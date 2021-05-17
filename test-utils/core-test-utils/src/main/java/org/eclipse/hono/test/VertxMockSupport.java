@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.test;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -21,7 +22,9 @@ import static org.mockito.Mockito.when;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -76,14 +79,25 @@ public final class VertxMockSupport {
      */
     public static void executeBlockingCodeImmediately(final Vertx vertx) {
 
-        doAnswer(invocation -> {
-            final Promise<Void> result = Promise.promise();
-            final Handler<Promise<?>> blockingCodeHandler = invocation.getArgument(0);
-            final Handler<Promise<?>> resultHandler = invocation.getArgument(1);
-            blockingCodeHandler.handle(result);
-            resultHandler.handle(result);
-            return null;
-        }).when(vertx).executeBlocking(anyHandler(), anyHandler());
+        doAnswer(VertxMockSupport::handleExecuteBlockingInvocation)
+                .when(vertx).executeBlocking(anyHandler(), anyHandler());
+
+        final Context context = VertxMockSupport.mockContext(vertx);
+        when(vertx.getOrCreateContext()).thenReturn(context);
+
+        doAnswer(VertxMockSupport::handleExecuteBlockingInvocation)
+                .when(context).executeBlocking(anyHandler(), any());
+    }
+
+    private static Void handleExecuteBlockingInvocation(final InvocationOnMock invocation) {
+        final Promise<Void> result = Promise.promise();
+        final Handler<Promise<?>> blockingCodeHandler = invocation.getArgument(0);
+        final Handler<AsyncResult<?>> resultHandler = invocation.getArgument(1);
+        blockingCodeHandler.handle(result);
+        if (resultHandler != null) {
+            resultHandler.handle(result.future());
+        }
+        return null;
     }
 
     /**

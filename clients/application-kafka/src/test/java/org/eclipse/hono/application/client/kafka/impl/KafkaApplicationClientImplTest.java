@@ -52,6 +52,7 @@ import io.vertx.kafka.client.consumer.KafkaConsumer;
 @ExtendWith(VertxExtension.class)
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class KafkaApplicationClientImplTest {
+
     private static final String PARAMETERIZED_TEST_NAME_PATTERN = "{displayName} [{index}]; parameters: {argumentsWithNames}";
     private KafkaApplicationClientImpl client;
     private MockConsumer<String, Buffer> mockConsumer;
@@ -73,8 +74,8 @@ public class KafkaApplicationClientImplTest {
     @BeforeEach
     void setUp(final Vertx vertx) {
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
-        final CachingKafkaProducerFactory<String, Buffer> producerFactory = KafkaClientUnitTestHelper
-                .newProducerFactory(mockProducer);
+        final CachingKafkaProducerFactory<String, Buffer> producerFactory = new CachingKafkaProducerFactory<>(
+                (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
 
         tenantId = UUID.randomUUID().toString();
 

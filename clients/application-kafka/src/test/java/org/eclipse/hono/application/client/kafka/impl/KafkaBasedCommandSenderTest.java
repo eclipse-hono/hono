@@ -41,6 +41,7 @@ import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
 import org.eclipse.hono.client.SendMessageTimeoutException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.kafka.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
@@ -99,10 +100,12 @@ public class KafkaBasedCommandSenderTest {
         producerConfig.setProducerConfig(Map.of("client.id", "application-test-sender"));
 
         mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
+        final CachingKafkaProducerFactory<String, Buffer> producerFactory = new CachingKafkaProducerFactory<>(
+                (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
         commandSender = new KafkaBasedCommandSender(
                 vertx,
                 consumerConfig,
-                KafkaClientUnitTestHelper.newProducerFactory(mockProducer),
+                producerFactory,
                 producerConfig,
                 NoopTracerFactory.create());
         tenantId = UUID.randomUUID().toString();
@@ -248,10 +251,12 @@ public class KafkaBasedCommandSenderTest {
                 });
             }
         };
+        final CachingKafkaProducerFactory<String, Buffer> producerFactory = new CachingKafkaProducerFactory<>(
+                (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
         commandSender = new KafkaBasedCommandSender(
                 vertx,
                 consumerConfig,
-                KafkaClientUnitTestHelper.newProducerFactory(mockProducer),
+                producerFactory,
                 producerConfig,
                 NoopTracerFactory.create());
 

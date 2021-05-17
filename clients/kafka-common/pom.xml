@@ -78,6 +78,11 @@
       <artifactId>jaeger-thrift</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>kafka-test-utils</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
 </project>

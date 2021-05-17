@@ -85,7 +85,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
     @Test
     public void testLifecycle() {
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
-        final CachingKafkaProducerFactory<String, Buffer> factory = KafkaClientUnitTestHelper.newProducerFactory(mockProducer);
+        final CachingKafkaProducerFactory<String, Buffer> factory = newProducerFactory(mockProducer);
         final AbstractKafkaBasedDownstreamSender sender = newSender(factory);
 
         assertThat(factory.getProducer(PRODUCER_NAME)).isEmpty();
@@ -107,7 +107,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
         final String payload = "the-payload";
         final Map<String, Object> properties = Collections.singletonMap("foo", "bar");
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
-        final AbstractKafkaBasedDownstreamSender sender = newSender(KafkaClientUnitTestHelper.newProducerFactory(mockProducer));
+        final AbstractKafkaBasedDownstreamSender sender = newSender(mockProducer);
 
         // WHEN sending a message
         sender.send(topic, tenant, device, qos, CONTENT_TYPE, Buffer.buffer(payload), properties, null)
@@ -122,7 +122,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
                         assertThat(actual.headers()).containsOnlyOnce(new RecordHeader("foo", "bar".getBytes()));
 
                         // ...AND contains the standard headers
-                        KafkaClientUnitTestHelper.assertStandardHeaders(actual, DEVICE_ID, CONTENT_TYPE, qos);
+                        KafkaClientUnitTestHelper.assertStandardHeaders(actual, DEVICE_ID, CONTENT_TYPE, qos.ordinal());
                     });
                     ctx.completeNow();
                 }));
@@ -139,7 +139,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
         // GIVEN a sender sending a message
         final RuntimeException expectedError = new RuntimeException("boom");
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(false);
-        final AbstractKafkaBasedDownstreamSender sender = newSender(KafkaClientUnitTestHelper.newProducerFactory(mockProducer));
+        final AbstractKafkaBasedDownstreamSender sender = newSender(mockProducer);
 
         sender.send(topic, tenant, device, qos, CONTENT_TYPE, null, null, null)
                 .onComplete(ctx.failing(t -> {
@@ -169,7 +169,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
 
         // GIVEN a sender sending a message
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(false);
-        final CachingKafkaProducerFactory<String, Buffer> factory = KafkaClientUnitTestHelper.newProducerFactory(mockProducer);
+        final CachingKafkaProducerFactory<String, Buffer> factory = newProducerFactory(mockProducer);
         newSender(factory).send(topic, tenant, device, qos, CONTENT_TYPE, null, null, null)
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
@@ -197,7 +197,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
 
         // GIVEN a sender sending a message
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(false);
-        final CachingKafkaProducerFactory<String, Buffer> factory = KafkaClientUnitTestHelper.newProducerFactory(mockProducer);
+        final CachingKafkaProducerFactory<String, Buffer> factory = newProducerFactory(mockProducer);
         newSender(factory).send(topic, tenant, device, qos, CONTENT_TYPE, null, null, null)
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
@@ -293,7 +293,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
             final VertxTestContext ctx) {
 
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
-        newSender(KafkaClientUnitTestHelper.newProducerFactory(mockProducer))
+        newSender(mockProducer)
                 .send(topic, tenant, device, qos, contentTypeParameter, null, properties, null)
                 .onComplete(ctx.succeeding(v -> {
                     ctx.verify(() -> {
@@ -314,7 +314,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
     @Test
     public void testThatCreationTimeIsAddedWhenNotPresentAndTtdIsSet(final VertxTestContext ctx) {
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
-        final AbstractKafkaBasedDownstreamSender sender = newSender(KafkaClientUnitTestHelper.newProducerFactory(mockProducer));
+        final AbstractKafkaBasedDownstreamSender sender = newSender(mockProducer);
 
         // GIVEN properties that contain a TTD
         final long ttd = 99L;
@@ -345,7 +345,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
     @Test
     public void testThatCreationTimeIsAddedWhenNotPresentAndTtlIsSet(final VertxTestContext ctx) {
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
-        final AbstractKafkaBasedDownstreamSender sender = newSender(KafkaClientUnitTestHelper.newProducerFactory(mockProducer));
+        final AbstractKafkaBasedDownstreamSender sender = newSender(mockProducer);
 
         // GIVEN properties that contain a TTL
         final long ttl = 99L;
@@ -375,7 +375,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
     @Test
     public void testThatCreationTimeIsNotChanged(final VertxTestContext ctx) {
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
-        final AbstractKafkaBasedDownstreamSender sender = newSender(KafkaClientUnitTestHelper.newProducerFactory(mockProducer));
+        final AbstractKafkaBasedDownstreamSender sender = newSender(mockProducer);
 
         // GIVEN properties that contain creation-time
         final long creationTime = 12345L;
@@ -405,7 +405,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
     @Test
     public void testThatConstructorThrowsOnMissingParameter() {
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
-        final CachingKafkaProducerFactory<String, Buffer> factory = KafkaClientUnitTestHelper.newProducerFactory(mockProducer);
+        final CachingKafkaProducerFactory<String, Buffer> factory = newProducerFactory(mockProducer);
 
         assertThrows(NullPointerException.class,
                 () -> new AbstractKafkaBasedDownstreamSender(null, PRODUCER_NAME, config, adapterConfig.isDefaultsEnabled(), tracer) {
@@ -432,7 +432,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
     @Test
     public void testThatSendThrowsOnMissingMandatoryParameter() {
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
-        final AbstractKafkaBasedDownstreamSender sender = newSender(KafkaClientUnitTestHelper.newProducerFactory(mockProducer));
+        final AbstractKafkaBasedDownstreamSender sender = newSender(mockProducer);
 
         assertThrows(NullPointerException.class,
                 () -> sender.send(null, tenant, device, qos, CONTENT_TYPE, null, null, null));
@@ -446,6 +446,16 @@ public class AbstractKafkaBasedDownstreamSenderTest {
         assertThrows(NullPointerException.class,
                 () -> sender.send(topic, tenant, device, null, CONTENT_TYPE, null, null, null));
 
+    }
+
+    private CachingKafkaProducerFactory<String, Buffer> newProducerFactory(final MockProducer<String, Buffer> mockProducer) {
+        return new CachingKafkaProducerFactory<>(
+                (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+    }
+
+    private AbstractKafkaBasedDownstreamSender newSender(final MockProducer<String, Buffer> mockProducer) {
+        final CachingKafkaProducerFactory<String, Buffer> factory = newProducerFactory(mockProducer);
+        return newSender(factory);
     }
 
     private AbstractKafkaBasedDownstreamSender newSender(final CachingKafkaProducerFactory<String, Buffer> factory) {

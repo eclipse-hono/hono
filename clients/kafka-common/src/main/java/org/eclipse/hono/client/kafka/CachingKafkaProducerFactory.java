@@ -57,7 +57,8 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
      * Use {@link KafkaProducerFactory#sharedProducerFactory(Vertx)} to create producers that can safely be shared
      * between verticle instances.
      *
-     * @param producerInstanceSupplier The function that provides new producer instances.
+     * @param producerInstanceSupplier The function that provides new producer instances. Parameters are the producer
+     *                                 name and the producer configuration.
      */
     public CachingKafkaProducerFactory(
             final BiFunction<String, Map<String, String>, KafkaProducer<K, V>> producerInstanceSupplier) {

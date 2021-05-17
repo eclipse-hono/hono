@@ -25,17 +25,14 @@ import java.util.stream.IntStream;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
-import org.apache.kafka.common.Node;
-import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
-import org.jetbrains.annotations.NotNull;
+import org.eclipse.hono.kafka.test.KafkaMockConsumer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -43,7 +40,6 @@ import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import io.vertx.kafka.client.consumer.KafkaConsumer;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 
 /**
@@ -63,11 +59,9 @@ public class HonoKafkaConsumerTest {
     private static final TopicPartition topicPartition = new TopicPartition(TOPIC, PARTITION);
     private static final TopicPartition topic2Partition = new TopicPartition(TOPIC2, PARTITION);
     private static final TopicPartition topic3Partition = new TopicPartition(TOPIC3, PARTITION);
-    private static final Node LEADER = new Node(1, "broker1", 9092);
 
     private KafkaConsumerConfigProperties consumerConfigProperties;
     private Vertx vertx;
-    private Context context;
     private HonoKafkaConsumer consumer;
     private KafkaMockConsumer mockConsumer;
 
@@ -79,7 +73,6 @@ public class HonoKafkaConsumerTest {
     @BeforeEach
     public void setUp(final Vertx vertx) {
         this.vertx = vertx;
-        context = vertx.getOrCreateContext();
 
         mockConsumer = new KafkaMockConsumer(OffsetResetStrategy.LATEST);
 
@@ -99,17 +92,11 @@ public class HonoKafkaConsumerTest {
         final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig("test");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
 
-        consumer = new HonoKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig) {
-            @Override
-            KafkaConsumer<String, Buffer> createKafkaConsumer() {
-                return KafkaConsumer.create(vertx, mockConsumer);
-            }
-        };
+        consumer = new HonoKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
+        consumer.setKafkaConsumerSupplier(() -> mockConsumer);
         mockConsumer.updateEndOffsets(Map.of(topicPartition, ((long) 0)));
-        mockConsumer.setRebalancePartitionAssignmentOnSubscribe(List.of(topicPartition));
-        context.runOnContext(v -> {
-            consumer.start().onComplete(ctx.completing());
-        });
+        mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(topicPartition));
+        consumer.start().onComplete(ctx.completing());
     }
 
     /**
@@ -123,28 +110,22 @@ public class HonoKafkaConsumerTest {
         final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig("test");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
 
-        consumer = new HonoKafkaConsumer(vertx, TOPIC_PATTERN, handler, consumerConfig) {
-            @Override
-            KafkaConsumer<String, Buffer> createKafkaConsumer() {
-                return KafkaConsumer.create(vertx, mockConsumer);
-            }
-        };
+        consumer = new HonoKafkaConsumer(vertx, TOPIC_PATTERN, handler, consumerConfig);
+        consumer.setKafkaConsumerSupplier(() -> mockConsumer);
         mockConsumer.updateEndOffsets(Map.of(topicPartition, (long) 0, topic2Partition, (long) 0));
-        mockConsumer.updatePartitions(TOPIC, List.of(getPartitionInfo(TOPIC, PARTITION)));
-        mockConsumer.updatePartitions(TOPIC2, List.of(getPartitionInfo(TOPIC2, PARTITION)));
-        mockConsumer.setRebalancePartitionAssignmentOnSubscribe(List.of(topicPartition, topic2Partition));
-        context.runOnContext(v -> {
-            consumer.start().onComplete(ctx.succeeding(v2 -> {
-                ctx.verify(() -> {
-                    assertThat(consumer.getSubscribedTopicPatternTopics()).isEqualTo(Set.of(TOPIC, TOPIC2));
-                    assertThat(consumer.isAmongKnownSubscribedTopics(TOPIC)).isTrue();
-                    assertThat(consumer.isAmongKnownSubscribedTopics(TOPIC2)).isTrue();
-                    assertThat(consumer.ensureTopicIsAmongSubscribedTopicPatternTopics(TOPIC).succeeded()).isTrue();
-                    assertThat(consumer.ensureTopicIsAmongSubscribedTopicPatternTopics(TOPIC2).succeeded()).isTrue();
-                });
-                ctx.completeNow();
-            }));
-        });
+        mockConsumer.updatePartitions(topicPartition, KafkaMockConsumer.DEFAULT_NODE);
+        mockConsumer.updatePartitions(topic2Partition, KafkaMockConsumer.DEFAULT_NODE);
+        mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(topicPartition, topic2Partition));
+        consumer.start().onComplete(ctx.succeeding(v2 -> {
+            ctx.verify(() -> {
+                assertThat(consumer.getSubscribedTopicPatternTopics()).isEqualTo(Set.of(TOPIC, TOPIC2));
+                assertThat(consumer.isAmongKnownSubscribedTopics(TOPIC)).isTrue();
+                assertThat(consumer.isAmongKnownSubscribedTopics(TOPIC2)).isTrue();
+                assertThat(consumer.ensureTopicIsAmongSubscribedTopicPatternTopics(TOPIC).succeeded()).isTrue();
+                assertThat(consumer.ensureTopicIsAmongSubscribedTopicPatternTopics(TOPIC2).succeeded()).isTrue();
+            });
+            ctx.completeNow();
+        }));
     }
 
     /**
@@ -159,34 +140,28 @@ public class HonoKafkaConsumerTest {
         final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig("test");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
 
-        consumer = new HonoKafkaConsumer(vertx, TOPIC_PATTERN, handler, consumerConfig) {
-            @Override
-            KafkaConsumer<String, Buffer> createKafkaConsumer() {
-                return KafkaConsumer.create(vertx, mockConsumer);
-            }
-        };
+        consumer = new HonoKafkaConsumer(vertx, TOPIC_PATTERN, handler, consumerConfig);
+        consumer.setKafkaConsumerSupplier(() -> mockConsumer);
         mockConsumer.updateEndOffsets(Map.of(topicPartition, (long) 0, topic2Partition, (long) 0));
-        mockConsumer.updatePartitions(TOPIC, List.of(getPartitionInfo(TOPIC, PARTITION)));
-        mockConsumer.updatePartitions(TOPIC2, List.of(getPartitionInfo(TOPIC2, PARTITION)));
-        mockConsumer.setRebalancePartitionAssignmentOnSubscribe(List.of(topicPartition, topic2Partition));
-        context.runOnContext(v -> {
-            consumer.start().onComplete(ctx.succeeding(v2 -> {
-                ctx.verify(() -> {
-                    assertThat(consumer.getSubscribedTopicPatternTopics()).isEqualTo(Set.of(TOPIC, TOPIC2));
-                });
-                // now update partitions with the one for topic3
-                mockConsumer.updatePartitions(TOPIC3, List.of(getPartitionInfo(TOPIC3, PARTITION)));
-                mockConsumer.setRebalancePartitionAssignmentOnSubscribe(List.of(topicPartition, topic2Partition, topic3Partition));
-                mockConsumer.updateEndOffsets(Map.of(topic3Partition, (long) 0));
+        mockConsumer.updatePartitions(topicPartition, KafkaMockConsumer.DEFAULT_NODE);
+        mockConsumer.updatePartitions(topic2Partition, KafkaMockConsumer.DEFAULT_NODE);
+        mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(topicPartition, topic2Partition));
+        consumer.start().onComplete(ctx.succeeding(v2 -> {
+            ctx.verify(() -> {
+                assertThat(consumer.getSubscribedTopicPatternTopics()).isEqualTo(Set.of(TOPIC, TOPIC2));
+            });
+            // now update partitions with the one for topic3
+            mockConsumer.updatePartitions(topic3Partition, KafkaMockConsumer.DEFAULT_NODE);
+            mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(topicPartition, topic2Partition, topic3Partition));
+            mockConsumer.updateEndOffsets(Map.of(topic3Partition, (long) 0));
 
-                consumer.ensureTopicIsAmongSubscribedTopicPatternTopics(TOPIC3).onComplete(ctx.succeeding(v3 -> {
-                    ctx.verify(() -> {
-                        assertThat(consumer.getSubscribedTopicPatternTopics()).isEqualTo(Set.of(TOPIC, TOPIC2, TOPIC3));
-                    });
-                    ctx.completeNow();
-                }));
+            consumer.ensureTopicIsAmongSubscribedTopicPatternTopics(TOPIC3).onComplete(ctx.succeeding(v3 -> {
+                ctx.verify(() -> {
+                    assertThat(consumer.getSubscribedTopicPatternTopics()).isEqualTo(Set.of(TOPIC, TOPIC2, TOPIC3));
+                });
+                ctx.completeNow();
             }));
-        });
+        }));
     }
 
     /**
@@ -204,29 +179,17 @@ public class HonoKafkaConsumerTest {
         final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig("test");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
 
-        consumer = new HonoKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig) {
-            @Override
-            KafkaConsumer<String, Buffer> createKafkaConsumer() {
-                return KafkaConsumer.create(vertx, mockConsumer);
-            }
-        };
+        consumer = new HonoKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
+        consumer.setKafkaConsumerSupplier(() -> mockConsumer);
         mockConsumer.updateEndOffsets(Map.of(topicPartition, ((long) 0)));
-        mockConsumer.setRebalancePartitionAssignmentOnSubscribe(List.of(topicPartition));
-        context.runOnContext(v -> {
-            consumer.start().onComplete(ctx.succeeding(v2 -> {
-                mockConsumer.schedulePollTask(() -> {
-                    IntStream.range(0, numTestRecords).forEach(offset -> {
-                        mockConsumer.addRecord(new ConsumerRecord<>(TOPIC, PARTITION, offset, "key_" + offset, Buffer.buffer()));
-                    });
+        mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(topicPartition));
+        consumer.start().onComplete(ctx.succeeding(v2 -> {
+            mockConsumer.schedulePollTask(() -> {
+                IntStream.range(0, numTestRecords).forEach(offset -> {
+                    mockConsumer.addRecord(new ConsumerRecord<>(TOPIC, PARTITION, offset, "key_" + offset, Buffer.buffer()));
                 });
-            }));
-        });
-    }
-
-    @NotNull
-    private PartitionInfo getPartitionInfo(final String topic, final int partition) {
-        final Node[] replicas = new Node[]{LEADER};
-        return new PartitionInfo(topic, partition, LEADER, replicas, replicas);
+            });
+        }));
     }
 
 }

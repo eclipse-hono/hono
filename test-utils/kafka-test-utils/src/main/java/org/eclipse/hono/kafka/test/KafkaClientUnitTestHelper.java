@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,25 +14,14 @@
 package org.eclipse.hono.kafka.test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import org.apache.kafka.clients.producer.MockProducer;
-import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.header.internals.RecordHeader;
 import org.apache.kafka.common.serialization.StringSerializer;
-import org.eclipse.hono.client.kafka.CachingKafkaProducerFactory;
 import org.eclipse.hono.test.VertxMockSupport;
-import org.eclipse.hono.util.QoS;
 
-import io.vertx.core.Context;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.Json;
@@ -48,29 +37,15 @@ public class KafkaClientUnitTestHelper {
     }
 
     /**
-     * Returns a new {@link org.eclipse.hono.client.impl.CachingClientFactory} for the given native {@link Producer}.
-     * <p>
-     * All producers returned by this factory will use the given native producer instance wrapped in a
-     * {@link KafkaProducer}.
+     * Returns a new {@link KafkaProducer}.
      *
-     * @param producer The (mock) producer to be wrapped.
-     * @return The producer factory.
+     * @param producer The mock producer to wrap.
+     * @return The new Kafka producer.
      */
-    public static CachingKafkaProducerFactory<String, Buffer> newProducerFactory(
-            final Producer<String, Buffer> producer) {
-
+    public static KafkaProducer<String, Buffer> newKafkaProducer(final MockProducer<String, Buffer> producer) {
         final Vertx vertxMock = mock(Vertx.class);
-        final Context context = VertxMockSupport.mockContext(vertxMock);
-        when(vertxMock.getOrCreateContext()).thenReturn(context);
-
-        doAnswer(invocation -> {
-            final Promise<RecordMetadata> result = Promise.promise();
-            final Handler<Future<RecordMetadata>> blockingCode = invocation.getArgument(0);
-            blockingCode.handle(result.future());
-            return null;
-        }).when(context).executeBlocking(VertxMockSupport.anyHandler(), any());
-
-        return new CachingKafkaProducerFactory<>((n, c) -> KafkaProducer.create(vertxMock, producer));
+        VertxMockSupport.executeBlockingCodeImmediately(vertxMock);
+        return KafkaProducer.create(vertxMock, producer);
     }
 
     /**
@@ -79,7 +54,7 @@ public class KafkaClientUnitTestHelper {
      * @param autoComplete If true, the producer automatically completes all requests successfully and executes the
      *            callback. Otherwise the {@link MockProducer#completeNext()} or
      *            {@link MockProducer#errorNext(RuntimeException)} must be invoked after sending a message.
-     * @return the mock producer.
+     * @return The new mock producer.
      */
     public static MockProducer<String, Buffer> newMockProducer(final boolean autoComplete) {
         return new MockProducer<>(autoComplete, new StringSerializer(), new BufferSerializer());
@@ -100,13 +75,13 @@ public class KafkaClientUnitTestHelper {
      * @param qos The expected QoS level.
      */
     public static void assertStandardHeaders(final ProducerRecord<String, Buffer> actual, final String deviceId,
-            final String contentType, final QoS qos) {
+            final String contentType, final int qos) {
 
         assertThat(actual.headers()).containsOnlyOnce(new RecordHeader("content-type", contentType.getBytes()));
 
         assertThat(actual.headers()).containsOnlyOnce(new RecordHeader("device_id", deviceId.getBytes()));
 
-        assertThat(actual.headers()).containsOnlyOnce(new RecordHeader("qos", Json.encode(qos.ordinal()).getBytes()));
+        assertThat(actual.headers()).containsOnlyOnce(new RecordHeader("qos", Json.encode(qos).getBytes()));
     }
 
 }

@@ -27,10 +27,6 @@
 
   <dependencies>
     <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-client-kafka-common</artifactId>
-    </dependency>
-    <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-kafka-client</artifactId>
     </dependency>

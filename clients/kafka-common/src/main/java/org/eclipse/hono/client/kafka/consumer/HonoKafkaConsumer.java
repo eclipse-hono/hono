@@ -26,8 +26,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
+import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.eclipse.hono.client.ServerErrorException;
@@ -99,6 +101,7 @@ public class HonoKafkaConsumer implements Lifecycle {
     private Handler<Set<TopicPartition>> onPartitionsAssignedHandler;
     private Handler<Set<TopicPartition>> onRebalanceDoneHandler;
     private Handler<Set<TopicPartition>> onPartitionsRevokedHandler;
+    private Supplier<Consumer<String, Buffer>> kafkaConsumerSupplier;
 
     /**
      * Creates a consumer to receive records on the given topics.
@@ -206,11 +209,11 @@ public class HonoKafkaConsumer implements Lifecycle {
     }
 
     /**
-     * Only to be overridden by unit tests.
-     * @return The created vert.x Kafka consumer.
+     * Only to be used for unit tests.
+     * @param supplier Supplier creating the internal Kafka consumer.
      */
-    KafkaConsumer<String, Buffer> createKafkaConsumer() {
-        return KafkaConsumer.create(vertx, consumerConfig, String.class, Buffer.class);
+    void setKafkaConsumerSupplier(final Supplier<Consumer<String, Buffer>> supplier) {
+        kafkaConsumerSupplier = supplier;
     }
 
     /**
@@ -228,32 +231,36 @@ public class HonoKafkaConsumer implements Lifecycle {
 
     @Override
     public Future<Void> start() {
-        context = Vertx.currentContext();
-        if (context == null) {
-            return Future.failedFuture(new IllegalStateException("consumer must be started in a Vert.x context"));
-        }
-        // create KafkaConsumer here so that it is created in the Vert.x context of the start() method (KafkaConsumer uses vertx.getOrCreateContext())
-        kafkaConsumer = createKafkaConsumer();
-        kafkaConsumer.handler(recordHandler);
-        kafkaConsumer.exceptionHandler(error -> log.error("consumer error occurred", error));
-        installRebalanceListeners();
-        // subscribe and wait for rebalance to make sure that when start() completes,
-        // the consumer is actually ready to receive records already
-        return subscribeAndWaitForRebalance()
-                .map(ok -> {
-                    if (topicPattern != null) {
-                        if (subscribedTopicPatternTopics.size() <= 5) {
-                            log.debug("subscribed to topic pattern [{}], matching topics: {}", topicPattern,
-                                    subscribedTopicPatternTopics);
+        context = vertx.getOrCreateContext();
+        final Promise<Void> startPromise = Promise.promise();
+        runOnContext(v -> {
+            // create KafkaConsumer here so that it is created in the Vert.x context of the start() method (KafkaConsumer uses vertx.getOrCreateContext())
+            kafkaConsumer = Optional.ofNullable(kafkaConsumerSupplier)
+                    .map(supplier -> KafkaConsumer.create(vertx, supplier.get()))
+                    .orElseGet(() -> KafkaConsumer.create(vertx, consumerConfig, String.class, Buffer.class));
+            kafkaConsumer.handler(recordHandler);
+            kafkaConsumer.exceptionHandler(error -> log.error("consumer error occurred", error));
+            installRebalanceListeners();
+            // subscribe and wait for rebalance to make sure that when start() completes,
+            // the consumer is actually ready to receive records already
+            subscribeAndWaitForRebalance()
+                    .map(ok -> {
+                        if (topicPattern != null) {
+                            if (subscribedTopicPatternTopics.size() <= 5) {
+                                log.debug("subscribed to topic pattern [{}], matching topics: {}", topicPattern,
+                                        subscribedTopicPatternTopics);
+                            } else {
+                                log.debug("subscribed to topic pattern [{}], matching {} topics", topicPattern,
+                                        subscribedTopicPatternTopics.size());
+                            }
                         } else {
-                            log.debug("subscribed to topic pattern [{}], matching {} topics", topicPattern,
-                                    subscribedTopicPatternTopics.size());
+                            log.debug("subscribed to topics {}", topics);
                         }
-                    } else {
-                        log.debug("subscribed to topics {}", topics);
-                    }
-                    return null;
-                });
+                        return (Void) null;
+                    })
+                    .onComplete(startPromise.future());
+        });
+        return startPromise.future();
     }
 
     private void installRebalanceListeners() {

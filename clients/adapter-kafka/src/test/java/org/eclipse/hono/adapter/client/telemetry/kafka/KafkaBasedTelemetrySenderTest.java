@@ -76,7 +76,8 @@ public class KafkaBasedTelemetrySenderTest {
         final QoS qos = QoS.AT_MOST_ONCE;
         final String payload = "the-payload";
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
-        final CachingKafkaProducerFactory<String, Buffer> factory = KafkaClientUnitTestHelper.newProducerFactory(mockProducer);
+        final CachingKafkaProducerFactory<String, Buffer> factory = new CachingKafkaProducerFactory<>(
+                (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
         final KafkaBasedTelemetrySender sender = new KafkaBasedTelemetrySender(factory, kafkaProducerConfig,
                 adapterConfig.isDefaultsEnabled(), tracer);
 
@@ -94,7 +95,7 @@ public class KafkaBasedTelemetrySenderTest {
 
                         // ...AND contains the standard headers
                         KafkaClientUnitTestHelper
-                                .assertStandardHeaders(actual, device.getDeviceId(), "the-content-type", qos);
+                                .assertStandardHeaders(actual, device.getDeviceId(), "the-content-type", qos.ordinal());
                     });
                     ctx.completeNow();
                 }));
@@ -114,7 +115,8 @@ public class KafkaBasedTelemetrySenderTest {
         final String contentType = "the-content-type";
         final String payload = "the-payload";
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
-        final CachingKafkaProducerFactory<String, Buffer> factory = KafkaClientUnitTestHelper.newProducerFactory(mockProducer);
+        final CachingKafkaProducerFactory<String, Buffer> factory = new CachingKafkaProducerFactory<>(
+                (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
         final KafkaBasedTelemetrySender sender = new KafkaBasedTelemetrySender(factory, kafkaProducerConfig,
                 adapterConfig.isDefaultsEnabled(), tracer);
 
@@ -131,7 +133,7 @@ public class KafkaBasedTelemetrySenderTest {
                         assertThat(actual.value().toString()).isEqualTo(payload);
 
                         // ...AND contains the standard headers
-                        KafkaClientUnitTestHelper.assertStandardHeaders(actual, device.getDeviceId(), contentType, qos);
+                        KafkaClientUnitTestHelper.assertStandardHeaders(actual, device.getDeviceId(), contentType, qos.ordinal());
                     });
                     ctx.completeNow();
                 }));
@@ -143,8 +145,8 @@ public class KafkaBasedTelemetrySenderTest {
      */
     @Test
     public void testThatConstructorThrowsOnMissingParameter() {
-        final CachingKafkaProducerFactory<String, Buffer> factory = KafkaClientUnitTestHelper
-                .newProducerFactory(KafkaClientUnitTestHelper.newMockProducer(true));
+        final CachingKafkaProducerFactory<String, Buffer> factory = new CachingKafkaProducerFactory<>(
+                (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(KafkaClientUnitTestHelper.newMockProducer(true)));
 
         assertThrows(NullPointerException.class,
                 () -> new KafkaBasedTelemetrySender(null, kafkaProducerConfig, adapterConfig.isDefaultsEnabled(), tracer));
@@ -164,8 +166,8 @@ public class KafkaBasedTelemetrySenderTest {
     @Test
     public void testThatSendTelemetryThrowsOnMissingMandatoryParameter() {
         final QoS qos = QoS.AT_LEAST_ONCE;
-        final CachingKafkaProducerFactory<String, Buffer> factory = KafkaClientUnitTestHelper
-                .newProducerFactory(KafkaClientUnitTestHelper.newMockProducer(true));
+        final CachingKafkaProducerFactory<String, Buffer> factory = new CachingKafkaProducerFactory<>(
+                (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(KafkaClientUnitTestHelper.newMockProducer(true)));
         final KafkaBasedTelemetrySender sender = new KafkaBasedTelemetrySender(factory, kafkaProducerConfig,
                 adapterConfig.isDefaultsEnabled(), tracer);
 

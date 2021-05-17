@@ -73,7 +73,8 @@ public class KafkaBasedCommandResponseSenderTest {
                 contentType,
                 status);
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
-        final CachingKafkaProducerFactory<String, Buffer> factory = KafkaClientUnitTestHelper.newProducerFactory(mockProducer);
+        final CachingKafkaProducerFactory<String, Buffer> factory = new CachingKafkaProducerFactory<>(
+                (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
         final KafkaBasedCommandResponseSender sender = new KafkaBasedCommandResponseSender(factory, kafkaProducerConfig,
                 tracer);
 

@@ -76,7 +76,8 @@ public class KafkaBasedEventSenderTest {
         final String contentType = "the-content-type";
         final String payload = "the-payload";
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
-        final CachingKafkaProducerFactory<String, Buffer> factory = KafkaClientUnitTestHelper.newProducerFactory(mockProducer);
+        final CachingKafkaProducerFactory<String, Buffer> factory = new CachingKafkaProducerFactory<>(
+                (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
         final KafkaBasedEventSender sender = new KafkaBasedEventSender(factory, kafkaProducerConfig, adapterConfig.isDefaultsEnabled(),
                 tracer);
 
@@ -93,7 +94,7 @@ public class KafkaBasedEventSenderTest {
                         assertThat(actual.value().toString()).isEqualTo(payload);
 
                         // ...AND contains the standard headers
-                        KafkaClientUnitTestHelper.assertStandardHeaders(actual, device.getDeviceId(), contentType, QoS.AT_LEAST_ONCE);
+                        KafkaClientUnitTestHelper.assertStandardHeaders(actual, device.getDeviceId(), contentType, QoS.AT_LEAST_ONCE.ordinal());
                     });
                     ctx.completeNow();
                 }));
@@ -106,8 +107,8 @@ public class KafkaBasedEventSenderTest {
      */
     @Test
     public void testThatConstructorThrowsOnMissingParameter() {
-        final CachingKafkaProducerFactory<String, Buffer> factory = KafkaClientUnitTestHelper
-                .newProducerFactory(KafkaClientUnitTestHelper.newMockProducer(true));
+        final CachingKafkaProducerFactory<String, Buffer> factory = new CachingKafkaProducerFactory<>(
+                (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(KafkaClientUnitTestHelper.newMockProducer(true)));
 
         assertThrows(NullPointerException.class,
                 () -> new KafkaBasedEventSender(null, kafkaProducerConfig, adapterConfig.isDefaultsEnabled(), tracer));
@@ -126,8 +127,8 @@ public class KafkaBasedEventSenderTest {
      */
     @Test
     public void testThatSendEventThrowsOnMissingMandatoryParameter() {
-        final CachingKafkaProducerFactory<String, Buffer> factory = KafkaClientUnitTestHelper
-                .newProducerFactory(KafkaClientUnitTestHelper.newMockProducer(true));
+        final CachingKafkaProducerFactory<String, Buffer> factory = new CachingKafkaProducerFactory<>(
+                (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(KafkaClientUnitTestHelper.newMockProducer(true)));
         final KafkaBasedEventSender sender = new KafkaBasedEventSender(factory, kafkaProducerConfig, adapterConfig.isDefaultsEnabled(),
                 tracer);
 
