@@ -268,7 +268,8 @@ For *Request/Response* commands, devices send their responses to commands by mea
 
 The MQTT adapter checks the configured [message limit]({{< relref "/concepts/resource-limits.md" >}}) before accepting any command requests and responses. In case of incoming command requests from business applications, if the message limit is exceeded, the Adapter rejects the message with the reason `amqp:resource-limit-exceeded`. And for the incoming command responses from devices, the Adapter rejects the message and closes the connection to the client. 
 
-The following sections define the topic filters/names to use for subscribing to and responding to commands. The following *shorthand* versions of topic path segments are supported:
+The following sections define the topic filters/names to use for subscribing to and responding to commands.
+The following *shorthand* versions of topic path segments are supported:
 
 * `c` instead of `command`
 * `q` instead of `req`
@@ -279,6 +280,12 @@ The following variables are used:
 * `${command}` : An arbitrary string that indicates the command to execute, e.g. `setBrightness`. The command is provided by the application that sends the command.
 * `${req-id}` (only for *Request/Response* commands) : The unique identifier of the command execution request. The identifier is passed to the device as part of the name of the topic that the command is published to. The device needs to publish its response to the command to a topic which includes this identifier, thus allowing the adapter to correlate the response with the request.
 * `${status}` : The HTTP status code indicating the outcome of executing the command. This status code is passed on to the application in the AMQP message's *status* application property.
+
+{{% note title="Wild card characters in topic filters" %}}
+The topic filters defined below make use of MQTT's wild card characters in certain places of topic filters.
+However, the MQTT adapter does **not** support the general usage of wild card characters in topic filters in any
+other way than defined below.
+{{% /note %}}
 
 ### Receiving Commands (authenticated Device)
 
