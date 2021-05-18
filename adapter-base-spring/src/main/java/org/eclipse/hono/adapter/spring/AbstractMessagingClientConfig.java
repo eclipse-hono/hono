@@ -64,7 +64,6 @@ public abstract class AbstractMessagingClientConfig extends AdapterConfiguration
      * @param tracer The tracer instance.
      * @param vertx The Vert.x instance to use.
      * @param adapterProperties The adapter's configuration properties.
-     *
      * @return The created messaging clients.
      */
     protected MessagingClients messagingClients(
@@ -189,7 +188,6 @@ public abstract class AbstractMessagingClientConfig extends AdapterConfiguration
      * and is already trying to establish the connection to the configured peer.
      *
      * @param vertx The Vert.x instance to use.
-     *
      * @return The connection.
      */
     @Qualifier(Constants.QUALIFIER_MESSAGING)
@@ -213,7 +211,8 @@ public abstract class AbstractMessagingClientConfig extends AdapterConfiguration
     }
 
     /**
-     * Exposes configuration properties for Command and Control.
+     * Exposes configuration properties for accessing the AMQP Messaging Network for receiving upstream commands as a
+     * Spring bean.
      *
      * @return The Properties.
      */
@@ -229,10 +228,9 @@ public abstract class AbstractMessagingClientConfig extends AdapterConfiguration
     }
 
     /**
-     * Exposes the connection used for receiving upstream commands as a Spring bean.
+     * Exposes the connection to the AMQP Messaging Network used for receiving upstream commands as a Spring bean.
      *
      * @param vertx The Vert.x instance to use.
-     *
      * @return The connection.
      */
     @Bean

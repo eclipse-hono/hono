@@ -143,7 +143,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     protected RequestResponseClientConfigProperties downstreamSenderConfig;
 
     @ConfigPrefix("hono.command")
-    protected RequestResponseClientConfigProperties commandConfig;
+    protected RequestResponseClientConfigProperties commandConsumerConfig;
 
     @ConfigPrefix("hono.tenant")
     protected RequestResponseClientConfigProperties tenantClientConfig;
@@ -232,9 +232,10 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             final CommandRouterClient commandRouterClient = commandRouterClient();
             adapter.setCommandRouterClient(commandRouterClient);
             final CommandRouterCommandConsumerFactory commandConsumerFactory = commandConsumerFactory(commandRouterClient);
-            commandConsumerFactory.registerInternalCommandConsumer(
-                    (id, handlers) -> new ProtonBasedInternalCommandConsumer(commandConsumerConnection(), id, handlers));
-
+            if (commandConsumerConfig.isHostConfigured()) {
+                commandConsumerFactory.registerInternalCommandConsumer(
+                        (id, handlers) -> new ProtonBasedInternalCommandConsumer(commandConsumerConnection(), id, handlers));
+            }
             if (kafkaAdminClientConfig.isConfigured() && kafkaConsumerConfig.isConfigured()) {
                 commandConsumerFactory.registerInternalCommandConsumer(
                         (id, handlers) -> new KafkaBasedInternalCommandConsumer(vertx, kafkaAdminClientConfig,
@@ -271,7 +272,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                     MessagingType.kafka,
                     new KafkaBasedCommandResponseSender(factory, kafkaProducerConfig, tracer));
         }
-        if (downstreamSenderConfig().isHostConfigured()) {
+        if (downstreamSenderConfig.isHostConfigured()) {
             telemetrySenders.setClient(MessagingType.amqp, downstreamSender());
             eventSenders.setClient(MessagingType.amqp, downstreamSender());
             commandResponseSenders.setClient(
@@ -404,9 +405,11 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     }
 
     private ClientConfigProperties downstreamSenderConfig() {
-        downstreamSenderConfig.setServerRoleIfUnknown("Downstream");
-        downstreamSenderConfig.setNameIfNotSet(getAdapterName());
-        return downstreamSenderConfig;
+        // downstreamSenderConfig also used for the commandResponseSender, therefore set role on a copy here
+        final ClientConfigProperties props = new ClientConfigProperties(downstreamSenderConfig);
+        props.setServerRoleIfUnknown("Downstream");
+        props.setNameIfNotSet(getAdapterName());
+        return props;
     }
 
     /**
@@ -422,11 +425,10 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                 protocolAdapterProperties.isJmsVendorPropsEnabled());
     }
 
-    private ClientConfigProperties commandConsumerFactoryConfig() {
-        final ClientConfigProperties props = new ClientConfigProperties(commandConfig);
-        props.setServerRoleIfUnknown("Command & Control");
-        props.setNameIfNotSet(getAdapterName());
-        return props;
+    private ClientConfigProperties commandConsumerConfig() {
+        commandConsumerConfig.setServerRoleIfUnknown("Command & Control");
+        commandConsumerConfig.setNameIfNotSet(getAdapterName());
+        return commandConsumerConfig;
     }
 
     /**
@@ -435,7 +437,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
      * @return The connection.
      */
     protected HonoConnection commandConsumerConnection() {
-        return HonoConnection.newConnection(vertx, commandConsumerFactoryConfig(), tracer);
+        return HonoConnection.newConnection(vertx, commandConsumerConfig(), tracer);
     }
 
     /**

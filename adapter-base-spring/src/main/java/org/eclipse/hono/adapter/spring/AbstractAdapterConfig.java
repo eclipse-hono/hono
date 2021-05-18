@@ -139,9 +139,10 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
             final CommandRouterClient commandRouterClient = context.getBean(CommandRouterClient.class);
             adapter.setCommandRouterClient(commandRouterClient);
             final CommandRouterCommandConsumerFactory commandConsumerFactory = commandConsumerFactory(commandRouterClient);
-            commandConsumerFactory.registerInternalCommandConsumer(
-                    (id, handlers) -> new ProtonBasedInternalCommandConsumer(commandConsumerConnection(vertx()), id, handlers));
-
+            if (commandConsumerFactoryConfig().isHostConfigured()) {
+                commandConsumerFactory.registerInternalCommandConsumer(
+                        (id, handlers) -> new ProtonBasedInternalCommandConsumer(commandConsumerConnection(vertx()), id, handlers));
+            }
             if (kafkaAdminClientConfig.isConfigured() && kafkaConsumerConfig.isConfigured()) {
                 commandConsumerFactory.registerInternalCommandConsumer(
                         (id, handlers) -> new KafkaBasedInternalCommandConsumer(vertx(), kafkaAdminClientConfig,
