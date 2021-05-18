@@ -17,6 +17,10 @@ description = "Information about changes in recent Hono releases. Includes new f
   separately for both the endpoints exposed by the components as well as the clients used for accessing service
   endpoints exposed by other components. Please refer to the corresponding admin guides for details regarding the
   corresponding configuration variables.
+* Hono now supports *auto-provisioning* of gateways. For more information please refer to the
+  [Gateway Provisioning]({{% doclink "/concepts/device-provisioning/#automatic-gateway-provisioning" %}})
+  concept and to the [Device Registry Management API]({{% doclink "/api/management#/tenants/createTenant" %}})
+  on how to configure a tenant's trusted CA authority for that.
 
 ### Fixes & Enhancements
 

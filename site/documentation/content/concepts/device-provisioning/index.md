@@ -82,8 +82,20 @@ The following query of the Device Registration API returns the previously genera
 
 The provisioning is, of course, a one-time action, on subsequent connections the APIs simply return the stored records.
 
-#### Gateway based Auto-Provisioning
+## Automatic Gateway Provisioning
 
+Auto-provisioning of gateways involves the same steps as 
+[Automatic Device Provisioning]({{< ref "/concepts/device-provisioning#automatic-devicegateway-provisioning" >}}).
+An extra attribute namely *auto-provision-as-gateway* is needed in the tenant's trusted CA configuration to enable
+auto-provisioning of gateways. If this attribute is set to `true` then the device registry provisions any unregistered 
+devices that authenticate with a client certificate issued by this tenant's trusted CA as gateways, provided that the 
+attribute *auto-provisioning-enabled* is also set to `true`. Refer to the 
+[Device Registry Management API]({{< ref "/api/management#tenants/createTenant" >}})
+for more details on the tenant's trusted CA configuration.
+
+## Gateway based Auto-Provisioning
+
+It refers to auto-provisioning of edge devices that are connected via gateways.
 Enabling gateway based auto-provisioning requires configuration of the gateway device:
 
 ##### Step 1: Configure the Gateway Device
