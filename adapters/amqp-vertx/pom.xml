@@ -18,7 +18,7 @@
     <groupId>org.eclipse.hono</groupId>
     <artifactId>hono-adapters-spring</artifactId>
     <relativePath>../base-spring</relativePath>
-    <version>1.7.3-SNAPSHOT</version>
+    <version>1.7.3</version>
   </parent>
   <artifactId>hono-adapter-amqp-vertx</artifactId>
   <name>Hono AMQP Adapter</name>
