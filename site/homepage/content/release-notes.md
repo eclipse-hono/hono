@@ -4,6 +4,13 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
+## 1.7.3
+
+### Fixes & Enhancements
+
+* The Hono component container images now contain the *Gson* library which is required by the Jaeger client for
+  processing sampling strategy configuration retrieved from the Jaeger Collector.
+
 ## 1.7.2
 
 ### Fixes & Enhancements

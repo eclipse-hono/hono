@@ -84,6 +84,16 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=com/google/guava/guava/${guava.version}/guava-${guava.version}-sources.jar).
 
+### Google Gson ${gson.version}
+
+This product includes software developed by the [Gson project](https://github.com/google/gson).
+
+Your use of *Gson* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/google/gson/tree/gson-parent-${guava.version}).
+
 ### c3p0 ${c3p0.version}
 
 This product includes software developed by the [c3p0 project](https://www.mchange.com/projects/c3p0/).
