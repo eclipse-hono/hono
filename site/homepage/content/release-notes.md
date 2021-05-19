@@ -28,14 +28,35 @@ description = "Information about changes in recent Hono releases. Includes new f
   cipher suite that is used in a device's attempt to establish a TLS based connection to an adapter.
 * The Quarkus based Command Router native image failed to start an embedded cache that was configured to persist data
   to the local file system. This has been fixed.
+* The delivery of a command message sent to an AMQP device potentially didn't get settled if the connection to the
+  AMQP device got disconnected. This has been fixed.
 * The Prometheus based resource limit checks' performance has been improved. This should result in considerably less
   load on the Prometheus server when failing over all of a crashed/stopped adapter instance's device connections.
+* The Hono component container images now contain the *Gson* library which is required by the Jaeger client for
+  processing sampling strategy configuration retrieved from the Jaeger Collector.
+
 
 ### Deprecations
 
 * The `org.eclipse.hono.client.ApplicationClientFactory`, `org.eclipse.hono.client.AsyncCommandClient` and
   `org.eclipse.hono.client.CommandClient` classes have been deprecated. Client code should use
   `org.eclipse.hono.application.client.ApplicationClient` instead.
+
+## 1.7.3
+
+### Fixes & Enhancements
+
+* The Hono component container images now contain the *Gson* library which is required by the Jaeger client for
+  processing sampling strategy configuration retrieved from the Jaeger Collector.
+
+## 1.7.2
+
+### Fixes & Enhancements
+
+* The Quarkus based Command Router native image failed to start an embedded cache that was configured to persist data
+  to the local file system. This has been fixed.
+* The delivery of a command message sent to an AMQP device potentially didn't get settled if the connection to the
+  AMQP device got disconnected. This has been fixed.
 
 ## 1.7.1
 
