@@ -86,6 +86,12 @@
 	display: none;
 }
 
+/* let text after try-out button stay in same line */
+.swagger-ui .try-out {
+  padding-right: 7px;
+  display: inline-block;
+}
+
 .swagger-ui table, .swagger-ui thead, .swagger-ui td {
 	border: none;
 }
