@@ -23,12 +23,12 @@ import java.util.stream.Collectors;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
-import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceStatus;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
@@ -63,19 +63,19 @@ public abstract class AbstractRegistrationService implements RegistrationService
 
     protected TenantInformationService tenantInformationService = new NoopTenantInformationService();
 
-    private AutoProvisioner autoProvisioner;
+    private EdgeDeviceAutoProvisioner edgeDeviceAutoProvisioner;
 
     @Override
     public final Future<Void> start() {
         return startInternal()
-            .compose(ok -> supportsAutoProvisioning() ? autoProvisioner.start() : Future.succeededFuture())
+            .compose(ok -> supportsEdgeDeviceAutoProvisioning() ? edgeDeviceAutoProvisioner.start() : Future.succeededFuture())
             .mapEmpty();
     }
 
     @Override
     public final Future<Void> stop() {
         return stopInternal()
-            .compose(ok -> supportsAutoProvisioning() ? autoProvisioner.stop() : Future.succeededFuture())
+            .compose(ok -> supportsEdgeDeviceAutoProvisioning() ? edgeDeviceAutoProvisioner.stop() : Future.succeededFuture())
             .mapEmpty();
     }
 
@@ -113,18 +113,18 @@ public abstract class AbstractRegistrationService implements RegistrationService
     }
 
     /**
-     * Sets the AutoProvisioner to use.
+     * Sets an instance of the edge device auto-provisioner.
      * <p>
-     * If set, gateway based auto-provisioning will be performed. Defaults to {@code null} meaning auto-provisioning
-     * is disabled.
+     * If set, edge device auto-provisioning will be performed. Defaults to {@code null} meaning edge device 
+     * auto-provisioning is disabled.
      *
-     * @param autoProvisioner The AutoProvisioner.
+     * @param edgeDeviceAutoProvisioner An instance of the edge device auto-provisioner.
      * @throws NullPointerException if parameter is {@code null};
      */
     @Autowired(required = false)
-    public void setAutoProvisioner(final AutoProvisioner autoProvisioner) {
-        Objects.requireNonNull(autoProvisioner);
-        this.autoProvisioner = autoProvisioner;
+    public void setEdgeDeviceAutoProvisioner(final EdgeDeviceAutoProvisioner edgeDeviceAutoProvisioner) {
+        Objects.requireNonNull(edgeDeviceAutoProvisioner);
+        this.edgeDeviceAutoProvisioner = edgeDeviceAutoProvisioner;
     }
 
     /**
@@ -263,17 +263,10 @@ public abstract class AbstractRegistrationService implements RegistrationService
         Objects.requireNonNull(gatewayId);
         Objects.requireNonNull(span);
 
-        return this.tenantInformationService.tenantExists(tenantId, span)
-                .compose(result -> {
-
-                    if (result.isError()) {
-                        return Future.succeededFuture(RegistrationResult.from(result.getStatus()));
-                    }
-
-                    final TenantKey tenantKey = result.getPayload();
-
-                    final Future<RegistrationResult> deviceInfoTracker = getRegistrationInformation(DeviceKey.from(tenantKey, deviceId), span);
-                    final Future<RegistrationResult> gatewayInfoTracker = getRegistrationInformation(DeviceKey.from(tenantKey, gatewayId), span);
+        return this.tenantInformationService.getTenant(tenantId, span)
+                .compose(tenant -> {
+                    final Future<RegistrationResult> deviceInfoTracker = getRegistrationInformation(DeviceKey.from(tenantId, deviceId), span);
+                    final Future<RegistrationResult> gatewayInfoTracker = getRegistrationInformation(DeviceKey.from(tenantId, gatewayId), span);
 
                     return CompositeFuture
                             .all(deviceInfoTracker, gatewayInfoTracker)
@@ -285,7 +278,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
                                 if (deviceResult.isNotFound() && !gatewayResult.isNotFound()
                                         && isDeviceEnabled(gatewayResult)
                                         && hasAuthorityForAutoRegistration(gatewayResult)
-                                        && supportsAutoProvisioning()) {
+                                        && supportsEdgeDeviceAutoProvisioning()) {
 
                                     final Device device = new Device()
                                             .setEnabled(true)
@@ -301,14 +294,14 @@ public abstract class AbstractRegistrationService implements RegistrationService
                                         .collect(Collectors.toList())));
 
                                     LOG.debug("auto-provisioning device {} for gateway {}", deviceId, gatewayId);
-                                    return autoProvisioner.performAutoProvisioning(tenantId, deviceId, gatewayId, device, span.context())
+                                    return edgeDeviceAutoProvisioner.performAutoProvisioning(tenantId, tenant, deviceId, 
+                                            gatewayId, device, span.context())
                                             .compose(newDevice -> {
                                                 final JsonObject deviceData = JsonObject.mapFrom(newDevice);
-                                                return createSuccessfulRegistrationResult(tenantId, deviceId, deviceData, span);
+                                                return createSuccessfulRegistrationResult(tenantId, deviceId,
+                                                        deviceData, span);
                                             })
-                                            .recover(throwable -> Future.succeededFuture(
-                                                RegistrationResult.from(ServiceInvocationException.extractStatusCode(throwable)))
-                                            );
+                                            .recover(this::convertToRegistrationResult);
                                 } else if (!isDeviceEnabled(deviceResult)) {
                                     if (deviceResult.isNotFound()) {
                                         LOG.debug("no such device");
@@ -340,10 +333,13 @@ public abstract class AbstractRegistrationService implements RegistrationService
                                     }
 
                                     if (isGatewayAuthorized(gatewayId, gatewayData, deviceId, deviceData)) {
-                                        if (supportsAutoProvisioning()) {
+                                        if (supportsEdgeDeviceAutoProvisioning()) {
                                             final Device device = deviceData.mapTo(Device.class);
-                                            return autoProvisioner.sendDelayedAutoProvisioningNotificationIfNeeded(tenantId, deviceId, gatewayId, device, span)
-                                                    .compose(v -> createSuccessfulRegistrationResult(tenantId, deviceId, deviceData, span));
+                                            return edgeDeviceAutoProvisioner
+                                                    .sendDelayedAutoProvisioningNotificationIfNeeded(tenantId, tenant,
+                                                            deviceId, gatewayId, device, span)
+                                                    .compose(v -> createSuccessfulRegistrationResult(tenantId, deviceId,
+                                                            deviceData, span));
                                         } else {
                                             return createSuccessfulRegistrationResult(tenantId, deviceId, deviceData, span);
                                         }
@@ -354,11 +350,12 @@ public abstract class AbstractRegistrationService implements RegistrationService
                                     }
                                 }
                             });
-                });
+                })
+                .recover(this::convertToRegistrationResult);
     }
 
-    private boolean supportsAutoProvisioning() {
-        return autoProvisioner != null;
+    private boolean supportsEdgeDeviceAutoProvisioning() {
+        return edgeDeviceAutoProvisioner != null;
     }
 
     /**
@@ -607,5 +604,11 @@ public abstract class AbstractRegistrationService implements RegistrationService
             });
         }
         return resultFuture;
+    }
+
+    private Future<RegistrationResult> convertToRegistrationResult(final Throwable error) {
+        LOG.debug("error occurred during device registration", error);
+        return Future.succeededFuture(RegistrationResult.from(ServiceInvocationException.extractStatusCode(error),
+                new JsonObject().put(Constants.JSON_FIELD_DESCRIPTION, error.getMessage())));
     }
 }

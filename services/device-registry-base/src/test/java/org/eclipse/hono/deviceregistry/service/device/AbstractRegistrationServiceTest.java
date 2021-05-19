@@ -37,6 +37,7 @@ import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.device.Device;
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -74,7 +75,7 @@ public class AbstractRegistrationServiceTest {
     private Span span;
     private AbstractRegistrationService service;
     private TenantInformationService tenantInformationService;
-    private AutoProvisioner autoProvisioner;
+    private EdgeDeviceAutoProvisioner edgeDeviceAutoProvisioner;
 
     /**
      * Sets up the fixture.
@@ -88,14 +89,16 @@ public class AbstractRegistrationServiceTest {
                 TenantKey.from(invocation.getArgument(0), "tenant-name"),
                 Optional.empty(),
                 Optional.empty())));
+        when(tenantInformationService.getTenant(anyString(), any(Span.class)))
+                .thenAnswer(invocation -> Future.succeededFuture(new Tenant()));
 
         span = TracingMockSupport.mockSpan();
 
         service = spy(AbstractRegistrationService.class);
         service.setTenantInformationService(tenantInformationService);
 
-        autoProvisioner = mock(AutoProvisioner.class);
-        service.setAutoProvisioner(autoProvisioner);
+        edgeDeviceAutoProvisioner = mock(EdgeDeviceAutoProvisioner.class);
+        service.setEdgeDeviceAutoProvisioner(edgeDeviceAutoProvisioner);
     }
 
     /**
@@ -141,7 +144,8 @@ public class AbstractRegistrationServiceTest {
         mockAssertRegistration(GATEWAY_ID, Collections.singletonList(GATEWAY_GROUP_ID), Collections.singletonList(RegistryManagementConstants.AUTHORITY_AUTO_PROVISIONING_ENABLED));
         mockAssertRegistration(DEVICE_ID);
 
-        when(autoProvisioner.performAutoProvisioning(any(), any(), any(), any(), any())).thenReturn(Future.succeededFuture(new Device()));
+        when(edgeDeviceAutoProvisioner.performAutoProvisioning(any(), any(), any(), any(), any(), any()))
+                .thenReturn(Future.succeededFuture(new Device()));
 
         service.assertRegistration(Constants.DEFAULT_TENANT, DEVICE_ID, GATEWAY_ID, span)
                 .onComplete(ctx.succeeding(result -> {
@@ -149,7 +153,8 @@ public class AbstractRegistrationServiceTest {
                         assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
 
                         final ArgumentCaptor<Device> registeredDeviceArgumentCaptor = ArgumentCaptor.forClass(Device.class);
-                        verify(autoProvisioner).performAutoProvisioning(eq(Constants.DEFAULT_TENANT), eq(DEVICE_ID), eq(GATEWAY_ID), registeredDeviceArgumentCaptor.capture(), any());
+                        verify(edgeDeviceAutoProvisioner).performAutoProvisioning(eq(Constants.DEFAULT_TENANT), any(),
+                                eq(DEVICE_ID), eq(GATEWAY_ID), registeredDeviceArgumentCaptor.capture(), any());
 
                         final Device registeredDevice = registeredDeviceArgumentCaptor.getValue();
                         assertThat(registeredDevice.getStatus().isAutoProvisioned()).isTrue();
@@ -173,7 +178,7 @@ public class AbstractRegistrationServiceTest {
         service.assertRegistration(Constants.DEFAULT_TENANT, AbstractRegistrationServiceTest.DEVICE_ID, AbstractRegistrationServiceTest.GATEWAY_ID, span)
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
-                        verifyNoInteractions(autoProvisioner);
+                        verifyNoInteractions(edgeDeviceAutoProvisioner);
                         assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
                     });
                     ctx.completeNow();
@@ -190,8 +195,8 @@ public class AbstractRegistrationServiceTest {
         mockAssertRegistration(GATEWAY_ID, Collections.singletonList(GATEWAY_GROUP_ID), Collections.singletonList(RegistryManagementConstants.AUTHORITY_AUTO_PROVISIONING_ENABLED));
         mockAssertRegistration(DEVICE_ID);
 
-        when(autoProvisioner.performAutoProvisioning(any(), any(), any(), any(), any())).thenReturn(Future.failedFuture(
-                StatusCodeMapper.from(HttpURLConnection.HTTP_FORBIDDEN, "foobar")));
+        when(edgeDeviceAutoProvisioner.performAutoProvisioning(any(), any(), any(), any(), any(), any()))
+                .thenReturn(Future.failedFuture(StatusCodeMapper.from(HttpURLConnection.HTTP_FORBIDDEN, "foobar")));
 
         service.assertRegistration(Constants.DEFAULT_TENANT, AbstractRegistrationServiceTest.DEVICE_ID, AbstractRegistrationServiceTest.GATEWAY_ID, span)
                 .onComplete(ctx.succeeding(result -> {
@@ -215,14 +220,18 @@ public class AbstractRegistrationServiceTest {
         when(service.getRegistrationInformation(eq(DeviceKey.from(TenantKey.from(Constants.DEFAULT_TENANT), DEVICE_ID)), any(Span.class)))
                 .thenReturn(Future.succeededFuture(newRegistrationResult()));
 
-        when(autoProvisioner.sendDelayedAutoProvisioningNotificationIfNeeded(any(), any(), any(), any(), any())).thenReturn(Future.succeededFuture());
+        when(edgeDeviceAutoProvisioner
+                .sendDelayedAutoProvisioningNotificationIfNeeded(any(), any(), any(), any(), any(), any()))
+                .thenReturn(Future.succeededFuture());
 
         service.assertRegistration(Constants.DEFAULT_TENANT, DEVICE_ID, GATEWAY_ID, span)
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
                         assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
-                        verify(autoProvisioner, never()).performAutoProvisioning(any(), any(), any(), any(), any());
-                        verify(autoProvisioner).sendDelayedAutoProvisioningNotificationIfNeeded(eq(Constants.DEFAULT_TENANT), eq(DEVICE_ID), eq(GATEWAY_ID), any(), any());
+                        verify(edgeDeviceAutoProvisioner, never()).performAutoProvisioning(any(), any(), any(), any(), any(),
+                                any());
+                        verify(edgeDeviceAutoProvisioner).sendDelayedAutoProvisioningNotificationIfNeeded(
+                                eq(Constants.DEFAULT_TENANT), any(), eq(DEVICE_ID), eq(GATEWAY_ID), any(), any());
                     });
                     ctx.completeNow();
                 }));

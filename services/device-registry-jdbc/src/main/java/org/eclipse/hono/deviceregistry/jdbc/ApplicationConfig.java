@@ -43,8 +43,8 @@ import org.eclipse.hono.deviceregistry.jdbc.impl.TenantManagementServiceImpl;
 import org.eclipse.hono.deviceregistry.jdbc.impl.TenantServiceImpl;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryAmqpServer;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
-import org.eclipse.hono.deviceregistry.service.device.AutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
+import org.eclipse.hono.deviceregistry.service.device.EdgeDeviceAutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.tenant.DefaultTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.util.ServiceClientAdapter;
@@ -437,15 +437,14 @@ public class ApplicationConfig {
     public RegistrationService registrationService(final SchemaCreator schemaCreator) throws IOException {
 
         final RegistrationServiceImpl registrationService = new RegistrationServiceImpl(devicesAdapterStore(), schemaCreator);
-        final AutoProvisioner autoProvisioner = new AutoProvisioner();
+        final EdgeDeviceAutoProvisioner edgeDeviceAutoProvisioner = new EdgeDeviceAutoProvisioner(
+                vertx(),
+                registrationManagementService(),
+                eventSenders(),
+                autoProvisionerConfigProperties(),
+                tracer());
 
-        autoProvisioner.setDeviceManagementService(registrationManagementService());
-        autoProvisioner.setVertx(vertx());
-        autoProvisioner.setTracer(tracer());
-        autoProvisioner.setEventSenders(eventSenders());
-        autoProvisioner.setConfig(autoProvisionerConfigProperties());
-        autoProvisioner.setTenantInformationService(tenantInformationService());
-        registrationService.setAutoProvisioner(autoProvisioner);
+        registrationService.setEdgeDeviceAutoProvisioner(edgeDeviceAutoProvisioner);
 
         return registrationService;
     }

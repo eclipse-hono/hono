@@ -36,7 +36,7 @@ public final class DeviceKey {
      * @param tenantId The id of the tenant.
      * @param deviceId The id of the device.
      */
-    public DeviceKey(final String tenantId, final String deviceId) {
+    private DeviceKey(final String tenantId, final String deviceId) {
         this.tenantId = tenantId;
         this.deviceId = deviceId;
     }
@@ -72,6 +72,21 @@ public final class DeviceKey {
         Objects.requireNonNull(deviceId);
 
         return new DeviceKey(tenantKey.getTenantId(), deviceId);
+    }
+
+    /**
+     * Creates a device key from tenant and device identifiers.
+     *
+     * @param tenantId The tenant identifier.
+     * @param deviceId The device identifier.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @return The device key.
+     */
+    public static DeviceKey from(final String tenantId, final String deviceId) {
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+
+        return new DeviceKey(tenantId, deviceId);
     }
 
     @Override
