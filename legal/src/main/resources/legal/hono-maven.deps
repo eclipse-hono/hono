@@ -107,7 +107,7 @@ io.vertx:vertx-micrometer-metrics:jar:3.9.7
 io.vertx:vertx-mongo-client:jar:3.9.7
 io.vertx:vertx-mqtt:jar:3.9.7
 io.vertx:vertx-proton:jar:3.9.7
-io.vertx:vertx-sql-common:jar:3.9.5
+io.vertx:vertx-sql-common:jar:3.9.7
 io.vertx:vertx-web-client:jar:3.9.7
 io.vertx:vertx-web-common:jar:3.9.7
 io.vertx:vertx-web:jar:3.9.7

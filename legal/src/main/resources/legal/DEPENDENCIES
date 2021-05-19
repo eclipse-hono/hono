@@ -107,7 +107,7 @@ maven/mavencentral/io.vertx/vertx-micrometer-metrics/3.9.7, , approved, eclipse
 maven/mavencentral/io.vertx/vertx-mongo-client/3.9.7, , approved, eclipse
 maven/mavencentral/io.vertx/vertx-mqtt/3.9.7, , approved, eclipse
 maven/mavencentral/io.vertx/vertx-proton/3.9.7, , approved, eclipse
-maven/mavencentral/io.vertx/vertx-sql-common/3.9.5, , approved, eclipse
+maven/mavencentral/io.vertx/vertx-sql-common/3.9.7, , approved, eclipse
 maven/mavencentral/io.vertx/vertx-web/3.9.7, , approved, eclipse
 maven/mavencentral/io.vertx/vertx-web-client/3.9.7, , approved, eclipse
 maven/mavencentral/io.vertx/vertx-web-common/3.9.7, , approved, eclipse
