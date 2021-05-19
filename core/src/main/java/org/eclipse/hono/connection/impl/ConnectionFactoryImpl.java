@@ -404,6 +404,12 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
                 protocols.add(p);
             });
             clientOptions.setEnabledSecureTransportProtocols(protocols);
+
+            config.getSupportedCipherSuites()
+                .forEach(suiteName -> {
+                    logger.debug("adding supported cipher suite [{}]", suiteName);
+                    clientOptions.addEnabledCipherSuite(suiteName);
+                });
         }
     }
 

@@ -13,6 +13,10 @@ description = "Information about changes in recent Hono releases. Includes new f
   device registration and tenant data. This is especially useful for experimental setups where an embedded database,
   such [as H2 provides](http://www.h2database.com/html/features.html#embedded_databases), is sufficient. To enable
   automatic schema creation, activate the application profile `create-schema`.
+* Hono's components now support configuration of supported TLS cipher suites. The cipher suites can be configured
+  separately for both the endpoints exposed by the components as well as the clients used for accessing service
+  endpoints exposed by other components. Please refer to the corresponding admin guides for details regarding the
+  corresponding configuration variables.
 
 ### Fixes & Enhancements
 

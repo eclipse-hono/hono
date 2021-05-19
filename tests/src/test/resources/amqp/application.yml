@@ -16,6 +16,11 @@ hono:
     certPath: /etc/hono/certs/amqp-adapter-cert.pem
     maxConnections: 10
     sendMessageToDeviceTimeout: ${adapter.sendMessageToDeviceTimeout}
+    supportedCipherSuites:
+    # one TLS 1.3 cipher suite
+    - "TLS_AES_128_GCM_SHA256"
+    # and one TLS 1.2 cipher suite
+    - "TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA384"
   messaging:
     name: 'Hono AMQP Adapter'
     host: ${hono.amqp-network.host}
@@ -54,6 +59,9 @@ hono:
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
+    supportedCipherSuites:
+    - "TLS_AES_128_GCM_SHA256"
+    - "TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA384"
   ${hono.command-related-service.configname}:
     name: 'Hono AMQP Adapter'
     host: ${hono.command-related-service.host}

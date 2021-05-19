@@ -206,18 +206,24 @@ public abstract class AmqpAdapterTestBase {
      * @return A succeeded future containing the established connection.
      */
     protected Future<ProtonConnection> connectToAdapter(final String username, final String password) {
-        return connectToAdapter("TLSv1.2", username, password);
+        return connectToAdapter("TLSv1.2", null, username, password);
     }
 
     /**
      * Connects to the AMQP protocol adapter using a username and password.
      *
      * @param tlsVersion The TLS protocol version to use for connecting to the adapter.
+     * @param cipherSuite The TLS cipher suite to use for connecting to the adapter or {@code null} if the
+     *                    cipher suite should not be restricted.
      * @param username The username to use for authentication.
      * @param password The password to use for authentication.
      * @return A succeeded future containing the established connection.
      */
-    protected Future<ProtonConnection> connectToAdapter(final String tlsVersion, final String username, final String password) {
+    protected Future<ProtonConnection> connectToAdapter(
+            final String tlsVersion,
+            final String cipherSuite,
+            final String username,
+            final String password) {
 
         final Promise<ProtonConnection> result = Promise.promise();
         final ProtonClient client = ProtonClient.create(vertx);
@@ -225,6 +231,7 @@ public abstract class AmqpAdapterTestBase {
         final ProtonClientOptions options = new ProtonClientOptions(defaultOptions);
         options.addEnabledSaslMechanism(ProtonSaslPlainImpl.MECH_NAME);
         options.setEnabledSecureTransportProtocols(Set.of(tlsVersion));
+        Optional.ofNullable(cipherSuite).ifPresent(options::addEnabledCipherSuite);
         client.connect(
                 options,
                 IntegrationTestSupport.AMQP_HOST,

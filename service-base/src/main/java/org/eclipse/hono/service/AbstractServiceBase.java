@@ -437,6 +437,12 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
             });
             serverOptions.setEnabledSecureTransportProtocols(protocols);
 
+            getConfig().getSupportedCipherSuites()
+                .forEach(suiteName -> {
+                    log.info("adding supported cipher suite [{}]", suiteName);
+                    serverOptions.addEnabledCipherSuite(suiteName);
+                });
+
             serverOptions.setSni(getConfig().isSni());
             log.info("Service supports TLS ServerNameIndication: {}", getConfig().isSni());
         }
