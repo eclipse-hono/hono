@@ -37,9 +37,8 @@ import java.util.UUID;
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.deviceregistry.DeviceRegistryTestUtils;
-import org.eclipse.hono.deviceregistry.service.device.AutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
-import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
+import org.eclipse.hono.deviceregistry.service.device.EdgeDeviceAutoProvisioner;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
@@ -56,6 +55,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 import io.opentracing.noop.NoopSpan;
+import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -94,17 +94,16 @@ public class FileBasedRegistrationServiceTest implements AbstractRegistrationSer
         registrationService = new FileBasedRegistrationService(vertx);
         registrationService.setConfig(registrationConfig);
 
-        final AutoProvisioner autoProvisioner = new AutoProvisioner();
-        autoProvisioner.setVertx(vertx);
-        autoProvisioner.setTenantInformationService(mock(TenantInformationService.class));
-        autoProvisioner.setDeviceManagementService(registrationService);
-        autoProvisioner.setConfig(new AutoProvisionerConfigProperties());
-
         final MessagingClient<EventSender> messagingClients = mockEventSenders();
 
-        autoProvisioner.setEventSenders(messagingClients);
+        final EdgeDeviceAutoProvisioner edgeDeviceAutoProvisioner = new EdgeDeviceAutoProvisioner(
+                vertx,
+                registrationService,
+                messagingClients,
+                new AutoProvisionerConfigProperties(),
+                NoopTracerFactory.create());
 
-        registrationService.setAutoProvisioner(autoProvisioner);
+        registrationService.setEdgeDeviceAutoProvisioner(edgeDeviceAutoProvisioner);
     }
 
     private MessagingClient<EventSender> mockEventSenders() {

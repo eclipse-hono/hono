@@ -12,14 +12,20 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.mongodb.service;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.hono.adapter.client.telemetry.EventSender;
+import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
-import org.eclipse.hono.deviceregistry.service.device.AutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
+import org.eclipse.hono.deviceregistry.service.device.EdgeDeviceAutoProvisioner;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.registration.AbstractRegistrationServiceTest;
 import org.eclipse.hono.service.registration.RegistrationService;
+import org.eclipse.hono.util.MessagingType;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -30,6 +36,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.noop.NoopTracerFactory;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
@@ -68,11 +76,14 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
                 mongoClient,
                 config);
 
-        final AutoProvisioner autoProvisioner = new AutoProvisioner();
-        autoProvisioner.setConfig(new AutoProvisionerConfigProperties());
-        autoProvisioner.setDeviceManagementService(registrationService);
+        final EdgeDeviceAutoProvisioner edgeDeviceAutoProvisioner = new EdgeDeviceAutoProvisioner(
+                vertx,
+                registrationService,
+                mockEventSenders(),
+                new AutoProvisionerConfigProperties(),
+                NoopTracerFactory.create());
 
-        registrationService.setAutoProvisioner(autoProvisioner);
+        registrationService.setEdgeDeviceAutoProvisioner(edgeDeviceAutoProvisioner);
 
         registrationService.createIndices().onComplete(testContext.completing());
     }
@@ -123,4 +134,11 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
         return this.registrationService;
     }
 
+    private MessagingClient<EventSender> mockEventSenders() {
+        final EventSender eventSender = mock(EventSender.class);
+        when(eventSender.start()).thenReturn(Future.succeededFuture());
+        when(eventSender.stop()).thenReturn(Future.succeededFuture());
+
+        return new MessagingClient<EventSender>().setClient(MessagingType.amqp, eventSender);
+    }
 }

@@ -27,8 +27,8 @@ import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
-import org.eclipse.hono.deviceregistry.service.device.AutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
+import org.eclipse.hono.deviceregistry.service.device.EdgeDeviceAutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.deviceconnection.MapBasedDeviceConnectionsConfigProperties;
 import org.eclipse.hono.deviceregistry.service.tenant.DefaultTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
@@ -249,15 +249,14 @@ public class FileBasedServiceConfig {
 
         final var tenantInformationService = tenantInformationService();
 
-        final AutoProvisioner autoProvisioner = new AutoProvisioner();
-        autoProvisioner.setDeviceManagementService(registrationService);
-        autoProvisioner.setVertx(vertx);
-        autoProvisioner.setTracer(tracer);
-        autoProvisioner.setTenantInformationService(tenantInformationService);
-        autoProvisioner.setEventSenders(eventSenders());
-        autoProvisioner.setConfig(autoProvisionerConfigProperties());
+        final EdgeDeviceAutoProvisioner edgeDeviceAutoProvisioner = new EdgeDeviceAutoProvisioner(
+                vertx,
+                registrationService,
+                eventSenders(),
+                autoProvisionerConfigProperties(),
+                tracer);
 
-        registrationService.setAutoProvisioner(autoProvisioner);
+        registrationService.setEdgeDeviceAutoProvisioner(edgeDeviceAutoProvisioner);
 
         final FileBasedCredentialsService credentialsService = new FileBasedCredentialsService(
                 vertx,

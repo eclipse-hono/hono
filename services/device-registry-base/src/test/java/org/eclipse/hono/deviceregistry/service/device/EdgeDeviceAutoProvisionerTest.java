@@ -33,7 +33,6 @@ import java.util.Optional;
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.util.MessagingClient;
-import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.device.Device;
@@ -56,13 +55,17 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.stubbing.Answer;
 
 import io.opentracing.Span;
+import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
+/**
+ * Tests verifying behavior of {@link EdgeDeviceAutoProvisioner}.
+ */
 @ExtendWith(VertxExtension.class)
-class AutoProvisionerTest {
+class EdgeDeviceAutoProvisionerTest {
 
     private static final String GATEWAY_ID = "barfoo4711";
     private static final String GATEWAY_GROUP_ID = "barfoospam4711";
@@ -72,10 +75,9 @@ class AutoProvisionerTest {
     private Span span;
     private Vertx vertx;
     private DeviceManagementService deviceManagementService;
-    private TenantInformationService tenantInformationService;
     private EventSender sender;
 
-    private AutoProvisioner autoProvisioner;
+    private EdgeDeviceAutoProvisioner autoProvisioner;
 
     /**
      * Sets up the fixture.
@@ -83,21 +85,11 @@ class AutoProvisionerTest {
     @SuppressWarnings("unchecked")
     @BeforeEach
     public void setUp() {
-        tenantInformationService = mock(TenantInformationService.class);
-        when(tenantInformationService.getTenant(anyString(), any(Span.class)))
-                .thenAnswer(invocation -> Future.succeededFuture(new Tenant()));
-
         span = TracingMockSupport.mockSpan();
         vertx = mock(Vertx.class);
         VertxMockSupport.runTimersImmediately(vertx);
 
         deviceManagementService = mock(DeviceManagementService.class);
-
-        autoProvisioner = new AutoProvisioner();
-        autoProvisioner.setTenantInformationService(tenantInformationService);
-        autoProvisioner.setDeviceManagementService(deviceManagementService);
-        autoProvisioner.setVertx(vertx);
-        autoProvisioner.setConfig(new AutoProvisionerConfigProperties());
 
         sender = mock(EventSender.class);
         when(sender.sendEvent(
@@ -109,11 +101,16 @@ class AutoProvisionerTest {
                 any()))
             .thenReturn(Future.succeededFuture());
 
-        autoProvisioner.setEventSenders(new MessagingClient<EventSender>().setClient(MessagingType.amqp, sender));
+        autoProvisioner = new EdgeDeviceAutoProvisioner(
+                vertx,
+                deviceManagementService,
+                new MessagingClient<EventSender>().setClient(MessagingType.amqp, sender),
+                new AutoProvisionerConfigProperties(),
+                NoopTracerFactory.create());
 
         when(deviceManagementService
                 .updateDevice(eq(Constants.DEFAULT_TENANT), eq(DEVICE_ID), any(Device.class), any(), any()))
-                .thenReturn(Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_OK)));
+                .thenReturn(Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_NO_CONTENT)));
     }
 
 
@@ -129,7 +126,9 @@ class AutoProvisionerTest {
         mockAssertRegistration(DEVICE_ID, true);
         mockAddEdgeDevice(HttpURLConnection.HTTP_CREATED);
 
-        autoProvisioner.performAutoProvisioning(Constants.DEFAULT_TENANT, DEVICE_ID, GATEWAY_ID, NEW_EDGE_DEVICE, span.context())
+        autoProvisioner
+                .performAutoProvisioning(Constants.DEFAULT_TENANT, new Tenant(), DEVICE_ID, GATEWAY_ID, NEW_EDGE_DEVICE,
+                        span.context())
                 .onComplete(ctx.succeeding(device -> {
                     ctx.verify(() -> verifySuccessfulAutoProvisioning());
                     ctx.completeNow();
@@ -148,7 +147,9 @@ class AutoProvisionerTest {
         mockAssertRegistration(DEVICE_ID, true);
         mockAddEdgeDevice(HttpURLConnection.HTTP_CONFLICT);
 
-        autoProvisioner.performAutoProvisioning(Constants.DEFAULT_TENANT, DEVICE_ID, GATEWAY_ID, NEW_EDGE_DEVICE, span.context())
+        autoProvisioner
+                .performAutoProvisioning(Constants.DEFAULT_TENANT, new Tenant(), DEVICE_ID, GATEWAY_ID, NEW_EDGE_DEVICE,
+                        span.context())
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
                         verify(deviceManagementService).createDevice(eq(Constants.DEFAULT_TENANT), eq(Optional.of(DEVICE_ID)), any(Device.class), any(Span.class));
@@ -171,7 +172,9 @@ class AutoProvisionerTest {
         mockAssertRegistration(DEVICE_ID, false);
         mockAddEdgeDevice(HttpURLConnection.HTTP_CONFLICT);
 
-        autoProvisioner.performAutoProvisioning(Constants.DEFAULT_TENANT, DEVICE_ID, "another-" + GATEWAY_ID, NEW_EDGE_DEVICE, span.context())
+        autoProvisioner
+                .performAutoProvisioning(Constants.DEFAULT_TENANT, new Tenant(), DEVICE_ID, "another-" + GATEWAY_ID,
+                        NEW_EDGE_DEVICE, span.context())
                 .onComplete(ctx.failing(throwable -> {
                     ctx.verify(() -> {
                         assertThat(throwable).isInstanceOf(ServiceInvocationException.class);
@@ -202,7 +205,9 @@ class AutoProvisionerTest {
                 .updateDevice(eq(Constants.DEFAULT_TENANT), eq(DEVICE_ID), any(Device.class), any(), any()))
                 .thenReturn(Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_INTERNAL_ERROR)));
 
-        autoProvisioner.performAutoProvisioning(Constants.DEFAULT_TENANT, DEVICE_ID, GATEWAY_ID, NEW_EDGE_DEVICE, span.context())
+        autoProvisioner
+                .performAutoProvisioning(Constants.DEFAULT_TENANT, new Tenant(), DEVICE_ID, GATEWAY_ID, NEW_EDGE_DEVICE,
+                        span.context())
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> verifySuccessfulAutoProvisioning());
                     ctx.completeNow();
@@ -222,7 +227,9 @@ class AutoProvisionerTest {
         mockAssertRegistration(DEVICE_ID, false);
         mockAddEdgeDevice(HttpURLConnection.HTTP_CONFLICT);
 
-        autoProvisioner.performAutoProvisioning(Constants.DEFAULT_TENANT, DEVICE_ID, GATEWAY_ID, new Device(), span.context())
+        autoProvisioner
+                .performAutoProvisioning(Constants.DEFAULT_TENANT, new Tenant(), DEVICE_ID, GATEWAY_ID, new Device(),
+                        span.context())
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
                         verify(deviceManagementService).createDevice(
@@ -244,13 +251,13 @@ class AutoProvisionerTest {
 
                         verify(deviceManagementService).updateDevice(
                                 eq(Constants.DEFAULT_TENANT),
-                                eq(AutoProvisionerTest.DEVICE_ID),
+                                eq(EdgeDeviceAutoProvisionerTest.DEVICE_ID),
                                 argThat(device -> device.getStatus().isAutoProvisioningNotificationSent()),
                                 any(Optional.class),
                                 any(Span.class));
 
                         final Map<String, Object> applicationProperties = messageArgumentCaptor.getValue();
-                        verifyApplicationProperties(AutoProvisionerTest.GATEWAY_ID, AutoProvisionerTest.DEVICE_ID, applicationProperties);
+                        verifyApplicationProperties(EdgeDeviceAutoProvisionerTest.GATEWAY_ID, EdgeDeviceAutoProvisionerTest.DEVICE_ID, applicationProperties);
 
                     });
                     ctx.completeNow();
@@ -276,7 +283,7 @@ class AutoProvisionerTest {
 
     private OperationResult<Device> newRegistrationResult(final boolean autoProvisioningNotificationSent) {
         final Device edgeDevice = new Device()
-                .setVia(Collections.singletonList(AutoProvisionerTest.GATEWAY_ID))
+                .setVia(Collections.singletonList(EdgeDeviceAutoProvisionerTest.GATEWAY_ID))
                 .setStatus(new DeviceStatus()
                         .setAutoProvisioned(true)
                         .setAutoProvisioningNotificationSent(autoProvisioningNotificationSent));

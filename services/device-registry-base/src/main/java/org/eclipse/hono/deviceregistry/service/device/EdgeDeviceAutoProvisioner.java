@@ -13,218 +13,61 @@
 package org.eclipse.hono.deviceregistry.service.device;
 
 import java.net.HttpURLConnection;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.util.MessagingClient;
-import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
-import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
-import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
-import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
-import org.eclipse.hono.service.management.device.DeviceStatus;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.EventConstants;
-import org.eclipse.hono.util.Lifecycle;
-import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.RegistrationAssertion;
-import org.eclipse.hono.util.RegistryManagementConstants;
-import org.eclipse.hono.util.TenantObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
-import io.opentracing.noop.NoopTracerFactory;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 
 /**
- * Implements gateway based auto-provisioning.
+ * Helper to auto-provision edge devices connected via gateways.
  */
-public class AutoProvisioner implements Lifecycle {
+public class EdgeDeviceAutoProvisioner extends AbstractAutoProvisioningEventSender {
 
-    private static final Logger LOG = LoggerFactory.getLogger(AutoProvisioner.class);
-
-    private final AtomicBoolean started = new AtomicBoolean(false);
-
-    private Tracer tracer = NoopTracerFactory.create();
-    private TenantInformationService tenantInformationService = new NoopTenantInformationService();
-    private DeviceManagementService deviceManagementService;
-    private MessagingClient<EventSender> eventClients;
-    private Vertx vertx;
-
-    private AutoProvisionerConfigProperties config;
+    private final AutoProvisionerConfigProperties config;
+    private final Tracer tracer;
 
     /**
-     * Sets the vert.x instance.
+     * Creates an instance of {@link EdgeDeviceAutoProvisioner} to auto provision edge devices.
      *
      * @param vertx The vert.x instance.
-     * @throws NullPointerException if vert.x is {@code null}.
+     * @param deviceManagementService The device management service instance.
+     * @param eventClients The messaging clients to send auto-provisioned events.
+     * @param config The auto-provisioning configuration.
+     * @param tracer The OpenTracing tracer instance.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public final void setVertx(final Vertx vertx) {
-        this.vertx = Objects.requireNonNull(vertx);
-    }
-
-    /**
-     * Sets the clients to use for sending events.
-     *
-     * @param clients The clients.
-     * @throws NullPointerException if clients is {@code null}.
-     */
-    public void setEventSenders(final MessagingClient<EventSender> clients) {
-        this.eventClients = Objects.requireNonNull(clients);
-    }
-
-    /**
-     * Sets the {@link DeviceManagementService} to use.
-     *
-     * @param deviceManagementService The service to set.
-     *
-     * @throws NullPointerException if the service is {@code null}.
-     */
-    public final void setDeviceManagementService(final DeviceManagementService deviceManagementService) {
-        this.deviceManagementService = Objects.requireNonNull(deviceManagementService);
-    }
-
-    /**
-     * Sets the service to use for checking existence of tenants.
-     * <p>
-     * If not set, tenant existence will not be verified.
-     *
-     * @param tenantInformationService The tenant information service.
-     * @throws NullPointerException if service is {@code null};
-     */
-    public final void setTenantInformationService(final TenantInformationService tenantInformationService) {
-        this.tenantInformationService = Objects.requireNonNull(tenantInformationService);
-        LOG.info("using {}", tenantInformationService);
-    }
-
-    /**
-     * Sets the OpenTracing {@code Tracer} to use for tracking the processing
-     * of messages published by devices across Hono's components.
-     * <p>
-     * If not set explicitly, the {@code NoopTracer} from OpenTracing will
-     * be used.
-     *
-     * @param opentracingTracer The tracer.
-     * @throws NullPointerException if the opentracingTracer is {@code null}.
-     */
-    public final void setTracer(final Tracer opentracingTracer) {
-        this.tracer = Objects.requireNonNull(opentracingTracer);
-        LOG.info("using OpenTracing Tracer implementation [{}]", opentracingTracer.getClass().getName());
-    }
-
-    /**
-     * Sets the configuration to use for auto-provisioning.
-     *
-     * @param config The configuration to set.
-     * @throws NullPointerException if the config is {@code null}.
-     */
-    public final void setConfig(final AutoProvisionerConfigProperties config) {
+    public EdgeDeviceAutoProvisioner(final Vertx vertx,
+            final DeviceManagementService deviceManagementService,
+            final MessagingClient<EventSender> eventClients,
+            final AutoProvisionerConfigProperties config,
+            final Tracer tracer) {
+        super(vertx, deviceManagementService, eventClients);
         this.config = Objects.requireNonNull(config);
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @return The future returned by the configured {@linkplain EventSender#start() event sender's start() method}.
-     * @throws IllegalStateException if any of the vertx, eventSender or deviceManagementService properties are not set.
-     */
-    @Override
-    public final Future<Void> start() {
-        if (vertx == null) {
-            throw new IllegalStateException("vert.x instance must be set");
-        }
-        if (eventClients == null || !eventClients.containsImplementations()) {
-             throw new IllegalStateException("Event client must be set");
-        }
-        if (deviceManagementService == null) {
-            throw new IllegalStateException("device management service is not set");
-        }
-        if (started.compareAndSet(false, true)) {
-            LOG.debug("starting up");
-            // decouple establishment of the sender's downstream connection from this component's
-            // start-up process and instead rely on the event sender's readiness check to succeed
-            // once the connection has been established
-            eventClients.start();
-        }
-        return Future.succeededFuture();
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @return The future returned by the configured {@linkplain EventSender#stop() event sender's stop() method}.
-     */
-    @Override
-    public final Future<Void> stop() {
-        if (started.compareAndSet(true, false)) {
-            LOG.debug("shutting down");
-            return eventClients.stop();
-        } else {
-            return Future.succeededFuture();
-        }
-    }
-
-    private Future<Void> sendAutoProvisioningEvent(
-            final String tenantId,
-            final String deviceId,
-            final String gatewayId,
-            final Span span) {
-
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(gatewayId);
-        Objects.requireNonNull(span);
-
-        LOG.debug("sending auto-provisioning event for device [{}] created via gateway [{}] [tenant-id: {}]", deviceId, gatewayId, tenantId);
-
-        return tenantInformationService.getTenant(tenantId, span)
-                .compose(tenant -> {
-                    // TODO to remove once able to send events without providing an argument of type TenantObject
-                    final TenantObject tenantConfig = DeviceRegistryUtils.convertTenant(tenantId, tenant)
-                            .mapTo(TenantObject.class);
-
-                    final Map<String, Object> props = new HashMap<>();
-                    props.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-                    props.put(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
-                    props.put(MessageHelper.APP_PROPERTY_REGISTRATION_STATUS,
-                            EventConstants.RegistrationStatus.NEW.name());
-                    props.put(MessageHelper.APP_PROPERTY_ORIG_ADAPTER, Constants.PROTOCOL_ADAPTER_TYPE_DEVICE_REGISTRY);
-                    props.put(MessageHelper.APP_PROPERTY_ORIG_ADDRESS, EventConstants.EVENT_ENDPOINT);
-
-                    final EventSender eventSender = eventClients.getClient(getMessagingType(tenant));
-
-                    return eventSender.sendEvent(
-                            tenantConfig,
-                            new RegistrationAssertion(deviceId),
-                            EventConstants.CONTENT_TYPE_DEVICE_PROVISIONING_NOTIFICATION,
-                            null,
-                            props,
-                            span.context())
-                .onFailure(t -> LOG.info("error sending auto-provisioning event for device [{}] created via gateway [{}] [tenant-id: {}]",
-                                    deviceId, gatewayId, tenantId));
-                });
+        this.tracer = Objects.requireNonNull(tracer);
     }
 
     /**
      * Auto-provisions the edge device using the given device id and the given registration data.
      *
      * @param tenantId The id of the tenant for which the edge device should be provisioned.
+     * @param tenant The tenant information.
      * @param deviceId The id of the edge device which should be provisioned, may be {@code null}.
      * @param gatewayId The id of the edge device's gateway.
      * @param device The registration data for the device to be auto-provisioned.
@@ -234,16 +77,17 @@ public class AutoProvisioner implements Lifecycle {
      *
      * @throws NullPointerException if any argument except deviceId is {@code null}.
      */
-    public Future<Device> performAutoProvisioning(final String tenantId, final String deviceId,
+    public Future<Device> performAutoProvisioning(final String tenantId, final Tenant tenant, final String deviceId,
             final String gatewayId, final Device device, final SpanContext spanContext) {
 
         Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(tenant);
         Objects.requireNonNull(gatewayId);
         Objects.requireNonNull(device);
         Objects.requireNonNull(spanContext);
 
         final Span span = TracingHelper
-                .buildChildSpan(tracer, spanContext, "auto-provision device for gateway", 
+                .buildChildSpan(tracer, spanContext, "auto-provision edge device connected via gateway", 
                         Constants.PROTOCOL_ADAPTER_TYPE_DEVICE_REGISTRY)
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
                 .withTag(TracingHelper.TAG_GATEWAY_ID, gatewayId)
@@ -288,18 +132,18 @@ public class AutoProvisioner implements Lifecycle {
 
                                     final Device readDevice = readDeviceResult.getPayload();
                                     // ensure that a notification event gets sent (even if we might send duplicate events)
-                                    return sendDelayedAutoProvisioningNotificationIfNeeded(tenantId, deviceId, gatewayId, readDevice, span).map(readDevice);
+                                    return sendDelayedAutoProvisioningNotificationIfNeeded(tenantId, tenant, deviceId,
+                                            gatewayId, readDevice, span).map(readDevice);
                                 });
                     }
 
                     span.log("device created");
                     LOG.trace("device [{}] for gateway [{}] successfully created by auto-provisioning [tenant-id: {}]",
                             deviceId, gatewayId, tenantId);
-                    return sendAutoProvisioningEvent(tenantId, deviceId, gatewayId, span)
+                    return sendAutoProvisioningEvent(tenantId, tenant, deviceId, gatewayId, span)
                             .compose(sendEmptyEventOk -> deviceManagementService.readDevice(tenantId, deviceId, span)
                                     .compose(readDeviceResult -> {
                                         if (!readDeviceResult.isOk()) {
-                                            span.log("update of notification flag failed");
                                             LOG.warn("notification flag of device [{}] for gateway [{}] of tenant [tenant-id: {}] could not be updated",
                                                     deviceId, gatewayId, tenantId);
                                             return Future.failedFuture(
@@ -310,7 +154,9 @@ public class AutoProvisioner implements Lifecycle {
                                         }
 
                                         final Device deviceData = readDeviceResult.getPayload();
-                                        return setAutoProvisioningNotificationSent(tenantId, deviceId, deviceData, span)
+                                        return updateAutoProvisioningNotificationSent(tenantId, deviceId, deviceData, span)
+                                                //auto-provisioning still succeeds even if the device registration cannot be updated with the notification flag
+                                                .recover(error -> Future.succeededFuture())
                                                 .map(deviceData);
                                     }));
                 })
@@ -322,6 +168,7 @@ public class AutoProvisioner implements Lifecycle {
      * Notify northbound applications of an auto-provisioned device.
      *
      * @param tenantId The id of the tenant for which the edge device should be provisioned.
+     * @param tenant The tenant information.
      * @param deviceId The id of the edge device which should be provisioned.
      * @param gatewayId The id of the edge device's gateway.
      * @param device The data of the edge device.
@@ -333,9 +180,10 @@ public class AutoProvisioner implements Lifecycle {
      *
      * @see AutoProvisionerConfigProperties#DEFAULT_RETRY_EVENT_SENDING_DELAY
      */
-    public Future<Void> sendDelayedAutoProvisioningNotificationIfNeeded(final String tenantId,
+    public Future<Void> sendDelayedAutoProvisioningNotificationIfNeeded(final String tenantId, final Tenant tenant,
             final String deviceId, final String gatewayId, final Device device, final Span span) {
         Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(tenant);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(gatewayId);
         Objects.requireNonNull(device);
@@ -369,9 +217,11 @@ public class AutoProvisioner implements Lifecycle {
                             LOG.debug("sending auto-provisioning event - notificationSent flag wasn't updated in between [tenant-id: {}, device-id: {}]",
                                     tenantId, deviceId);
                             span.log("sending event - notificationSent flag wasn't updated in between");
-                            return sendAutoProvisioningEvent(tenantId, deviceId, gatewayId, span)
-                                    .compose(ok -> setAutoProvisioningNotificationSent(tenantId, deviceId, readDevice, span))
-                                    .mapEmpty();
+                            return sendAutoProvisioningEvent(tenantId, tenant, deviceId, gatewayId, span)
+                                    .compose(ok -> updateAutoProvisioningNotificationSent(tenantId, deviceId, readDevice, span)
+                                                    // auto-provisioning still succeeds even if the device registration
+                                                    // cannot be updated with the notification flag
+                                                    .recover(error -> Future.succeededFuture()));
                         } else {
                             LOG.debug("no need to send auto-provisioning event, notificationSent flag was set in between [tenant-id: {}, device-id: {}]",
                                     tenantId, deviceId);
@@ -383,14 +233,6 @@ public class AutoProvisioner implements Lifecycle {
         return resultPromise.future();
     }
 
-    private String getMessagingType(final Tenant tenant) {
-        return Optional.ofNullable(tenant.getExtensions())
-                .map(ext -> ext.get(RegistryManagementConstants.FIELD_EXT_MESSAGING_TYPE))
-                .filter(String.class::isInstance)
-                .map(String.class::cast)
-                .orElse(null);
-    }
-
     private boolean wasDeviceAutoProvisioned(final Device registrationData) {
         return registrationData.getStatus() != null ? registrationData.getStatus().isAutoProvisioned() : false;
     }
@@ -399,18 +241,4 @@ public class AutoProvisioner implements Lifecycle {
         return registrationData.getStatus() != null ? registrationData.getStatus().isAutoProvisioningNotificationSent() : false;
     }
 
-    private Future<OperationResult<Id>> setAutoProvisioningNotificationSent(final String tenantId,
-            final String deviceId, final Device device, final Span span) {
-        device.setStatus(new DeviceStatus().setAutoProvisioningNotificationSent(true));
-        return deviceManagementService.updateDevice(tenantId, deviceId, device, Optional.empty(), span)
-                .map(opResult -> {
-                    if (opResult.isError()) {
-                        LOG.debug("Error updating device with 'AutoProvisioningNotificationSent=true'; status: {} [tenant-id: {}, device-id: {}]",
-                                opResult.getStatus(), tenantId, deviceId);
-                        TracingHelper.logError(span, String.format("Error updating device with 'AutoProvisioningNotificationSent=true' (status: %d)",
-                                opResult.getStatus()));
-                    }
-                    return opResult;
-                });
-    }
 }

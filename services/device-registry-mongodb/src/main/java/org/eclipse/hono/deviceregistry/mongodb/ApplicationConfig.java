@@ -40,8 +40,8 @@ import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedRegistrationS
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedTenantService;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryAmqpServer;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
-import org.eclipse.hono.deviceregistry.service.device.AutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
+import org.eclipse.hono.deviceregistry.service.device.EdgeDeviceAutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.tenant.DefaultTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.util.ServiceClientAdapter;
@@ -387,15 +387,14 @@ public class ApplicationConfig {
                 mongoClient(),
                 registrationServiceProperties());
 
-        final AutoProvisioner autoProvisioner = new AutoProvisioner();
-        autoProvisioner.setVertx(vertx());
-        autoProvisioner.setTracer(tracer());
-        autoProvisioner.setDeviceManagementService(service);
-        autoProvisioner.setTenantInformationService(tenantInformationService());
-        autoProvisioner.setEventSenders(eventSenders());
-        autoProvisioner.setConfig(autoProvisionerConfigProperties());
+        final EdgeDeviceAutoProvisioner edgeDeviceAutoProvisioner = new EdgeDeviceAutoProvisioner(
+                vertx(),
+                service,
+                eventSenders(),
+                autoProvisionerConfigProperties(),
+                tracer());
 
-        service.setAutoProvisioner(autoProvisioner);
+        service.setEdgeDeviceAutoProvisioner(edgeDeviceAutoProvisioner);
         healthCheckServer().registerHealthCheckResources(service);
         return service;
     }
