@@ -2,6 +2,21 @@
 
 <script>
 window.onload = function() {
+
+    const TryItOutButtonWithHonoSandboxInfo = function() {
+        return {
+            wrapComponents: {
+                TryItOutButton: (Original, { React }) => (props) => {
+                    return React.createElement("div", {style: {"font-size": '14px'}},
+                        React.createElement(Original, props),
+                        'using the ',
+                        React.createElement('a', {href: 'https://www.eclipse.org/hono/sandbox/'}, "Hono Sandbox")
+                    )
+                }
+            }
+        }
+    }
+
   // Begin Swagger UI call region
   const ui = SwaggerUIBundle({
     url: "{{ .Get 0 }}",
@@ -12,8 +27,12 @@ window.onload = function() {
       SwaggerUIStandalonePreset
     ],
     plugins: [
+      TryItOutButtonWithHonoSandboxInfo,
       SwaggerUIBundle.plugins.DownloadUrl
     ],
+//{{ if and (not (hasPrefix .Site.Params.honoVersion "stable")) (not (eq (string .Site.Params.honoVersion) "")) }}
+    supportedSubmitMethods: [], // hide "try it out" for non-stable version
+//{{ end }}
     layout: "StandaloneLayout",
     docExpansion: "none", // don't expand all the tags by default
     defaultModelRendering: "model", // display models instead of examples by default

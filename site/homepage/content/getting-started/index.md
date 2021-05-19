@@ -94,6 +94,8 @@ and then proceed to the [Overview of Hono Components]({{< relref "#overview-of-h
 
 However, if the `curl` command yielded different output, you will need to set up Hono locally as described in the next section.
 
+For interacting with the Device Registry of the Hono Sandbox (e.g. for creating tenants, devices), you can also use the testing functionality integrated in the [Device Registry Management API documentation]({{% doclink "/api/management/" %}}).
+
 #### Setting up a local Hono Instance
 
 In case you cannot access the Hono Sandbox as described above, you will need to set up an instance of Hono running on your local computer.
