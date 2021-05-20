@@ -21,12 +21,17 @@ description = "Information about changes in recent Hono releases. Includes new f
   [Gateway Provisioning]({{% doclink "/concepts/device-provisioning/#automatic-gateway-provisioning" %}})
   concept and to the [Device Registry Management API]({{% doclink "/api/management#/tenants/createTenant" %}})
   on how to configure a tenant's trusted CA authority for that.
-* Now the tenant configuration supports a new property namely *auto-provisioning-device-id-template* in it's trusted CA 
-  section. During auto-provisioning of devices and gateways, the device identifier is generated based on this template 
+* Now the tenant configuration supports a new property namely *auto-provisioning-device-id-template* in it's trusted CA
+  section. During auto-provisioning of devices and gateways, the device identifier is generated based on this template
   and used for the device registration. For more information please refer to the
-  [Device Provisioning]({{% doclink "/concepts/device-provisioning/" %}}) concept and to the 
+  [Device Provisioning]({{% doclink "/concepts/device-provisioning/" %}}) concept and to the
   [Device Registry Management API]({{% doclink "/api/management#/tenants/createTenant" %}})
   on how to configure a tenant's trusted CA authority for that.
+* The Hono CLI supports now Kafka as a messaging system. Please refer to the module's
+  [README](https://github.com/eclipse/hono/tree/master/cli) file for examples of using the CLI to receive events and
+  telemetry data and send commands.
+* The example business application supports now Kafka as a messaging system. Please refer to the
+  [Developer Guide]({{% doclink "/dev-guide/java_client_consumer/" %}}) for details.
 
 ### Fixes & Enhancements
 
