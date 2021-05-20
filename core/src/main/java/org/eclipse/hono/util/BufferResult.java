@@ -21,6 +21,7 @@ import io.vertx.core.buffer.Buffer;
  * A container for the opaque result of a request-response service invocation.
  *
  */
+@Deprecated
 public final class BufferResult extends RequestResponseResult<Buffer> {
 
     private final String contentType;
