@@ -23,12 +23,10 @@ import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.client.StatusCodeMapper;
-import org.eclipse.hono.deviceregistry.service.tenant.DefaultTenantInformationService;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
@@ -563,34 +561,6 @@ public interface AbstractTenantServiceTest {
             });
             ctx.completeNow();
         }));
-    }
-
-    /**
-     * Verifies that {@link org.eclipse.hono.deviceregistry.service.tenant.DefaultTenantInformationService} works
-     * correctly.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    default void testTenantInformationService(final VertxTestContext ctx) {
-        final DefaultTenantInformationService informationService = new DefaultTenantInformationService(
-                getTenantManagementService());
-        final String tenantId = UUID.randomUUID().toString();
-
-        informationService.tenantExists(tenantId, NoopSpan.INSTANCE)
-                .onComplete(ctx.succeeding(t -> {
-                    ctx.verify(() -> assertThat(t.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
-                }));
-
-        addTenant(tenantId)
-                .map(ok -> {
-                    informationService.tenantExists(tenantId, NoopSpan.INSTANCE)
-                            .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
-                                assertThat(s.getPayload().getTenantId()).isEqualTo(tenantId);
-                                ctx.completeNow();
-                            })));
-                    return null;
-                });
     }
 
     /**
