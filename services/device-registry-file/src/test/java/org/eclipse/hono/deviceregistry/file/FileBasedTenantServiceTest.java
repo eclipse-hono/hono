@@ -410,14 +410,16 @@ public class FileBasedTenantServiceTest implements AbstractTenantServiceTest {
                 .setPublicKey("NOT_A_PUBLIC_KEY".getBytes())
                 .setNotBefore(Instant.now().minus(1, ChronoUnit.DAYS))
                 .setNotAfter(Instant.now().plus(2, ChronoUnit.DAYS))
-                .setAutoProvisioningAsGatewayEnabled(true);
+                .setAutoProvisioningAsGatewayEnabled(true)
+                .setAutoProvisioningDeviceIdTemplate("device-{{subject-dn}}");
         final TrustedCertificateAuthority ca2 = new TrustedCertificateAuthority()
                 .setSubjectDn("CN=test.org")
                 .setKeyAlgorithm("RSA")
                 .setPublicKey("NOT_A_PUBLIC_KEY".getBytes())
                 .setNotBefore(Instant.now().plus(1, ChronoUnit.DAYS))
                 .setNotAfter(Instant.now().plus(20, ChronoUnit.DAYS))
-                .setAutoProvisioningAsGatewayEnabled(true);
+                .setAutoProvisioningAsGatewayEnabled(true)
+                .setAutoProvisioningDeviceIdTemplate("device-{{subject-dn}}");
 
         final Tenant source = new Tenant();
         source.setEnabled(true);
@@ -456,5 +458,7 @@ public class FileBasedTenantServiceTest implements AbstractTenantServiceTest {
         //Verify that the internal attributes to the device registry are not transferred to the TenantObject
         assertThat(expectedAuthorities.getJsonObject(0)
                 .containsKey(RegistryManagementConstants.FIELD_AUTO_PROVISION_AS_GATEWAY)).isFalse();
+        assertThat(expectedAuthorities.getJsonObject(0)
+                .containsKey(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_DEVICE_ID_TEMPLATE)).isFalse();
     }
 }

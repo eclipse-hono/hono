@@ -131,6 +131,7 @@ public final class DeviceRegistryUtils {
                         // remove the attributes that are internal to the device registry
                         // and not to be exposed to the adapters
                         json.remove(RegistryManagementConstants.FIELD_AUTO_PROVISION_AS_GATEWAY);
+                        json.remove(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_DEVICE_ID_TEMPLATE);
                         return json;
                     })
                     .collect(JsonArray::new, JsonArray::add, JsonArray::addAll))
