@@ -224,7 +224,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   validity period explicitly in the *auth-id* and *secrets* properties. This should make setting the correct *auth-id*
   value much less error prone.
 * Hono now supports *auto-provisioning* of devices that connect via gateway. For more information please refer to the
-  [Device Provisioning]({{% doclink "/concepts/provisioning/#gateway-based-auto-provisioning" %}}) concept and to the
+  [Device Provisioning]({{% doclink "/concepts/device-provisioning/#gateway-based-auto-provisioning" %}}) concept and to the
   [Device registry management API]({{% doclink "/api/management#/devices/createDeviceRegistration" %}}) on how to
   create a device registration for a gateway which is enabled for auto-provisioning.
 * The Device Registry Management API has been extended now to support searching tenants with optional filters,
@@ -744,7 +744,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   server certificate and host name. Please refer to the *Secure Communication* admin
   guide for details.
 * Hono now supports *auto-provisioning* of devices that authenticate with X.509 client certificates. 
-  For more information please refer to the [Device Provisioning]({{% doclink "/concepts/provisioning/" %}})
+  For more information please refer to the [Device Provisioning]({{% doclink "/concepts/device-provisioning/" %}})
   concept and for details to the [Tenant API]({{% doclink "/api/tenant/#trusted-ca-format" %}})
   and the [Credentials API]({{% doclink "/api/credentials/#get-credentials" %}}).
 * The Hono Auth Server and Device Registry components now support configuring the SASL
