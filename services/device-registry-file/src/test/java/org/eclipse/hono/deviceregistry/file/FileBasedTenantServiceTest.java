@@ -33,7 +33,6 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.deviceregistry.DeviceRegistryTestUtils;
-import org.eclipse.hono.deviceregistry.service.tenant.AutowiredTenantInformationService;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
@@ -458,33 +457,4 @@ public class FileBasedTenantServiceTest implements AbstractTenantServiceTest {
         assertThat(expectedAuthorities.getJsonObject(0)
                 .containsKey(RegistryManagementConstants.FIELD_AUTO_PROVISION_AS_GATEWAY)).isFalse();
     }
-
-    /**
-     * Verifies that autowired {@link org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService} works correctly.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testTenantInformationService(final VertxTestContext ctx) {
-        final AutowiredTenantInformationService informationService = new AutowiredTenantInformationService();
-        informationService.setService(svc);
-
-        informationService.tenantExists(Constants.DEFAULT_TENANT, NoopSpan.INSTANCE)
-                .onComplete(ctx.succeeding(t -> {
-                                ctx.verify(() -> assertThat(t.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
-                            }));
-
-        addTenant(Constants.DEFAULT_TENANT)
-                .map(ok -> {
-                    informationService.tenantExists(Constants.DEFAULT_TENANT, NoopSpan.INSTANCE)
-                            .onComplete(ctx.succeeding(s -> {
-                                ctx.verify(() -> {
-                                    assertThat(s.getPayload().getTenantId()).isEqualTo(Constants.DEFAULT_TENANT);
-                                    ctx.completeNow();
-                                });
-                            }));
-                    return null;
-                });
-    }
-
 }
