@@ -1,15 +1,26 @@
+![License](https://img.shields.io/github/license/eclipse/hono)
+![Continuous Integration Build](https://img.shields.io/github/workflow/status/eclipse/hono/Build%20and%20run%20integration%20tests)
+![Docker Pulls](https://img.shields.io/docker/pulls/eclipse/hono-service-auth)
+![Latest Release](https://img.shields.io/docker/v/eclipse/hono-service-auth?sort=semver)
+
 ![Hono logo](logo/PNG-150dpi/HONO-Logo_Bild-Wort_quadrat-w-200x180px.png)
 
-[Eclipse Hono](https://www.eclipse.org/hono) provides uniform (remote) service interfaces for connecting large numbers of IoT devices to a (cloud) back end. It specifically supports scalable and secure data ingestion (*telemetry* data) as well as *command & control* type message exchange patterns and provides interfaces for provisioning & managing device identity and access control rules.
+[Eclipse Hono](https://www.eclipse.org/hono) provides uniform (remote) service interfaces for connecting large
+numbers of IoT devices to a (cloud) back end. It specifically supports scalable and secure data ingestion
+(*telemetry* data) as well as *command & control* type message exchange patterns and provides interfaces for
+provisioning & managing device identity and access control rules.
 
 ## Getting started
 
-Please refer to the [Getting Started guide on the project web site](https://www.eclipse.org/hono/getting-started/).
+Please refer to the [Getting Started guide](https://www.eclipse.org/hono/getting-started/) on the project web site.
 
 ## Running Hono
 
+Eclipse Hono consists of multiple micro service components provided as container images. Please refer to the
+[Admin Guide](https://www.eclipse.org/hono/docs/admin-guide/) and
+[User Guide](https://www.eclipse.org/hono/docs/user-guide/) sections on the project web site for details on how
+to configure and use these components.
 
-Eclipse Hono consists of multiple micro service components. Please refer to the [Admin Guide](https://www.eclipse.org/hono/docs/admin-guide/) and [User Guide](https://www.eclipse.org/hono/docs/user-guide/) sections on the project web site for details on how to configure and use these components.
 ## Using Hono
 
 Please take a look at the [Developer Guide](https://www.eclipse.org/hono/docs/dev-guide/) which provides examples of how clients can interact with Hono and how to create a custom protocol adapter.
@@ -20,8 +31,4 @@ Clients can interact with Hono by means of AMQP 1.0 based message exchanges. Ple
 
 ## Get in Touch
 
-Please check out the [Eclipse Hono project home page](https://www.eclipse.org/hono) for details regarding our mailing list and #IRC channel.
-
-## Build status
-
-- [Continuous Integration Build](https://github.com/eclipse/hono/actions?query=workflow%3A%22Build+and+run+integration+tests%22)
+Please check out the [Eclipse Hono project home page](https://www.eclipse.org/hono/community/get-in-touch/) for details regarding our mailing list and Gitter channel.
