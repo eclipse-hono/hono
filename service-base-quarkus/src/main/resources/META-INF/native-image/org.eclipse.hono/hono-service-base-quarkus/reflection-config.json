@@ -1,4 +1,5 @@
 [
+  ${jaeger-reflection-config}
   {
     "name": "org.apache.logging.log4j.message.ReusableMessageFactory",
     "methods": [
