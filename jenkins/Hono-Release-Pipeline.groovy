@@ -54,10 +54,6 @@ node {
         echo "Error: ${err}"
     } finally {
         echo "Build status: ${currentBuild.result}"
-        step([$class                  : 'Mailer',
-              notifyEveryUnstableBuild: true,
-              recipients              : 'hono-dev@eclipse.org',
-              sendToIndividuals       : false])
     }
 }
 
