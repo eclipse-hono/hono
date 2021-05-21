@@ -247,8 +247,8 @@ public abstract class AbstractServiceClient implements ConnectionLifecycle<HonoC
                 String.format("connection-to-%s-%s", connection.getConfig().getServerRole(), UUID.randomUUID()),
                 status -> {
                     connection.isConnected()
-                        .onSuccess(ok -> status.complete(Status.OK()))
-                        .onFailure(t -> status.complete(Status.KO()));
+                        .onSuccess(ok -> status.tryComplete(Status.OK()))
+                        .onFailure(t -> status.tryComplete(Status.KO()));
                 });
     }
 

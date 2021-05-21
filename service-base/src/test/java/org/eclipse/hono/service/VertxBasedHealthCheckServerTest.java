@@ -175,7 +175,7 @@ class VertxBasedHealthCheckServerTest {
             public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
                 readinessHandler.register("readiness-insecure", event -> {
                     callReadinessCheckpoint.flag();
-                    event.complete(Status.OK());
+                    event.tryComplete(Status.OK());
                 });
             }
 
@@ -183,7 +183,7 @@ class VertxBasedHealthCheckServerTest {
             public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
                 livenessHandler.register("liveness-insecure", event -> {
                     callLivenessCheckpoint.flag();
-                    event.complete(Status.OK());
+                    event.tryComplete(Status.OK());
                 });
             }
         });

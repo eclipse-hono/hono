@@ -151,10 +151,10 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                 "credentials-indices-created-" + UUID.randomUUID(),
                 status -> {
                     if (indicesCreated.get()) {
-                        status.complete(Status.OK());
+                        status.tryComplete(Status.OK());
                     } else {
                         LOG.debug("credentials-indices not (yet) created");
-                        status.complete(Status.KO());
+                        status.tryComplete(Status.KO());
                         createIndices();
                     }
                 });

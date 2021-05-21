@@ -138,10 +138,10 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                 "devices-indices-created-" + UUID.randomUUID(),
                 status -> {
                     if (indicesCreated.get()) {
-                        status.complete(Status.OK());
+                        status.tryComplete(Status.OK());
                     } else {
                         LOG.debug("devices-indices not (yet) created");
-                        status.complete(Status.KO());
+                        status.tryComplete(Status.KO());
                         createIndices();
                     }
                 });

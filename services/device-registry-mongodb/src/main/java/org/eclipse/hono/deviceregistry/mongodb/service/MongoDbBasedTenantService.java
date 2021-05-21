@@ -146,10 +146,10 @@ public final class MongoDbBasedTenantService extends AbstractTenantManagementSer
                 "tenants-indices-created-" + UUID.randomUUID(),
                 status -> {
                     if (indicesCreated.get()) {
-                        status.complete(Status.OK());
+                        status.tryComplete(Status.OK());
                     } else {
                         LOG.debug("tenants-indices not (yet) created");
-                        status.complete(Status.KO());
+                        status.tryComplete(Status.KO());
                         createIndices();
                     }
                 });
