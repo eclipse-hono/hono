@@ -48,6 +48,7 @@ public class ServiceConfigProperties extends ServerConfig {
      */
     private static final long MIN_SEND_TIMEOUT_IN_MS = 500;
 
+    private long eventLoopBlockedCheckTimeout = 5000L;
     private boolean networkDebugLoggingEnabled = false;
     private boolean waitForDownstreamConnectionEnabled = false;
     private int maxPayloadSize = DEFAULT_MAX_PAYLOAD_SIZE;
@@ -272,5 +273,29 @@ public class ServiceConfigProperties extends ServerConfig {
      */
     public void setTenantIdPattern(final String regex) {
         this.tenantIdPattern = Pattern.compile(Objects.requireNonNull(regex));
+    }
+
+    /**
+     * Gets the time to wait for completion after which a handler is considered to
+     * be blocking the vert.x event loop.
+     * <p>
+     * Default value is 5000 milliseconds.
+     *
+     * @return The timeout value in milliseconds.
+     */
+    public final long getEventLoopBlockedCheckTimeout() {
+        return eventLoopBlockedCheckTimeout;
+    }
+
+    /**
+     * Sets the time to wait for completion after which a handler is to be considered to
+     * be blocking the vert.x event loop.
+     * <p>
+     * Default value is 5000 milliseconds.
+     *
+     * @param eventLoopBlockedCheckTimeout The timeout value in milliseconds.
+     */
+    public final void setEventLoopBlockedCheckTimeout(final long eventLoopBlockedCheckTimeout) {
+        this.eventLoopBlockedCheckTimeout = eventLoopBlockedCheckTimeout;
     }
 }

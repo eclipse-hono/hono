@@ -33,7 +33,6 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
     private boolean authenticationRequired = true;
     private boolean jmsVendorPropsEnabled = false;
     private boolean defaultsEnabled = true;
-    private long eventLoopBlockedCheckTimeout = 5000L;
     private int maxConnections = 0;
     private Duration tenantIdleTimeout = DEFAULT_TENANT_IDLE_TIMEOUT;
     private HashMap<String, MapperEndpoint> mapperEndpoints = new HashMap<>();
@@ -144,29 +143,6 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
      */
     public final void setDefaultsEnabled(final boolean flag) {
         this.defaultsEnabled = flag;
-    }
-
-    /**
-     * Gets the timeout value used by protocol adapter liveness check,
-     * which determines if protocol adapter vert.x event loop is blocked.
-     * <p>
-     * Default value of the timeout is 5000 milliseconds.
-     *
-     * @return The timeout value in milliseconds.
-     */
-    public final long getEventLoopBlockedCheckTimeout() {
-        return eventLoopBlockedCheckTimeout;
-    }
-
-    /**
-     * Sets the timeout value used by protocol adapter liveness check,
-     * which determines if protocol adapter vert.x event loop is blocked.
-     * <p>
-     *
-     * @param eventLoopBlockedCheckTimeout Liveness check timeout value in milliseconds.
-     */
-    public final void setEventLoopBlockedCheckTimeout(final long eventLoopBlockedCheckTimeout) {
-        this.eventLoopBlockedCheckTimeout = eventLoopBlockedCheckTimeout;
     }
 
     /**

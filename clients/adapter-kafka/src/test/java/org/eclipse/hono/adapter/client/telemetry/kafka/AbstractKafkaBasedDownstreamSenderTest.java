@@ -29,7 +29,6 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.kafka.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
@@ -39,7 +38,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.buffer.Buffer;
@@ -67,8 +65,6 @@ public class AbstractKafkaBasedDownstreamSenderTest {
     private final HonoTopic topic = new HonoTopic(HonoTopic.Type.EVENT, TENANT_ID);
     private final TenantObject tenant = new TenantObject(TENANT_ID, true);
     private final RegistrationAssertion device = new RegistrationAssertion(DEVICE_ID);
-    private final ProtocolAdapterProperties adapterConfig = new ProtocolAdapterProperties();
-
 
     /**
      * Sets up the fixture.
@@ -408,19 +404,19 @@ public class AbstractKafkaBasedDownstreamSenderTest {
         final CachingKafkaProducerFactory<String, Buffer> factory = newProducerFactory(mockProducer);
 
         assertThrows(NullPointerException.class,
-                () -> new AbstractKafkaBasedDownstreamSender(null, PRODUCER_NAME, config, adapterConfig.isDefaultsEnabled(), tracer) {
+                () -> new AbstractKafkaBasedDownstreamSender(null, PRODUCER_NAME, config, true, tracer) {
                 });
 
         assertThrows(NullPointerException.class,
-                () -> new AbstractKafkaBasedDownstreamSender(factory, null, config, adapterConfig.isDefaultsEnabled(), tracer) {
+                () -> new AbstractKafkaBasedDownstreamSender(factory, null, config, true, tracer) {
                 });
 
         assertThrows(NullPointerException.class,
-                () -> new AbstractKafkaBasedDownstreamSender(factory, PRODUCER_NAME, null, adapterConfig.isDefaultsEnabled(), tracer) {
+                () -> new AbstractKafkaBasedDownstreamSender(factory, PRODUCER_NAME, null, true, tracer) {
                 });
 
         assertThrows(NullPointerException.class,
-                () -> new AbstractKafkaBasedDownstreamSender(factory, PRODUCER_NAME, config, adapterConfig.isDefaultsEnabled(), null) {
+                () -> new AbstractKafkaBasedDownstreamSender(factory, PRODUCER_NAME, config, true, null) {
                 });
     }
 
@@ -459,7 +455,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
     }
 
     private AbstractKafkaBasedDownstreamSender newSender(final CachingKafkaProducerFactory<String, Buffer> factory) {
-        return new AbstractKafkaBasedDownstreamSender(factory, PRODUCER_NAME, config, adapterConfig.isDefaultsEnabled(), tracer) {
+        return new AbstractKafkaBasedDownstreamSender(factory, PRODUCER_NAME, config, true, tracer) {
         };
     }
 

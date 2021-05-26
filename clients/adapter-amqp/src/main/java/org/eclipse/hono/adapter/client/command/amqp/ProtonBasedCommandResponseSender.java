@@ -24,7 +24,6 @@ import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.amqp.AbstractServiceClient;
 import org.eclipse.hono.client.amqp.GenericSenderLink;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -47,15 +46,15 @@ public class ProtonBasedCommandResponseSender extends AbstractServiceClient impl
      *
      * @param connection The connection to the AMQP 1.0 Messaging Network.
      * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
-     * @param adapterConfig The protocol adapter's configuration properties.
+     * @param jmsVendorPropsEnabled {@code true} if JMS vendor props should be included in downstream messages.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public ProtonBasedCommandResponseSender(
             final HonoConnection connection,
             final SendMessageSampler.Factory samplerFactory,
-            final ProtocolAdapterProperties adapterConfig) {
+            final boolean jmsVendorPropsEnabled) {
         super(connection, samplerFactory);
-        this.jmsVendorPropsEnabled = adapterConfig.isJmsVendorPropsEnabled();
+        this.jmsVendorPropsEnabled = jmsVendorPropsEnabled;
     }
 
     private Future<GenericSenderLink> createSender(final String tenantId, final String replyId) {

@@ -280,7 +280,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                     new ProtonBasedCommandResponseSender(
                             HonoConnection.newConnection(vertx, commandResponseSenderConfig(), tracer),
                             messageSamplerFactory,
-                            protocolAdapterProperties));
+                            protocolAdapterProperties.isJmsVendorPropsEnabled()));
         }
 
         final var tenantClient = tenantClient();

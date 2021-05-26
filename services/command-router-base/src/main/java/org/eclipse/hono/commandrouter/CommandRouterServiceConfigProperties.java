@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,11 +12,10 @@
  *******************************************************************************/
 package org.eclipse.hono.commandrouter;
 
-import org.eclipse.hono.config.ProtocolAdapterProperties;
+import org.eclipse.hono.config.ServiceConfigProperties;
 
 /**
  * Configuration properties for Hono's Command Router service.
  */
-public class CommandRouterServiceConfigProperties extends ProtocolAdapterProperties {
-
+public class CommandRouterServiceConfigProperties extends ServiceConfigProperties {
 }

@@ -113,7 +113,7 @@ public abstract class AbstractMessagingClientConfig extends AdapterConfiguration
                     new ProtonBasedCommandResponseSender(
                             commandConsumerConnection(vertx),
                             samplerFactory,
-                            adapterProperties));
+                            adapterProperties.isJmsVendorPropsEnabled()));
         }
 
         return new MessagingClients(telemetrySenders, eventSenders, commandResponseSenders);

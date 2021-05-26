@@ -17,14 +17,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.HashMap;
-import java.util.Map;
 
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.eclipse.hono.client.kafka.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
@@ -33,7 +31,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.buffer.Buffer;
@@ -48,7 +45,6 @@ public class KafkaBasedTelemetrySenderTest {
 
     private final TenantObject tenant = new TenantObject("the-tenant", true);
     private final RegistrationAssertion device = new RegistrationAssertion("the-device");
-    private final ProtocolAdapterProperties adapterConfig = new ProtocolAdapterProperties();
     private final Tracer tracer = NoopTracerFactory.create();
 
     private KafkaProducerConfigProperties kafkaProducerConfig;
@@ -79,7 +75,7 @@ public class KafkaBasedTelemetrySenderTest {
         final CachingKafkaProducerFactory<String, Buffer> factory = new CachingKafkaProducerFactory<>(
                 (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
         final KafkaBasedTelemetrySender sender = new KafkaBasedTelemetrySender(factory, kafkaProducerConfig,
-                adapterConfig.isDefaultsEnabled(), tracer);
+                true, tracer);
 
         // WHEN sending telemetry data with QoS 0
         sender.sendTelemetry(tenant, device, qos, "the-content-type", Buffer.buffer(payload), null, null)
@@ -118,7 +114,7 @@ public class KafkaBasedTelemetrySenderTest {
         final CachingKafkaProducerFactory<String, Buffer> factory = new CachingKafkaProducerFactory<>(
                 (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
         final KafkaBasedTelemetrySender sender = new KafkaBasedTelemetrySender(factory, kafkaProducerConfig,
-                adapterConfig.isDefaultsEnabled(), tracer);
+                true, tracer);
 
         // WHEN sending telemetry data with QoS 1
         sender.sendTelemetry(tenant, device, qos, contentType, Buffer.buffer(payload), null, null)
@@ -149,13 +145,13 @@ public class KafkaBasedTelemetrySenderTest {
                 (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(KafkaClientUnitTestHelper.newMockProducer(true)));
 
         assertThrows(NullPointerException.class,
-                () -> new KafkaBasedTelemetrySender(null, kafkaProducerConfig, adapterConfig.isDefaultsEnabled(), tracer));
+                () -> new KafkaBasedTelemetrySender(null, kafkaProducerConfig, true, tracer));
 
         assertThrows(NullPointerException.class,
-                () -> new KafkaBasedTelemetrySender(factory, null, adapterConfig.isDefaultsEnabled(), tracer));
+                () -> new KafkaBasedTelemetrySender(factory, null, true, tracer));
 
         assertThrows(NullPointerException.class,
-                () -> new KafkaBasedTelemetrySender(factory, kafkaProducerConfig, adapterConfig.isDefaultsEnabled(), null));
+                () -> new KafkaBasedTelemetrySender(factory, kafkaProducerConfig, true, null));
     }
 
     /**
@@ -169,7 +165,7 @@ public class KafkaBasedTelemetrySenderTest {
         final CachingKafkaProducerFactory<String, Buffer> factory = new CachingKafkaProducerFactory<>(
                 (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(KafkaClientUnitTestHelper.newMockProducer(true)));
         final KafkaBasedTelemetrySender sender = new KafkaBasedTelemetrySender(factory, kafkaProducerConfig,
-                adapterConfig.isDefaultsEnabled(), tracer);
+                true, tracer);
 
         assertThrows(NullPointerException.class,
                 () -> sender.sendTelemetry(null, device, qos, "the-content-type", null, null, null));
