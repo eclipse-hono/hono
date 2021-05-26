@@ -12,10 +12,10 @@
  *******************************************************************************/
 package org.eclipse.hono.tests.registry;
 
-import org.eclipse.hono.adapter.client.registry.CredentialsClient;
-import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedCredentialsClient;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.registry.CredentialsClient;
+import org.eclipse.hono.client.registry.amqp.ProtonBasedCredentialsClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;

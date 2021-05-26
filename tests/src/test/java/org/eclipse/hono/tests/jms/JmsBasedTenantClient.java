@@ -21,10 +21,10 @@ import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.security.auth.x500.X500Principal;
 
-import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
+import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;

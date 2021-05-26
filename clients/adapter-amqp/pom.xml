@@ -34,6 +34,10 @@
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-registry</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client</artifactId>
     </dependency>
     <dependency>

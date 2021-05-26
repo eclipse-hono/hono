@@ -21,7 +21,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
+import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.BeforeEach;

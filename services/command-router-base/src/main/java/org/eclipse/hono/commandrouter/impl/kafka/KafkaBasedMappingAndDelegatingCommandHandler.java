@@ -18,9 +18,9 @@ import org.eclipse.hono.adapter.client.command.CommandContext;
 import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedCommand;
 import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedCommandContext;
 import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedInternalCommandSender;
-import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.client.impl.CommandConsumer;
 import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
+import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.commandrouter.impl.AbstractMappingAndDelegatingCommandHandler;
 

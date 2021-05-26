@@ -38,6 +38,10 @@
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-registry-amqp</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client-adapter-kafka</artifactId>
     </dependency>
     <dependency>

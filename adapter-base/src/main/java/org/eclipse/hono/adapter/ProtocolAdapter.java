@@ -18,9 +18,9 @@ import java.util.Objects;
 
 import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.CommandResponseSender;
-import org.eclipse.hono.adapter.client.registry.CredentialsClient;
-import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.client.registry.CredentialsClient;
+import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.TelemetrySender;
 import org.eclipse.hono.util.RegistrationAssertion;

@@ -23,10 +23,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
-import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.registry.DeviceRegistrationClient;
+import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;

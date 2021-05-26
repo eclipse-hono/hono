@@ -32,8 +32,8 @@ import java.util.concurrent.TimeUnit;
 
 import javax.security.auth.x500.X500Principal;
 
-import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.application.client.DownstreamMessage;
+import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.Credentials;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;

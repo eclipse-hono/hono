@@ -30,7 +30,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.eclipse.hono.adapter.client.registry.TenantClient;
+import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.TenantObject;

@@ -18,7 +18,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
-import org.eclipse.hono.adapter.client.registry.TenantClient;
+import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;

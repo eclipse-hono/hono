@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.security.auth.x500.X500Principal;
 
-import org.eclipse.hono.adapter.client.registry.TenantClient;
+import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;

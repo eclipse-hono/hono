@@ -27,8 +27,8 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
-import org.eclipse.hono.adapter.client.registry.TenantClient;
+import org.eclipse.hono.client.registry.DeviceRegistrationClient;
+import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterServiceConfigProperties;

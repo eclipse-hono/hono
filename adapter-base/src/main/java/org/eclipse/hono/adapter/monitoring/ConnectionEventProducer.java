@@ -13,8 +13,8 @@
 package org.eclipse.hono.adapter.monitoring;
 
 
-import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.telemetry.EventSender;
 
 import io.vertx.core.Future;
