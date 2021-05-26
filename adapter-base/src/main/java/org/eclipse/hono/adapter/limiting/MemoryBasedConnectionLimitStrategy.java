@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -75,7 +75,8 @@ public class MemoryBasedConnectionLimitStrategy implements ConnectionLimitStrate
 
     @Override
     public String getResourcesDescription() {
-        return "max. available memory: " + maxMemory / 1_000_000 + "MB";
+        return String.format("max. available memory: %dMB, memory required to start: %dMB",
+                maxMemory / 1_000_000, memoryRequiredToStart / 1_000_000);
     }
 
 }

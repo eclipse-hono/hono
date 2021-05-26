@@ -14,8 +14,8 @@ hono:
     insecurePortEnabled: true
     keyPath: /etc/hono/certs/amqp-adapter-key.pem
     certPath: /etc/hono/certs/amqp-adapter-cert.pem
-    maxConnections: 10
     sendMessageToDeviceTimeout: ${adapter.sendMessageToDeviceTimeout}
+    maxFrameSize: 4096
     supportedCipherSuites:
     # one TLS 1.3 cipher suite
     - "TLS_AES_128_GCM_SHA256"

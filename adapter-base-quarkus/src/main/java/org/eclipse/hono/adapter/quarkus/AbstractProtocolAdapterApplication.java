@@ -207,7 +207,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
      */
     private void logJvmDetails() {
         if (LOG.isInfoEnabled()) {
-            LOG.info("running on Java VM [version: {}, name: {}, vendor: {}, max memory: {}MB, processors: {}]",
+            LOG.info("running on Java VM [version: {}, name: {}, vendor: {}, max memory: {}MiB, processors: {}]",
                     System.getProperty("java.version"),
                     System.getProperty("java.vm.name"),
                     System.getProperty("java.vm.vendor"),

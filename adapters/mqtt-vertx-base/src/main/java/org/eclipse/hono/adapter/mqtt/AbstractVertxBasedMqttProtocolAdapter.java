@@ -105,13 +105,18 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         extends AbstractProtocolAdapterBase<T> {
 
     /**
-     * The minimum amount of memory that the adapter requires to run.
+     * The minimum amount of memory (bytes) that the adapter requires to run on a standard Java VM.
      */
-    protected static final int MINIMAL_MEMORY = 100_000_000; // 100MB: minimal memory necessary for startup
+    protected static final int MINIMAL_MEMORY_JVM = 100_000_000;
     /**
-     * The amount of memory required for each connection.
+     * The minimum amount of memory (bytes) that the adapter requires to run on a Substrate VM (i.e. when running
+     * as a GraalVM native image).
      */
-    protected static final int MEMORY_PER_CONNECTION = 20_000; // 20KB: expected avg. memory consumption per connection
+    protected static final int MINIMAL_MEMORY_SUBSTRATE = 35_000_000;
+    /**
+     * The amount of memory (bytes) required for each connection.
+     */
+    protected static final int MEMORY_PER_CONNECTION = 20_000;
 
     private static final int IANA_MQTT_PORT = 1883;
     private static final int IANA_SECURE_MQTT_PORT = 8883;
@@ -349,7 +354,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     private ConnectionLimitManager createConnectionLimitManager() {
         return new DefaultConnectionLimitManager(
-                new MemoryBasedConnectionLimitStrategy(MINIMAL_MEMORY, MEMORY_PER_CONNECTION),
+                new MemoryBasedConnectionLimitStrategy(
+                        getConfig().isSubstrateVm() ? MINIMAL_MEMORY_SUBSTRATE : MINIMAL_MEMORY_JVM,
+                        MEMORY_PER_CONNECTION),
                 () -> metrics.getNumberOfConnections(), getConfig());
     }
 

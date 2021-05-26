@@ -40,13 +40,13 @@ import org.eclipse.hono.config.quarkus.ApplicationConfigProperties;
 import org.eclipse.hono.config.quarkus.ServiceConfigProperties;
 import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
 import org.eclipse.hono.service.HealthCheckProvider;
-import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.service.cache.Caches;
 import org.eclipse.hono.service.commandrouter.CommandRouterService;
 import org.eclipse.hono.service.commandrouter.DelegatingCommandRouterAmqpEndpoint;
 import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.service.quarkus.AbstractServiceApplication;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.RegistrationResult;
@@ -57,7 +57,6 @@ import org.slf4j.LoggerFactory;
 
 import com.github.benmanes.caffeine.cache.Cache;
 
-import io.micrometer.core.instrument.MeterRegistry;
 import io.opentracing.Tracer;
 import io.quarkus.arc.config.ConfigPrefix;
 import io.quarkus.runtime.ShutdownEvent;
@@ -66,8 +65,6 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Promise;
 import io.vertx.core.Verticle;
-import io.vertx.core.Vertx;
-import io.vertx.core.impl.cpu.CpuCoreSensor;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
 
@@ -75,13 +72,10 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
  * The Quarkus based Command Router main application class.
  */
 @ApplicationScoped
-public class Application {
+public class Application extends AbstractServiceApplication {
 
     private static final String COMPONENT_NAME = "Hono Command Router";
     private static final Logger LOG = LoggerFactory.getLogger(Application.class);
-
-    @Inject
-    Vertx vertx;
 
     @Inject
     Tracer tracer;
@@ -112,12 +106,6 @@ public class Application {
 
     @Inject
     DeviceConnectionInfo deviceConnectionInfo;
-
-    @Inject
-    HealthCheckServer healthCheckServer;
-
-    @Inject
-    MeterRegistry meterRegistry;
 
     @Inject
     ProtonSaslAuthenticatorFactory saslAuthenticatorFactory;
@@ -180,21 +168,6 @@ public class Application {
                 });
             });
         shutdown.join();
-    }
-
-    /**
-     * Logs information about the JVM.
-     */
-    private void logJvmDetails() {
-        if (LOG.isInfoEnabled()) {
-            LOG.info("running on Java VM [version: {}, name: {}, vendor: {}, max memory: {}MB, processors: {}]",
-                    System.getProperty("java.version"),
-                    System.getProperty("java.vm.name"),
-                    System.getProperty("java.vm.vendor"),
-                    Runtime.getRuntime().maxMemory() >> 20,
-                    CpuCoreSensor.availableProcessors());
-        }
-
     }
 
     private CommandRouterAmqpServer amqpServer() {
