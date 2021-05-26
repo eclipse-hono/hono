@@ -14,10 +14,10 @@
 package org.eclipse.hono.adapter;
 
 /**
- * A base class that provides helper methods for configuring protocol adapters.
+ * A strategy for determining the (component) name of a protocol adapter.
  *
  */
-public abstract class AdapterConfigurationSupport {
+public interface AdapterNameProvider {
 
     /**
      * Gets the name of the protocol adapter to configure.
@@ -27,5 +27,5 @@ public abstract class AdapterConfigurationSupport {
      *
      * @return The protocol adapter name.
      */
-    protected abstract String getAdapterName();
+    String getAdapterName();
 }

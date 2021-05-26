@@ -15,7 +15,7 @@ package org.eclipse.hono.adapter.spring;
 
 import java.util.Optional;
 
-import org.eclipse.hono.adapter.AdapterConfigurationSupport;
+import org.eclipse.hono.adapter.AdapterNameProvider;
 import org.eclipse.hono.adapter.MessagingClients;
 import org.eclipse.hono.adapter.client.command.CommandResponseSender;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandResponseSender;
@@ -53,7 +53,7 @@ import io.vertx.core.buffer.Buffer;
  * A base class that provides helper methods for configuring messaging clients.
  */
 @Configuration
-public abstract class AbstractMessagingClientConfig extends AdapterConfigurationSupport {
+public abstract class AbstractMessagingClientConfig implements AdapterNameProvider {
 
     protected final Logger log = LoggerFactory.getLogger(getClass());
 

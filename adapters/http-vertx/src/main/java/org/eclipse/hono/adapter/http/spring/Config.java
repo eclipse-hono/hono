@@ -61,7 +61,7 @@ public class Config extends AbstractAdapterConfig {
     }
 
     @Override
-    protected String getAdapterName() {
+    public String getAdapterName() {
         return CONTAINER_ID_HONO_HTTP_ADAPTER;
     }
 

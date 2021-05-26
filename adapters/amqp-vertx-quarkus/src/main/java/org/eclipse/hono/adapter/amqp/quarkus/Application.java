@@ -35,7 +35,7 @@ public class Application extends AbstractProtocolAdapterApplication<AmqpAdapterP
      * {@inheritDoc}
      */
     @Override
-    protected String getAdapterName() {
+    public String getAdapterName() {
         return CONTAINER_ID;
     }
 
