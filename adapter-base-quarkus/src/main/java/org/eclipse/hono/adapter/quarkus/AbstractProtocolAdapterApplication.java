@@ -22,7 +22,7 @@ import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
-import org.eclipse.hono.adapter.AdapterConfigurationSupport;
+import org.eclipse.hono.adapter.AdapterNameProvider;
 import org.eclipse.hono.adapter.MessagingClients;
 import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.CommandResponseSender;
@@ -102,7 +102,7 @@ import io.vertx.ext.web.client.WebClientOptions;
  *
  * @param <C> The type of configuration properties the adapter uses.
  */
-public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapterProperties> extends AdapterConfigurationSupport {
+public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapterProperties> implements AdapterNameProvider {
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractProtocolAdapterApplication.class);
 

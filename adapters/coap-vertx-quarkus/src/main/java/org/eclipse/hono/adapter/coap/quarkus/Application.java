@@ -43,7 +43,7 @@ public class Application extends AbstractProtocolAdapterApplication<CoapAdapterP
      * {@inheritDoc}
      */
     @Override
-    protected String getAdapterName() {
+    public String getAdapterName() {
         return CONTAINER_ID;
     }
 

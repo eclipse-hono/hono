@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -35,7 +35,7 @@ public class Application extends AbstractProtocolAdapterApplication<HttpProtocol
      * {@inheritDoc}
      */
     @Override
-    protected String getAdapterName() {
+    public String getAdapterName() {
         return CONTAINER_ID;
     }
 
