@@ -43,11 +43,11 @@
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-client-adapter-amqp</artifactId>
+      <artifactId>hono-client-telemetry-amqp</artifactId>
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-client-adapter-kafka</artifactId>
+      <artifactId>hono-client-telemetry-kafka</artifactId>
     </dependency>
 
     <!-- testing -->

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,7 +20,7 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 /**
- * A connection event producer based on a {@link org.eclipse.hono.adapter.client.telemetry.EventSender}.
+ * A connection event producer based on a {@link org.eclipse.hono.client.telemetry.EventSender}.
  */
 public abstract class AbstractMessageSenderConnectionEventProducer implements ConnectionEventProducer {
 

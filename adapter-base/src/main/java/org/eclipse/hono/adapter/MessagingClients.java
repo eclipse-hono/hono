@@ -16,8 +16,8 @@ package org.eclipse.hono.adapter;
 import java.util.Objects;
 
 import org.eclipse.hono.adapter.client.command.CommandResponseSender;
-import org.eclipse.hono.adapter.client.telemetry.EventSender;
-import org.eclipse.hono.adapter.client.telemetry.TelemetrySender;
+import org.eclipse.hono.client.telemetry.EventSender;
+import org.eclipse.hono.client.telemetry.TelemetrySender;
 import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.TenantObject;
