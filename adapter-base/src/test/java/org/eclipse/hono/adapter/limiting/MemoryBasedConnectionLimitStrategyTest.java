@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,17 +24,6 @@ public class MemoryBasedConnectionLimitStrategyTest {
 
     private static final int MINIMAL_MEMORY = 100_000_000;
     private static final int MEMORY_PER_CONNECTION = 20_000;
-
-    /**
-     * Verifies the description of the resources that the strategy takes into account.
-     */
-    @Test
-    public void getResourcesDescription() {
-        assertEquals("max. available memory: 1MB", new MemoryBasedConnectionLimitStrategy(MINIMAL_MEMORY,
-                MEMORY_PER_CONNECTION, 1_000_000).getResourcesDescription());
-        assertEquals("max. available memory: 10MB", new MemoryBasedConnectionLimitStrategy(MINIMAL_MEMORY,
-                MEMORY_PER_CONNECTION, 10_000_000).getResourcesDescription());
-    }
 
     /**
      * Verifies that the recommended connection limit is not negative.

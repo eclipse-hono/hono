@@ -105,14 +105,19 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
     // These values should be made configurable.
     /**
-     * The minimum amount of memory that the adapter requires to run.
+     * The minimum amount of memory (bytes) that the adapter requires to run on a standard Java VM.
      */
-    private static final int MINIMAL_MEMORY = 100_000_000; // 100MB: minimal memory necessary for startup
+    private static final int MINIMAL_MEMORY_JVM = 100_000_000;
+    /**
+     * The minimum amount of memory (bytes) that the adapter requires to run on a Substrate VM (i.e. when running
+     * as a GraalVM native image).
+     */
+    private static final int MINIMAL_MEMORY_SUBSTRATE = 35_000_000;
 
     /**
-     * The amount of memory required for each connection.
+     * The amount of memory (bytes) required for each connection.
      */
-    private static final int MEMORY_PER_CONNECTION = 20_000; // 20KB: expected avg. memory consumption per connection
+    private static final int MEMORY_PER_CONNECTION = 20_000;
 
     /**
      * The AMQP server instance that maps to a secure port.
@@ -229,7 +234,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     private ConnectionLimitManager createConnectionLimitManager() {
         return new DefaultConnectionLimitManager(
                 new MemoryBasedConnectionLimitStrategy(
-                        MINIMAL_MEMORY, MEMORY_PER_CONNECTION + getConfig().getMaxSessionWindowSize()),
+                        getConfig().isSubstrateVm() ? MINIMAL_MEMORY_SUBSTRATE : MINIMAL_MEMORY_JVM,
+                        MEMORY_PER_CONNECTION + getConfig().getMaxSessionWindowSize()),
                 () -> metrics.getNumberOfConnections(), getConfig());
     }
 

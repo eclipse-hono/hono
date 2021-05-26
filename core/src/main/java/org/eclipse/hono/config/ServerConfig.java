@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,6 +29,15 @@ public class ServerConfig extends AbstractConfig {
     private String insecurePortBindAddress = Constants.LOOPBACK_DEVICE_ADDRESS;
     private int insecurePort = Constants.PORT_UNCONFIGURED;
     private boolean sni = false;
+
+    /**
+     * Checks if the current thread is running on the Graal Substrate VM.
+     *
+     * @return {@code true} if the <em>java.vm.name</em> system property value start with {@code Substrate}.
+     */
+    public final boolean isSubstrateVm() {
+        return System.getProperty("java.vm.name", "unknown").startsWith("Substrate");
+    }
 
     /**
      * Gets the host name or literal IP address of the network interface that this server's secure port is configured to
