@@ -154,7 +154,8 @@ public class EdgeDeviceAutoProvisioner extends AbstractAutoProvisioningEventSend
                                         }
 
                                         final Device deviceData = readDeviceResult.getPayload();
-                                        return updateAutoProvisioningNotificationSent(tenantId, deviceId, deviceData, span)
+                                        return updateAutoProvisioningNotificationSent(tenantId, deviceId, deviceData,
+                                                readDeviceResult.getResourceVersion(), span)
                                                 //auto-provisioning still succeeds even if the device registration cannot be updated with the notification flag
                                                 .recover(error -> Future.succeededFuture())
                                                 .map(deviceData);
@@ -218,7 +219,8 @@ public class EdgeDeviceAutoProvisioner extends AbstractAutoProvisioningEventSend
                                     tenantId, deviceId);
                             span.log("sending event - notificationSent flag wasn't updated in between");
                             return sendAutoProvisioningEvent(tenantId, tenant, deviceId, gatewayId, span)
-                                    .compose(ok -> updateAutoProvisioningNotificationSent(tenantId, deviceId, readDevice, span)
+                                    .compose(ok -> updateAutoProvisioningNotificationSent(tenantId, deviceId,
+                                            readDevice, readDeviceResult.getResourceVersion(), span)
                                                     // auto-provisioning still succeeds even if the device registration
                                                     // cannot be updated with the notification flag
                                                     .recover(error -> Future.succeededFuture()));

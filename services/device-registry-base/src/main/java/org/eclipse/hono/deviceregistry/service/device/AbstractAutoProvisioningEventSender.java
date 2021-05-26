@@ -163,20 +163,23 @@ public abstract class AbstractAutoProvisioningEventSender implements Lifecycle {
      * @param tenantId The tenant identifier.
      * @param deviceId The edge device identifier.
      * @param device The edge device registration information.
+     * @param deviceVersion The version of the device registration information to check before update,
+     *                      may be {@link Optional#empty()}.
      * @param span The span to be used for tracing this operation.
      * @return A future indicating the outcome of the operation.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     protected Future<Void> updateAutoProvisioningNotificationSent(final String tenantId,
-            final String deviceId, final Device device, final Span span) {
+            final String deviceId, final Device device, final Optional<String> deviceVersion, final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(device);
+        Objects.requireNonNull(deviceVersion);
         Objects.requireNonNull(span);
 
         device.setStatus(new DeviceStatus().setAutoProvisioningNotificationSent(true));
-        return deviceManagementService.updateDevice(tenantId, deviceId, device, Optional.empty(), span)
+        return deviceManagementService.updateDevice(tenantId, deviceId, device, deviceVersion, span)
                 .compose(result -> {
                     if (HttpURLConnection.HTTP_NO_CONTENT == result.getStatus()) {
                         return Future.succeededFuture();
