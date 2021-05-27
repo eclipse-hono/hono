@@ -1402,9 +1402,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     ? String.format("gateway [%s], device [%s]", authenticatedDevice.getDeviceId(), context.deviceId())
                     : String.format("device [%s]", context.deviceId());
 
-            final Promise<Integer> resultPromise = Promise.promise();
-            endpoint.publish(publishTopic, errorJson.toBuffer(), subscription.getQos(), false, false, resultPromise);
-            return resultPromise.future()
+            return publish(publishTopic, errorJson.toBuffer(), subscription.getQos())
                     .onSuccess(msgId -> {
                         log.debug("published error message [packet-id: {}] to {} [tenant-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
                                 msgId, targetInfo, subscription.getTenant(), endpoint.clientIdentifier(),
@@ -1522,43 +1520,53 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 : String.format("device [%s]", command.getDeviceId());
 
             getCommandPayload(commandContext)
-                .onSuccess(mappedPayload -> {
-                    endpoint.publish(publishTopic, mappedPayload, subscription.getQos(), false, false, sentHandler -> {
-                        if (sentHandler.succeeded()) {
-
-                            final Integer msgId = sentHandler.result();
-                            log.debug("published command [packet-id: {}] to {} [tenant-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
-                                msgId, targetInfo, subscription.getTenant(), endpoint.clientIdentifier(),
-                                subscription.getQos(), publishTopic);
-                            commandContext.getTracingSpan().log(subscription.getQos().value() > 0 ? "published command, packet-id: " + msgId
-                                : "published command");
-                            afterCommandPublished(msgId, commandContext, tenantObject, subscription);
-                        } else {
-                            log.debug("error publishing command to {} [tenant-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
-                                targetInfo, subscription.getTenant(), endpoint.clientIdentifier(),
-                                subscription.getQos(), publishTopic, sentHandler.cause());
-                            TracingHelper.logError(commandContext.getTracingSpan(), "failed to publish command", sentHandler.cause());
-                            reportPublishedCommand(
+                    .onSuccess(mappedPayload -> {
+                        publish(publishTopic, mappedPayload, subscription.getQos())
+                                .onSuccess(msgId -> {
+                                    log.debug("published command [packet-id: {}] to {} [tenant-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
+                                            msgId, targetInfo, subscription.getTenant(), endpoint.clientIdentifier(),
+                                            subscription.getQos(), publishTopic);
+                                    commandContext.getTracingSpan()
+                                            .log(subscription.getQos().value() > 0
+                                                    ? "published command, packet-id: " + msgId
+                                                    : "published command");
+                                    afterCommandPublished(msgId, commandContext, tenantObject, subscription);
+                                })
+                                .onFailure(thr -> {
+                                    log.debug("error publishing command to {} [tenant-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
+                                            targetInfo, subscription.getTenant(), endpoint.clientIdentifier(),
+                                            subscription.getQos(), publishTopic, thr);
+                                    TracingHelper.logError(commandContext.getTracingSpan(), "failed to publish command", thr);
+                                    reportPublishedCommand(
+                                            tenantObject,
+                                            subscription,
+                                            commandContext,
+                                            ProcessingOutcome.from(thr));
+                                    commandContext.release();
+                                });
+                    }).onFailure(t -> {
+                        log.debug("error mapping command [tenant-id: {}, MQTT client-id: {}, QoS: {}]",
+                                subscription.getTenant(), endpoint.clientIdentifier(), subscription.getQos(), t);
+                        TracingHelper.logError(commandContext.getTracingSpan(), "failed to map command", t);
+                        reportPublishedCommand(
                                 tenantObject,
                                 subscription,
                                 commandContext,
-                                ProcessingOutcome.from(sentHandler.cause()));
-                            commandContext.release();
-                        }
+                                ProcessingOutcome.from(t));
+                        commandContext.release();
                     });
-                }
-            ).onFailure(t -> {
-                log.debug("error mapping command [tenant-id: {}, MQTT client-id: {}, QoS: {}]",
-                    subscription.getTenant(), endpoint.clientIdentifier(),
-                    subscription.getQos(), t);
-                TracingHelper.logError(commandContext.getTracingSpan(), "failed to map command", t);
-                reportPublishedCommand(
-                    tenantObject,
-                    subscription,
-                    commandContext,
-                    ProcessingOutcome.from(t));
-                commandContext.release();
-            });
+        }
+
+        private Future<Integer> publish(final String topic, final Buffer payload, final MqttQoS qosLevel) {
+            final Promise<Integer> publishSentPromise = Promise.promise();
+            try {
+                endpoint.publish(topic, payload, qosLevel, false, false, publishSentPromise);
+            } catch (final Exception e) {
+                publishSentPromise.fail(!endpoint.isConnected()
+                        ? new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "connection to device already closed")
+                        : new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, e));
+            }
+            return publishSentPromise.future();
         }
 
         private void afterCommandPublished(
