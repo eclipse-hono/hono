@@ -15,7 +15,6 @@ package org.eclipse.hono.commandrouter.quarkus;
 import java.util.concurrent.CompletableFuture;
 
 import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
@@ -59,8 +58,6 @@ import com.github.benmanes.caffeine.cache.Cache;
 
 import io.opentracing.Tracer;
 import io.quarkus.arc.config.ConfigPrefix;
-import io.quarkus.runtime.ShutdownEvent;
-import io.quarkus.runtime.StartupEvent;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Promise;
@@ -117,17 +114,17 @@ public class Application extends AbstractServiceApplication {
 
     private Cache<Object, TenantResult<TenantObject>> tenantResponseCache;
 
-    String getComponentName() {
+    @Override
+    public String getComponentName() {
         return COMPONENT_NAME;
     }
 
-    void onStart(final @Observes StartupEvent ev) {
+    @Override
+    protected void doStart() {
 
         if (!(authenticationService instanceof Verticle)) {
             throw new IllegalStateException("Authentication service must be a vert.x Verticle");
         }
-
-        logJvmDetails();
 
         LOG.info("adding common tags to meter registry");
         meterRegistry.config().commonTags(MetricsTags.forService(Constants.SERVICE_NAME_COMMAND_ROUTER));
@@ -152,22 +149,6 @@ public class Application extends AbstractServiceApplication {
             .onSuccess(ok -> startup.complete(null))
             .onFailure(t -> startup.completeExceptionally(t));
         startup.join();
-    }
-
-    void onStop(final @Observes ShutdownEvent ev) {
-        LOG.info("shutting down {}", getComponentName());
-        final CompletableFuture<Void> shutdown = new CompletableFuture<>();
-        healthCheckServer.stop()
-            .onComplete(ok -> {
-                vertx.close(attempt -> {
-                    if (attempt.succeeded()) {
-                        shutdown.complete(null);
-                    } else {
-                        shutdown.completeExceptionally(attempt.cause());
-                    }
-                });
-            });
-        shutdown.join();
     }
 
     private CommandRouterAmqpServer amqpServer() {

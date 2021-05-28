@@ -11,21 +11,18 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.adapter;
+package org.eclipse.hono.service;
 
 /**
- * A strategy for determining the (component) name of a protocol adapter.
+ * A strategy for determining the component's logical name.
  *
  */
-public interface AdapterNameProvider {
+public interface ComponentNameProvider {
 
     /**
-     * Gets the name of the protocol adapter to configure.
-     * <p>
-     * This name will be used as part of the <em>container-id</em> in the AMQP <em>Open</em> frame sent by the
-     * clients configured by this class.
+     * Gets the name of the component to configure.
      *
-     * @return The protocol adapter name.
+     * @return The component name.
      */
-    String getAdapterName();
+    String getComponentName();
 }

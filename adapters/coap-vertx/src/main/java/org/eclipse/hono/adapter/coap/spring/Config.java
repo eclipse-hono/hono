@@ -96,7 +96,7 @@ public class Config extends AbstractAdapterConfig {
     }
 
     @Override
-    public String getAdapterName() {
+    public String getComponentName() {
         return CONTAINER_ID_HONO_COAP_ADAPTER;
     }
 

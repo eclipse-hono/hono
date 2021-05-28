@@ -15,7 +15,6 @@ package org.eclipse.hono.authentication.quarkus;
 import java.util.concurrent.CompletableFuture;
 
 import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 
 import org.eclipse.hono.authentication.AuthenticationEndpoint;
@@ -34,8 +33,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.quarkus.arc.config.ConfigPrefix;
-import io.quarkus.runtime.ShutdownEvent;
-import io.quarkus.runtime.StartupEvent;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Promise;
@@ -59,13 +56,13 @@ public class Application extends AbstractServiceApplication {
     @Inject
     FileBasedAuthenticationServiceConfigProperties serviceConfig;
 
-    String getComponentName() {
+    @Override
+    public String getComponentName() {
         return COMPONENT_NAME;
     }
 
-    void onStart(final @Observes StartupEvent ev) {
-
-        logJvmDetails();
+    @Override
+    protected void doStart() {
 
         LOG.info("adding common tags to meter registry");
         meterRegistry.config().commonTags(MetricsTags.forService(Constants.SERVICE_NAME_AUTH));
@@ -90,22 +87,6 @@ public class Application extends AbstractServiceApplication {
             .onSuccess(ok -> startup.complete(null))
             .onFailure(t -> startup.completeExceptionally(t));
         startup.join();
-    }
-
-    void onStop(final @Observes ShutdownEvent ev) {
-        LOG.info("shutting down {}", getComponentName());
-        final CompletableFuture<Void> shutdown = new CompletableFuture<>();
-        healthCheckServer.stop()
-            .onComplete(ok -> {
-                vertx.close(attempt -> {
-                    if (attempt.succeeded()) {
-                        shutdown.complete(null);
-                    } else {
-                        shutdown.completeExceptionally(attempt.cause());
-                    }
-                });
-            });
-        shutdown.join();
     }
 
     AuthTokenHelper authTokenFactory() {

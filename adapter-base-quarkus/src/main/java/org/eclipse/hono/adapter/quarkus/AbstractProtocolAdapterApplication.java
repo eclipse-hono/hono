@@ -18,11 +18,9 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 
-import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
-import org.eclipse.hono.adapter.AdapterNameProvider;
 import org.eclipse.hono.adapter.MessagingClients;
 import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
 import org.eclipse.hono.adapter.client.command.CommandResponseSender;
@@ -68,8 +66,8 @@ import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.config.quarkus.ApplicationConfigProperties;
-import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.cache.Caches;
+import org.eclipse.hono.service.quarkus.AbstractServiceApplication;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.MessagingType;
@@ -84,13 +82,9 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 
 import io.opentracing.Tracer;
 import io.quarkus.arc.config.ConfigPrefix;
-import io.quarkus.runtime.ShutdownEvent;
-import io.quarkus.runtime.StartupEvent;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.impl.cpu.CpuCoreSensor;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 
@@ -102,21 +96,15 @@ import io.vertx.ext.web.client.WebClientOptions;
  *
  * @param <C> The type of configuration properties the adapter uses.
  */
-public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapterProperties> implements AdapterNameProvider {
+public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapterProperties> extends AbstractServiceApplication {
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractProtocolAdapterApplication.class);
-
-    @Inject
-    protected Vertx vertx;
 
     @Inject
     protected Tracer tracer;
 
     @Inject
     protected SendMessageSampler.Factory messageSamplerFactory;
-
-    @Inject
-    protected HealthCheckServer healthCheckServer;
 
     @Inject
     protected PrometheusBasedResourceLimitChecksConfig resourceLimitChecksConfig;
@@ -168,9 +156,10 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
      */
     protected abstract AbstractProtocolAdapterBase<C> adapter();
 
-    void onStart(final @Observes StartupEvent ev) {
-        logJvmDetails();
-        LOG.info("deploying {} {} instances ...", appConfig.getMaxInstances(), getAdapterName());
+    @Override
+    protected void doStart() {
+
+        LOG.info("deploying {} {} instances ...", appConfig.getMaxInstances(), getComponentName());
 
         final CompletableFuture<Void> startup = new CompletableFuture<>();
         final Promise<String> deploymentTracker = Promise.promise();
@@ -184,36 +173,6 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             .onFailure(t -> startup.completeExceptionally(t));
         startup.join();
 
-    }
-
-    void onStop(final @Observes ShutdownEvent ev) {
-        LOG.info("shutting down {}", getAdapterName());
-        final CompletableFuture<Void> shutdown = new CompletableFuture<>();
-        healthCheckServer.stop()
-            .onComplete(ok -> {
-                vertx.close(attempt -> {
-                    if (attempt.succeeded()) {
-                        shutdown.complete(null);
-                    } else {
-                        shutdown.completeExceptionally(attempt.cause());
-                    }
-                });
-            });
-        shutdown.join();
-    }
-
-    /**
-     * Logs information about the JVM.
-     */
-    private void logJvmDetails() {
-        if (LOG.isInfoEnabled()) {
-            LOG.info("running on Java VM [version: {}, name: {}, vendor: {}, max memory: {}MiB, processors: {}]",
-                    System.getProperty("java.version"),
-                    System.getProperty("java.vm.name"),
-                    System.getProperty("java.vm.vendor"),
-                    Runtime.getRuntime().maxMemory() >> 20,
-                    CpuCoreSensor.availableProcessors());
-        }
     }
 
     /**
@@ -256,7 +215,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         if (kafkaProducerConfig.isConfigured()) {
             LOG.info("Kafka Producer is configured, adding Kafka messaging clients");
 
-            Optional.ofNullable(getAdapterName()).ifPresent(kafkaProducerConfig::setDefaultClientIdPrefix);
+            Optional.ofNullable(getComponentName()).ifPresent(kafkaProducerConfig::setDefaultClientIdPrefix);
             LOG.debug("KafkaProducerConfig: " + kafkaProducerConfig.getProducerConfig("log"));
 
             final KafkaProducerFactory<String, Buffer> factory = KafkaProducerFactory.sharedProducerFactory(vertx);
@@ -314,7 +273,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
     private RequestResponseClientConfigProperties tenantServiceClientConfig() {
         tenantClientConfig.setServerRoleIfUnknown("Tenant");
-        tenantClientConfig.setNameIfNotSet(getAdapterName());
+        tenantClientConfig.setNameIfNotSet(getComponentName());
         return tenantClientConfig;
     }
 
@@ -339,7 +298,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
     private RequestResponseClientConfigProperties registrationServiceClientConfig() {
         deviceRegistrationClientConfig.setServerRoleIfUnknown("Device Registration");
-        deviceRegistrationClientConfig.setNameIfNotSet(getAdapterName());
+        deviceRegistrationClientConfig.setNameIfNotSet(getComponentName());
         return deviceRegistrationClientConfig;
     }
 
@@ -364,7 +323,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
     private RequestResponseClientConfigProperties credentialsServiceClientConfig() {
         credentialsClientConfig.setServerRoleIfUnknown("Credentials");
-        credentialsClientConfig.setNameIfNotSet(getAdapterName());
+        credentialsClientConfig.setNameIfNotSet(getComponentName());
         return credentialsClientConfig;
     }
 
@@ -389,7 +348,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
     private RequestResponseClientConfigProperties commandRouterServiceClientConfig() {
         commandRouterConfig.setServerRoleIfUnknown("Command Router");
-        commandRouterConfig.setNameIfNotSet(getAdapterName());
+        commandRouterConfig.setNameIfNotSet(getComponentName());
         return commandRouterConfig;
     }
 
@@ -408,7 +367,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         // downstreamSenderConfig also used for the commandResponseSender, therefore set role on a copy here
         final ClientConfigProperties props = new ClientConfigProperties(downstreamSenderConfig);
         props.setServerRoleIfUnknown("Downstream");
-        props.setNameIfNotSet(getAdapterName());
+        props.setNameIfNotSet(getComponentName());
         return props;
     }
 
@@ -427,7 +386,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
     private ClientConfigProperties commandConsumerConfig() {
         commandConsumerConfig.setServerRoleIfUnknown("Command & Control");
-        commandConsumerConfig.setNameIfNotSet(getAdapterName());
+        commandConsumerConfig.setNameIfNotSet(getComponentName());
         return commandConsumerConfig;
     }
 
@@ -476,13 +435,13 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
         LOG.debug("using Command Router service client, configuring CommandConsumerFactory [{}]",
                 CommandRouterCommandConsumerFactory.class.getName());
-        return new CommandRouterCommandConsumerFactory(commandRouterClient, getAdapterName());
+        return new CommandRouterCommandConsumerFactory(commandRouterClient, getComponentName());
     }
 
     private ClientConfigProperties commandResponseSenderConfig() {
         final ClientConfigProperties props = new ClientConfigProperties(downstreamSenderConfig);
         props.setServerRoleIfUnknown("Command Response");
-        props.setNameIfNotSet(getAdapterName());
+        props.setNameIfNotSet(getComponentName());
         return props;
     }
 

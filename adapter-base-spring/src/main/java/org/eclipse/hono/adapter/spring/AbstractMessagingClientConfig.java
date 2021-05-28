@@ -15,7 +15,6 @@ package org.eclipse.hono.adapter.spring;
 
 import java.util.Optional;
 
-import org.eclipse.hono.adapter.AdapterNameProvider;
 import org.eclipse.hono.adapter.MessagingClients;
 import org.eclipse.hono.adapter.client.command.CommandResponseSender;
 import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandResponseSender;
@@ -33,6 +32,7 @@ import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
+import org.eclipse.hono.service.ComponentNameProvider;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessagingType;
@@ -53,7 +53,7 @@ import io.vertx.core.buffer.Buffer;
  * A base class that provides helper methods for configuring messaging clients.
  */
 @Configuration
-public abstract class AbstractMessagingClientConfig implements AdapterNameProvider {
+public abstract class AbstractMessagingClientConfig implements ComponentNameProvider {
 
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
@@ -128,8 +128,8 @@ public abstract class AbstractMessagingClientConfig implements AdapterNameProvid
     @Bean
     public KafkaProducerConfigProperties kafkaProducerConfig() {
         final KafkaProducerConfigProperties configProperties = new KafkaProducerConfigProperties();
-        if (getAdapterName() != null) {
-            configProperties.setDefaultClientIdPrefix(getAdapterName());
+        if (getComponentName() != null) {
+            configProperties.setDefaultClientIdPrefix(getComponentName());
         }
         return configProperties;
     }
@@ -143,8 +143,8 @@ public abstract class AbstractMessagingClientConfig implements AdapterNameProvid
     @Bean
     public KafkaConsumerConfigProperties kafkaConsumerConfig() {
         final KafkaConsumerConfigProperties configProperties = new KafkaConsumerConfigProperties();
-        if (getAdapterName() != null) {
-            configProperties.setDefaultClientIdPrefix(getAdapterName());
+        if (getComponentName() != null) {
+            configProperties.setDefaultClientIdPrefix(getComponentName());
         }
         return configProperties;
     }
@@ -177,7 +177,7 @@ public abstract class AbstractMessagingClientConfig implements AdapterNameProvid
         final ClientConfigProperties config = Optional.ofNullable(getDownstreamSenderConfigDefaults())
                 .orElseGet(ClientConfigProperties::new);
         config.setServerRoleIfUnknown("AMQP Messaging Network");
-        config.setNameIfNotSet(getAdapterName());
+        config.setNameIfNotSet(getComponentName());
         return config;
     }
 
@@ -223,7 +223,7 @@ public abstract class AbstractMessagingClientConfig implements AdapterNameProvid
         final ClientConfigProperties config = Optional.ofNullable(getCommandConsumerFactoryConfigDefaults())
                 .orElseGet(ClientConfigProperties::new);
         config.setServerRoleIfUnknown("Command & Control");
-        config.setNameIfNotSet(getAdapterName());
+        config.setNameIfNotSet(getComponentName());
         return config;
     }
 
