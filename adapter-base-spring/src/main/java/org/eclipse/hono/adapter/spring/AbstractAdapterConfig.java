@@ -240,8 +240,8 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
     @Bean
     public KafkaAdminClientConfigProperties kafkaAdminClientConfig() {
         final KafkaAdminClientConfigProperties configProperties = new KafkaAdminClientConfigProperties();
-        if (getAdapterName() != null) {
-            configProperties.setDefaultClientIdPrefix(getAdapterName());
+        if (getComponentName() != null) {
+            configProperties.setDefaultClientIdPrefix(getComponentName());
         }
         return configProperties;
     }
@@ -258,7 +258,7 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
         final RequestResponseClientConfigProperties config = Optional.ofNullable(getRegistrationClientConfigDefaults())
                 .orElseGet(RequestResponseClientConfigProperties::new);
         config.setServerRoleIfUnknown("Device Registration");
-        config.setNameIfNotSet(getAdapterName());
+        config.setNameIfNotSet(getComponentName());
         return config;
     }
 
@@ -328,7 +328,7 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
         final RequestResponseClientConfigProperties config = Optional.ofNullable(getCredentialsClientConfigDefaults())
                 .orElseGet(RequestResponseClientConfigProperties::new);
         config.setServerRoleIfUnknown("Credentials");
-        config.setNameIfNotSet(getAdapterName());
+        config.setNameIfNotSet(getComponentName());
         return config;
     }
 
@@ -398,7 +398,7 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
         final RequestResponseClientConfigProperties config = Optional.ofNullable(getTenantClientConfigDefaults())
                 .orElseGet(RequestResponseClientConfigProperties::new);
         config.setServerRoleIfUnknown("Tenant");
-        config.setNameIfNotSet(getAdapterName());
+        config.setNameIfNotSet(getComponentName());
         return config;
     }
 
@@ -469,7 +469,7 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
         final RequestResponseClientConfigProperties config = Optional.ofNullable(getDeviceConnectionClientFactoryConfigDefaults())
                 .orElseGet(RequestResponseClientConfigProperties::new);
         config.setServerRoleIfUnknown("Device Connection");
-        config.setNameIfNotSet(getAdapterName());
+        config.setNameIfNotSet(getComponentName());
         return config;
     }
 
@@ -530,7 +530,7 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
         final RequestResponseClientConfigProperties config = Optional.ofNullable(getCommandRouterClientConfigDefaults())
                 .orElseGet(RequestResponseClientConfigProperties::new);
         config.setServerRoleIfUnknown("Command Router");
-        config.setNameIfNotSet(getAdapterName());
+        config.setNameIfNotSet(getComponentName());
         return config;
     }
 
@@ -597,7 +597,7 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
 
         log.debug("using Command Router service client, configuring CommandConsumerFactory [{}]",
                 CommandRouterCommandConsumerFactory.class.getName());
-        return new CommandRouterCommandConsumerFactory(commandRouterClient, getAdapterName());
+        return new CommandRouterCommandConsumerFactory(commandRouterClient, getComponentName());
     }
 
     /**

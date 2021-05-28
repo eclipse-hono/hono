@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,6 +15,9 @@ package org.eclipse.hono.service.quarkus.metric;
 import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.prometheus.PrometheusConfig;
@@ -27,10 +30,13 @@ import io.quarkus.arc.properties.IfBuildProperty;
  */
 public class MeterRegistryProducer {
 
+    private final Logger LOG = LoggerFactory.getLogger(MeterRegistryProducer.class);
+
     @Singleton
     @Produces
     @IfBuildProperty(name = "hono.metrics", stringValue = "prometheus")
     MeterRegistry prometheusRegistry() {
+        LOG.info("creating PrometheusMeterRegistry");
         return new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
     }
 
@@ -38,6 +44,7 @@ public class MeterRegistryProducer {
     @Produces
     @DefaultBean
     MeterRegistry simpleRegistry() {
+        LOG.info("creating SimpleMeterRegistry");
         return new SimpleMeterRegistry();
     }
 }

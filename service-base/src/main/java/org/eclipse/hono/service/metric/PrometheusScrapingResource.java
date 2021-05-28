@@ -14,11 +14,12 @@
 
 package org.eclipse.hono.service.metric;
 
-import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import io.micrometer.prometheus.PrometheusMeterRegistry;
+import io.prometheus.client.exporter.common.TextFormat;
 import io.vertx.core.Handler;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 
@@ -48,8 +49,9 @@ public class PrometheusScrapingResource implements Handler<Router> {
      * @param event The request.
      */
     private void scrape(final RoutingContext event) {
-        final String stats = registry.scrape();
-        event.response().setStatusCode(HttpURLConnection.HTTP_OK).end(stats);
+        event.response()
+            .putHeader(HttpHeaders.CONTENT_TYPE, TextFormat.CONTENT_TYPE_004)
+            .end(registry.scrape());
     }
 
     /**
