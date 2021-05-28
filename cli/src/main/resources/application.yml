@@ -20,7 +20,9 @@ device:
 ---
 
 spring:
-  profiles: receiver
+  config:
+    activate:
+      on-profile: receiver
 
 hono:
   client:
@@ -39,7 +41,9 @@ message:
 ---
 
 spring:
-  profiles: kafka
+  config:
+    activate:
+      on-profile: kafka
 
 hono:
   kafka:
@@ -51,7 +55,9 @@ hono:
 ---
 
 spring:
-  profiles: statistic
+  config:
+    activate:
+      on-profile: statistic
 
 statistic:
   interval: 10000
@@ -63,7 +69,9 @@ statistic:
 # Do not use this profile for certificates that the JVM trusts, e.g. for the Hono sandbox. Simply set hono.client.tlsEnabled 
 # to true. 
 spring:
-  profiles: ssl
+  config:
+    activate:
+      on-profile: ssl
 hono:
   client:
     hostnameVerificationRequired: false
@@ -73,7 +81,9 @@ hono:
 ---
 
 spring:
-  profiles: amqp-send,amqp-command
+  config:
+    activate:
+      on-profile: amqp-send,amqp-command
 
 hono:
   client:
@@ -86,7 +96,9 @@ message:
 ---
 
 spring:
-  profiles: command
+  config:
+    activate:
+      on-profile: command
 
 hono:
   client:
