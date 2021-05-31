@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -126,15 +126,16 @@ abstract class DeviceRegistryTestBase {
     }
 
     /**
-     * Creates a new integration test helper.
+     * Creates a new integration test helper and connects to the messaging network.
      *
      * @param vertx The vert.x instance to use for the helper.
      */
     @BeforeEach
-    public void createHelper(final Vertx vertx) {
+    public void setUp(final Vertx vertx, final VertxTestContext ctx) {
 
         helper = new IntegrationTestSupport(vertx);
         helper.initRegistryClient();
+        helper.init().onComplete(ctx.completing());
     }
 
     /**
@@ -145,6 +146,16 @@ abstract class DeviceRegistryTestBase {
     @AfterEach
     public void cleanupDeviceRegistry(final VertxTestContext ctx) {
         helper.deleteObjects(ctx);
+    }
+
+    /**
+     * Closes the connection to the Messaging Network.
+     *
+     * @param ctx The vert.x context.
+     */
+    @AfterEach
+    public void closeConnectionToMessagingNetwork(final VertxTestContext ctx) {
+        helper.disconnect().onComplete(r -> ctx.completeNow());
     }
 
     /**

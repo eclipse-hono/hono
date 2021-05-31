@@ -36,6 +36,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.RegistrationResult;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -228,13 +229,21 @@ public class MongoDbBasedDeviceBackend implements DeviceBackend, Lifecycle {
         return this.tenantInformationService.getTenant(tenantId, span)
                 .compose(tenant -> credentialsService.get(tenantId, type, authId, clientContext, span)
                         .compose(credentialsResult -> {
-                            if (credentialsResult.isNotFound() && deviceAndGatewayAutoProvisioner != null) {
-                                return deviceAndGatewayAutoProvisioner.provisionIfEnabled(
-                                        tenantId,
-                                        tenant,
-                                        authId,
-                                        clientContext,
-                                        span);
+                            if (deviceAndGatewayAutoProvisioner != null) {
+                                if (credentialsResult.isNotFound()) {
+                                    return deviceAndGatewayAutoProvisioner.provisionIfEnabled(
+                                            tenantId,
+                                            tenant,
+                                            authId,
+                                            clientContext,
+                                            span);
+                                } else {
+                                    final String deviceId = credentialsResult.getPayload()
+                                            .getString(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID);
+                                    return deviceAndGatewayAutoProvisioner
+                                            .sendAutoProvisioningEventIfNeeded(tenantId, tenant, deviceId, span)
+                                            .map(ok -> credentialsResult);
+                                }
                             }
                             return Future.succeededFuture(credentialsResult);
                         }))
