@@ -19,7 +19,7 @@ import io.vertx.proton.ProtonDelivery;
 /**
  * A sender to send back the response message of a command.
  *
- * @deprecated Use {@code org.eclipse.hono.adapter.client.command.CommandResponseSender} instead.
+ * @deprecated Use {@code org.eclipse.hono.client.command.CommandResponseSender} instead.
  */
 @Deprecated
 public interface CommandResponseSender extends MessageSender {

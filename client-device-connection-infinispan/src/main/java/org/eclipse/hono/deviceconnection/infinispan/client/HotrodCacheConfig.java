@@ -15,7 +15,7 @@ package org.eclipse.hono.deviceconnection.infinispan.client;
 
 import java.util.Optional;
 
-import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
+import org.eclipse.hono.client.command.DeviceConnectionClient;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

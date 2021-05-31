@@ -168,17 +168,17 @@
       </dependency>
       <dependency>
         <groupId>org.eclipse.hono</groupId>
-        <artifactId>hono-client-adapter</artifactId>
+        <artifactId>hono-client-command</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.hono</groupId>
-        <artifactId>hono-client-adapter-amqp</artifactId>
+        <artifactId>hono-client-command-amqp</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.hono</groupId>
-        <artifactId>hono-client-adapter-kafka</artifactId>
+        <artifactId>hono-client-command-kafka</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

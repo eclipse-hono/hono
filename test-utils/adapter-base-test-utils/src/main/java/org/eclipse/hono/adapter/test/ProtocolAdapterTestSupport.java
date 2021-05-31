@@ -16,7 +16,7 @@ package org.eclipse.hono.adapter.test;
 
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.adapter.MessagingClients;
-import org.eclipse.hono.adapter.client.command.CommandResponseSender;
+import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.TelemetrySender;
 import org.eclipse.hono.client.util.MessagingClient;

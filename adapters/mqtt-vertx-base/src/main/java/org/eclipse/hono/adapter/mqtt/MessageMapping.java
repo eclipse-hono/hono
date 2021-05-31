@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.adapter.mqtt;
 
-import org.eclipse.hono.adapter.client.command.Command;
+import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.util.ExecutionContext;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.ResourceIdentifier;

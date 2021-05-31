@@ -28,14 +28,14 @@
   <description>Client role specific libraries for accessing Hono's remote APIs</description>
 
   <modules>
-    <module>adapter</module>
-    <module>adapter-amqp</module>
-    <module>adapter-kafka</module>
     <module>amqp-common</module>
     <module>application</module>
     <module>application-amqp</module>
     <module>application-kafka</module>
     <module>client-common</module>
+    <module>command</module>
+    <module>command-amqp</module>
+    <module>command-kafka</module>
     <module>kafka-common</module>
     <module>registry</module>
     <module>registry-amqp</module>

@@ -16,11 +16,11 @@ package org.eclipse.hono.adapter.spring;
 import java.util.Optional;
 
 import org.eclipse.hono.adapter.MessagingClients;
-import org.eclipse.hono.adapter.client.command.CommandResponseSender;
-import org.eclipse.hono.adapter.client.command.amqp.ProtonBasedCommandResponseSender;
-import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedCommandResponseSender;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.command.CommandResponseSender;
+import org.eclipse.hono.client.command.amqp.ProtonBasedCommandResponseSender;
+import org.eclipse.hono.client.command.kafka.KafkaBasedCommandResponseSender;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;

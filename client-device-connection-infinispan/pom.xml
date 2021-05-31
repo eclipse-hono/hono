@@ -70,7 +70,7 @@
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-client-adapter</artifactId>
+      <artifactId>hono-client-command</artifactId>
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>

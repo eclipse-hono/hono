@@ -26,7 +26,7 @@ import io.vertx.core.Handler;
  * A factory for creating clients for the <em>AMQP 1.0 Messaging Network</em> to
  * receive commands and send responses.
  *
- * @deprecated Use {@code org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDelegatingCommandConsumerFactory} instead.
+ * @deprecated Use {@code org.eclipse.hono.client.command.amqp.ProtonBasedDelegatingCommandConsumerFactory} instead.
  */
 @Deprecated
 public interface ProtocolAdapterCommandConsumerFactory extends ConnectionLifecycle<HonoConnection> {

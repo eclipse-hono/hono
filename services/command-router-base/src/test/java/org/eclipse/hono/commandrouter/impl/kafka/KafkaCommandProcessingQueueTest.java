@@ -26,9 +26,9 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.apache.kafka.common.TopicPartition;
-import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedCommand;
-import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedCommandContext;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.command.kafka.KafkaBasedCommand;
+import org.eclipse.hono.client.command.kafka.KafkaBasedCommandContext;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;

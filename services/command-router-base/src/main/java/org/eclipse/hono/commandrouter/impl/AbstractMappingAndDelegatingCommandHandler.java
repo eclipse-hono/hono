@@ -15,10 +15,10 @@ package org.eclipse.hono.commandrouter.impl;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
-import org.eclipse.hono.adapter.client.command.Command;
-import org.eclipse.hono.adapter.client.command.CommandContext;
-import org.eclipse.hono.adapter.client.command.InternalCommandSender;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.command.Command;
+import org.eclipse.hono.client.command.CommandContext;
+import org.eclipse.hono.client.command.InternalCommandSender;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
@@ -33,7 +33,7 @@ import io.vertx.core.Future;
 
 /**
  * Handler for mapping received commands to the corresponding target protocol adapter instance
- * and forwarding them using the {@link org.eclipse.hono.adapter.client.command.InternalCommandSender}.
+ * and forwarding them using the {@link org.eclipse.hono.client.command.InternalCommandSender}.
  */
 public abstract class AbstractMappingAndDelegatingCommandHandler implements Lifecycle {
 

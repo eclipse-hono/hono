@@ -19,8 +19,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 
-import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.command.DeviceConnectionClient;
 import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Lifecycle;

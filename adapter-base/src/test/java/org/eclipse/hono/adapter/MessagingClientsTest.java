@@ -18,7 +18,7 @@ import static org.mockito.Mockito.mock;
 
 import java.util.Map;
 
-import org.eclipse.hono.adapter.client.command.CommandResponseSender;
+import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.TelemetrySender;
 import org.eclipse.hono.client.util.MessagingClient;

@@ -30,11 +30,11 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
-import org.eclipse.hono.adapter.client.command.Command;
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.config.MapperEndpoint;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;

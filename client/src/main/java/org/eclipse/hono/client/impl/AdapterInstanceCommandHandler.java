@@ -42,7 +42,7 @@ import io.vertx.proton.ProtonHelper;
 /**
  * Handler for commands received at the protocol adapter instance specific address.
  *
- * @deprecated Use {@code org.eclipse.hono.adapter.client.command.amqp.ProtonBasedInternalCommandConsumer} instead.
+ * @deprecated Use {@code org.eclipse.hono.client.command.amqp.ProtonBasedInternalCommandConsumer} instead.
  */
 @Deprecated
 public final class AdapterInstanceCommandHandler {

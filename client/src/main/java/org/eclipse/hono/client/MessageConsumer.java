@@ -19,7 +19,7 @@ import io.vertx.core.Handler;
 /**
  * A client for consuming messages from a Hono server.
  *
- * @deprecated Use {@code org.eclipse.hono.adapter.client.command.CommandConsumer} instead.
+ * @deprecated Use {@code org.eclipse.hono.client.command.CommandConsumer} instead.
  */
 @Deprecated
 public interface MessageConsumer {

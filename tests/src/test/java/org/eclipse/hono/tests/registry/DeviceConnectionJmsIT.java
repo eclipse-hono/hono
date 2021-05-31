@@ -17,7 +17,7 @@ import java.net.HttpURLConnection;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
+import org.eclipse.hono.client.command.DeviceConnectionClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.jms.JmsBasedDeviceConnectionClient;
 import org.eclipse.hono.tests.jms.JmsBasedHonoConnection;
