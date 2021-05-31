@@ -415,9 +415,14 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       </activation>
       <properties>
         <hono.mongodb.disabled>true</hono.mongodb.disabled>
-        <hono.deviceregistry.image>hono-service-device-registry-file</hono.deviceregistry.image>
-        <hono.deviceregistry.resources.folder>deviceregistry</hono.deviceregistry.resources.folder>
+        <hono.postgres.disabled>true</hono.postgres.disabled>
+        <hono.deviceregistry.image>hono-service-device-registry-jdbc</hono.deviceregistry.image>
+        <hono.deviceregistry.resources.folder>deviceregistry-jdbc-h2</hono.deviceregistry.resources.folder>
+        <hono.deviceregistry.spring.profiles>registry-adapter,registry-management,tenant-service,create-schema,${logging.profile}</hono.deviceregistry.spring.profiles>
+        <hono.deviceregistry.credentials.supportsClientContext>false</hono.deviceregistry.credentials.supportsClientContext>
+        <hono.deviceregistry.supportsSearchDevices>false</hono.deviceregistry.supportsSearchDevices>
         <hono.deviceregistry.supportsSearchTenants>false</hono.deviceregistry.supportsSearchTenants>
+        <hono.jdbc.db.url>jdbc:h2:file://var/tmp/hono</hono.jdbc.db.url>
       </properties>
     </profile>
     <profile>
@@ -432,13 +437,12 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
         <hono.mongodb.disabled>true</hono.mongodb.disabled>
         <hono.postgres.disabled>false</hono.postgres.disabled>
         <hono.deviceregistry.image>hono-service-device-registry-jdbc</hono.deviceregistry.image>
-        <hono.deviceregistry.resources.folder>deviceregistry-jdbc</hono.deviceregistry.resources.folder>
+        <hono.deviceregistry.resources.folder>deviceregistry-jdbc-postgres</hono.deviceregistry.resources.folder>
         <hono.deviceregistry.spring.profiles>registry-adapter,registry-management,tenant-service,create-schema,${logging.profile}</hono.deviceregistry.spring.profiles>
         <hono.deviceregistry.credentials.supportsClientContext>false</hono.deviceregistry.credentials.supportsClientContext>
         <hono.deviceregistry.supportsSearchDevices>false</hono.deviceregistry.supportsSearchDevices>
         <hono.deviceregistry.supportsSearchTenants>false</hono.deviceregistry.supportsSearchTenants>
-        <hono.jdbc.db.host>hono-jdbc-db.hono</hono.jdbc.db.host>
-        <hono.jdbc.db.port>5432</hono.jdbc.db.port>
+        <hono.jdbc.db.url>jdbc:postgresql://hono-jdbc-db.hono:5432/</hono.jdbc.db.url>
         <hono.jdbc.db.admin.username>postgres</hono.jdbc.db.admin.username>
         <hono.jdbc.db.admin.password>change-me</hono.jdbc.db.admin.password>
         <hono.jdbc.db.registry.username>${hono.jdbc.db.admin.username}</hono.jdbc.db.registry.username>
@@ -620,7 +624,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
-                      <alias>${hono.jdbc.db.host}</alias>
+                      <alias>hono-jdbc-db.hono</alias>
                     </network>
                     <memorySwap>134217728</memorySwap>
                     <memory>134217728</memory>

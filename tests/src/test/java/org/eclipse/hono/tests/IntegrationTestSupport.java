@@ -873,7 +873,7 @@ public final class IntegrationTestSupport {
                     case HttpURLConnection.HTTP_NOT_FOUND:
                         return 0;
                     default:
-                        LOGGER.info("search for tenants failed: {} - {}",
+                        LOGGER.debug("search for tenants failed: {} - {}",
                                 searchResponse.statusCode(), searchResponse.statusMessage());
                         return 0;
                     }
