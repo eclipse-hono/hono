@@ -35,7 +35,8 @@ import java.util.UUID;
 
 import javax.security.auth.x500.X500Principal;
 
-import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
+import org.eclipse.hono.adapter.client.telemetry.EventSender;
+import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
@@ -44,6 +45,7 @@ import org.eclipse.hono.service.management.credentials.CredentialsManagementServ
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TrustedCertificateAuthority;
 import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,20 +54,21 @@ import org.mockito.ArgumentCaptor;
 
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
 /**
- * Tests verifying behavior of {@link AutoProvisioning}.
+ * Tests verifying behavior of {@link DeviceAndGatewayAutoProvisioner}.
  */
 @ExtendWith(VertxExtension.class)
-public class AutoProvisioningTest {
+public class DeviceAndGatewayAutoProvisionerTest {
 
     private DeviceManagementService deviceManagementService;
     private CredentialsManagementService credentialsManagementService;
-    private TenantInformationService tenantInformationService;
+    private DeviceAndGatewayAutoProvisioner deviceAndGatewayAutoProvisioner;
     private String fqdn;
     private X509Certificate cert;
     private String subjectDn;
@@ -92,11 +95,11 @@ public class AutoProvisioningTest {
         final TrustedCertificateAuthority trustedCertificateAuthority = new TrustedCertificateAuthority()
                 .setCertificate(cert.getEncoded());
         tenant = new Tenant().setTrustedCertificateAuthorities(List.of(trustedCertificateAuthority));
-        tenantInformationService = mock(TenantInformationService.class);
-        when(tenantInformationService.getTenant(eq(tenantId), any())).thenReturn(Future.succeededFuture(tenant));
 
         deviceManagementService = mock(DeviceManagementService.class);
         credentialsManagementService = mock(CredentialsManagementService.class);
+        deviceAndGatewayAutoProvisioner = new DeviceAndGatewayAutoProvisioner(mock(Vertx.class),
+                deviceManagementService, credentialsManagementService, mockEventSenders());
     }
 
     /**
@@ -159,9 +162,8 @@ public class AutoProvisioningTest {
         tenant.getTrustedCertificateAuthorities().get(0).setAutoProvisioningEnabled(false);
 
         // WHEN provisioning a device from a certificate
-        AutoProvisioning
-                .provisionIfEnabled(tenantId, subjectDn, new JsonObject(), credentialsManagementService,
-                        deviceManagementService, tenantInformationService, NoopSpan.INSTANCE)
+        deviceAndGatewayAutoProvisioner
+                .provisionIfEnabled(tenantId, tenant, subjectDn, new JsonObject(), NoopSpan.INSTANCE)
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
                         //THEN the device is not registered and credentials are not set
@@ -200,9 +202,8 @@ public class AutoProvisioningTest {
                 .thenReturn(Future.succeededFuture(Result.from(HttpURLConnection.HTTP_NO_CONTENT)));
 
         // WHEN provisioning a device from a certificate
-        AutoProvisioning
-                .provisionIfEnabled(tenantId, subjectDn, clientContext, credentialsManagementService,
-                        deviceManagementService, tenantInformationService, NoopSpan.INSTANCE)
+        deviceAndGatewayAutoProvisioner
+                .provisionIfEnabled(tenantId, tenant, subjectDn, clientContext, NoopSpan.INSTANCE)
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
                         // THEN the device is registered
@@ -258,9 +259,8 @@ public class AutoProvisioningTest {
                 any())).thenReturn(Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_NO_CONTENT)));
 
         // WHEN provisioning a device/gateway from a certificate
-        AutoProvisioning
-                .provisionIfEnabled(tenantId, subjectDn, clientContext, credentialsManagementService,
-                        deviceManagementService, tenantInformationService, NoopSpan.INSTANCE)
+        deviceAndGatewayAutoProvisioner
+                .provisionIfEnabled(tenantId, tenant, subjectDn, clientContext, NoopSpan.INSTANCE)
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
                         // VERIFY that that the device/gateway has been registered.
@@ -296,5 +296,13 @@ public class AutoProvisioningTest {
                     });
                     ctx.completeNow();
                 }));
+    }
+
+    private MessagingClient<EventSender> mockEventSenders() {
+        final EventSender eventSender = mock(EventSender.class);
+        when(eventSender.start()).thenReturn(Future.succeededFuture());
+        when(eventSender.stop()).thenReturn(Future.succeededFuture());
+
+        return new MessagingClient<EventSender>().setClient(MessagingType.amqp, eventSender);
     }
 }

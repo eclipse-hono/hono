@@ -38,6 +38,7 @@ import org.eclipse.hono.service.http.HttpEndpoint;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.DelegatingCredentialsManagementHttpEndpoint;
 import org.eclipse.hono.service.management.device.DelegatingDeviceManagementHttpEndpoint;
+import org.eclipse.hono.service.management.device.DeviceAndGatewayAutoProvisioner;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.tenant.DelegatingTenantManagementHttpEndpoint;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
@@ -263,7 +264,13 @@ public class FileBasedServiceConfig {
                 credentialsProperties(),
                 passwordEncoder());
 
-        return new FileBasedDeviceBackend(registrationService, credentialsService, tenantInformationService);
+        final FileBasedDeviceBackend fileBasedDeviceBackend = new FileBasedDeviceBackend(registrationService,
+                credentialsService, tenantInformationService);
+        final DeviceAndGatewayAutoProvisioner deviceAndGatewayAutoProvisioner = new DeviceAndGatewayAutoProvisioner(
+                vertx, fileBasedDeviceBackend, fileBasedDeviceBackend, eventSenders());
+        fileBasedDeviceBackend.setDeviceAndGatewayAutoProvisioner(deviceAndGatewayAutoProvisioner);
+
+        return fileBasedDeviceBackend;
     }
 
     //

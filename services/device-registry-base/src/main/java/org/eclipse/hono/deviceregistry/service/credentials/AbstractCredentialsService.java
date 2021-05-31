@@ -14,20 +14,22 @@
 package org.eclipse.hono.deviceregistry.service.credentials;
 
 import java.util.Objects;
+import java.util.Optional;
 
 import javax.annotation.PostConstruct;
 
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.credentials.CredentialsService;
-import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
-import org.eclipse.hono.service.management.device.AutoProvisioning;
-import org.eclipse.hono.service.management.device.DeviceManagementService;
+import org.eclipse.hono.service.management.device.DeviceAndGatewayAutoProvisioner;
 import org.eclipse.hono.util.CacheDirective;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
+import org.eclipse.hono.util.Lifecycle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,14 +43,13 @@ import io.vertx.core.json.JsonObject;
  * <p>
  * It checks the parameters, validate tenant using {@link TenantInformationService} and creates {@link CredentialKey} for looking up the credentials.
  */
-public abstract class AbstractCredentialsService implements CredentialsService {
+public abstract class AbstractCredentialsService implements CredentialsService, Lifecycle {
 
     private static final Logger log = LoggerFactory.getLogger(AbstractCredentialsService.class);
 
     protected TenantInformationService tenantInformationService = new NoopTenantInformationService();
 
-    private DeviceManagementService deviceManagementService;
-    private CredentialsManagementService credentialsManagementService;
+    private DeviceAndGatewayAutoProvisioner deviceAndGatewayAutoProvisioner;
 
     /**
      * Sets the service to use for checking existence of tenants.
@@ -64,15 +65,30 @@ public abstract class AbstractCredentialsService implements CredentialsService {
     }
 
     /**
-     * Set the service to use for auto-provisioning devices.
+     * Set the service to use for auto-provisioning devices and gateways.
      * <p>
      * If the service is not configured, auto-provisioning will be disabled.
      *
-     * @param deviceManagementService The service to use.
+     * @param deviceAndGatewayAutoProvisioner The service to use for auto-provisioning devices and gateways.
+     * @throws NullPointerException if the service is {@code null}.
      */
-    @Autowired(required = false)
-    public void setDeviceManagementService(final DeviceManagementService deviceManagementService) {
-        this.deviceManagementService = deviceManagementService;
+    public void setDeviceAndGatewayAutoProvisioner(
+            final DeviceAndGatewayAutoProvisioner deviceAndGatewayAutoProvisioner) {
+        this.deviceAndGatewayAutoProvisioner = Objects.requireNonNull(deviceAndGatewayAutoProvisioner);
+    }
+
+    @Override
+    public final Future<Void> start() {
+        return Optional.ofNullable(this.deviceAndGatewayAutoProvisioner)
+                .map(DeviceAndGatewayAutoProvisioner::start)
+                .orElse(Future.succeededFuture());
+    }
+
+    @Override
+    public final Future<Void> stop() {
+        return Optional.ofNullable(this.deviceAndGatewayAutoProvisioner)
+                .map(DeviceAndGatewayAutoProvisioner::stop)
+                .orElse(Future.succeededFuture());
     }
 
     /**
@@ -81,22 +97,10 @@ public abstract class AbstractCredentialsService implements CredentialsService {
     @PostConstruct
     protected void log() {
         if (isAutoProvisioningConfigured()) {
-            log.info("Auto-provisioning is available");
+            log.info("Auto-provisioning of devices/gateways is available");
         } else {
-            log.info("Auto-provisioning is not available");
+            log.info("Auto-provisioning of devices/gateways is not available");
         }
-    }
-
-    /**
-     * Set the service to use for auto-provisioning devices.
-     * <p>
-     * If the service is not configured, auto-provisioning will be disabled.
-     *
-     * @param credentialsManagementService The service to use.
-     */
-    @Autowired(required = false)
-    public void setCredentialsManagementService(final CredentialsManagementService credentialsManagementService) {
-        this.credentialsManagementService = credentialsManagementService;
     }
 
     /**
@@ -143,30 +147,31 @@ public abstract class AbstractCredentialsService implements CredentialsService {
             final JsonObject clientContext,
             final Span span) {
 
-        return this.tenantInformationService.tenantExists(tenantId, span)
-                .compose(result -> {
-                    if (result.isError()) {
-                        return Future.succeededFuture(CredentialsResult.from(result.getStatus()));
-                    }
+        return this.tenantInformationService.getTenant(tenantId, span)
+                .compose(tenant -> {
                     return processGet(TenantKey.from(tenantId), CredentialKey.from(tenantId, authId, type),
                             clientContext, span)
                                     .compose(credentialsResult -> {
                                         if (credentialsResult.isNotFound() && isAutoProvisioningConfigured()) {
-                                            return AutoProvisioning.provisionIfEnabled(
+                                            return deviceAndGatewayAutoProvisioner.provisionIfEnabled(
                                                     tenantId,
+                                                    tenant,
                                                     authId,
                                                     clientContext,
-                                                    this.credentialsManagementService,
-                                                    this.deviceManagementService,
-                                                    this.tenantInformationService,
                                                     span);
                                         }
                                         return Future.succeededFuture(credentialsResult);
                                     });
-                });
+                })
+                .recover(this::convertToCredentialsResult);
     }
 
     private boolean isAutoProvisioningConfigured() {
-        return this.credentialsManagementService != null && this.deviceManagementService != null;
+        return this.deviceAndGatewayAutoProvisioner != null;
+    }
+
+    private Future<CredentialsResult<JsonObject>> convertToCredentialsResult(final Throwable error) {
+        return Future.succeededFuture(CredentialsResult.from(ServiceInvocationException.extractStatusCode(error),
+                new JsonObject().put(Constants.JSON_FIELD_DESCRIPTION, error.getMessage())));
     }
 }

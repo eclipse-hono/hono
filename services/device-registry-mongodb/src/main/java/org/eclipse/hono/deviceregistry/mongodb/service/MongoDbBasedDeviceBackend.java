@@ -13,11 +13,14 @@
 package org.eclipse.hono.deviceregistry.mongodb.service;
 
 import java.net.HttpURLConnection;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.deviceregistry.service.device.AbstractAutoProvisioningEventSender;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.Id;
@@ -26,10 +29,11 @@ import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.SearchResult;
 import org.eclipse.hono.service.management.Sort;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
-import org.eclipse.hono.service.management.device.AutoProvisioning;
 import org.eclipse.hono.service.management.device.Device;
+import org.eclipse.hono.service.management.device.DeviceAndGatewayAutoProvisioner;
 import org.eclipse.hono.service.management.device.DeviceBackend;
 import org.eclipse.hono.service.management.device.DeviceWithId;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.RegistrationResult;
@@ -56,6 +60,7 @@ public class MongoDbBasedDeviceBackend implements DeviceBackend, Lifecycle {
     private final MongoDbBasedRegistrationService registrationService;
     private final MongoDbBasedCredentialsService credentialsService;
     private final TenantInformationService tenantInformationService;
+    private DeviceAndGatewayAutoProvisioner deviceAndGatewayAutoProvisioner;
 
     /**
      * Creates a new instance.
@@ -79,12 +84,34 @@ public class MongoDbBasedDeviceBackend implements DeviceBackend, Lifecycle {
     }
 
     /**
+     * Sets the service to use for auto-provisioning devices and gateways.
+     * <p>
+     * If the service is not configured, auto-provisioning will be disabled.
+     *
+     * @param deviceAndGatewayAutoProvisioner The service to use for auto-provisioning devices and gateways.
+     * @throws NullPointerException if the service is {@code null}.
+     */
+    public void setDeviceAndGatewayAutoProvisioner(
+            final DeviceAndGatewayAutoProvisioner deviceAndGatewayAutoProvisioner) {
+        this.deviceAndGatewayAutoProvisioner = Objects.requireNonNull(deviceAndGatewayAutoProvisioner);
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
     public Future<Void> start() {
+        final List<Future> services = new ArrayList<>();
+
         LOG.debug("starting up services");
-        return CompositeFuture.all(registrationService.start(), credentialsService.start()).mapEmpty();
+        services.add(registrationService.start());
+        services.add(credentialsService.start());
+        Optional.ofNullable(deviceAndGatewayAutoProvisioner)
+                .map(AbstractAutoProvisioningEventSender::start)
+                .map(services::add);
+
+        return CompositeFuture.all(services)
+                .mapEmpty();
     }
 
     /**
@@ -92,8 +119,16 @@ public class MongoDbBasedDeviceBackend implements DeviceBackend, Lifecycle {
      */
     @Override
     public Future<Void> stop() {
+        final List<Future> services = new ArrayList<>();
+
         LOG.debug("stopping services");
-        return CompositeFuture.join(registrationService.stop(), credentialsService.stop()).mapEmpty();
+        services.add(registrationService.start());
+        services.add(credentialsService.start());
+        Optional.ofNullable(deviceAndGatewayAutoProvisioner)
+                .map(AbstractAutoProvisioningEventSender::start)
+                .map(services::add);
+
+        return CompositeFuture.join(services).mapEmpty();
     }
 
     // DEVICES
@@ -196,20 +231,20 @@ public class MongoDbBasedDeviceBackend implements DeviceBackend, Lifecycle {
     public Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type, final String authId,
             final JsonObject clientContext, final Span span) {
 
-        return credentialsService.get(tenantId, type, authId, clientContext, span)
-                .compose(credentialsResult -> {
-                    if (credentialsResult.isNotFound()) {
-                        return AutoProvisioning.provisionIfEnabled(
-                                tenantId,
-                                authId,
-                                clientContext,
-                                this,
-                                this,
-                                tenantInformationService,
-                                span);
-                    }
-                    return Future.succeededFuture(credentialsResult);
-                });
+        return this.tenantInformationService.getTenant(tenantId, span)
+                .compose(tenant -> credentialsService.get(tenantId, type, authId, clientContext, span)
+                        .compose(credentialsResult -> {
+                            if (credentialsResult.isNotFound() && deviceAndGatewayAutoProvisioner != null) {
+                                return deviceAndGatewayAutoProvisioner.provisionIfEnabled(
+                                        tenantId,
+                                        tenant,
+                                        authId,
+                                        clientContext,
+                                        span);
+                            }
+                            return Future.succeededFuture(credentialsResult);
+                        }))
+                .recover(this::convertToCredentialsResult);
     }
 
     @Override
@@ -257,5 +292,10 @@ public class MongoDbBasedDeviceBackend implements DeviceBackend, Lifecycle {
     @Override
     public String toString() {
         return toStringHelper().toString();
+    }
+
+    private Future<CredentialsResult<JsonObject>> convertToCredentialsResult(final Throwable error) {
+        return Future.succeededFuture(CredentialsResult.from(ServiceInvocationException.extractStatusCode(error),
+                new JsonObject().put(Constants.JSON_FIELD_DESCRIPTION, error.getMessage())));
     }
 }

@@ -55,6 +55,7 @@ import org.eclipse.hono.service.http.HttpServiceConfigProperties;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.DelegatingCredentialsManagementHttpEndpoint;
 import org.eclipse.hono.service.management.device.DelegatingDeviceManagementHttpEndpoint;
+import org.eclipse.hono.service.management.device.DeviceAndGatewayAutoProvisioner;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.tenant.DelegatingTenantManagementHttpEndpoint;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
@@ -468,6 +469,10 @@ public class ApplicationConfig {
         // supports auto-provisioning and thus needs to be able to create a device on the fly
         final MongoDbBasedDeviceBackend service = new MongoDbBasedDeviceBackend(registrationService(),
                 credentialsService(), tenantInformationService());
+        final DeviceAndGatewayAutoProvisioner deviceAndGatewayAutoProvisioner = new DeviceAndGatewayAutoProvisioner(
+                vertx(), service, service, eventSenders());
+        service.setDeviceAndGatewayAutoProvisioner(deviceAndGatewayAutoProvisioner);
+
         return new DelegatingCredentialsAmqpEndpoint<CredentialsService>(vertx(), service);
     }
 
