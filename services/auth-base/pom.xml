@@ -29,14 +29,6 @@
       <artifactId>hono-service-base</artifactId>
       <exclusions>
         <exclusion>
-          <groupId>org.eclipse.hono</groupId>
-          <artifactId>hono-client-adapter-amqp</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.eclipse.hono</groupId>
-          <artifactId>hono-client-adapter-kafka</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>org.springframework.boot</groupId>
           <artifactId>spring-boot-autoconfigure</artifactId>
         </exclusion>

@@ -26,13 +26,13 @@ import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.adapter.auth.device.UsernamePasswordCredentials;
-import org.eclipse.hono.adapter.client.command.CommandConsumer;
-import org.eclipse.hono.adapter.client.command.CommandContext;
 import org.eclipse.hono.adapter.http.HttpAdapterMetrics;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.adapter.test.ProtocolAdapterTestSupport;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.command.CommandConsumer;
+import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.test.VertxMockSupport;

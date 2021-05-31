@@ -19,9 +19,9 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.californium.core.coap.CoAP.ResponseCode;
-import org.eclipse.hono.adapter.client.command.CommandResponse;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.command.CommandResponse;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.tracing.TracingHelper;

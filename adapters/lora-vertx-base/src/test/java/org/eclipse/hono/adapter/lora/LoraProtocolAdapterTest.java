@@ -33,14 +33,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import org.eclipse.hono.adapter.client.command.Command;
-import org.eclipse.hono.adapter.client.command.CommandConsumer;
-import org.eclipse.hono.adapter.client.command.CommandContext;
 import org.eclipse.hono.adapter.http.HttpAdapterMetrics;
 import org.eclipse.hono.adapter.lora.providers.LoraProvider;
 import org.eclipse.hono.adapter.lora.providers.LoraProviderMalformedPayloadException;
 import org.eclipse.hono.adapter.test.ProtocolAdapterTestSupport;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.command.Command;
+import org.eclipse.hono.client.command.CommandConsumer;
+import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.http.HttpContext;
 import org.eclipse.hono.service.http.TracingHandler;

@@ -29,7 +29,7 @@ import io.vertx.proton.ProtonHelper;
  * A wrapper around payload that has been sent by a device in
  * response to a command.
  *
- * @deprecated Use {@code org.eclipse.hono.adapter.client.command.CommandResponse} instead.
+ * @deprecated Use {@code org.eclipse.hono.client.command.CommandResponse} instead.
  */
 @Deprecated
 public final class CommandResponse {

@@ -14,10 +14,10 @@ package org.eclipse.hono.commandrouter.impl.kafka;
 
 import java.util.Objects;
 
-import org.eclipse.hono.adapter.client.command.CommandContext;
-import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedCommand;
-import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedCommandContext;
-import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedInternalCommandSender;
+import org.eclipse.hono.client.command.CommandContext;
+import org.eclipse.hono.client.command.kafka.KafkaBasedCommand;
+import org.eclipse.hono.client.command.kafka.KafkaBasedCommandContext;
+import org.eclipse.hono.client.command.kafka.KafkaBasedInternalCommandSender;
 import org.eclipse.hono.client.impl.CommandConsumer;
 import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
 import org.eclipse.hono.client.registry.TenantClient;

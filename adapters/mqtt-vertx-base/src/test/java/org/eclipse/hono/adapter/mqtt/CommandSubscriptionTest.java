@@ -19,8 +19,8 @@ import static org.mockito.Mockito.when;
 
 import java.util.stream.Stream;
 
-import org.eclipse.hono.adapter.client.command.Command;
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.util.CommandConstants;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;

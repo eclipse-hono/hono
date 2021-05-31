@@ -24,8 +24,8 @@ import java.util.Optional;
 import java.util.function.Supplier;
 
 import org.apache.kafka.common.TopicPartition;
-import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedCommandContext;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.command.kafka.KafkaBasedCommandContext;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Pair;
 import org.slf4j.Logger;

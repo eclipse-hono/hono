@@ -19,7 +19,7 @@ import org.eclipse.hono.client.impl.DeviceConnectionClientFactoryImpl;
 /**
  * A factory for creating clients for Hono's Device Connection API.
  *
- * @deprecated Use {@code org.eclipse.hono.adapter.client.command.DeviceConnectionClient} instead.
+ * @deprecated Use {@code org.eclipse.hono.client.command.DeviceConnectionClient} instead.
  */
 @Deprecated
 public interface DeviceConnectionClientFactory extends BasicDeviceConnectionClientFactory, ConnectionLifecycle<HonoConnection> {

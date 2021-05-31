@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
+import org.eclipse.hono.client.command.DeviceConnectionClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.junit.jupiter.api.BeforeAll;

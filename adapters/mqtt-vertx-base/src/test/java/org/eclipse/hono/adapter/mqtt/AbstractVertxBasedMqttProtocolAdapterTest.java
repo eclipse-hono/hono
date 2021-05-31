@@ -37,14 +37,14 @@ import java.util.function.BiConsumer;
 import javax.net.ssl.SSLSession;
 
 import org.eclipse.hono.adapter.auth.device.AuthHandler;
-import org.eclipse.hono.adapter.client.command.CommandConsumer;
-import org.eclipse.hono.adapter.client.command.CommandResponse;
-import org.eclipse.hono.adapter.client.command.CommandResponseSender;
-import org.eclipse.hono.adapter.client.command.Commands;
 import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.adapter.test.ProtocolAdapterTestSupport;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.command.CommandConsumer;
+import org.eclipse.hono.client.command.CommandResponse;
+import org.eclipse.hono.client.command.CommandResponseSender;
+import org.eclipse.hono.client.command.Commands;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.metric.MetricsTags;

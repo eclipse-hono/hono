@@ -64,7 +64,7 @@ import io.vertx.proton.ProtonReceiver;
  * possible gateways. If found, that handler is either invoked directly, or, if it is on another protocol adapter
  * instance, the command message is sent to that protocol adapter instance to be handled there.
  *
- * @deprecated Use {@code org.eclipse.hono.adapter.client.command.amqp.ProtonBasedDelegatingCommandConsumerFactory} instead.
+ * @deprecated Use {@code org.eclipse.hono.client.command.amqp.ProtonBasedDelegatingCommandConsumerFactory} instead.
  */
 @Deprecated
 public class ProtocolAdapterCommandConsumerFactoryImpl extends AbstractHonoClientFactory implements ProtocolAdapterCommandConsumerFactory {

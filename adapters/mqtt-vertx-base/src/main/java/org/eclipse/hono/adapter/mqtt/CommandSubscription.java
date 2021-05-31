@@ -15,8 +15,8 @@ package org.eclipse.hono.adapter.mqtt;
 
 import java.util.Objects;
 
-import org.eclipse.hono.adapter.client.command.Command;
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;

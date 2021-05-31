@@ -19,7 +19,7 @@ import io.vertx.core.Future;
 /**
  * A factory for creating clients for Hono's Device Connection API.
  *
- * @deprecated Use the {@code org.eclipse.hono.adapter.client.command.DeviceConnectionClient} instead.
+ * @deprecated Use the {@code org.eclipse.hono.client.command.DeviceConnectionClient} instead.
  */
 @Deprecated
 public interface BasicDeviceConnectionClientFactory {

@@ -23,10 +23,10 @@ import java.util.Optional;
 import javax.jms.JMSException;
 import javax.jms.Message;
 
-import org.eclipse.hono.adapter.client.command.DeviceConnectionClient;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.command.DeviceConnectionClient;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.DeviceConnectionConstants.DeviceConnectionAction;

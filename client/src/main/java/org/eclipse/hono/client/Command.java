@@ -30,7 +30,7 @@ import io.vertx.core.buffer.Buffer;
 /**
  * A wrapper around an AMQP 1.0 message representing a command.
  *
- * @deprecated Use {@code org.eclipse.hono.adapter.client.command.Command} instead.
+ * @deprecated Use {@code org.eclipse.hono.client.command.Command} instead.
  */
 @Deprecated
 public final class Command {
@@ -427,7 +427,7 @@ public final class Command {
      * @param replyToId An arbitrary identifier to encode into the request ID.
      * @param deviceId The target of the command.
      * @return The request identifier or {@code null} if correlationId or deviceId is {@code null}.
-     * @deprecated Use {@code org.eclipse.hono.adapter.client.command.Commands#getRequestId(String, String, String)} instead.
+     * @deprecated Use {@code org.eclipse.hono.client.command.Commands#getRequestId(String, String, String)} instead.
      */
     public static String getRequestId(final String correlationId, final String replyToId, final String deviceId) {
 

@@ -16,9 +16,9 @@ package org.eclipse.hono.adapter;
 import java.util.Map;
 import java.util.Objects;
 
-import org.eclipse.hono.adapter.client.command.CommandConsumerFactory;
-import org.eclipse.hono.adapter.client.command.CommandResponseSender;
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.client.command.CommandConsumerFactory;
+import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.telemetry.EventSender;

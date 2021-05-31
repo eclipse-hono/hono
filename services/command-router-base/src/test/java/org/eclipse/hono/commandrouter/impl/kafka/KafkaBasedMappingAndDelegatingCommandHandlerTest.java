@@ -31,10 +31,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.eclipse.hono.adapter.client.command.CommandContext;
-import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedCommandContext;
-import org.eclipse.hono.adapter.client.command.kafka.KafkaBasedInternalCommandSender;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.command.CommandContext;
+import org.eclipse.hono.client.command.kafka.KafkaBasedCommandContext;
+import org.eclipse.hono.client.command.kafka.KafkaBasedInternalCommandSender;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
