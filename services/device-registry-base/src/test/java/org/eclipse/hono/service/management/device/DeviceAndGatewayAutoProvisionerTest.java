@@ -15,6 +15,7 @@ package org.eclipse.hono.service.management.device;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -30,12 +31,14 @@ import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
@@ -45,8 +48,12 @@ import org.eclipse.hono.service.management.credentials.CredentialsManagementServ
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TrustedCertificateAuthority;
 import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
+import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.RegistryManagementConstants;
+import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -69,6 +76,7 @@ public class DeviceAndGatewayAutoProvisionerTest {
     private DeviceManagementService deviceManagementService;
     private CredentialsManagementService credentialsManagementService;
     private DeviceAndGatewayAutoProvisioner deviceAndGatewayAutoProvisioner;
+    private EventSender sender;
     private String fqdn;
     private X509Certificate cert;
     private String subjectDn;
@@ -82,6 +90,7 @@ public class DeviceAndGatewayAutoProvisionerTest {
      * @throws GeneralSecurityException if the self signed certificate cannot be created.
      * @throws IOException if the self signed certificate cannot be read.
      */
+    @SuppressWarnings("unchecked")
     @BeforeEach
     public void init() throws GeneralSecurityException, IOException {
         tenantId = UUID.randomUUID().toString();
@@ -98,8 +107,22 @@ public class DeviceAndGatewayAutoProvisionerTest {
 
         deviceManagementService = mock(DeviceManagementService.class);
         credentialsManagementService = mock(CredentialsManagementService.class);
-        deviceAndGatewayAutoProvisioner = new DeviceAndGatewayAutoProvisioner(mock(Vertx.class),
-                deviceManagementService, credentialsManagementService, mockEventSenders());
+
+        sender = mock(EventSender.class);
+        when(sender.sendEvent(
+                any(TenantObject.class),
+                any(RegistrationAssertion.class),
+                anyString(),
+                any(),
+                any(Map.class),
+                any()))
+                .thenReturn(Future.succeededFuture());
+
+        deviceAndGatewayAutoProvisioner = new DeviceAndGatewayAutoProvisioner(
+                mock(Vertx.class),
+                deviceManagementService,
+                credentialsManagementService,
+                new MessagingClient<EventSender>().setClient(MessagingType.amqp, sender));
     }
 
     /**
@@ -127,6 +150,31 @@ public class DeviceAndGatewayAutoProvisionerTest {
     }
 
     /**
+     * Verifies that auto-provisioning of a device succeeds even if the device registration cannot be updated with the
+     * status indicating that the auto-provisioning notification has been successfully sent.
+     *
+     * @param ctx The vert.x test context.
+     * @throws CertificateEncodingException if the certificate cannot be encoded.
+     */
+    @Test
+    public void testProvisionDeviceSucceedsWhenUpdateOfNotificationFlagFails(final VertxTestContext ctx)
+            throws CertificateEncodingException {
+        testProvisionSucceedsWhenUpdateOfNotificationFlagFails(ctx, false, deviceId);
+    }
+
+    /**
+     * Verifies that auto-provisioning of a device fails when auto-provisioning notification couldn't be sent.
+     *
+     * @param ctx The vert.x test context.
+     * @throws CertificateEncodingException if the certificate cannot be encoded.
+     */
+    @Test
+    public void testProvisionDeviceFailsWhenEventNotificationFails(final VertxTestContext ctx)
+            throws CertificateEncodingException {
+        testProvisionFailsWhenEventNotificationFails(ctx, false, deviceId);
+    }
+
+    /**
      * Verifies that auto-provisioning of a gateway succeeds.
      *
      * @param ctx The vert.x test context.
@@ -147,6 +195,31 @@ public class DeviceAndGatewayAutoProvisionerTest {
     @Test
     public void testProvisionGatewayWithDeviceIdTemplateSucceeds(final VertxTestContext ctx) throws CertificateEncodingException {
         testProvisionSucceeds(ctx, true, "device-{{subject-dn}}", "device-" + subjectDn);
+    }
+
+    /**
+     * Verifies that auto-provisioning of a gateway succeeds even if the device registration cannot be updated with the
+     * status indicating that the auto-provisioning notification has been successfully sent.
+     *
+     * @param ctx The vert.x test context.
+     * @throws CertificateEncodingException if the certificate cannot be encoded.
+     */
+    @Test
+    public void testProvisionGatewaySucceedsWhenUpdateOfNotificationFlagFails(final VertxTestContext ctx)
+            throws CertificateEncodingException {
+        testProvisionSucceedsWhenUpdateOfNotificationFlagFails(ctx, true, deviceId);
+    }
+
+    /**
+     * Verifies that auto-provisioning of a gateway fails when auto-provisioning notification couldn't be sent.
+     *
+     * @param ctx The vert.x test context.
+     * @throws CertificateEncodingException if the certificate cannot be encoded.
+     */
+    @Test
+    public void testProvisionGatewayFailsWhenEventNotificationFails(final VertxTestContext ctx)
+            throws CertificateEncodingException {
+        testProvisionFailsWhenEventNotificationFails(ctx, true, deviceId);
     }
 
     /**
@@ -220,24 +293,34 @@ public class DeviceAndGatewayAutoProvisionerTest {
                 }));
     }
 
-    @SuppressWarnings("unchecked")
+    private void testProvisionSucceedsWhenUpdateOfNotificationFlagFails(final VertxTestContext ctx,
+            final boolean isGateway, final String expectedDeviceId) throws CertificateEncodingException {
+        configureTenant(isGateway, null);
+
+        doAnswer(invocation -> {
+            // WHEN read device is called return the corresponding device registration
+            final Device createdDevice = invocation.getArgument(2);
+            when(deviceManagementService.readDevice(eq(tenantId), eq(expectedDeviceId), any()))
+                    .thenReturn(Future.succeededFuture(OperationResult.ok(HttpURLConnection.HTTP_OK, createdDevice,
+                            Optional.empty(), Optional.empty())));
+
+            return Future.succeededFuture(OperationResult.ok(HttpURLConnection.HTTP_CREATED, Id.of(expectedDeviceId),
+                    Optional.empty(), Optional.empty()));
+        }).when(deviceManagementService).createDevice(eq(tenantId), any(), any(), any());
+
+        // WHEN update device registration fails
+        when(deviceManagementService.updateDevice(eq(tenantId), eq(expectedDeviceId), any(), any(), any()))
+                .thenReturn(Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_INTERNAL_ERROR)));
+
+        when(credentialsManagementService.updateCredentials(eq(tenantId), eq(expectedDeviceId), any(), any(),
+                any())).thenReturn(Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_NO_CONTENT)));
+
+        provisionAndVerifySuccessfulResult(ctx, isGateway, expectedDeviceId);
+    }
+
     private void testProvisionSucceeds(final VertxTestContext ctx, final boolean isGateway,
             final String deviceIdTemplate, final String expectedDeviceId) throws CertificateEncodingException {
-        final TrustedCertificateAuthority trustedCA = tenant.getTrustedCertificateAuthorities().get(0);
-        final JsonObject clientContext = new JsonObject().put(CredentialsConstants.FIELD_CLIENT_CERT,
-                cert.getEncoded());
-
-        // GIVEN a tenant CA with auto-provisioning enabled
-        trustedCA.setAutoProvisioningEnabled(true);
-
-        if (isGateway) {
-            // The property auto-provision-as-gateway is set to true
-            trustedCA.setAutoProvisioningAsGatewayEnabled(true);
-        }
-
-        // Set the device id template if available
-        Optional.ofNullable(deviceIdTemplate)
-                .ifPresent(trustedCA::setAutoProvisioningDeviceIdTemplate);
+        configureTenant(isGateway, deviceIdTemplate);
 
         doAnswer(invocation -> {
             final Optional<String> optionalDeviceId = invocation.getArgument(1);
@@ -251,13 +334,31 @@ public class DeviceAndGatewayAutoProvisionerTest {
                 // when no device id template is configured
                 assertThat(optionalDeviceId).isEmpty();
             }
+
+            // WHEN read device is called return the corresponding device registration
+            final Device createdDevice = invocation.getArgument(2);
+            when(deviceManagementService.readDevice(eq(tenantId), eq(expectedDeviceId), any()))
+                    .thenReturn(Future.succeededFuture(OperationResult.ok(HttpURLConnection.HTTP_OK, createdDevice,
+                            Optional.empty(), Optional.empty())));
+
             return Future.succeededFuture(OperationResult.ok(HttpURLConnection.HTTP_CREATED, Id.of(expectedDeviceId),
                     Optional.empty(), Optional.empty()));
         }).when(deviceManagementService).createDevice(eq(tenantId), any(), any(), any());
 
+        when(deviceManagementService.updateDevice(eq(tenantId), eq(expectedDeviceId), any(), any(), any()))
+                .thenReturn(Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_NO_CONTENT)));
+
         when(credentialsManagementService.updateCredentials(eq(tenantId), eq(expectedDeviceId), any(), any(),
                 any())).thenReturn(Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_NO_CONTENT)));
 
+        provisionAndVerifySuccessfulResult(ctx, isGateway, expectedDeviceId);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void provisionAndVerifySuccessfulResult(final VertxTestContext ctx, final boolean isGateway,
+            final String expectedDeviceId) throws CertificateEncodingException {
+        final JsonObject clientContext = new JsonObject().put(CredentialsConstants.FIELD_CLIENT_CERT,
+                cert.getEncoded());
         // WHEN provisioning a device/gateway from a certificate
         deviceAndGatewayAutoProvisioner
                 .provisionIfEnabled(tenantId, tenant, subjectDn, clientContext, NoopSpan.INSTANCE)
@@ -274,7 +375,7 @@ public class DeviceAndGatewayAutoProvisionerTest {
                                     .contains(RegistryManagementConstants.AUTHORITY_AUTO_PROVISIONING_ENABLED);
                         }
 
-                        //VERIFY that the correct credentials are stored
+                        // VERIFY that the correct credentials are stored
                         final ArgumentCaptor<List<CommonCredential>> credentialsCaptor = ArgumentCaptor.forClass(List.class);
                         verify(credentialsManagementService).updateCredentials(eq(tenantId), eq(expectedDeviceId),
                                 credentialsCaptor.capture(), any(), any());
@@ -284,7 +385,7 @@ public class DeviceAndGatewayAutoProvisionerTest {
                                 .isEqualTo(RegistryManagementConstants.SECRETS_TYPE_X509_CERT);
                         assertThat(credentialsCaptorValue.get(0).getAuthId()).isEqualTo(subjectDn);
 
-                        //VERIFY the returned credentials result after successful auto-provisioning
+                        // VERIFY the returned credentials result after successful auto-provisioning
                         assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_CREATED);
                         final JsonObject returnedCredential = result.getPayload();
                         assertThat(returnedCredential.getString(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID))
@@ -293,16 +394,82 @@ public class DeviceAndGatewayAutoProvisionerTest {
                                 .isEqualTo(subjectDn);
                         assertThat(returnedCredential.getString(RegistryManagementConstants.FIELD_TYPE))
                                 .isEqualTo(RegistryManagementConstants.SECRETS_TYPE_X509_CERT);
+
+                        // VERIFY that a auto-provisioning notification has been sent
+                        final ArgumentCaptor<Map<String, Object>> messagePropertiesArgumentCaptor = ArgumentCaptor.forClass(Map.class);
+                        verify(sender).sendEvent(
+                                argThat(tenant -> tenant.getTenantId().equals(tenantId)),
+                                argThat(assertion -> assertion.getDeviceId().equals(expectedDeviceId)),
+                                eq(EventConstants.CONTENT_TYPE_DEVICE_PROVISIONING_NOTIFICATION),
+                                any(),
+                                messagePropertiesArgumentCaptor.capture(),
+                                any());
+                        final Map<String, Object> eventProperties = messagePropertiesArgumentCaptor.getValue();
+                        assertThat(eventProperties.get(MessageHelper.APP_PROPERTY_REGISTRATION_STATUS))
+                                .isEqualTo(EventConstants.RegistrationStatus.NEW.name());
+                        assertThat(eventProperties.get(MessageHelper.APP_PROPERTY_TENANT_ID)).isEqualTo(tenantId);
+
+                        // VERIFY that the device registration has been updated as the auto-provisioning event has been
+                        // successfully sent
+                        verify(deviceManagementService).updateDevice(eq(tenantId), eq(expectedDeviceId),
+                                deviceCaptor.capture(), any(), any());
+                        final DeviceStatus deviceStatus = deviceCaptor.getValue().getStatus();
+                        assertThat(deviceStatus.isAutoProvisioned()).isTrue();
+                        assertThat(deviceStatus.isAutoProvisioningNotificationSent()).isTrue();
                     });
                     ctx.completeNow();
                 }));
     }
 
-    private MessagingClient<EventSender> mockEventSenders() {
-        final EventSender eventSender = mock(EventSender.class);
-        when(eventSender.start()).thenReturn(Future.succeededFuture());
-        when(eventSender.stop()).thenReturn(Future.succeededFuture());
+    @SuppressWarnings("unchecked")
+    private void testProvisionFailsWhenEventNotificationFails(final VertxTestContext ctx, final boolean isGateway,
+            final String expectedDeviceId) throws CertificateEncodingException {
+        configureTenant(isGateway, null);
+        final JsonObject clientContext = new JsonObject().put(CredentialsConstants.FIELD_CLIENT_CERT,
+                cert.getEncoded());
 
-        return new MessagingClient<EventSender>().setClient(MessagingType.amqp, eventSender);
+        when(deviceManagementService.createDevice(eq(tenantId), any(), any(), any()))
+                .thenReturn(Future.succeededFuture(OperationResult.ok(HttpURLConnection.HTTP_CREATED, Id.of(deviceId),
+                        Optional.empty(), Optional.empty())));
+        when(deviceManagementService.updateDevice(eq(tenantId), eq(expectedDeviceId), any(), any(), any()))
+                .thenReturn(Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_NO_CONTENT)));
+        when(credentialsManagementService.updateCredentials(eq(tenantId), eq(expectedDeviceId), any(), any(),
+                any())).thenReturn(Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_NO_CONTENT)));
+        // WHEN sending an auto-provisioning event fails
+        when(sender.sendEvent(
+                any(TenantObject.class),
+                any(RegistrationAssertion.class),
+                anyString(),
+                any(),
+                any(Map.class),
+                any()))
+                        .thenReturn(Future.failedFuture(new ServiceInvocationException(
+                                HttpURLConnection.HTTP_INTERNAL_ERROR, "error sending event")));
+
+        // WHEN provisioning a device/gateway from a certificate
+        deviceAndGatewayAutoProvisioner
+                .provisionIfEnabled(tenantId, tenant, subjectDn, clientContext, NoopSpan.INSTANCE)
+                .onComplete(ctx.succeeding(result -> {
+                    // VERIFY that the status code corresponds to an error.
+                    assertThat(result.isError()).isTrue();
+                    assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_INTERNAL_ERROR);
+                    ctx.completeNow();
+                }));
+    }
+
+    private void configureTenant(final boolean isGateway, final String deviceIdTemplate) {
+        final TrustedCertificateAuthority trustedCA = tenant.getTrustedCertificateAuthorities().get(0);
+
+        // GIVEN a tenant CA with auto-provisioning enabled
+        trustedCA.setAutoProvisioningEnabled(true);
+
+        if (isGateway) {
+            // The property auto-provision-as-gateway is set to true
+            trustedCA.setAutoProvisioningAsGatewayEnabled(true);
+        }
+
+        // Set the device id template if available
+        Optional.ofNullable(deviceIdTemplate)
+                .ifPresent(trustedCA::setAutoProvisioningDeviceIdTemplate);
     }
 }

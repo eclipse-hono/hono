@@ -30,6 +30,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.Lifecycle;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -152,13 +153,21 @@ public abstract class AbstractCredentialsService implements CredentialsService, 
                     return processGet(TenantKey.from(tenantId), CredentialKey.from(tenantId, authId, type),
                             clientContext, span)
                                     .compose(credentialsResult -> {
-                                        if (credentialsResult.isNotFound() && isAutoProvisioningConfigured()) {
-                                            return deviceAndGatewayAutoProvisioner.provisionIfEnabled(
-                                                    tenantId,
-                                                    tenant,
-                                                    authId,
-                                                    clientContext,
-                                                    span);
+                                        if (isAutoProvisioningConfigured()) {
+                                            if (credentialsResult.isNotFound()) {
+                                                return deviceAndGatewayAutoProvisioner.provisionIfEnabled(
+                                                        tenantId,
+                                                        tenant,
+                                                        authId,
+                                                        clientContext,
+                                                        span);
+                                            } else {
+                                                final String deviceId = credentialsResult.getPayload()
+                                                        .getString(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID);
+                                                return deviceAndGatewayAutoProvisioner
+                                                        .sendAutoProvisioningEventIfNeeded(tenantId, tenant, deviceId, span)
+                                                        .map(ok -> credentialsResult);
+                                            }
                                         }
                                         return Future.succeededFuture(credentialsResult);
                                     });

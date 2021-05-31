@@ -33,16 +33,20 @@ import java.util.concurrent.TimeUnit;
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.adapter.client.registry.CredentialsClient;
+import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.Credentials;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.service.management.device.Device;
+import org.eclipse.hono.service.management.device.DeviceStatus;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
+import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -53,6 +57,7 @@ import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.SelfSignedCertificate;
+import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxTestContext;
 
@@ -142,6 +147,9 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
     /**
      * Verifies that if no credentials are found and the client context in the Get request contains a serialized X.509
      * certificate, the credentials and device are created (i.e., automatic provisioning is performed).
+     * <p>
+     * It also verifies that an auto-provisioning event is successfully sent and the device registration
+     * is updated accordingly.
      *
      * @param ctx The vert.x test context.
      * @throws CertificateException if the self signed certificate cannot be created.
@@ -169,6 +177,9 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
      * <p>
      * Also verify that the device is auto-provisioned with a device id generated in accordance
      * with the configured device id template.
+     * <p>
+     * It also verifies that an auto-provisioning event is successfully sent and the device registration
+     * is updated accordingly.
      *
      * @param ctx The vert.x test context.
      * @throws CertificateException if the self signed certificate cannot be created.
@@ -196,6 +207,9 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
      * Verifies when no credentials are found, the properties related to auto-provisioning of gateways are enabled
      * in the corresponding tenant's CA entry and the client context contains a serialized X.509 certificate then 
      * a gateway is auto-provisioned. (i.e A gateway is registered and it's corresponding credentials are stored). 
+     * <p>
+     * It also verifies that an auto-provisioning event is successfully sent and the device registration
+     * is updated accordingly.
      *
      * @param ctx The vert.x test context.
      * @throws CertificateException if the self signed certificate cannot be created.
@@ -226,6 +240,10 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
      * <p>
      * Also verify that the gateway is auto-provisioned with a device id generated in accordance
      * with the configured device id template.
+     * <p>
+     * It also verifies that an auto-provisioning event is sent successfully sent and the device registration's
+     * property {@value RegistryManagementConstants#FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT} is updated to
+     * {@code true}.
      *
      * @param ctx The vert.x test context.
      * @throws CertificateException if the self signed certificate cannot be created.
@@ -252,14 +270,23 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
     }
 
     private void testAutoProvisioningSucceeds(final VertxTestContext ctx, final Tenant tenant,
-            final X509Certificate cert, final boolean isGateway, final String expectedDeviceId) throws CertificateEncodingException {
+            final X509Certificate cert, final boolean isGateway, final String expectedDeviceId)
+            throws CertificateEncodingException {
+        final Checkpoint autoProvisioningEventReceived = ctx.checkpoint(1);
+        final Checkpoint autoProvisioningCompleted = ctx.checkpoint(1);
         // GIVEN a client context that contains a client certificate
         final JsonObject clientCtx = new JsonObject().put(CredentialsConstants.FIELD_CLIENT_CERT, cert.getEncoded());
         final String authId = cert.getSubjectX500Principal().getName(X500Principal.RFC2253);
 
         tenantId = getHelper().getRandomTenantId();
-        getHelper().registry
-                .addTenant(tenantId, tenant)
+        getHelper().applicationClient.createEventConsumer(
+                tenantId,
+                msg -> ctx.verify(() -> {
+                    // VERIFY that the auto-provisioning event has been received and it's properties
+                    verifyAutoProvisioningEventNotification(tenantId, expectedDeviceId, msg);
+                    autoProvisioningEventReceived.flag();
+                }), close -> {})
+                .compose(ok -> getHelper().registry.addTenant(tenantId, tenant))
                 .compose(ok -> getClient()
                         // WHEN getting credentials
                         .get(tenantId, CredentialsConstants.SECRETS_TYPE_X509_CERT, authId, clientCtx, spanContext))
@@ -275,7 +302,7 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
                         assertThat(result.getSecrets()).hasSize(1);
 
                         if (expectedDeviceId != null) {
-                            //VERIFY the generated device-id 
+                            // VERIFY the generated device-id
                             assertThat(result.getDeviceId()).isEqualTo(expectedDeviceId);
                         }
                     });
@@ -293,9 +320,32 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
                                     .contains(RegistryManagementConstants.AUTHORITY_AUTO_PROVISIONING_ENABLED))
                                             .isTrue();
                         }
+                        // VERIFY that the property "auto-provisioning-notification-sent" is updated to true.
+                        final DeviceStatus deviceStatus = result.bodyAsJsonObject()
+                                .getJsonObject(RegistryManagementConstants.FIELD_STATUS)
+                                .mapTo(DeviceStatus.class);
+                        assertThat(deviceStatus.isAutoProvisioned())
+                                .withFailMessage(RegistryManagementConstants.FIELD_AUTO_PROVISIONED + " must be true")
+                                .isTrue();
+                        assertThat(deviceStatus.isAutoProvisioningNotificationSent())
+                                .withFailMessage(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT + " must be true")
+                                .isTrue();
                     });
-                    ctx.completeNow();
+                    autoProvisioningCompleted.flag();
                 }));
+    }
+
+    private void verifyAutoProvisioningEventNotification(final String expectedTenantId, final String expectedDeviceId,
+            final DownstreamMessage msg) {
+        assertThat(msg.getContentType())
+                .isEqualTo(EventConstants.CONTENT_TYPE_DEVICE_PROVISIONING_NOTIFICATION);
+        assertThat(msg.getProperties().getProperty(MessageHelper.APP_PROPERTY_REGISTRATION_STATUS, String.class))
+                .isEqualTo(EventConstants.RegistrationStatus.NEW.name());
+        assertThat(msg.getTenantId()).isEqualTo(expectedTenantId);
+        assertThat(msg.getDeviceId()).isNotNull();
+        if (expectedDeviceId != null) {
+            assertThat(msg.getDeviceId()).isEqualTo(expectedDeviceId);
+        }
     }
 
     private X509Certificate createCertificate() throws CertificateException, FileNotFoundException {

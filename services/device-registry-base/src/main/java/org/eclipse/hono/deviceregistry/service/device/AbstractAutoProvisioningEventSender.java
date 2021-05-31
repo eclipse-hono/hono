@@ -178,17 +178,22 @@ public abstract class AbstractAutoProvisioningEventSender implements Lifecycle {
         Objects.requireNonNull(deviceVersion);
         Objects.requireNonNull(span);
 
-        device.setStatus(new DeviceStatus().setAutoProvisioningNotificationSent(true));
+        Optional.ofNullable(device.getStatus())
+                .ifPresentOrElse(
+                        status -> status.setAutoProvisioningNotificationSent(true),
+                        () -> device.setStatus(new DeviceStatus().setAutoProvisioningNotificationSent(true)));
+
         return deviceManagementService.updateDevice(tenantId, deviceId, device, deviceVersion, span)
                 .compose(result -> {
                     if (HttpURLConnection.HTTP_NO_CONTENT == result.getStatus()) {
                         return Future.succeededFuture();
                     } else {
                         final String errorMessage = String.format(
-                                "error updating device with 'AutoProvisioningNotificationSent=true' [status: %s, tenant-id: %s, device-id: %s]",
-                                result.getStatus(), tenantId, deviceId);
+                                "error updating device with 'AutoProvisioningNotificationSent=true' [status: %s, tenant-id: %s, device-id: %s, device-version: %s]",
+                                result.getStatus(), tenantId, deviceId, deviceVersion.orElse(""));
                         LOG.warn(errorMessage);
                         Tags.HTTP_STATUS.set(span, result.getStatus());
+                        deviceVersion.ifPresent(version -> span.setTag("device-registration-version", version));
                         TracingHelper.logError(span,
                                 "error updating device with 'AutoProvisioningNotificationSent=true'");
                         return Future.failedFuture(errorMessage);
