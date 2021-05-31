@@ -67,6 +67,7 @@ import org.eclipse.hono.service.http.HttpServiceConfigProperties;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.DelegatingCredentialsManagementHttpEndpoint;
 import org.eclipse.hono.service.management.device.DelegatingDeviceManagementHttpEndpoint;
+import org.eclipse.hono.service.management.device.DeviceAndGatewayAutoProvisioner;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.tenant.DelegatingTenantManagementHttpEndpoint;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
@@ -459,7 +460,15 @@ public class ApplicationConfig {
     @Scope("prototype")
     @Profile(Profiles.PROFILE_REGISTRY_ADAPTER)
     public CredentialsService credentialsService() throws IOException {
-        return new CredentialsServiceImpl(devicesAdapterStore(), deviceRegistryServiceProperties());
+        final CredentialsServiceImpl credentialsService = new CredentialsServiceImpl(devicesAdapterStore(),
+                deviceRegistryServiceProperties());
+        final DeviceAndGatewayAutoProvisioner deviceAndGatewayAutoProvisioner = new DeviceAndGatewayAutoProvisioner(
+                vertx(),
+                registrationManagementService(),
+                credentialsManagementService(),
+                eventSenders());
+        credentialsService.setDeviceAndGatewayAutoProvisioner(deviceAndGatewayAutoProvisioner);
+        return credentialsService;
     }
 
     /**
