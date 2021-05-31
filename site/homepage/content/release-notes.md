@@ -4,7 +4,14 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
-## 1.8.0 (not released yet)
+## 1.8.1 (not released yet)
+
+### Fixes & Enhancements
+
+* Letting the trace sampling settings of the Hono components be defined via sampling strategies served by the Jaeger
+  Collector did not work for components using Quarkus native images. This has been fixed.
+
+## 1.8.0
 
 ### New Features
 
@@ -49,7 +56,9 @@ description = "Information about changes in recent Hono releases. Includes new f
   load on the Prometheus server when failing over all of a crashed/stopped adapter instance's device connections.
 * The Hono component container images now contain the *Gson* library which is required by the Jaeger client for
   processing sampling strategy configuration retrieved from the Jaeger Collector.
-
+* The Kafka based implementation of the north bound application client
+  `org.eclipse.hono.application.client.kafka.impl.KafkaApplicationClientImpl` now supports sending commands and
+  receiving responses in a *request/response* fashion.
 
 ### Deprecations
 
