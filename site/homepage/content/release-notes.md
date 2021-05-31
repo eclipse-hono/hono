@@ -4,6 +4,15 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
+## 1.9.0 (not yet released)
+
+### Deprecations
+
+* The file based device registry implementation has been deprecated and will be removed in a future version of Hono.
+  Please use the Mongo DB or JDBC based registry implementations instead. The JDBC based registry can be configured
+  to use an H2 database in either *embedded* or *in-memory* mode. The former can be used to persist data to the local
+  file system while the latter keeps all data in memory only.
+
 ## 1.8.0
 
 ### New Features

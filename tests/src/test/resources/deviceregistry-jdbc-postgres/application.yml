@@ -1,12 +1,15 @@
 hono:
+
   app:
     maxInstances: 1
     startupTimeout: 90
+
   healthCheck:
     insecurePortBindAddress: 0.0.0.0
     insecurePort: ${vertx.health.port}
+
   messaging:
-    name: 'Hono Device Registry File'
+    name: 'Hono Device Registry JDBC'
     host: ${hono.amqp-network.host}
     port: 5673
     amqpHostname: hono-internal
@@ -16,6 +19,7 @@ hono:
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
+
   auth:
     host: ${hono.auth.host}
     port: 5671
@@ -23,25 +27,43 @@ hono:
     trustStorePath: "/etc/hono/certs/trusted-certs.pem"
     validation:
       certPath: /etc/hono/certs/auth-server-cert.pem
+
   registry:
     amqp:
       insecurePortEnabled: true
       insecurePortBindAddress: 0.0.0.0
     http:
+      authenticationRequired: false
       insecurePortEnabled: true
       insecurePortBindAddress: 0.0.0.0
-    svc:
-      startEmpty: true
-      saveToFile: false
-  credentials:
+    jdbc:
+      adapter:
+        url: ${hono.jdbc.db.url}
+        driverClass: org.postgresql.Driver
+        username: ${hono.jdbc.db.registry.username}
+        password: ${hono.jdbc.db.registry.password}
+      management:
+        url: ${hono.jdbc.db.url}
+        driverClass: org.postgresql.Driver
+        username: ${hono.jdbc.db.registry.username}
+        password: ${hono.jdbc.db.registry.password}
     svc:
       maxBcryptCostFactor: ${max.bcrypt.costFactor}
-      startEmpty: true
-      saveToFile: false
+
   tenant:
+    jdbc:
+      adapter:
+        url: ${hono.jdbc.db.url}
+        driverClass: org.postgresql.Driver
+        username: ${hono.jdbc.db.registry.username}
+        password: ${hono.jdbc.db.registry.password}
+      management:
+        url: ${hono.jdbc.db.url}
+        driverClass: org.postgresql.Driver
+        username: ${hono.jdbc.db.registry.username}
+        password: ${hono.jdbc.db.registry.password}
     svc:
-      filename: /etc/hono/tenants.json
-      saveToFile: false
+
   vertx:
     maxEventLoopExecuteTime: ${max.event-loop.execute-time}
     preferNative: true
