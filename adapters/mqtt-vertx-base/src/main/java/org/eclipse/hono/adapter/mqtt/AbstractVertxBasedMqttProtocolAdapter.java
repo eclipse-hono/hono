@@ -1532,8 +1532,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 : String.format("device [%s]", command.getDeviceId());
 
             getCommandPayload(commandContext)
-                    .onSuccess(mappedPayload -> {
-                        publish(publishTopic, mappedPayload, subscription.getQos())
+                    .map(mappedPayload -> Optional.ofNullable(mappedPayload).orElseGet(Buffer::buffer))
+                    .onSuccess(payload -> {
+                        publish(publishTopic, payload, subscription.getQos())
                                 .onSuccess(msgId -> {
                                     log.debug("published command [packet-id: {}] to {} [tenant-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
                                             msgId, targetInfo, subscription.getTenant(), endpoint.clientIdentifier(),
@@ -1763,8 +1764,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * Get the buffer to send as a command to the gateway/device.
      * <p>
      * Subclasses should override this method in order to overwrite the provided command.
-     * <p>
-     *  @param ctx The command context for this command.
+     *
+     * @param ctx The command context for this command.
      * @return A future containing the mapped buffer.
      */
     protected Future<Buffer> getCommandPayload(final CommandContext ctx) {
