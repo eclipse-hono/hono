@@ -180,8 +180,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(span);
 
-        return MongoDbDeviceRegistryUtils.isModificationEnabled(config)
-                .compose(ok -> tenantExists(tenantId, span))
+        return tenantExists(tenantId, span)
                 .compose(ok -> isMaxDevicesLimitReached(tenantId))
                 .compose(ok -> {
                     final DeviceDto deviceDto = DeviceDto.forCreation(MongoDbBasedDeviceDto::new, tenantId,
@@ -252,8 +251,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         Objects.requireNonNull(resourceVersion);
         Objects.requireNonNull(span);
 
-        return MongoDbDeviceRegistryUtils.isModificationEnabled(config)
-                .compose(ok -> tenantExists(tenantId, span))
+        return tenantExists(tenantId, span)
                 .compose(deviceDto -> processUpdateDevice(tenantId, deviceId,
                         device.getStatus() != null ? device.getStatus().getAutoProvisioningNotificationSentSetInternal() : null,
                         device, resourceVersion, span))
@@ -269,8 +267,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         Objects.requireNonNull(resourceVersion);
         Objects.requireNonNull(span);
 
-        return MongoDbDeviceRegistryUtils.isModificationEnabled(config)
-                .compose(ok -> tenantExists(tenantId, span))
+        return tenantExists(tenantId, span)
                 .compose(ok -> processDeleteDevice(tenantId, deviceId, resourceVersion, span))
                 .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
     }

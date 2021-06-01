@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -30,10 +30,6 @@ public abstract class AbstractMongoDbBasedRegistryConfigProperties {
      * Mongodb collection name for individual device registry service entity type.
      */
     private String collectionName = getDefaultCollectionName();
-    /**
-     * Option if modification on device registry is permitted.
-     */
-    private boolean modificationEnabled = true;
 
     /**
      * Gets the Mongodb collection name that the registry should be persisted to periodically.
@@ -63,32 +59,6 @@ public abstract class AbstractMongoDbBasedRegistryConfigProperties {
      */
     public final void setCollectionName(final String collectionName) {
         this.collectionName = collectionName;
-    }
-
-    /**
-     * Checks whether this registry allows the creation, modification and removal of entries.
-     * <p>
-     * If set to {@code false} then methods for creating, updating or deleting an entry should return a <em>403 Forbidden</em> response.
-     * <p>
-     * The default value of this property is {@code true}.
-     *
-     * @return The flag.
-     */
-    public final boolean isModificationEnabled() {
-        return modificationEnabled;
-    }
-
-    /**
-     * Sets whether this registry allows creation, modification and removal of entries.
-     * <p>
-     * If set to {@code false} then for creating, updating or deleting an entry should return a <em>403 Forbidden</em> response.
-     * <p>
-     * The default value of this property is {@code true}.
-     *
-     * @param flag The flag.
-     */
-    public final void setModificationEnabled(final boolean flag) {
-        modificationEnabled = flag;
     }
 
     /**
