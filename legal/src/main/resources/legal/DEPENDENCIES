@@ -29,9 +29,9 @@ maven/mavencentral/io.jaegertracing/jaeger-tracerresolver/1.6.0, Apache-2.0, app
 maven/mavencentral/io.jsonwebtoken/jjwt-api/0.11.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.jsonwebtoken/jjwt-impl/0.11.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.jsonwebtoken/jjwt-jackson/0.11.2, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.micrometer/micrometer-core/1.6.2, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.micrometer/micrometer-registry-graphite/1.6.2, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.micrometer/micrometer-registry-prometheus/1.6.2, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.micrometer/micrometer-core/1.6.7, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.micrometer/micrometer-registry-graphite/1.6.7, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.micrometer/micrometer-registry-prometheus/1.6.7, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.netty/netty-buffer/4.1.58.Final, Apache-2.0, approved, CQ21842
 maven/mavencentral/io.netty/netty-codec/4.1.58.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
 maven/mavencentral/io.netty/netty-codec-dns/4.1.58.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
