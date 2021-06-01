@@ -80,7 +80,7 @@
     <protostream.version>4.3.4.Final</protostream.version>
     <proton.version>0.33.8</proton.version>
     <qpid-jms.version>0.55.0</qpid-jms.version>
-    <quarkus.platform.version>1.11.6.Final</quarkus.platform.version>
+    <quarkus.platform.version>1.11.7.Final</quarkus.platform.version>
     <reactive-streams.version>1.0.3</reactive-streams.version>
     <rxjava.version>3.0.4</rxjava.version>
     <slf4j.version>1.7.28</slf4j.version>
