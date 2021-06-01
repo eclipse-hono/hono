@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
@@ -44,6 +45,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -73,7 +75,6 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
 
     private KafkaConsumerConfigProperties consumerConfigProperties;
     private Vertx vertx;
-    private HonoKafkaConsumer consumer;
     private KafkaMockConsumer mockConsumer;
 
     /**
@@ -119,7 +120,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig("test");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
 
-        consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
+        final var consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
         mockConsumer.updateEndOffsets(Map.of(topicPartition, ((long) 0)));
         mockConsumer.updatePartitions(topicPartition, KafkaMockConsumer.DEFAULT_NODE);
@@ -138,7 +139,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig("test");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
 
-        consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, TOPIC_PATTERN, handler, consumerConfig);
+        final var consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, TOPIC_PATTERN, handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
         mockConsumer.updateEndOffsets(Map.of(topicPartition, ((long) 0)));
         mockConsumer.updatePartitions(topicPartition, KafkaMockConsumer.DEFAULT_NODE);
@@ -170,7 +171,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
         consumerConfig.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "300000"); // periodic commit shall not play a role here
 
-        consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
+        final var consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
         mockConsumer.updateEndOffsets(Map.of(topicPartition, ((long) 0)));
         mockConsumer.updatePartitions(topicPartition, KafkaMockConsumer.DEFAULT_NODE);
@@ -271,7 +272,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
         consumerConfig.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "300000"); // periodic commit shall not play a role here
 
-        consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
+        final var consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
         mockConsumer.updateEndOffsets(Map.of(topicPartition, ((long) 0)));
         mockConsumer.updatePartitions(topicPartition, KafkaMockConsumer.DEFAULT_NODE);
@@ -328,7 +329,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         // otherwise the frequent commit task on the event loop thread will prevent the test main thread from getting things done
         consumerConfig.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "100");
 
-        consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
+        final var consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
         mockConsumer.updateEndOffsets(Map.of(topicPartition, ((long) 0)));
         mockConsumer.updatePartitions(topicPartition, KafkaMockConsumer.DEFAULT_NODE);
@@ -391,7 +392,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         consumerConfig.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG,
                 "300000"); // periodic commit shall not play a role here
 
-        consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
+        final var consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
         mockConsumer.updateEndOffsets(Map.of(topicPartition, ((long) 0)));
         mockConsumer.updatePartitions(topicPartition, KafkaMockConsumer.DEFAULT_NODE);
@@ -453,7 +454,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
         consumerConfig.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "300000"); // periodic commit shall not play a role here
 
-        consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig) {
+        final var consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig) {
             @Override
             protected void onRecordHandlerSkippedForExpiredRecord(final KafkaConsumerRecord<String, Buffer> record) {
                 super.onRecordHandlerSkippedForExpiredRecord(record);
@@ -464,15 +465,18 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         mockConsumer.updateEndOffsets(Map.of(topicPartition, ((long) 0)));
         mockConsumer.updatePartitions(topicPartition, KafkaMockConsumer.DEFAULT_NODE);
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(topicPartition));
-        consumer.start().onComplete(ctx.succeeding(v2 -> {
-            mockConsumer.schedulePollTask(() -> {
-                // add record with elapsed ttl
-                mockConsumer.addRecord(createRecordWithElapsedTtl());
-                IntStream.range(1, numNonExpiredTestRecords + 1).forEach(offset -> {
-                    mockConsumer.addRecord(new ConsumerRecord<>(TOPIC, PARTITION, offset, "key_" + offset, Buffer.buffer()));
+        final Context consumerVertxContext = vertx.getOrCreateContext();
+        consumerVertxContext.runOnContext(v -> {
+            consumer.start().onComplete(ctx.succeeding(v2 -> {
+                mockConsumer.schedulePollTask(() -> {
+                    // add record with elapsed ttl
+                    mockConsumer.addRecord(createRecordWithElapsedTtl());
+                    IntStream.range(1, numNonExpiredTestRecords + 1).forEach(offset -> {
+                        mockConsumer.addRecord(new ConsumerRecord<>(TOPIC, PARTITION, offset, "key_" + offset, Buffer.buffer()));
+                    });
                 });
-            });
-        }));
+            }));
+        });
         assertThat(receivedRecordsCtx.awaitCompletion(5, TimeUnit.SECONDS))
                 .as("records received in 5s").isTrue();
         if (receivedRecordsCtx.failed()) {
@@ -494,6 +498,12 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
             commitCheckpoint.flag();
         });
         // now force a rebalance which should trigger the above onPartitionsAssignedHandler
+        // (rebalance is done as part of the poll() invocation; the vert.x consumer will schedule that invocation
+        // via an action executed on the event loop thread; do this here as well, meaning the record handler
+        // run on the event loop thread will be finished once the rebalance get triggered).
+        final CountDownLatch latch = new CountDownLatch(1);
+        consumerVertxContext.runOnContext(v -> latch.countDown());
+        latch.await();
         mockConsumer.rebalance(List.of(topicPartition));
         assertThat(commitCheckContext.awaitCompletion(5, TimeUnit.SECONDS))
                 .as("partition assigned in 5s for checking of commits").isTrue();
