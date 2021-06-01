@@ -13,7 +13,6 @@
 package org.eclipse.hono.deviceregistry.mongodb.service;
 
 import java.net.HttpURLConnection;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -101,16 +100,13 @@ public class MongoDbBasedDeviceBackend implements DeviceBackend, Lifecycle {
      */
     @Override
     public Future<Void> start() {
-        final List<Future> services = new ArrayList<>();
-
         LOG.debug("starting up services");
-        services.add(registrationService.start());
-        services.add(credentialsService.start());
-        Optional.ofNullable(deviceAndGatewayAutoProvisioner)
-                .map(AbstractAutoProvisioningEventSender::start)
-                .map(services::add);
-
-        return CompositeFuture.all(services)
+        return CompositeFuture.all(
+                registrationService.start(),
+                credentialsService.start(),
+                Optional.ofNullable(deviceAndGatewayAutoProvisioner)
+                    .map(AbstractAutoProvisioningEventSender::start)
+                    .orElseGet(Future::succeededFuture))
                 .mapEmpty();
     }
 
@@ -119,16 +115,14 @@ public class MongoDbBasedDeviceBackend implements DeviceBackend, Lifecycle {
      */
     @Override
     public Future<Void> stop() {
-        final List<Future> services = new ArrayList<>();
-
         LOG.debug("stopping services");
-        services.add(registrationService.start());
-        services.add(credentialsService.start());
-        Optional.ofNullable(deviceAndGatewayAutoProvisioner)
-                .map(AbstractAutoProvisioningEventSender::start)
-                .map(services::add);
-
-        return CompositeFuture.join(services).mapEmpty();
+        return CompositeFuture.join(
+                registrationService.start(),
+                credentialsService.start(),
+                Optional.ofNullable(deviceAndGatewayAutoProvisioner)
+                    .map(AbstractAutoProvisioningEventSender::start)
+                    .orElseGet(Future::succeededFuture))
+                .mapEmpty();
     }
 
     // DEVICES

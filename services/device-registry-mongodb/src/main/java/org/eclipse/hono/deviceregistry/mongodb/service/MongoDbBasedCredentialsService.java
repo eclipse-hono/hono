@@ -241,24 +241,25 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
 
         TracingHelper.TAG_DEVICE_ID.set(span, deviceKey.getDeviceId());
 
-        return MongoDbDeviceRegistryUtils.isModificationEnabled(config)
-                .compose(ok -> {
-                    final var updatedCredentialsDto = CredentialsDto.forUpdate(
-                            deviceKey.getTenantId(),
-                            deviceKey.getDeviceId(),
-                            updatedCredentials,
-                            DeviceRegistryUtils.getUniqueIdentifier());
+        final Promise<CredentialsDto> result = Promise.promise();
+        final var updatedCredentialsDto = CredentialsDto.forUpdate(
+                deviceKey.getTenantId(),
+                deviceKey.getDeviceId(),
+                updatedCredentials,
+                DeviceRegistryUtils.getUniqueIdentifier());
 
-                    if (updatedCredentialsDto.requiresMerging()) {
-                        return getCredentialsDto(deviceKey, resourceVersion)
-                                .map(updatedCredentialsDto::merge);
-                    } else {
-                        // simply replace the existing credentials with the
-                        // updated ones provided by the client
-                        return Future.succeededFuture(updatedCredentialsDto);
-                    }
+        if (updatedCredentialsDto.requiresMerging()) {
+            getCredentialsDto(deviceKey, resourceVersion)
+                    .map(updatedCredentialsDto::merge)
+                    .onComplete(result);
+        } else {
+            // simply replace the existing credentials with the
+            // updated ones provided by the client
+            result.complete(updatedCredentialsDto);
+        }
 
-                }).compose(credentialsDto -> {
+        return result.future()
+                .compose(credentialsDto -> {
                     credentialsDto.createMissingSecretIds();
                     return updateCredentials(
                             deviceKey,

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,7 +21,6 @@ import java.util.function.Function;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.deviceregistry.mongodb.config.AbstractMongoDbBasedRegistryConfigProperties;
 import org.eclipse.hono.service.management.BaseDto;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.SearchResult;
@@ -85,28 +84,6 @@ public final class MongoDbDeviceRegistryUtils {
     }
 
     /**
-     * Checks whether a registry component supports modification of persistent data.
-     *
-     * @param config The configuration properties of the affected registry component.
-     * @return A future indicating the outcome of the operation.
-     *         <p>
-     *         The future will be succeeded if modification is supported.
-     *         Otherwise the future will be failed with a {@link ClientErrorException} with
-     *         error code {@value HttpURLConnection#HTTP_FORBIDDEN}.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
-    public static Future<Void> isModificationEnabled(final AbstractMongoDbBasedRegistryConfigProperties config) {
-        Objects.requireNonNull(config);
-
-        if (config.isModificationEnabled()) {
-            return Future.succeededFuture();
-        } else {
-            return Future.failedFuture(
-                    new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, "modification is disabled"));
-        }
-    }
-
-    /**
      * Maps the given error to an {@link OperationResult} containing the appropriate HTTP status code.
      *
      * @param error The error.
@@ -151,7 +128,7 @@ public final class MongoDbDeviceRegistryUtils {
     public static <T> Future<T> checkForVersionMismatchAndFail(
             final String resourceId,
             final Optional<String> versionFromRequest,
-            final Future<? extends BaseDto> resourceSupplierFuture) {
+            final Future<? extends BaseDto<?>> resourceSupplierFuture) {
 
         Objects.requireNonNull(resourceId);
         Objects.requireNonNull(versionFromRequest);

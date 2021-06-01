@@ -192,8 +192,7 @@ public final class MongoDbBasedTenantService extends AbstractTenantManagementSer
         Objects.requireNonNull(resourceVersion);
         Objects.requireNonNull(span);
 
-        return MongoDbDeviceRegistryUtils.isModificationEnabled(config)
-                .compose(ok -> modifyTenant(tenantId, tenantObj, resourceVersion, span))
+        return modifyTenant(tenantId, tenantObj, resourceVersion, span)
                 .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
     }
 
@@ -248,8 +247,7 @@ public final class MongoDbBasedTenantService extends AbstractTenantManagementSer
         Objects.requireNonNull(resourceVersion);
         Objects.requireNonNull(span);
 
-        return MongoDbDeviceRegistryUtils.isModificationEnabled(config)
-                .compose(ok -> processDeleteTenant(tenantId, resourceVersion, span))
+        return processDeleteTenant(tenantId, resourceVersion, span)
                 .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
     }
 
@@ -448,8 +446,7 @@ public final class MongoDbBasedTenantService extends AbstractTenantManagementSer
         Objects.requireNonNull(tenantObj);
         Objects.requireNonNull(span);
 
-        return MongoDbDeviceRegistryUtils.isModificationEnabled(config)
-                .compose(ok -> addTenant(tenantId, tenantObj, span))
+        return addTenant(tenantId, tenantObj, span)
                 .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
     }
 

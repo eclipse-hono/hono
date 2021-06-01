@@ -12,6 +12,9 @@ description = "Information about changes in recent Hono releases. Includes new f
   Please use the Mongo DB or JDBC based registry implementations instead. The JDBC based registry can be configured
   to use an H2 database in either *embedded* or *in-memory* mode. The former can be used to persist data to the local
   file system while the latter keeps all data in memory only.
+* The MongoDB based registry implementation no longer supports the configuration variables for disabling modification
+  of existing data. In real life deployments this feature has no meaning because write access to data will need to
+  be authorized more explicitly anyway, e.g. at the tenant level.
 
 ## 1.8.0
 
