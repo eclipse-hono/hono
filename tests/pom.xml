@@ -109,6 +109,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <hono.deviceregistry.supportsSearchTenants>true</hono.deviceregistry.supportsSearchTenants>
     <hono.deviceregistry.image>hono-service-device-registry-mongodb</hono.deviceregistry.image>
     <hono.deviceregistry.resources.folder>deviceregistry-mongodb</hono.deviceregistry.resources.folder>
+    <!-- default memory limit of the device registry container is 300MiB -->
+    <hono.deviceregistry.containerMemoryLimit>314572800</hono.deviceregistry.containerMemoryLimit>
     <!-- Spring application profiles to activate for the registry -->
     <hono.deviceregistry.spring.profiles>${logging.profile}</hono.deviceregistry.spring.profiles>
 
@@ -422,6 +424,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
         <hono.deviceregistry.credentials.supportsClientContext>false</hono.deviceregistry.credentials.supportsClientContext>
         <hono.deviceregistry.supportsSearchDevices>false</hono.deviceregistry.supportsSearchDevices>
         <hono.deviceregistry.supportsSearchTenants>false</hono.deviceregistry.supportsSearchTenants>
+        <!-- increase memory limit of the device registry container to 400MB in order to accommodate for embedded H2 DB -->
+        <hono.deviceregistry.containerMemoryLimit>400000000</hono.deviceregistry.containerMemoryLimit>
         <hono.jdbc.db.url>jdbc:h2:file://var/tmp/hono</hono.jdbc.db.url>
       </properties>
     </profile>
@@ -998,8 +1002,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>hono</name>
                       <alias>hono-service-device-registry.hono</alias>
                     </network>
-                    <memorySwap>314572800</memorySwap>
-                    <memory>314572800</memory>
+                    <memorySwap>${hono.deviceregistry.containerMemoryLimit}</memorySwap>
+                    <memory>${hono.deviceregistry.containerMemoryLimit}</memory>
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
