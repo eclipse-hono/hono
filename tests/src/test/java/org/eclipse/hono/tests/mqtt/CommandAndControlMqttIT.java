@@ -246,11 +246,12 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                     false,
                     false);
         }, payload -> {
+            final String contentType = payload != null ? "text/plain" : null;
             return helper.sendCommand(
                     tenantId,
                     commandTargetDeviceId,
                     "setValue",
-                    "text/plain",
+                    contentType,
                     payload,
                     // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
                     IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= COMMANDS_TO_SEND / 2),
@@ -308,7 +309,10 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         while (commandsSent.get() < totalNoOfCommandsToSend) {
             final CountDownLatch commandSent = new CountDownLatch(1);
             context.runOnContext(go -> {
-                final Buffer msg = Buffer.buffer("value: " + commandsSent.getAndIncrement());
+                commandsSent.getAndIncrement();
+                final Buffer msg = commandsSent.get() % 2 == 0
+                        ? Buffer.buffer("value: " + commandsSent.get())
+                        : null; // use 'null' payload for half the commands, ensuring such commands also get forwarded
                 commandSender.apply(msg).onComplete(sendAttempt -> {
                     if (sendAttempt.failed()) {
                         LOGGER.info("error sending command {}", commandsSent.get(), sendAttempt.cause());
