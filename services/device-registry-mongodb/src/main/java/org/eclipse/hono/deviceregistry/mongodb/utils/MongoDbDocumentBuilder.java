@@ -78,7 +78,7 @@ public final class MongoDbDocumentBuilder {
         final JsonObject updateDocument = document.getJsonObject(MONGODB_OPERATOR_SET);
 
         if (deviceDto.getDeviceStatus().getAutoProvisioningNotificationSentSetInternal() != null) {
-            updateDocument.put(MongoDbDeviceRegistryUtils.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT,
+            updateDocument.put(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT,
                     deviceDto.getDeviceStatus().getAutoProvisioningNotificationSentSetInternal());
         }
 
