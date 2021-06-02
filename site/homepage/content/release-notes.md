@@ -6,10 +6,16 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 ## 1.9.0 (not yet released)
 
+### New Features
+
+* The Mongo DB based registry now supports enforcement of registration limits configured at the tenant level.
+  In particular, the maximum number of devices and the maximum number of credentials per device can be set in
+  a tenant's registration-limits property. Please refer to the Mongo DB User Guide for details.
+
 ### Fixes & Enhancements
 
-* The value of the properties `auto-provisioned` and `auto-provisioning-notification-sent` are always *false* while 
-  retrieving device registration information using the MongoDB based registry implementation. This has been fixed now.
+* The value of the properties `auto-provisioned` and `auto-provisioning-notification-sent` had always been *false* when
+  retrieving device registration information using the MongoDB based registry implementation. This has been fixed.
 
 ### Deprecations
 

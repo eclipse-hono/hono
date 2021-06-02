@@ -31,6 +31,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.eclipse.hono.service.management.SearchResult;
+import org.eclipse.hono.service.management.tenant.RegistrationLimits;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TenantWithId;
 import org.eclipse.hono.service.management.tenant.TrustedCertificateAuthority;
@@ -94,7 +95,15 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
     public void testAddTenantSucceeds(final VertxTestContext context) {
 
         final Tenant tenant = buildTenantPayload();
-        getHelper().registry.addTenant(tenantId, tenant).onComplete(context.completing());
+        getHelper().registry.addTenant(tenantId, tenant)
+            .onComplete(context.succeeding(response -> {
+                context.verify(() -> {
+                    final String idFromLocation = assertLocationHeader(response.headers());
+                    assertThat(idFromLocation).isEqualTo(tenantId);
+                    assertThat(response.getHeader(HttpHeaders.ETAG.toString())).isNotNull();
+                });
+                context.completeNow();
+            }));
     }
 
     /**
@@ -444,11 +453,15 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
     @Test
     public void testGetTenantSucceeds(final VertxTestContext context)  {
 
-        final ResourceLimits resourceLimits = new ResourceLimits();
+        final var resourceLimits = new ResourceLimits();
         resourceLimits.setMaxConnections(1000);
+        final var registrationLimits = new RegistrationLimits();
+        registrationLimits.setMaxNumberOfDevices(100);
+        registrationLimits.setMaxCredentialsPerDevice(5);
         final Tenant requestBody = buildTenantPayload();
         requestBody.setMinimumMessageSize(2048);
         requestBody.setResourceLimits(resourceLimits);
+        requestBody.setRegistrationLimits(registrationLimits);
 
         LOG.debug("registering tenant using Management API: {}", JsonObject.mapFrom(requestBody).encodePrettily());
         getHelper().registry.addTenant(tenantId, requestBody)

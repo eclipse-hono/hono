@@ -36,7 +36,7 @@ info:
    license:
       name: EPL-2.0
       url: https://www.eclipse.org/legal/epl-2.0/
-   version: 1.8.0
+   version: 1.9.0
 
 externalDocs:
    description: Eclipse Hono™ web page
@@ -716,6 +716,8 @@ components:
                   telemetry, event and command messages is calculated as the minimum multiple
                   of the configured value that is greater than or equal to the messages
                   payload size.
+            "registration-limits":
+               $ref: '#/components/schemas/RegistrationLimits'
             "resource-limits":
                $ref: '#/components/schemas/ResourceLimit'
             "tracing":
@@ -884,6 +886,23 @@ components:
                default: true
             "ext":
                $ref: '#/components/schemas/Extensions'
+
+      RegistrationLimits:
+         type: object
+         additionalProperties: false
+         properties:
+            "max-devices":
+               type: integer
+               default: -1
+               description: |
+                  The maximum number of devices that can be registered for a tenant.
+                  A value of `-1` (the default) indicates that no limit is set.
+            "max-credentials-per-device":
+               type: integer
+               default: -1
+               description: |
+                  The maximum number of credentials that can be registered for a device.
+                  A value of `-1` (the default) indicates that no limit is set.
 
       ResourceLimit:
          type: object

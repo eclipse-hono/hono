@@ -12,9 +12,14 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.mongodb.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.net.HttpURLConnection;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.adapter.client.telemetry.EventSender;
@@ -22,7 +27,13 @@ import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 import org.eclipse.hono.deviceregistry.service.device.EdgeDeviceAutoProvisioner;
+import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
+import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
+import org.eclipse.hono.service.management.OperationResult;
+import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
+import org.eclipse.hono.service.management.tenant.RegistrationLimits;
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.registration.AbstractRegistrationServiceTest;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.util.MessagingType;
@@ -30,12 +41,14 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.noop.NoopSpan;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -58,19 +71,37 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
     private final MongoDbBasedRegistrationConfigProperties config = new MongoDbBasedRegistrationConfigProperties();
     private MongoClient mongoClient;
     private MongoDbBasedRegistrationService registrationService;
+    private TenantInformationService tenantInformationService;
     private Vertx vertx;
 
     /**
      * Starts up the service.
-     *
-     * @param testContext The test context to use for running asynchronous tests.
      */
     @BeforeAll
-    public void setup(final VertxTestContext testContext) {
+    public void setup() {
 
         vertx = Vertx.vertx();
         mongoClient = MongoDbTestUtils.getMongoClient(vertx, "hono-devices-test");
+    }
 
+    /**
+     * Starts up the service.
+     *
+     * @param testInfo Test case meta information.
+     * @param testContext The test context to use for running asynchronous tests.
+     */
+    @BeforeEach
+    public void setup(final TestInfo testInfo, final VertxTestContext testContext) {
+        LOG.info("running {}", testInfo.getDisplayName());
+        tenantInformationService = mock(TenantInformationService.class);
+        when(tenantInformationService.getTenant(anyString(), any())).thenReturn(Future.succeededFuture(new Tenant()));
+        when(tenantInformationService.tenantExists(anyString(), any())).thenAnswer(invocation -> {
+            return Future.succeededFuture(OperationResult.ok(
+                    HttpURLConnection.HTTP_OK,
+                    TenantKey.from(invocation.getArgument(0)),
+                    Optional.empty(),
+                    Optional.empty()));
+        });
         registrationService = new MongoDbBasedRegistrationService(
                 vertx,
                 mongoClient,
@@ -84,18 +115,9 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
                 NoopTracerFactory.create());
 
         registrationService.setEdgeDeviceAutoProvisioner(edgeDeviceAutoProvisioner);
+        registrationService.setTenantInformationService(tenantInformationService);
 
         registrationService.createIndices().onComplete(testContext.completing());
-    }
-
-    /**
-     * Prints the test name.
-     *
-     * @param testInfo Test case meta information.
-     */
-    @BeforeEach
-    public void setup(final TestInfo testInfo) {
-        LOG.info("running {}", testInfo.getDisplayName());
     }
 
     /**
@@ -140,5 +162,49 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
         when(eventSender.stop()).thenReturn(Future.succeededFuture());
 
         return new MessagingClient<EventSender>().setClient(MessagingType.amqp, eventSender);
+    }
+
+    /**
+     * Verifies that a request to create more devices than the globally configured limit fails with a 403.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCreateDeviceFailsIfGlobalDeviceLimitHasBeenReached(final VertxTestContext ctx) {
+
+        config.setMaxDevicesPerTenant(1);
+
+        getDeviceManagementService().createDevice(TENANT, Optional.empty(), new Device(), NoopSpan.INSTANCE)
+            .onComplete(ok -> ctx.succeeding())
+            .compose(ok -> getDeviceManagementService().createDevice(TENANT, Optional.empty(), new Device(), NoopSpan.INSTANCE))
+            .onComplete(ctx.succeeding(response -> {
+                ctx.verify(() -> {
+                    assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
+                });
+                ctx.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that a request to create more devices than the limit configured at the tenant level fails with a 403.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCreateDeviceFailsIfTenantLevelDeviceLimitHasBeenReached(final VertxTestContext ctx) {
+
+        config.setMaxDevicesPerTenant(3);
+        when(tenantInformationService.getTenant(anyString(), any())).thenReturn(
+                Future.succeededFuture(new Tenant().setRegistrationLimits(new RegistrationLimits().setMaxNumberOfDevices(1))));
+
+        getDeviceManagementService().createDevice(TENANT, Optional.empty(), new Device(), NoopSpan.INSTANCE)
+            .onComplete(ok -> ctx.succeeding())
+            .compose(ok -> getDeviceManagementService().createDevice(TENANT, Optional.empty(), new Device(), NoopSpan.INSTANCE))
+            .onComplete(ctx.succeeding(response -> {
+                ctx.verify(() -> {
+                    assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
+                });
+                ctx.completeNow();
+            }));
     }
 }

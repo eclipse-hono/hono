@@ -25,7 +25,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedDeviceDto;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbCallExecutor;
@@ -46,6 +45,8 @@ import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceDto;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.device.DeviceWithId;
+import org.eclipse.hono.service.management.tenant.RegistrationLimits;
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -180,8 +181,8 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(span);
 
-        return tenantExists(tenantId, span)
-                .compose(ok -> isMaxDevicesLimitReached(tenantId))
+        return tenantInformationService.getTenant(tenantId, span)
+                .compose(tenant -> checkDeviceLimitReached(tenant, tenantId))
                 .compose(ok -> {
                     final DeviceDto deviceDto = DeviceDto.forCreation(MongoDbBasedDeviceDto::new, tenantId,
                             deviceId.orElseGet(() -> DeviceRegistryUtils.getUniqueIdentifier()),
@@ -201,7 +202,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(span);
 
-        return tenantExists(tenantId, span)
+        return tenantInformationService.getTenant(tenantId, span)
                 .compose(ok -> processReadDevice(tenantId, deviceId))
                 .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
     }
@@ -220,7 +221,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         Objects.requireNonNull(sortOptions);
         Objects.requireNonNull(span);
 
-        return tenantExists(tenantId, span)
+        return tenantInformationService.getTenant(tenantId, span)
                 .compose(ok -> {
                     final JsonObject filterDocument = MongoDbDocumentBuilder.builder()
                             .withTenantId(tenantId)
@@ -251,7 +252,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         Objects.requireNonNull(resourceVersion);
         Objects.requireNonNull(span);
 
-        return tenantExists(tenantId, span)
+        return tenantInformationService.getTenant(tenantId, span)
                 .compose(deviceDto -> processUpdateDevice(tenantId, deviceId,
                         device.getStatus() != null ? device.getStatus().getAutoProvisioningNotificationSentSetInternal() : null,
                         device, resourceVersion, span))
@@ -267,7 +268,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         Objects.requireNonNull(resourceVersion);
         Objects.requireNonNull(span);
 
-        return tenantExists(tenantId, span)
+        return tenantInformationService.getTenant(tenantId, span)
                 .compose(ok -> processDeleteDevice(tenantId, deviceId, resourceVersion, span))
                 .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
     }
@@ -472,33 +473,41 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                                 findDevice(tenantId, deviceId))));
     }
 
-    private <T> Future<T> isMaxDevicesLimitReached(final String tenantId) {
+    private Future<Void> checkDeviceLimitReached(final Tenant tenant, final String tenantId) {
 
-        if (config.getMaxDevicesPerTenant() == MongoDbBasedRegistrationConfigProperties.UNLIMITED_DEVICES_PER_TENANT) {
+        final boolean isLimitedAtTenantLevel = Optional.ofNullable(tenant.getRegistrationLimits())
+                .map(RegistrationLimits::isNumberOfDevicesLimited)
+                .orElse(false);
+
+        if (!config.isNumberOfDevicesPerTenantLimited() && !isLimitedAtTenantLevel) {
             return Future.succeededFuture();
         }
 
+        final int maxNumberOfDevices;
+        if (isLimitedAtTenantLevel) {
+            maxNumberOfDevices = tenant.getRegistrationLimits().getMaxNumberOfDevices();
+        } else {
+            maxNumberOfDevices = config.getMaxDevicesPerTenant();
+        }
+
         final Promise<Long> findExistingNoOfDevicesPromise = Promise.promise();
-        mongoClient.count(config.getCollectionName(), MongoDbDocumentBuilder.builder().withTenantId(tenantId).document(),
+        mongoClient.count(
+                config.getCollectionName(),
+                MongoDbDocumentBuilder.builder().withTenantId(tenantId).document(),
                 findExistingNoOfDevicesPromise);
 
         return findExistingNoOfDevicesPromise.future()
                 .compose(existingNoOfDevices -> {
-                    if (existingNoOfDevices >= config.getMaxDevicesPerTenant()) {
+                    if (existingNoOfDevices >= maxNumberOfDevices) {
                         return Future.failedFuture(
-                                new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, String.format(
-                                        "Maximum number of devices limit already reached for the tenant [%s]",
-                                        tenantId)));
+                                new ClientErrorException(
+                                        HttpURLConnection.HTTP_FORBIDDEN,
+                                        String.format(
+                                                "configured device limit reached [tenant-id: %s, max devices: %d]",
+                                                tenantId, maxNumberOfDevices)));
+                    } else {
+                        return Future.succeededFuture();
                     }
-                    return Future.succeededFuture();
                 });
-    }
-
-    private Future<Void> tenantExists(final String tenantId, final Span span) {
-
-        return tenantInformationService.tenantExists(tenantId, span)
-                .compose(result -> result.isOk() ? Future.succeededFuture()
-                        : Future.failedFuture(StatusCodeMapper.from(result.getStatus(), null)));
-
     }
 }

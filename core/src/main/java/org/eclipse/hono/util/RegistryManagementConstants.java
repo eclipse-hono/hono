@@ -278,6 +278,14 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String FIELD_MAX_CONNECTIONS = "max-connections";
     /**
+     * The name of the property that contains the maximum number of credentials allowed per device of a tenant.
+     */
+    public static final String FIELD_MAX_CREDENTIALS_PER_DEVICE = "max-credentials-per-device";
+    /**
+     * The name of the property that contains the maximum number of devices to be allowed for a tenant.
+     */
+    public static final String FIELD_MAX_DEVICES = "max-devices";
+    /**
      * The name of the property that contains the maximum connection duration in minutes to be allowed for a tenant.
      */
     public static final String FIELD_MAX_MINUTES = "max-minutes";
@@ -316,11 +324,15 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      * The name of the property that contains the mode of the period for which the data usage
      * is calculated.
      */
-    public static final String FIELD_PERIOD_MODE = "mode";    
+    public static final String FIELD_PERIOD_MODE = "mode";
     /**
      * The name of the property that contains the number of days for which the data usage is calculated.
      */
-    public static final String FIELD_PERIOD_NO_OF_DAYS = "no-of-days";    
+    public static final String FIELD_PERIOD_NO_OF_DAYS = "no-of-days";
+    /**
+     * The name of the property that contains the configuration options for the registration limits.
+     */
+    public static final String FIELD_REGISTRATION_LIMITS = "registration-limits";
     /**
      * The name of the property that contains the configuration options for the resource limits.
      */

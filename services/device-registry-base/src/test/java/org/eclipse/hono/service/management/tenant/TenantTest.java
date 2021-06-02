@@ -335,6 +335,39 @@ public class TenantTest {
     }
 
     /**
+     * Encode "registration-limits" section.
+     */
+    @Test
+    public void testEncodeRegistrationLimits() {
+        final var tenant = new Tenant()
+                .setRegistrationLimits(new RegistrationLimits()
+                        .setMaxNumberOfDevices(100)
+                        .setMaxCredentialsPerDevice(5));
+        final var json = JsonObject.mapFrom(tenant);
+        final var limits = json.getJsonObject(RegistryManagementConstants.FIELD_REGISTRATION_LIMITS);
+        assertNotNull(limits);
+        assertEquals(100, limits.getInteger(RegistryManagementConstants.FIELD_MAX_DEVICES));
+        assertEquals(5,  limits.getInteger(RegistryManagementConstants.FIELD_MAX_CREDENTIALS_PER_DEVICE));
+    }
+
+    /**
+     * Decode "registration-limits" section.
+     */
+    @Test
+    public void testDecodeRegistrationLimits() {
+        final JsonObject tenantSpec = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_REGISTRATION_LIMITS, new JsonObject()
+                        .put(RegistryManagementConstants.FIELD_MAX_DEVICES, 100)
+                        .put(RegistryManagementConstants.FIELD_MAX_CREDENTIALS_PER_DEVICE, 5));
+
+        final Tenant tenant = tenantSpec.mapTo(Tenant.class);
+        assertNotNull(tenant);
+        assertTrue(tenant.isEnabled());
+        assertEquals(100, tenant.getRegistrationLimits().getMaxNumberOfDevices());
+        assertEquals(5, tenant.getRegistrationLimits().getMaxCredentialsPerDevice());
+    }
+
+    /**
      * Verify that the trust anchor IDs are unique.
      */
     @Test
