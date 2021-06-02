@@ -242,11 +242,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      *
      * @param server The server.
      * @throws NullPointerException if the server is {@code null}.
+     * @throws IllegalStateException if the adapter has already been started.
      */
     public void setMqttSecureServer(final MqttServer server) {
         Objects.requireNonNull(server);
         if (server.actualPort() > 0) {
-            throw new IllegalArgumentException("MQTT server must not be started already");
+            throw new IllegalStateException("MQTT server must not be started already");
         } else {
             this.server = server;
         }
@@ -257,11 +258,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      *
      * @param server The server.
      * @throws NullPointerException if the server is {@code null}.
+     * @throws IllegalStateException if the adapter has already been started.
      */
     public void setMqttInsecureServer(final MqttServer server) {
         Objects.requireNonNull(server);
         if (server.actualPort() > 0) {
-            throw new IllegalArgumentException("MQTT server must not be started already");
+            throw new IllegalStateException("MQTT server must not be started already");
         } else {
             this.insecureServer = server;
         }

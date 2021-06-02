@@ -171,6 +171,8 @@ public abstract class JwtHelper {
      * @param config The key material to use for signing.
      * @param instanceSupplier The supplier to invoke for creating the new helper instance.
      * @return The newly created helper.
+     * @throws IllegalArgumentException if the given configuration does not contain key material required
+     *                                  for signing tokens.
      */
     protected static <T extends JwtHelper> T forSigning(final SignatureSupportingConfigProperties config,
             final Supplier<T> instanceSupplier) {
@@ -203,6 +205,8 @@ public abstract class JwtHelper {
      * @param config The key material to use for verifying signatures.
      * @param instanceSupplier The supplier to invoke for creating the new helper instance.
      * @return The newly created helper.
+     * @throws IllegalArgumentException if the given configuration does not contain key material required
+     *                                  for validating a token's signature.
      */
     protected static <T extends JwtHelper> T forValidating(final SignatureSupportingConfigProperties config,
             final Supplier<T> instanceSupplier) {

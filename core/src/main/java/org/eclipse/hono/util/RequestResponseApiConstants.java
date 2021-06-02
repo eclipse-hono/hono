@@ -194,6 +194,7 @@ public abstract class RequestResponseApiConstants {
      *                         section.
      * @param requestMessage The request message.
      * @return The response message.
+     * @throws IllegalArgumentException if the status code is &lt; 100 or &gt;= 600.
      */
     public static final Message getErrorMessage(
             final int status,

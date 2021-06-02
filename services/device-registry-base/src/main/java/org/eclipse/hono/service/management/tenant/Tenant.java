@@ -266,6 +266,8 @@ public class Tenant {
      *
      * @param configuration The configuration properties to add.
      * @return This instance, to allow chained invocations.
+     * @throws IllegalArgumentException if the configuration is for an adapter type for which there already exists
+     *                                  a configuration.
      */
     public final Tenant addAdapterConfig(final Adapter configuration) {
 

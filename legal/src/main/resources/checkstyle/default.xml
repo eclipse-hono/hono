@@ -72,8 +72,7 @@
     <module name="AvoidStaticImport">
       <property
         name="excludes"
-        value="com.github.tomakehurst.wiremock.client.WireMock.*,
-               org.assertj.core.api.Assertions.assertThat,
+        value="org.assertj.core.api.Assertions.assertThat,
                org.assertj.core.api.Assertions.assertThatThrownBy,
                org.hamcrest.CoreMatchers.*,
                org.hamcrest.Matchers.*,
@@ -118,7 +117,7 @@
     <!-- javadoc validation -->
 
     <module name="JavadocMethod">
-      <property name="scope" value="protected"/>
+      <property name="accessModifiers" value="public,protected"/>
       <property name="validateThrows" value="true"/>
     </module>
     <module name="JavadocStyle"/>

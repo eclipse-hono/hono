@@ -55,9 +55,11 @@ public class DeviceServiceProperties {
      * Set TTL for credential responses, defaults to {@link #DEFAULT_CREDENTIALS_TTL}.
      *
      * @param credentialsTtl The TTL.
+     * @throws NullPointerException if ttl is {@code null}.
      * @throws IllegalArgumentException if the TTL value is less than one second.
      */
     public void setCredentialsTtl(final Duration credentialsTtl) {
+        Objects.requireNonNull(credentialsTtl);
         if (credentialsTtl.toSeconds() <= 0) {
             throw new IllegalArgumentException("'credentialsTtl' must be a positive duration of at least one second");
         }

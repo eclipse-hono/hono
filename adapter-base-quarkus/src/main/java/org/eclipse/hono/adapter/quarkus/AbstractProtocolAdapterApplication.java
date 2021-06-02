@@ -180,6 +180,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
      *
      * @param adapter The adapter to set the collaborators on.
      * @throws NullPointerException if adapter is {@code null}
+     * @throws IllegalStateException if no connection to the Command Router service has been configured.
      */
     protected void setCollaborators(final AbstractProtocolAdapterBase<?> adapter) {
 

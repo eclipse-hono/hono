@@ -550,6 +550,7 @@ public class HonoKafkaConsumer implements Lifecycle {
      *         is among the subscribed topics. The Future is failed with a {@link ServerErrorException} if the topic
      *         doesn't exist or there was an error determining whether the topic is part of the subscription.
      * @throws IllegalArgumentException If this consumer doesn't use a topic pattern or the topic doesn't match the pattern.
+     * @throws IllegalStateException if the consumer hasn't been created with a set of topics to consume from.
      * @throws NullPointerException if topic is {@code null}.
      */
     public final Future<Void> ensureTopicIsAmongSubscribedTopicPatternTopics(final String topic) {

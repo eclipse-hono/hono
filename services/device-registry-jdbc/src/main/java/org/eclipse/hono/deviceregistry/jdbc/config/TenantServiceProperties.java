@@ -30,9 +30,11 @@ public class TenantServiceProperties {
     }
 
     /**
-     * Set the tenant TTL.
+     * Sets the duration after which retrieved tenant information must be considered stale.
      *
      * @param tenantTtl The tenant TTL.
+     * @throws NullPointerException if ttl is {@code null}.
+     * @throws IllegalArgumentException if the duration is less than one second.
      */
     public void setTenantTtl(final Duration tenantTtl) {
         Objects.requireNonNull(tenantTtl);

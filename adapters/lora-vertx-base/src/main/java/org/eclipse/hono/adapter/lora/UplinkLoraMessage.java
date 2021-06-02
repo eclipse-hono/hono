@@ -39,6 +39,7 @@ public class UplinkLoraMessage implements LoraMessage {
      *
      * @param devEui The identifier.
      * @throws NullPointerException if devEui is {@code null}.
+     * @throws IllegalArgumentException if devEui is not 8 bytes in length.
      */
     public UplinkLoraMessage(final byte[] devEui) {
         Objects.requireNonNull(devEui);

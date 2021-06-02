@@ -495,11 +495,12 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      *
      * @param server The insecure server instance.
      * @throws NullPointerException If the server is {@code null}.
+     * @throws IllegalStateException if this adapter is already running.
      */
     protected void setInsecureAmqpServer(final ProtonServer server) {
         Objects.requireNonNull(server);
         if (server.actualPort() > 0) {
-            throw new IllegalArgumentException("AMQP Server should not be running");
+            throw new IllegalStateException("AMQP Server should not be running");
         } else {
             this.insecureServer = server;
         }

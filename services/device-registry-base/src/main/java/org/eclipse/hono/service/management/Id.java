@@ -38,6 +38,8 @@ public final class Id {
      *
      * @param id The value of the id.
      * @return The new instance.
+     * @throws NullPointerException if id is {@code null}.
+     * @throws IllegalArgumentException if id is blank.
      */
     public static Id of(final String id) {
         Objects.requireNonNull(id);
