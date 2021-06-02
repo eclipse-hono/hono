@@ -46,14 +46,15 @@ public final class MongoDbBasedDeviceDto extends DeviceDto {
     public static MongoDbBasedDeviceDto forRead(final String tenantId, final String deviceId, final JsonObject recordJson) {
 
         return DeviceDto.forRead(MongoDbBasedDeviceDto::new, tenantId,
-            deviceId,
-            recordJson.getJsonObject(MongoDbDeviceRegistryUtils.FIELD_DEVICE).mapTo(Device.class),
-            new DeviceStatus()
-                .setAutoProvisioned(recordJson.getBoolean(MongoDbDeviceRegistryUtils.FIELD_AUTO_PROVISIONED))
-                .setAutoProvisioningNotificationSent(recordJson.getBoolean(MongoDbDeviceRegistryUtils.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT)),
-            recordJson.getInstant(MongoDbDeviceRegistryUtils.FIELD_CREATED),
-            recordJson.getInstant(MongoDbDeviceRegistryUtils.FIELD_UPDATED_ON),
-            recordJson.getString(MongoDbDeviceRegistryUtils.FIELD_VERSION));
+                deviceId,
+                recordJson.getJsonObject(MongoDbDeviceRegistryUtils.FIELD_DEVICE).mapTo(Device.class),
+                new DeviceStatus()
+                        .setAutoProvisioned(recordJson.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED))
+                        .setAutoProvisioningNotificationSent(recordJson
+                                .getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT)),
+                recordJson.getInstant(MongoDbDeviceRegistryUtils.FIELD_CREATED),
+                recordJson.getInstant(MongoDbDeviceRegistryUtils.FIELD_UPDATED_ON),
+                recordJson.getString(MongoDbDeviceRegistryUtils.FIELD_VERSION));
     }
 
     /**
