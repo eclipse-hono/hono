@@ -11,6 +11,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 * Letting the trace sampling settings of the Hono components be defined via sampling strategies served by the Jaeger
   Collector did not work for components using Quarkus native images. This has been fixed.
 * Command messages with no payload could not be sent to an MQTT device. This has been fixed.
+* The value of the properties `auto-provisioned` and `auto-provisioning-notification-sent` are always *false* while
+  retrieving device registration information using the MongoDB based registry implementation. This has been fixed now.
 
 ## 1.8.0
 
