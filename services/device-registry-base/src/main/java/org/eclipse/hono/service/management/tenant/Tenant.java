@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.service.management.tenant;
 
+import java.net.HttpURLConnection;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -29,7 +30,9 @@ import java.util.stream.Collectors;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
+import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.ResourceLimits;
@@ -39,6 +42,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
+import io.vertx.core.Future;
 
 /**
  * Information about a Hono Tenant.
@@ -79,6 +84,10 @@ public class Tenant {
     @JsonProperty(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA)
     private List<TrustedCertificateAuthority> trustedCertificateAuthorities;
 
+    @JsonProperty(RegistryManagementConstants.FIELD_REGISTRATION_LIMITS)
+    @JsonInclude(Include.NON_DEFAULT)
+    private RegistrationLimits registrationLimits;
+
     /**
      * Creates a new Tenant instance.
      */
@@ -106,6 +115,7 @@ public class Tenant {
         }
         this.minimumMessageSize = other.minimumMessageSize;
         this.resourceLimits = other.resourceLimits;
+        this.registrationLimits = other.registrationLimits;
         this.tracing = other.tracing;
         if (Objects.nonNull(other.trustedCertificateAuthorities)) {
             this.trustedCertificateAuthorities = new ArrayList<>(other.trustedCertificateAuthorities);
@@ -333,6 +343,26 @@ public class Tenant {
     }
 
     /**
+     * Gets registration limits defined for this tenant.
+     *
+     * @return The registration limits or {@code null} if no limits have been set.
+     */
+    public final RegistrationLimits getRegistrationLimits() {
+        return registrationLimits;
+    }
+
+    /**
+     * Sets registration limits for this tenant.
+     *
+     * @param registrationLimits The limits to set.
+     * @return This instance, to allow chained invocations.
+     */
+    public final Tenant setRegistrationLimits(final RegistrationLimits registrationLimits) {
+        this.registrationLimits = registrationLimits;
+        return this;
+    }
+
+    /**
      * Gets this tenant's tracing configuration.
      *
      * @return The tracing configuration or {@code null} if not set.
@@ -532,5 +562,45 @@ public class Tenant {
                 // filter out CAs which are not valid at this point in time
                 .filter(ca -> !now.isBefore(ca.getNotBefore()) && !now.isAfter(ca.getNotAfter()))
                 .findFirst();
+    }
+
+
+    /**
+     * Checks if a given set of credentials exceeds the maximum number of credentials per device that
+     * has been configured for this tenant.
+     *
+     * @param tenantId The tenant's identifier.
+     * @param credentials The credentials to check.
+     * @return A succeeded future if the check succeeds. Otherwise, the future will be failed
+     *         with a {@link ClientErrorException} with a status code of {@value HttpURLConnection#HTTP_FORBIDDEN}.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    public final Future<Void> checkCredentialsLimitExceeded(
+            final String tenantId,
+            final List<CommonCredential> credentials) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(credentials);
+
+        final boolean isLimitedAtTenantLevel = Optional.ofNullable(this.getRegistrationLimits())
+                .map(RegistrationLimits::isNumberOfCredentialsPerDeviceLimited)
+                .orElse(false);
+
+        if (!isLimitedAtTenantLevel || credentials.isEmpty()) {
+            return Future.succeededFuture();
+        }
+
+        final int maxNumberOfCredentialsPerDevice = this.getRegistrationLimits().getMaxCredentialsPerDevice();
+
+        if (maxNumberOfCredentialsPerDevice >= credentials.size()) {
+            return Future.succeededFuture();
+        } else {
+            return Future.failedFuture(
+                    new ClientErrorException(
+                            HttpURLConnection.HTTP_FORBIDDEN,
+                            String.format(
+                                    "configured credentials limit exceeded [tenant-id: %s, max credentials: %d]",
+                                    tenantId, maxNumberOfCredentialsPerDevice)));
+        }
     }
 }

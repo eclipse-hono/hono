@@ -241,24 +241,27 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
 
         TracingHelper.TAG_DEVICE_ID.set(span, deviceKey.getDeviceId());
 
-        final Promise<CredentialsDto> result = Promise.promise();
-        final var updatedCredentialsDto = CredentialsDto.forUpdate(
-                deviceKey.getTenantId(),
-                deviceKey.getDeviceId(),
-                updatedCredentials,
-                DeviceRegistryUtils.getUniqueIdentifier());
+        return tenantInformationService.getTenant(deviceKey.getTenantId(), span)
+                .compose(tenant -> tenant.checkCredentialsLimitExceeded(deviceKey.getTenantId(), updatedCredentials))
+                .compose(ok -> {
+                    final Promise<CredentialsDto> result = Promise.promise();
+                    final var updatedCredentialsDto = CredentialsDto.forUpdate(
+                            deviceKey.getTenantId(),
+                            deviceKey.getDeviceId(),
+                            updatedCredentials,
+                            DeviceRegistryUtils.getUniqueIdentifier());
 
-        if (updatedCredentialsDto.requiresMerging()) {
-            getCredentialsDto(deviceKey, resourceVersion)
-                    .map(updatedCredentialsDto::merge)
-                    .onComplete(result);
-        } else {
-            // simply replace the existing credentials with the
-            // updated ones provided by the client
-            result.complete(updatedCredentialsDto);
-        }
-
-        return result.future()
+                    if (updatedCredentialsDto.requiresMerging()) {
+                        getCredentialsDto(deviceKey, resourceVersion)
+                                .map(updatedCredentialsDto::merge)
+                                .onComplete(result);
+                    } else {
+                        // simply replace the existing credentials with the
+                        // updated ones provided by the client
+                        result.complete(updatedCredentialsDto);
+                    }
+                    return result.future();
+                })
                 .compose(credentialsDto -> {
                     credentialsDto.createMissingSecretIds();
                     return updateCredentials(
@@ -318,7 +321,9 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
 
         TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
 
-        return processAddCredentials(tenantId, deviceId, credentials, resourceVersion, span)
+        return tenantInformationService.getTenant(tenantId, span)
+                .compose(tenant -> tenant.checkCredentialsLimitExceeded(tenantId, credentials))
+                .compose(ok -> processAddCredentials(tenantId, deviceId, credentials, resourceVersion, span))
                 .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
     }
 

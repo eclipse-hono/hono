@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,6 +28,16 @@ public final class MongoDbBasedRegistrationConfigProperties extends AbstractMong
     private static final String DEFAULT_DEVICE_COLLECTION_NAME = "devices";
 
     private int maxDevicesPerTenant = UNLIMITED_DEVICES_PER_TENANT;
+
+    /**
+     * Checks if the number of devices per tenant is limited.
+     *
+     * @return {@code true} if the configured number of devices per tenant is &gt;
+     *         {@value #UNLIMITED_DEVICES_PER_TENANT}.
+     */
+    public boolean isNumberOfDevicesPerTenantLimited() {
+        return maxDevicesPerTenant > UNLIMITED_DEVICES_PER_TENANT;
+    }
 
     /**
      * Gets the maximum number of devices that can be registered for each tenant.
