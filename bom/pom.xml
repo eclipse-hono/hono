@@ -517,6 +517,11 @@
         <artifactId>kafka-clients</artifactId>
         <version>${kafka-clients.version}</version>
       </dependency>
+      <dependency>
+        <groupId>io.vertx</groupId>
+        <artifactId>vertx-codegen</artifactId>
+        <version>${vertx.version}</version>
+      </dependency>
 
       <!-- Netty -->
       <dependency>
