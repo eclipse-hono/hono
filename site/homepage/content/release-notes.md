@@ -6,6 +6,11 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 ## 1.9.0 (not yet released)
 
+### Fixes & Enhancements
+
+* The value of the properties `auto-provisioned` and `auto-provisioning-notification-sent` are always *false* while 
+  retrieving device registration information using the MongoDB based registry implementation. This has been fixed now.
+
 ### Deprecations
 
 * The file based device registry implementation has been deprecated and will be removed in a future version of Hono.
