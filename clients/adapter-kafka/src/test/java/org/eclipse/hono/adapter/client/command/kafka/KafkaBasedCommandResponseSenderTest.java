@@ -22,6 +22,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.header.internals.RecordHeader;
 import org.eclipse.hono.adapter.client.command.CommandResponse;
+import org.eclipse.hono.adapter.client.command.Commands;
 import org.eclipse.hono.client.kafka.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
@@ -66,9 +67,10 @@ public class KafkaBasedCommandResponseSenderTest {
         final String contentType = "the-content-type";
         final String payload = "the-payload";
         final int status = 200;
-        final CommandResponse commandResponse = CommandResponse.fromCorrelationId(
+        final CommandResponse commandResponse = CommandResponse.fromAddressAndCorrelationId(
+                String.format("%s/%s/%s", CommandConstants.COMMAND_RESPONSE_ENDPOINT, tenantId,
+                        Commands.getDeviceFacingReplyToId("", deviceId)),
                 correlationId,
-                String.format("%s/%s/%s/0", CommandConstants.COMMAND_RESPONSE_ENDPOINT, tenantId, deviceId),
                 Buffer.buffer(payload),
                 contentType,
                 status);

@@ -111,19 +111,20 @@ public final class CommandResponse {
     }
 
     /**
-     * Creates a response for a correlation ID.
+     * Creates a response for a given response message address and correlation ID.
      *
+     * @param address The address of the response message. It has to contain a tenant segment followed by the segments
+     *                returned by {@link Commands#getDeviceFacingReplyToId(String, String)}.
      * @param correlationId The correlation ID of the command that this is the response for.
-     * @param address The address of the response message.
      * @param payload The payload of the response or {@code null} if the response has no payload.
      * @param contentType The contentType of the response or {@code null} if the response has no payload.
      * @param status The HTTP status code indicating the outcome of the command.
      * @return The response or {@code null} if correlation ID is {@code null}, the address cannot be parsed,
      *         the status is {@code null} or if the status code is &lt; 200 or &gt;= 600.
      */
-    public static CommandResponse fromCorrelationId(
-            final String correlationId,
+    public static CommandResponse fromAddressAndCorrelationId(
             final String address,
+            final String correlationId,
             final Buffer payload,
             final String contentType,
             final Integer status) {

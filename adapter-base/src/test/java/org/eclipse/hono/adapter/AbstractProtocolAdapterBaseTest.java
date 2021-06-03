@@ -724,7 +724,8 @@ public class AbstractProtocolAdapterBaseTest {
      */
     @Test
     public void testGetCommandResponseSenderConfiguredOnTenant() {
-        final CommandResponse response = CommandResponse.fromCorrelationId("", "x/y/z/12", Buffer.buffer(), null, 200);
+        final CommandResponse response = CommandResponse.fromAddressAndCorrelationId("x/y/z/12", "", Buffer.buffer(),
+                null, 200);
         final TenantObject tenant = new TenantObject("tenant", true);
 
         tenant.setProperty(TenantConstants.FIELD_EXT,

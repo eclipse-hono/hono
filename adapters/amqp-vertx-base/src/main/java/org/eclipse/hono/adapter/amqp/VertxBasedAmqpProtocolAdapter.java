@@ -1221,9 +1221,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
     private CommandResponse getCommandResponse(final Message message) {
 
-        return CommandResponse.fromCorrelationId(
-                message.getCorrelationId() instanceof String ? (String) message.getCorrelationId() : null,
+        return CommandResponse.fromAddressAndCorrelationId(
                 message.getAddress(),
+                message.getCorrelationId() instanceof String ? (String) message.getCorrelationId() : null,
                 MessageHelper.getPayload(message),
                 message.getContentType(),
                 MessageHelper.getStatus(message));
