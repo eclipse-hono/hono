@@ -42,6 +42,7 @@ import org.slf4j.LoggerFactory;
 
 import io.opentracing.References;
 import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.log.Fields;
 import io.vertx.core.CompositeFuture;
@@ -212,27 +213,29 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
         tenantsToEnable.addAll(tenantIds);
         if (isProcessingRequired) {
             final Span processingSpan = tracer.buildSpan("re-enable command routing for tenants")
-                    .addReference(References.FOLLOWS_FROM, span.context())
+                    .addReference(References.CHILD_OF, span.context())
                     .start();
-            processTenantQueue(new ConcurrentHashSet<>(), processingSpan);
+            processingSpan.log(Map.of("number of tenant IDs", tenantIds.size()));
+            // make sure to report the span in a timely fashion
+            // so that it can be seen in the tracing back end
+            processingSpan.finish();
+            processTenantQueue(new ConcurrentHashSet<>(), processingSpan.context());
         }
         return Future.succeededFuture(CommandRouterResult.from(HttpURLConnection.HTTP_NO_CONTENT));
     }
 
-    private void processTenantQueue(final Set<String> processedTenants, final Span parentSpan) {
-        final String tenantId = tenantsToEnable.poll();
+    private void processTenantQueue(final Set<String> processedTenants, final SpanContext tracingContext) {
+        final String tenantId = tenantsToEnable.pollFirst();
         if (tenantId == null) {
-            parentSpan.finish();
             return;
         }
         context.runOnContext(go -> {
             if (processedTenants.contains(tenantId)) {
-                parentSpan.log(Map.of(
-                        Fields.MESSAGE, "skipping tenant, already processed ...",
-                        TracingHelper.TAG_TENANT_ID.getKey(), tenantId));
+                LOG.debug("skipping tenant [tenant-id: {}], already processed ...", tenantId);
+                processTenantQueue(processedTenants, tracingContext);
             } else {
                 final Span span = tracer.buildSpan("re-enable command routing for tenant")
-                        .addReference(References.CHILD_OF, parentSpan.context())
+                        .addReference(References.FOLLOWS_FROM, tracingContext)
                         .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
                         .start();
                 tenantClient.get(tenantId, span.context())
@@ -247,14 +250,14 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
                         if (t instanceof ServerErrorException) {
                             // add to end of queue in order to retry at a later time
                             span.log("marking tenant for later re-try to create command consumer");
-                            tenantsToEnable.add(tenantId);
+                            tenantsToEnable.addLast(tenantId);
                         }
                     })
                     .onComplete(r -> {
                         span.finish();
+                        processTenantQueue(processedTenants, tracingContext);
                     });
             }
-            processTenantQueue(processedTenants, parentSpan);
         });
     }
 

@@ -24,7 +24,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Deque;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
@@ -86,35 +89,52 @@ class CommandRouterServiceImplTest {
     @Test
     void testEnableCommandRoutingCreatesCommandConsumers() {
 
-        final AtomicReference<Handler<Void>> firstHandler = new AtomicReference<>();
+        final Deque<Handler<Void>> eventLoop = new LinkedList<>();
         doAnswer(invocation -> {
-            final Handler<Void> codeToRun = invocation.getArgument(0);
-            if (firstHandler.compareAndSet(null, codeToRun)) {
-                return null;
-            } else {
-                codeToRun.handle(null);
-                return null;
-            }
+            eventLoop.addLast(invocation.getArgument(0));
+            return null;
         }).when(context).runOnContext(VertxMockSupport.anyHandler());
-
 
         final List<String> firstTenants = List.of("tenant1", "tenant2", "tenant3");
         final List<String> secondTenants = List.of("tenant3", "tenant4");
         // WHEN submitting the first list of tenants to enable
         service.enableCommandRouting(firstTenants, NoopSpan.INSTANCE);
-        assertThat(firstHandler.get()).isNotNull();
         // THEN no command consumer has been created yet
         verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
+        assertThat(eventLoop).hasSize(1);
         // WHEN submitting the second list of tenants
         service.enableCommandRouting(secondTenants, NoopSpan.INSTANCE);
         // still no command consumer has been created
         verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
-        // but when the handler for creating the initial tenant is being run
-        firstHandler.get().handle(null);
-        // THEN a command consumer is being created once for each tenant
+        assertThat(eventLoop).hasSize(1);
+
+        // WHEN running the first task on the event loop
+        eventLoop.pollFirst().handle(null);
+        // THEN a command consumer is being created
         verify(commandConsumerFactory).createCommandConsumer(eq("tenant1"), any());
+        // AND a new task has been added to the event loop
+        assertThat(eventLoop).hasSize(1);
+        // WHEN running the first task on the event loop
+        eventLoop.pollFirst().handle(null);
+        // THEN a command consumer is being created
         verify(commandConsumerFactory).createCommandConsumer(eq("tenant2"), any());
+        // AND a new task has been added to the event loop
+        assertThat(eventLoop).hasSize(1);
+        // WHEN running the first task on the event loop
+        eventLoop.pollFirst().handle(null);
+        // THEN a new task has been added to the event loop
+        assertThat(eventLoop).hasSize(1);
+        // WHEN running the first task on the event loop
+        eventLoop.pollFirst().handle(null);
+        // THEN a single command consumer is being created for the duplicate tenant3 ID
         verify(commandConsumerFactory).createCommandConsumer(eq("tenant3"), any());
+        // AND a new task has been added to the event loop
+        assertThat(eventLoop).hasSize(1);
+        // WHEN running the first task on the event loop
+        eventLoop.pollFirst().handle(null);
+        // THEN a command consumer is being created
         verify(commandConsumerFactory).createCommandConsumer(eq("tenant4"), any());
+        // AND no new task has been added to the event loop
+        assertThat(eventLoop).isEmpty();
     }
 }
