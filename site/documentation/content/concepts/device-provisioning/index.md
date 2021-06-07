@@ -80,7 +80,14 @@ The Device Registry is expected to perform the following steps:
 1. Generate a unique device-id
 2. Create device
 3. Create credentials
-4. Optional: Provision device in external systems
+4. Send a [Device Provisioning Notification]({{< ref "/api/event#device-provisioning-notification" >}})
+5. Optional: Provision device in external systems
+
+After successfully sending a device provisioning notification, the corresponding device registration is updated with
+*auto-provisioning-notification-sent* as `true`. Whenever a protocol adapter sends a request to the Device Registry to
+fetch credentials, this property is verified provided that the device or gateway is auto-provisioned. If it is `false`
+a device provisioning notification is sent followed by setting *auto-provisioning-notification-sent* to `true`. This 
+is to ensure that the notification is sent at least once.
 
 The newly created credentials are returned to the protocol adapter in the response as if they had been present before.
 

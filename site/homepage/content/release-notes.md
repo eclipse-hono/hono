@@ -11,6 +11,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The Mongo DB based registry now supports enforcement of registration limits configured at the tenant level.
   In particular, the maximum number of devices and the maximum number of credentials per device can be set in
   a tenant's registration-limits property. Please refer to the Mongo DB User Guide for details.
+* Hono now sends a device provisioning notification when a device or a gateway is successfully auto-provisioned.
 
 ### Fixes & Enhancements
 
