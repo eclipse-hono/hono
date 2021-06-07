@@ -24,9 +24,9 @@ import java.util.regex.Pattern;
 
 import javax.security.auth.x500.X500Principal;
 
-import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.deviceregistry.service.device.AbstractAutoProvisioningEventSender;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
@@ -38,7 +38,6 @@ import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
@@ -85,7 +84,7 @@ public final class DeviceAndGatewayAutoProvisioner extends AbstractAutoProvision
      * <p>
      * A device/gateway is auto-provisioned based on the information from the client certificate that 
      * the device/gateway used for authentication. The client certificate is expected to be in the 
-     * client context corresponding to the property {@value CredentialsConstants#FIELD_CLIENT_CERT}
+     * client context corresponding to the property {@value org.eclipse.hono.util.CredentialsConstants#FIELD_CLIENT_CERT}
      * for auto-provisioning to take place.
      *<p>
      * In order to enable auto-provisioning, the value of the property

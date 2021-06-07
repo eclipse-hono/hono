@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,8 +20,8 @@ import io.vertx.core.Future;
 /**
  * A factory for creating clients for Hono's south bound Telemetry and Event APIs.
  *
- * @deprecated Use {@code org.eclipse.hono.adapter.client.telemetry.TelemetrySender} and/or
- * {@code org.eclipse.hono.adapter.client.telemetry.EventSender} instead.
+ * @deprecated Use {@code org.eclipse.hono.client.telemetry.TelemetrySender} and/or
+ * {@code org.eclipse.hono.client.telemetry.EventSender} instead.
  */
 @Deprecated
 public interface DownstreamSenderFactory extends ConnectionLifecycle<HonoConnection> {

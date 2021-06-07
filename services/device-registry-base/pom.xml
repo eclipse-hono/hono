@@ -32,6 +32,10 @@
 
   <dependencies>
     <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-service-base</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-crypto</artifactId>
     </dependency>
@@ -41,19 +45,11 @@
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-client-adapter</artifactId>
-    </dependency>
-    <!--
-      explicitly declare dependency on vert.x in order to pull in
-      Netty artifacts, which are excluded by hono-client-adapter
-    -->
-    <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-core</artifactId>
+      <artifactId>hono-client-common</artifactId>
     </dependency>
     <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-proton</artifactId>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-telemetry</artifactId>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
@@ -77,6 +73,10 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-params</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-junit5</artifactId>
     </dependency>
   </dependencies>
 

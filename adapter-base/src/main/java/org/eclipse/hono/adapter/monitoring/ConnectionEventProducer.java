@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,8 +14,8 @@ package org.eclipse.hono.adapter.monitoring;
 
 
 import org.eclipse.hono.adapter.client.registry.TenantClient;
-import org.eclipse.hono.adapter.client.telemetry.EventSender;
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.client.telemetry.EventSender;
 
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;

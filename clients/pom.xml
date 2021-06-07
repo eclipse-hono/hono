@@ -37,6 +37,9 @@
     <module>application-kafka</module>
     <module>client-common</module>
     <module>kafka-common</module>
+    <module>telemetry</module>
+    <module>telemetry-amqp</module>
+    <module>telemetry-kafka</module>
   </modules>
 
   <dependencies>

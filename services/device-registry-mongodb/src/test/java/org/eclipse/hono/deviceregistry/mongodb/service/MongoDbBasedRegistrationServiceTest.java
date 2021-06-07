@@ -22,7 +22,7 @@ import java.net.HttpURLConnection;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-import org.eclipse.hono.adapter.client.telemetry.EventSender;
+import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
