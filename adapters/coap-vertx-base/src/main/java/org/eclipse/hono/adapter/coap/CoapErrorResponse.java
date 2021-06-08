@@ -21,7 +21,6 @@ import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.coap.MediaTypeRegistry;
 import org.eclipse.californium.core.coap.MessageFormatException;
 import org.eclipse.californium.core.coap.Response;
-import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 
 /**
@@ -54,13 +53,7 @@ public final class CoapErrorResponse {
     public static Response newResponse(final Throwable cause, final ResponseCode fallbackCode) {
 
         final String message = Optional.ofNullable(cause)
-                .map(t -> {
-                    if (t instanceof ServerErrorException) {
-                        return ((ServerErrorException) t).getClientFacingMessage();
-                    } else {
-                        return t.getMessage();
-                    }
-                })
+                .map(ServiceInvocationException::getErrorMessageForExternalClient)
                 .orElse(null);
         final ResponseCode code = toCoapCode(cause, fallbackCode);
         final Response response = newResponse(code, message);
