@@ -116,8 +116,9 @@ public class KafkaCommandProcessingQueue {
             TracingHelper.logError(commandContext.getTracingSpan(), String.format(
                     "command won't be sent - commands received from partition [%s] aren't handled by this consumer anymore",
                     topicPartition));
-            commandContext.release();
-            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
+            final ServerErrorException error = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE);
+            commandContext.release(error);
+            return Future.failedFuture(error);
         }
         return commandQueue.applySendCommandAction(commandContext, sendActionSupplier);
     }
@@ -202,8 +203,9 @@ public class KafkaCommandProcessingQueue {
                     // command is ready to be sent but waiting for the processing of an earlier entry
                     LOG.info("command won't be sent - its partition isn't being handled anymore [{}]", commandContext.getCommand());
                     TracingHelper.logError(commandContext.getTracingSpan(), "command won't be sent - its partition isn't being handled anymore");
-                    commandContext.release();
-                    actionAppliedPair.two().fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
+                    final ServerErrorException error = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE);
+                    commandContext.release(error);
+                    actionAppliedPair.two().fail(error);
                 } // in the else case let the applySendCommandAction() method release the command eventually
             });
             queue.clear();
@@ -233,8 +235,9 @@ public class KafkaCommandProcessingQueue {
                 // might happen if the invoking the sendAction takes place after the partition got unassigned and then reassigned again
                 LOG.info("command won't be sent - not in queue [{}]", commandContext.getCommand());
                 TracingHelper.logError(commandContext.getTracingSpan(), "command won't be sent - not in queue");
-                commandContext.release();
-                resultPromise.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
+                final ServerErrorException error = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE);
+                commandContext.release(error);
+                resultPromise.fail(error);
             } else {
                 // given command is not next-in-line;
                 // that means determining its target adapter instance has finished sooner (maybe because of fewer data-grid requests)

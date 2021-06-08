@@ -505,7 +505,7 @@ public class TelemetryResourceTest extends ResourceTestBase {
                         eq(TtdStatus.COMMAND),
                         any());
                 // and the command delivery is released
-                verify(commandContext).release();
+                verify(commandContext).release(any(Throwable.class));
             });
             ctx.completeNow();
         }));

@@ -22,6 +22,7 @@ import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.eclipse.hono.adapter.client.command.CommandContext;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MapBasedExecutionContext;
@@ -78,6 +79,12 @@ public class ProtonBasedCommandContext extends MapBasedExecutionContext implemen
     }
 
     @Override
+    public void release(final Throwable error) {
+        Objects.requireNonNull(error);
+        updateDelivery(Released.getInstance());
+    }
+
+    @Override
     public void modify(final boolean deliveryFailed, final boolean undeliverableHere) {
         final Modified modified = new Modified();
         modified.setDeliveryFailed(deliveryFailed);
@@ -93,6 +100,10 @@ public class ProtonBasedCommandContext extends MapBasedExecutionContext implemen
         updateDelivery(rejected);
     }
 
+    @Override
+    public void reject(final Throwable error) {
+        reject(ServiceInvocationException.getErrorMessageForExternalClient(error));
+    }
 
     private void updateDelivery(final DeliveryState deliveryState) {
         final Span span = getTracingSpan();

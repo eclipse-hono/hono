@@ -37,6 +37,7 @@ import org.eclipse.hono.adapter.lora.providers.LoraProvider;
 import org.eclipse.hono.adapter.lora.providers.LoraProviderMalformedPayloadException;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.service.http.HttpContext;
 import org.eclipse.hono.service.http.HttpUtils;
@@ -271,9 +272,10 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
         final Command command = commandContext.getCommand();
 
         if (command.getGatewayId() == null) {
-            LOG.debug("no gateway defined for command [{}]", command);
-            TracingHelper.logError(commandContext.getTracingSpan(), "no gateway defined for command");
-            commandContext.release();
+            final String errorMsg = "no gateway defined for command";
+            LOG.debug("{} [{}]", errorMsg, command);
+            TracingHelper.logError(commandContext.getTracingSpan(), errorMsg);
+            commandContext.release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, errorMsg));
             return;
         }
         final String tenant = command.getTenant();
@@ -284,7 +286,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
             LOG.debug("received command for unknown gateway [{}] for tenant [{}]", gatewayId, tenant);
             TracingHelper.logError(commandContext.getTracingSpan(),
                     String.format("received command for unknown gateway [%s]", gatewayId));
-            commandContext.release();
+            commandContext.release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "received command for unknown gateway"));
             return;
         }
         final Future<TenantObject> tenantTracker = getTenantConfiguration(tenant, commandContext.getTracingContext());
@@ -315,7 +317,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                 .onFailure(t -> {
                     LOG.error("error sending command", t);
                     TracingHelper.logError(commandContext.getTracingSpan(), t);
-                    commandContext.release();
+                    commandContext.release(t);
                     metrics.reportCommand(
                             command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                             tenant,

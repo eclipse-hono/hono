@@ -33,6 +33,7 @@ import org.eclipse.hono.adapter.client.command.CommandConsumer;
 import org.eclipse.hono.adapter.client.command.CommandContext;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
@@ -384,7 +385,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                     if (commandContext != null) {
                         TracingHelper.logError(commandContext.getTracingSpan(),
                                 "command won't be forwarded to device in CoAP response, CoAP request handling failed", t);
-                        commandContext.release();
+                        commandContext.release(t);
                         currentSpan.log("released command for device");
                     }
                     getAdapter().getMetrics().reportTelemetry(
@@ -524,7 +525,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                                     // put command context to routing context and notify
                                     context.put(CommandContext.KEY_COMMAND_CONTEXT, commandContext);
                                 } else {
-                                    commandContext.reject(result.cause().getMessage());
+                                    commandContext.reject(result.cause());
                                     TracingHelper.logError(waitForCommandSpan, "rejected command for device", result.cause());
                                     getAdapter().getMetrics().reportCommand(
                                             command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
@@ -539,8 +540,8 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                                 responseReady.handle(Future.succeededFuture());
                             });
                 } else {
-                    LOG.debug("waiting time for command has elapsed or another command has already been processed [tenantId: {}, deviceId: {}]",
-                            tenantObject.getTenantId(), deviceId);
+                    final String errorMsg = "waiting time for command has elapsed or another command has already been processed";
+                    LOG.debug("{} [tenantId: {}, deviceId: {}]", errorMsg, tenantObject.getTenantId(), deviceId);
                     getAdapter().getMetrics().reportCommand(
                             command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                             tenantObject.getTenantId(),
@@ -548,9 +549,8 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                             ProcessingOutcome.UNDELIVERABLE,
                             command.getPayloadSize(),
                             commandSample);
-                    TracingHelper.logError(commandContext.getTracingSpan(),
-                            "waiting time for command has elapsed or another command has already been processed");
-                    commandContext.release();
+                    TracingHelper.logError(commandContext.getTracingSpan(), errorMsg);
+                    commandContext.release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, errorMsg));
                 }
 
             } else {

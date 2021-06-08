@@ -13,9 +13,11 @@
 
 package org.eclipse.hono.adapter.client.command.kafka;
 
+import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import org.eclipse.hono.adapter.client.command.CommandContext;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.MapBasedExecutionContext;
 import org.slf4j.Logger;
@@ -32,6 +34,7 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
     private static final Logger LOG = LoggerFactory.getLogger(KafkaBasedCommandContext.class);
 
     private final KafkaBasedCommand command;
+    private String completedOutcome;
 
     /**
      * Creates a new command context.
@@ -57,6 +60,9 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
 
     @Override
     public void accept() {
+        if (!setCompleted("accepted")) {
+            return;
+        }
         final Span span = getTracingSpan();
         LOG.trace("accepted command message [{}]", getCommand());
         span.log("command for device handled with outcome 'accepted'");
@@ -64,7 +70,11 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
     }
 
     @Override
-    public void release() {
+    public void release(final Throwable error) {
+        Objects.requireNonNull(error);
+        if (!setCompleted("released")) {
+            return;
+        }
         final Span span = getTracingSpan();
         TracingHelper.logError(span, "command for device handled with outcome 'released'");
         span.finish();
@@ -72,6 +82,9 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
 
     @Override
     public void modify(final boolean deliveryFailed, final boolean undeliverableHere) {
+        if (!setCompleted("modified")) {
+            return;
+        }
         final Span span = getTracingSpan();
         TracingHelper.logError(span, "command for device handled with outcome 'modified'"
                 + (deliveryFailed ? "; delivery failed" : "")
@@ -81,9 +94,32 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
 
     @Override
     public void reject(final String cause) {
+        reject(HttpURLConnection.HTTP_BAD_REQUEST, cause);
+    }
+
+    @Override
+    public void reject(final Throwable cause) {
+        final int status = cause instanceof ClientErrorException
+                ? ((ClientErrorException) cause).getErrorCode()
+                : HttpURLConnection.HTTP_BAD_REQUEST;
+        reject(status, cause.getMessage());
+    }
+
+    private void reject(final int status, final String cause) {
+        if (!setCompleted("rejected")) {
+            return;
+        }
         final Span span = getTracingSpan();
         TracingHelper.logError(span, "command for device handled with outcome 'rejected'; error: " + cause);
         span.finish();
     }
 
+    private boolean setCompleted(final String outcome) {
+        if (completedOutcome != null) {
+            LOG.warn("can't apply '{}' outcome, context already completed with '{}' outcome [{}]", outcome, completedOutcome, getCommand());
+            return false;
+        }
+        completedOutcome = outcome;
+        return true;
+    }
 }

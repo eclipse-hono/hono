@@ -115,7 +115,7 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
                     }
                     log.debug(errorMsg, cause);
                     TracingHelper.logError(commandContext.getTracingSpan(), errorMsg, cause);
-                    commandContext.release();
+                    commandContext.release(cause);
                     return Future.failedFuture(cause);
                 })
                 .compose(result -> {

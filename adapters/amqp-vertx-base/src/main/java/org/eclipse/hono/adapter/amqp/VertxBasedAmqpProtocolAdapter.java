@@ -905,11 +905,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 return Future.succeededFuture();
             }).otherwise(failure -> {
                 if (failure instanceof ClientErrorException) {
-                    final ErrorCondition error = getErrorCondition(failure);
-                    commandContext.reject(error.getDescription());
+                    commandContext.reject(failure);
                 } else {
                     TracingHelper.logError(commandContext.getTracingSpan(), failure);
-                    commandContext.release();
+                    commandContext.release(failure);
                 }
                 metrics.reportCommand(
                         command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
@@ -979,7 +978,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             final Exception ex = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
                     "no credit available for sending command to device");
             TracingHelper.logError(commandContext.getTracingSpan(), ex);
-            commandContext.release();
+            commandContext.release(ex);
             reportSentCommand(tenantObject, commandContext, ProcessingOutcome.UNDELIVERABLE);
         } else {
 
@@ -1013,7 +1012,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     final Exception ex = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
                             "timeout waiting for delivery update from device");
                     TracingHelper.logError(commandContext.getTracingSpan(), ex);
-                    commandContext.release();
+                    commandContext.release(ex);
                     reportSentCommand(tenantObject, commandContext, ProcessingOutcome.UNDELIVERABLE);
                 } else {
                     log.trace("command is already settled and downstream application was already notified [{}]", command);
@@ -1057,7 +1056,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                         logItems.put(Fields.EVENT, "device did not settle command");
                         logItems.put("remote state", remoteState);
                         commandContext.getTracingSpan().log(logItems);
-                        commandContext.release();
+                        commandContext.release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                                "device did not settle command"));
                         outcome = ProcessingOutcome.UNDELIVERABLE;
                     }
                     reportSentCommand(tenantObject, commandContext, outcome);

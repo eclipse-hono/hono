@@ -766,7 +766,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         final ProtonDelivery unsuccessfulDelivery = mock(ProtonDelivery.class);
         when(unsuccessfulDelivery.remotelySettled()).thenReturn(true);
         when(unsuccessfulDelivery.getRemoteState()).thenReturn(remoteState);
-        testOneWayCommandOutcome(unsuccessfulDelivery, ctx -> verify(ctx).reject(any()), ProcessingOutcome.UNPROCESSABLE);
+        testOneWayCommandOutcome(unsuccessfulDelivery, ctx -> verify(ctx).reject((String) any()), ProcessingOutcome.UNPROCESSABLE);
     }
 
     /**
@@ -794,7 +794,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         final ProtonDelivery unsuccessfulDelivery = mock(ProtonDelivery.class);
         when(unsuccessfulDelivery.remotelySettled()).thenReturn(false);
         when(unsuccessfulDelivery.getRemoteState()).thenReturn(remoteState);
-        testOneWayCommandOutcome(unsuccessfulDelivery, ctx -> verify(ctx).release(), ProcessingOutcome.UNDELIVERABLE);
+        testOneWayCommandOutcome(unsuccessfulDelivery, ctx -> verify(ctx).release(any(Throwable.class)), ProcessingOutcome.UNDELIVERABLE);
     }
 
     private void testOneWayCommandOutcome(
@@ -1117,7 +1117,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
         adapter.onCommandReceived(tenantObject, deviceLink, context);
         // THEN the adapter releases the command
-        verify(context).release();
+        verify(context).release(any(Throwable.class));
     }
 
     /**

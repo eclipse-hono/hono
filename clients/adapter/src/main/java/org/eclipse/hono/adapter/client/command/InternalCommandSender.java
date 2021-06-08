@@ -28,7 +28,7 @@ public interface InternalCommandSender extends Lifecycle {
      * <p>
      * Note that the result of the send operation is getting applied to the command context here.
      * That means implementations are required to invoke one of the given command context's
-     * {@link CommandContext#accept()}, {@link CommandContext#release()}, {@link CommandContext#modify(boolean, boolean)}
+     * {@link CommandContext#accept()}, {@link CommandContext#release(Throwable)}, {@link CommandContext#modify(boolean, boolean)}
      * or {@link CommandContext#reject(String)} methods based on the outcome of sending the command to the
      * protocol adapter instance.
      *
