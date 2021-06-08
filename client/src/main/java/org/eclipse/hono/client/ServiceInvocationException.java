@@ -192,4 +192,26 @@ public class ServiceInvocationException extends RuntimeException {
             return key;
         }
     }
+
+    /**
+     * Gets the error message suitable to be propagated to an external client.
+     *
+     * @param t The exception to extract the message from, may be {@code null}.
+     * @return The message or {@code null} if not set.
+     */
+    public static String getErrorMessageForExternalClient(final Throwable t) {
+        if (t instanceof ServerErrorException) {
+            final String clientFacingMessage = ((ServerErrorException) t).getClientFacingMessage();
+            if (clientFacingMessage != null) {
+                return clientFacingMessage;
+            }
+            switch (((ServerErrorException) t).getErrorCode()) {
+            case HttpURLConnection.HTTP_INTERNAL_ERROR:
+                return "Internal server error";
+            case HttpURLConnection.HTTP_UNAVAILABLE:
+                return "Temporarily unavailable";
+            }
+        }
+        return Optional.ofNullable(t).map(Throwable::getMessage).orElse(null);
+    }
 }

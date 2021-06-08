@@ -35,7 +35,6 @@ import org.eclipse.hono.adapter.resourcelimits.NoopResourceLimitChecks;
 import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.TelemetrySender;
@@ -1167,28 +1166,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                         return null;
                     }
                 });
-    }
-
-    /**
-     * Gets the error message suitable to be propagated to an external client.
-     *
-     * @param t The exception to extract the message from.
-     * @return The message.
-     */
-    public static String getClientFacingErrorMessage(final Throwable t) {
-        if (t instanceof ServerErrorException) {
-            final String clientFacingMessage = ((ServerErrorException) t).getClientFacingMessage();
-            if (clientFacingMessage != null) {
-                return clientFacingMessage;
-            }
-            switch (((ServerErrorException) t).getErrorCode()) {
-            case HttpURLConnection.HTTP_INTERNAL_ERROR:
-                return "Internal server error";
-            case HttpURLConnection.HTTP_UNAVAILABLE:
-                return "Temporarily unavailable";
-            }
-        }
-        return t.getMessage();
     }
 
     /**

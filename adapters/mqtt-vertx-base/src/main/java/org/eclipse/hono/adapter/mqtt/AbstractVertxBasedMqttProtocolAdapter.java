@@ -1403,10 +1403,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             final Span span = newChildSpan(spanContext, "publish error to device");
 
             final int errorCode = ServiceInvocationException.extractStatusCode(error);
-            final String clientFacingErrorMessage = error instanceof ServerErrorException
-                    ? ((ServerErrorException) error).getClientFacingMessage()
-                    : null;
-            final String errorMessage = Optional.ofNullable(clientFacingErrorMessage).orElse(error.getMessage());
             final String correlationId = Optional.ofNullable(context.correlationId()).orElse("-1");
             final String publishTopic = subscription.getErrorPublishTopic(context, errorCode);
             Tags.MESSAGE_BUS_DESTINATION.set(span, publishTopic);
@@ -1414,7 +1410,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
             final JsonObject errorJson = new JsonObject();
             errorJson.put("code", errorCode);
-            errorJson.put("message", errorMessage);
+            errorJson.put("message", ServiceInvocationException.getErrorMessageForExternalClient(error));
             errorJson.put("timestamp", ZonedDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MILLIS)
                     .format(DateTimeFormatter.ISO_INSTANT));
             errorJson.put(MessageHelper.SYS_PROPERTY_CORRELATION_ID, correlationId);

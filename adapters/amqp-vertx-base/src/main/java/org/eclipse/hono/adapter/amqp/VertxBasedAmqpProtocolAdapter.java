@@ -1372,7 +1372,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * @return The error condition.
      */
     protected static ErrorCondition getErrorCondition(final Throwable t) {
-        final String errorMessage = getClientFacingErrorMessage(t);
+        final String errorMessage = ServiceInvocationException.getErrorMessageForExternalClient(t);
         if (t instanceof AuthorizationException || t instanceof AdapterDisabledException) {
             return ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS, errorMessage);
         } else if (ServiceInvocationException.class.isInstance(t)) {
