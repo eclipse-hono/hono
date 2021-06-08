@@ -177,7 +177,7 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseServic
             final Span currentSpan) {
 
         final Future<TenantResult<TenantObject>> resultTracker = getResponseFromCache(responseCacheKey, currentSpan)
-                .recover(cacheMiss -> addResultHandler(
+                .recover(cacheMiss -> executeOrUsePendingRequestResult(
                         responseCacheKey,
                         () -> getOrCreateClient().compose(client -> client.createAndSendRequest(
                                     TenantAction.get.toString(),
@@ -198,28 +198,22 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseServic
         }, currentSpan);
     }
 
-    private Future<TenantResult<TenantObject>> addResultHandler(
+    private Future<TenantResult<TenantObject>> executeOrUsePendingRequestResult(
             final Object responseCacheKey,
             final Supplier<Future<TenantResult<TenantObject>>> serviceRequest) {
 
-        final Future<TenantResult<TenantObject>> response = Optional.ofNullable(pendingRequests.get(responseCacheKey))
-                .map(request -> {
-                    // create a new result handler
-                    final Promise<TenantResult<TenantObject>> resultHandler = Promise.promise();
-                    // which will be notified once the the pending request completes
-                    request.onComplete(resultHandler);
-                    return resultHandler.future();
-                })
-                // execute the request
-                .orElseGet(() -> serviceRequest.get()
-                        // make sure to put the response to the cache (if applicable)
-                        .onSuccess(tenantResult -> addToCache(responseCacheKey, tenantResult))
-                        // and remove the most recent result handler so that
-                        // a new request will be executed again
-                        .onComplete(r -> pendingRequests.remove(responseCacheKey)));
-
-        // keep track of the most recent result handler
-        pendingRequests.put(responseCacheKey, response);
-        return response;
+        final Promise<TenantResult<TenantObject>> resultPromise = Promise.promise();
+        Optional.ofNullable(pendingRequests.putIfAbsent(responseCacheKey, resultPromise.future()))
+                .ifPresentOrElse(
+                        // pending request exists - complete the result promise with its result
+                        pendingRequest -> pendingRequest.onComplete(resultPromise),
+                        // otherwise execute the request
+                        () -> serviceRequest.get()
+                                // make sure to put the response to the cache (if applicable)
+                                .onSuccess(tenantResult -> addToCache(responseCacheKey, tenantResult))
+                                // and again remove the result promise so that a subsequent request will be executed again
+                                .onComplete(ar -> pendingRequests.remove(responseCacheKey))
+                                .onComplete(resultPromise));
+        return resultPromise.future();
     }
 }
