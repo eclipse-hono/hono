@@ -20,6 +20,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -28,6 +29,7 @@ import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -54,7 +56,10 @@ import com.github.benmanes.caffeine.cache.Cache;
 import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Checkpoint;
@@ -280,7 +285,7 @@ class ProtonBasedTenantClientTest {
     @Test
     public void testGetTenantFailsIfSenderHasNoCredit(final VertxTestContext ctx) {
 
-        // GIVEN a client with no credit left 
+        // GIVEN a client with no credit left
         givenAClient(cache);
         when(sender.sendQueueFull()).thenReturn(true);
 
@@ -292,9 +297,94 @@ class ProtonBasedTenantClientTest {
                 // and the span is finished
                 verify(span).finish();
                 assertThat(t).isInstanceOf(ServerErrorException.class)
-                    .extracting("errorCode").isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+                        .extracting("errorCode").isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
             });
             ctx.completeNow();
+        }));
+    }
+
+    /**
+     * Verifies that the client completes a request with the result of
+     * another pending request.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testGetTenantUsesResultFromPendingRequest(final VertxTestContext ctx) {
+
+        // GIVEN a client where there is no credit left
+        givenAClient(cache);
+        final Promise<Void> isConnectedPromise = Promise.promise();
+        when(connection.isConnected(anyLong())).thenReturn(isConnectedPromise.future());
+        when(sender.sendQueueFull()).thenReturn(true);
+
+        // WHEN getting tenant information twice before the client is connected
+        final Future<TenantObject> firstFuture = client.get("tenant", span.context());
+        final Future<TenantObject> secondFuture = client.get("tenant", span.context());
+
+        // THEN after connection establishment ...
+        isConnectedPromise.complete();
+
+        final Checkpoint checkpoint = ctx.checkpoint(3);
+        final Handler<AsyncResult<TenantObject>> failureCheckHandler = ctx.failing(t -> {
+            ctx.verify(() -> {
+                assertThat(t).isInstanceOf(ServerErrorException.class)
+                        .extracting("errorCode").isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+            });
+            checkpoint.flag();
+        });
+        // ... both invocations fail
+        firstFuture.onComplete(failureCheckHandler);
+        secondFuture.onComplete(failureCheckHandler);
+
+        // and credits were only checked once
+        verify(sender).sendQueueFull();
+        checkpoint.flag();
+    }
+
+    /**
+     * Verifies that the client fails if the Tenant service cannot be reached
+     * because the sender link has no credit left. Also verifies that a subsequent
+     * client invocation succeeds if there is credit again.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testGetTenantSucceedsWhenCreditRestored(final VertxTestContext ctx) {
+
+        // GIVEN a client where there is initially no credit left
+        givenAClient(cache);
+        final AtomicBoolean isNoCreditLeft = new AtomicBoolean(true);
+        doAnswer(invocation -> isNoCreditLeft.get())
+                .when(sender).sendQueueFull();
+
+        final Checkpoint checkpoint = ctx.checkpoint(2);
+
+        // WHEN getting tenant information
+        client.get("tenant", span.context()).onComplete(ctx.failing(t -> {
+            ctx.verify(() -> {
+                // THEN the invocation fails
+                assertThat(t).isInstanceOf(ServerErrorException.class)
+                        .extracting("errorCode").isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+            });
+            checkpoint.flag();
+        }));
+
+        // AND after credits are restored a subsequent invocation to get tenant information succeeds
+        isNoCreditLeft.set(false);
+        final Future<TenantObject> secondGetFuture = client.get("tenant", span.context());
+
+        final Message requestMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
+        final Message responseMessage = ProtonHelper.message();
+        MessageHelper.addProperty(responseMessage, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
+        MessageHelper.addCacheDirective(responseMessage, CacheDirective.maxAgeDirective(60));
+        responseMessage.setCorrelationId(requestMessage.getMessageId());
+        MessageHelper.setPayload(responseMessage, MessageHelper.CONTENT_TYPE_APPLICATION_JSON, newTenantResult("tenant").toBuffer());
+        final ProtonDelivery delivery = mock(ProtonDelivery.class);
+        AmqpClientUnitTestHelper.assertReceiverLinkCreated(connection).handle(delivery, responseMessage);
+
+        secondGetFuture.onComplete(ctx.succeeding(v -> {
+            checkpoint.flag();
         }));
     }
 
