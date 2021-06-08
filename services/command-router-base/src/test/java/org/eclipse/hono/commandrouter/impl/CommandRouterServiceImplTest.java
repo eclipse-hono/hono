@@ -69,12 +69,16 @@ class CommandRouterServiceImplTest {
     @BeforeEach
     void setUp() {
         final var registrationClient = mock(DeviceRegistrationClient.class);
+        when(registrationClient.stop()).thenReturn(Future.succeededFuture());
         tenantClient = mock(TenantClient.class);
+        when(tenantClient.stop()).thenReturn(Future.succeededFuture());
         when(tenantClient.get(anyString(), any())).thenAnswer(invocation -> {
             return Future.succeededFuture(TenantObject.from(invocation.getArgument(0)));
         });
         final var deviceConnectionInfo = mock(DeviceConnectionInfo.class);
         commandConsumerFactory = mock(CommandConsumerFactory.class);
+        when(commandConsumerFactory.start()).thenReturn(Future.succeededFuture());
+        when(commandConsumerFactory.stop()).thenReturn(Future.succeededFuture());
         final MessagingClient<CommandConsumerFactory> factories = new MessagingClient<>();
         factories.setClient(MessagingType.amqp, commandConsumerFactory);
         vertx = mock(Vertx.class);
@@ -88,10 +92,14 @@ class CommandRouterServiceImplTest {
                 factories,
                 NoopTracerFactory.create());
         service.setContext(context);
+        service.start();
     }
 
+    /**
+     * Verifies that command routing is enabled for a given set of tenant IDs.
+     */
     @Test
-    void testEnableCommandRoutingCreatesCommandConsumers() {
+    public void testEnableCommandRoutingCreatesCommandConsumers() {
 
         final Deque<Handler<Void>> eventLoop = new LinkedList<>();
         doAnswer(invocation -> {
@@ -148,7 +156,7 @@ class CommandRouterServiceImplTest {
      */
     @SuppressWarnings("unchecked")
     @Test
-    void testEnableCommandRoutingUsesExponentialBackoff() {
+    public void testEnableCommandRoutingUsesExponentialBackoff() {
 
         final Deque<Handler<?>> eventLoop = new LinkedList<>();
         doAnswer(invocation -> {
@@ -237,6 +245,37 @@ class CommandRouterServiceImplTest {
         // THEN a command consumer has been created
         verify(commandConsumerFactory).createCommandConsumer(eq("tenant1"), any());
         // AND no new task for retrying the attempt has been added to the event loop
+        assertThat(eventLoop).hasSize(0);
+    }
+
+    /**
+     * Verifies that the stop method effectively prevents command routing being re-enabled for
+     * remaining tenant IDs.
+     */
+    @Test
+    public void testStopPreventsCommandConsumersFromBeingReenabled() {
+
+        final Deque<Handler<?>> eventLoop = new LinkedList<>();
+        doAnswer(invocation -> {
+            eventLoop.addLast(invocation.getArgument(0));
+            return null;
+        }).when(context).runOnContext(VertxMockSupport.anyHandler());
+
+        final List<String> firstTenants = List.of("tenant1");
+        service.enableCommandRouting(firstTenants, NoopSpan.INSTANCE);
+
+        // THEN no command consumer has been created yet
+        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
+        // BUT a first task to process the first tenant ID has been scheduled
+        verify(context).runOnContext(VertxMockSupport.anyHandler());
+        assertThat(eventLoop).hasSize(1);
+
+        // WHEN running the next task on the event loop after the component has been stopped
+        service.stop();
+        eventLoop.pollFirst().handle(null);
+        // THEN no command consumer has been created
+        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
+        // AND no new task has been scheduled
         assertThat(eventLoop).hasSize(0);
     }
 }
