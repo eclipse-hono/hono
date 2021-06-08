@@ -72,7 +72,7 @@ public class KafkaBasedInternalCommandSender extends AbstractKafkaBasedMessageSe
                 getHeaders((KafkaBasedCommand) command),
                 commandContext.getTracingContext())
                         .onSuccess(v -> commandContext.accept())
-                        .onFailure(thr -> commandContext.release());
+                        .onFailure(thr -> commandContext.release(thr));
     }
 
     private static String getInternalCommandTopic(final String adapterInstanceId) {

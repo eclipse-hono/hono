@@ -97,7 +97,7 @@ public class ProtonBasedInternalCommandSender extends SenderCachingServiceClient
                     LOG.debug("failed to send command [{}] to downstream peer", commandContext.getCommand(), thr);
                     TracingHelper.logError(commandContext.getTracingSpan(),
                             "failed to send command message to downstream peer: " + thr);
-                    commandContext.release();
+                    commandContext.release(thr);
                     return Future.succeededFuture();
                 });
     }

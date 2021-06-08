@@ -13,8 +13,11 @@
 
 package org.eclipse.hono.adapter.client.command;
 
+import java.net.HttpURLConnection;
 import java.util.Objects;
 
+import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.impl.CommandConsumer;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.ExecutionContext;
@@ -60,16 +63,26 @@ public interface CommandContext extends ExecutionContext {
      * Indicates to the sender that the command message could not be delivered to its target due to
      * reasons that are not the responsibility of the sender of the command.
      */
-    void release();
+    default void release() {
+        release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
+    }
 
     /**
      * Indicates to the sender that the command message could not be delivered to its target due to
      * reasons that are not the responsibility of the sender of the command.
      *
-     * @param deliveryFailed {@code true} if the attempt to send the command to the target device
-     *                       has failed.
-     * @param undeliverableHere {@code true} if the component processing the context
-     *                          has no access to the command's target device.
+     * @param error The delivery error.
+     * @throws NullPointerException if error is {@code null}.
+     */
+    void release(Throwable error);
+
+    /**
+     * Indicates to the sender that the command message could not be delivered to its target due to
+     * reasons that are not the responsibility of the sender of the command.
+     *
+     * @param deliveryFailed {@code true} if the attempt to send the command to the target device has failed.
+     * @param undeliverableHere {@code true} if the component processing the context has no access to the command's
+     *            target device.
      */
     void modify(boolean deliveryFailed, boolean undeliverableHere);
 
@@ -80,9 +93,22 @@ public interface CommandContext extends ExecutionContext {
      * The reason for a command being rejected often is that the command is invalid, e.g. lacking a
      * subject or having a malformed address.
      *
-     * @param cause The error that caused he command to be rejected or {@code null} if the cause is unknown.
+     * @param error The error that caused the command to be rejected or {@code null} if the cause is unknown.
      */
-    void reject(String cause);
+    default void reject(final String error) {
+        reject(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, error));
+    }
+
+    /**
+     * Indicates to the sender that the command message cannot be delivered to its target due to
+     * reasons that are the responsibility of the sender of the command.
+     * <p>
+     * The reason for a command being rejected often is that the command is invalid, e.g. lacking a
+     * subject or having a malformed address.
+     *
+     * @param error The error that caused the command to be rejected or {@code null} if the cause is unknown.
+     */
+    void reject(Throwable error);
 
     /**
      * Creates and starts an <em>OpenTracing</em> span for the command handling operation.

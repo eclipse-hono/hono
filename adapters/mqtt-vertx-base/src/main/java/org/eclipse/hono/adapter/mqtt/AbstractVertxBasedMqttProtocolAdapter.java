@@ -1468,10 +1468,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     return Future.succeededFuture();
                 }).onFailure(t -> {
                     if (t instanceof ClientErrorException) {
-                        commandContext.reject(t.getMessage());
+                        commandContext.reject(t);
                     } else {
                         TracingHelper.logError(commandContext.getTracingSpan(), t);
-                        commandContext.release();
+                        commandContext.release(t);
                     }
                     metrics.reportCommand(
                             command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
@@ -1560,7 +1560,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                                             subscription,
                                             commandContext,
                                             ProcessingOutcome.from(thr));
-                                    commandContext.release();
+                                    commandContext.release(thr);
                                 });
                     }).onFailure(t -> {
                         log.debug("error mapping command [tenant-id: {}, MQTT client-id: {}, QoS: {}]",
@@ -1571,7 +1571,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                                 subscription,
                                 commandContext,
                                 ProcessingOutcome.from(t));
-                        commandContext.release();
+                        commandContext.release(t);
                     });
         }
 
@@ -1607,8 +1607,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 final Handler<Void> onAckTimeoutHandler = v -> {
                     log.debug("did not receive PUBACK [packet-id: {}] for command [tenant-id: {}, device-id: {}, MQTT client-id: {}]",
                             publishedMsgId, subscription.getTenant(), subscription.getDeviceId(), endpoint.clientIdentifier());
-                    TracingHelper.logError(commandContext.getTracingSpan(), "did not receive PUBACK from device");
-                    commandContext.release();
+                    final String errorMsg = "did not receive PUBACK from device";
+                    TracingHelper.logError(commandContext.getTracingSpan(), errorMsg);
+                    commandContext.release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, errorMsg));
                     reportPublishedCommand(tenantObject, subscription, commandContext, ProcessingOutcome.UNDELIVERABLE);
                 };
                 pendingAcks.add(publishedMsgId, onAckHandler, onAckTimeoutHandler, getConfig().getEffectiveSendMessageToDeviceTimeout());

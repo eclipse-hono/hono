@@ -762,7 +762,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     if (commandContext != null) {
                         TracingHelper.logError(commandContext.getTracingSpan(),
                                 "failed to forward command to device in HTTP response body", t);
-                        commandContext.release();
+                        commandContext.release(t);
                         metrics.reportCommand(
                                 commandContext.getCommand().isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                                 tenant,
@@ -794,7 +794,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             if (commandContext != null) {
                 TracingHelper.logError(commandContext.getTracingSpan(),
                         "command won't be forwarded to device in HTTP response body, HTTP request handling failed", t);
-                commandContext.release();
+                commandContext.release(t);
                 currentSpan.log("released command for device");
             }
             final ProcessingOutcome outcome;
@@ -1017,7 +1017,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             // put command context to routing context and notify
                             ctx.put(CommandContext.KEY_COMMAND_CONTEXT, commandContext);
                         } else {
-                            commandContext.reject(result.cause().getMessage());
+                            commandContext.reject(result.cause());
                             TracingHelper.logError(waitForCommandSpan, "rejected command for device", result.cause());
                             metrics.reportCommand(
                                     command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
@@ -1032,8 +1032,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         responseReady.handle(Future.succeededFuture());
                     });
                 } else {
-                    log.debug("waiting time for command has elapsed or another command has already been processed [tenantId: {}, deviceId: {}]",
-                            tenantObject.getTenantId(), deviceId);
+                    final String errorMsg = "waiting time for command has elapsed or another command has already been processed";
+                    log.debug("{} [tenantId: {}, deviceId: {}]", errorMsg, tenantObject.getTenantId(), deviceId);
                     getMetrics().reportCommand(
                             command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                             tenantObject.getTenantId(),
@@ -1041,9 +1041,8 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             ProcessingOutcome.UNDELIVERABLE,
                             command.getPayloadSize(),
                             commandSample);
-                    TracingHelper.logError(commandContext.getTracingSpan(),
-                            "waiting time for command has elapsed or another command has already been processed");
-                    commandContext.release();
+                    TracingHelper.logError(commandContext.getTracingSpan(), errorMsg);
+                    commandContext.release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, errorMsg));
                 }
 
             } else {
