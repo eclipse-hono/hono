@@ -1,32 +1,38 @@
+# The file contains some default configurations for Hono's CLI tool.
+#
+# The Hono CLI serves two different use cases:
+# For the first one, it can be used as a southbound client to Hono's AMQP protocol adapter
+# and simulates an AMQP enabled device. This southbound client is activated by setting
+# one of the profiles "amqp-send" or "amqp-command".
+#
+# For the second use case, it serves as a northbound client that simulates a business application
+# that receives telemetry data and events or sends commands upstream to devices.
+# The northbound client supports a couple of profiles that provide some defaults:
+# 1. select the mode: "receiver" or "command"
+# 2. select the target: "sandbox" or "local"
+# 3. optionally add "kafka" to enable Kafka based messaging (otherwise AMQP is used for messaging).
+
 spring:
   jmx:
     enabled: false
   profiles:
-    active: receiver,ssl
+    active: receiver,sandbox
 
 hono:
   client:
-    host: localhost
     reconnectAttempts: 5
 
 connection:
   retryInterval: 1000
 
-tenant:
-  id: DEFAULT_TENANT
-device:
-  id: 4711
-
 ---
+# Enables the "receiver" mode of the northbound client used to receive telemetry data and/or event messages.
+# Use this profile together with either "sandbox" or "local".
 
 spring:
   config:
     activate:
       on-profile: receiver
-
-hono:
-  client:
-    port: 15671
 
 address:
   resolver:
@@ -39,6 +45,79 @@ message:
   type: all
 
 ---
+# Enables the "command" mode of the northbound client used to send commands to devices.
+# Use this profile together with either "sandbox" or "local".
+
+spring:
+  config:
+    activate:
+      on-profile: command
+
+command:
+  timeoutInSeconds: 60
+
+---
+# Configuration for the Hono sandbox - see:
+# https://www.eclipse.org/hono/getting-started/
+# Use this profile together with either "receiver" or "command".
+
+spring:
+  config:
+    activate:
+      on-profile: sandbox
+
+hono:
+  client:
+    host: hono.eclipseprojects.io
+    port: 15672
+    tlsEnabled: false
+    username: consumer@HONO
+    password: verysecret
+  kafka:
+    commonClientConfig:
+      bootstrap.servers: hono.eclipseprojects.io:9092
+      security.protocol: SASL_PLAINTEXT
+      sasl.mechanism: SCRAM-SHA-256
+      sasl.jaas.config: "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"hono\" password=\"hono-secret\";"
+
+---
+# Configuration for example deployment in local Kubernetes cluster - see:
+# https://www.eclipse.org/hono/getting-started/
+# Use this profile together with either "receiver" or "command".
+# If used with Kafka based messaging, bootstrap servers and the truststore path need to be provided additionally.
+
+spring:
+  config:
+    activate:
+      on-profile: local
+
+hono:
+  client:
+    port: 15672
+    tlsEnabled: false
+    username: consumer@HONO
+    password: verysecret
+  kafka:
+    commonClientConfig:
+      bootstrap.servers: UNCONFIGURED
+      security.protocol: SASL_SSL
+      sasl.jaas.config: "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"hono\" password=\"hono-secret\";"
+      sasl.mechanism: SCRAM-SHA-512
+      ssl.truststore.location: UNCONFIGURED
+      ssl.truststore.password: honotrust
+      ssl.endpoint.identification.algorithm: ""
+
+tenant:
+  id: DEFAULT_TENANT
+device:
+  id: 4711
+
+---
+# This profile enables Kafka based messaging - see:
+# https://www.eclipse.org/hono/getting-started-kafka/
+# Use this profile together with either "receiver" or "command".
+# Additionally activate either "sandbox" or "local".
+# If not using the sandbox, bootstrap servers and the truststore path need to be provided additionally.
 
 spring:
   config:
@@ -48,11 +127,14 @@ spring:
 hono:
   kafka:
     commonClientConfig:
-      bootstrap.servers: localhost:9092
+      client.id: hono-cli
     consumerConfig:
-      group.id: hono-cli
+      group.id: cli
 
 ---
+# This profile enables the collection of statistics of received messages from
+# Hono's northbound Telemetry and Event APIs.
+# Use this profile together with "receiver".
 
 spring:
   config:
@@ -64,21 +146,9 @@ statistic:
   autoreset: false
 
 ---
-
-# For use with the demo certificates.
-# Do not use this profile for certificates that the JVM trusts, e.g. for the Hono sandbox. Simply set hono.client.tlsEnabled 
-# to true. 
-spring:
-  config:
-    activate:
-      on-profile: ssl
-hono:
-  client:
-    hostnameVerificationRequired: false
-    trustStorePath: target/config/hono-demo-certs-jar/trusted-certs.pem
-    tlsEnabled: true
-
----
+# Enables the southbound client for Hono's AMQP protocol adapter- see:
+# https://www.eclipse.org/hono/docs/user-guide/amqp-adapter/
+# It is not to be combined with the other profiles.
 
 spring:
   config:
@@ -87,29 +157,9 @@ spring:
 
 hono:
   client:
+    host: hono.eclipseprojects.io
     port: 5672
 
 message:
   address: telemetry
   payload: '{"temp": 5}'
-
----
-
-spring:
-  config:
-    activate:
-      on-profile: command
-
-hono:
-  client:
-    port: 15671
-
-command:
-  timeoutInSeconds: 60
-
-tenant:
-  id: DEFAULT_TENANT
-
-device:
-  id: 4711
-

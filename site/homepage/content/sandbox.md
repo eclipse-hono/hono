@@ -49,7 +49,7 @@ All services are exposed via the same ports as used in the guide.
 
   ~~~sh
   # in directory where the hono-cli-*-exec.jar file has been downloaded to
-  java -jar hono-cli-*-exec.jar --hono.client.host=hono.eclipseprojects.io --hono.client.port=15671 --hono.client.tlsEnabled=true --hono.client.username=consumer@HONO --hono.client.password=verysecret --spring.profiles.active=receiver
+  java -jar hono-cli-*-exec.jar --hono.client.host=hono.eclipseprojects.io --hono.client.port=15671 --hono.client.tlsEnabled=true --hono.client.username=consumer@HONO --hono.client.password=verysecret --tenant.id=DEFAULT_TENANT --spring.profiles.active=receiver
   ~~~
   Note that only the *receiver* profile is activated but not the *ssl* profile.
 

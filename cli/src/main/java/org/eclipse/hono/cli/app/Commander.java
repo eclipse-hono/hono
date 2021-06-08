@@ -47,6 +47,8 @@ public class Commander extends AbstractApplicationClient {
     private final Scanner scanner = new Scanner(System.in);
     @Value(value = "${command.timeoutInSeconds}")
     private int commandTimeOutInSeconds;
+    @Value(value = "${device.id}")
+    private String deviceId;
     private WorkerExecutor workerExecutor;
 
     /**
