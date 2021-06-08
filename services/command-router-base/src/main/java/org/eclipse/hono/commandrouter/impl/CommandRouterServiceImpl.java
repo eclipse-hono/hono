@@ -248,6 +248,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
                         TracingHelper.logError(span, "failed to create command consumer", t);
                         if (t instanceof ServerErrorException) {
                             // add to end of queue in order to retry at a later time
+                            LOG.info("failed to create command consumer", t);
                             span.log("marking tenant for later re-try to create command consumer");
                             tenantsToEnable.addLast(tenantId);
                         }
