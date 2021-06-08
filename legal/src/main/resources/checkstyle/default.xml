@@ -117,7 +117,7 @@
     <!-- javadoc validation -->
 
     <module name="JavadocMethod">
-      <property name="accessModifiers" value="public,protected"/>
+      <property name="scope" value="protected"/>
       <property name="validateThrows" value="true"/>
     </module>
     <module name="JavadocStyle"/>
