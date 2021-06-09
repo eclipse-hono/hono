@@ -54,8 +54,8 @@ Hono indicates the outcome of the operation by means of the following AMQP deliv
 | Delivery State | Description                                      |
 | :------------- | :----------------------------------------------- |
 | `accepted`    | The command has been delivered to the device for processing. |
-| `released`    | The command has not been delivered to the device because the device is (currently) not connected. |
-| `rejected`    | The command has not been delivered to the device because it does not contain all required information. |
+| `released`    | The command has not been delivered to the device or can not be processed by the device due to reasons that are not the responsibility of the sender of the command. Possible reasons are:<ul><li>The device is (currently) not connected.</li><li>In case the transport protocol supports acknowledgements: The device hasn't sent an acknowledgement in time or has indicated that the message cannot be processed.</li><li>There was an error forwarding the command to the device.</li></ul> |
+| `rejected`    | The command has not been delivered to or processed by the device because the command message does not contain all required information. Another reason may be that a message limit has been exceeded. |
 
 **Note** that Hono relies on the particular protocol adapter to deliver commands to devices. Depending on the used transport protocol and the adapter's implementation, the `accepted` outcome may thus indicate any of the following:
 
@@ -116,8 +116,8 @@ Hono uses following AMQP delivery states to indicate the outcome of sending the 
 | Delivery State | Description                                      |
 | :------------- | :----------------------------------------------- |
 | `accepted`    | The command has been delivered to the device for processing. |
-| `released`    | The command has not been delivered to the device because the device is (currently) not connected. |
-| `rejected`    | The command has not been delivered to the device because it does not contain all required information. |
+| `released`    | The command has not been delivered to the device or can not be processed by the device due to reasons that are not the responsibility of the sender of the command. Possible reasons are:<ul><li>The device is (currently) not connected.</li><li>In case the transport protocol supports acknowledgements: The device hasn't sent an acknowledgement in time or has indicated that the message cannot be processed.</li><li>There was an error forwarding the command to the device.</li></ul> |
+| `rejected`    | The command has not been delivered to or processed by the device because the command message does not contain all required information. Another reason may be that a message limit has been exceeded. |
 
 **Note** that Hono relies on the particular protocol adapter to deliver commands to devices. Depending on the used transport protocol and the adapter's implementation, the `accepted` outcome may thus indicate any of the following:
 

@@ -91,7 +91,7 @@ The following table provides an overview of the headers the *Business Applicatio
 
 The command message MAY contain arbitrary payload, set as message value, to be sent to the device. The value of the message's *subject* header may provide a hint to the device regarding the format, encoding and semantics of the payload data.
 
-An application can determine the overall outcome of the operation by means of the response to the command that is sent back by the device. An application should consider execution of a command to have failed, if it does not receive a response within a reasonable amount of time.
+An application can determine the overall outcome of the operation by means of the response to the command. The response is either sent back by the device, or in case the command could not be successfully forwarded to the device, an error command response message is sent by the Hono protocol adapter or Command Router component.
 
 **Response Message Format**
 
@@ -105,9 +105,15 @@ The following table provides an overview of the headers set on a message sent in
 | *correlation-id*   | yes       | *string*  | MUST contain the value of the *correlation-id* header of the request message that this is the response for. |
 | *device_id*        | yes       | *string*  | The identifier of the device that sent the response. |
 | *status*           | yes       | *integer* | MUST indicate the status of the execution. See table below for possible values. |
-| *content-type*     | no        | *string*  | If present, MUST contain a *Media Type* as defined by [RFC 2046](https://tools.ietf.org/html/rfc2046) which describes the semantics and format of the command's input data contained in the message payload. However, not all protocol adapters will support this property as not all transport protocols provide means to convey this information, e.g. MQTT 3.1.1 has no notion of message headers. |
+| *content-type*     | no        | *string*  | If present, MUST contain a *Media Type* as defined by [RFC 2046](https://tools.ietf.org/html/rfc2046) which describes the semantics and format of the command's input data contained in the message payload. However, not all protocol adapters will support this property as not all transport protocols provide means to convey this information, e.g. MQTT 3.1.1 has no notion of message headers.<br>If the response is an error message sent by the Hono protocol adapter or Command Router component, the content type MUST be *application/vnd.eclipse-hono-delivery-failure-notification+json*. |
 
-The *status* header must contain an [HTTP 1.1 response status code](https://tools.ietf.org/html/rfc7231#section-6):
+The *status* header must contain an [HTTP 1.1 response status code](https://tools.ietf.org/html/rfc7231#section-6). 
+
+The command response message MAY contain arbitrary payload, set as message value, to be sent to the business application.
+
+**Response Message sent from Device**
+
+In a response from a device, the semantics of the *status* code ranges are as follows:
 
 | Code  | Description |
 | :---- | :---------- |
@@ -117,4 +123,17 @@ The *status* header must contain an [HTTP 1.1 response status code](https://tool
 
 The semantics of the individual codes are specific to the device and command. For status codes indicating an error (codes in the `400 - 599` range) the message body MAY contain a detailed description of the error that occurred.
 
-The command response message MAY contain arbitrary payload, set as message value, to be sent to the business application.
+**Response Message sent from Hono Component**
+
+If the command response message represents an error message sent by the Hono protocol adapter or Command Router component, with the *content-type* header set to *application/vnd.eclipse-hono-delivery-failure-notification+json*, the possible status codes are:
+
+| Code  | Description |
+| :---- | :---------- |
+| *4xx* | The command has not been delivered to or processed by the device because the command message does not contain all required information. Another reason may be that a message limit has been exceeded. |
+| *5xx* | The command has not been delivered to the device or can not be processed by the device due to reasons that are not the responsibility of the sender of the command. Possible reasons are:<ul><li>The device is (currently) not connected.</li><li>In case the transport protocol supports acknowledgements: The device hasn't sent an acknowledgement in time or has indicated that the message cannot be processed.</li><li>There was an error forwarding the command to the device.</li></ul> |
+
+The payload MUST contain a UTF-8 encoded string representation of a single JSON object with the following fields:
+
+| Name        | Mandatory | Type      | Description |
+| :---------- | :-------: | :-------- | :---------- |
+| *error*     | yes       | *string*  | The error message describing the cause for the command message delivery failure. |
