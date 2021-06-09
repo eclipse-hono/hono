@@ -18,11 +18,11 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -53,7 +53,6 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.impl.ConcurrentHashSet;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
 
@@ -71,6 +70,8 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
     private final MessagingClient<CommandConsumerFactory> commandConsumerFactories;
     private final Tracer tracer;
     private final Deque<Pair<String, Integer>> tenantsToEnable = new LinkedList<>();
+    private final Set<String> reenabledTenants = new HashSet<>();
+    private final Set<String> tenantsInProcess = new HashSet<>();
     private final AtomicBoolean running = new AtomicBoolean();
 
     /**
@@ -218,11 +219,20 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
 
     @Override
     public Future<CommandRouterResult> enableCommandRouting(final List<String> tenantIds, final Span span) {
+
+        if (!running.get()) {
+            return Future.succeededFuture(CommandRouterResult.from(HttpURLConnection.HTTP_UNAVAILABLE));
+        }
+
         Objects.requireNonNull(tenantIds);
         final boolean isProcessingRequired = tenantsToEnable.isEmpty();
-        tenantIds.forEach(id -> {
-            tenantsToEnable.addLast(Pair.of(id, 1));
-        });
+        tenantIds.stream()
+            .filter(s -> !reenabledTenants.contains(s))
+            .filter(s -> !tenantsInProcess.contains(s))
+            .filter(s -> tenantsToEnable.stream()
+                .allMatch(entry -> !entry.one().equals(s)))
+            .forEach(s -> tenantsToEnable.addLast(Pair.of(s, 1)));
+
         if (isProcessingRequired) {
             final Span processingSpan = tracer.buildSpan("re-enable command routing for tenants")
                     .addReference(References.CHILD_OF, span.context())
@@ -231,27 +241,26 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
             // make sure to report the span in a timely fashion
             // so that it can be seen in the tracing back end
             processingSpan.finish();
-            processTenantQueue(new ConcurrentHashSet<>(), processingSpan.context());
+            processTenantQueue(processingSpan.context());
         }
         return Future.succeededFuture(CommandRouterResult.from(HttpURLConnection.HTTP_NO_CONTENT));
     }
 
-    private void processTenantQueue(final Set<String> processedTenants, final SpanContext tracingContext) {
+    private void processTenantQueue(final SpanContext tracingContext) {
 
-        Optional.ofNullable(tenantsToEnable.pollFirst())
-            .ifPresent(attempt -> {
-                if (processedTenants.contains(attempt.one())) {
-                    LOG.debug("skipping tenant [tenant-id: {}], already processed ...", attempt.one());
-                    context.runOnContext(go -> processTenantQueue(processedTenants, tracingContext));
-                } else {
-                    final long delay = calculateDelayMillis(attempt.two());
-                    if (delay <= 0) {
-                        context.runOnContext(go -> activateCommandRouting(attempt, processedTenants, tracingContext));
-                    } else {
-                        context.owner().setTimer(delay, tid -> activateCommandRouting(attempt, processedTenants, tracingContext));
-                    }
-                }
-            });
+        final var attempt = tenantsToEnable.pollFirst();
+        if (attempt == null) {
+            reenabledTenants.clear();
+            tenantsInProcess.clear();
+        } else {
+            tenantsInProcess.add(attempt.one());
+            final long delay = calculateDelayMillis(attempt.two());
+            if (delay <= 0) {
+                context.runOnContext(go -> activateCommandRouting(attempt, tracingContext));
+            } else {
+                context.owner().setTimer(delay, tid -> activateCommandRouting(attempt, tracingContext));
+            }
+        }
     }
 
     private long calculateDelayMillis(final int attemptNo) {
@@ -269,11 +278,11 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
 
     private void activateCommandRouting(
             final Pair<String, Integer> attempt,
-            final Set<String> processedTenants,
             final SpanContext tracingContext) {
 
         if (!running.get()) {
             // component has been stopped, no need to create command consumer in this case
+            tenantsInProcess.remove(attempt.one());
             return;
         }
 
@@ -289,7 +298,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
             .onSuccess(ok -> {
                 logEntries.put(Fields.MESSAGE, "successfully created command consumer");
                 span.log(logEntries);
-                processedTenants.add(attempt.one());
+                reenabledTenants.add(attempt.one());
             })
             .onFailure(t -> {
                 logEntries.put(Fields.MESSAGE, "failed to create command consumer");
@@ -299,14 +308,13 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
                     // add to end of queue in order to retry at a later time
                     LOG.info("failed to create command consumer [attempt#: {}]", attempt.two(), t);
                     span.log("marking tenant for later re-try to create command consumer");
-                    // with the maximum delay of 10s before re-trying,
-                    // the attempt number will increase to 
                     tenantsToEnable.addLast(Pair.of(attempt.one(), attempt.two() + 1));
                 }
             })
             .onComplete(r -> {
                 span.finish();
-                processTenantQueue(processedTenants, tracingContext);
+                tenantsInProcess.remove(attempt.one());
+                processTenantQueue(tracingContext);
             });
     }
 

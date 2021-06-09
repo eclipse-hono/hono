@@ -55,7 +55,7 @@ import io.vertx.core.Vertx;
  * Tests verifying behavior of {@link CommandRouterServiceImpl}.
  *
  */
-class CommandRouterServiceImplTest {
+public class CommandRouterServiceImplTest {
 
     private CommandRouterServiceImpl service;
     private CommandConsumerFactory commandConsumerFactory;
@@ -113,36 +113,35 @@ class CommandRouterServiceImplTest {
         service.enableCommandRouting(firstTenants, NoopSpan.INSTANCE);
         // THEN no command consumer has been created yet
         verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
+        // AND a task for processing the first tenant has been scheduled
         assertThat(eventLoop).hasSize(1);
         // WHEN submitting the second list of tenants
         service.enableCommandRouting(secondTenants, NoopSpan.INSTANCE);
         // still no command consumer has been created
         verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
+        // AND no additional task has been scheduled
         assertThat(eventLoop).hasSize(1);
 
-        // WHEN running the first task on the event loop
-        eventLoop.pollFirst().handle(null);
+        // WHEN running the next task on the event loop
+        final var task = eventLoop.pollFirst();
+        task.handle(null);
         // THEN a command consumer is being created
         verify(commandConsumerFactory).createCommandConsumer(eq("tenant1"), any());
         // AND a new task has been added to the event loop
         assertThat(eventLoop).hasSize(1);
-        // WHEN running the first task on the event loop
+        // WHEN running the next task on the event loop
         eventLoop.pollFirst().handle(null);
         // THEN a command consumer is being created
         verify(commandConsumerFactory).createCommandConsumer(eq("tenant2"), any());
         // AND a new task has been added to the event loop
         assertThat(eventLoop).hasSize(1);
-        // WHEN running the first task on the event loop
-        eventLoop.pollFirst().handle(null);
-        // THEN a new task has been added to the event loop
-        assertThat(eventLoop).hasSize(1);
-        // WHEN running the first task on the event loop
+        // WHEN running the next task on the event loop
         eventLoop.pollFirst().handle(null);
         // THEN a single command consumer is being created for the duplicate tenant3 ID
         verify(commandConsumerFactory).createCommandConsumer(eq("tenant3"), any());
         // AND a new task has been added to the event loop
         assertThat(eventLoop).hasSize(1);
-        // WHEN running the first task on the event loop
+        // WHEN running the next task on the event loop
         eventLoop.pollFirst().handle(null);
         // THEN a command consumer is being created
         verify(commandConsumerFactory).createCommandConsumer(eq("tenant4"), any());
@@ -182,7 +181,7 @@ class CommandRouterServiceImplTest {
         service.enableCommandRouting(firstTenants, NoopSpan.INSTANCE);
         // THEN no command consumer has been created yet
         verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
-        // BUT a first task to process the first tenant ID has been scheduled
+        // AND a first task to process the first tenant ID has been scheduled
         verify(context).runOnContext(VertxMockSupport.anyHandler());
         assertThat(eventLoop).hasSize(1);
 
@@ -190,8 +189,8 @@ class CommandRouterServiceImplTest {
         eventLoop.pollFirst().handle(null);
         // THEN no command consumer has been created yet
         verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
-        // AND a new task for retrying the attempt has been scheduled with the
-        // delay corresponding to the number of unsuccessful attempts tha have been made
+        // AND a new task for retrying the attempt has been scheduled with a
+        // delay corresponding to the number of unsuccessful attempts that have been made
         verify(vertx).setTimer(eq(400L), VertxMockSupport.anyHandler());
         assertThat(eventLoop).hasSize(1);
 
@@ -200,7 +199,7 @@ class CommandRouterServiceImplTest {
         // THEN no command consumer has been created yet
         verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
         // AND a new task for retrying the attempt has been scheduled with the
-        // delay corresponding to the number of unsuccessful attempts tha have been made
+        // delay corresponding to the number of unsuccessful attempts that have been made
         verify(vertx).setTimer(eq(800L), VertxMockSupport.anyHandler());
         assertThat(eventLoop).hasSize(1);
 
@@ -208,17 +207,22 @@ class CommandRouterServiceImplTest {
         eventLoop.pollFirst().handle(null);
         // THEN no command consumer has been created yet
         verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
-        // AND a new task for retrying the attempt has been scheduled with the
-        // delay corresponding to the number of unsuccessful attempts tha have been made
+        // AND a new task for retrying the attempt has been scheduled with a
+        // delay corresponding to the number of unsuccessful attempts that have been made
         verify(vertx).setTimer(eq(1600L), VertxMockSupport.anyHandler());
+        assertThat(eventLoop).hasSize(1);
+
+        // WHEN adding the same tenant again in between re-tries
+        service.enableCommandRouting(firstTenants, NoopSpan.INSTANCE);
+        // THEN no additional task has been scheduled
         assertThat(eventLoop).hasSize(1);
 
         // WHEN running the next task on the event loop
         eventLoop.pollFirst().handle(null);
         // THEN no command consumer has been created yet
         verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
-        // AND a new task for retrying the attempt has been scheduled with the
-        // delay corresponding to the number of unsuccessful attempts tha have been made
+        // AND a new task for retrying the attempt has been scheduled with a
+        // delay corresponding to the number of unsuccessful attempts that have been made
         verify(vertx).setTimer(eq(3200L), VertxMockSupport.anyHandler());
         assertThat(eventLoop).hasSize(1);
 
@@ -226,8 +230,8 @@ class CommandRouterServiceImplTest {
         eventLoop.pollFirst().handle(null);
         // THEN no command consumer has been created yet
         verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
-        // AND a new task for retrying the attempt has been scheduled with the
-        // delay corresponding to the number of unsuccessful attempts tha have been made
+        // AND a new task for retrying the attempt has been scheduled with a
+        // delay corresponding to the number of unsuccessful attempts that have been made
         verify(vertx).setTimer(eq(6400L), VertxMockSupport.anyHandler());
         assertThat(eventLoop).hasSize(1);
 
@@ -235,14 +239,13 @@ class CommandRouterServiceImplTest {
         eventLoop.pollFirst().handle(null);
         // THEN no command consumer has been created yet
         verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
-        // AND a new task for retrying the attempt has been scheduled with the
-        // delay corresponding to the number of unsuccessful attempts tha have been made
+        // AND a new task for retrying the attempt has been scheduled with maximum delay
         verify(vertx).setTimer(eq(10000L), VertxMockSupport.anyHandler());
         assertThat(eventLoop).hasSize(1);
 
         // WHEN running the next task on the event loop
         eventLoop.pollFirst().handle(null);
-        // THEN a command consumer has been created
+        // THEN a command consumer has been created for the tenant
         verify(commandConsumerFactory).createCommandConsumer(eq("tenant1"), any());
         // AND no new task for retrying the attempt has been added to the event loop
         assertThat(eventLoop).hasSize(0);
@@ -270,12 +273,19 @@ class CommandRouterServiceImplTest {
         verify(context).runOnContext(VertxMockSupport.anyHandler());
         assertThat(eventLoop).hasSize(1);
 
-        // WHEN running the next task on the event loop after the component has been stopped
+        // WHEN the component has been stopped
         service.stop();
+        // THEN no new tenant IDs can be submitted anymore
+        final var result = service.enableCommandRouting(List.of("tenant X"), NoopSpan.INSTANCE);
+        assertThat(result.succeeded()).isTrue();
+        assertThat(result.result().getStatus()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+
+        // WHEN running the next task on the event loop
         eventLoop.pollFirst().handle(null);
         // THEN no command consumer has been created
         verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
         // AND no new task has been scheduled
         assertThat(eventLoop).hasSize(0);
+        // AND 
     }
 }
