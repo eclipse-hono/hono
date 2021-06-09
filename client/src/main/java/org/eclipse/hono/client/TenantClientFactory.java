@@ -22,7 +22,7 @@ import io.vertx.core.Future;
 /**
  * A factory for creating clients for Hono's Tenant API.
  *
- * @deprecated Use {@code org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedTenantClient} instead.
+ * @deprecated Use {@code org.eclipse.hono.client.registry.amqp.ProtonBasedTenantClient} instead.
  */
 @Deprecated
 public interface TenantClientFactory extends ConnectionLifecycle<HonoConnection> {
