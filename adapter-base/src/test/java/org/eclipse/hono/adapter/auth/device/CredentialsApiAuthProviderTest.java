@@ -26,10 +26,10 @@ import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.adapter.auth.device.AbstractDeviceCredentials;
 import org.eclipse.hono.adapter.auth.device.CredentialsApiAuthProvider;
-import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.util.CredentialsObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

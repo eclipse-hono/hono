@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.adapter.client.registry;
+package org.eclipse.hono.client.registry;
 
 import javax.security.auth.x500.X500Principal;
 

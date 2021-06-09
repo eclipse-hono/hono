@@ -16,11 +16,11 @@ package org.eclipse.hono.adapter.auth.device;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
-import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsObject;

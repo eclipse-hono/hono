@@ -31,7 +31,7 @@ import java.util.Set;
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.adapter.auth.device.TenantServiceBasedX509Authentication;
-import org.eclipse.hono.adapter.client.registry.TenantClient;
+import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.service.auth.X509CertificateChainValidator;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeAll;

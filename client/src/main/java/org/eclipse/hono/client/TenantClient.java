@@ -26,7 +26,7 @@ import io.vertx.core.Future;
  * See Hono's <a href="https://www.eclipse.org/hono/docs/api/tenant">
  * Tenant API specification</a> for a description of the result codes returned.
  *
- * @deprecated Use {@code org.eclipse.hono.adapter.client.registry.TenantClient} instead.
+ * @deprecated Use {@code org.eclipse.hono.client.registry.TenantClient} instead.
  */
 @Deprecated
 public interface TenantClient extends RequestResponseClient {

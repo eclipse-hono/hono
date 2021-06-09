@@ -15,8 +15,8 @@ package org.eclipse.hono.adapter.auth.device;
 
 import java.util.Objects;
 
-import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.springframework.beans.factory.annotation.Autowired;

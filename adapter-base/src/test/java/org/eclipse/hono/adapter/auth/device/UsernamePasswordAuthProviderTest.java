@@ -30,9 +30,9 @@ import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.adapter.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.adapter.auth.device.UsernamePasswordCredentials;
-import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;

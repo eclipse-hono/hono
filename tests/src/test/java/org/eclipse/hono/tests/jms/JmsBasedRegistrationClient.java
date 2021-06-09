@@ -22,10 +22,10 @@ import java.util.Objects;
 import javax.jms.JMSException;
 import javax.jms.Message;
 
-import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
+import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;

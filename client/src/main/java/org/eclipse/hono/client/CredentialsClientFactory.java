@@ -22,7 +22,7 @@ import io.vertx.core.Future;
 /**
  * A factory for creating clients for Hono's Credentials API.
  *
- * @deprecated Use {@code org.eclipse.hono.adapter.client.registry.CredentialsClient} instead.
+ * @deprecated Use {@code org.eclipse.hono.client.registry.CredentialsClient} instead.
  */
 @Deprecated
 public interface CredentialsClientFactory extends ConnectionLifecycle<HonoConnection> {

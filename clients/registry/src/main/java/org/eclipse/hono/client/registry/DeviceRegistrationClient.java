@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.adapter.client.registry;
+package org.eclipse.hono.client.registry;
 
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.RegistrationAssertion;

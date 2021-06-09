@@ -20,7 +20,7 @@ import static org.mockito.Mockito.mock;
 
 import org.eclipse.hono.adapter.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.adapter.auth.device.X509AuthProvider;
-import org.eclipse.hono.adapter.client.registry.CredentialsClient;
+import org.eclipse.hono.client.registry.CredentialsClient;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 

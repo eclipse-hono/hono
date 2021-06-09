@@ -29,7 +29,7 @@ import io.vertx.core.json.JsonObject;
  * Credentials API specification</a> for a description of the result codes returned.
  * </p>
  *
- * @deprecated Use {@code org.eclipse.hono.adapter.client.registry.CredentialsClient} instead.
+ * @deprecated Use {@code org.eclipse.hono.client.registry.CredentialsClient} instead.
  */
 @Deprecated
 public interface CredentialsClient extends RequestResponseClient {

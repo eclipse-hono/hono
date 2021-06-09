@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.adapter.client.registry.amqp;
+package org.eclipse.hono.client.registry.amqp;
 
 import java.net.HttpURLConnection;
 import java.util.HashMap;
@@ -24,7 +24,6 @@ import java.util.function.Supplier;
 import javax.security.auth.x500.X500Principal;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
-import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
@@ -32,6 +31,7 @@ import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.amqp.AbstractRequestResponseServiceClient;
 import org.eclipse.hono.client.amqp.RequestResponseClient;
 import org.eclipse.hono.client.impl.CachingClientFactory;
+import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.Pair;

@@ -17,11 +17,11 @@ import java.net.HttpURLConnection;
 import java.util.Base64;
 import java.util.Objects;
 
-import org.eclipse.hono.adapter.client.registry.CredentialsClient;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.JsonHelper;

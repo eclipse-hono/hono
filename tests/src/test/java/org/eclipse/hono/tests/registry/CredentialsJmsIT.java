@@ -16,7 +16,7 @@ package org.eclipse.hono.tests.registry;
 import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
 
-import org.eclipse.hono.adapter.client.registry.CredentialsClient;
+import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.jms.JmsBasedCredentialsClient;
 import org.eclipse.hono.tests.jms.JmsBasedHonoConnection;

@@ -13,9 +13,9 @@
 
 package org.eclipse.hono.commandrouter;
 
-import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.commandrouter.impl.CommandTargetMapperImpl;
 import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
 import org.eclipse.hono.util.DeviceConnectionConstants;

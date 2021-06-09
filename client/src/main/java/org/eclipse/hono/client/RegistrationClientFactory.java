@@ -22,7 +22,7 @@ import io.vertx.core.Future;
 /**
  * A factory for creating clients for Hono's Device Registration API.
  *
- * @deprecated Use {@code org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient} instead.
+ * @deprecated Use {@code org.eclipse.hono.client.registry.DeviceRegistrationClient} instead.
  */
 @Deprecated
 public interface RegistrationClientFactory extends ConnectionLifecycle<HonoConnection> {

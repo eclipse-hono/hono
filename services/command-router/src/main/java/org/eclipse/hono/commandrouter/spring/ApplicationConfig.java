@@ -15,16 +15,16 @@ package org.eclipse.hono.commandrouter.spring;
 
 import java.util.Optional;
 
-import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
-import org.eclipse.hono.adapter.client.registry.TenantClient;
-import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
-import org.eclipse.hono.adapter.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
+import org.eclipse.hono.client.registry.DeviceRegistrationClient;
+import org.eclipse.hono.client.registry.TenantClient;
+import org.eclipse.hono.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
+import org.eclipse.hono.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.commandrouter.CacheBasedDeviceConnectionService;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;

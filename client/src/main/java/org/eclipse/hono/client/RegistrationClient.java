@@ -25,7 +25,7 @@ import io.vertx.core.json.JsonObject;
  * See Hono's <a href="https://www.eclipse.org/hono/docs/api/device-registration/">
  * Registration API specification</a> for a description of the result codes returned.
  *
- * @deprecated Use {@code org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient} instead.
+ * @deprecated Use {@code org.eclipse.hono.client.registry.DeviceRegistrationClient} instead.
  */
 @Deprecated
 public interface RegistrationClient extends RequestResponseClient {

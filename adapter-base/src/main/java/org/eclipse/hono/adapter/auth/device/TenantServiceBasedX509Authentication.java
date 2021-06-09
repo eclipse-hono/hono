@@ -28,8 +28,8 @@ import java.util.Set;
 
 import javax.security.auth.x500.X500Principal;
 
-import org.eclipse.hono.adapter.client.registry.TenantClient;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.service.auth.X509CertificateChainValidator;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsConstants;

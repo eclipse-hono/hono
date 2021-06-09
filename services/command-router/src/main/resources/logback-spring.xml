@@ -30,6 +30,8 @@
   <springProfile name="trace">
     <logger name="org.eclipse.hono.adapter.client" level="TRACE"/>
     <logger name="org.eclipse.hono.client" level="TRACE"/>
+    <logger name="org.eclipse.hono.client.registry" level="TRACE"/>
+    <logger name="org.eclipse.hono.client.telemetry" level="TRACE"/>
     <logger name="org.eclipse.hono.commandrouter" level="TRACE"/>
     <logger name="org.eclipse.hono.connection" level="TRACE"/>
     <logger name="org.eclipse.hono.service" level="TRACE"/>
@@ -42,6 +44,8 @@
   <springProfile name="dev">
     <logger name="org.eclipse.hono.adapter.client" level="DEBUG"/>
     <logger name="org.eclipse.hono.client" level="DEBUG"/>
+    <logger name="org.eclipse.hono.client.registry" level="DEBUG"/>
+    <logger name="org.eclipse.hono.client.telemetry" level="DEBUG"/>
     <logger name="org.eclipse.hono.connection" level="DEBUG"/>
     <logger name="org.eclipse.hono.commandrouter" level="DEBUG"/>
     <logger name="org.eclipse.hono.service" level="DEBUG"/>
