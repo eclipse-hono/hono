@@ -21,7 +21,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -234,14 +233,8 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
             .forEach(s -> tenantsToEnable.addLast(Pair.of(s, 1)));
 
         if (isProcessingRequired) {
-            final Span processingSpan = tracer.buildSpan("re-enable command routing for tenants")
-                    .addReference(References.CHILD_OF, span.context())
-                    .start();
-            processingSpan.log(Map.of("number of tenant IDs", tenantIds.size()));
-            // make sure to report the span in a timely fashion
-            // so that it can be seen in the tracing back end
-            processingSpan.finish();
-            processTenantQueue(processingSpan.context());
+            LOG.debug("triggering re-enabling of command routing");
+            processTenantQueue(span.context());
         }
         return Future.succeededFuture(CommandRouterResult.from(HttpURLConnection.HTTP_NO_CONTENT));
     }
@@ -251,7 +244,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
         final var attempt = tenantsToEnable.pollFirst();
         if (attempt == null) {
             reenabledTenants.clear();
-            tenantsInProcess.clear();
+            LOG.debug("finished re-enabling of command routing");
         } else {
             tenantsInProcess.add(attempt.one());
             final long delay = calculateDelayMillis(attempt.two());
