@@ -58,6 +58,7 @@ import org.slf4j.LoggerFactory;
 
 import io.micrometer.core.instrument.Timer.Sample;
 import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.opentracing.log.Fields;
 import io.opentracing.tag.StringTag;
 import io.opentracing.tag.Tag;
@@ -81,6 +82,8 @@ import io.vertx.ext.web.handler.ChainAuthHandler;
  * A Vert.x based protocol adapter for receiving HTTP push messages from a LoRa provider's network server.
  */
 public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAdapter<LoraProtocolAdapterProperties> {
+
+    static final String SPAN_NAME_PROCESS_MESSAGE = "process message";
 
     private static final Logger LOG = LoggerFactory.getLogger(LoraProtocolAdapter.class);
 
@@ -142,7 +145,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
         log.debug("check command subscriptions on timeout of tenant [{}]", tenantId);
         final Span span = TracingHelper
                 .buildSpan(tracer, null, "check command subscriptions on tenant timeout", getClass().getSimpleName())
-                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
                 .start();
         TracingHelper.setDeviceTags(span, tenantId, null);
         // check if tenant still exists
@@ -235,78 +238,106 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
 
     void handleProviderRoute(final HttpContext ctx, final LoraProvider provider) {
 
-        LOG.debug("processing request from provider [name: {}, URI: {}", provider.getProviderName(),
+        LOG.debug("processing request from provider [name: {}, URI: {}]", provider.getProviderName(),
                 ctx.getRoutingContext().normalisedPath());
         final Span currentSpan = TracingHelper.buildServerChildSpan(
                 tracer,
                 TracingHandler.serverSpanContext(ctx.getRoutingContext()),
-                "process message",
+                SPAN_NAME_PROCESS_MESSAGE,
                 getClass().getSimpleName())
                 .start();
 
         TAG_LORA_PROVIDER.set(currentSpan, provider.getProviderName());
         ctx.put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, provider.getProviderName());
 
-        if (ctx.isDeviceAuthenticated()) {
-            final Device gatewayDevice = ctx.getAuthenticatedDevice();
-            TracingHelper.setDeviceTags(currentSpan, gatewayDevice.getTenantId(), gatewayDevice.getDeviceId());
+        if (!ctx.isDeviceAuthenticated()) {
+            logUnsupportedUserType(ctx.getRoutingContext(), currentSpan);
+            currentSpan.finish();
+            handle401(ctx.getRoutingContext());
+            return;
+        }
 
-            try {
-                final LoraMessage loraMessage = provider.getMessage(ctx.getRoutingContext());
-                final LoraMessageType type = loraMessage.getType();
-                currentSpan.log(Map.of("message type", type));
-                final String deviceId = loraMessage.getDevEUIAsString();
-                currentSpan.setTag(TAG_LORA_DEVICE_ID, deviceId);
+        final Device gatewayDevice = ctx.getAuthenticatedDevice();
+        TracingHelper.setDeviceTags(currentSpan, gatewayDevice.getTenantId(), gatewayDevice.getDeviceId());
+        try {
+            final LoraMessage loraMessage = provider.getMessage(ctx.getRoutingContext());
+            final LoraMessageType type = loraMessage.getType();
+            currentSpan.log(Map.of("message type", type));
+            final String deviceId = loraMessage.getDevEUIAsString();
+            currentSpan.setTag(TAG_LORA_DEVICE_ID, deviceId);
 
-                switch (type) {
-                case UPLINK:
-                    final UplinkLoraMessage uplinkMessage = (UplinkLoraMessage) loraMessage;
-                    final Buffer payload = uplinkMessage.getPayload();
+            switch (type) {
+            case UPLINK:
+                final UplinkLoraMessage uplinkMessage = (UplinkLoraMessage) loraMessage;
+                final Buffer payload = uplinkMessage.getPayload();
 
-                    Optional.ofNullable(uplinkMessage.getMetaData())
+                Optional.ofNullable(uplinkMessage.getMetaData())
                         .ifPresent(metaData -> ctx.put(LoraConstants.APP_PROPERTY_META_DATA, metaData));
 
-                    Optional.ofNullable(uplinkMessage.getAdditionalData())
-                            .ifPresent(additionalData -> ctx.put(LoraConstants.APP_PROPERTY_ADDITIONAL_DATA, additionalData));
+                Optional.ofNullable(uplinkMessage.getAdditionalData())
+                        .ifPresent(additionalData -> ctx.put(LoraConstants.APP_PROPERTY_ADDITIONAL_DATA, additionalData));
 
-                    final String contentType;
-                    if (payload.length() > 0) {
-                        contentType = String.format(
-                                "%s%s",
-                                LoraConstants.CONTENT_TYPE_LORA_BASE,
-                                provider.getProviderName());
-                    } else {
-                        contentType = EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION;
-                    }
+                final String contentType = payload.length() > 0
+                        ? LoraConstants.CONTENT_TYPE_LORA_BASE + provider.getProviderName()
+                        : EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION;
 
-                    uploadTelemetryMessage(ctx, gatewayDevice.getTenantId(), deviceId, payload, contentType);
-                    final SubscriptionKey key = new SubscriptionKey(gatewayDevice.getTenantId(),
-                        gatewayDevice.getDeviceId());
-                    if (!commandSubscriptions.containsKey(key)) {
-                        createCommandConsumer(
-                                gatewayDevice.getTenantId(),
-                                gatewayDevice.getDeviceId(),
-                                this::handleCommand,
-                                currentSpan.context())
-                                        .map(commandConsumer -> commandSubscriptions.put(key, Pair.of(commandConsumer, provider)));
-                    }
-                    break;
-                default:
-                    LOG.debug("discarding message of unsupported type [tenant: {}, device-id: {}, type: {}]",
-                            gatewayDevice.getTenantId(), deviceId, type);
-                    currentSpan.log("discarding message of unsupported type");
-                    // discard the message but return 202 to not cause errors on the LoRa provider side
-                    handle202(ctx.getRoutingContext());
-                }
-            } catch (final LoraProviderMalformedPayloadException e) {
-                LOG.debug("error processing request from provider [name: {}]", provider.getProviderName(), e);
-                TracingHelper.logError(currentSpan, "error processing request", e);
-                handle400(ctx.getRoutingContext(), ERROR_MSG_INVALID_PAYLOAD);
+                currentSpan.finish(); // uploadTelemetryMessage will finish the root span, therefore finish child span here already
+                uploadTelemetryMessage(ctx, gatewayDevice.getTenantId(), deviceId, payload, contentType);
+                registerCommandConsumerIfNeeded(provider, gatewayDevice, currentSpan.context());
+                break;
+            default:
+                LOG.debug("discarding message of unsupported type [tenant: {}, device-id: {}, type: {}]",
+                        gatewayDevice.getTenantId(), deviceId, type);
+                currentSpan.log("discarding message of unsupported type");
+                currentSpan.finish();
+                // discard the message but return 202 to not cause errors on the LoRa provider side
+                handle202(ctx.getRoutingContext());
             }
-        } else {
-            handleUnsupportedUserType(ctx.getRoutingContext(), currentSpan);
+        } catch (final LoraProviderMalformedPayloadException e) {
+            LOG.debug("error processing request from provider [name: {}]", provider.getProviderName(), e);
+            TracingHelper.logError(currentSpan, "error processing request", e);
+            currentSpan.finish();
+            handle400(ctx.getRoutingContext(), ERROR_MSG_INVALID_PAYLOAD);
         }
-        currentSpan.finish();
+    }
+
+    private void registerCommandConsumerIfNeeded(final LoraProvider provider, final Device gatewayDevice,
+            final SpanContext context) {
+        final String tenantId = gatewayDevice.getTenantId();
+        final String gatewayId = gatewayDevice.getDeviceId();
+        final SubscriptionKey key = new SubscriptionKey(tenantId, gatewayId);
+        if (commandSubscriptions.containsKey(key)) {
+            return;
+        }
+        // use FOLLOWS_FROM span since this operation is decoupled from the rest of the request handling
+        final Span currentSpan = TracingHelper.buildFollowsFromSpan(tracer, context, "create command consumer")
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
+                .start();
+        TracingHelper.setDeviceTags(currentSpan, tenantId, gatewayId);
+        TAG_LORA_PROVIDER.set(currentSpan, provider.getProviderName());
+        getRegistrationClient()
+                .assertRegistration(tenantId, gatewayId, null, currentSpan.context())
+                .onFailure(thr -> {
+                    LOG.debug("error asserting gateway registration, no command consumer will be created [tenant: {}, gateway-id: {}]",
+                            tenantId, gatewayId);
+                    TracingHelper.logError(currentSpan, "error asserting gateway registration, no command consumer will be created", thr);
+                })
+                .compose(assertion -> {
+                    if (assertion.getCommandEndpoint() == null) {
+                        LOG.debug("gateway has no command endpoint defined, skipping command consumer creation [tenant: {}, gateway-id: {}]",
+                                tenantId, gatewayId);
+                        currentSpan.log("gateway has no command endpoint defined, skipping command consumer creation");
+                        return Future.succeededFuture((Void) null);
+                    }
+                    return createCommandConsumer(
+                            tenantId,
+                            gatewayId,
+                            this::handleCommand,
+                            currentSpan.context())
+                            .onFailure(thr -> TracingHelper.logError(currentSpan, thr))
+                            .map(commandConsumer -> commandSubscriptions.put(key, Pair.of(commandConsumer, provider)))
+                            .mapEmpty();
+                }).onComplete(ar -> currentSpan.finish());
     }
 
     private void handleCommand(final CommandContext commandContext) {
@@ -426,22 +457,23 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                 .start();
 
         if (ctx.user() instanceof Device) {
+            currentSpan.finish();
             // Some providers use OPTIONS request to check if request works. Therefore returning 200.
             handle200(ctx);
         } else {
-            handleUnsupportedUserType(ctx, currentSpan);
+            logUnsupportedUserType(ctx, currentSpan);
+            currentSpan.finish();
+            handle401(ctx);
         }
-        currentSpan.finish();
     }
 
-    private void handleUnsupportedUserType(final RoutingContext ctx, final Span currentSpan) {
+    private void logUnsupportedUserType(final RoutingContext ctx, final Span currentSpan) {
         final String userType = Optional.ofNullable(ctx.user()).map(user -> user.getClass().getName()).orElse("null");
         TracingHelper.logError(
                 currentSpan,
                 Map.of(Fields.MESSAGE, "request contains unsupported type of user credentials",
                         "type", userType));
         LOG.debug("request contains unsupported type of credentials [{}], returning 401", userType);
-        handle401(ctx);
     }
 
     private void handle200(final RoutingContext ctx) {
