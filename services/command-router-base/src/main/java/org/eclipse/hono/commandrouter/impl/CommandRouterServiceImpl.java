@@ -17,11 +17,13 @@ import java.net.HttpURLConnection;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -37,18 +39,19 @@ import org.eclipse.hono.service.commandrouter.CommandRouterResult;
 import org.eclipse.hono.service.commandrouter.CommandRouterService;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Lifecycle;
+import org.eclipse.hono.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.opentracing.References;
 import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.log.Fields;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.impl.ConcurrentHashSet;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
 
@@ -65,7 +68,10 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
     private final DeviceConnectionInfo deviceConnectionInfo;
     private final MessagingClient<CommandConsumerFactory> commandConsumerFactories;
     private final Tracer tracer;
-    private final Deque<String> tenantsToEnable = new LinkedList<>();
+    private final Deque<Pair<String, Integer>> tenantsToEnable = new LinkedList<>();
+    private final Set<String> reenabledTenants = new HashSet<>();
+    private final Set<String> tenantsInProcess = new HashSet<>();
+    private final AtomicBoolean running = new AtomicBoolean();
 
     /**
      * Vert.x context that this service has been started in.
@@ -123,12 +129,14 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
             return Future.failedFuture("no command consumer factories set");
         }
 
-        registrationClient.start();
-        tenantClient.start();
-        if (deviceConnectionInfo instanceof Lifecycle) {
-            ((Lifecycle) deviceConnectionInfo).start();
+        if (running.compareAndSet(false, true)) {
+            registrationClient.start();
+            tenantClient.start();
+            if (deviceConnectionInfo instanceof Lifecycle) {
+                ((Lifecycle) deviceConnectionInfo).start();
+            }
+            commandConsumerFactories.start();
         }
-        commandConsumerFactories.start();
 
         return Future.succeededFuture();
     }
@@ -137,24 +145,27 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
     public Future<Void> stop() {
         LOG.info("stopping command router");
 
-        @SuppressWarnings("rawtypes")
-        final List<Future> results = new ArrayList<>();
-        results.add(registrationClient.stop());
-        results.add(tenantClient.stop());
-        if (deviceConnectionInfo instanceof Lifecycle) {
-            results.add(((Lifecycle) deviceConnectionInfo).stop());
+        if (running.compareAndSet(true, false)) {
+            @SuppressWarnings("rawtypes")
+            final List<Future> results = new ArrayList<>();
+            results.add(registrationClient.stop());
+            results.add(tenantClient.stop());
+            if (deviceConnectionInfo instanceof Lifecycle) {
+                results.add(((Lifecycle) deviceConnectionInfo).stop());
+            }
+            results.add(commandConsumerFactories.stop());
+            tenantsToEnable.clear();
+            return CompositeFuture.all(results)
+                    .onFailure(t -> {
+                        LOG.info("error while stopping command router", t);
+                    })
+                    .map(ok -> {
+                        LOG.info("successfully stopped command router");
+                        return (Void) null;
+                    });
+        } else {
+            return Future.succeededFuture();
         }
-        results.add(commandConsumerFactories.stop());
-
-        return CompositeFuture.all(results)
-                .recover(t -> {
-                    LOG.info("error while stopping command router", t);
-                    return Future.failedFuture(t);
-                })
-                .map(ok -> {
-                    LOG.info("successfully stopped command router");
-                    return (Void) null;
-                });
     }
 
     @Override
@@ -207,55 +218,101 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
 
     @Override
     public Future<CommandRouterResult> enableCommandRouting(final List<String> tenantIds, final Span span) {
+
+        if (!running.get()) {
+            return Future.succeededFuture(CommandRouterResult.from(HttpURLConnection.HTTP_UNAVAILABLE));
+        }
+
         Objects.requireNonNull(tenantIds);
         final boolean isProcessingRequired = tenantsToEnable.isEmpty();
-        tenantsToEnable.addAll(tenantIds);
+        tenantIds.stream()
+            .filter(s -> !reenabledTenants.contains(s))
+            .filter(s -> !tenantsInProcess.contains(s))
+            .filter(s -> tenantsToEnable.stream()
+                .allMatch(entry -> !entry.one().equals(s)))
+            .forEach(s -> tenantsToEnable.addLast(Pair.of(s, 1)));
+
         if (isProcessingRequired) {
-            final Span processingSpan = tracer.buildSpan("re-enable command routing for tenants")
-                    .addReference(References.FOLLOWS_FROM, span.context())
-                    .start();
-            processTenantQueue(new ConcurrentHashSet<>(), processingSpan);
+            LOG.debug("triggering re-enabling of command routing");
+            processTenantQueue(span.context());
         }
         return Future.succeededFuture(CommandRouterResult.from(HttpURLConnection.HTTP_NO_CONTENT));
     }
 
-    private void processTenantQueue(final Set<String> processedTenants, final Span parentSpan) {
-        final String tenantId = tenantsToEnable.poll();
-        if (tenantId == null) {
-            parentSpan.finish();
+    private void processTenantQueue(final SpanContext tracingContext) {
+
+        final var attempt = tenantsToEnable.pollFirst();
+        if (attempt == null) {
+            // at this point there might still be pending (re-try) tasks on the event loop,
+            // thus we need to wait for those to have finished before declaring victory
+            if (tenantsInProcess.isEmpty()) {
+                reenabledTenants.clear();
+                LOG.debug("finished re-enabling of command routing");
+            }
+        } else {
+            tenantsInProcess.add(attempt.one());
+            final long delay = calculateDelayMillis(attempt.two());
+            if (delay <= 0) {
+                context.runOnContext(go -> activateCommandRouting(attempt, tracingContext));
+            } else {
+                context.owner().setTimer(delay, tid -> activateCommandRouting(attempt, tracingContext));
+            }
+        }
+    }
+
+    private long calculateDelayMillis(final int attemptNo) {
+        if (attemptNo == 1) {
+            // run first attempt immediately
+            return 0L;
+        } else if (attemptNo > 6) {
+            // cap delay at 10secs
+            return 10000L;
+        } else {
+            // wait for 2^attemptNo times 100 millis before retrying
+            return (1 << attemptNo) * 100L;
+        }
+    }
+
+    private void activateCommandRouting(
+            final Pair<String, Integer> attempt,
+            final SpanContext tracingContext) {
+
+        if (!running.get()) {
+            // component has been stopped, no need to create command consumer in this case
+            tenantsInProcess.remove(attempt.one());
             return;
         }
-        context.runOnContext(go -> {
-            if (processedTenants.contains(tenantId)) {
-                parentSpan.log(Map.of(
-                        Fields.MESSAGE, "skipping tenant, already processed ...",
-                        TracingHelper.TAG_TENANT_ID.getKey(), tenantId));
-            } else {
-                final Span span = tracer.buildSpan("re-enable command routing for tenant")
-                        .addReference(References.CHILD_OF, parentSpan.context())
-                        .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
-                        .start();
-                tenantClient.get(tenantId, span.context())
-                    .map(tenantObject -> commandConsumerFactories.getClient(tenantObject))
-                    .map(factory -> factory.createCommandConsumer(tenantId, span.context()))
-                    .onSuccess(ok -> {
-                        span.log("successfully created command consumer");
-                        processedTenants.add(tenantId);
-                    })
-                    .onFailure(t -> {
-                        TracingHelper.logError(span, "failed to create command consumer", t);
-                        if (t instanceof ServerErrorException) {
-                            // add to end of queue in order to retry at a later time
-                            span.log("marking tenant for later re-try to create command consumer");
-                            tenantsToEnable.add(tenantId);
-                        }
-                    })
-                    .onComplete(r -> {
-                        span.finish();
-                    });
-            }
-            processTenantQueue(processedTenants, parentSpan);
-        });
+
+        final Span span = tracer.buildSpan("re-enable command routing for tenant")
+                .addReference(References.FOLLOWS_FROM, tracingContext)
+                .withTag(TracingHelper.TAG_TENANT_ID, attempt.one())
+                .start();
+        final var logEntries = new HashMap<String, Object>(2);
+        logEntries.put("attempt#", attempt.two());
+        tenantClient.get(attempt.one(), span.context())
+            .map(tenantObject -> commandConsumerFactories.getClient(tenantObject))
+            .map(factory -> factory.createCommandConsumer(attempt.one(), span.context()))
+            .onSuccess(ok -> {
+                logEntries.put(Fields.MESSAGE, "successfully created command consumer");
+                span.log(logEntries);
+                reenabledTenants.add(attempt.one());
+            })
+            .onFailure(t -> {
+                logEntries.put(Fields.MESSAGE, "failed to create command consumer");
+                logEntries.put(Fields.ERROR_OBJECT, t);
+                TracingHelper.logError(span, logEntries);
+                if (t instanceof ServerErrorException) {
+                    // add to end of queue in order to retry at a later time
+                    LOG.info("failed to create command consumer [attempt#: {}]", attempt.two(), t);
+                    span.log("marking tenant for later re-try to create command consumer");
+                    tenantsToEnable.addLast(Pair.of(attempt.one(), attempt.two() + 1));
+                }
+            })
+            .onComplete(r -> {
+                span.finish();
+                tenantsInProcess.remove(attempt.one());
+                processTenantQueue(tracingContext);
+            });
     }
 
     @Override
