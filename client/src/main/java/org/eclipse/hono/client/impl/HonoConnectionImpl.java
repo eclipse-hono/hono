@@ -16,6 +16,7 @@ import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -458,10 +459,10 @@ public class HonoConnectionImpl implements HonoConnection {
         for (final DisconnectListener<HonoConnection> listener : disconnectListeners) {
             notifyDisconnectHandler(listener);
         }
-        oneTimeDisconnectListeners.removeIf(listener -> {
-            notifyDisconnectHandler(listener);
-            return true;
-        });
+        for (final Iterator<DisconnectListener<HonoConnection>> iter = oneTimeDisconnectListeners.iterator(); iter.hasNext();) {
+            notifyDisconnectHandler(iter.next());
+            iter.remove();
+        }
     }
 
     private void notifyDisconnectHandler(final DisconnectListener<HonoConnection> listener) {

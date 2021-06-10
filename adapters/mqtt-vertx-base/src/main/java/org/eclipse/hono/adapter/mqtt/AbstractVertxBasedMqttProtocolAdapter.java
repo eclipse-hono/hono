@@ -1739,10 +1739,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         private CompositeFuture removeAllCommandSubscriptions(final Span span) {
             @SuppressWarnings("rawtypes")
             final List<Future> removalFutures = new ArrayList<>(commandSubscriptions.size());
-            commandSubscriptions.values().removeIf(pair -> {
+            for (final var iter = commandSubscriptions.values().iterator(); iter.hasNext();) {
+                final Pair<CommandSubscription, CommandConsumer> pair = iter.next();
                 pair.one().logUnsubscribe(span);
-                return removalFutures.add(onCommandSubscriptionRemoved(pair, span));
-            });
+                removalFutures.add(onCommandSubscriptionRemoved(pair, span));
+                iter.remove();
+            }
             return CompositeFuture.join(removalFutures);
         }
 
