@@ -857,30 +857,36 @@ public final class IntegrationTestSupport {
                                     .map(tenantId -> registry.removeTenant(tenantId, true))
                                     .collect(Collectors.toList()));
                 })
-                .compose(ok -> registry.searchTenants(
-                        Optional.of(30),
-                        Optional.of(0),
-                        List.of(),
-                        List.of()))
-                .map(searchResponse -> {
-                    switch (searchResponse.statusCode()) {
-                    case HttpURLConnection.HTTP_OK:
-                        final JsonObject response = searchResponse.bodyAsJsonObject();
-                        if (LOGGER.isDebugEnabled()) {
-                            LOGGER.debug("search tenants result: {}{}", System.lineSeparator(), response.encodePrettily());
-                        }
-                        return response.getInteger("total");
-                    case HttpURLConnection.HTTP_NOT_FOUND:
-                        return 0;
-                    default:
-                        LOGGER.debug("search for tenants failed: {} - {}",
-                                searchResponse.statusCode(), searchResponse.statusMessage());
-                        return 0;
+                .compose(ok -> {
+                    if (registry == null) {
+                        return Future.succeededFuture(0);
+                    } else {
+                        return registry.searchTenants(
+                                Optional.of(30),
+                                Optional.of(0),
+                                List.of(),
+                                List.of())
+                            .map(searchResponse -> {
+                                switch (searchResponse.statusCode()) {
+                                case HttpURLConnection.HTTP_OK:
+                                    final JsonObject response = searchResponse.bodyAsJsonObject();
+                                    if (LOGGER.isDebugEnabled()) {
+                                        LOGGER.debug("search tenants result: {}{}", System.lineSeparator(), response.encodePrettily());
+                                    }
+                                    return response.getInteger("total");
+                                case HttpURLConnection.HTTP_NOT_FOUND:
+                                    return 0;
+                                default:
+                                    LOGGER.debug("search for tenants failed: {} - {}",
+                                            searchResponse.statusCode(), searchResponse.statusMessage());
+                                    return 0;
+                                }
+                            })
+                            .otherwise(t -> {
+                                LOGGER.info("error querying tenants endpoint", t);
+                                return 0;
+                            });
                     }
-                })
-                .otherwise(t -> {
-                    LOGGER.info("error querying tenants endpoint", t);
-                    return 0;
                 })
                 // wait for deletion of Kafka topics result
                 .compose(tenantsInRegistry -> tenantTopicsDeletionDoneFuture.map(tenantsInRegistry))
