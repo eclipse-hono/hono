@@ -16,6 +16,7 @@ package org.eclipse.hono.commandrouter.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -24,11 +25,14 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.net.HttpURLConnection;
+import java.util.Deque;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.hono.adapter.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.adapter.client.registry.TenantClient;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.util.MessagingClient;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterServiceConfigProperties;
@@ -51,11 +55,13 @@ import io.vertx.core.Vertx;
  * Tests verifying behavior of {@link CommandRouterServiceImpl}.
  *
  */
-class CommandRouterServiceImplTest {
+public class CommandRouterServiceImplTest {
 
     private CommandRouterServiceImpl service;
     private CommandConsumerFactory commandConsumerFactory;
     private Context context;
+    private Vertx vertx;
+    private TenantClient tenantClient;
 
     /**
      * Sets up the fixture.
@@ -63,16 +69,21 @@ class CommandRouterServiceImplTest {
     @BeforeEach
     void setUp() {
         final var registrationClient = mock(DeviceRegistrationClient.class);
-        final var tenantClient = mock(TenantClient.class);
+        when(registrationClient.stop()).thenReturn(Future.succeededFuture());
+        tenantClient = mock(TenantClient.class);
+        when(tenantClient.stop()).thenReturn(Future.succeededFuture());
         when(tenantClient.get(anyString(), any())).thenAnswer(invocation -> {
             return Future.succeededFuture(TenantObject.from(invocation.getArgument(0)));
         });
         final var deviceConnectionInfo = mock(DeviceConnectionInfo.class);
         commandConsumerFactory = mock(CommandConsumerFactory.class);
+        when(commandConsumerFactory.start()).thenReturn(Future.succeededFuture());
+        when(commandConsumerFactory.stop()).thenReturn(Future.succeededFuture());
         final MessagingClient<CommandConsumerFactory> factories = new MessagingClient<>();
         factories.setClient(MessagingType.amqp, commandConsumerFactory);
-        final Vertx vertx = mock(Vertx.class);
+        vertx = mock(Vertx.class);
         context = VertxMockSupport.mockContext(vertx);
+        when(context.owner()).thenReturn(vertx);
         service = new CommandRouterServiceImpl(
                 new CommandRouterServiceConfigProperties(),
                 registrationClient,
@@ -81,40 +92,200 @@ class CommandRouterServiceImplTest {
                 factories,
                 NoopTracerFactory.create());
         service.setContext(context);
+        service.start();
     }
 
+    /**
+     * Verifies that command routing is enabled for a given set of tenant IDs.
+     */
     @Test
-    void testEnableCommandRoutingCreatesCommandConsumers() {
+    public void testEnableCommandRoutingCreatesCommandConsumers() {
 
-        final AtomicReference<Handler<Void>> firstHandler = new AtomicReference<>();
+        final Deque<Handler<Void>> eventLoop = new LinkedList<>();
         doAnswer(invocation -> {
-            final Handler<Void> codeToRun = invocation.getArgument(0);
-            if (firstHandler.compareAndSet(null, codeToRun)) {
-                return null;
-            } else {
-                codeToRun.handle(null);
-                return null;
-            }
+            eventLoop.addLast(invocation.getArgument(0));
+            return null;
         }).when(context).runOnContext(VertxMockSupport.anyHandler());
-
 
         final List<String> firstTenants = List.of("tenant1", "tenant2", "tenant3");
         final List<String> secondTenants = List.of("tenant3", "tenant4");
         // WHEN submitting the first list of tenants to enable
         service.enableCommandRouting(firstTenants, NoopSpan.INSTANCE);
-        assertThat(firstHandler.get()).isNotNull();
         // THEN no command consumer has been created yet
         verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
+        // AND a task for processing the first tenant has been scheduled
+        assertThat(eventLoop).hasSize(1);
         // WHEN submitting the second list of tenants
         service.enableCommandRouting(secondTenants, NoopSpan.INSTANCE);
         // still no command consumer has been created
         verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
-        // but when the handler for creating the initial tenant is being run
-        firstHandler.get().handle(null);
-        // THEN a command consumer is being created once for each tenant
+        // AND no additional task has been scheduled
+        assertThat(eventLoop).hasSize(1);
+
+        // WHEN running the next task on the event loop
+        final var task = eventLoop.pollFirst();
+        task.handle(null);
+        // THEN a command consumer is being created
         verify(commandConsumerFactory).createCommandConsumer(eq("tenant1"), any());
+        // AND a new task has been added to the event loop
+        assertThat(eventLoop).hasSize(1);
+        // WHEN running the next task on the event loop
+        eventLoop.pollFirst().handle(null);
+        // THEN a command consumer is being created
         verify(commandConsumerFactory).createCommandConsumer(eq("tenant2"), any());
+        // AND a new task has been added to the event loop
+        assertThat(eventLoop).hasSize(1);
+        // WHEN running the next task on the event loop
+        eventLoop.pollFirst().handle(null);
+        // THEN a single command consumer is being created for the duplicate tenant3 ID
         verify(commandConsumerFactory).createCommandConsumer(eq("tenant3"), any());
+        // AND a new task has been added to the event loop
+        assertThat(eventLoop).hasSize(1);
+        // WHEN running the next task on the event loop
+        eventLoop.pollFirst().handle(null);
+        // THEN a command consumer is being created
         verify(commandConsumerFactory).createCommandConsumer(eq("tenant4"), any());
+        // AND no new task has been added to the event loop
+        assertThat(eventLoop).isEmpty();
+    }
+
+    /**
+     * Verifies that exponential back-off is used for rescheduling attempts
+     * to enable command routing if an attempt fails.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testEnableCommandRoutingUsesExponentialBackoff() {
+
+        final Deque<Handler<?>> eventLoop = new LinkedList<>();
+        doAnswer(invocation -> {
+            eventLoop.addLast(invocation.getArgument(0));
+            return null;
+        }).when(context).runOnContext(VertxMockSupport.anyHandler());
+
+        when(vertx.setTimer(anyLong(), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
+            eventLoop.addLast(invocation.getArgument(1));
+            return 1L;
+        });
+
+        when(tenantClient.get(eq("tenant1"), any())).thenReturn(
+                Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)),
+                Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)),
+                Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)),
+                Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)),
+                Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)),
+                Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)),
+                Future.succeededFuture(TenantObject.from("tenant1")));
+
+        final List<String> firstTenants = List.of("tenant1");
+        service.enableCommandRouting(firstTenants, NoopSpan.INSTANCE);
+        // THEN no command consumer has been created yet
+        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
+        // AND a first task to process the first tenant ID has been scheduled
+        verify(context).runOnContext(VertxMockSupport.anyHandler());
+        assertThat(eventLoop).hasSize(1);
+
+        // WHEN running the next task on the event loop
+        eventLoop.pollFirst().handle(null);
+        // THEN no command consumer has been created yet
+        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
+        // AND a new task for retrying the attempt has been scheduled with a
+        // delay corresponding to the number of unsuccessful attempts that have been made
+        verify(vertx).setTimer(eq(400L), VertxMockSupport.anyHandler());
+        assertThat(eventLoop).hasSize(1);
+
+        // WHEN running the next task on the event loop
+        eventLoop.pollFirst().handle(null);
+        // THEN no command consumer has been created yet
+        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
+        // AND a new task for retrying the attempt has been scheduled with the
+        // delay corresponding to the number of unsuccessful attempts that have been made
+        verify(vertx).setTimer(eq(800L), VertxMockSupport.anyHandler());
+        assertThat(eventLoop).hasSize(1);
+
+        // WHEN running the next task on the event loop
+        eventLoop.pollFirst().handle(null);
+        // THEN no command consumer has been created yet
+        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
+        // AND a new task for retrying the attempt has been scheduled with a
+        // delay corresponding to the number of unsuccessful attempts that have been made
+        verify(vertx).setTimer(eq(1600L), VertxMockSupport.anyHandler());
+        assertThat(eventLoop).hasSize(1);
+
+        // WHEN adding the same tenant again in between re-tries
+        service.enableCommandRouting(firstTenants, NoopSpan.INSTANCE);
+        // THEN no additional task has been scheduled
+        assertThat(eventLoop).hasSize(1);
+
+        // WHEN running the next task on the event loop
+        eventLoop.pollFirst().handle(null);
+        // THEN no command consumer has been created yet
+        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
+        // AND a new task for retrying the attempt has been scheduled with a
+        // delay corresponding to the number of unsuccessful attempts that have been made
+        verify(vertx).setTimer(eq(3200L), VertxMockSupport.anyHandler());
+        assertThat(eventLoop).hasSize(1);
+
+        // WHEN running the next task on the event loop
+        eventLoop.pollFirst().handle(null);
+        // THEN no command consumer has been created yet
+        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
+        // AND a new task for retrying the attempt has been scheduled with a
+        // delay corresponding to the number of unsuccessful attempts that have been made
+        verify(vertx).setTimer(eq(6400L), VertxMockSupport.anyHandler());
+        assertThat(eventLoop).hasSize(1);
+
+        // WHEN running the next task on the event loop
+        eventLoop.pollFirst().handle(null);
+        // THEN no command consumer has been created yet
+        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
+        // AND a new task for retrying the attempt has been scheduled with maximum delay
+        verify(vertx).setTimer(eq(10000L), VertxMockSupport.anyHandler());
+        assertThat(eventLoop).hasSize(1);
+
+        // WHEN running the next task on the event loop
+        eventLoop.pollFirst().handle(null);
+        // THEN a command consumer has been created for the tenant
+        verify(commandConsumerFactory).createCommandConsumer(eq("tenant1"), any());
+        // AND no new task for retrying the attempt has been added to the event loop
+        assertThat(eventLoop).hasSize(0);
+    }
+
+    /**
+     * Verifies that the stop method effectively prevents command routing being re-enabled for
+     * remaining tenant IDs.
+     */
+    @Test
+    public void testStopPreventsCommandConsumersFromBeingReenabled() {
+
+        final Deque<Handler<?>> eventLoop = new LinkedList<>();
+        doAnswer(invocation -> {
+            eventLoop.addLast(invocation.getArgument(0));
+            return null;
+        }).when(context).runOnContext(VertxMockSupport.anyHandler());
+
+        final List<String> firstTenants = List.of("tenant1");
+        service.enableCommandRouting(firstTenants, NoopSpan.INSTANCE);
+
+        // THEN no command consumer has been created yet
+        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
+        // BUT a first task to process the first tenant ID has been scheduled
+        verify(context).runOnContext(VertxMockSupport.anyHandler());
+        assertThat(eventLoop).hasSize(1);
+
+        // WHEN the component has been stopped
+        service.stop();
+        // THEN no new tenant IDs can be submitted anymore
+        final var result = service.enableCommandRouting(List.of("tenant X"), NoopSpan.INSTANCE);
+        assertThat(result.succeeded()).isTrue();
+        assertThat(result.result().getStatus()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+
+        // WHEN running the next task on the event loop
+        eventLoop.pollFirst().handle(null);
+        // THEN no command consumer has been created
+        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
+        // AND no new task has been scheduled
+        assertThat(eventLoop).hasSize(0);
+        // AND 
     }
 }
