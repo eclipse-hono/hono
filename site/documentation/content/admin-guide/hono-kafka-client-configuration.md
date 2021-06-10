@@ -60,11 +60,8 @@ required to enable Kafka based messaging.
 
 ### Using TLS
 
-The factory can be configured to use TLS for
-
-* authenticating the brokers in the Kafka cluster during connection establishment and
-* (optionally) authenticating to the broker using a client certificate
-
+The factory can be configured to use TLS for authenticating the brokers in the Kafka cluster during connection establishment
+and optionally for authenticating to the broker using a client certificate.
 To use this, a Kafka Producer configuration as described in 
 [Kafka documentation - section "Security"](https://kafka.apache.org/documentation/#security_configclients) needs to be provided. 
 The properties must be prefixed with `HONO_KAFKA_PRODUCERCONFIG_` and `hono.kafka.producerConfig.` respectively as shown in 
@@ -96,11 +93,8 @@ required to enable Kafka based messaging.
 
 ### Using TLS
 
-The factory can be configured to use TLS for
-
-* authenticating the brokers in the Kafka cluster during connection establishment and
-* (optionally) authenticating to the broker using a client certificate
-
+The factory can be configured to use TLS for authenticating the brokers in the Kafka cluster during connection establishment
+and optionally for authenticating to the broker using a client certificate.
 To use this, a Kafka Consumer configuration as described in
 [Kafka documentation - section "Security"](https://kafka.apache.org/documentation/#security_configclients) needs to be provided.
 The properties must be prefixed with `HONO_KAFKA_CONSUMERCONFIG_` and `hono.kafka.consumerConfig.` respectively as shown in
@@ -126,11 +120,8 @@ required to enable Kafka based messaging.
 
 ### Using TLS
 
-The factory can be configured to use TLS for
-
-* authenticating the brokers in the Kafka cluster during connection establishment and
-* (optionally) authenticating to the broker using a client certificate
-
+The factory can be configured to use TLS for authenticating the brokers in the Kafka cluster during connection establishment
+and optionally for authenticating to the broker using a client certificate.
 To use this, a Kafka admin client configuration as described in
 [Kafka documentation - section "Security"](https://kafka.apache.org/documentation/#security_configclients) needs to be provided.
 The properties must be prefixed with `HONO_KAFKA_ADMINCLIENTCONFIG_` and `hono.kafka.adminClientConfig.` respectively as shown in
@@ -143,9 +134,16 @@ The complete reference of available properties and the possible values is availa
 Configuration properties that are common to all the client types described above can be put in a common configuration section.
 This will avoid having to define duplicate configuration properties for the different client types.
 
-Relevant properties are `bootstrap.servers` and the properties related to the TLS configuration (see chapters above).
+Relevant properties are `bootstrap.servers` and the properties related to authentication and TLS configuration (see chapters above).
 
 The properties must be prefixed with `HONO_KAFKA_COMMONCLIENTCONFIG_` and `hono.kafka.commonClientConfig.` respectively.
 
 A property with the same name defined in the configuration of one of the specific client types above will have precedence
 over the common property.
+
+## Required Kafka Version
+
+Hono's protocol adapters (and other components) use the Kafka clients in version 2.6. It is recommended to provide a 
+Kafka cluster with a version number equal or higher to this. While you _might_ get Hono to work with older Kafka brokers, 
+this has not been tested. If you experience any issues using Hono with an older Kafka version, please try to connect it
+to a recent Kafka cluster instead before raising an issue.
