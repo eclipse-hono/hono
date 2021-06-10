@@ -28,6 +28,15 @@ description = "Information about changes in recent Hono releases. Includes new f
   of existing data. In real life deployments this feature has no meaning because write access to data will need to
   be authorized more explicitly anyway, e.g. at the tenant level.
 
+## API Changes
+
+* The client classes used by the protocol adapters for accessing the device registry, the Command Router
+  and the south bound C&C APIs have been reorganized into dedicated modules.
+  In particular, the *adapter*, *adapter-amqp* and *adapter-kafka* modules have been resolved into modules
+  *command*, *command-amqp*, *command-kafka*, *registry*, *registry-amqp*, *telemetry*, *telemetry-amqp* and
+  *telemetry-kafka*. This allows Hono's components to define more specific dependencies on client classes
+  that they require. This change should have no effect on application clients.
+
 ## 1.8.0
 
 ### New Features
