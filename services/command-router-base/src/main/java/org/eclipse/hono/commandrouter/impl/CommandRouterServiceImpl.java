@@ -243,8 +243,12 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
 
         final var attempt = tenantsToEnable.pollFirst();
         if (attempt == null) {
-            reenabledTenants.clear();
-            LOG.debug("finished re-enabling of command routing");
+            // at this point there might still be pending (re-try) tasks on the event loop,
+            // thus we need to wait for those to have finished before declaring victory
+            if (tenantsInProcess.isEmpty()) {
+                reenabledTenants.clear();
+                LOG.debug("finished re-enabling of command routing");
+            }
         } else {
             tenantsInProcess.add(attempt.one());
             final long delay = calculateDelayMillis(attempt.two());
