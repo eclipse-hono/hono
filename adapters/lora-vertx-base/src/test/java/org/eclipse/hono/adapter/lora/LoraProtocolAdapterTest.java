@@ -83,11 +83,8 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
     private static final byte[] TEST_PAYLOAD = "bumxlux".getBytes(StandardCharsets.UTF_8);
     private static final String TEST_PROVIDER = "bumlux";
 
-    private Tracer tracer;
-    private Span currentSpan;
+    private Span processMessageSpan;
     private Vertx vertx;
-    private Context context;
-    private HttpAdapterMetrics metrics;
 
     /**
      * Sets up the fixture.
@@ -96,22 +93,27 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
     public void setUp() {
 
         vertx = mock(Vertx.class);
-        context = VertxMockSupport.mockContext(vertx);
+        final Context context = VertxMockSupport.mockContext(vertx);
 
         this.properties = givenDefaultConfigurationProperties();
         createClients();
         prepareClients();
 
-        currentSpan = mock(Span.class);
-        when(currentSpan.context()).thenReturn(mock(SpanContext.class));
+        processMessageSpan = mock(Span.class);
+        when(processMessageSpan.context()).thenReturn(mock(SpanContext.class));
+        final Span otherSpan = mock(Span.class);
+        when(otherSpan.context()).thenReturn(mock(SpanContext.class));
 
-        final SpanBuilder spanBuilder = mock(SpanBuilder.class, withSettings().defaultAnswer(RETURNS_SELF));
-        when(spanBuilder.start()).thenReturn(currentSpan);
+        final SpanBuilder processMessageSpanBuilder = mock(SpanBuilder.class, withSettings().defaultAnswer(RETURNS_SELF));
+        when(processMessageSpanBuilder.start()).thenReturn(processMessageSpan);
+        final SpanBuilder otherSpanBuilder = mock(SpanBuilder.class, withSettings().defaultAnswer(RETURNS_SELF));
+        when(otherSpanBuilder.start()).thenReturn(otherSpan);
 
-        tracer = mock(Tracer.class);
-        when(tracer.buildSpan(anyString())).thenReturn(spanBuilder);
+        final Tracer tracer = mock(Tracer.class);
+        when(tracer.buildSpan(eq(LoraProtocolAdapter.SPAN_NAME_PROCESS_MESSAGE))).thenReturn(processMessageSpanBuilder);
+        when(tracer.buildSpan(argThat(opName -> !opName.equals(LoraProtocolAdapter.SPAN_NAME_PROCESS_MESSAGE)))).thenReturn(otherSpanBuilder);
 
-        metrics =  mock(HttpAdapterMetrics.class);
+        final HttpAdapterMetrics metrics = mock(HttpAdapterMetrics.class);
         when(metrics.startTimer()).thenReturn(mock(Sample.class));
 
         adapter = new LoraProtocolAdapter();
@@ -143,6 +145,8 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         final HttpContext httpContext = newHttpContext();
         when(httpContext.request()).thenReturn(request);
 
+        setGatewayDeviceCommandEndpoint(new CommandEndpoint());
+
         final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.createCommandConsumer(any(), any(), any(), any(), any())).thenReturn(Future.succeededFuture(commandConsumer));
@@ -167,7 +171,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         final JsonObject metaDataJson = new JsonObject(metaData);
         assertThat(metaDataJson.getInteger(LoraConstants.APP_PROPERTY_FUNCTION_PORT)).isEqualTo(TEST_FUNCTION_PORT);
         verify(httpContext.getRoutingContext().response()).setStatusCode(HttpResponseStatus.ACCEPTED.code());
-        verify(currentSpan).finish();
+        verify(processMessageSpan).finish();
     }
 
     /**
@@ -182,6 +186,9 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         final HttpServerRequest request = mock(HttpServerRequest.class);
         final HttpContext httpContext = newHttpContext();
         when(httpContext.request()).thenReturn(request);
+
+        setGatewayDeviceCommandEndpoint(new CommandEndpoint());
+
         final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.createCommandConsumer(any(), any(), any(), any(), any())).thenReturn(Future.succeededFuture(commandConsumer));
@@ -211,6 +218,12 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         final HttpContext httpContext = newHttpContext();
         when(httpContext.request()).thenReturn(request);
 
+        final CommandEndpoint commandEndpoint = new CommandEndpoint();
+        commandEndpoint.setHeaders(Map.of("my-header", "my-header-value"));
+        commandEndpoint.setUri("https://my-server.com/commands/{{deviceId}}/send");
+
+        setGatewayDeviceCommandEndpoint(commandEndpoint);
+
         final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.createCommandConsumer(any(), any(), any(), any(), any())).thenReturn(Future.succeededFuture(commandConsumer));
@@ -236,14 +249,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
 
         final CommandContext commandContext = mock(CommandContext.class);
         when(commandContext.getCommand()).thenReturn(command);
-        when(commandContext.getTracingSpan()).thenReturn(currentSpan);
-
-        final CommandEndpoint commandEndpoint = new CommandEndpoint();
-        commandEndpoint.setHeaders(Map.of("my-header", "my-header-value"));
-        commandEndpoint.setUri("https://my-server.com/commands/{{deviceId}}/send");
-
-        final RegistrationAssertion gatewayRegistration = new RegistrationAssertion(TEST_GATEWAY_ID);
-        gatewayRegistration.setCommandEndpoint(commandEndpoint);
+        when(commandContext.getTracingSpan()).thenReturn(processMessageSpan);
 
         final JsonObject json = new JsonObject().put("my-payload", "bumlux");
         final LoraCommand loraCommand = new LoraCommand(json, "https://my-server.com/commands/deviceId/send");
@@ -260,9 +266,6 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         final HttpClient httpClient = mock(HttpClient.class);
         when(httpClient.postAbs(anyString())).thenReturn(httpClientRequest);
         when(vertx.createHttpClient()).thenReturn(httpClient);
-
-        when(registrationClient.assertRegistration(eq(LoraProtocolAdapterTest.TEST_TENANT_ID),
-            eq(LoraProtocolAdapterTest.TEST_GATEWAY_ID), eq(null), any())).thenReturn(Future.succeededFuture(gatewayRegistration));
 
         commandHandler.handle(commandContext);
 
@@ -283,7 +286,6 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         adapter.handleOptionsRoute(httpContext.getRoutingContext());
 
         verify(httpContext.getRoutingContext().response()).setStatusCode(HttpResponseStatus.OK.code());
-        verify(currentSpan).finish();
     }
 
     /**
@@ -304,7 +306,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         verify(httpContext.getRoutingContext()).put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, TEST_PROVIDER);
         assertNoTelemetryMessageHasBeenSentDownstream();
         verify(httpContext.getRoutingContext().response()).setStatusCode(HttpResponseStatus.ACCEPTED.code());
-        verify(currentSpan).finish();
+        verify(processMessageSpan).finish();
     }
 
     /**
@@ -325,7 +327,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         verify(httpContext.getRoutingContext()).put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, TEST_PROVIDER);
         assertNoTelemetryMessageHasBeenSentDownstream();
         verify(httpContext.response()).setStatusCode(HttpResponseStatus.ACCEPTED.code());
-        verify(currentSpan).finish();
+        verify(processMessageSpan).finish();
     }
 
     /**
@@ -346,7 +348,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         verify(httpContext.getRoutingContext()).put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, TEST_PROVIDER);
         assertNoTelemetryMessageHasBeenSentDownstream();
         verify(httpContext.response()).setStatusCode(HttpResponseStatus.ACCEPTED.code());
-        verify(currentSpan).finish();
+        verify(processMessageSpan).finish();
     }
 
     /**
@@ -366,7 +368,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         verify(httpContext.getRoutingContext()).put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, TEST_PROVIDER);
         assertNoTelemetryMessageHasBeenSentDownstream();
         verifyUnauthorized(httpContext.getRoutingContext());
-        verify(currentSpan).finish();
+        verify(processMessageSpan).finish();
     }
 
     /**
@@ -387,7 +389,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         verify(httpContext.getRoutingContext()).put(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, TEST_PROVIDER);
         assertNoTelemetryMessageHasBeenSentDownstream();
         verifyBadRequest(httpContext.getRoutingContext());
-        verify(currentSpan).finish();
+        verify(processMessageSpan).finish();
     }
 
     /**
@@ -439,6 +441,16 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         when(context.get(TracingHandler.CURRENT_SPAN)).thenReturn(parentSpan);
 
         return HttpContext.from(context);
+    }
+
+    private void setGatewayDeviceCommandEndpoint(final CommandEndpoint commandEndpoint) {
+        when(registrationClient.assertRegistration(eq(TEST_TENANT_ID), eq(TEST_GATEWAY_ID), eq(null), (SpanContext) any()))
+                .thenAnswer(invocation -> {
+                    final String deviceId = invocation.getArgument(1);
+                    final RegistrationAssertion regAssertion = new RegistrationAssertion(deviceId);
+                    regAssertion.setCommandEndpoint(commandEndpoint);
+                    return Future.succeededFuture(regAssertion);
+                });
     }
 
     private void verifyUnauthorized(final RoutingContext routingContextMock) {
