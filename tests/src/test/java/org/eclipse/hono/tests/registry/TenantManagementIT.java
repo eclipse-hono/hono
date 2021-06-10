@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.bouncycastle.util.Arrays;
 import org.eclipse.hono.service.management.SearchResult;
 import org.eclipse.hono.service.management.tenant.RegistrationLimits;
 import org.eclipse.hono.service.management.tenant.Tenant;
@@ -124,6 +125,24 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
                 });
                 context.completeNow();
             }));
+    }
+
+    /**
+     * Verifies that a request to create a tenant with a body that exceeds the registry's max payload limit
+     * fails with a {@link HttpURLConnection#HTTP_ENTITY_TOO_LARGE} status code.
+     *
+     * @param context The vert.x test context.
+     */
+    @Test
+    public void testAddTenantFailsForRequestPayloadExceedingLimit(final VertxTestContext context)  {
+
+        final var data = new char[3000];
+        Arrays.fill(data, 'x');
+        final Tenant payload = new Tenant();
+        payload.setExtensions(Map.of("data", new String(data)));
+
+        getHelper().registry.addTenant(tenantId, payload, HttpURLConnection.HTTP_ENTITY_TOO_LARGE)
+            .onComplete(context.completing());
     }
 
     /**
