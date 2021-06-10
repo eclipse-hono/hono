@@ -439,6 +439,27 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
     }
 
     /**
+     * Verifies that a request to update a tenant with a body that exceeds the registry's max payload limit
+     * fails with a {@link HttpURLConnection#HTTP_ENTITY_TOO_LARGE} status code.
+     *
+     * @param context The vert.x test context.
+     */
+    @Test
+    public void testUpdateTenantFailsForRequestPayloadExceedingLimit(final VertxTestContext context)  {
+
+        getHelper().registry.addTenant(tenantId, new Tenant())
+            .compose(ok -> {
+                final var data = new char[3000];
+                Arrays.fill(data, 'x');
+                final Tenant payload = new Tenant();
+                payload.setExtensions(Map.of("data", new String(data)));
+
+                return getHelper().registry.updateTenant(tenantId, payload, HttpURLConnection.HTTP_ENTITY_TOO_LARGE);
+            })
+            .onComplete(context.completing());
+    }
+
+    /**
      * Verify that a correctly added tenant record can be successfully deleted again.
      *
      * @param context The vert.x test context.
