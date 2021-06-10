@@ -15,6 +15,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   retrieving device registration information using the MongoDB based registry implementation. This has been fixed now.
 * The Command Router service could have gotten into a state of very high CPU utilization when protocol
   adapters submitted non-existing tenant IDs for which command routing should be re-enabled. This has been fixed.
+* The LoRA protocol adapter will now free command consumer resources when the idle timeout of the corresponding tenant
+  (configured via the `hono.lora.tenantIdleTimeout` property) has elapsed and the tenant is already removed or disabled.
 
 ## 1.7.3
 

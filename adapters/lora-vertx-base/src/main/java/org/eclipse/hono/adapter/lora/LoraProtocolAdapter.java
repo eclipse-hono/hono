@@ -15,6 +15,7 @@ package org.eclipse.hono.adapter.lora;
 
 import java.net.HttpURLConnection;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -22,6 +23,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.IntPredicate;
 
+import org.eclipse.hono.adapter.TenantDisabledOrNotRegisteredException;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.adapter.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.adapter.auth.device.TenantServiceBasedX509Authentication;
@@ -29,6 +31,7 @@ import org.eclipse.hono.adapter.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.adapter.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.adapter.auth.device.X509AuthProvider;
 import org.eclipse.hono.adapter.client.command.Command;
+import org.eclipse.hono.adapter.client.command.CommandConsumer;
 import org.eclipse.hono.adapter.client.command.CommandContext;
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.adapter.http.HonoBasicAuthHandler;
@@ -47,6 +50,7 @@ import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandEndpoint;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.Pair;
 import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,9 +61,11 @@ import io.opentracing.log.Fields;
 import io.opentracing.tag.StringTag;
 import io.opentracing.tag.Tag;
 import io.opentracing.tag.Tags;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.eventbus.Message;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.http.HttpMethod;
@@ -86,7 +92,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
 
     private DeviceCredentialsAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
     private DeviceCredentialsAuthProvider<SubjectDnCredentials> clientCertAuthProvider;
-    private final Map<SubscriptionKey, LoraProvider> commandSubscriptions = new ConcurrentHashMap<>();
+    private final Map<SubscriptionKey, Pair<CommandConsumer, LoraProvider>> commandSubscriptions = new ConcurrentHashMap<>();
     private HttpClient httpClient = null;
 
     /**
@@ -123,6 +129,43 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
      */
     public void setClientCertAuthProvider(final DeviceCredentialsAuthProvider<SubjectDnCredentials> provider) {
         this.clientCertAuthProvider = Objects.requireNonNull(provider);
+    }
+
+    @Override
+    protected void onStartupSuccess() {
+        vertx.eventBus().consumer(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT, this::handleTenantTimeout);
+    }
+
+    private void handleTenantTimeout(final Message<String> msg) {
+        final String tenantId = msg.body();
+        log.debug("check command subscriptions on timeout of tenant [{}]", tenantId);
+        final Span span = TracingHelper
+                .buildSpan(tracer, null, "check command subscriptions on tenant timeout", getClass().getSimpleName())
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
+                .start();
+        TracingHelper.setDeviceTags(span, tenantId, null);
+        // check if tenant still exists
+        getTenantConfiguration(tenantId, span.context())
+                .recover(thr -> {
+                    if (thr instanceof TenantDisabledOrNotRegisteredException) {
+                        log.debug("tenant [{}] disabled or removed, removing corresponding command consumers", tenantId);
+                        span.log("tenant disabled or removed, corresponding command consumers will be closed");
+                        @SuppressWarnings("rawtypes")
+                        final List<Future> consumerCloseFutures = new LinkedList<>();
+                        for (final var iter = commandSubscriptions.entrySet().iterator(); iter.hasNext();) {
+                            final var entry = iter.next();
+                            if (entry.getKey().getTenant().equals(tenantId)) {
+                                final CommandConsumer commandConsumer = entry.getValue().one();
+                                consumerCloseFutures.add(commandConsumer.close(span.context()));
+                                iter.remove();
+                            }
+                        }
+                        return CompositeFuture.join(consumerCloseFutures).mapEmpty();
+                    } else {
+                        return Future.failedFuture(thr);
+                    }
+                }).onFailure(thr -> TracingHelper.logError(span, thr))
+                .onComplete(ar -> span.finish());
     }
 
     @Override
@@ -244,7 +287,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                                 gatewayDevice.getDeviceId(),
                                 this::handleCommand,
                                 currentSpan.context())
-                                        .map(commandConsumer -> commandSubscriptions.put(key, provider));
+                                        .map(commandConsumer -> commandSubscriptions.put(key, Pair.of(commandConsumer, provider)));
                     }
                     break;
                 default:
@@ -279,7 +322,8 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
         final String tenant = command.getTenant();
         final String gatewayId = command.getGatewayId();
 
-        final LoraProvider loraProvider = commandSubscriptions.get(new SubscriptionKey(tenant, gatewayId));
+        final LoraProvider loraProvider = Optional.ofNullable(commandSubscriptions.get(new SubscriptionKey(tenant, gatewayId)))
+                .map(Pair::two).orElse(null);
         if (loraProvider == null) {
             LOG.debug("received command for unknown gateway [{}] for tenant [{}]", gatewayId, tenant);
             TracingHelper.logError(commandContext.getTracingSpan(),
