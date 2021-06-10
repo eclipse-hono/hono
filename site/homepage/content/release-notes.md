@@ -13,6 +13,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 * Command messages with no payload could not be sent to an MQTT device. This has been fixed.
 * The value of the properties `auto-provisioned` and `auto-provisioning-notification-sent` are always *false* while
   retrieving device registration information using the MongoDB based registry implementation. This has been fixed now.
+* The Command Router service could have gotten into a state of very high CPU utilization when protocol
+  adapters submitted non-existing tenant IDs for which command routing should be re-enabled. This has been fixed.
 
 ## 1.8.0
 
