@@ -37,6 +37,7 @@ import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Sort;
 import org.eclipse.hono.service.management.Sort.Direction;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,6 +45,7 @@ import org.mockito.ArgumentCaptor;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -80,13 +82,7 @@ public class DelegatingDeviceManagementHttpEndpointTest {
         // make sure that ServiceInvocationExceptions are properly handled
         // and result in the exception's error code being set on the response
         router.route().failureHandler(new DefaultFailureHandler());
-        // allow upload of data in a request
-        router.route().handler(ctx -> {
-            if (requestBody != null) {
-                ctx.setBody(requestBody);
-            }
-            ctx.next();
-        });
+
         service = mock(DeviceManagementService.class);
         when(service.searchDevices(
                 anyString(),
@@ -99,6 +95,7 @@ public class DelegatingDeviceManagementHttpEndpointTest {
         endpoint = new DelegatingDeviceManagementHttpEndpoint<DeviceManagementService>(vertx, service);
         endpoint.setConfiguration(new ServiceConfigProperties());
         endpoint.addRoutes(router);
+        requestBody = Buffer.buffer();
         requestParams = MultiMap.caseInsensitiveMultiMap();
         requestHeaders = MultiMap.caseInsensitiveMultiMap();
     }
@@ -160,7 +157,6 @@ public class DelegatingDeviceManagementHttpEndpointTest {
     public void testCreateDeviceRejectsInvalidDeviceId() {
 
         final HttpServerResponse response = newResponse();
-
         final HttpServerRequest request = newRequest(
                 HttpMethod.POST,
                 "/v1/devices/mytenant/%265woo_%24",
@@ -428,7 +424,7 @@ public class DelegatingDeviceManagementHttpEndpointTest {
                 any(Span.class));
     }
 
-    private static HttpServerRequest newRequest(
+    private HttpServerRequest newRequest(
             final HttpMethod method,
             final String path,
             final MultiMap requestHeaders,
@@ -441,6 +437,16 @@ public class DelegatingDeviceManagementHttpEndpointTest {
         when(request.headers()).thenReturn(requestHeaders);
         when(request.params()).thenReturn(requestParams);
         when(request.response()).thenReturn(response);
+        when(request.handler(VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
+            final Handler<Buffer> handler = invocation.getArgument(0);
+            handler.handle(requestBody);
+            return request;
+        });
+        when(request.endHandler(VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
+            final Handler<Void> dataHandler = invocation.getArgument(0);
+            dataHandler.handle(null);
+            return request;
+        });
         return request;
     }
 

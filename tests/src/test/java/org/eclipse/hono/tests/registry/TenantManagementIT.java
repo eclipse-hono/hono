@@ -22,6 +22,7 @@ import java.net.HttpURLConnection;
 import java.security.PublicKey;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -115,6 +116,24 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
                 });
                 context.completeNow();
             }));
+    }
+
+    /**
+     * Verifies that a request to create a tenant with a body that exceeds the registry's max payload limit
+     * fails with a {@link HttpURLConnection#HTTP_ENTITY_TOO_LARGE} status code.
+     *
+     * @param context The vert.x test context.
+     */
+    @Test
+    public void testAddTenantFailsForRequestPayloadExceedingLimit(final VertxTestContext context)  {
+
+        final var data = new char[3000];
+        Arrays.fill(data, 'x');
+        final Tenant payload = new Tenant();
+        payload.setExtensions(Map.of("data", new String(data)));
+
+        getHelper().registry.addTenant(tenantId, payload, HttpURLConnection.HTTP_ENTITY_TOO_LARGE)
+            .onComplete(context.completing());
     }
 
     /**
@@ -408,6 +427,27 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
                 .compose(ok -> getHelper().registry.updateTenant(tenantId, tenantForUpdate,
                         HttpURLConnection.HTTP_BAD_REQUEST))
                 .onComplete(context.completing());
+    }
+
+    /**
+     * Verifies that a request to update a tenant with a body that exceeds the registry's max payload limit
+     * fails with a {@link HttpURLConnection#HTTP_ENTITY_TOO_LARGE} status code.
+     *
+     * @param context The vert.x test context.
+     */
+    @Test
+    public void testUpdateTenantFailsForRequestPayloadExceedingLimit(final VertxTestContext context)  {
+
+        getHelper().registry.addTenant(tenantId, new Tenant())
+            .compose(ok -> {
+                final var data = new char[3000];
+                Arrays.fill(data, 'x');
+                final Tenant payload = new Tenant();
+                payload.setExtensions(Map.of("data", new String(data)));
+
+                return getHelper().registry.updateTenant(tenantId, payload, HttpURLConnection.HTTP_ENTITY_TOO_LARGE);
+            })
+            .onComplete(context.completing());
     }
 
     /**
