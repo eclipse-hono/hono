@@ -16,6 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.HttpURLConnection;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -198,6 +199,24 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
     }
 
     /**
+     * Verifies that a request to register a device with a body that exceeds the registry's max payload limit
+     * fails with a {@link HttpURLConnection#HTTP_ENTITY_TOO_LARGE} status code.
+     *
+     * @param context The vert.x test context.
+     */
+    @Test
+    public void testAddDeviceFailsForRequestPayloadExceedingLimit(final VertxTestContext context)  {
+
+        final Device device = new Device();
+        final var data = new char[3000];
+        Arrays.fill(data, 'x');
+        device.setExtensions(Map.of("data", new String(data)));
+
+        registry.registerDevice(tenantId, deviceId, device, HttpURLConnection.HTTP_ENTITY_TOO_LARGE)
+            .onComplete(context.completing());
+    }
+
+    /**
      * Verifies that a device can be registered if the request
      * does not contain a body.
      *
@@ -351,12 +370,39 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             .compose(ok -> {
                 // now try to update the device with missing content type
                 final JsonObject requestBody = new JsonObject()
-                        .put("ext", new JsonObject()
+                        .put(RegistryManagementConstants.FIELD_EXT, new JsonObject()
                                 .put("test", "testUpdateDeviceFailsForMissingContentType")
                                 .put("newKey1", "newValue1"));
                 return registry.updateDevice(tenantId, deviceId, requestBody, null, HttpURLConnection.HTTP_BAD_REQUEST);
             }).onComplete(context.completing());
     }
+
+    /**
+     * Verifies that a request to update a device with a body that exceeds the registry's max payload limit
+     * fails with a {@link HttpURLConnection#HTTP_ENTITY_TOO_LARGE} status code.
+     *
+     * @param context The vert.x test context.
+     */
+    @Test
+    public void testUpdateDeviceFailsForRequestPayloadExceedingLimit(final VertxTestContext context)  {
+
+        registry.registerDevice(tenantId, deviceId, new Device())
+            .compose(ok -> {
+                final var data = new char[3000];
+                Arrays.fill(data, 'x');
+                final JsonObject requestBody = new JsonObject()
+                        .put(RegistryManagementConstants.FIELD_EXT, new JsonObject()
+                                .put("data", new String(data)));
+                return registry.updateDevice(
+                        tenantId,
+                        deviceId,
+                        requestBody,
+                        "application/json",
+                        HttpURLConnection.HTTP_ENTITY_TOO_LARGE);
+            })
+            .onComplete(context.completing());
+    }
+
 
     /**
      * Verifies that no registration info can be retrieved anymore

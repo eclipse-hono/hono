@@ -1,12 +1,15 @@
 hono:
+
   app:
     maxInstances: 1
     startupTimeout: 90
+
   healthCheck:
     insecurePortBindAddress: 0.0.0.0
     insecurePort: ${vertx.health.port}
+
   messaging:
-    name: 'Hono Device Registry MongoDb'
+    name: 'Hono Device Registry JDBC'
     host: ${hono.amqp-network.host}
     port: 5673
     amqpHostname: hono-internal
@@ -16,6 +19,7 @@ hono:
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
+
   auth:
     host: ${hono.auth.host}
     port: 5671
@@ -23,6 +27,7 @@ hono:
     trustStorePath: "/etc/hono/certs/trusted-certs.pem"
     validation:
       certPath: /etc/hono/certs/auth-server-cert.pem
+
   registry:
     amqp:
       insecurePortEnabled: true
@@ -32,18 +37,26 @@ hono:
       insecurePortEnabled: true
       insecurePortBindAddress: 0.0.0.0
       maxPayloadSize: ${hono.deviceregistry.maxPayloadSize}
-    svc:
-  credentials:
+    jdbc:
+      adapter:
+        url: ${hono.jdbc.db.url}
+        driverClass: org.h2.Driver
+      management:
+        url: ${hono.jdbc.db.url}
+        driverClass: org.h2.Driver
     svc:
       maxBcryptCostFactor: ${max.bcrypt.costFactor}
+
   tenant:
+    jdbc:
+      adapter:
+        url: ${hono.jdbc.db.url}
+        driverClass: org.h2.Driver
+      management:
+        url: ${hono.jdbc.db.url}
+        driverClass: org.h2.Driver
     svc:
-  mongodb:
-    host: ${hono.mongodb.host}
-    port: ${hono.mongodb.port}
-    dbName: ${hono.mongodb.database.name}
-    username: ${hono.mongodb.username}
-    password: ${hono.mongodb.password}
+
   vertx:
     maxEventLoopExecuteTime: ${max.event-loop.execute-time}
     preferNative: true

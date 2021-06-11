@@ -116,6 +116,8 @@ paths:
                      example:
                         error: "Root Certificate Authority is already used by other tenant"
                         subject-dn: "CN=devices,OU=iot,O=ACME"
+            413:
+               $ref: '#/components/responses/RequestEntityTooLarge'
 
       get:
          tags:
@@ -185,6 +187,8 @@ paths:
                         $ref: '#/components/schemas/Error'
                      example:
                         error: "tenant with given identifier already exists"
+            413:
+               $ref: '#/components/responses/RequestEntityTooLarge'
 
       get:
          tags:
@@ -288,6 +292,8 @@ paths:
                         subject-dn: "CN=devices,OU=iot,O=ACME"
             412:
                $ref: '#/components/responses/ResourceVersionMismatch'
+            413:
+               $ref: '#/components/responses/RequestEntityTooLarge'
 
       delete:
          tags:
@@ -351,6 +357,8 @@ paths:
                $ref: '#/components/responses/NotAllowed'
             404:
                $ref: '#/components/responses/TenantNotFound'
+            413:
+               $ref: '#/components/responses/RequestEntityTooLarge'
 
       get:
          tags:
@@ -415,6 +423,8 @@ paths:
                $ref: '#/components/responses/AlreadyExists'
             404:
                $ref: '#/components/responses/TenantNotFound'
+            413:
+               $ref: '#/components/responses/RequestEntityTooLarge'
 
       get:
          tags:
@@ -515,6 +525,8 @@ paths:
                $ref: '#/components/responses/NotFound'
             412:
                $ref: '#/components/responses/ResourceVersionMismatch'
+            413:
+               $ref: '#/components/responses/RequestEntityTooLarge'
 
       delete:
          tags:
@@ -657,6 +669,8 @@ paths:
                $ref: '#/components/responses/AlreadyExists'
             412:
                $ref: '#/components/responses/ResourceVersionMismatch'
+            413:
+               $ref: '#/components/responses/RequestEntityTooLarge'
 
 components:
 
@@ -1686,6 +1700,14 @@ components:
             Expected resource version does not match current.
             This can only happen when the request header `If-Match`
             was set.
+         content:
+            application/json:
+               schema:
+                  $ref: '#/components/schemas/Error'
+
+      RequestEntityTooLarge:
+         description: |
+            The size of the payload in the request body exceeds the registry's configured limit.
          content:
             application/json:
                schema:

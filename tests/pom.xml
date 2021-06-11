@@ -111,6 +111,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <hono.deviceregistry.resources.folder>deviceregistry-mongodb</hono.deviceregistry.resources.folder>
     <!-- Spring application profiles to activate for the registry -->
     <hono.deviceregistry.spring.profiles>${logging.profile}</hono.deviceregistry.spring.profiles>
+    <!--  accept requests with a body size of up to 2000 bytes -->
+    <hono.deviceregistry.maxPayloadSize>2000</hono.deviceregistry.maxPayloadSize>
 
     <hono.mongodb.disabled>false</hono.mongodb.disabled>
     <hono.mongodb.host>hono-mongodb.hono</hono.mongodb.host>

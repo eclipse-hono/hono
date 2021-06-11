@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -30,6 +31,7 @@ import java.util.stream.Collectors;
 import org.assertj.core.api.recursive.comparison.RecursiveComparisonConfiguration;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
+import org.eclipse.hono.service.management.credentials.Credentials;
 import org.eclipse.hono.service.management.credentials.GenericCredential;
 import org.eclipse.hono.service.management.credentials.GenericSecret;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
@@ -468,6 +470,25 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
             .onComplete(context.completing());
     }
 
+    /**
+     * Verifies that a request to update credentials with a body that exceeds the registry's max payload limit
+     * fails with a {@link HttpURLConnection#HTTP_ENTITY_TOO_LARGE} status code.
+     *
+     * @param context The vert.x test context.
+     */
+    @Test
+    public void testUpdateCredentialsFailsForRequestPayloadExceedingLimit(final VertxTestContext context)  {
+
+        final var data = new char[3000];
+        Arrays.fill(data, 'x');
+
+        final List<CommonCredential> credentials = List.of(
+                Credentials.createPasswordCredential("auth-id", "password", OptionalInt.of(4))
+                    .setExtensions(Map.of("data", data)));
+
+        registry.updateCredentials(tenantId, deviceId, credentials, HttpURLConnection.HTTP_ENTITY_TOO_LARGE)
+            .onComplete(context.completing());
+    }
 
     /**
      * Verify that a correctly added credentials record can be successfully looked up again by using the type and
