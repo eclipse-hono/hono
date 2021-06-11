@@ -297,18 +297,6 @@
       </dependency>
       <dependency>
         <groupId>io.micrometer</groupId>
-        <artifactId>micrometer-registry-graphite</artifactId>
-        <version>${micrometer.version}</version>
-        <scope>runtime</scope>
-      </dependency>
-      <dependency>
-        <groupId>io.micrometer</groupId>
-        <artifactId>micrometer-registry-influx</artifactId>
-        <version>${micrometer.version}</version>
-        <scope>runtime</scope>
-      </dependency>
-      <dependency>
-        <groupId>io.micrometer</groupId>
         <artifactId>micrometer-registry-prometheus</artifactId>
         <version>${micrometer.version}</version>
         <scope>runtime</scope>

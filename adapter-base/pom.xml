@@ -114,11 +114,6 @@
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest-core</artifactId>
     </dependency>
-    <dependency>
-      <groupId>io.micrometer</groupId>
-      <artifactId>micrometer-registry-graphite</artifactId>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
 
   <build>

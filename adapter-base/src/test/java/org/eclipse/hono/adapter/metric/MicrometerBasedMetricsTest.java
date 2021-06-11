@@ -41,12 +41,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
 
-import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.Timer.Sample;
-import io.micrometer.graphite.GraphiteConfig;
-import io.micrometer.graphite.GraphiteMeterRegistry;
 import io.micrometer.prometheus.PrometheusConfig;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.vertx.core.Handler;
@@ -68,8 +65,7 @@ public class MicrometerBasedMetricsTest {
      */
     public static Stream<MeterRegistry> registries() {
         return Stream.of(new MeterRegistry[] {
-                                new PrometheusMeterRegistry(PrometheusConfig.DEFAULT),
-                                new GraphiteMeterRegistry(GraphiteConfig.DEFAULT, Clock.SYSTEM)
+                                new PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
                                 });
     }
 
