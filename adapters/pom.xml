@@ -135,26 +135,6 @@
       </dependencies>
     </profile>
 
-   <profile>
-      <id>metrics-graphite</id>
-      <dependencies>
-        <dependency>
-          <groupId>io.micrometer</groupId>
-          <artifactId>micrometer-registry-graphite</artifactId>
-        </dependency>
-      </dependencies>
-    </profile>
-
-    <profile>
-      <id>metrics-influxdb</id>
-      <dependencies>
-        <dependency>
-          <groupId>io.micrometer</groupId>
-          <artifactId>micrometer-registry-influx</artifactId>
-        </dependency>
-      </dependencies>
-    </profile>
-
     <profile>
       <id>metrics-prometheus</id>
       <dependencies>

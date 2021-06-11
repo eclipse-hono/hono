@@ -15,12 +15,9 @@ maven/mavencentral/com.h2database/h2/1.4.200, EPL-1.0, approved, CQ14966
 maven/mavencentral/com.mchange/c3p0/0.9.5.4, LGPL-2.1-only OR EPL-1.0, approved, clearlydefined
 maven/mavencentral/com.mchange/mchange-commons-java/0.2.15, LGPL-2.1-only OR EPL-1.0, approved, clearlydefined
 maven/mavencentral/commons-cli/commons-cli/1.4, Apache-2.0, approved, CQ13132
-maven/mavencentral/com.rabbitmq/amqp-client/5.5.3, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.squareup.okhttp3/okhttp/4.9.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.squareup.okio/okio/2.8.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.squareup/protoparser/4.0.3, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.dropwizard.metrics/metrics-core/4.1.14, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.dropwizard.metrics/metrics-graphite/4.1.14, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.jaegertracing/jaeger-client/1.6.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.jaegertracing/jaeger-core/1.6.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.jaegertracing/jaeger-micrometer/1.6.0, Apache-2.0, approved, clearlydefined
@@ -30,7 +27,6 @@ maven/mavencentral/io.jsonwebtoken/jjwt-api/0.11.2, Apache-2.0, approved, clearl
 maven/mavencentral/io.jsonwebtoken/jjwt-impl/0.11.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.jsonwebtoken/jjwt-jackson/0.11.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.micrometer/micrometer-core/1.6.7, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.micrometer/micrometer-registry-graphite/1.6.7, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.micrometer/micrometer-registry-prometheus/1.6.7, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.netty/netty-buffer/4.1.58.Final, Apache-2.0, approved, CQ21842
 maven/mavencentral/io.netty/netty-codec/4.1.58.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
@@ -123,7 +119,6 @@ maven/mavencentral/javax.annotation/javax.annotation-api/1.3.2, CDDL-1.1 OR GPL-
 maven/mavencentral/javax.xml.bind/jaxb-api/2.2.12, CDDL-1.0, approved, CQ8374
 maven/mavencentral/net.bytebuddy/byte-buddy/1.10.19, , approved, CQ22491
 maven/mavencentral/net.bytebuddy/byte-buddy-agent/1.10.19, Apache-2.0, approved, clearlydefined
-maven/mavencentral/net.i2p.crypto/eddsa/0.3.0, CC0, approved, CQ17804
 maven/mavencentral/org.apache.kafka/kafka-clients/2.6.0, Apache-2.0 AND BSD-2-Clause AND BSD-3-Clause AND EPL-2.0, approved, clearlydefined
 maven/mavencentral/org.apache.logging.log4j/log4j-api/2.13.3, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.apache.logging.log4j/log4j-to-slf4j/2.13.3, Apache-2.0, approved, clearlydefined
