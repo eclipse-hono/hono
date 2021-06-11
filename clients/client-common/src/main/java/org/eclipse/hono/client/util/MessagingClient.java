@@ -94,21 +94,20 @@ public final class MessagingClient<T extends Lifecycle> implements Lifecycle, Se
 
         return Optional.ofNullable(tenant.getProperty(TenantConstants.FIELD_EXT, JsonObject.class))
             .map(ext -> ext.getString(TenantConstants.FIELD_EXT_MESSAGING_TYPE))
-            .map(type -> {
-                return clientImplementations.get(MessagingType.valueOf(type));
-            })
+            .map(type -> clientImplementations.get(MessagingType.valueOf(type)))
             .orElseGet(this::getDefaultImplementation);
     }
 
     /**
-     * Gets an messaging client implementation for the given messaging type.
+     * Gets a messaging client implementation for the given messaging type or the default client.
      *
-     * @param messagingType The messaging type. If {@code null}, then a messaging client of 
-     *                      type defined in {@link #DEFAULT_MESSAGING_TYPE} is returned.
-     * @return The messaging client for the given type.
+     * @param messagingType The messaging type. If {@code null} or no messaging client of
+     *                      the given type is set, a messaging client of the type defined
+     *                      in {@link #DEFAULT_MESSAGING_TYPE} is returned.
+     * @return The messaging client for the given type or the default client.
      * @throws IllegalStateException if no client implementations are set.
      */
-    public T getClient(final String messagingType) {
+    public T getClientOrDefault(final String messagingType) {
 
         requireClientsConfigured();
 
@@ -116,6 +115,21 @@ public final class MessagingClient<T extends Lifecycle> implements Lifecycle, Se
                 .map(MessagingType::valueOf)
                 .map(clientImplementations::get)
                 .orElseGet(this::getDefaultImplementation);
+    }
+
+    /**
+     * Gets a messaging client implementation for the given messaging type.
+     *
+     * @param messagingType The messaging type.
+     * @return The messaging client for the given type or {@code null} if not set.
+     * @throws NullPointerException if messagingType is {@code null}.
+     * @throws IllegalStateException if no client implementations are set.
+     */
+    public T getClient(final MessagingType messagingType) {
+        Objects.requireNonNull(messagingType);
+        requireClientsConfigured();
+
+        return clientImplementations.get(messagingType);
     }
 
     private T getDefaultImplementation() {

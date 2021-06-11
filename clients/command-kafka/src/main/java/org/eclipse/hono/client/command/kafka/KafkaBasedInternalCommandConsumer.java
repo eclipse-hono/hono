@@ -27,6 +27,7 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandHandlerWrapper;
 import org.eclipse.hono.client.command.CommandHandlers;
+import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
@@ -66,6 +67,7 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
     private final String adapterInstanceId;
     private final CommandHandlers commandHandlers;
     private final Tracer tracer;
+    private final CommandResponseSender commandResponseSender;
     private final Admin adminClient;
     /**
      * Key is the tenant id, value is a Map with partition index as key and offset as value.
@@ -79,8 +81,9 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
      * Creates a consumer.
      *
      * @param vertx The Vert.x instance to use.
-     * @param consumerConfigProperties The Kafka consumer config properties.
      * @param adminClientConfigProperties The Kafka admin client config properties.
+     * @param consumerConfigProperties The Kafka consumer config properties.
+     * @param commandResponseSender The sender used to send command responses.
      * @param adapterInstanceId The adapter instance id.
      * @param commandHandlers The command handlers to choose from for handling a received command.
      * @param tracer The OpenTracing tracer.
@@ -90,12 +93,14 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
             final Vertx vertx,
             final KafkaAdminClientConfigProperties adminClientConfigProperties,
             final KafkaConsumerConfigProperties consumerConfigProperties,
+            final CommandResponseSender commandResponseSender,
             final String adapterInstanceId,
             final CommandHandlers commandHandlers,
             final Tracer tracer) {
         Objects.requireNonNull(vertx);
         Objects.requireNonNull(adminClientConfigProperties);
         Objects.requireNonNull(consumerConfigProperties);
+        this.commandResponseSender = Objects.requireNonNull(commandResponseSender);
         this.adapterInstanceId = Objects.requireNonNull(adapterInstanceId);
         this.commandHandlers = Objects.requireNonNull(commandHandlers);
         this.tracer = Objects.requireNonNull(tracer);
@@ -123,6 +128,7 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
      * @param context The vert.x context to run on.
      * @param kafkaAdminClient The Kafka admin client to use.
      * @param kafkaConsumer The Kafka consumer to use.
+     * @param commandResponseSender The sender used to send command responses.
      * @param adapterInstanceId The adapter instance id.
      * @param commandHandlers The command handlers to choose from for handling a received command.
      * @param tracer The OpenTracing tracer.
@@ -132,12 +138,14 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
             final Context context,
             final Admin kafkaAdminClient,
             final KafkaConsumer<String, Buffer> kafkaConsumer,
+            final CommandResponseSender commandResponseSender,
             final String adapterInstanceId,
             final CommandHandlers commandHandlers,
             final Tracer tracer) {
         this.context = Objects.requireNonNull(context);
         this.adminClient = Objects.requireNonNull(kafkaAdminClient);
         this.consumer = Objects.requireNonNull(kafkaConsumer);
+        this.commandResponseSender = Objects.requireNonNull(commandResponseSender);
         this.adapterInstanceId = Objects.requireNonNull(adapterInstanceId);
         this.commandHandlers = Objects.requireNonNull(commandHandlers);
         this.tracer = Objects.requireNonNull(tracer);
@@ -277,7 +285,7 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
         final Span currentSpan = CommandContext.createSpan(tracer, command, spanContext);
         currentSpan.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
 
-        final CommandContext commandContext = new KafkaBasedCommandContext(command, currentSpan);
+        final CommandContext commandContext = new KafkaBasedCommandContext(command, currentSpan, commandResponseSender);
 
         if (commandHandler != null) {
             // partition index and offset here are related to the *tenant-based* topic the command was originally received in

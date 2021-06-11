@@ -18,6 +18,7 @@ import java.util.Objects;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.command.CommandContext;
+import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.MapBasedExecutionContext;
 import org.slf4j.Logger;
@@ -34,6 +35,7 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
     private static final Logger LOG = LoggerFactory.getLogger(KafkaBasedCommandContext.class);
 
     private final KafkaBasedCommand command;
+    private final CommandResponseSender commandResponseSender;
     private String completedOutcome;
 
     /**
@@ -41,11 +43,14 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
      *
      * @param command The command to be processed.
      * @param span The OpenTracing span to use for tracking the processing of the command.
+     * @param commandResponseSender The sender used to send a command response.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public KafkaBasedCommandContext(final KafkaBasedCommand command, final Span span) {
+    public KafkaBasedCommandContext(final KafkaBasedCommand command, final Span span,
+            final CommandResponseSender commandResponseSender) {
         super(span);
         this.command = Objects.requireNonNull(command);
+        this.commandResponseSender = Objects.requireNonNull(commandResponseSender);
     }
 
     @Override

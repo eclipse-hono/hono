@@ -188,27 +188,6 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
         final DeviceRegistrationClient registrationClient = registrationClient();
 
-        if (commandRouterConfig.isHostConfigured()) {
-            final CommandRouterClient commandRouterClient = commandRouterClient();
-            adapter.setCommandRouterClient(commandRouterClient);
-            final CommandRouterCommandConsumerFactory commandConsumerFactory = commandConsumerFactory(commandRouterClient);
-            if (commandConsumerConfig.isHostConfigured()) {
-                commandConsumerFactory.registerInternalCommandConsumer(
-                        (id, handlers) -> new ProtonBasedInternalCommandConsumer(commandConsumerConnection(), id, handlers));
-            }
-            if (kafkaAdminClientConfig.isConfigured() && kafkaConsumerConfig.isConfigured()) {
-                commandConsumerFactory.registerInternalCommandConsumer(
-                        (id, handlers) -> new KafkaBasedInternalCommandConsumer(vertx, kafkaAdminClientConfig,
-                                kafkaConsumerConfig, id, handlers, tracer));
-            }
-
-            adapter.setCommandConsumerFactory(commandConsumerFactory);
-        } else {
-            LOG.warn("Quarkus based protocol adapters do not support the Device Connection service to be used."
-                    + " Make sure to configure a connection to the Command Router service instead.");
-            throw new IllegalStateException("No Command Router connection configured");
-        }
-
         final MessagingClient<TelemetrySender> telemetrySenders = new MessagingClient<>();
         final MessagingClient<EventSender> eventSenders = new MessagingClient<>();
         final MessagingClient<CommandResponseSender> commandResponseSenders = new MessagingClient<>();
@@ -243,8 +222,34 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                             protocolAdapterProperties.isJmsVendorPropsEnabled()));
         }
 
+        final MessagingClients messagingClients = new MessagingClients(telemetrySenders, eventSenders,
+                commandResponseSenders);
+
+        if (commandRouterConfig.isHostConfigured()) {
+            final CommandRouterClient commandRouterClient = commandRouterClient();
+            adapter.setCommandRouterClient(commandRouterClient);
+            final CommandRouterCommandConsumerFactory commandConsumerFactory = commandConsumerFactory(commandRouterClient);
+            commandConsumerFactory.registerInternalCommandConsumer(
+                    (id, handlers) -> new ProtonBasedInternalCommandConsumer(commandConsumerConnection(), id, handlers));
+
+            final CommandResponseSender kafkaCommandResponseSender = messagingClients.getCommandResponseSenders()
+                    .getClient(MessagingType.kafka);
+            if (kafkaAdminClientConfig.isConfigured() && kafkaConsumerConfig.isConfigured()
+                    && kafkaCommandResponseSender != null) {
+                commandConsumerFactory.registerInternalCommandConsumer(
+                        (id, handlers) -> new KafkaBasedInternalCommandConsumer(vertx, kafkaAdminClientConfig,
+                                kafkaConsumerConfig, kafkaCommandResponseSender, id, handlers, tracer));
+            }
+
+            adapter.setCommandConsumerFactory(commandConsumerFactory);
+        } else {
+            LOG.warn("Quarkus based protocol adapters do not support the Device Connection service to be used."
+                    + " Make sure to configure a connection to the Command Router service instead.");
+            throw new IllegalStateException("No Command Router connection configured");
+        }
+
         final var tenantClient = tenantClient();
-        adapter.setMessagingClients(new MessagingClients(telemetrySenders, eventSenders, commandResponseSenders));
+        adapter.setMessagingClients(messagingClients);
         Optional.ofNullable(connectionEventProducer())
             .ifPresent(adapter::setConnectionEventProducer);
         adapter.setCredentialsClient(credentialsClient());

@@ -17,6 +17,7 @@ import java.util.Objects;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.kafka.KafkaBasedCommand;
 import org.eclipse.hono.client.command.kafka.KafkaBasedCommandContext;
+import org.eclipse.hono.client.command.kafka.KafkaBasedCommandResponseSender;
 import org.eclipse.hono.client.command.kafka.KafkaBasedInternalCommandSender;
 import org.eclipse.hono.client.impl.CommandConsumer;
 import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
@@ -36,6 +37,7 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
  */
 public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappingAndDelegatingCommandHandler {
 
+    private final KafkaBasedCommandResponseSender kafkaBasedCommandResponseSender;
     private final Tracer tracer;
     private final KafkaCommandProcessingQueue commandQueue;
 
@@ -46,6 +48,7 @@ public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappin
      * @param commandQueue The command queue to use for keeping track of the command processing.
      * @param commandTargetMapper The mapper component to determine the command target.
      * @param internalCommandSender The command sender to publish commands to the internal command topic.
+     * @param kafkaBasedCommandResponseSender The sender used to send command responses.
      * @param tracer The tracer instance.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
@@ -54,9 +57,11 @@ public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappin
             final KafkaCommandProcessingQueue commandQueue,
             final CommandTargetMapper commandTargetMapper,
             final KafkaBasedInternalCommandSender internalCommandSender,
+            final KafkaBasedCommandResponseSender kafkaBasedCommandResponseSender,
             final Tracer tracer) {
         super(tenantClient, commandTargetMapper, internalCommandSender);
         this.commandQueue = Objects.requireNonNull(commandQueue);
+        this.kafkaBasedCommandResponseSender = Objects.requireNonNull(kafkaBasedCommandResponseSender);
         this.tracer = Objects.requireNonNull(tracer);
     }
 
@@ -86,7 +91,8 @@ public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappin
         final Span currentSpan = CommandConsumer.createSpan("map and delegate command", command.getTenant(),
                 command.getDeviceId(), null, tracer, spanContext);
         KafkaTracingHelper.setRecordTags(currentSpan, consumerRecord);
-        final KafkaBasedCommandContext commandContext = new KafkaBasedCommandContext(command, currentSpan);
+        final KafkaBasedCommandContext commandContext = new KafkaBasedCommandContext(command, currentSpan,
+                kafkaBasedCommandResponseSender);
 
         command.logToSpan(currentSpan);
         if (!command.isValid()) {

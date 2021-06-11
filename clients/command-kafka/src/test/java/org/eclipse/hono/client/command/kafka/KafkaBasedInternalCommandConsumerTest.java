@@ -27,7 +27,7 @@ import java.util.List;
 import org.apache.kafka.clients.admin.Admin;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandHandlers;
-import org.eclipse.hono.client.command.kafka.KafkaBasedInternalCommandConsumer;
+import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.test.TracingMockSupport;
@@ -71,10 +71,12 @@ public class KafkaBasedInternalCommandConsumerTest {
         final Tracer tracer = TracingMockSupport.mockTracer(span);
         context = VertxMockSupport.mockContext(mock(Vertx.class));
         commandHandlers = new CommandHandlers();
+        final CommandResponseSender commandResponseSender = mock(CommandResponseSender.class);
         internalCommandConsumer = new KafkaBasedInternalCommandConsumer(
                 context,
                 kafkaAdminClient,
                 kafkaConsumer,
+                commandResponseSender,
                 adapterInstanceId,
                 commandHandlers,
                 tracer);
