@@ -40,6 +40,7 @@ import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
 
 /**
  * An {@code HttpEndpoint} for managing device registration information.
@@ -96,14 +97,18 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
         router.route(pathWithTenant).handler(createCorsHandler(config.getCorsAllowedOrigin(), EnumSet.of(HttpMethod.POST)));
         router.route(pathWithTenantAndDeviceId).handler(createDefaultCorsHandler(config.getCorsAllowedOrigin()));
 
+        final BodyHandler bodyHandler = BodyHandler.create();
+        bodyHandler.setBodyLimit(config.getMaxPayloadSize());
 
         // CREATE device with auto-generated deviceID
         router.post(pathWithTenant)
+                .handler(bodyHandler)
                 .handler(this::extractOptionalJsonPayload)
                 .handler(this::doCreateDevice);
 
         // CREATE device
         router.post(pathWithTenantAndDeviceId)
+                .handler(bodyHandler)
                 .handler(this::extractOptionalJsonPayload)
                 .handler(this::doCreateDevice);
 
@@ -117,6 +122,7 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
 
         // UPDATE existing device
         router.put(pathWithTenantAndDeviceId)
+                .handler(bodyHandler)
                 .handler(this::extractRequiredJsonPayload)
                 .handler(this::extractIfMatchVersionParam)
                 .handler(this::doUpdateDevice);
