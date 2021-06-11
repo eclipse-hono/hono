@@ -12,9 +12,6 @@ description = "Information about changes in recent Hono releases. Includes new f
   In particular, the maximum number of devices and the maximum number of credentials per device can be set in
   a tenant's registration-limits property. Please refer to the Mongo DB User Guide for details.
 * Hono now sends a device provisioning notification when a device or a gateway is successfully auto-provisioned.
-* The device registry implementations now support the limitation of the body size of requests to their HTTP based
-  Device Registration Management API. The limit can be configured using the `HONO_REGISTRY_HTTP_MAXPAYLOADSIZE`
-  configuration variable as documented in the registry admin guides.
 
 ### Fixes & Enhancements
 
@@ -24,6 +21,11 @@ description = "Information about changes in recent Hono releases. Includes new f
   that gateway device has no command endpoint defined. The adapter will now also free command consumer resources when
   the idle timeout of the corresponding tenant (configured via the `hono.lora.tenantIdleTimeout` property) has elapsed
   and the tenant is already removed or disabled.
+* The device registry implementations have already supported the limitation of the body size of requests to the
+  `/tenants` and `/credentials` resources of the HTTP based Device Registration Management API.
+  However, the admin guides did not cover the corresponding `HONO_REGISTRY_HTTP_MAXPAYLOADSIZE` configuration variable
+  yet. The `/devices` resources have been added to the scope of the feature and the admin guides have been amended
+  accordingly.
 
 ### Deprecations
 
