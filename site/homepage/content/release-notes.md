@@ -17,6 +17,10 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 * The value of the properties `auto-provisioned` and `auto-provisioning-notification-sent` had always been *false* when
   retrieving device registration information using the MongoDB based registry implementation. This has been fixed.
+* The LoRA protocol adapter will now skip registering itself for receiving commands for a given gateway device if
+  that gateway device has no command endpoint defined. The adapter will now also free command consumer resources when
+  the idle timeout of the corresponding tenant (configured via the `hono.lora.tenantIdleTimeout` property) has elapsed
+  and the tenant is already removed or disabled.
 
 ### Deprecations
 
