@@ -152,6 +152,10 @@
                   <image>
                     <name>${docker.repository}/%a:%v</name>
                     <build>
+                      <runCmds>
+                        <runCmd>adduser --system --disabled-password -u 1000 hono</runCmd>
+                      </runCmds>
+                      <user>hono</user>
                       <env>
                         <JAVA_MAJOR_VERSION>${maven.compiler.release}</JAVA_MAJOR_VERSION>
                         <JAVA_APP_NAME>${project.artifactId}</JAVA_APP_NAME>
@@ -242,6 +246,10 @@
                       </tags>
                       <imagePullPolicy>Always</imagePullPolicy>
                       <from>registry.access.redhat.com/ubi8/ubi-minimal:8.1</from>
+                      <runCmds>
+                        <runCmd>adduser --system --disabled-password -u 1000 hono</runCmd>
+                      </runCmds>
+                      <user>hono</user>
                       <workdir>/opt/hono</workdir>
                       <entryPoint>
                         <arg>/opt/hono/${project.artifactId}-${project.version}-runner</arg>
