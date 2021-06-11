@@ -27,6 +27,7 @@ import java.util.stream.IntStream;
 
 import org.apache.kafka.common.TopicPartition;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.command.kafka.KafkaBasedCommand;
 import org.eclipse.hono.client.command.kafka.KafkaBasedCommandContext;
 import org.eclipse.hono.client.kafka.HonoTopic;
@@ -151,7 +152,7 @@ public class KafkaCommandProcessingQueueTest {
         when(consumerRecord.partition()).thenReturn(0);
 
         final KafkaBasedCommand cmd = KafkaBasedCommand.from(consumerRecord);
-        return new KafkaBasedCommandContext(cmd, mock(Span.class)) {
+        return new KafkaBasedCommandContext(cmd, mock(Span.class), mock(CommandResponseSender.class)) {
             @Override
             public String toString() {
                 return "Command " + offset;

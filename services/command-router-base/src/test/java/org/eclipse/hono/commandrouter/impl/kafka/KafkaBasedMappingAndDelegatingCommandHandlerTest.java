@@ -34,6 +34,7 @@ import java.util.UUID;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.kafka.KafkaBasedCommandContext;
+import org.eclipse.hono.client.command.kafka.KafkaBasedCommandResponseSender;
 import org.eclipse.hono.client.command.kafka.KafkaBasedInternalCommandSender;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.registry.TenantClient;
@@ -69,6 +70,7 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
     private CommandTargetMapper commandTargetMapper;
     private KafkaBasedMappingAndDelegatingCommandHandler cmdHandler;
     private KafkaBasedInternalCommandSender internalCommandSender;
+    private KafkaBasedCommandResponseSender kafkaBasedCommandResponseSender;
     private String tenantId;
     private String deviceId;
     private String adapterInstanceId;
@@ -92,10 +94,12 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
         internalCommandSender = mock(KafkaBasedInternalCommandSender.class);
         when(internalCommandSender.sendCommand(any(), any())).thenReturn(Future.succeededFuture());
 
+        kafkaBasedCommandResponseSender = mock(KafkaBasedCommandResponseSender.class);
+
         final Context context = VertxMockSupport.mockContext(mock(Vertx.class));
         final KafkaCommandProcessingQueue commandQueue = new KafkaCommandProcessingQueue(context);
         cmdHandler = new KafkaBasedMappingAndDelegatingCommandHandler(tenantClient, commandQueue, commandTargetMapper,
-                internalCommandSender, TracingMockSupport.mockTracer(TracingMockSupport.mockSpan()));
+                internalCommandSender, kafkaBasedCommandResponseSender, TracingMockSupport.mockTracer(TracingMockSupport.mockSpan()));
     }
 
     /**

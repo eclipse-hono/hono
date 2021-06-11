@@ -33,9 +33,9 @@ import io.vertx.ext.healthchecks.HealthCheckHandler;
  */
 public final class MessagingClients implements Lifecycle {
 
-    private MessagingClient<TelemetrySender> telemetrySenders;
-    private MessagingClient<EventSender> eventSenders;
-    private MessagingClient<CommandResponseSender> commandResponseSenders;
+    private final MessagingClient<TelemetrySender> telemetrySenders;
+    private final MessagingClient<EventSender> eventSenders;
+    private final MessagingClient<CommandResponseSender> commandResponseSenders;
 
     /**
      * Creates a new instance.
@@ -97,6 +97,33 @@ public final class MessagingClients implements Lifecycle {
      */
     public CommandResponseSender getCommandResponseSender(final TenantObject tenant) {
         return commandResponseSenders.getClient(tenant);
+    }
+
+    /**
+     * Gets the clients for sending telemetry messages downstream.
+     *
+     * @return The clients.
+     */
+    public MessagingClient<TelemetrySender> getTelemetrySenders() {
+        return telemetrySenders;
+    }
+
+    /**
+     * Gets the clients for sending event messages downstream.
+     *
+     * @return The clients.
+     */
+    public MessagingClient<EventSender> getEventSenders() {
+        return eventSenders;
+    }
+
+    /**
+     * Gets the clients for sending command response messages downstream.
+     *
+     * @return The clients.
+     */
+    public MessagingClient<CommandResponseSender> getCommandResponseSenders() {
+        return commandResponseSenders;
     }
 
     @Override

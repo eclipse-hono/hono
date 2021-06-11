@@ -17,6 +17,7 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.eclipse.hono.client.command.kafka.KafkaBasedCommandResponseSender;
 import org.eclipse.hono.client.command.kafka.KafkaBasedInternalCommandSender;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
@@ -63,6 +64,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
     private final KafkaConsumerConfigProperties kafkaConsumerConfig;
     private final Tracer tracer;
     private final KafkaBasedInternalCommandSender internalCommandSender;
+    private final KafkaBasedCommandResponseSender kafkaBasedCommandResponseSender;
 
     private KafkaBasedMappingAndDelegatingCommandHandler commandHandler;
     private AsyncHandlingAutoCommitKafkaConsumer kafkaConsumer;
@@ -99,6 +101,8 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
         this.tracer = Objects.requireNonNull(tracer);
 
         internalCommandSender = new KafkaBasedInternalCommandSender(kafkaProducerFactory, kafkaProducerConfig, tracer);
+        kafkaBasedCommandResponseSender = new KafkaBasedCommandResponseSender(kafkaProducerFactory, kafkaProducerConfig,
+                tracer);
     }
 
     @Override
@@ -109,7 +113,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
         }
         final KafkaCommandProcessingQueue commandQueue = new KafkaCommandProcessingQueue(context);
         commandHandler = new KafkaBasedMappingAndDelegatingCommandHandler(tenantClient, commandQueue,
-                commandTargetMapper, internalCommandSender, tracer);
+                commandTargetMapper, internalCommandSender, kafkaBasedCommandResponseSender, tracer);
 
         final Map<String, String> consumerConfig = kafkaConsumerConfig.getConsumerConfig("consumer");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, "cmd-router-group");
