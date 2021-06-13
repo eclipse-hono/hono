@@ -15,12 +15,9 @@ com.h2database:h2:jar:1.4.200
 com.mchange:c3p0:jar:0.9.5.4
 com.mchange:mchange-commons-java:jar:0.2.15
 commons-cli:commons-cli:jar:1.4
-com.rabbitmq:amqp-client:jar:5.5.3
 com.squareup.okhttp3:okhttp:jar:4.9.0
 com.squareup.okio:okio:jar:2.8.0
 com.squareup:protoparser:jar:4.0.3
-io.dropwizard.metrics:metrics-core:jar:4.1.14
-io.dropwizard.metrics:metrics-graphite:jar:4.1.14
 io.jaegertracing:jaeger-client:jar:1.6.0
 io.jaegertracing:jaeger-core:jar:1.6.0
 io.jaegertracing:jaeger-micrometer:jar:1.6.0
@@ -30,7 +27,6 @@ io.jsonwebtoken:jjwt-api:jar:0.11.2
 io.jsonwebtoken:jjwt-impl:jar:0.11.2
 io.jsonwebtoken:jjwt-jackson:jar:0.11.2
 io.micrometer:micrometer-core:jar:1.6.7
-io.micrometer:micrometer-registry-graphite:jar:1.6.7
 io.micrometer:micrometer-registry-prometheus:jar:1.6.7
 io.netty:netty-buffer:jar:4.1.58.Final
 io.netty:netty-codec-dns:jar:4.1.58.Final
@@ -123,7 +119,6 @@ javax.annotation:javax.annotation-api:jar:1.3.2
 javax.xml.bind:jaxb-api:jar:2.2.12
 net.bytebuddy:byte-buddy-agent:jar:1.10.19
 net.bytebuddy:byte-buddy:jar:1.10.19
-net.i2p.crypto:eddsa:jar:0.3.0
 org.apache.kafka:kafka-clients:jar:2.6.0
 org.apache.logging.log4j:log4j-api:jar:2.13.3
 org.apache.logging.log4j:log4j-to-slf4j:jar:2.13.3

@@ -46,6 +46,10 @@ description = "Information about changes in recent Hono releases. Includes new f
   *telemetry-kafka*. This allows Hono's components to define more specific dependencies on client classes
   that they require. This change should have no effect on application clients.
 
+## End of life
+
+* The Maven profiles for compiling in support for exporting metrics to Graphite and InfluxDB have been removed.
+
 ## 1.8.0
 
 ### New Features

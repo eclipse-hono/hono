@@ -12,12 +12,12 @@ and how to interpret actual values.
 
 ## Reported Metrics
 
-Hono uses [Micrometer](https://micrometer.io/) in combination with Spring Boot
-to internally collect metrics. Those metrics can be exported to different
+Hono uses [Micrometer](https://micrometer.io/) for collecting metrics. Those metrics can be exported to different
 back ends. Please refer to [Configuring Metrics]({{< relref "/admin-guide/monitoring-tracing-config#configuring-a-metrics-back-end" >}})
 for details.
 
-The example deployment by default uses [Prometheus](https://prometheus.io/) as the metrics back end.
+The container images published on Docker Hub have been compiled with support for [Prometheus](https://prometheus.io/)
+as the metrics back end.
 
 When deploying to Kubernetes/OpenShift, the metrics reported by Hono may contain
 environment specific tags (like the *pod* name) which are added by the Prometheus
@@ -27,28 +27,28 @@ Hono applications may report other metrics in addition to the ones defined here.
 In particular, all components report metrics regarding the JVM's internal state, e.g.
 memory consumption and garbage collection status. Those metrics are not considered
 part of Hono's *official* metrics definition. However, all those metrics
-will still contain tags as described below.
+will still contain the common tags described below.
 
 ### Common Metrics
 
 Tags for common metrics are:
 
-| Tag              | Value                              | Description |
-| ---------------- | ---------------------------------- | ----------- |
-| *host*           | *string*                           | The name of the host that the component reporting the metric is running on |
-| *component-type* | `adapter`, `service`             | The type of component reporting the metric |
-| *component-name* | *string*                           | The name of the component reporting the metric. |
+| Tag              | Value              | Description |
+| ---------------- | ------------------ | ----------- |
+| *host*           | *string*           | The name of the host that the component reporting the metric is running on |
+| *component-type* | `adapter`, `service` | The type of component reporting the metric |
+| *component-name* | *string*           | The name of the component reporting the metric. |
 
 The names of Hono's standard components are as follows:
 
-| Component         | *component-name*      |
-| ----------------- | --------------------- |
+| Component         | *component-name*   |
+| ----------------- | ------------------ |
 | Auth Server       | `hono-auth`         |
 | Device Registry   | `hono-registry`     |
 | AMQP adapter      | `hono-amqp`         |
 | CoAP adapter      | `hono-coap`         |
 | HTTP adapter      | `hono-http`         |
-| Kura adapter      | `hono-kura-mqtt`   |
+| Kura adapter      | `hono-kura-mqtt`    |
 | MQTT adapter      | `hono-mqtt`         |
 | Lora adapter      | `hono-lora`         |
 | Sigfox adapter    | `hono-sigfox`       |
