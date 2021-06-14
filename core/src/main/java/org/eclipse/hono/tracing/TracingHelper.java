@@ -119,6 +119,10 @@ public final class TracingHelper {
      * An OpenTracing tag indicating if a client's connection is secured using TLS.
      */
     public static final BooleanTag TAG_TLS = new BooleanTag("tls");
+    /**
+     * An OpenTracing span log entry field containing a nested exception object.
+     */
+    public static final String ERROR_CAUSE_OBJECT = "error.cause.object";
 
     private static final String JSON_KEY_SPAN_CONTEXT = "span-context";
 
@@ -194,6 +198,9 @@ public final class TracingHelper {
         items.put(Fields.EVENT, Tags.ERROR.getKey());
         if (error != null) {
             items.put(Fields.ERROR_OBJECT, error);
+            if (error.getCause() != null) {
+                items.put(ERROR_CAUSE_OBJECT, error.getCause());
+            }
         }
         return items;
     }

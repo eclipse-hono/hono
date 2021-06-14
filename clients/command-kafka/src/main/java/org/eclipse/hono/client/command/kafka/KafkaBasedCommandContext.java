@@ -17,6 +17,8 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -25,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
+import io.opentracing.tag.Tags;
 
 /**
  * A context for passing around parameters relevant for processing a {@code Command} used in a Kafka based
@@ -70,6 +73,7 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
         }
         final Span span = getTracingSpan();
         LOG.trace("accepted command message [{}]", getCommand());
+        Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_ACCEPTED);
         span.log("command for device handled with outcome 'accepted'");
         span.finish();
     }
@@ -81,7 +85,10 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
             return;
         }
         final Span span = getTracingSpan();
-        TracingHelper.logError(span, "command for device handled with outcome 'released'");
+        TracingHelper.logError(span, "command could not be delivered or processed", error);
+        final ServiceInvocationException mappedError = StatusCodeMapper.toServerError(error);
+        final int status = mappedError.getErrorCode();
+        Tags.HTTP_STATUS.set(span, status);
         span.finish();
     }
 
@@ -94,20 +101,25 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
         TracingHelper.logError(span, "command for device handled with outcome 'modified'"
                 + (deliveryFailed ? "; delivery failed" : "")
                 + (undeliverableHere ? "; undeliverable here" : ""));
+        final int status = undeliverableHere ? HttpURLConnection.HTTP_NOT_FOUND
+                : HttpURLConnection.HTTP_UNAVAILABLE;
+        Tags.HTTP_STATUS.set(span, status);
         span.finish();
     }
 
     @Override
-    public void reject(final String cause) {
-        reject(HttpURLConnection.HTTP_BAD_REQUEST, cause);
+    public void reject(final String error) {
+        TracingHelper.logError(getTracingSpan(), "client error trying to deliver or process command: " + error);
+        reject(HttpURLConnection.HTTP_BAD_REQUEST, error);
     }
 
     @Override
-    public void reject(final Throwable cause) {
-        final int status = cause instanceof ClientErrorException
-                ? ((ClientErrorException) cause).getErrorCode()
+    public void reject(final Throwable error) {
+        final int status = error instanceof ClientErrorException
+                ? ((ClientErrorException) error).getErrorCode()
                 : HttpURLConnection.HTTP_BAD_REQUEST;
-        reject(status, cause.getMessage());
+        TracingHelper.logError(getTracingSpan(), "client error trying to deliver or process command", error);
+        reject(status, error.getMessage());
     }
 
     private void reject(final int status, final String cause) {
@@ -115,7 +127,7 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
             return;
         }
         final Span span = getTracingSpan();
-        TracingHelper.logError(span, "command for device handled with outcome 'rejected'; error: " + cause);
+        Tags.HTTP_STATUS.set(span, status);
         span.finish();
     }
 

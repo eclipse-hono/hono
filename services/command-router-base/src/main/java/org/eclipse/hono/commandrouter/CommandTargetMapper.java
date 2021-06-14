@@ -15,6 +15,7 @@ package org.eclipse.hono.commandrouter;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.registry.DeviceDisabledOrNotRegisteredException;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.commandrouter.impl.CommandTargetMapperImpl;
 import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
@@ -91,6 +92,8 @@ public interface CommandTargetMapper {
      * @return A succeeded Future containing the JSON object with target device/gateway and adapter instance; or a
      *         failed Future with:
      *         <ul>
+     *         <li>a {@link DeviceDisabledOrNotRegisteredException} if the given device is disabled or not registered,
+     *         </li>
      *         <li>a {@link ClientErrorException} with status <em>Not Found</em> if no matching adapter instance was
      *         found</li>
      *         <li>or a {@link ServiceInvocationException} with an error code indicating the cause of the failure</li>

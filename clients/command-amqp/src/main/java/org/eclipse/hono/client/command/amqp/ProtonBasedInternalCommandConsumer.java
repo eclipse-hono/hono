@@ -20,6 +20,7 @@ import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.NoConsumerException;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.amqp.AbstractServiceClient;
 import org.eclipse.hono.client.command.CommandContext;
@@ -144,8 +145,7 @@ public class ProtonBasedInternalCommandConsumer extends AbstractServiceClient im
             commandHandler.handleCommand(commandContext);
         } else {
             log.info("no command handler found for command [{}]", command);
-            TracingHelper.logError(currentSpan, "no command handler found for command");
-            commandContext.release();
+            commandContext.release(new NoConsumerException("no command handler found for command"));
         }
     }
 

@@ -1470,7 +1470,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     if (t instanceof ClientErrorException) {
                         commandContext.reject(t);
                     } else {
-                        TracingHelper.logError(commandContext.getTracingSpan(), t);
                         commandContext.release(t);
                     }
                     metrics.reportCommand(
@@ -1607,9 +1606,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 final Handler<Void> onAckTimeoutHandler = v -> {
                     log.debug("did not receive PUBACK [packet-id: {}] for command [tenant-id: {}, device-id: {}, MQTT client-id: {}]",
                             publishedMsgId, subscription.getTenant(), subscription.getDeviceId(), endpoint.clientIdentifier());
-                    final String errorMsg = "did not receive PUBACK from device";
-                    TracingHelper.logError(commandContext.getTracingSpan(), errorMsg);
-                    commandContext.release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, errorMsg));
+                    commandContext.release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                            "did not receive PUBACK from device"));
                     reportPublishedCommand(tenantObject, subscription, commandContext, ProcessingOutcome.UNDELIVERABLE);
                 };
                 pendingAcks.add(publishedMsgId, onAckHandler, onAckTimeoutHandler, getConfig().getEffectiveSendMessageToDeviceTimeout());

@@ -20,6 +20,7 @@ import java.util.Objects;
 
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.registry.DeviceDisabledOrNotRegisteredException;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
@@ -87,7 +88,9 @@ public class CommandTargetMapperImpl implements CommandTargetMapper {
                 .recover(t -> {
                     LOG.debug("Error retrieving gateways authorized to act on behalf of device [tenant-id: {}, device-id: {}]",
                             tenantId, deviceId, t);
-                    return Future.failedFuture(t);
+                    return Future.failedFuture(ServiceInvocationException.extractStatusCode(t) == HttpURLConnection.HTTP_NOT_FOUND
+                            ? new DeviceDisabledOrNotRegisteredException(tenantId, HttpURLConnection.HTTP_NOT_FOUND)
+                            : t);
                 }).compose(viaGateways -> {
                     return deviceConnectionInfo
                             .getCommandHandlingAdapterInstances(tenantId, deviceId, new HashSet<>(viaGateways), span)

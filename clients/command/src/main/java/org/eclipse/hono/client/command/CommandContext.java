@@ -60,16 +60,18 @@ public interface CommandContext extends ExecutionContext {
     void accept();
 
     /**
-     * Indicates to the sender that the command message could not be delivered to its target due to
-     * reasons that are not the responsibility of the sender of the command.
+     * Indicates to the sender that the command message could not be delivered to its target or could
+     * not be processed by its target due to reasons that are not the responsibility of the sender
+     * of the command.
      */
     default void release() {
         release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
     }
 
     /**
-     * Indicates to the sender that the command message could not be delivered to its target due to
-     * reasons that are not the responsibility of the sender of the command.
+     * Indicates to the sender that the command message could not be delivered to its target or could
+     * not be processed by its target due to reasons that are not the responsibility of the sender
+     * of the command.
      *
      * @param error The delivery error.
      * @throws NullPointerException if error is {@code null}.
@@ -87,7 +89,7 @@ public interface CommandContext extends ExecutionContext {
     void modify(boolean deliveryFailed, boolean undeliverableHere);
 
     /**
-     * Indicates to the sender that the command message cannot be delivered to its target due to
+     * Indicates to the sender that the command message cannot be delivered to or processed by its target due to
      * reasons that are the responsibility of the sender of the command.
      * <p>
      * The reason for a command being rejected often is that the command is invalid, e.g. lacking a
@@ -100,7 +102,7 @@ public interface CommandContext extends ExecutionContext {
     }
 
     /**
-     * Indicates to the sender that the command message cannot be delivered to its target due to
+     * Indicates to the sender that the command message cannot be delivered to or processed by its target due to
      * reasons that are the responsibility of the sender of the command.
      * <p>
      * The reason for a command being rejected often is that the command is invalid, e.g. lacking a
