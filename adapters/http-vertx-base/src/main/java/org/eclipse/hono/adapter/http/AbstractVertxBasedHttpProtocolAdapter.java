@@ -1041,7 +1041,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             ProcessingOutcome.UNDELIVERABLE,
                             command.getPayloadSize(),
                             commandSample);
-                    TracingHelper.logError(commandContext.getTracingSpan(), errorMsg);
                     commandContext.release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, errorMsg));
                 }
 

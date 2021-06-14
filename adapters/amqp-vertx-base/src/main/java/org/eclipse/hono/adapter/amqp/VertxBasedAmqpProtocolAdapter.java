@@ -907,7 +907,6 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 if (failure instanceof ClientErrorException) {
                     commandContext.reject(failure);
                 } else {
-                    TracingHelper.logError(commandContext.getTracingSpan(), failure);
                     commandContext.release(failure);
                 }
                 metrics.reportCommand(
@@ -975,10 +974,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
         if (sender.sendQueueFull()) {
             log.debug("cannot send command to device: no credit available [{}]", command);
-            final Exception ex = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
-                    "no credit available for sending command to device");
-            TracingHelper.logError(commandContext.getTracingSpan(), ex);
-            commandContext.release(ex);
+            commandContext.release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                    "no credit available for sending command to device"));
             reportSentCommand(tenantObject, commandContext, ProcessingOutcome.UNDELIVERABLE);
         } else {
 
@@ -1009,10 +1006,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                         getConfig().getSendMessageToDeviceTimeout(), linkOrConnectionClosedInfo, command);
                 if (isCommandSettled.compareAndSet(false, true)) {
                     // timeout reached -> release command
-                    final Exception ex = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
-                            "timeout waiting for delivery update from device");
-                    TracingHelper.logError(commandContext.getTracingSpan(), ex);
-                    commandContext.release(ex);
+                    commandContext.release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                            "timeout waiting for delivery update from device"));
                     reportSentCommand(tenantObject, commandContext, ProcessingOutcome.UNDELIVERABLE);
                 } else {
                     log.trace("command is already settled and downstream application was already notified [{}]", command);

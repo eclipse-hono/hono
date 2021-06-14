@@ -15,14 +15,18 @@ package org.eclipse.hono.commandrouter.impl;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
+import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.NoConsumerException;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.InternalCommandSender;
+import org.eclipse.hono.client.registry.DeviceDisabledOrNotRegisteredException;
 import org.eclipse.hono.client.registry.TenantClient;
+import org.eclipse.hono.client.registry.TenantDisabledOrNotRegisteredException;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
-import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.TenantObject;
@@ -102,20 +106,28 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
                 .compose(tenantObject -> commandTargetMapper.getTargetGatewayAndAdapterInstance(command.getTenant(),
                         command.getDeviceId(), commandContext.getTracingContext()))
                 .recover(cause -> {
-                    final String errorMsg;
-
-                    if (tenantObjectFuture.failed()) {
-                        errorMsg = "error getting tenant information for tenant " + command.getTenant();
+                    final Throwable error;
+                    if (tenantObjectFuture.failed() && ServiceInvocationException
+                            .extractStatusCode(cause) == HttpURLConnection.HTTP_NOT_FOUND) {
+                        error = new TenantDisabledOrNotRegisteredException(command.getTenant(),
+                                HttpURLConnection.HTTP_NOT_FOUND);
+                    } else if (cause instanceof DeviceDisabledOrNotRegisteredException) {
+                        error = cause;
                     } else if (ServiceInvocationException.extractStatusCode(cause) == HttpURLConnection.HTTP_NOT_FOUND) {
-                        errorMsg = "no target adapter instance found for command with device id "
-                                + command.getDeviceId();
+                        log.debug("no target adapter instance found for command with device id "
+                                + command.getDeviceId(), cause);
+                        error = new NoConsumerException("no target adapter instance found");
                     } else {
-                        errorMsg = "error getting target gateway and adapter instance for command with device id "
-                                + command.getDeviceId();
+                        log.debug("error getting target gateway and adapter instance for command with device id "
+                                + command.getDeviceId(), cause);
+                        error = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                                "error getting target gateway and adapter instance", cause);
                     }
-                    log.debug(errorMsg, cause);
-                    TracingHelper.logError(commandContext.getTracingSpan(), errorMsg, cause);
-                    commandContext.release(cause);
+                    if (error instanceof ClientErrorException) {
+                        commandContext.reject(error);
+                    } else {
+                        commandContext.release(error);
+                    }
                     return Future.failedFuture(cause);
                 })
                 .compose(result -> {

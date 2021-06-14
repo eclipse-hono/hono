@@ -12,11 +12,13 @@
  */
 package org.eclipse.hono.client.command.kafka;
 
+import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.InternalCommandSender;
@@ -72,7 +74,8 @@ public class KafkaBasedInternalCommandSender extends AbstractKafkaBasedMessageSe
                 getHeaders((KafkaBasedCommand) command),
                 commandContext.getTracingContext())
                         .onSuccess(v -> commandContext.accept())
-                        .onFailure(thr -> commandContext.release(thr));
+                        .onFailure(thr -> commandContext.release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                                "failed to publish command message on internal command topic", thr)));
     }
 
     private static String getInternalCommandTopic(final String adapterInstanceId) {

@@ -22,7 +22,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.eclipse.hono.adapter.TenantDisabledOrNotRegisteredException;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.adapter.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.adapter.auth.device.TenantServiceBasedX509Authentication;
@@ -42,6 +41,7 @@ import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.command.CommandContext;
+import org.eclipse.hono.client.registry.TenantDisabledOrNotRegisteredException;
 import org.eclipse.hono.service.http.HttpContext;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.http.TracingHandler;
@@ -348,7 +348,6 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
         if (command.getGatewayId() == null) {
             final String errorMsg = "no gateway defined for command";
             LOG.debug("{} [{}]", errorMsg, command);
-            TracingHelper.logError(commandContext.getTracingSpan(), errorMsg);
             commandContext.release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, errorMsg));
             return;
         }
@@ -390,8 +389,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                             timer);
                 })
                 .onFailure(t -> {
-                    LOG.error("error sending command", t);
-                    TracingHelper.logError(commandContext.getTracingSpan(), t);
+                    LOG.debug("error sending command", t);
                     commandContext.release(t);
                     metrics.reportCommand(
                             command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,

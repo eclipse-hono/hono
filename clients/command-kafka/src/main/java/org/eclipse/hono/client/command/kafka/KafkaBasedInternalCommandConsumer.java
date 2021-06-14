@@ -24,6 +24,7 @@ import java.util.function.Supplier;
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.eclipse.hono.client.NoConsumerException;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandHandlerWrapper;
 import org.eclipse.hono.client.command.CommandHandlers;
@@ -306,8 +307,7 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
             }
         } else {
             LOG.info("no command handler found for command [{}]", command);
-            TracingHelper.logError(currentSpan, "no command handler found for command");
-            commandContext.release();
+            commandContext.release(new NoConsumerException("no command handler found for command"));
         }
     }
 
