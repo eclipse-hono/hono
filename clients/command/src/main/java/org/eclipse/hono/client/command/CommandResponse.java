@@ -43,7 +43,19 @@ public final class CommandResponse {
     private final String correlationId;
     private final String replyToId;
 
-    private CommandResponse(
+    /**
+     * Creates a command response.
+     *
+     * @param tenantId The tenant that the device sending the response belongs to.
+     * @param deviceId The ID of the device that the response originates from.
+     * @param payload The payload of the response or {@code null} if the response has no payload.
+     * @param contentType The contentType of the response or {@code null} if the response has no payload.
+     * @param status The HTTP status code indicating the outcome of the command.
+     * @param correlationId The correlation ID of the command that this is the response for.
+     * @param replyToId The replyTo ID of the command message.
+     * @throws NullPointerException if tenantId, deviceId, correlationId or replyToId is {@code null}.
+     */
+    public CommandResponse(
             final String tenantId,
             final String deviceId,
             final Buffer payload,
@@ -52,13 +64,13 @@ public final class CommandResponse {
             final String correlationId,
             final String replyToId) {
 
-        this.tenantId = tenantId;
-        this.deviceId = deviceId;
+        this.tenantId = Objects.requireNonNull(tenantId);
+        this.deviceId = Objects.requireNonNull(deviceId);
         this.payload = payload;
         this.contentType = contentType;
         this.status = status;
-        this.correlationId = correlationId;
-        this.replyToId = replyToId;
+        this.correlationId = Objects.requireNonNull(correlationId);
+        this.replyToId = Objects.requireNonNull(replyToId);
     }
 
     /**
@@ -91,22 +103,21 @@ public final class CommandResponse {
         } else if (INVALID_STATUS_CODE.test(status)) {
             LOG.debug("cannot create CommandResponse: status is invalid: {}", status);
             return null;
-        } else {
-            try {
-                final Pair<String, String> correlationAndReplyToId = Commands
-                        .getCorrelationAndReplyToId(requestId, deviceId);
-                return new CommandResponse(
-                        tenantId,
-                        deviceId,
-                        payload,
-                        contentType,
-                        status,
-                        correlationAndReplyToId.one(),
-                        correlationAndReplyToId.two());
-            } catch (final IllegalArgumentException e) {
-                LOG.debug("error creating CommandResponse", e);
-                return null;
-            }
+        }
+        try {
+            final Pair<String, String> correlationAndReplyToId = Commands
+                    .getCorrelationAndReplyToId(requestId, deviceId);
+            return new CommandResponse(
+                    tenantId,
+                    deviceId,
+                    payload,
+                    contentType,
+                    status,
+                    correlationAndReplyToId.one(),
+                    correlationAndReplyToId.two());
+        } catch (final IllegalArgumentException e) {
+            LOG.debug("error creating CommandResponse", e);
+            return null;
         }
     }
 
@@ -193,18 +204,18 @@ public final class CommandResponse {
     }
 
     /**
-     * Gets the reply-to identifier that has been extracted from the request ID.
+     * Gets the reply-to identifier that is either part of the request ID or the response address.
      *
-     * @return The identifier or {@code null} if the request ID could not be parsed.
+     * @return The identifier.
      */
     public String getReplyToId() {
         return replyToId;
     }
 
     /**
-     * Gets the correlation identifier that has bee extracted from the request ID.
+     * Gets the correlation identifier.
      *
-     * @return The identifier or {@code null} if the request ID could not be parsed.
+     * @return The identifier.
      */
     public String getCorrelationId() {
         return correlationId;

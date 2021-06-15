@@ -17,6 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -33,12 +34,17 @@ import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.SendMessageTimeoutException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.amqp.GenericSenderLink;
+import org.eclipse.hono.client.kafka.HonoTopic;
+import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.tests.AssumeMessagingSystem;
 import org.eclipse.hono.tests.CommandEndpointConfiguration.SubscriberRole;
+import org.eclipse.hono.tests.GenericKafkaSender;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
@@ -291,7 +297,9 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         .compose(conAck -> subscribeToCommands(commandTargetDeviceId, commandConsumer, endpointConfig, subscribeQos))
         .onComplete(setup.succeeding(ok -> ready.flag()));
 
-        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
+                .as("setup of adapter finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+                .isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;
@@ -361,14 +369,14 @@ public class CommandAndControlMqttIT extends MqttTestBase {
     @MethodSource("allCombinations")
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 20)
     @AssumeMessagingSystem(type = MessagingType.amqp)
-    public void testSendCommandFailsForMalformedMessage(
+    public void testSendCommandViaAmqpFailsForMalformedMessage(
             final MqttCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
 
         final String commandTargetDeviceId = endpointConfig.isSubscribeAsGateway()
                 ? helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5)
                 : deviceId;
-        final AtomicReference<GenericSenderLink> sender = new AtomicReference<>();
+        final AtomicReference<GenericSenderLink> amqpCmdSenderRef = new AtomicReference<>();
         final String linkTargetAddress = endpointConfig.getSenderLinkTargetAddress(tenantId);
 
         final VertxTestContext setup = new VertxTestContext();
@@ -392,11 +400,13 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         .compose(ok -> helper.createGenericAmqpMessageSender(endpointConfig.getNorthboundEndpoint(), tenantId))
         .onComplete(setup.succeeding(genericSender -> {
             LOGGER.debug("created generic sender for sending commands [target address: {}]", linkTargetAddress);
-            sender.set(genericSender);
+            amqpCmdSenderRef.set(genericSender);
             ready.flag();
         }));
 
-        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
+                .as("setup of adapter finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+                .isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;
@@ -410,7 +420,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         messageWithoutSubject.setAddress(messageAddress);
         messageWithoutSubject.setMessageId("message-id");
         messageWithoutSubject.setReplyTo("reply/to/address");
-        sender.get().sendAndWaitForOutcome(messageWithoutSubject, NoopSpan.INSTANCE).onComplete(ctx.failing(t -> {
+        amqpCmdSenderRef.get().sendAndWaitForOutcome(messageWithoutSubject, NoopSpan.INSTANCE).onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertThat(t).isInstanceOf(ClientErrorException.class));
             failedAttempts.flag();
         }));
@@ -420,10 +430,105 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         messageWithoutId.setAddress(messageAddress);
         messageWithoutId.setSubject("setValue");
         messageWithoutId.setReplyTo("reply/to/address");
-        sender.get().sendAndWaitForOutcome(messageWithoutId, NoopSpan.INSTANCE).onComplete(ctx.failing(t -> {
+        amqpCmdSenderRef.get().sendAndWaitForOutcome(messageWithoutId, NoopSpan.INSTANCE).onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertThat(t).isInstanceOf(ClientErrorException.class));
             failedAttempts.flag();
         }));
+    }
+
+    /**
+     * Verifies that the adapter rejects malformed command messages sent by applications.
+     * <p>
+     * This test is applicable only if the messaging network type is Kafka.
+     *
+     * @param endpointConfig The endpoints to use for sending/receiving commands.
+     * @param ctx The vert.x test context.
+     * @throws InterruptedException if not all commands and responses are exchanged in time.
+     */
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
+    @MethodSource("allCombinations")
+    @Timeout(timeUnit = TimeUnit.SECONDS, value = 20)
+    @AssumeMessagingSystem(type = MessagingType.kafka)
+    public void testSendCommandViaKafkaFailsForMalformedMessage(
+            final MqttCommandEndpointConfiguration endpointConfig,
+            final VertxTestContext ctx) throws InterruptedException {
+
+        final String commandTargetDeviceId = endpointConfig.isSubscribeAsGateway()
+                ? helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5)
+                : deviceId;
+        final AtomicReference<GenericKafkaSender> kafkaSenderRef = new AtomicReference<>();
+        final CountDownLatch expectedCommandResponses = new CountDownLatch(1);
+
+        final VertxTestContext setup = new VertxTestContext();
+        final Checkpoint ready = setup.checkpoint(2);
+
+        final Future<MessageConsumer> kafkaAsyncErrorResponseConsumer = helper.createDeliveryFailureCommandResponseConsumer(
+                ctx,
+                tenantId,
+                HttpURLConnection.HTTP_BAD_REQUEST,
+                response -> expectedCommandResponses.countDown(),
+                null);
+
+        createConsumer(tenantId, msg -> {
+            // expect empty notification with TTD -1
+            setup.verify(() -> assertThat(msg.getContentType()).isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
+            final TimeUntilDisconnectNotification notification = msg.getTimeUntilDisconnectNotification().orElse(null);
+            LOGGER.info("received notification [{}]", notification);
+            if (notification.getTtd() == -1) {
+                ready.flag();
+            }
+        })
+                .compose(consumer -> helper.registry.addDeviceToTenant(tenantId, deviceId, password))
+                .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
+                .compose(conAck -> subscribeToCommands(commandTargetDeviceId, msg -> {
+                    // all commands should get rejected because they fail to pass the validity check
+                    ctx.failNow(new IllegalStateException("should not have received command"));
+                }, endpointConfig, MqttQoS.AT_MOST_ONCE))
+                .compose(ok -> helper.createGenericKafkaSender().onSuccess(kafkaSenderRef::set).mapEmpty())
+                .onComplete(setup.succeeding(v -> ready.flag()));
+
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
+                .as("setup of adapter finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+                .isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+            return;
+        }
+
+        final String commandTopic = new HonoTopic(HonoTopic.Type.COMMAND, tenantId).toString();
+
+        LOGGER.debug("sending command message lacking subject and correlation ID - no failure response expected here");
+        final Map<String, Object> properties1 = Map.of(
+                MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId,
+                MessageHelper.SYS_PROPERTY_CONTENT_TYPE, MessageHelper.CONTENT_TYPE_OCTET_STREAM,
+                KafkaRecordHelper.HEADER_RESPONSE_REQUIRED, true
+        );
+        kafkaSenderRef.get().sendAndWaitForOutcome(commandTopic, tenantId, deviceId, Buffer.buffer(), properties1)
+                .onComplete(ctx.succeeding());
+
+        LOGGER.debug("sending command message lacking subject");
+        final String correlationId = "1";
+        final Map<String, Object> properties2 = Map.of(
+                MessageHelper.SYS_PROPERTY_CORRELATION_ID, correlationId,
+                MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId,
+                MessageHelper.SYS_PROPERTY_CONTENT_TYPE, MessageHelper.CONTENT_TYPE_OCTET_STREAM,
+                KafkaRecordHelper.HEADER_RESPONSE_REQUIRED, true
+        );
+        kafkaSenderRef.get().sendAndWaitForOutcome(commandTopic, tenantId, deviceId, Buffer.buffer(), properties2)
+                .onComplete(ctx.succeeding());
+
+        final long timeToWait = 500;
+        if (!expectedCommandResponses.await(timeToWait, TimeUnit.MILLISECONDS)) {
+            LOGGER.info("Timeout of {} milliseconds reached, stop waiting for command response", timeToWait);
+        }
+        kafkaAsyncErrorResponseConsumer.result().close()
+                .onComplete(ar -> {
+                    if (expectedCommandResponses.getCount() == 0) {
+                        ctx.completeNow();
+                    } else {
+                        ctx.failNow(new java.lang.IllegalStateException("did not receive command response"));
+                    }
+                });
     }
 
     /**
@@ -488,7 +593,9 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                 .compose(conAck -> subscribeToCommands(commandTargetDeviceId, commandConsumer, endpointConfig, subscribeQos))
                 .onComplete(setup.succeeding(ok -> ready.flag()));
 
-        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
+                .as("setup of adapter finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+                .isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;
@@ -507,7 +614,8 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                         LOGGER.debug("sending command {} succeeded unexpectedly", commandsSent.get());
                     } else {
                         if (sendAttempt.cause() instanceof ServerErrorException
-                                && ((ServerErrorException) sendAttempt.cause()).getErrorCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
+                                && ((ServerErrorException) sendAttempt.cause()).getErrorCode() == HttpURLConnection.HTTP_UNAVAILABLE
+                                && !(sendAttempt.cause() instanceof SendMessageTimeoutException)) {
                             LOGGER.debug("sending command {} failed as expected: {}", commandsSent.get(),
                                     sendAttempt.cause().toString());
                             lastReceivedTimestamp.set(System.currentTimeMillis());
@@ -520,9 +628,6 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                             LOGGER.debug("sending command {} failed with an unexpected error", commandsSent.get(),
                                     sendAttempt.cause());
                         }
-                    }
-                    if (commandsSent.get() % 20 == 0) {
-                        LOGGER.info("commands sent: " + commandsSent.get());
                     }
                     commandSent.countDown();
                 });

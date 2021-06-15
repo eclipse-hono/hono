@@ -163,18 +163,18 @@ public final class CommandResponse {
     }
 
     /**
-     * Gets the reply-to identifier that has been extracted from the request ID.
+     * Gets the reply-to identifier that is either part of the request ID or the response address.
      *
-     * @return The identifier or {@code null} if the request ID could not be parsed.
+     * @return The identifier.
      */
     public String getReplyToId() {
         return replyToId;
     }
 
     /**
-     * Gets the correlation identifier that has bee extracted from the request ID.
+     * Gets the correlation identifier.
      *
-     * @return The identifier or {@code null} if the request ID could not be parsed.
+     * @return The identifier or {@code null} if no correlation id is set.
      */
     public String getCorrelationId() {
         return (String) message.getCorrelationId();

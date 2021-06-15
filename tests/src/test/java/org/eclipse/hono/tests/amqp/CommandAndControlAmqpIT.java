@@ -16,6 +16,7 @@ package org.eclipse.hono.tests.amqp;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.HttpURLConnection;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -36,10 +37,14 @@ import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.SendMessageTimeoutException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.amqp.GenericSenderLink;
+import org.eclipse.hono.client.kafka.HonoTopic;
+import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.tests.AssumeMessagingSystem;
 import org.eclipse.hono.tests.CommandEndpointConfiguration.SubscriberRole;
+import org.eclipse.hono.tests.GenericKafkaSender;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
@@ -78,6 +83,9 @@ import io.vertx.proton.ProtonSender;
 public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
     private static final String REJECTED_COMMAND_ERROR_MESSAGE = "rejected command error message";
+
+    private static final int COMMANDS_TO_SEND = 60;
+
     private String tenantId;
     private String deviceId;
     private final String password = "secret";
@@ -96,7 +104,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
      * @param ctx The vert.x test context.
      */
     @BeforeEach
-    public void createRandomTenant(final VertxTestContext ctx) {
+    public void createRandomTenantAndInitDeviceId(final VertxTestContext ctx) {
 
         tenantId = helper.getRandomTenantId();
         deviceId = helper.getRandomDeviceId(tenantId);
@@ -159,7 +167,9 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             }))
         .onComplete(setup.succeeding(v -> setupDone.flag()));
 
-        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
+                .as("connect and subscribe finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+                .isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
         }
@@ -246,8 +256,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 ? helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5)
                 : deviceId;
 
-        final int commandsToSend = 60;
-        final Checkpoint commandsReceived = ctx.checkpoint(commandsToSend);
+        final Checkpoint commandsReceived = ctx.checkpoint(COMMANDS_TO_SEND);
 
         final AtomicInteger counter = new AtomicInteger();
         testSendCommandSucceeds(
@@ -273,9 +282,9 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                             "text/plain",
                             payload,
                             // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
-                            IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= commandsToSend / 2),
+                            IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= COMMANDS_TO_SEND / 2),
                             IntegrationTestSupport.getSendCommandTimeout());
-                }, commandsToSend);
+                }, COMMANDS_TO_SEND);
     }
 
     /**
@@ -325,7 +334,9 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
         asyncResponseConsumer.onComplete(setup.completing());
 
-        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
+                .as("setup of command response consumer finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+                .isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;
@@ -345,7 +356,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                         "text/plain",
                         msg,
                         correlationId,
-                        replyId, null)
+                        replyId,
+                        null)
                 .onComplete(sendAttempt -> {
                     if (sendAttempt.failed()) {
                         log.debug("error sending command {}", correlationId, sendAttempt.cause());
@@ -394,7 +406,6 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 ? helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5)
                 : deviceId;
 
-        final int commandsToSend = 60;
         final AtomicInteger counter = new AtomicInteger();
         testSendCommandSucceeds(
                 ctx,
@@ -409,7 +420,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                             "text/plain",
                             payload,
                             // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
-                            IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= commandsToSend / 2),
+                            IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= COMMANDS_TO_SEND / 2),
                             IntegrationTestSupport.getSendCommandTimeout())
                         .map(response -> {
                             ctx.verify(() -> {
@@ -419,7 +430,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                             return response;
                         });
                 },
-                commandsToSend);
+                COMMANDS_TO_SEND);
     }
 
     private void testSendCommandSucceeds(
@@ -494,7 +505,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
     @MethodSource("allCombinations")
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
     @AssumeMessagingSystem(type = MessagingType.amqp)
-    public void testSendCommandFailsForMalformedMessage(
+    public void testSendCommandViaAmqpFailsForMalformedMessage(
             final AmqpCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
 
@@ -502,8 +513,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 ? helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5)
                 : deviceId;
 
-        final AtomicReference<GenericSenderLink> sender = new AtomicReference<>();
-        final String targetAddress = endpointConfig.getSenderLinkTargetAddress(tenantId);
+        final AtomicReference<GenericSenderLink> amqpCmdSenderRef = new AtomicReference<>();
 
         final VertxTestContext setup = new VertxTestContext();
         final Checkpoint setupDone = setup.checkpoint();
@@ -529,8 +539,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             }))
             .compose(ok -> helper.createGenericAmqpMessageSender(endpointConfig.getNorthboundEndpoint(), tenantId))
             .map(s -> {
-                log.debug("created generic sender for sending commands [target address: {}]", targetAddress);
-                sender.set(s);
+                log.debug("created generic sender for sending commands [target address: {}]", endpointConfig.getSenderLinkTargetAddress(tenantId));
+                amqpCmdSenderRef.set(s);
                 preconditions.flag();
                 return s;
             })
@@ -551,7 +561,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         messageWithoutSubject.setAddress(endpointConfig.getCommandMessageAddress(tenantId, commandTargetDeviceId));
         messageWithoutSubject.setMessageId("message-id");
         messageWithoutSubject.setReplyTo("reply/to/address");
-        sender.get().sendAndWaitForOutcome(messageWithoutSubject, NoopSpan.INSTANCE).onComplete(ctx.failing(t -> {
+        amqpCmdSenderRef.get().sendAndWaitForOutcome(messageWithoutSubject, NoopSpan.INSTANCE).onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertThat(t).isInstanceOf(ClientErrorException.class));
             expectedFailures.flag();
         }));
@@ -561,15 +571,16 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         messageWithoutId.setAddress(endpointConfig.getCommandMessageAddress(tenantId, commandTargetDeviceId));
         messageWithoutId.setSubject("setValue");
         messageWithoutId.setReplyTo("reply/to/address");
-        sender.get().sendAndWaitForOutcome(messageWithoutId, NoopSpan.INSTANCE).onComplete(ctx.failing(t -> {
+        amqpCmdSenderRef.get().sendAndWaitForOutcome(messageWithoutId, NoopSpan.INSTANCE).onComplete(ctx.failing(t -> {
             ctx.verify(() -> assertThat(t).isInstanceOf(ClientErrorException.class));
             expectedFailures.flag();
         }));
     }
 
     /**
-     * Verifies that the adapter immediately forwards the <em>released</em> disposition
-     * if there is no credit left for sending the command to the device.
+     * Verifies that the adapter rejects malformed command messages sent by applications.
+     * <p>
+     * This test is applicable only if the messaging network type is Kafka.
      *
      * @param endpointConfig The endpoints to use for sending/receiving commands.
      * @param ctx The vert.x test context.
@@ -578,7 +589,108 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("allCombinations")
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
-    @AssumeMessagingSystem(type = MessagingType.amqp)
+    @AssumeMessagingSystem(type = MessagingType.kafka)
+    public void testSendCommandViaKafkaFailsForMalformedMessage(
+            final AmqpCommandEndpointConfiguration endpointConfig,
+            final VertxTestContext ctx) throws InterruptedException {
+
+        final String commandTargetDeviceId = endpointConfig.isSubscribeAsGateway()
+                ? helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5)
+                : deviceId;
+
+        final AtomicReference<GenericKafkaSender> kafkaSenderRef = new AtomicReference<>();
+        final CountDownLatch expectedCommandResponses = new CountDownLatch(1);
+
+        final VertxTestContext setup = new VertxTestContext();
+        final Checkpoint setupDone = setup.checkpoint();
+        final Checkpoint ttdReceivedPrecondition = setup.checkpoint();
+
+        final Future<MessageConsumer> kafkaAsyncErrorResponseConsumer = helper.createDeliveryFailureCommandResponseConsumer(
+                ctx,
+                tenantId,
+                HttpURLConnection.HTTP_BAD_REQUEST,
+                response -> expectedCommandResponses.countDown(),
+                null);
+
+        connectToAdapter(tenantId, deviceId, password, () -> createEventConsumer(tenantId, msg -> {
+            // expect empty notification with TTD -1
+            setup.verify(() -> assertThat(msg.getContentType())
+                    .as("receive TTD notification")
+                    .isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
+            final TimeUntilDisconnectNotification notification = msg.getTimeUntilDisconnectNotification().orElse(null);
+            log.debug("received notification [{}]", notification);
+            setup.verify(() -> assertThat(notification).isNotNull());
+            if (notification.getTtd() == -1) {
+                ttdReceivedPrecondition.flag();
+            }
+        }))
+                .compose(con -> subscribeToCommands(endpointConfig, tenantId, commandTargetDeviceId)
+                        .map(recv -> {
+                            recv.handler((delivery, msg) -> ctx
+                                    .failNow(new IllegalStateException("should not have received command")));
+                            return null;
+                        }))
+                .compose(ok -> helper.createGenericKafkaSender().onSuccess(kafkaSenderRef::set).mapEmpty())
+                .compose(v -> kafkaAsyncErrorResponseConsumer)
+                .onComplete(setup.succeeding(v -> setupDone.flag()));
+
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
+                .as("setup of adapter finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+                .isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+            return;
+        }
+
+        final String commandTopic = new HonoTopic(HonoTopic.Type.COMMAND, tenantId).toString();
+
+        log.debug("sending command message lacking subject and correlation ID - no failure response expected here");
+        final Map<String, Object> properties1 = Map.of(
+                MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId,
+                MessageHelper.SYS_PROPERTY_CONTENT_TYPE, MessageHelper.CONTENT_TYPE_OCTET_STREAM,
+                KafkaRecordHelper.HEADER_RESPONSE_REQUIRED, true
+        );
+        kafkaSenderRef.get().sendAndWaitForOutcome(commandTopic, tenantId, deviceId, Buffer.buffer(), properties1)
+                .onComplete(ctx.succeeding());
+
+        log.debug("sending command message lacking subject");
+        final String correlationId = "1";
+        final Map<String, Object> properties2 = Map.of(
+                MessageHelper.SYS_PROPERTY_CORRELATION_ID, correlationId,
+                MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId,
+                MessageHelper.SYS_PROPERTY_CONTENT_TYPE, MessageHelper.CONTENT_TYPE_OCTET_STREAM,
+                KafkaRecordHelper.HEADER_RESPONSE_REQUIRED, true
+        );
+        kafkaSenderRef.get().sendAndWaitForOutcome(commandTopic, tenantId, deviceId, Buffer.buffer(), properties2)
+                .onComplete(ctx.succeeding());
+
+        final long timeToWait = 500;
+        if (!expectedCommandResponses.await(timeToWait, TimeUnit.MILLISECONDS)) {
+            log.info("Timeout of {} milliseconds reached, stop waiting for command response", timeToWait);
+        }
+        kafkaAsyncErrorResponseConsumer.result().close()
+                .onComplete(ar -> {
+                    if (expectedCommandResponses.getCount() == 0) {
+                        ctx.completeNow();
+                    } else {
+                        ctx.failNow(new IllegalStateException("did not receive command response"));
+                    }
+                });
+    }
+
+    /**
+     * Verifies that the adapter immediately forwards the <em>released</em> disposition
+     * if there is no credit left for sending the command to the device.
+     * <p>
+     * If Kafka is used, this means a corresponding error command response is published.
+     *
+     * @param endpointConfig The endpoints to use for sending/receiving commands.
+     * @param ctx The vert.x test context.
+     * @throws InterruptedException if not all commands and responses are exchanged in time.
+     */
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
+    @MethodSource("allCombinations")
+    @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
     public void testSendCommandFailsWhenNoCredit(
             final AmqpCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
@@ -633,7 +745,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         .onComplete(ctx.succeeding(v -> {
             expectedSteps.flag();
             // send second command
-            helper.sendOneWayCommand(
+            helper.sendCommand(
                     tenantId,
                     commandTargetDeviceId,
                     "setValue",
@@ -648,6 +760,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                         assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
                         // with no explicit credit check, the AMQP adapter would just run into the "waiting for delivery update" timeout (after 1s)
                         // and the error here would be caused by a request timeout in the sendOneWayCommand() method above
+                        assertThat(t).isNotInstanceOf(SendMessageTimeoutException.class);
                         assertThat(t.getMessage()).doesNotContain("timed out");
                     });
                     expectedSteps.flag();
@@ -656,8 +769,10 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
     }
 
     /**
-     * Verifies that the adapter forwards the <em>rejected</em> disposition, received from a device, back to the
-     * application.
+     * Verifies that the adapter immediately forwards the <em>released</em> disposition
+     * if there is no consumer for a sent command.
+     * <p>
+     * If Kafka is used, this means a corresponding error command response is published.
      *
      * @param endpointConfig The endpoints to use for sending/receiving commands.
      * @param ctx The vert.x test context.
@@ -666,7 +781,69 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("allCombinations")
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
-    @AssumeMessagingSystem(type = MessagingType.amqp)
+    public void testSendCommandFailsForNoConsumer(
+            final AmqpCommandEndpointConfiguration endpointConfig,
+            final VertxTestContext ctx) throws InterruptedException {
+
+        final String commandTargetDeviceId = endpointConfig.isSubscribeAsGateway()
+                ? helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5)
+                : deviceId;
+
+        final String otherDeviceId = helper.getRandomDeviceId(tenantId);
+
+        final VertxTestContext setup = new VertxTestContext();
+        final Checkpoint setupDone = setup.checkpoint();
+
+        connectToAdapter(tenantId, otherDeviceId, password, (Supplier<Future<MessageConsumer>>) null)
+                .onSuccess(v -> helper.registry.addDeviceToTenant(tenantId, deviceId, password))
+                // subscribe using otherDeviceId so that the Command Router creates the tenant-specific consumer
+                .compose(con -> subscribeToCommands(endpointConfig, tenantId, otherDeviceId)
+                        .map(recv -> {
+                            recv.handler((delivery, msg) -> ctx
+                                    .failNow(new IllegalStateException("should not have received command")));
+                            return null;
+                        }))
+                .onComplete(setup.succeeding(v -> setupDone.flag()));
+
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
+                .as("setup of adapter finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+                .isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+            return;
+        }
+
+        helper.sendCommand(
+                tenantId,
+                commandTargetDeviceId,
+                "setValue",
+                "text/plain",
+                Buffer.buffer("cmd"),
+                null,
+                IntegrationTestSupport.getSendCommandTimeout())
+                .onComplete(ctx.failing(t -> {
+                    ctx.verify(() -> {
+                        assertThat(t).isInstanceOf(ServerErrorException.class);
+                        assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+                        assertThat(t).isNotInstanceOf(SendMessageTimeoutException.class);
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
+     * Verifies that the adapter forwards the <em>rejected</em> disposition, received from a device, back to the
+     * application.
+     * <p>
+     * If Kafka is used, this means a corresponding error command response is published.
+     *
+     * @param endpointConfig The endpoints to use for sending/receiving commands.
+     * @param ctx The vert.x test context.
+     * @throws InterruptedException if not all commands and responses are exchanged in time.
+     */
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
+    @MethodSource("allCombinations")
+    @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
     public void testSendCommandFailsForCommandRejectedByDevice(
             final AmqpCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
@@ -683,39 +860,58 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             return;
         }
 
+        final String replyId = "reply-id";
         final CountDownLatch commandsFailed = new CountDownLatch(totalNoOfCommandsToSend);
         final AtomicInteger commandsSent = new AtomicInteger(0);
         final AtomicLong lastReceivedTimestamp = new AtomicLong();
         final long start = System.currentTimeMillis();
         final long commandTimeout = IntegrationTestSupport.getSendCommandTimeout();
+        final Handler<Void> failureNotificationReceivedHandler = v -> {
+            lastReceivedTimestamp.set(System.currentTimeMillis());
+            commandsFailed.countDown();
+        };
+
+        final VertxTestContext setup = new VertxTestContext();
+        final Future<MessageConsumer> kafkaAsyncErrorResponseConsumer = IntegrationTestSupport.isUsingKafkaMessaging()
+                ? helper.createDeliveryFailureCommandResponseConsumer(ctx, tenantId,
+                        HttpURLConnection.HTTP_BAD_REQUEST,
+                        response -> failureNotificationReceivedHandler.handle(null),
+                        REJECTED_COMMAND_ERROR_MESSAGE::equals)
+                : Future.succeededFuture(null);
+        kafkaAsyncErrorResponseConsumer.onComplete(setup.completing());
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
+                .as("setup of command response consumer finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+                .isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+            return;
+        }
 
         while (commandsSent.get() < totalNoOfCommandsToSend) {
             final CountDownLatch commandSent = new CountDownLatch(1);
             context.runOnContext(go -> {
-                final Buffer msg = Buffer.buffer("value: " + commandsSent.getAndIncrement());
-                helper.sendCommand(tenantId, commandTargetDeviceId, "setValue", "text/plain", msg, null, commandTimeout)
+                final String correlationId = String.valueOf(commandsSent.getAndIncrement());
+                final Buffer msg = Buffer.buffer("value: " + commandsSent.get());
+                helper.applicationClient.sendAsyncCommand(tenantId, commandTargetDeviceId, "setValue", "text/plain",
+                        msg, correlationId, replyId, null)
                         .onComplete(sendAttempt -> {
-                            if (sendAttempt.succeeded()) {
-                                log.debug("sending command {} succeeded unexpectedly", commandsSent.get());
-                            } else {
-                                if (sendAttempt.cause() instanceof ClientErrorException
-                                        && ((ClientErrorException) sendAttempt.cause()).getErrorCode() == HttpURLConnection.HTTP_BAD_REQUEST
-                                        && REJECTED_COMMAND_ERROR_MESSAGE.equals(sendAttempt.cause().getMessage())) {
-                                    log.debug("sending command {} failed as expected: {}", commandsSent.get(),
-                                            sendAttempt.cause().toString());
-                                    lastReceivedTimestamp.set(System.currentTimeMillis());
-                                    commandsFailed.countDown();
-                                    if (commandsFailed.getCount() % 20 == 0) {
-                                        log.info("commands failed as expected: {}",
-                                                totalNoOfCommandsToSend - commandsFailed.getCount());
-                                    }
+                            if (IntegrationTestSupport.isUsingAmqpMessaging()) {
+                                if (sendAttempt.succeeded()) {
+                                    log.info("sending command {} via AMQP succeeded unexpectedly", commandsSent.get());
                                 } else {
-                                    log.debug("sending command {} failed with an unexpected error", commandsSent.get(),
-                                            sendAttempt.cause());
+                                    if (sendAttempt.cause() instanceof ClientErrorException
+                                            && ((ClientErrorException) sendAttempt.cause()).getErrorCode() == HttpURLConnection.HTTP_BAD_REQUEST
+                                            && REJECTED_COMMAND_ERROR_MESSAGE.equals(sendAttempt.cause().getMessage())) {
+                                        log.debug("sending command {} failed as expected: {}", commandsSent.get(),
+                                                sendAttempt.cause().toString());
+                                        failureNotificationReceivedHandler.handle(null);
+                                    } else {
+                                        log.info("sending command {} failed with an unexpected error", commandsSent.get(),
+                                                sendAttempt.cause());
+                                    }
                                 }
-                            }
-                            if (commandsSent.get() % 20 == 0) {
-                                log.info("commands sent: " + commandsSent.get());
+                            } else if (sendAttempt.failed()) {
+                                log.debug("sending command {} via Kafka failed unexpectedly", commandsSent.get(), sendAttempt.cause());
                             }
                             commandSent.countDown();
                         });
@@ -731,24 +927,30 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         final long commandsCompleted = totalNoOfCommandsToSend - commandsFailed.getCount();
         log.info("commands sent: {}, commands failed: {} after {} milliseconds",
                 commandsSent.get(), commandsCompleted, lastReceivedTimestamp.get() - start);
-        if (commandsCompleted == commandsSent.get()) {
-            ctx.completeNow();
-        } else {
-            ctx.failNow(new IllegalStateException("did not complete all commands sent"));
-        }
+        Optional.ofNullable(kafkaAsyncErrorResponseConsumer.result())
+                .map(MessageConsumer::close)
+                .orElseGet(Future::succeededFuture)
+                .onComplete(ar -> {
+                    if (commandsCompleted == commandsSent.get()) {
+                        ctx.completeNow();
+                    } else {
+                        ctx.failNow(new IllegalStateException("did not complete all commands sent"));
+                    }
+                });
     }
 
     /**
      * Verifies that the adapter forwards the <em>released</em> disposition back to the
      * application if the device hasn't sent a disposition update for the delivery of
      * the command message sent to the device.
+     * <p>
+     * If Kafka is used, this means a corresponding error command response is published.
      *
      * @param ctx The vert.x test context.
      * @throws InterruptedException if not all commands and responses are exchanged in time.
      */
     @Test
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
-    @AssumeMessagingSystem(type = MessagingType.amqp)
     public void testSendCommandFailsForCommandNotAcknowledgedByDevice(
             final VertxTestContext ctx) throws InterruptedException {
 
@@ -766,38 +968,58 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             return;
         }
 
+        final String replyId = "reply-id";
         final CountDownLatch commandsFailed = new CountDownLatch(totalNoOfCommandsToSend);
         final AtomicInteger commandsSent = new AtomicInteger(0);
         final AtomicLong lastReceivedTimestamp = new AtomicLong();
         final long start = System.currentTimeMillis();
         final long commandTimeout = IntegrationTestSupport.getSendCommandTimeout();
+        final Handler<Void> failureNotificationReceivedHandler = v -> {
+            lastReceivedTimestamp.set(System.currentTimeMillis());
+            commandsFailed.countDown();
+        };
+
+        final VertxTestContext setup = new VertxTestContext();
+        final Future<MessageConsumer> kafkaAsyncErrorResponseConsumer = IntegrationTestSupport.isUsingKafkaMessaging()
+                ? helper.createDeliveryFailureCommandResponseConsumer(ctx, tenantId,
+                        HttpURLConnection.HTTP_UNAVAILABLE,
+                        response -> failureNotificationReceivedHandler.handle(null),
+                        null)
+                : Future.succeededFuture(null);
+        kafkaAsyncErrorResponseConsumer.onComplete(setup.completing());
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
+                .as("setup of command response consumer finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+                .isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+            return;
+        }
 
         while (commandsSent.get() < totalNoOfCommandsToSend) {
             final CountDownLatch commandSent = new CountDownLatch(1);
             context.runOnContext(go -> {
-                final Buffer msg = Buffer.buffer("value: " + commandsSent.getAndIncrement());
-                helper.sendCommand(tenantId, commandTargetDeviceId, "setValue", "text/plain", msg, null, commandTimeout)
+                final String correlationId = String.valueOf(commandsSent.getAndIncrement());
+                final Buffer msg = Buffer.buffer("value: " + commandsSent.get());
+                helper.applicationClient.sendAsyncCommand(tenantId, commandTargetDeviceId, "setValue", "text/plain",
+                        msg, correlationId, replyId, null)
                         .onComplete(sendAttempt -> {
-                            if (sendAttempt.succeeded()) {
-                                log.debug("sending command {} succeeded unexpectedly", commandsSent.get());
-                            } else {
-                                if (sendAttempt.cause() instanceof ServerErrorException
-                                        && ((ServerErrorException) sendAttempt.cause()).getErrorCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
-                                    log.debug("sending command {} failed as expected: {}", commandsSent.get(),
-                                            sendAttempt.cause().toString());
-                                    lastReceivedTimestamp.set(System.currentTimeMillis());
-                                    commandsFailed.countDown();
-                                    if (commandsFailed.getCount() % 20 == 0) {
-                                        log.info("commands failed as expected: {}",
-                                                totalNoOfCommandsToSend - commandsFailed.getCount());
-                                    }
+                            if (IntegrationTestSupport.isUsingAmqpMessaging()) {
+                                if (sendAttempt.succeeded()) {
+                                    log.debug("sending command {} succeeded unexpectedly", commandsSent.get());
                                 } else {
-                                    log.debug("sending command {} failed with an unexpected error", commandsSent.get(),
-                                            sendAttempt.cause());
+                                    if (sendAttempt.cause() instanceof ServerErrorException
+                                            && ((ServerErrorException) sendAttempt.cause()).getErrorCode() == HttpURLConnection.HTTP_UNAVAILABLE
+                                            && !(sendAttempt.cause() instanceof SendMessageTimeoutException)) {
+                                        log.debug("sending command {} failed as expected: {}", commandsSent.get(),
+                                                sendAttempt.cause().toString());
+                                        failureNotificationReceivedHandler.handle(null);
+                                    } else {
+                                        log.debug("sending command {} failed with an unexpected error", commandsSent.get(),
+                                                sendAttempt.cause());
+                                    }
                                 }
-                            }
-                            if (commandsSent.get() % 20 == 0) {
-                                log.info("commands sent: " + commandsSent.get());
+                            } else if (sendAttempt.failed()) {
+                                log.debug("sending command {} via Kafka failed unexpectedly", commandsSent.get(), sendAttempt.cause());
                             }
                             commandSent.countDown();
                         });
@@ -814,11 +1036,16 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         final long commandsCompleted = totalNoOfCommandsToSend - commandsFailed.getCount();
         log.info("commands sent: {}, commands failed: {} after {} milliseconds",
                 commandsSent.get(), commandsCompleted, lastReceivedTimestamp.get() - start);
-        if (commandsCompleted == commandsSent.get()) {
-            ctx.completeNow();
-        } else {
-            ctx.failNow(new IllegalStateException("did not complete all commands sent"));
-        }
+        Optional.ofNullable(kafkaAsyncErrorResponseConsumer.result())
+                .map(MessageConsumer::close)
+                .orElseGet(Future::succeededFuture)
+                .onComplete(ar -> {
+                    if (commandsCompleted == commandsSent.get()) {
+                        ctx.completeNow();
+                    } else {
+                        ctx.failNow(new IllegalStateException("did not complete all commands sent"));
+                    }
+                });
     }
 
     /**
@@ -890,7 +1117,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         .addDeviceToTenant(tenantId, deviceId, password)
         .compose(ok -> Optional.ofNullable(consumerFactory)
                 .map(Supplier::get)
-                .orElseGet(() -> Future.succeededFuture()))
+                .orElseGet(Future::succeededFuture))
         .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
         .recover(t -> {
             log.error("failed to establish connection to AMQP adapter [host: {}, port: {}]",

@@ -25,6 +25,7 @@ import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.eclipse.hono.client.NoConsumerException;
+import org.eclipse.hono.client.command.CommandAlreadyProcessedException;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandHandlerWrapper;
 import org.eclipse.hono.client.command.CommandHandlers;
@@ -298,7 +299,7 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
                 LOG.debug("ignoring command - record partition offset {} <= last handled offset {} [{}]", commandOffset,
                         lastHandledOffset, command);
                 TracingHelper.logError(currentSpan, "command record already handled before");
-                commandContext.release();
+                commandContext.release(new CommandAlreadyProcessedException());
             } else {
                 lastHandledPartitionOffsets.put(commandPartition, commandOffset);
                 LOG.trace("using [{}] for received command [{}]", commandHandler, command);
