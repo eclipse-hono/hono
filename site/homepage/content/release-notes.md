@@ -4,8 +4,7 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
-## 1.7.4 (not released yet)
-
+## 1.7.4
 ### Fixes & Enhancements
 
 * Letting the trace sampling settings of the Hono components be defined via sampling strategies served by the Jaeger
