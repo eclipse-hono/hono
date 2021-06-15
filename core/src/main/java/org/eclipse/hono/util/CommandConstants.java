@@ -71,6 +71,11 @@ public class CommandConstants {
     public static final String COMMAND_RESPONSE_RESPONSE_PART_SHORT = "s";
 
     /**
+     * The content type that is defined for error command response messages sent by a protocol adapter or Command Router.
+     */
+    public static final String CONTENT_TYPE_DELIVERY_FAILURE_NOTIFICATION = "application/vnd.eclipse-hono-delivery-failure-notification+json";
+
+    /**
      * Position of the status code in the MQTT command response topic.
      * {@code command/[tenant]/[device-id]/res/<req-id>/<status>}
      */

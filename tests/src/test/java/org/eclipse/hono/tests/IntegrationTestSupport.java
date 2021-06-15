@@ -43,6 +43,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -50,6 +51,7 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.eclipse.hono.application.client.ApplicationClient;
 import org.eclipse.hono.application.client.DownstreamMessage;
+import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.application.client.MessageProperties;
 import org.eclipse.hono.application.client.amqp.ProtonBasedApplicationClient;
@@ -71,6 +73,7 @@ import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.service.management.credentials.PskCredential;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.test.VertxTools;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -86,6 +89,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -513,6 +517,7 @@ public final class IntegrationTestSupport {
     private final Vertx vertx;
     private final boolean gatewayModeSupported;
     private HonoConnection protonBasedHonoConnection;
+    private KafkaProducerFactory<String, Buffer> kafkaProducerFactory;
 
     /**
      * Creates a new helper instance.
@@ -558,6 +563,22 @@ public final class IntegrationTestSupport {
     }
 
     /**
+     * Checks whether Kafka based messaging is used.
+     * @return {@code true} if Kafka is used.
+     */
+    public static boolean isUsingKafkaMessaging() {
+        return getConfiguredMessagingType() == MessagingType.kafka;
+    }
+
+    /**
+     * Checks whether AMQP based messaging is used.
+     * @return {@code true} if AMQP based messaging is used.
+     */
+    public static boolean isUsingAmqpMessaging() {
+        return getConfiguredMessagingType() == MessagingType.amqp;
+    }
+
+    /**
      * Creates properties for connecting to the AMQP Messaging Network's secure port.
      *
      * @return The properties.
@@ -572,6 +593,7 @@ public final class IntegrationTestSupport {
         props.setTrustStorePath(TRUST_STORE_PATH);
         props.setHostnameVerificationRequired(false);
         props.setSecureProtocols(List.of("TLSv1.3"));
+        props.setSendMessageTimeout(getSendCommandTimeout());
         return props;
     }
 
@@ -712,7 +734,7 @@ public final class IntegrationTestSupport {
      */
     public static long getTestSetupTimeout() {
         return DEFAULT_TEST_SETUP_TIMEOUT_SECONDS * getTimeoutMultiplicator()
-                + (getConfiguredMessagingType() == MessagingType.kafka ? KAFKA_ADD_TO_TEST_SETUP_TIMEOUT : 0);
+                + (isUsingKafkaMessaging() ? KAFKA_ADD_TO_TEST_SETUP_TIMEOUT : 0);
     }
 
     /**
@@ -746,7 +768,7 @@ public final class IntegrationTestSupport {
      * @return A future indicating the outcome of the operation.
      */
     public Future<?> init() {
-        if (getConfiguredMessagingType() == MessagingType.amqp) {
+        if (isUsingAmqpMessaging()) {
             return init(getMessagingNetworkProperties());
         } else {
             return init(getKafkaConsumerConfig());
@@ -786,8 +808,9 @@ public final class IntegrationTestSupport {
 
         initRegistryClient();
 
-        applicationClient = new KafkaApplicationClientImpl(vertx, kafkaDownstreamProps,
-                KafkaProducerFactory.sharedProducerFactory(vertx), getKafkaProducerConfig());
+        kafkaProducerFactory = KafkaProducerFactory.sharedProducerFactory(vertx);
+        applicationClient = new KafkaApplicationClientImpl(vertx, kafkaDownstreamProps, kafkaProducerFactory,
+                getKafkaProducerConfig());
 
         return Future.succeededFuture();
     }
@@ -906,7 +929,7 @@ public final class IntegrationTestSupport {
     }
 
     private Future<Void> deleteTenantKafkaTopics(final List<String> tenantsToDelete) {
-        if (getConfiguredMessagingType() != MessagingType.kafka) {
+        if (!isUsingKafkaMessaging()) {
             return Future.succeededFuture();
         }
         // topics for the given tenants are not deleted right away: It could be that the offset-commit interval of the CommandRouter
@@ -1121,13 +1144,12 @@ public final class IntegrationTestSupport {
 
         return CompositeFuture.all(sendCommandTracker, timeOutTracker.future())
                 .recover(error -> {
-                    LOGGER.debug("could not send command or did not receive a response: {}", error.getMessage());
+                    LOGGER.debug("got error sending command: {}", error.getMessage());
                     return Future.failedFuture(error);
                 })
                 .map(ok -> {
                     final DownstreamMessage<?> response = sendCommandTracker.result();
-                    LOGGER.debug(
-                            "successfully sent command [name: {}, payload: {}] and received response [payload: {}]",
+                    LOGGER.debug("successfully sent command [name: {}, payload: {}] and received response [payload: {}]",
                             command, payload, response.getPayload());
                     return response;
                 });
@@ -1486,6 +1508,45 @@ public final class IntegrationTestSupport {
     }
 
     /**
+     * Creates a client for consuming command response messages with content-type
+     * {@value CommandConstants#CONTENT_TYPE_DELIVERY_FAILURE_NOTIFICATION} for the given tenant identifier.
+     *
+     * @param ctx The test context to run the assertions on.
+     * @param tenantId The identifier of the tenant to use.
+     * @param expectedErrorStatus The status to test the received command response messages for.
+     * @param messageHandler The handler to apply for each received message (may be {@code null}).
+     * @param errorMessageValidator The validator checking the command response error message (may be {@code null}).
+     * @return The created client.
+     * @throws NullPointerException If ctx or tenantId is {@code null}.
+     */
+    public Future<MessageConsumer> createDeliveryFailureCommandResponseConsumer(
+            final VertxTestContext ctx,
+            final String tenantId,
+            final int expectedErrorStatus,
+            final Handler<DownstreamMessage<?>> messageHandler,
+            final Function<String, Boolean> errorMessageValidator) {
+        Objects.requireNonNull(ctx);
+        Objects.requireNonNull(tenantId);
+        return applicationClient.createCommandResponseConsumer(tenantId, "ignored",
+                response -> {
+                    ctx.verify(() -> {
+                        assertThat(response.getContentType()).isEqualTo(CommandConstants.CONTENT_TYPE_DELIVERY_FAILURE_NOTIFICATION);
+                        assertThat(response.getStatus()).isEqualTo(expectedErrorStatus);
+                        final String errorMessage = response.getPayload().toJsonObject().getString("error");
+                        assertThat(errorMessage).isNotNull();
+                        LOGGER.trace("received delivery failure command response; correlation-id: {}, error: {}",
+                                response.getCorrelationId(), errorMessage);
+                        if (errorMessageValidator != null) {
+                            assertThat(errorMessageValidator.apply(errorMessage)).isTrue();
+                        }
+                    });
+                    if (messageHandler != null) {
+                        messageHandler.handle(response);
+                    }
+                }, null);
+    }
+
+    /**
      * Creates a new AMQP sender link for publishing messages.
      *
      * @param endpoint The endpoint to send messages to.
@@ -1498,22 +1559,35 @@ public final class IntegrationTestSupport {
         Objects.requireNonNull(endpoint);
         Objects.requireNonNull(tenantId);
 
-        if (protonBasedHonoConnection != null) {
-            return GenericSenderLink.create(
-                    protonBasedHonoConnection,
-                    endpoint,
-                    tenantId,
-                    SendMessageSampler.noop(),
-                    s -> {
-                    })
-                    .onSuccess(ok -> LOGGER.info("created proton based message sender [endpoint: {}, tenant: {}]",
-                            endpoint, tenantId))
-                    .onFailure(
-                            error -> LOGGER.error("error creating proton based message sender [endpoint: {}, tenant: {}]", 
-                            endpoint, tenantId, error));
-        } else {
-            throw new UnsupportedOperationException("messaging network type should be AMQP");
+        if (protonBasedHonoConnection == null) {
+            throw new UnsupportedOperationException("messaging network type must be AMQP");
         }
+        return GenericSenderLink.create(
+                protonBasedHonoConnection,
+                endpoint,
+                tenantId,
+                SendMessageSampler.noop(),
+                s -> {})
+                .onSuccess(ok -> LOGGER.info("created proton based message sender [endpoint: {}, tenant: {}]",
+                        endpoint, tenantId))
+                .onFailure(error -> LOGGER.error("error creating proton based message sender [endpoint: {}, tenant: {}]",
+                        endpoint, tenantId, error));
+    }
+
+    /**
+     * Creates a new generic Kafka based sender for producing messages.
+     *
+     * @return A future indicating the outcome.
+     * @throws UnsupportedOperationException if the messaging network type is other than AMQP.
+     */
+    public Future<GenericKafkaSender> createGenericKafkaSender() {
+
+        if (kafkaProducerFactory == null) {
+            throw new UnsupportedOperationException("messaging network type must be Kafka");
+        }
+        final GenericKafkaSender genericKafkaSender = new GenericKafkaSender(kafkaProducerFactory,
+                getKafkaProducerConfig());
+        return genericKafkaSender.start().map(genericKafkaSender);
     }
 
     private static String getRegistrationStatus(final DownstreamMessage<? extends MessageContext> msg) {
