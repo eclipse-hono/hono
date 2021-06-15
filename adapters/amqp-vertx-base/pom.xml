@@ -17,7 +17,7 @@
   <parent>
     <groupId>org.eclipse.hono</groupId>
     <artifactId>hono-adapters</artifactId>
-    <version>1.8.1-SNAPSHOT</version>
+    <version>1.8.1</version>
   </parent>
   <artifactId>hono-adapter-amqp-vertx-base</artifactId>
   <name>Hono AMQP Adapter base</name>
