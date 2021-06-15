@@ -50,6 +50,25 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 * The Maven profiles for compiling in support for exporting metrics to Graphite and InfluxDB have been removed.
 
+## 1.8.1
+
+### Fixes & Enhancements
+
+* Letting the trace sampling settings of the Hono components be defined via sampling strategies served by the Jaeger
+  Collector did not work for components using Quarkus native images. This has been fixed.
+* Command messages with no payload could not be sent to an MQTT device. This has been fixed.
+* The value of the properties `auto-provisioned` and `auto-provisioning-notification-sent` are always *false* while
+  retrieving device registration information using the MongoDB based registry implementation. This has been fixed now.
+* The Command Router service could have gotten into a state of very high CPU utilization when protocol
+  adapters submitted non-existing tenant IDs for which command routing should be re-enabled. This has been fixed.
+* The LoRA protocol adapter will now free command consumer resources when the idle timeout of the corresponding tenant
+  (configured via the `hono.lora.tenantIdleTimeout` property) has elapsed and the tenant is already removed or disabled.
+* The device registry implementations have already supported the limitation of the body size of requests to the
+  `/tenants` and `/credentials` resources of the HTTP based Device Registration Management API.
+  However, the admin guides did not cover the corresponding `HONO_REGISTRY_HTTP_MAXPAYLOADSIZE` configuration variable
+  yet. The `/devices` resources have been added to the scope of the feature and the admin guides have been amended
+  accordingly.
+
 ## 1.8.0
 
 ### New Features
@@ -104,6 +123,25 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The `org.eclipse.hono.client.ApplicationClientFactory`, `org.eclipse.hono.client.AsyncCommandClient` and
   `org.eclipse.hono.client.CommandClient` classes have been deprecated. Client code should use
   `org.eclipse.hono.application.client.ApplicationClient` instead.
+
+## 1.7.4
+
+### Fixes & Enhancements
+
+* Letting the trace sampling settings of the Hono components be defined via sampling strategies served by the Jaeger
+  Collector did not work for components using Quarkus native images. This has been fixed.
+* Command messages with no payload could not be sent to an MQTT device. This has been fixed.
+* The value of the properties `auto-provisioned` and `auto-provisioning-notification-sent` are always *false* while
+  retrieving device registration information using the MongoDB based registry implementation. This has been fixed now.
+* The Command Router service could have gotten into a state of very high CPU utilization when protocol
+  adapters submitted non-existing tenant IDs for which command routing should be re-enabled. This has been fixed.
+* The LoRA protocol adapter will now free command consumer resources when the idle timeout of the corresponding tenant
+  (configured via the `hono.lora.tenantIdleTimeout` property) has elapsed and the tenant is already removed or disabled.
+* The device registry implementations have already supported the limitation of the body size of requests to the
+  `/tenants` and `/credentials` resources of the HTTP based Device Registration Management API.
+  However, the admin guides did not cover the corresponding `HONO_REGISTRY_HTTP_MAXPAYLOADSIZE` configuration variable
+  yet. The `/devices` resources have been added to the scope of the feature and the admin guides have been amended
+  accordingly.
 
 ## 1.7.3
 
