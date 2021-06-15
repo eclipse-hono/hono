@@ -1,5 +1,5 @@
 /*******************************************************************************
-O * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+O * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -204,7 +204,7 @@ public class HonoHttpDevice {
                             });
                         }
                     } else {
-                        result.completeExceptionally(new ServiceInvocationException(response.statusCode()));
+                        result.completeExceptionally(ServiceInvocationException.create(response.statusCode()));
                     }
                 }).exceptionHandler(t -> result.completeExceptionally(t));
 

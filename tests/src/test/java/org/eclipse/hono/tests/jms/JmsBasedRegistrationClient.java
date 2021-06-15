@@ -159,7 +159,7 @@ public class JmsBasedRegistrationClient extends JmsBasedRequestResponseServiceCl
                             return RegistrationResult.from(getStatus(message), json, getCacheDirective(message));
                         } catch (DecodeException e) {
                             LOG.warn("Device Registration service returned malformed payload", e);
-                            throw new ServiceInvocationException(
+                            throw ServiceInvocationException.create(
                                     HttpURLConnection.HTTP_INTERNAL_ERROR,
                                     "Device Registration service returned malformed payload");
                         }

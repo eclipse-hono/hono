@@ -145,7 +145,7 @@ public class JmsBasedTenantClient extends JmsBasedRequestResponseServiceClient<T
                         return TenantResult.from(getStatus(message), tenant, getCacheDirective(message));
                     } catch (DecodeException e) {
                         LOG.warn("Tenant service returned malformed payload", e);
-                        throw new ServiceInvocationException(
+                        throw ServiceInvocationException.create(
                                 HttpURLConnection.HTTP_INTERNAL_ERROR,
                                 "Tenant service returned malformed payload");
                     }

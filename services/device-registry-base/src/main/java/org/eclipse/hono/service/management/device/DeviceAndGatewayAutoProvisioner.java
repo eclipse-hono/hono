@@ -190,7 +190,7 @@ public final class DeviceAndGatewayAutoProvisioner extends AbstractAutoProvision
                                                 .recover(error -> Future.succeededFuture())))
                                 .orElseGet(Future::succeededFuture);
                     } else {
-                        return Future.failedFuture(new ServiceInvocationException(deviceResult.getStatus(),
+                        return Future.failedFuture(ServiceInvocationException.create(deviceResult.getStatus(),
                                 "error retrieving device registration information"));
                     }
                 });

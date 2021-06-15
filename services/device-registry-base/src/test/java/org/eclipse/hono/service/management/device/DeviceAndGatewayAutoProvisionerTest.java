@@ -443,7 +443,7 @@ public class DeviceAndGatewayAutoProvisionerTest {
                 any(),
                 any(Map.class),
                 any()))
-                        .thenReturn(Future.failedFuture(new ServiceInvocationException(
+                        .thenReturn(Future.failedFuture(ServiceInvocationException.create(
                                 HttpURLConnection.HTTP_INTERNAL_ERROR, "error sending event")));
 
         // WHEN provisioning a device/gateway from a certificate

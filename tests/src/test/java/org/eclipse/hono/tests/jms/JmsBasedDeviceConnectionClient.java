@@ -239,7 +239,7 @@ public class JmsBasedDeviceConnectionClient extends JmsBasedRequestResponseServi
                             return new RequestResponseResult<>(getStatus(message), json, null, null);
                         } catch (final DecodeException e) {
                             LOG.warn("Device Connection service returned malformed payload", e);
-                            throw new ServiceInvocationException(
+                            throw ServiceInvocationException.create(
                                     HttpURLConnection.HTTP_INTERNAL_ERROR,
                                     "Device Connection service returned malformed payload");
                         }
