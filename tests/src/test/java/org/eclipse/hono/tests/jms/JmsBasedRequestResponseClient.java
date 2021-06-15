@@ -289,15 +289,15 @@ public class JmsBasedRequestResponseClient<R extends RequestResponseResult<?>> {
         try {
             final ServiceInvocationException error;
             if (message instanceof TextMessage) {
-                error = new ServiceInvocationException(status, ((TextMessage) message).getText());
+                error = ServiceInvocationException.create(status, ((TextMessage) message).getText());
             } else if (message instanceof BytesMessage) {
                 final BytesMessage byteMessage = (BytesMessage) message;
                 error = Optional.ofNullable(byteMessage.getBody(byte[].class))
-                        .map(b -> new ServiceInvocationException(status, new String(b, StandardCharsets.UTF_8)))
-                        .orElseGet(() -> new ServiceInvocationException(status));
+                        .map(b -> ServiceInvocationException.create(status, new String(b, StandardCharsets.UTF_8)))
+                        .orElseGet(() -> ServiceInvocationException.create(status));
             } else {
                 // ignore body
-                error = new ServiceInvocationException(status);
+                error = ServiceInvocationException.create(status);
             }
             resultHandler.handle(Future.failedFuture(error));
         } catch (JMSException e) {

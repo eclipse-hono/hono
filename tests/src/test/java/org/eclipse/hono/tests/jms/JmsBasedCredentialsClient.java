@@ -169,7 +169,7 @@ public class JmsBasedCredentialsClient extends JmsBasedRequestResponseServiceCli
                             return CredentialsResult.from(getStatus(message), credentials, getCacheDirective(message));
                         } catch (DecodeException e) {
                             LOG.warn("Credentials service returned malformed payload", e);
-                            throw new ServiceInvocationException(
+                            throw ServiceInvocationException.create(
                                     HttpURLConnection.HTTP_INTERNAL_ERROR,
                                     "Credentials service returned malformed payload");
                         }
