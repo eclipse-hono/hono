@@ -269,7 +269,8 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                             resourceVersion,
                             JsonObject.mapFrom(credentialsDto),
                             span);
-                }).recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
+                })
+                .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
     }
 
     /**
@@ -289,7 +290,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                         credentialsDto.getCredentials(),
                         Optional.empty(),
                         Optional.of(credentialsDto.getVersion())))
-                .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
+                .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
     }
 
     /**
@@ -324,7 +325,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
         return tenantInformationService.getTenant(tenantId, span)
                 .compose(tenant -> tenant.checkCredentialsLimitExceeded(tenantId, credentials))
                 .compose(ok -> processAddCredentials(tenantId, deviceId, credentials, resourceVersion, span))
-                .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
+                .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
     }
 
     /**
@@ -352,7 +353,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
         TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
 
         return processRemoveCredentials(tenantId, deviceId, span)
-                .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
+                .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
     }
 
     private Future<CredentialsDto> getCredentialsDto(final DeviceKey deviceKey) {

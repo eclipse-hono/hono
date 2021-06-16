@@ -118,6 +118,31 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
     }
 
     /**
+     * Verifies that a request to add a device fails if the given tenant does not exist.
+     *
+     * @param ctx The vert.x test context
+     */
+    @Test
+    public void testAddDeviceFailsForNonExistingTenant(final VertxTestContext ctx) {
+
+        final Device device = new Device();
+
+        registry.registerDevice(
+                "non-existing-tenant",
+                null,
+                device,
+                CrudHttpClient.CONTENT_TYPE_JSON,
+                HttpURLConnection.HTTP_NOT_FOUND)
+            .compose(ok -> registry.registerDevice(
+                    "non-existing-tenant",
+                    deviceId,
+                    device,
+                    CrudHttpClient.CONTENT_TYPE_JSON,
+                    HttpURLConnection.HTTP_NOT_FOUND))
+            .onComplete(ctx.completing());
+    }
+
+    /**
      * Verifies that a device can be registered only once.
      *
      * @param ctx The vert.x test context.
@@ -266,6 +291,18 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
     }
 
     /**
+     * Verifies that a request for registration information fails if the given tenant does not exist.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testGetDeviceFailsForNonExistingTenant(final VertxTestContext ctx) {
+
+        registry.getRegistrationInfo("non-existing-tenant", deviceId, HttpURLConnection.HTTP_NOT_FOUND)
+            .onComplete(ctx.completing());
+    }
+
+    /**
      * Verifies that a request for registration information fails for
      * a device that is not registered.
      *
@@ -327,6 +364,23 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
                     ctx.verify(() -> assertRegistrationInformation(httpResponse, updatedData.mapTo(Device.class)));
                     ctx.completeNow();
                 }));
+    }
+
+    /**
+     * Verifies that an update request fails if the device does not exist.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testUpdateDeviceFailsForNonExistingTenant(final VertxTestContext ctx) {
+
+        registry.updateDevice(
+                "non-existing-tenant",
+                deviceId,
+                new JsonObject().put("ext", new JsonObject().put("test", "test")),
+                CrudHttpClient.CONTENT_TYPE_JSON,
+                HttpURLConnection.HTTP_NOT_FOUND)
+            .onComplete(ctx.completing());
     }
 
     /**
@@ -428,6 +482,18 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
     public void testDeregisterDeviceFailsForMissingDeviceId(final VertxTestContext ctx) {
 
         registry.deregisterDevice(tenantId, null, HttpURLConnection.HTTP_NOT_FOUND)
+            .onComplete(ctx.completing());
+    }
+
+    /**
+     * Verifies that a request to deregister a device fails if the given tenant does not exist.
+     *
+     * @param ctx The vert.x test context
+     */
+    @Test
+    public void testDeregisterDeviceFailsForNonExistingTenant(final VertxTestContext ctx) {
+
+        registry.deregisterDevice("non-existing-tenant", deviceId, HttpURLConnection.HTTP_NOT_FOUND)
             .onComplete(ctx.completing());
     }
 

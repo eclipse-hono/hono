@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,6 +18,7 @@ import java.util.UUID;
 
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
+import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
@@ -78,7 +79,11 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
      * @param span The active OpenTracing span for this operation.
      * @return A future indicating the outcome of the operation.
      */
-    protected abstract Future<OperationResult<Id>> processUpdateDevice(DeviceKey key, Device device, Optional<String> resourceVersion, Span span);
+    protected abstract Future<OperationResult<Id>> processUpdateDevice(
+            DeviceKey key,
+            Device device,
+            Optional<String> resourceVersion,
+            Span span);
 
     /**
      * Delete a device with a specified key.
@@ -101,7 +106,11 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
     }
 
     @Override
-    public Future<OperationResult<Id>> createDevice(final String tenantId, final Optional<String> deviceId, final Device device, final Span span) {
+    public Future<OperationResult<Id>> createDevice(
+            final String tenantId,
+            final Optional<String> deviceId,
+            final Device device,
+            final Span span) {
 
         Objects.requireNonNull(tenantId);
         final String deviceIdValue = deviceId.orElseGet(() -> generateDeviceId(tenantId));
@@ -110,8 +119,8 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
                 .tenantExists(tenantId, span)
                 .compose(result -> result.isError()
                         ? Future.succeededFuture(OperationResult.empty(result.getStatus()))
-                        : processCreateDevice(DeviceKey.from(result.getPayload(), deviceIdValue), device, span));
-
+                        : processCreateDevice(DeviceKey.from(result.getPayload(), deviceIdValue), device, span))
+                .otherwise(t -> DeviceRegistryUtils.mapErrorToResult(t, span));
     }
 
     @Override
@@ -124,12 +133,17 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
                 .tenantExists(tenantId, span)
                 .compose(result -> result.isError()
                         ? Future.succeededFuture(OperationResult.empty(result.getStatus()))
-                        : processReadDevice(DeviceKey.from(result.getPayload(), deviceId), span));
-
+                        : processReadDevice(DeviceKey.from(result.getPayload(), deviceId), span))
+                .otherwise(t -> DeviceRegistryUtils.mapErrorToResult(t, span));
     }
 
     @Override
-    public Future<OperationResult<Id>> updateDevice(final String tenantId, final String deviceId, final Device device, final Optional<String> resourceVersion, final Span span) {
+    public Future<OperationResult<Id>> updateDevice(
+            final String tenantId,
+            final String deviceId,
+            final Device device,
+            final Optional<String> resourceVersion,
+            final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
@@ -139,12 +153,16 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
                 .tenantExists(tenantId, span)
                 .compose(result -> result.isError()
                         ? Future.succeededFuture(OperationResult.empty(result.getStatus()))
-                        : processUpdateDevice(DeviceKey.from(result.getPayload(), deviceId), device, resourceVersion, span));
-
+                        : processUpdateDevice(DeviceKey.from(result.getPayload(), deviceId), device, resourceVersion, span))
+                .otherwise(t -> DeviceRegistryUtils.mapErrorToResult(t, span));
     }
 
     @Override
-    public Future<Result<Void>> deleteDevice(final String tenantId, final String deviceId, final Optional<String> resourceVersion, final Span span) {
+    public Future<Result<Void>> deleteDevice(
+            final String tenantId,
+            final String deviceId,
+            final Optional<String> resourceVersion,
+            final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
@@ -154,7 +172,7 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
                 .tenantExists(tenantId, span)
                 .compose(result -> result.isError()
                         ? Future.succeededFuture(Result.from(result.getStatus()))
-                        : processDeleteDevice(DeviceKey.from(result.getPayload(), deviceId), resourceVersion, span));
-
+                        : processDeleteDevice(DeviceKey.from(result.getPayload(), deviceId), resourceVersion, span))
+                .otherwise(t -> DeviceRegistryUtils.mapErrorToResult(t, span));
     }
 }

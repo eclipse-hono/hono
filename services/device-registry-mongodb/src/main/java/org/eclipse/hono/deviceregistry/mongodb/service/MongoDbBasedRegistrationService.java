@@ -192,7 +192,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                             deviceDto,
                             span);
                 })
-                .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
+                .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
     }
 
     @Override
@@ -204,7 +204,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
 
         return tenantInformationService.getTenant(tenantId, span)
                 .compose(ok -> processReadDevice(tenantId, deviceId))
-                .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
+                .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
     }
 
     @Override
@@ -240,7 +240,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                             sortDocument,
                             MongoDbBasedRegistrationService::getDevicesWithId);
                 })
-                .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
+                .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
     }
 
     @Override
@@ -256,7 +256,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                 .compose(deviceDto -> processUpdateDevice(tenantId, deviceId,
                         device.getStatus() != null ? device.getStatus().getAutoProvisioningNotificationSentSetInternal() : null,
                         device, resourceVersion, span))
-                .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
+                .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
     }
 
     @Override
@@ -270,7 +270,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
 
         return tenantInformationService.getTenant(tenantId, span)
                 .compose(ok -> processDeleteDevice(tenantId, deviceId, resourceVersion, span))
-                .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
+                .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
     }
 
     /**

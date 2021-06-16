@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -33,6 +33,7 @@ import io.vertx.core.Future;
  * An abstract base class implementation for {@link TenantManagementService}.
  */
 public abstract class AbstractTenantManagementService implements TenantManagementService {
+
     private final Logger log = LoggerFactory.getLogger(getClass());
 
     /**
@@ -54,8 +55,11 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
      * @param span The span to contribute to.
      * @return A future, tracking the outcome of the operation.
      */
-    protected abstract Future<OperationResult<Void>> processUpdateTenant(String tenantId, Tenant tenantObj,
-            Optional<String> resourceVersion, Span span);
+    protected abstract Future<OperationResult<Void>> processUpdateTenant(
+            String tenantId,
+            Tenant tenantObj,
+            Optional<String> resourceVersion,
+            Span span);
 
     @Override
     public Future<OperationResult<Id>> createTenant(final Optional<String> tenantId, final Tenant tenantObj,
@@ -72,11 +76,17 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
             return Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_BAD_REQUEST));
         }
 
-        return processCreateTenant(tenantId.orElseGet(this::createId), tenantObj, span);
+        return processCreateTenant(tenantId.orElseGet(this::createId), tenantObj, span)
+                .otherwise(t -> DeviceRegistryUtils.mapErrorToResult(t, span));
     }
 
-    @Override public Future<OperationResult<Void>> updateTenant(final String tenantId, final Tenant tenantObj,
-            final Optional<String> resourceVersion, final Span span) {
+    @Override
+    public Future<OperationResult<Void>> updateTenant(
+            final String tenantId,
+            final Tenant tenantObj,
+            final Optional<String> resourceVersion,
+            final Span span) {
+
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(tenantObj);
         Objects.requireNonNull(resourceVersion);
@@ -89,15 +99,18 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
             TracingHelper.logError(span, e);
             return Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_BAD_REQUEST));
         }
-        return processUpdateTenant(tenantId, tenantObj, resourceVersion, span);
+        return processUpdateTenant(tenantId, tenantObj, resourceVersion, span)
+                .otherwise(t -> DeviceRegistryUtils.mapErrorToResult(t, span));
     }
 
     /**
-     * Create a new tenant ID.
-     * @return The new tenant ID.
+     * Creates a new identifier.
+     * <p>
+     * This default implementation creates a new UUID on each invocation.
+     *
+     * @return The ID.
      */
     protected String createId() {
         return DeviceRegistryUtils.getUniqueIdentifier();
     }
-
 }

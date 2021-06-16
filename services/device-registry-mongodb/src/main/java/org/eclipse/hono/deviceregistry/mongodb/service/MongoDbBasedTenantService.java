@@ -193,7 +193,7 @@ public final class MongoDbBasedTenantService extends AbstractTenantManagementSer
         Objects.requireNonNull(span);
 
         return modifyTenant(tenantId, tenantObj, resourceVersion, span)
-                .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
+                .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
     }
 
     private Future<OperationResult<Void>> modifyTenant(
@@ -248,7 +248,7 @@ public final class MongoDbBasedTenantService extends AbstractTenantManagementSer
         Objects.requireNonNull(span);
 
         return processDeleteTenant(tenantId, resourceVersion, span)
-                .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
+                .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
     }
 
     private Future<Result<Void>> processDeleteTenant(final String tenantId, final Optional<String> resourceVersion,
@@ -298,7 +298,7 @@ public final class MongoDbBasedTenantService extends AbstractTenantManagementSer
                 filterDocument,
                 sortDocument,
                 MongoDbBasedTenantService::getTenantsWithId)
-                .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
+                .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
     }
 
     @Override
@@ -353,7 +353,7 @@ public final class MongoDbBasedTenantService extends AbstractTenantManagementSer
         Objects.requireNonNull(span);
 
         return processReadTenant(tenantId)
-                .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
+                .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
     }
 
     private Future<OperationResult<Tenant>> processReadTenant(final String tenantId) {
@@ -447,7 +447,7 @@ public final class MongoDbBasedTenantService extends AbstractTenantManagementSer
         Objects.requireNonNull(span);
 
         return addTenant(tenantId, tenantObj, span)
-                .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
+                .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
     }
 
     private Future<OperationResult<Id>> addTenant(final String tenantId, final Tenant tenantObj,

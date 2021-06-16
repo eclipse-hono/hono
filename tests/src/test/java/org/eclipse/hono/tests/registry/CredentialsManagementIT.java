@@ -491,6 +491,21 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
     }
 
     /**
+     * Verifies that a request to update credentials fails if the given tenant does not exist.
+     *
+     * @param context The vert.x test context.
+     */
+    @Test
+    public void testUpdateCredentialsFailsForNonExistingTenant(final VertxTestContext context)  {
+
+        final List<CommonCredential> credentials = List.of(
+                Credentials.createPasswordCredential("auth-id", "password", OptionalInt.of(4)));
+
+        registry.updateCredentials("non-existing-tenant", deviceId, credentials, HttpURLConnection.HTTP_NOT_FOUND)
+            .onComplete(context.completing());
+    }
+
+    /**
      * Verify that a correctly added credentials record can be successfully looked up again by using the type and
      * authId.
      *
@@ -566,7 +581,23 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
     }
 
     /**
-     * Verify that a correctly added credentials record is not found when looking it up again with a wrong type.
+     * Verifies that a request to read credentials fails if the given tenant does not exist.
+     *
+     * @param context The vert.x test context.
+     */
+    @Test
+    public void testGetCredentialsFailsForNonExistingTenant(final VertxTestContext context)  {
+
+        registry.getCredentials(
+                "non-existing-tenant",
+                authId,
+                CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
+                HttpURLConnection.HTTP_NOT_FOUND)
+            .onComplete(context.completing());
+    }
+
+    /**
+     * Verifies that a correctly added credentials record is not found when looking it up again with a wrong type.
      *
      * @param context The vert.x test context.
      */

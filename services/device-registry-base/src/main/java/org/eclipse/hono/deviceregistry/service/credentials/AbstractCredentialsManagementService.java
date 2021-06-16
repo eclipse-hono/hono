@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,6 +21,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.eclipse.hono.auth.HonoPasswordEncoder;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
@@ -96,7 +97,11 @@ public abstract class AbstractCredentialsManagementService implements Credential
      * @param span The active OpenTracing span for this operation.
      * @return A future indicating the outcome of the operation.
      */
-    protected abstract Future<OperationResult<Void>> processUpdateCredentials(DeviceKey key, Optional<String> resourceVersion, List<CommonCredential> credentials, Span span);
+    protected abstract Future<OperationResult<Void>> processUpdateCredentials(
+            DeviceKey key,
+            Optional<String> resourceVersion,
+            List<CommonCredential> credentials,
+            Span span);
 
     /**
      * Read credentials with a specified device key.
@@ -134,11 +139,15 @@ public abstract class AbstractCredentialsManagementService implements Credential
                                     encodedCredentials,
                                     span));
                 })
-                .recover(t -> Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_BAD_REQUEST)));
+                .otherwise(t -> DeviceRegistryUtils.mapErrorToResult(t, span));
     }
 
     @Override
-    public Future<OperationResult<List<CommonCredential>>> readCredentials(final String tenantId, final String deviceId, final Span span) {
+    public Future<OperationResult<List<CommonCredential>>> readCredentials(
+            final String tenantId,
+            final String deviceId,
+            final Span span) {
+
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
 
@@ -155,7 +164,8 @@ public abstract class AbstractCredentialsManagementService implements Credential
                         v.getPayload().forEach(CommonCredential::stripPrivateInfo);
                     }
                     return v;
-                });
+                })
+                .otherwise(t -> DeviceRegistryUtils.mapErrorToResult(t, span));
     }
 
     private Future<List<CommonCredential>> verifyAndEncodePasswords(final List<CommonCredential> credentials) {
@@ -167,8 +177,14 @@ public abstract class AbstractCredentialsManagementService implements Credential
                         // ... yes, encode passwords asynchronously
                         return Futures.executeBlocking(this.vertx, () -> checkCredentials(credentials));
                     } else {
-                        // ... no, so don't fork off a worker task, but inline work
-                        return Future.succeededFuture(checkCredentials(credentials));
+                        try {
+                            // ... no, so don't fork off a worker task, but inline work
+                            return Future.succeededFuture(checkCredentials(credentials));
+                        } catch (final IllegalStateException e) {
+                            return Future.failedFuture(new ClientErrorException(
+                                    HttpURLConnection.HTTP_BAD_REQUEST,
+                                    e.getMessage()));
+                        }
                     }
                 });
     }

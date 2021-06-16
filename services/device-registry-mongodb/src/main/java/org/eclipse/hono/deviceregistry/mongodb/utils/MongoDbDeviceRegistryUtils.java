@@ -20,11 +20,9 @@ import java.util.function.Function;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.management.BaseDto;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.SearchResult;
-import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +30,6 @@ import org.slf4j.LoggerFactory;
 import com.mongodb.ErrorCategory;
 import com.mongodb.MongoException;
 
-import io.opentracing.Span;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
@@ -76,32 +73,6 @@ public final class MongoDbDeviceRegistryUtils {
     }
 
     /**
-     * Maps the given error to an {@link OperationResult} containing the appropriate HTTP status code.
-     *
-     * @param error The error.
-     * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
-     *             implementation should log (error) events on this span and it may set tags and use this span as the
-     *             parent for any spans created in this method.
-     *
-     * @param <T> The type of the resource.
-     *
-     * @return The result of the mapped error.
-     * @throws NullPointerException if the error is {@code null}.
-     */
-    public static <T> OperationResult<T> mapErrorToResult(final Throwable error, final Span span) {
-        Objects.requireNonNull(error);
-
-        LOG.debug(error.getMessage(), error);
-        TracingHelper.logError(span, error.getMessage(), error);
-
-        if (error instanceof IllegalArgumentException) {
-            return OperationResult.empty(HttpURLConnection.HTTP_BAD_REQUEST);
-        }
-
-        return OperationResult.empty(ServiceInvocationException.extractStatusCode(error));
-    }
-
-    /**
      * Checks if the version of the given resource matches that of the request and returns a
      * failed future with an appropriate status code.
 
@@ -110,7 +81,8 @@ public final class MongoDbDeviceRegistryUtils {
      * @param resourceSupplierFuture The Future that supplies the resource for which the version
      *                               is to be checked.
      * @param <T> The type of the field.
-     * @return A failed future with a {@link ServiceInvocationException}. The <em>status</em> will be
+     * @return A failed future with a {@link org.eclipse.hono.client.ServiceInvocationException}.
+     *         The <em>status</em> will be
      *         <ul>
      *         <li><em>404 Not Found</em> if no resource with the given identifier exists.</li>
      *         <li><em>412 Precondition Failed</em> if the resource exists but the version does not match.</li>
