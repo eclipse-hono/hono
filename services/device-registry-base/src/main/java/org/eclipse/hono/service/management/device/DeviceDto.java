@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,7 +23,10 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * A base class for a device DTO.
+ * A Data Transfer Object for device information.
+ * <p>
+ * This is basically a wrapper around a {@link Device} object, adding a resource version
+ * and time stamps for initial creation and last update.
  */
 public class DeviceDto extends BaseDto<Device> {
     @JsonProperty(value = RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID)
@@ -43,23 +46,35 @@ public class DeviceDto extends BaseDto<Device> {
     }
 
     /**
-     * Constructs a new DTO for use with the <b>creation of a new</b> persistent entry.
+     * Creates a DTO for persisting device configuration data.
      *
-     * @param supplier A DTO subclass' constructor of which a new instance shall be created.
-     * @param tenantId The id of the tenant.
-     * @param deviceId The id of the device.
-     * @param autoProvisioned Marks this device as being auto-provisioned.
-     * @param device The data of the DTO.
-     * @param version The version of the DTO
+     * @param supplier The supplier to use for creating the concrete DTO instance.
+     * @param tenantId The identifier of the tenant that the device belongs to.
+     * @param deviceId The identifier of the device.
+     * @param autoProvisioned {@code true} if this device has been auto-provisioned or {@code null} if unknown.
+     * @param device The device configuration to write to the store.
+     * @param version The object's (initial) resource version.
      *
-     * @param <T> The type of the DTO subclass.
+     * @param <T> The concrete type of DTO being created.
      *
-     * @return A DTO instance for creating a new entry.
+     * @return The DTO.
+     * @throws NullPointerException if any of the parameters other than auto provisioned are {@code null}.
      */
-    public static <T extends DeviceDto> T forCreation(final Supplier<T> supplier, final String tenantId, final String deviceId, final Boolean autoProvisioned, final Device device, final String version) {
-        final T deviceDto = BaseDto.forCreation(supplier,
-                withoutStatus(device),
-                version);
+    public static <T extends DeviceDto> T forCreation(
+            final Supplier<T> supplier,
+            final String tenantId,
+            final String deviceId,
+            final Boolean autoProvisioned,
+            final Device device,
+            final String version) {
+
+        Objects.requireNonNull(supplier);
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(device);
+        Objects.requireNonNull(version);
+
+        final T deviceDto = BaseDto.forCreation(supplier, device.withoutStatus(), version);
         deviceDto.setTenantId(tenantId);
         deviceDto.setDeviceId(deviceId);
         deviceDto.setDeviceStatus(new DeviceStatus()
@@ -70,23 +85,38 @@ public class DeviceDto extends BaseDto<Device> {
     }
 
     /**
-     * Constructs a new DTO to be returned by a read operation.
+     * Creates a DTO for device configuration data that has been read from a persistent store.
      *
-     * @param supplier A DTO subclass' constructor of which a new instance shall be created.
-     * @param tenantId The id of the tenant.
-     * @param deviceId The id of the device.
-     * @param device The data of the DTO.
+     * @param supplier The supplier to use for creating the concrete DTO instance.
+     * @param tenantId The identifier of the tenant that the device belongs to.
+     * @param deviceId The identifier of the device.
+     * @param device The device configuration from the store.
      * @param deviceStatus The registry internal status of the device.
-     * @param created The instant when the object was created.
-     * @param updated The instant of the most recent update.
-     * @param version The version of the DTO
+     * @param created The point in time when the object was created initially in the store (may be {@code null}).
+     * @param updated The point in time when the object was updated most recently in the store (may be {@code null}).
+     * @param version The object's resource version in the store (may be {@code null}).
      *
      * @param <T> The type of the DTO subclass.
      *
-     * @return A DTO instance for reading an entry.
+     * @return The DTO.
+     * @throws NullPointerException if any of supplier, tenantId, deviceId, device and device status are {@code null}.
      */
-    public static <T extends DeviceDto> T forRead(final Supplier<T> supplier, final String tenantId, final String deviceId, final Device device,
-                                    final DeviceStatus deviceStatus, final Instant created, final Instant updated, final String version) {
+    public static <T extends DeviceDto> T forRead(
+            final Supplier<T> supplier,
+            final String tenantId,
+            final String deviceId,
+            final Device device,
+            final DeviceStatus deviceStatus,
+            final Instant created,
+            final Instant updated,
+            final String version) {
+
+        Objects.requireNonNull(supplier);
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(device);
+        Objects.requireNonNull(deviceStatus);
+
         final T deviceDto = BaseDto.forRead(supplier, device, created, updated, version);
         deviceDto.setTenantId(tenantId);
         deviceDto.setDeviceId(deviceId);
@@ -96,21 +126,36 @@ public class DeviceDto extends BaseDto<Device> {
     }
 
     /**
-     * Constructs a new DTO for use with the <b>updating</b> a persistent entry.
+     * Creates a DTO for updating device configuration data.
      *
-     * @param supplier A DTO subclass' constructor of which a new instance shall be created.
-     * @param tenantId The id of the tenant.
-     * @param deviceId The id of the device.
-     * @param autoProvisioningNotificationSent Marks the auto-provisioning notification for this device as sent.
-     * @param device The data of the DTO.
-     * @param version The version of the DTO
+     * @param supplier The supplier to use for creating the concrete DTO instance.
+     * @param tenantId The identifier of the tenant that the device belongs to.
+     * @param deviceId The identifier of the device.
+     * @param autoProvisioningNotificationSent {@code true} if the an <em>auto-provisioning notification</em> has been
+     *                                         published for this device or {@code null} if unknown.
+     * @param device The device configuration to write to the store.
+     * @param version The resource version of the object in the store to be updated or {@code null} if the
+     *                device's data should be updated regardless of the resource version.
      *
      * @param <T> The type of the DTO subclass.
      *
      * @return A DTO instance for updating an entry.
+     * @throws NullPointerException if supplier, tenant ID, device ID or device are {@code null}.
      */
-    public static <T extends DeviceDto> T forUpdate(final Supplier<T> supplier, final String tenantId, final String deviceId, final Boolean autoProvisioningNotificationSent, final Device device, final String version) {
-        final T deviceDto = BaseDto.forUpdate(supplier, withoutStatus(device), version);
+    public static <T extends DeviceDto> T forUpdate(
+            final Supplier<T> supplier,
+            final String tenantId,
+            final String deviceId,
+            final Boolean autoProvisioningNotificationSent,
+            final Device device,
+            final String version) {
+
+        Objects.requireNonNull(supplier);
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(device);
+
+        final T deviceDto = BaseDto.forUpdate(supplier, device.withoutStatus(), version);
         deviceDto.setTenantId(tenantId);
         deviceDto.setDeviceId(deviceId);
         deviceDto.setDeviceStatus(new DeviceStatus()
@@ -118,21 +163,6 @@ public class DeviceDto extends BaseDto<Device> {
         );
 
         return deviceDto;
-    }
-
-    /**
-     * Returns a new device without internal status.
-     * <p>
-     * The status should be null anyway, since it should not be deserialized in the given device value object.
-     * Also it will be overwritten with the actual internal status when devices are retrieved.
-     * Nevertheless this makes sure that status information will never be persisted.
-     *
-     * @param device The device which should be copied without status.
-     *
-     * @return The copied device.
-     */
-    protected static Device withoutStatus(final Device device) {
-        return new Device(device).setStatus(null);
     }
 
     /**
@@ -194,9 +224,9 @@ public class DeviceDto extends BaseDto<Device> {
     }
 
     /**
-     * Gets the device information including internal status.
+     * Gets a copy of the device configuration data and the object's status information (if available).
      *
-     * @return The device information including internal status or {@code null} if not set.
+     * @return The device.
      */
     @JsonIgnore
     public Device getDeviceWithStatus() {

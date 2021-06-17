@@ -348,6 +348,17 @@ public class Device {
     }
 
     /**
+     * Gets a copy of this device without its status.
+     *
+     * @return The copied device.
+     */
+    public final Device withoutStatus() {
+        final var copy = new Device(this);
+        copy.status = null;
+        return copy;
+    }
+
+    /**
      * Sets the authorities granted to this device.
      *
      * @param authorities The device's authorities.

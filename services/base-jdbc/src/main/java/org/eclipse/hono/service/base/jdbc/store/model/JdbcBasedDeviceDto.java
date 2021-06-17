@@ -83,7 +83,7 @@ public class JdbcBasedDeviceDto extends DeviceDto {
                 deviceKey.getTenantId(),
                 deviceKey.getDeviceId(),
                 autoProvisioningNotificationSent,
-                withoutStatus(device),
+                device.withoutStatus(),
                 UUID.randomUUID().toString());
     }
 
