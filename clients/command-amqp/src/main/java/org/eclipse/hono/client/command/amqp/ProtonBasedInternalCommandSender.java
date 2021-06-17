@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.client.command.amqp;
 
-import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -25,8 +24,8 @@ import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.NoConsumerException;
 import org.eclipse.hono.client.SendMessageSampler;
-import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.amqp.SenderCachingServiceClient;
 import org.eclipse.hono.client.command.Command;
@@ -97,8 +96,11 @@ public class ProtonBasedInternalCommandSender extends SenderCachingServiceClient
                 })
                 .onFailure(thr -> {
                     LOG.debug("failed to send command [{}] to downstream peer", commandContext.getCommand(), thr);
-                    commandContext.release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
-                            "failed to send command message to downstream peer", thr));
+                    if (thr instanceof NoConsumerException) {
+                        TracingHelper.logError(commandContext.getTracingSpan(),
+                                "no credit - target adapter instance '" + adapterInstanceId + "' may be offline in which case the device hasn't subscribed again yet");
+                    }
+                    commandContext.release(thr);
                 });
     }
 
