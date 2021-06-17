@@ -26,6 +26,8 @@ import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Lifecycle;
+import org.eclipse.hono.util.MessagingClient;
+import org.eclipse.hono.util.MessagingType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,7 +48,7 @@ import io.vertx.kafka.client.producer.RecordMetadata;
 /**
  * A client for publishing messages to a Kafka cluster.
  */
-public abstract class AbstractKafkaBasedMessageSender implements Lifecycle {
+public abstract class AbstractKafkaBasedMessageSender implements MessagingClient, Lifecycle {
     /**
      * A logger to be shared with subclasses.
      */
@@ -82,6 +84,11 @@ public abstract class AbstractKafkaBasedMessageSender implements Lifecycle {
         this.producerName = producerName;
         this.config = config;
         this.tracer = tracer;
+    }
+
+    @Override
+    public final MessagingType getMessagingType() {
+        return MessagingType.kafka;
     }
 
     /**

@@ -19,7 +19,7 @@ import java.util.Optional;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.telemetry.EventSender;
-import org.eclipse.hono.client.util.MessagingClient;
+import org.eclipse.hono.client.util.MessagingClients;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
@@ -55,7 +55,7 @@ public class EdgeDeviceAutoProvisioner extends AbstractAutoProvisioningEventSend
      */
     public EdgeDeviceAutoProvisioner(final Vertx vertx,
             final DeviceManagementService deviceManagementService,
-            final MessagingClient<EventSender> eventClients,
+            final MessagingClients<EventSender> eventClients,
             final AutoProvisionerConfigProperties config,
             final Tracer tracer) {
         super(vertx, deviceManagementService, eventClients);

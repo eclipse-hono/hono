@@ -18,7 +18,7 @@ import java.util.Objects;
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.TelemetrySender;
-import org.eclipse.hono.client.util.MessagingClient;
+import org.eclipse.hono.client.util.MessagingClients;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.TenantObject;
 
@@ -31,11 +31,11 @@ import io.vertx.ext.healthchecks.HealthCheckHandler;
  * <p>
  * It contains clients for each of Hono's south bound API endpoints.
  */
-public final class MessagingClients implements Lifecycle {
+public final class AdapterMessagingClients implements Lifecycle {
 
-    private final MessagingClient<TelemetrySender> telemetrySenders;
-    private final MessagingClient<EventSender> eventSenders;
-    private final MessagingClient<CommandResponseSender> commandResponseSenders;
+    private final MessagingClients<TelemetrySender> telemetrySenders;
+    private final MessagingClients<EventSender> eventSenders;
+    private final MessagingClients<CommandResponseSender> commandResponseSenders;
 
     /**
      * Creates a new instance.
@@ -46,10 +46,10 @@ public final class MessagingClients implements Lifecycle {
      * @throws NullPointerException if any of the parameters are {@code null}.
      * @throws IllegalArgumentException if any of the senders does not contain at least one client implementation.
      */
-    public MessagingClients(
-            final MessagingClient<TelemetrySender> telemetrySenders,
-            final MessagingClient<EventSender> eventSenders,
-            final MessagingClient<CommandResponseSender> commandResponseSenders) {
+    public AdapterMessagingClients(
+            final MessagingClients<TelemetrySender> telemetrySenders,
+            final MessagingClients<EventSender> eventSenders,
+            final MessagingClients<CommandResponseSender> commandResponseSenders) {
 
         Objects.requireNonNull(telemetrySenders);
         Objects.requireNonNull(eventSenders);
@@ -104,7 +104,7 @@ public final class MessagingClients implements Lifecycle {
      *
      * @return The clients.
      */
-    public MessagingClient<TelemetrySender> getTelemetrySenders() {
+    public MessagingClients<TelemetrySender> getTelemetrySenders() {
         return telemetrySenders;
     }
 
@@ -113,7 +113,7 @@ public final class MessagingClients implements Lifecycle {
      *
      * @return The clients.
      */
-    public MessagingClient<EventSender> getEventSenders() {
+    public MessagingClients<EventSender> getEventSenders() {
         return eventSenders;
     }
 
@@ -122,7 +122,7 @@ public final class MessagingClients implements Lifecycle {
      *
      * @return The clients.
      */
-    public MessagingClient<CommandResponseSender> getCommandResponseSenders() {
+    public MessagingClients<CommandResponseSender> getCommandResponseSenders() {
         return commandResponseSenders;
     }
 

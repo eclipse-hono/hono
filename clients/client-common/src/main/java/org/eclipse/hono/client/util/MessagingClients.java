@@ -11,9 +11,9 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-
 package org.eclipse.hono.client.util;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +22,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.util.Lifecycle;
+import org.eclipse.hono.util.MessagingClient;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
@@ -36,7 +37,7 @@ import io.vertx.ext.healthchecks.HealthCheckHandler;
  *
  * @param <T> The type of client to wrap.
  */
-public final class MessagingClient<T extends Lifecycle> implements Lifecycle, ServiceClient {
+public final class MessagingClients<T extends MessagingClient & Lifecycle> implements Lifecycle, ServiceClient {
 
     /**
      * The default messaging type to be used.
@@ -63,15 +64,14 @@ public final class MessagingClient<T extends Lifecycle> implements Lifecycle, Se
     /**
      * Sets a client to use for a particular type of messaging system.
      *
-     * @param type The messaging system type.
      * @param client The client.
      * @return A reference to this wrapper.
-     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @throws NullPointerException if client or its messaging type is {@code null}.
      */
-    public MessagingClient<T> setClient(final MessagingType type, final T client) {
-        Objects.requireNonNull(type);
+    public MessagingClients<T> setClient(final T client) {
         Objects.requireNonNull(client);
-        this.clientImplementations.put(type, client);
+        Objects.requireNonNull(client.getMessagingType(), "client messaging type is null");
+        this.clientImplementations.put(client.getMessagingType(), client);
         return this;
     }
 
@@ -132,6 +132,14 @@ public final class MessagingClient<T extends Lifecycle> implements Lifecycle, Se
         return clientImplementations.get(messagingType);
     }
 
+    /**
+     * Gets s list of all supported messaging client implementation.
+     * @return The list of clients.
+     */
+    public List<T> getClients() {
+        return new ArrayList<>(clientImplementations.values());
+    }
+
     private T getDefaultImplementation() {
         if (clientImplementations.size() == 1) {
             return clientImplementations.values().iterator().next();
@@ -169,9 +177,6 @@ public final class MessagingClient<T extends Lifecycle> implements Lifecycle, Se
         return CompositeFuture.all(futures).mapEmpty();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<Void> stop() {
         @SuppressWarnings("rawtypes")

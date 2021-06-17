@@ -39,7 +39,7 @@ import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.telemetry.EventSender;
-import org.eclipse.hono.client.util.MessagingClient;
+import org.eclipse.hono.client.util.MessagingClients;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
@@ -109,6 +109,7 @@ public class DeviceAndGatewayAutoProvisionerTest {
         credentialsManagementService = mock(CredentialsManagementService.class);
 
         sender = mock(EventSender.class);
+        when(sender.getMessagingType()).thenReturn(MessagingType.amqp);
         when(sender.sendEvent(
                 any(TenantObject.class),
                 any(RegistrationAssertion.class),
@@ -122,7 +123,7 @@ public class DeviceAndGatewayAutoProvisionerTest {
                 mock(Vertx.class),
                 deviceManagementService,
                 credentialsManagementService,
-                new MessagingClient<EventSender>().setClient(MessagingType.amqp, sender));
+                new MessagingClients<EventSender>().setClient(sender));
     }
 
     /**

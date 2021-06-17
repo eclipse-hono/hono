@@ -101,7 +101,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     private DeviceRegistrationClient registrationClient;
     private ResourceLimitChecks resourceLimitChecks = new NoopResourceLimitChecks();
     private TenantClient tenantClient;
-    private MessagingClients messagingClients;
+    private AdapterMessagingClients messagingClients;
 
     /**
      * Adds a Micrometer sample to a command context.
@@ -128,9 +128,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         return ctx.get(KEY_MICROMETER_SAMPLE);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public final void setConfig(final T configuration) {
         setSpecificConfig(configuration);
@@ -176,7 +173,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param messagingClients The messaging clients.
      * @throws NullPointerException if the messaging clients is {@code null}.
      */
-    public void setMessagingClients(final MessagingClients messagingClients) {
+    public void setMessagingClients(final AdapterMessagingClients messagingClients) {
         Objects.requireNonNull(messagingClients);
         this.messagingClients = messagingClients;
     }

@@ -42,6 +42,7 @@ import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.TelemetrySender;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.TenantObject;
@@ -80,6 +81,7 @@ public abstract class ProtocolAdapterMockSupport {
 
     private CommandResponseSender createCommandResponseSender() {
         final CommandResponseSender client = mock(CommandResponseSender.class);
+        when(client.getMessagingType()).thenReturn(MessagingType.amqp);
         when(client.start()).thenReturn(Future.succeededFuture());
         when(client.stop()).thenReturn(Future.succeededFuture());
         return client;
@@ -115,6 +117,7 @@ public abstract class ProtocolAdapterMockSupport {
 
     private TelemetrySender createTelemetrySenderMock() {
         final TelemetrySender sender = mock(TelemetrySender.class);
+        when(sender.getMessagingType()).thenReturn(MessagingType.amqp);
         when(sender.start()).thenReturn(Future.succeededFuture());
         when(sender.stop()).thenReturn(Future.succeededFuture());
         return sender;
@@ -122,6 +125,7 @@ public abstract class ProtocolAdapterMockSupport {
 
     private EventSender createEventSenderMock() {
         final EventSender sender = mock(EventSender.class);
+        when(sender.getMessagingType()).thenReturn(MessagingType.amqp);
         when(sender.start()).thenReturn(Future.succeededFuture());
         when(sender.stop()).thenReturn(Future.succeededFuture());
         return sender;

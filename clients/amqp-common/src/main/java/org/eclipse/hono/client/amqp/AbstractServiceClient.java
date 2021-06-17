@@ -25,6 +25,8 @@ import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Lifecycle;
+import org.eclipse.hono.util.MessagingClient;
+import org.eclipse.hono.util.MessagingType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +44,7 @@ import io.vertx.ext.healthchecks.Status;
 /**
  * A base class for implementing Hono service clients.
  */
-public abstract class AbstractServiceClient implements ConnectionLifecycle<HonoConnection>, ServiceClient, Lifecycle {
+public abstract class AbstractServiceClient implements ConnectionLifecycle<HonoConnection>, MessagingClient, ServiceClient, Lifecycle {
 
     /**
      * A logger to be shared with subclasses.
@@ -71,6 +73,11 @@ public abstract class AbstractServiceClient implements ConnectionLifecycle<HonoC
         this.connection = Objects.requireNonNull(connection);
         this.connection.addDisconnectListener(con -> onDisconnect());
         this.samplerFactory = Objects.requireNonNull(samplerFactory);
+    }
+
+    @Override
+    public final MessagingType getMessagingType() {
+        return MessagingType.amqp;
     }
 
     /**
@@ -252,9 +259,6 @@ public abstract class AbstractServiceClient implements ConnectionLifecycle<HonoC
                 });
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
         // no liveness checks to be added

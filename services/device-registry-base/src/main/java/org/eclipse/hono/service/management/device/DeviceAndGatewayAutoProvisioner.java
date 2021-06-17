@@ -27,7 +27,7 @@ import javax.security.auth.x500.X500Principal;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.telemetry.EventSender;
-import org.eclipse.hono.client.util.MessagingClient;
+import org.eclipse.hono.client.util.MessagingClients;
 import org.eclipse.hono.deviceregistry.service.device.AbstractAutoProvisioningEventSender;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
@@ -74,7 +74,7 @@ public final class DeviceAndGatewayAutoProvisioner extends AbstractAutoProvision
             final Vertx vertx,
             final DeviceManagementService deviceManagementService,
             final CredentialsManagementService credentialsManagementService,
-            final MessagingClient<EventSender> eventSenders) {
+            final MessagingClients<EventSender> eventSenders) {
         super(vertx, deviceManagementService, eventSenders);
         this.credentialsManagementService = Objects.requireNonNull(credentialsManagementService);
     }

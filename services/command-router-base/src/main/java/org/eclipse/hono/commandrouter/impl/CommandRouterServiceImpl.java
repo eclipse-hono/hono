@@ -29,7 +29,7 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
-import org.eclipse.hono.client.util.MessagingClient;
+import org.eclipse.hono.client.util.MessagingClients;
 import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterServiceConfigProperties;
@@ -66,7 +66,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
     private final DeviceRegistrationClient registrationClient;
     private final TenantClient tenantClient;
     private final DeviceConnectionInfo deviceConnectionInfo;
-    private final MessagingClient<CommandConsumerFactory> commandConsumerFactories;
+    private final MessagingClients<CommandConsumerFactory> commandConsumerFactories;
     private final Tracer tracer;
     private final Deque<Pair<String, Integer>> tenantsToEnable = new LinkedList<>();
     private final Set<String> reenabledTenants = new HashSet<>();
@@ -95,7 +95,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
             final DeviceRegistrationClient registrationClient,
             final TenantClient tenantClient,
             final DeviceConnectionInfo deviceConnectionInfo,
-            final MessagingClient<CommandConsumerFactory> commandConsumerFactories,
+            final MessagingClients<CommandConsumerFactory> commandConsumerFactories,
             final Tracer tracer) {
 
         this.config = Objects.requireNonNull(config);

@@ -16,11 +16,13 @@ package org.eclipse.hono.client.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.Map;
 
 import org.assertj.core.api.Assertions;
 import org.eclipse.hono.util.Lifecycle;
+import org.eclipse.hono.util.MessagingClient;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
@@ -29,10 +31,10 @@ import org.junit.jupiter.api.Test;
 
 
 /**
- * Tests verifying behavior of {@link MessagingClient}.
+ * Tests verifying behavior of {@link MessagingClients}.
  *
  */
-public class MessagingClientTest {
+public class MessagingClientsTest {
 
     private static final String tenant = "tenant";
 
@@ -41,17 +43,19 @@ public class MessagingClientTest {
     private static final Map<String, String> CONFIG_AMQP = Map.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE,
             MessagingType.amqp.name());
 
-    private final Lifecycle amqpClient = mock(Lifecycle.class);
-    private final Lifecycle kafkaClient = mock(Lifecycle.class);
+    private final TestClient amqpClient = mock(TestClient.class);
+    private final TestClient kafkaClient = mock(TestClient.class);
 
-    private MessagingClient<Lifecycle> underTest;
+    private MessagingClients<TestClient> underTest;
 
     /**
      * Sets up the fixture.
      */
     @BeforeEach
     void setUp() {
-        underTest = new MessagingClient<>();
+        when(amqpClient.getMessagingType()).thenReturn(MessagingType.amqp);
+        when(kafkaClient.getMessagingType()).thenReturn(MessagingType.kafka);
+        underTest = new MessagingClients<>();
     }
 
     /**
@@ -62,7 +66,7 @@ public class MessagingClientTest {
 
         assertThat(underTest.containsImplementations()).isFalse();
 
-        underTest.setClient(MessagingType.amqp, amqpClient);
+        underTest.setClient(amqpClient);
         assertThat(underTest.containsImplementations()).isTrue();
     }
 
@@ -72,8 +76,8 @@ public class MessagingClientTest {
     @Test
     public void testGetClientConfiguredOnTenant() {
 
-        underTest.setClient(MessagingType.amqp, amqpClient)
-                .setClient(MessagingType.kafka, kafkaClient);
+        underTest.setClient(amqpClient)
+                .setClient(kafkaClient);
 
         assertThat(underTest.getClient(TenantObject.from(tenant, true).setProperty(
                 TenantConstants.FIELD_EXT, CONFIG_KAFKA))).isEqualTo(kafkaClient);
@@ -89,7 +93,7 @@ public class MessagingClientTest {
      */
     @Test
     public void testGetClientReturnsKafkaClient() {
-        underTest.setClient(MessagingType.kafka, kafkaClient);
+        underTest.setClient(kafkaClient);
 
         assertThat(underTest.getClient(TenantObject.from(tenant, true))).isEqualTo(kafkaClient);
     }
@@ -100,7 +104,7 @@ public class MessagingClientTest {
      */
     @Test
     public void testGetClientReturnsAmqpClient() {
-        underTest.setClient(MessagingType.amqp, amqpClient);
+        underTest.setClient(amqpClient);
 
         assertThat(underTest.getClient(TenantObject.from(tenant, true))).isEqualTo(amqpClient);
     }
@@ -111,8 +115,8 @@ public class MessagingClientTest {
      */
     @Test
     public void testGetClientReturnsDefaultClient() {
-        underTest.setClient(MessagingType.kafka, kafkaClient);
-        underTest.setClient(MessagingType.amqp, amqpClient);
+        underTest.setClient(kafkaClient);
+        underTest.setClient(amqpClient);
 
         assertThat(underTest.getClient(TenantObject.from(tenant, true))).isEqualTo(amqpClient);
     }
@@ -123,6 +127,9 @@ public class MessagingClientTest {
     @Test
     public void testGetClientFailsIfNoClientHasBeenSet() {
         Assertions.assertThatIllegalStateException().isThrownBy(() -> underTest.getClient(TenantObject.from(tenant, true)));
+    }
+
+    abstract static class TestClient implements MessagingClient, Lifecycle {
     }
 
 }

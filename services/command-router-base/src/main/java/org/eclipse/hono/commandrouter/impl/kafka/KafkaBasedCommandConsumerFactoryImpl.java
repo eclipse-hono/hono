@@ -28,6 +28,7 @@ import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.MessagingType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -103,6 +104,11 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
         internalCommandSender = new KafkaBasedInternalCommandSender(kafkaProducerFactory, kafkaProducerConfig, tracer);
         kafkaBasedCommandResponseSender = new KafkaBasedCommandResponseSender(kafkaProducerFactory, kafkaProducerConfig,
                 tracer);
+    }
+
+    @Override
+    public MessagingType getMessagingType() {
+        return MessagingType.kafka;
     }
 
     @Override

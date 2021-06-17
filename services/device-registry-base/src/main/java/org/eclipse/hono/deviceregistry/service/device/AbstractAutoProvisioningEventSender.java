@@ -20,7 +20,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.client.telemetry.EventSender;
-import org.eclipse.hono.client.util.MessagingClient;
+import org.eclipse.hono.client.util.MessagingClients;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
@@ -50,7 +50,7 @@ public abstract class AbstractAutoProvisioningEventSender implements Lifecycle {
      */
     protected final Logger LOG = LoggerFactory.getLogger(getClass());
     protected final DeviceManagementService deviceManagementService;
-    protected final MessagingClient<EventSender> eventClients;
+    protected final MessagingClients<EventSender> eventClients;
     protected final Vertx vertx;
 
     private final AtomicBoolean started = new AtomicBoolean(false);
@@ -65,7 +65,7 @@ public abstract class AbstractAutoProvisioningEventSender implements Lifecycle {
      */
     public AbstractAutoProvisioningEventSender(final Vertx vertx,
             final DeviceManagementService deviceManagementService,
-            final MessagingClient<EventSender> eventClients) {
+            final MessagingClients<EventSender> eventClients) {
         Objects.requireNonNull(vertx);
         Objects.requireNonNull(deviceManagementService);
         Objects.requireNonNull(eventClients);

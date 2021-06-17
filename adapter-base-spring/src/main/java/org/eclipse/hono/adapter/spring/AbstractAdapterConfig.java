@@ -19,7 +19,7 @@ import java.util.Optional;
 import java.util.concurrent.Executors;
 
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
-import org.eclipse.hono.adapter.MessagingClients;
+import org.eclipse.hono.adapter.AdapterMessagingClients;
 import org.eclipse.hono.adapter.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.adapter.monitoring.ConnectionEventProducerConfig;
 import org.eclipse.hono.adapter.monitoring.HonoEventConnectionEventProducer;
@@ -123,7 +123,7 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
 
         final KafkaAdminClientConfigProperties kafkaAdminClientConfig = kafkaAdminClientConfig();
         final KafkaConsumerConfigProperties kafkaConsumerConfig = kafkaConsumerConfig();
-        final MessagingClients messagingClients = messagingClients(samplerFactory, getTracer(), vertx(), adapterProperties);
+        final AdapterMessagingClients messagingClients = messagingClients(samplerFactory, getTracer(), vertx(), adapterProperties);
 
         final TenantClient tenantClient = tenantClient(samplerFactory);
         final DeviceRegistrationClient registrationClient = registrationClient(samplerFactory);

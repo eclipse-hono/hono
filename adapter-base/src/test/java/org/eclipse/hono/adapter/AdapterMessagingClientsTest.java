@@ -15,39 +15,41 @@ package org.eclipse.hono.adapter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.Map;
 
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.TelemetrySender;
-import org.eclipse.hono.client.util.MessagingClient;
+import org.eclipse.hono.client.util.MessagingClients;
+import org.eclipse.hono.util.MessagingClient;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests verifying behavior of {@link MessagingClients}.
+ * Tests verifying behavior of {@link AdapterMessagingClients}.
  *
  */
-public class MessagingClientsTest {
+public class AdapterMessagingClientsTest {
 
     private static final String TENANT = "tenant";
 
-    private final TelemetrySender kafkaTelemetrySender = mock(TelemetrySender.class);
-    private final EventSender amqpEventSender = mock(EventSender.class);
+    private final TelemetrySender kafkaTelemetrySender = mockMessagingClient(TelemetrySender.class, MessagingType.kafka);
+    private final EventSender amqpEventSender = mockMessagingClient(EventSender.class, MessagingType.amqp);
 
-    private final MessagingClient<TelemetrySender> telemetrySenders = new MessagingClient<TelemetrySender>()
-            .setClient(MessagingType.amqp, mock(TelemetrySender.class))
-            .setClient(MessagingType.kafka, kafkaTelemetrySender);
+    private final MessagingClients<TelemetrySender> telemetrySenders = new MessagingClients<TelemetrySender>()
+            .setClient(mockMessagingClient(TelemetrySender.class, MessagingType.amqp))
+            .setClient(kafkaTelemetrySender);
 
-    private final MessagingClient<EventSender> eventSenders = new MessagingClient<EventSender>()
-            .setClient(MessagingType.amqp, amqpEventSender)
-            .setClient(MessagingType.kafka, mock(EventSender.class));
-    private final MessagingClient<CommandResponseSender> commandResponseSenders = new MessagingClient<CommandResponseSender>()
-            .setClient(MessagingType.amqp, mock(CommandResponseSender.class))
-            .setClient(MessagingType.kafka, mock(CommandResponseSender.class));
+    private final MessagingClients<EventSender> eventSenders = new MessagingClients<EventSender>()
+            .setClient(amqpEventSender)
+            .setClient(mockMessagingClient(EventSender.class, MessagingType.kafka));
+    private final MessagingClients<CommandResponseSender> commandResponseSenders = new MessagingClients<CommandResponseSender>()
+            .setClient(mockMessagingClient(CommandResponseSender.class, MessagingType.amqp))
+            .setClient(mockMessagingClient(CommandResponseSender.class, MessagingType.kafka));
 
     private final Map<String, String> extensionFieldKafka = Map.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE,
             MessagingType.kafka.name());
@@ -60,12 +62,19 @@ public class MessagingClientsTest {
     @Test
     public void testGetClientConfiguredOnTenant() {
 
-        final MessagingClients underTest = new MessagingClients(telemetrySenders, eventSenders, commandResponseSenders);
+        final AdapterMessagingClients underTest = new AdapterMessagingClients(telemetrySenders, eventSenders, commandResponseSenders);
 
         assertThat(underTest.getTelemetrySender(TenantObject.from(TENANT, true).setProperty(
                 TenantConstants.FIELD_EXT, extensionFieldKafka))).isEqualTo(kafkaTelemetrySender);
 
         assertThat(underTest.getEventSender(TenantObject.from(TENANT, true).setProperty(
                 TenantConstants.FIELD_EXT, extensionFieldAmqp))).isEqualTo(amqpEventSender);
+    }
+
+    private <T extends MessagingClient> T mockMessagingClient(final Class<T> messagingClientClass,
+            final MessagingType messagingType) {
+        final T mock = mock(messagingClientClass);
+        when(mock.getMessagingType()).thenReturn(messagingType);
+        return mock;
     }
 }

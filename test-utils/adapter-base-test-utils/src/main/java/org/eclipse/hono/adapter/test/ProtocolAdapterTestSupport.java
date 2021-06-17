@@ -15,13 +15,12 @@
 package org.eclipse.hono.adapter.test;
 
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
-import org.eclipse.hono.adapter.MessagingClients;
+import org.eclipse.hono.adapter.AdapterMessagingClients;
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.TelemetrySender;
-import org.eclipse.hono.client.util.MessagingClient;
+import org.eclipse.hono.client.util.MessagingClients;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
-import org.eclipse.hono.util.MessagingType;
 
 /**
  * A base class for implementing tests for protocol adapters that extend
@@ -47,12 +46,12 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
      *
      * @return The clients
      */
-    protected MessagingClients createMessagingClients() {
+    protected AdapterMessagingClients createMessagingClients() {
 
-        return new MessagingClients(
-                new MessagingClient<TelemetrySender>().setClient(MessagingType.amqp, telemetrySender),
-                new MessagingClient<EventSender>().setClient(MessagingType.amqp, eventSender),
-                new MessagingClient<CommandResponseSender>().setClient(MessagingType.amqp, commandResponseSender));
+        return new AdapterMessagingClients(
+                new MessagingClients<TelemetrySender>().setClient(telemetrySender),
+                new MessagingClients<EventSender>().setClient(eventSender),
+                new MessagingClients<CommandResponseSender>().setClient(commandResponseSender));
     }
 
     /**

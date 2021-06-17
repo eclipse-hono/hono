@@ -21,7 +21,7 @@ import java.util.concurrent.Executors;
 import javax.inject.Inject;
 
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
-import org.eclipse.hono.adapter.MessagingClients;
+import org.eclipse.hono.adapter.AdapterMessagingClients;
 import org.eclipse.hono.adapter.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.adapter.monitoring.HonoEventConnectionEventProducer;
 import org.eclipse.hono.adapter.monitoring.LoggingConnectionEventProducer;
@@ -62,7 +62,7 @@ import org.eclipse.hono.client.telemetry.TelemetrySender;
 import org.eclipse.hono.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.client.telemetry.kafka.KafkaBasedEventSender;
 import org.eclipse.hono.client.telemetry.kafka.KafkaBasedTelemetrySender;
-import org.eclipse.hono.client.util.MessagingClient;
+import org.eclipse.hono.client.util.MessagingClients;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.config.quarkus.ApplicationConfigProperties;
@@ -188,9 +188,9 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
         final DeviceRegistrationClient registrationClient = registrationClient();
 
-        final MessagingClient<TelemetrySender> telemetrySenders = new MessagingClient<>();
-        final MessagingClient<EventSender> eventSenders = new MessagingClient<>();
-        final MessagingClient<CommandResponseSender> commandResponseSenders = new MessagingClient<>();
+        final MessagingClients<TelemetrySender> telemetrySenders = new MessagingClients<>();
+        final MessagingClients<EventSender> eventSenders = new MessagingClients<>();
+        final MessagingClients<CommandResponseSender> commandResponseSenders = new MessagingClients<>();
 
         if (kafkaProducerConfig.isConfigured()) {
             LOG.info("Kafka Producer is configured, adding Kafka messaging clients");
@@ -199,30 +199,23 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             LOG.debug("KafkaProducerConfig: " + kafkaProducerConfig.getProducerConfig("log"));
 
             final KafkaProducerFactory<String, Buffer> factory = KafkaProducerFactory.sharedProducerFactory(vertx);
-            telemetrySenders.setClient(
-                    MessagingType.kafka,
-                    new KafkaBasedTelemetrySender(factory, kafkaProducerConfig,
-                            protocolAdapterProperties.isDefaultsEnabled(), tracer));
-            eventSenders.setClient(
-                    MessagingType.kafka,
-                    new KafkaBasedEventSender(factory, kafkaProducerConfig,
-                            protocolAdapterProperties.isDefaultsEnabled(), tracer));
-            commandResponseSenders.setClient(
-                    MessagingType.kafka,
-                    new KafkaBasedCommandResponseSender(factory, kafkaProducerConfig, tracer));
+            telemetrySenders.setClient(new KafkaBasedTelemetrySender(factory, kafkaProducerConfig,
+                    protocolAdapterProperties.isDefaultsEnabled(), tracer));
+            eventSenders.setClient(new KafkaBasedEventSender(factory, kafkaProducerConfig,
+                    protocolAdapterProperties.isDefaultsEnabled(), tracer));
+            commandResponseSenders.setClient(new KafkaBasedCommandResponseSender(factory, kafkaProducerConfig, tracer));
         }
         if (downstreamSenderConfig.isHostConfigured()) {
-            telemetrySenders.setClient(MessagingType.amqp, downstreamSender());
-            eventSenders.setClient(MessagingType.amqp, downstreamSender());
+            telemetrySenders.setClient(downstreamSender());
+            eventSenders.setClient(downstreamSender());
             commandResponseSenders.setClient(
-                    MessagingType.amqp,
                     new ProtonBasedCommandResponseSender(
                             HonoConnection.newConnection(vertx, commandResponseSenderConfig(), tracer),
                             messageSamplerFactory,
                             protocolAdapterProperties.isJmsVendorPropsEnabled()));
         }
 
-        final MessagingClients messagingClients = new MessagingClients(telemetrySenders, eventSenders,
+        final AdapterMessagingClients messagingClients = new AdapterMessagingClients(telemetrySenders, eventSenders,
                 commandResponseSenders);
 
         if (commandRouterConfig.isHostConfigured()) {

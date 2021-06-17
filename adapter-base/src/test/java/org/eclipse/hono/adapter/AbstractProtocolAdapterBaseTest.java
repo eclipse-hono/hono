@@ -50,13 +50,14 @@ import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.TelemetrySender;
-import org.eclipse.hono.client.util.MessagingClient;
+import org.eclipse.hono.client.util.MessagingClients;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.MessagingClient;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -104,7 +105,7 @@ public class AbstractProtocolAdapterBaseTest {
     private CommandResponseSender amqpCommandResponseSender;
     private CommandResponseSender kafkaCommandResponseSender;
     private CommandRouterClient commandRouterClient;
-    private MessagingClients messagingClients;
+    private AdapterMessagingClients messagingClients;
 
     /**
      * Sets up the fixture.
@@ -121,34 +122,34 @@ public class AbstractProtocolAdapterBaseTest {
         credentialsClient = mock(CredentialsClient.class);
         when(credentialsClient.start()).thenReturn(Future.succeededFuture());
 
-        amqpTelemetrySender = mock(TelemetrySender.class);
+        amqpTelemetrySender = mockMessagingClient(TelemetrySender.class, MessagingType.amqp);
         when(amqpTelemetrySender.start()).thenReturn(Future.succeededFuture());
-        kafkaTelemetrySender = mock(TelemetrySender.class);
+        kafkaTelemetrySender = mockMessagingClient(TelemetrySender.class, MessagingType.kafka);
         when(kafkaTelemetrySender.start()).thenReturn(Future.succeededFuture());
-        amqpEventSender = mock(EventSender.class);
+        amqpEventSender = mockMessagingClient(EventSender.class, MessagingType.amqp);
         when(amqpEventSender.start()).thenReturn(Future.succeededFuture());
-        kafkaEventSender = mock(EventSender.class);
+        kafkaEventSender = mockMessagingClient(EventSender.class, MessagingType.kafka);
         when(kafkaEventSender.start()).thenReturn(Future.succeededFuture());
 
         commandConsumerFactory = mock(CommandConsumerFactory.class);
         when(commandConsumerFactory.start()).thenReturn(Future.succeededFuture());
 
-        amqpCommandResponseSender = mock(CommandResponseSender.class);
+        amqpCommandResponseSender = mockMessagingClient(CommandResponseSender.class, MessagingType.amqp);
         when(amqpCommandResponseSender.start()).thenReturn(Future.succeededFuture());
-        kafkaCommandResponseSender = mock(CommandResponseSender.class);
+        kafkaCommandResponseSender = mockMessagingClient(CommandResponseSender.class, MessagingType.kafka);
         when(kafkaCommandResponseSender.start()).thenReturn(Future.succeededFuture());
 
-        final var telemetrySenders = new MessagingClient<TelemetrySender>()
-                .setClient(MessagingType.amqp, amqpTelemetrySender)
-                .setClient(MessagingType.kafka, kafkaTelemetrySender);
-        final var eventSenders = new MessagingClient<EventSender>()
-                .setClient(MessagingType.amqp, amqpEventSender)
-                .setClient(MessagingType.kafka, kafkaEventSender);
-        final var commandResponseSenders = new MessagingClient<CommandResponseSender>()
-                .setClient(MessagingType.amqp, amqpCommandResponseSender)
-                .setClient(MessagingType.kafka, kafkaCommandResponseSender);
+        final var telemetrySenders = new MessagingClients<TelemetrySender>()
+                .setClient(amqpTelemetrySender)
+                .setClient(kafkaTelemetrySender);
+        final var eventSenders = new MessagingClients<EventSender>()
+                .setClient(amqpEventSender)
+                .setClient(kafkaEventSender);
+        final var commandResponseSenders = new MessagingClients<CommandResponseSender>()
+                .setClient(amqpCommandResponseSender)
+                .setClient(kafkaCommandResponseSender);
 
-        messagingClients = new MessagingClients(
+        messagingClients = new AdapterMessagingClients(
                 telemetrySenders,
                 eventSenders,
                 commandResponseSenders);
@@ -801,5 +802,12 @@ public class AbstractProtocolAdapterBaseTest {
         Optional.ofNullable(defaultContentType)
             .ifPresent(ct -> result.setDefaults(Map.of(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, ct)));
         return result;
+    }
+
+    private <T extends MessagingClient> T mockMessagingClient(final Class<T> messagingClientClass,
+            final MessagingType messagingType) {
+        final T mock = mock(messagingClientClass);
+        when(mock.getMessagingType()).thenReturn(messagingType);
+        return mock;
     }
 }
