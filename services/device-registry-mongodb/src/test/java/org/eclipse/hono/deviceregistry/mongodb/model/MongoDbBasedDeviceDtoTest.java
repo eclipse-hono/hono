@@ -16,7 +16,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
 
-import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDeviceRegistryUtils;
 import org.eclipse.hono.service.management.BaseDto;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceStatus;
@@ -55,13 +54,14 @@ class MongoDbBasedDeviceDtoTest {
         assertThat(json.getString(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID)).isEqualTo(tenantId);
         assertThat(json.getString(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID)).isEqualTo(deviceId);
         // make sure that the creation date set on the new device is not the one contained in the DeviceStatus
-        assertThat(json.getInstant(RegistryManagementConstants.FIELD_STATUS_CREATION_DATE)).isBefore(futureInstant);
+        final var createdAt = json.getInstant(RegistryManagementConstants.FIELD_STATUS_CREATION_DATE);
+        assertThat(createdAt).isBefore(futureInstant);
         assertThat(json.getString(BaseDto.FIELD_VERSION)).isEqualTo(version);
         assertThat(json.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED))
                 .isEqualTo(deviceDto.getDeviceStatus().isAutoProvisioned());
         assertThat(json.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT))
                 .isEqualTo(deviceDto.getDeviceStatus().isAutoProvisioningNotificationSent());
-        assertThat(json.getJsonObject(MongoDbDeviceRegistryUtils.FIELD_DEVICE)).isNotNull();
+        assertThat(json.getJsonObject(MongoDbBasedDeviceDto.FIELD_DEVICE)).isNotNull();
     }
 
 
@@ -97,6 +97,6 @@ class MongoDbBasedDeviceDtoTest {
                 .isEqualTo(deviceDto.getDeviceStatus().isAutoProvisioned());
         assertThat(json.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT))
                 .isEqualTo(deviceDto.getDeviceStatus().isAutoProvisioningNotificationSent());
-        assertThat(json.getJsonObject(MongoDbDeviceRegistryUtils.FIELD_DEVICE)).isNotNull();
+        assertThat(json.getJsonObject(MongoDbBasedDeviceDto.FIELD_DEVICE)).isNotNull();
     }
 }

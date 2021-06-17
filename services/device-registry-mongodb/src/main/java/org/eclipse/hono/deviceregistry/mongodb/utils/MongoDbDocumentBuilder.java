@@ -18,6 +18,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 
+import org.eclipse.hono.deviceregistry.mongodb.model.CredentialsDto;
+import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedDeviceDto;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.BaseDto;
 import org.eclipse.hono.service.management.Filter;
@@ -104,15 +106,15 @@ public final class MongoDbDocumentBuilder {
         }
 
         if (baseDto.getCreationTime() != null) {
-            updates.put(MongoDbDeviceRegistryUtils.FIELD_CREATED, baseDto.getCreationTime());
+            updates.put(BaseDto.FIELD_CREATED, baseDto.getCreationTime());
         }
 
         if (baseDto.getUpdatedOn() != null) {
-            updates.put(MongoDbDeviceRegistryUtils.FIELD_UPDATED_ON, baseDto.getUpdatedOn());
+            updates.put(BaseDto.FIELD_UPDATED_ON, baseDto.getUpdatedOn());
         }
 
         if (baseDto.getVersion() != null) {
-            updates.put(MongoDbDeviceRegistryUtils.FIELD_VERSION, baseDto.getVersion());
+            updates.put(BaseDto.FIELD_VERSION, baseDto.getVersion());
         }
 
         document.put(MONGODB_OPERATOR_SET, updates);
@@ -161,7 +163,7 @@ public final class MongoDbDocumentBuilder {
      */
     public MongoDbDocumentBuilder withVersion(final Optional<String> version) {
         Objects.requireNonNull(version);
-        version.ifPresent(ver -> document.put(MongoDbDeviceRegistryUtils.FIELD_VERSION, ver));
+        version.ifPresent(ver -> document.put(BaseDto.FIELD_VERSION, ver));
         return this;
     }
 
@@ -195,11 +197,11 @@ public final class MongoDbDocumentBuilder {
     }
 
     private MongoDbDocumentBuilder withCredentialsPredicate(final String field, final String value) {
-        final var credentialsArraySpec = document.getJsonObject(MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS, new JsonObject());
+        final var credentialsArraySpec = document.getJsonObject(CredentialsDto.FIELD_CREDENTIALS, new JsonObject());
         final var elementMatchSpec = credentialsArraySpec.getJsonObject(MONGODB_OPERATOR_ELEM_MATCH, new JsonObject());
         elementMatchSpec.put(field, value);
         credentialsArraySpec.put(MONGODB_OPERATOR_ELEM_MATCH, elementMatchSpec);
-        document.put(MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS, credentialsArraySpec);
+        document.put(CredentialsDto.FIELD_CREDENTIALS, credentialsArraySpec);
         return this;
     }
 
@@ -276,7 +278,7 @@ public final class MongoDbDocumentBuilder {
         if (FIELD_ID.equals(field)) {
             return RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID;
         } else {
-            return MongoDbDeviceRegistryUtils.FIELD_DEVICE + field.toString().replace("/", ".");
+            return MongoDbBasedDeviceDto.FIELD_DEVICE + field.toString().replace("/", ".");
         }
     }
 

@@ -69,10 +69,10 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedCredentialsService.class);
 
     private static final String CREDENTIALS_FILTERED_POSITIONAL_OPERATOR = String.format("%s.$",
-            MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS);
-    private static final String KEY_AUTH_ID = String.format("%s.%s", MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS,
+            CredentialsDto.FIELD_CREDENTIALS);
+    private static final String KEY_AUTH_ID = String.format("%s.%s", CredentialsDto.FIELD_CREDENTIALS,
             RegistryManagementConstants.FIELD_AUTH_ID);
-    private static final String KEY_CREDENTIALS_TYPE = String.format("%s.%s", MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS,
+    private static final String KEY_CREDENTIALS_TYPE = String.format("%s.%s", CredentialsDto.FIELD_CREDENTIALS,
             RegistryManagementConstants.FIELD_TYPE);
 
     private final MongoDbBasedCredentialsConfigProperties config;
@@ -408,7 +408,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
 
         return findCredentialsPromise.future()
                 .map(result -> Optional.ofNullable(result)
-                        .flatMap(json -> Optional.ofNullable(json.getJsonArray(MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS)))
+                        .flatMap(json -> Optional.ofNullable(json.getJsonArray(CredentialsDto.FIELD_CREDENTIALS)))
                         .map(credential -> credential.getJsonObject(0))
                         .filter(this::isCredentialEnabled)
                         .filter(credential -> DeviceRegistryUtils.matchesWithClientContext(credential, clientContext))
@@ -542,7 +542,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                                         HttpURLConnection.HTTP_NO_CONTENT,
                                         (Void) null,
                                         Optional.empty(),
-                                        Optional.of(result.getString(MongoDbDeviceRegistryUtils.FIELD_VERSION))));
+                                        Optional.of(result.getString(CredentialsDto.FIELD_VERSION))));
                     }
                 })
                 .recover(error -> {

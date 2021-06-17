@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,11 +14,9 @@
 package org.eclipse.hono.deviceregistry.mongodb.model;
 
 import java.time.Instant;
-import java.util.Objects;
 
 import org.eclipse.hono.service.management.BaseDto;
 import org.eclipse.hono.service.management.tenant.Tenant;
-import org.eclipse.hono.util.RegistryManagementConstants;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -27,8 +25,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public final class TenantDto extends BaseDto<Tenant> {
 
-    @JsonProperty(value = RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, required = true)
-    private String tenantId;
+    /**
+     * The name of the JSON property containing the tenant data.
+     */
+    public static final String FIELD_TENANT = "tenant";
 
     /**
      * Default constructor for serialisation/deserialization.
@@ -87,27 +87,8 @@ public final class TenantDto extends BaseDto<Tenant> {
         return tenantDto;
     }
 
-    /**
-     * Gets the tenant id.
-     *
-     * @return the tenant id or {@code null} if none has been set.
-     */
-    public String getTenantId() {
-        return tenantId;
-    }
-
-    /**
-     * Sets the tenant id.
-     *
-     * @param tenantId the tenant id.
-     * @throws NullPointerException if the tenantId is {@code null}.
-     */
-    private void setTenantId(final String tenantId) {
-        this.tenantId = Objects.requireNonNull(tenantId);
-    }
-
     @Override
-    @JsonProperty(RegistryManagementConstants.FIELD_TENANT)
+    @JsonProperty(FIELD_TENANT)
     public Tenant getData() {
         return super.getData();
     }

@@ -82,7 +82,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
      * The property that contains the group IDs that a (gateway) device is a member of.
      */
     private static final String PROPERTY_DEVICE_MEMBER_OF = String.format("%s.%s",
-            MongoDbDeviceRegistryUtils.FIELD_DEVICE, RegistryManagementConstants.FIELD_MEMBER_OF);
+            MongoDbBasedDeviceDto.FIELD_DEVICE, RegistryManagementConstants.FIELD_MEMBER_OF);
 
     private final MongoClient mongoClient;
     private final MongoDbBasedRegistrationConfigProperties config;
@@ -286,7 +286,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                 .map(result -> Optional.ofNullable(result)
                         .map(ok -> getRegistrationResult(
                                 deviceKey.getDeviceId(),
-                                result.getJsonObject(MongoDbDeviceRegistryUtils.FIELD_DEVICE)))
+                                result.getJsonObject(MongoDbBasedDeviceDto.FIELD_DEVICE)))
                         .orElseGet(() -> RegistrationResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
     }
 
@@ -465,7 +465,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                                     HttpURLConnection.HTTP_NO_CONTENT,
                                     Id.of(deviceId),
                                     Optional.empty(),
-                                    Optional.of(result.getString(MongoDbDeviceRegistryUtils.FIELD_VERSION))));
+                                    Optional.of(result.getString(MongoDbBasedDeviceDto.FIELD_VERSION))));
                         })
                         .orElseGet(() -> MongoDbDeviceRegistryUtils.checkForVersionMismatchAndFail(
                                 deviceId,

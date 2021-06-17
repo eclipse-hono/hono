@@ -29,8 +29,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * and time stamps for initial creation and last update.
  */
 public class DeviceDto extends BaseDto<Device> {
-    @JsonProperty(value = RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID)
-    private String tenantId;
+
+    /**
+     * The name of the JSON property containing the device data.
+     */
+    public static final String FIELD_DEVICE = "device";
 
     @JsonProperty(value = RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID)
     private String deviceId;
@@ -165,23 +168,10 @@ public class DeviceDto extends BaseDto<Device> {
         return deviceDto;
     }
 
-    /**
-     * Gets the identifier of the tenant.
-     *
-     * @return The identifier of the tenant.
-     */
-    public final String getTenantId() {
-        return tenantId;
-    }
-
-    /**
-     * Sets the identifier of the tenant.
-     *
-     * @param tenantId The tenant's identifier.
-     * @throws NullPointerException if the tenantId is {@code null}.
-     */
-    protected final void setTenantId(final String tenantId) {
-        this.tenantId = Objects.requireNonNull(tenantId);
+    @Override
+    @JsonProperty(FIELD_DEVICE)
+    public Device getData() {
+        return super.getData();
     }
 
     /**

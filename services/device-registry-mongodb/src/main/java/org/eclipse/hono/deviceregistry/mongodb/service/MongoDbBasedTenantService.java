@@ -46,7 +46,6 @@ import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.service.management.tenant.TenantWithId;
 import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.tracing.TracingHelper;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantResult;
@@ -221,7 +220,7 @@ public final class MongoDbBasedTenantService extends AbstractTenantManagementSer
                                     HttpURLConnection.HTTP_NO_CONTENT,
                                     (Void) null,
                                     Optional.empty(),
-                                    Optional.of(updateResult.getString(MongoDbDeviceRegistryUtils.FIELD_VERSION))));
+                                    Optional.of(updateResult.getString(TenantDto.FIELD_VERSION))));
                         })
                         .orElseGet(() -> MongoDbDeviceRegistryUtils.checkForVersionMismatchAndFail(
                                 tenantId, resourceVersion, findTenant(tenantId)))
@@ -424,11 +423,11 @@ public final class MongoDbBasedTenantService extends AbstractTenantManagementSer
         mongoClient.findOne(config.getCollectionName(), findQuery, new JsonObject(), findTenantPromise);
         return findTenantPromise.future()
                 .compose(tenantJsonResult -> Optional.ofNullable(tenantJsonResult)
-                        .map(tenantJson -> Future.succeededFuture(TenantDto.forRead(tenantJsonResult.getString(Constants.JSON_FIELD_TENANT_ID),
-                                tenantJsonResult.getJsonObject(RegistryManagementConstants.FIELD_TENANT).mapTo(Tenant.class),
-                                tenantJsonResult.getInstant(MongoDbDeviceRegistryUtils.FIELD_CREATED),
-                                tenantJsonResult.getInstant(MongoDbDeviceRegistryUtils.FIELD_UPDATED_ON),
-                                tenantJsonResult.getString(MongoDbDeviceRegistryUtils.FIELD_VERSION))))
+                        .map(tenantJson -> Future.succeededFuture(TenantDto.forRead(tenantJsonResult.getString(TenantDto.FIELD_TENANT_ID),
+                                tenantJsonResult.getJsonObject(TenantDto.FIELD_TENANT).mapTo(Tenant.class),
+                                tenantJsonResult.getInstant(TenantDto.FIELD_CREATED),
+                                tenantJsonResult.getInstant(TenantDto.FIELD_UPDATED_ON),
+                                tenantJsonResult.getString(TenantDto.FIELD_VERSION))))
                         .orElseGet(
                                 () -> Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND))));
     }

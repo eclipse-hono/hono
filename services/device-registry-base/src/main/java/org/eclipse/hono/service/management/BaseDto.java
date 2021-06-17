@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,10 +13,10 @@
 package org.eclipse.hono.service.management;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.function.Supplier;
 
 import org.eclipse.hono.annotation.HonoTimestamp;
-import org.eclipse.hono.util.RegistryManagementConstants;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -31,14 +31,31 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public abstract class BaseDto<T> {
 
-    public static final String FIELD_UPDATED_ON = "updatedOn";
-    public static final String FIELD_VERSION = "version";
+    /**
+     * The name of the JSON property containing the point in time when the object was initially created.
+     */
+    public static final String FIELD_CREATED = "created";
     public static final String FIELD_DATA = "data";
+    /**
+     * The name of the property that contains the identifier of a tenant.
+     */
+    public static final String FIELD_TENANT_ID = "tenant-id";
+    /**
+     * The name of the JSON property containing the point in time of the object's last modification.
+     */
+    public static final String FIELD_UPDATED_ON = "updatedOn";
+    /**
+     * The name of the JSON property containing the object's resource version.
+     */
+    public static final String FIELD_VERSION = "version";
+
+    @JsonProperty(FIELD_TENANT_ID)
+    private String tenantId;
 
     @JsonProperty(FIELD_VERSION)
     private String version;
 
-    @JsonProperty(RegistryManagementConstants.FIELD_STATUS_CREATION_DATE)
+    @JsonProperty(FIELD_CREATED)
     @JsonInclude(value = JsonInclude.Include.NON_EMPTY)
     @HonoTimestamp
     private Instant creationTime;
@@ -120,6 +137,25 @@ public abstract class BaseDto<T> {
         dto.setVersion(version);
 
         return dto;
+    }
+
+    /**
+     * Gets the identifier of the tenant that the data belongs to.
+     *
+     * @return The identifier.
+     */
+    public final String getTenantId() {
+        return tenantId;
+    }
+
+    /**
+     * Sets the identifier of the tenant that the data belongs to.
+     *
+     * @param tenantId The identifier.
+     * @throws NullPointerException if the identifier is {@code null}.
+     */
+    protected final void setTenantId(final String tenantId) {
+        this.tenantId = Objects.requireNonNull(tenantId);
     }
 
     /**

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,7 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.mongodb.model;
 
-import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDeviceRegistryUtils;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceDto;
 import org.eclipse.hono.service.management.device.DeviceStatus;
@@ -45,16 +44,18 @@ public final class MongoDbBasedDeviceDto extends DeviceDto {
      */
     public static MongoDbBasedDeviceDto forRead(final String tenantId, final String deviceId, final JsonObject recordJson) {
 
-        return DeviceDto.forRead(MongoDbBasedDeviceDto::new, tenantId,
+        return DeviceDto.forRead(
+                MongoDbBasedDeviceDto::new,
+                tenantId,
                 deviceId,
-                recordJson.getJsonObject(MongoDbDeviceRegistryUtils.FIELD_DEVICE).mapTo(Device.class),
+                recordJson.getJsonObject(FIELD_DEVICE).mapTo(Device.class),
                 new DeviceStatus()
                         .setAutoProvisioned(recordJson.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED))
                         .setAutoProvisioningNotificationSent(recordJson
                                 .getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT)),
-                recordJson.getInstant(MongoDbDeviceRegistryUtils.FIELD_CREATED),
-                recordJson.getInstant(MongoDbDeviceRegistryUtils.FIELD_UPDATED_ON),
-                recordJson.getString(MongoDbDeviceRegistryUtils.FIELD_VERSION));
+                recordJson.getInstant(MongoDbBasedDeviceDto.FIELD_CREATED),
+                recordJson.getInstant(MongoDbBasedDeviceDto.FIELD_UPDATED_ON),
+                recordJson.getString(MongoDbBasedDeviceDto.FIELD_VERSION));
     }
 
     /**
@@ -76,11 +77,5 @@ public final class MongoDbBasedDeviceDto extends DeviceDto {
     @JsonProperty(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT)
     public boolean isAutoProvisioningNotificationSent() {
         return getDeviceStatus().isAutoProvisioningNotificationSent();
-    }
-
-    @Override
-    @JsonProperty(MongoDbDeviceRegistryUtils.FIELD_DEVICE)
-    public Device getData() {
-        return super.getData();
     }
 }

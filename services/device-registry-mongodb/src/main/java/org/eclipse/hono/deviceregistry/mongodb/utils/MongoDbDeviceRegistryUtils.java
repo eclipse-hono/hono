@@ -42,27 +42,6 @@ import io.vertx.ext.mongo.MongoClient;
  */
 public final class MongoDbDeviceRegistryUtils {
 
-    /**
-     * The name of the JSON property containing the credentials.
-     */
-    public static final String FIELD_CREDENTIALS = "credentials";
-    /**
-     * The name of the JSON property containing the device data.
-     */
-    public static final String FIELD_DEVICE = "device";
-    /**
-     * The name of the JSON property containing time when the object was created.
-     */
-    public static final String FIELD_CREATED = "created";
-    /**
-     * The name of the JSON property containing the last modification date and time.
-     */
-    public static final String FIELD_UPDATED_ON = "updatedOn";
-    /**
-     * The name of the JSON property containing the version of the tenant or device or credentials information.
-     */
-    public static final String FIELD_VERSION = "version";
-
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbDeviceRegistryUtils.class);
     private static final String FIELD_SEARCH_RESOURCES_COUNT = "count";
     private static final String FIELD_SEARCH_RESOURCES_TOTAL_COUNT = String.format("$%s.%s",
