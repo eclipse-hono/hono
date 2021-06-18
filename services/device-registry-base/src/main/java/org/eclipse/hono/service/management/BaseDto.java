@@ -35,6 +35,9 @@ public abstract class BaseDto<T> {
      * The name of the JSON property containing the point in time when the object was initially created.
      */
     public static final String FIELD_CREATED = "created";
+    /**
+     * The default name of the JSON property to map the object data to.
+     */
     public static final String FIELD_DATA = "data";
     /**
      * The name of the property that contains the identifier of a tenant.
@@ -162,7 +165,7 @@ public abstract class BaseDto<T> {
     }
 
     /**
-     * Gets the identifier of the tenant that the data belongs to.
+     * Gets the identifier of the tenant that the object belongs to.
      *
      * @return The identifier.
      */
@@ -171,7 +174,7 @@ public abstract class BaseDto<T> {
     }
 
     /**
-     * Sets the identifier of the tenant that the data belongs to.
+     * Sets the identifier of the tenant that the object belongs to.
      *
      * @param tenantId The identifier.
      * @throws NullPointerException if the identifier is {@code null}.
@@ -181,62 +184,66 @@ public abstract class BaseDto<T> {
     }
 
     /**
-     * Gets the version of the document.
+     * Gets the version of the object.
      *
-     * @return The version of the document.
+     * @return The version.
      */
     public final String getVersion() {
         return version;
     }
 
     /**
-     * Sets the version of the document.
+     * Sets the version of the object.
      *
-     * @param version The version of the document or {@code null} if not set.
+     * @param version The version of the object or {@code null} if unknown.
      */
     protected final void setVersion(final String version) {
         this.version = version;
     }
 
     /**
-     * Gets the date and time of last modification.
+     * Gets the point in time at which the object has been last updated.
      *
-     * @return The date and time of last modification.
+     * @return The object's time of last modification.
      */
     public final Instant getUpdatedOn() {
         return updatedOn;
     }
 
     /**
-     * Sets the date and time of last modification.
+     * Sets the point in time at which the object has been last updated.
      *
-     * @param updatedOn The date and time of last modification.
+     * @param updatedOn The object's time of last modification.
      */
     protected final void setUpdatedOn(final Instant updatedOn) {
         this.updatedOn = updatedOn;
     }
 
     /**
-     * Gets the date and time when the entity detailed by this status was created.
+     * Gets the point in time at which the object has been initially created.
      *
-     * @return The entity's creation time.
+     * @return The Object's creation time.
      */
     public final Instant getCreationTime() {
         return creationTime;
     }
 
     /**
-     * Sets the date and time when the entity detailed by this status was created.
+     * Sets the point in time at which the object has been initially created.
      *
-     * @param creationTime The entity's creation time.
+     * @param creationTime The objects's creation time.
      */
     protected final void setCreationTime(final Instant creationTime) {
         this.creationTime = creationTime;
     }
 
     /**
-     * Gets the data object (i.e. what should be editable by clients) of this DTO.
-     * This method may be overridden by subclasses to set the JSON property name to a more meaningful one.
+     * Gets the data object.
+     * <p>
+     * Subclasses overriding this method must also add a {@link JsonProperty} annotation defining
+     * the name of the JSON property that the object should be mapped to.
+     * <p>
+     * If this method is not overridden, then the data will be mapped to property {@value #FIELD_DATA}.
      *
      * @return The data object.
      */
@@ -247,6 +254,7 @@ public abstract class BaseDto<T> {
 
     /**
      * Sets the data object of this DTO.
+     * <p>
      * This method may be overridden by subclasses to include validation logic dependent on the payload type.
      *
      * @param data The data object.
