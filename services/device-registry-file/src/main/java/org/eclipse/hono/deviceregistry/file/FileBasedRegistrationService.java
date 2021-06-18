@@ -148,8 +148,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
         return readResult.future()
                 .compose(this::addAll)
                 .recover(t -> {
-                    LOG.debug("cannot load device identities from file [{}]: {}", getConfig().getFilename(),
-                            t.getMessage());
+                    LOG.debug("cannot load device identities from file [{}]", getConfig().getFilename(), t);
                     return Future.succeededFuture();
                 });
     }
@@ -721,19 +720,30 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
 
         public static FileBasedDeviceDto forRead(final String tenantId, final String deviceId, final JsonObject entry) {
 
+            if (LOG.isTraceEnabled()) {
+                LOG.trace("device [tenant-id: {}, device-id: {}] from file:{}{}",
+                        tenantId, deviceId, System.lineSeparator(), entry.encodePrettily());
+            }
             final Device device = mapFromStoredJson(entry.getJsonObject(RegistrationConstants.FIELD_DATA));
-            return DeviceDto.forRead(FileBasedDeviceDto::new, tenantId,
+            return DeviceDto.forRead(
+                    FileBasedDeviceDto::new,
+                    tenantId,
                     deviceId,
                     device,
                     new DeviceStatus()
                         .setAutoProvisioned(entry.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED))
-                        .setAutoProvisioningNotificationSent(entry.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT)),
+                        .setAutoProvisioningNotificationSent(
+                                entry.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT)),
                     entry.getInstant(RegistryManagementConstants.FIELD_STATUS_CREATION_DATE),
                     entry.getInstant(RegistryManagementConstants.FIELD_STATUS_LAST_UPDATE),
                     new Versioned<>(device).getVersion());
         }
 
-        public static FileBasedDeviceDto forUpdate(final String tenantId, final String deviceId, final Boolean autoProvisioningNotificationSent, final Device device) {
+        public static FileBasedDeviceDto forUpdate(
+                final String tenantId,
+                final String deviceId,
+                final Boolean autoProvisioningNotificationSent,
+                final Device device) {
 
             return DeviceDto.forUpdate(FileBasedDeviceDto::new,
                     tenantId,

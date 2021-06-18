@@ -33,6 +33,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.util.MessagingClient;
@@ -44,7 +45,7 @@ import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
-import org.eclipse.hono.service.management.device.Status;
+import org.eclipse.hono.service.management.device.DeviceStatus;
 import org.eclipse.hono.service.registration.AbstractRegistrationServiceTest;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.util.MessagingType;
@@ -63,6 +64,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.file.FileSystem;
+import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -70,6 +72,7 @@ import io.vertx.junit5.VertxTestContext;
  * Tests {@link FileBasedRegistrationService}.
  */
 @ExtendWith(VertxExtension.class)
+@Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class FileBasedRegistrationServiceTest implements AbstractRegistrationServiceTest {
 
     private static final String FILE_NAME = "/device-identities.json";
@@ -270,6 +273,7 @@ public class FileBasedRegistrationServiceTest implements AbstractRegistrationSer
 
         // WHEN the service is started
         final Promise<Void> startupTracker = Promise.promise();
+        registrationService.start().onComplete(startupTracker);
         startupTracker.future()
                 .compose(ok -> assertCanReadDevice(TENANT, DEVICE))
                 .compose(ok -> assertCanReadDevice(TENANT, GW))
@@ -278,7 +282,7 @@ public class FileBasedRegistrationServiceTest implements AbstractRegistrationSer
                             assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
                             assertNotNull(r.getPayload());
                             assertEquals(Collections.singletonList(GW), r.getPayload().getVia());
-                            final Status<?> status = r.getPayload().getStatus();
+                            final DeviceStatus status = r.getPayload().getStatus();
                             assertEquals(status.getCreationTime(), Instant.parse("2020-09-16T12:33:43.000000Z"));
                             assertEquals(status.getLastUpdate(), Instant.parse("2020-09-16T12:33:53.000000Z"));
                         },
@@ -290,7 +294,7 @@ public class FileBasedRegistrationServiceTest implements AbstractRegistrationSer
                             assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
                             assertNotNull(r.getPayload());
                             assertEquals(Collections.singletonList(GW), r.getPayload().getVia());
-                            final Status<?> status = r.getPayload().getStatus();
+                            final DeviceStatus status = r.getPayload().getStatus();
                             assertNull(status.getCreationTime());
                             assertNull(status.getLastUpdate());
                             assertNull(status.getLastUser());
@@ -299,9 +303,6 @@ public class FileBasedRegistrationServiceTest implements AbstractRegistrationSer
                             assertEquals(HttpURLConnection.HTTP_OK, r.getStatus());
                         })
                 .onComplete(ctx.succeeding(s -> ctx.completeNow())));
-
-        registrationService.start().onComplete(startupTracker);
-
     }
 
 
