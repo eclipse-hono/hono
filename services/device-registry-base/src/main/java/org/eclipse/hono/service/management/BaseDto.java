@@ -74,18 +74,24 @@ public abstract class BaseDto<T> {
     }
 
     /**
-     * Constructs a new DTO for use with the <b>creation of a new</b> persistent entry.
+     * Creates a DTO for persisting an object instance.
      *
-     * @param supplier A DTO subclass' constructor of which a new instance shall be created.
-     * @param data The data of the DTO.
-     * @param version The version of the DTO
+     * @param supplier The supplier to use for creating the concrete DTO instance.
+     * @param data The object instance to persist.
+     * @param version The object's (initial) resource version.
      *
-     * @param <P> The type of the DTO's payload.
-     * @param <T> The type of the DTO subclass.
+     * @param <P> The type of object to persist.
+     * @param <T> The concrete type of DTO being created.
      *
-     * @return A DTO instance for creating a new entry.
+     * @return The DTO.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public static <P, T extends BaseDto<P>> T forCreation(final Supplier<T> supplier, final P data, final String version) {
+
+        Objects.requireNonNull(supplier);
+        Objects.requireNonNull(data);
+        Objects.requireNonNull(version);
+
         final T dto = supplier.get();
         dto.setCreationTime(Instant.now());
         dto.setData(data);
@@ -95,18 +101,24 @@ public abstract class BaseDto<T> {
     }
 
     /**
-     * Constructs a new DTO for <b>updating</b> a persistent entry.
+     * Creates a DTO for updating data in the store.
      *
-     * @param supplier A DTO subclass' constructor of which a new instance shall be created.
-     * @param data The data of the DTO.
-     * @param version The version of the DTO
+     * @param supplier The supplier to use for creating the concrete DTO instance.
+     * @param data The object instance to update.
+     * @param version The resource version of the object in the store to be updated or {@code null} if the
+     *                data should be updated regardless of the resource version.
      *
-     * @param <P> The type of the DTO's payload.
-     * @param <T> The type of the DTO subclass.
+     * @param <P> The type of object to update.
+     * @param <T> The concrete type of DTO being created.
      *
-     * @return A DTO instance for updating an entry.
+     * @return The DTO.
+     * @throws NullPointerException if supplier or data are {@code null}.
      */
     public static <P, T extends BaseDto<P>> T forUpdate(final Supplier<T> supplier, final P data, final String version) {
+
+        Objects.requireNonNull(supplier);
+        Objects.requireNonNull(data);
+
         final T dto = supplier.get();
         dto.setUpdatedOn(Instant.now());
         dto.setData(data);
@@ -116,20 +128,30 @@ public abstract class BaseDto<T> {
     }
 
     /**
-     * Constructs a new DTO to be returned by a read operation.
+     * Creates a DTO for data that has been read from a persistent store.
      *
-     * @param supplier A DTO subclass' constructor of which a new instance shall be created.
-     * @param data The data of the DTO.
-     * @param created The instant when the object was created.
-     * @param updated The instant of the most recent update.
-     * @param version The version of the DTO
+     * @param supplier The supplier to use for creating the concrete DTO instance.
+     * @param data The data from the store.
+     * @param created The point in time when the object was created initially in the store (may be {@code null}).
+     * @param updated The point in time when the object was updated most recently in the store (may be {@code null}).
+     * @param version The object's resource version in the store (may be {@code null}).
      *
-     * @param <P> The type of the DTO's payload.
-     * @param <T> The type of the DTO subclass.
+     * @param <P> The type of object being read.
+     * @param <T> The concrete type of DTO being created.
      *
-     * @return A DTO instance for updating an entry.
+     * @return The DTO.
+     * @throws NullPointerException if supplier or data are {@code null}.
      */
-    public static <P, T extends BaseDto<P>> T forRead(final Supplier<T> supplier, final P data, final Instant created, final Instant updated, final String version) {
+    public static <P, T extends BaseDto<P>> T forRead(
+            final Supplier<T> supplier,
+            final P data,
+            final Instant created,
+            final Instant updated,
+            final String version) {
+
+        Objects.requireNonNull(supplier);
+        Objects.requireNonNull(data);
+
         final T dto = supplier.get();
         dto.setCreationTime(created);
         dto.setUpdatedOn(updated);

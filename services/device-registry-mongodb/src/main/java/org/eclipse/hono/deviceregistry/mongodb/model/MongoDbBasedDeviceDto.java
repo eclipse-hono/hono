@@ -12,6 +12,8 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.mongodb.model;
 
+import java.util.Objects;
+
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceDto;
 import org.eclipse.hono.service.management.device.DeviceStatus;
@@ -34,28 +36,33 @@ public final class MongoDbBasedDeviceDto extends DeviceDto {
     }
 
     /**
-     * Constructs a new DTO to be returned by a read operation.
+     * Creates a DTO for device configuration data that has been read from a persistent store.
      *
-     * @param tenantId The id of the tenant.
-     * @param deviceId The id of the device.
-     * @param recordJson The JSON of the device's MongoDb document.
+     * @param tenantId The identifier of the tenant that the device belongs to.
+     * @param deviceId The identifier of the device.
+     * @param deviceData The JSON document representing the device data.
      *
-     * @return A DTO instance for reading an entry.
+     * @return The DTO.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public static MongoDbBasedDeviceDto forRead(final String tenantId, final String deviceId, final JsonObject recordJson) {
+    public static MongoDbBasedDeviceDto forRead(final String tenantId, final String deviceId, final JsonObject deviceData) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(deviceData);
 
         return DeviceDto.forRead(
                 MongoDbBasedDeviceDto::new,
                 tenantId,
                 deviceId,
-                recordJson.getJsonObject(FIELD_DEVICE).mapTo(Device.class),
+                deviceData.getJsonObject(FIELD_DEVICE).mapTo(Device.class),
                 new DeviceStatus()
-                        .setAutoProvisioned(recordJson.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED))
-                        .setAutoProvisioningNotificationSent(recordJson
+                        .setAutoProvisioned(deviceData.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED))
+                        .setAutoProvisioningNotificationSent(deviceData
                                 .getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT)),
-                recordJson.getInstant(MongoDbBasedDeviceDto.FIELD_CREATED),
-                recordJson.getInstant(MongoDbBasedDeviceDto.FIELD_UPDATED_ON),
-                recordJson.getString(MongoDbBasedDeviceDto.FIELD_VERSION));
+                deviceData.getInstant(MongoDbBasedDeviceDto.FIELD_CREATED),
+                deviceData.getInstant(MongoDbBasedDeviceDto.FIELD_UPDATED_ON),
+                deviceData.getString(MongoDbBasedDeviceDto.FIELD_VERSION));
     }
 
     /**

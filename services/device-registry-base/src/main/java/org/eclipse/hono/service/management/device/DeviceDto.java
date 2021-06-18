@@ -168,6 +168,13 @@ public class DeviceDto extends BaseDto<Device> {
         return deviceDto;
     }
 
+    /**
+     * Gets the device configuration data.
+     * <p>
+     * The object returned will have a {@code null} valued status property.
+     * The {@link #getDeviceWithStatus()} method can be used to obtain an object
+     * with its status properly set.
+     */
     @Override
     @JsonProperty(FIELD_DEVICE)
     public Device getData() {
@@ -219,7 +226,7 @@ public class DeviceDto extends BaseDto<Device> {
      * @return The device.
      */
     @JsonIgnore
-    public Device getDeviceWithStatus() {
+    public final Device getDeviceWithStatus() {
         final Device deviceWithStatus = new Device(getData());
         deviceWithStatus.setStatus(new DeviceStatus()
                 .setAutoProvisioned(getDeviceStatus().isAutoProvisioned())
