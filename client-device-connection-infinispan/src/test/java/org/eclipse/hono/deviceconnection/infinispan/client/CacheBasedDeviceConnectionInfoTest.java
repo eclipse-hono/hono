@@ -19,7 +19,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -105,7 +107,7 @@ class CacheBasedDeviceConnectionInfoTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    void testSetLastKnownGatewaySucceeds(final VertxTestContext ctx) {
+    void testSetLastKnownGatewaySucceedsForSingleEntry(final VertxTestContext ctx) {
 
         when(cache.put(anyString(), anyString(), anyLong(), any(TimeUnit.class))).thenReturn(Future.succeededFuture("oldValue"));
 
@@ -120,6 +122,33 @@ class CacheBasedDeviceConnectionInfoTest {
                 });
                 ctx.completeNow();
             }));
+    }
+
+    /**
+     * Verifies that multiple last known gateways can be successfully set.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    void testSetLastKnownGatewaySucceedsForMultipleEntries(final VertxTestContext ctx) {
+
+        when(cache.putAll(anyMap(), anyLong(), any(TimeUnit.class))).thenReturn(Future.succeededFuture());
+
+        final Map<String, String> deviceIdToGatewayIdMap = Map.of("device-id", "gw-id", "device-id2", "gw-id2");
+        info.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, deviceIdToGatewayIdMap, span)
+                .onComplete(ctx.succeeding(ok -> {
+                    ctx.verify(() -> {
+                        verify(cache).putAll(
+                                argThat(map -> map.size() == deviceIdToGatewayIdMap.size()
+                                        && "gw-id".equals(map.get(CacheBasedDeviceConnectionInfo
+                                                .getGatewayEntryKey(Constants.DEFAULT_TENANT, "device-id")))
+                                        && "gw-id2".equals(map.get(CacheBasedDeviceConnectionInfo
+                                                .getGatewayEntryKey(Constants.DEFAULT_TENANT, "device-id2")))),
+                                anyLong(),
+                                any(TimeUnit.class));
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**

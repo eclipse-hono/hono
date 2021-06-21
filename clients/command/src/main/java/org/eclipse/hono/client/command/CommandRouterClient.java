@@ -45,6 +45,8 @@ public interface CommandRouterClient extends Lifecycle {
      *         <p>
      *         The future will be succeeded if the entry was successfully set.
      *         Otherwise the future will be failed with a {@code org.eclipse.hono.client.ServiceInvocationException}.
+     *         An implementation may also always return a succeeded future and set the gateway at a later point in time
+     *         as part of a batch request.
      * @throws NullPointerException if any of the parameters except context is {@code null}.
      */
     Future<Void> setLastKnownGatewayForDevice(String tenantId, String deviceId, String gatewayId, SpanContext context);

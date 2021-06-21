@@ -112,13 +112,15 @@ For status codes indicating an error (codes in the `400 - 499` range) the messag
 
 Clients use this command to *set* the gateway that last acted on behalf of a given device.
 
+There are two variants of this command, one providing a single gateway and device identifier combination via request application-properties and one providing a map of multiple such combinations in the request payload.
+
 As this operation is invoked frequently by Hono's components, implementors may choose to keep this information in memory. This API doesn't mandate checks on the validity of the given device or gateway IDs in order not to introduce a dependency on the *Device Registration API*. However, implementations of this API may choose to perform such checks or impose a restriction on the overall amount of data that can be stored per tenant in order to protect against malicious requests.
 
 **Message Flow**
 
 {{< figure src="set_last_known_gateway_success.svg" title="Client sets the last known gateway for a device" alt="A client sends a request message for setting the last known gateway and receives a response containing a confirmation" >}}
 
-**Request Message Format**
+**Request Message Format - Setting single entry**
 
 The following table provides an overview of the properties a client needs to set on a message to set the last known gateway for a device in addition to the [Standard Request Properties]({{< relref "#standard-request-properties" >}}).
 
@@ -130,6 +132,26 @@ The following table provides an overview of the properties a client needs to set
 
 The body of the message SHOULD be empty and will be ignored if it is not.
 
+**Request Message Format - Setting multiple entries**
+
+The following table provides an overview of the properties a client needs to set on a message to set multiple last known gateway and device pairs in addition to the [Standard Request Properties]({{< relref "#standard-request-properties" >}}).
+
+| Name         | Mandatory | Location                 | AMQP Type | Description |
+| :----------- | :-------: | :----------------------- | :-------- | :---------- |
+| *subject*    | yes       | *properties*             | *string*  | MUST be set to `set-last-gw`. |
+
+The body of the request MUST consist of a single *Data* section containing a UTF-8 encoded string representation of a single JSON object. The device identifiers are to be used as fields, the corresponding gateway identifiers as *string* values.
+Note that the number of entries supported in the object may be limited by the maximum message size negotiated between the service and the client. In such a case, a client may use multiple consecutive requests to overcome this limitation.
+
+Example payload for setting *gateway-1* as last known gateway for the devices *device-1* and *device-2*.
+
+~~~json
+{
+  "device-1": "gateway-1",
+  "device-2": "gateway-1"
+}
+~~~
+
 **Response Message Format**
 
 A response to a *set last known gateway for device* request contains the [Standard Response Properties]({{< relref "#standard-response-properties" >}}).
@@ -138,10 +160,10 @@ The response message's *status* property may contain the following codes:
 
 | Code  | Description |
 | :---- | :---------- |
-| *204* | OK, the last known gateway for the device has been updated. |
-| *400* | Bad Request, the last known gateway has not been updated due to invalid or missing data in the request. |
+| *204* | OK, the update of the last known gateway(s) for the device(s) was successful. |
+| *400* | Bad Request, the update of the last known gateway(s) for the device(s) failed due to invalid or missing data in the request. |
 
-Implementors of this API may return a *404* status code in order to indicate that no device and/or gateway with the given identifier exists for the given tenant. However, performing such a check is optional.
+Implementors of this API may return a *404* status code for the single entry operation in order to indicate that no device and/or gateway with the given identifier exists for the given tenant. However, performing such a check is optional.
 
 For status codes indicating an error (codes in the `400 - 499` range) the message body MAY contain a detailed description of the error that occurred.
 

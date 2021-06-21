@@ -116,6 +116,33 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
             });
     }
 
+    @Override
+    public Future<Void> setLastKnownGatewayForDevice(final String tenantId,
+            final Map<String, String> deviceIdToGatewayIdMap, final Span span) {
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceIdToGatewayIdMap);
+        Objects.requireNonNull(span);
+
+        if (deviceIdToGatewayIdMap.isEmpty()) {
+            return Future.succeededFuture();
+        }
+
+        final long lifespanMillis = LAST_KNOWN_GATEWAY_CACHE_ENTRY_LIFESPAN.toMillis();
+        final Map<String, String> mapToBePut = deviceIdToGatewayIdMap.entrySet().stream()
+                .collect(Collectors.toMap(entry -> getGatewayEntryKey(tenantId, entry.getKey()), Map.Entry::getValue));
+        return cache.putAll(mapToBePut, lifespanMillis, TimeUnit.MILLISECONDS)
+                .map(v -> {
+                    LOG.debug("set {} last known gateway entries [tenant: {}]", deviceIdToGatewayIdMap.size(), tenantId);
+                    return (Void) null;
+                })
+                .recover(t -> {
+                    LOG.debug("failed to set {} last known gateway entries [tenant: {}]", deviceIdToGatewayIdMap.size(),
+                            tenantId, t);
+                    TracingHelper.logError(span, "failed to set last known gateway entries", t);
+                    return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, t));
+                });
+    }
+
     /**
      * {@inheritDoc}
      */
