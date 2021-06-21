@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -698,6 +699,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         final String commandTargetDeviceId = endpointConfig.isSubscribeAsGateway()
                 ? helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5)
                 : deviceId;
+        final String firstCommandSubject = "firstCommandSubject";
+        final AtomicBoolean firstCommandReceived = new AtomicBoolean();
 
         final VertxTestContext setup = new VertxTestContext();
         final Checkpoint setupDone = setup.checkpoint();
@@ -720,6 +723,10 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 recv.handler((delivery, msg) -> {
                     log.debug("received command [name: {}, reply-to: {}, correlation-id: {}]", msg.getSubject(), msg.getReplyTo(),
                             msg.getCorrelationId());
+                    ctx.verify(() -> {
+                        assertThat(msg.getSubject()).isEqualTo(firstCommandSubject);
+                    });
+                    firstCommandReceived.setPlain(true);
                     ProtonHelper.accepted(delivery, true);
                     // don't send credits
                 });
@@ -739,7 +746,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         final Checkpoint expectedSteps = ctx.checkpoint(2);
 
         // send first command
-        helper.sendOneWayCommand(tenantId, commandTargetDeviceId, "setValue", "text/plain",
+        helper.sendOneWayCommand(tenantId, commandTargetDeviceId, firstCommandSubject, "text/plain",
                 Buffer.buffer("cmd"), null, IntegrationTestSupport.getSendCommandTimeout())
         // first command shall succeed because there's one initial credit
         .onComplete(ctx.succeeding(v -> {
@@ -748,7 +755,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             helper.sendCommand(
                     tenantId,
                     commandTargetDeviceId,
-                    "setValue",
+                    "secondCommandSubject",
                     "text/plain",
                     Buffer.buffer("cmd"),
                     null,
@@ -756,6 +763,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 // second command shall fail because there's no credit left
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
+                        // relevant for Kafka case: assert first command was actually received
+                        assertThat(firstCommandReceived.getPlain()).as("first command was received").isTrue();
                         assertThat(t).isInstanceOf(ServerErrorException.class);
                         assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
                         // with no explicit credit check, the AMQP adapter would just run into the "waiting for delivery update" timeout (after 1s)
