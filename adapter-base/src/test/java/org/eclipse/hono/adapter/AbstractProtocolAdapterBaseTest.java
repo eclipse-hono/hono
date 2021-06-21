@@ -50,7 +50,7 @@ import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.TelemetrySender;
-import org.eclipse.hono.client.util.MessagingClients;
+import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.test.VertxMockSupport;
@@ -139,20 +139,20 @@ public class AbstractProtocolAdapterBaseTest {
         kafkaCommandResponseSender = mockMessagingClient(CommandResponseSender.class, MessagingType.kafka);
         when(kafkaCommandResponseSender.start()).thenReturn(Future.succeededFuture());
 
-        final var telemetrySenders = new MessagingClients<TelemetrySender>()
+        final var telemetrySenderProvider = new MessagingClientProvider<TelemetrySender>()
                 .setClient(amqpTelemetrySender)
                 .setClient(kafkaTelemetrySender);
-        final var eventSenders = new MessagingClients<EventSender>()
+        final var eventSenderProvider = new MessagingClientProvider<EventSender>()
                 .setClient(amqpEventSender)
                 .setClient(kafkaEventSender);
-        final var commandResponseSenders = new MessagingClients<CommandResponseSender>()
+        final var commandResponseSenderProvider = new MessagingClientProvider<CommandResponseSender>()
                 .setClient(amqpCommandResponseSender)
                 .setClient(kafkaCommandResponseSender);
 
         messagingClients = new AdapterMessagingClients(
-                telemetrySenders,
-                eventSenders,
-                commandResponseSenders);
+                telemetrySenderProvider,
+                eventSenderProvider,
+                commandResponseSenderProvider);
 
         commandRouterClient = mock(CommandRouterClient.class);
         when(commandRouterClient.start()).thenReturn(Future.succeededFuture());

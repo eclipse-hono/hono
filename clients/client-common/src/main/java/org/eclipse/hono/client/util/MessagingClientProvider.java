@@ -37,7 +37,7 @@ import io.vertx.ext.healthchecks.HealthCheckHandler;
  *
  * @param <T> The type of client to wrap.
  */
-public final class MessagingClients<T extends MessagingClient & Lifecycle> implements Lifecycle, ServiceClient {
+public final class MessagingClientProvider<T extends MessagingClient & Lifecycle> implements Lifecycle, ServiceClient {
 
     /**
      * The default messaging type to be used.
@@ -68,7 +68,7 @@ public final class MessagingClients<T extends MessagingClient & Lifecycle> imple
      * @return A reference to this wrapper.
      * @throws NullPointerException if client or its messaging type is {@code null}.
      */
-    public MessagingClients<T> setClient(final T client) {
+    public MessagingClientProvider<T> setClient(final T client) {
         Objects.requireNonNull(client);
         Objects.requireNonNull(client.getMessagingType(), "client messaging type is null");
         this.clientImplementations.put(client.getMessagingType(), client);

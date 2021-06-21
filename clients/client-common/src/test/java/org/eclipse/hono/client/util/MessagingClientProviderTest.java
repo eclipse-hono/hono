@@ -31,10 +31,10 @@ import org.junit.jupiter.api.Test;
 
 
 /**
- * Tests verifying behavior of {@link MessagingClients}.
+ * Tests verifying behavior of {@link MessagingClientProvider}.
  *
  */
-public class MessagingClientsTest {
+public class MessagingClientProviderTest {
 
     private static final String tenant = "tenant";
 
@@ -46,7 +46,7 @@ public class MessagingClientsTest {
     private final TestClient amqpClient = mock(TestClient.class);
     private final TestClient kafkaClient = mock(TestClient.class);
 
-    private MessagingClients<TestClient> underTest;
+    private MessagingClientProvider<TestClient> underTest;
 
     /**
      * Sets up the fixture.
@@ -55,7 +55,7 @@ public class MessagingClientsTest {
     void setUp() {
         when(amqpClient.getMessagingType()).thenReturn(MessagingType.amqp);
         when(kafkaClient.getMessagingType()).thenReturn(MessagingType.kafka);
-        underTest = new MessagingClients<>();
+        underTest = new MessagingClientProvider<>();
     }
 
     /**

@@ -147,7 +147,7 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
                 commandConsumerFactory.registerInternalCommandConsumer(
                         (id, handlers) -> new ProtonBasedInternalCommandConsumer(commandConsumerConnection(vertx()), id, handlers));
             }
-            final CommandResponseSender kafkaCommandResponseSender = messagingClients.getCommandResponseSenders()
+            final CommandResponseSender kafkaCommandResponseSender = messagingClients.getCommandResponseSenderProvider()
                     .getClient(MessagingType.kafka);
             if (kafkaAdminClientConfig.isConfigured() && kafkaConsumerConfig.isConfigured()
                     && kafkaCommandResponseSender != null) {

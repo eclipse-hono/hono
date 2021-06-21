@@ -25,7 +25,7 @@ import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.client.telemetry.kafka.KafkaBasedEventSender;
-import org.eclipse.hono.client.util.MessagingClients;
+import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ServerConfig;
@@ -372,9 +372,9 @@ public class ApplicationConfig {
      */
     @Bean
     @Scope("prototype")
-    public MessagingClients<EventSender> eventSenders() {
+    public MessagingClientProvider<EventSender> eventSenderProvider() {
 
-        final MessagingClients<EventSender> result = new MessagingClients<>();
+        final MessagingClientProvider<EventSender> result = new MessagingClientProvider<>();
 
         if (downstreamSenderConfig().isHostConfigured()) {
             result.setClient(new ProtonBasedDownstreamSender(
@@ -436,7 +436,7 @@ public class ApplicationConfig {
         final EdgeDeviceAutoProvisioner edgeDeviceAutoProvisioner = new EdgeDeviceAutoProvisioner(
                 vertx(),
                 registrationManagementService(),
-                eventSenders(),
+                eventSenderProvider(),
                 autoProvisionerConfigProperties(),
                 tracer());
 
@@ -461,7 +461,7 @@ public class ApplicationConfig {
                 vertx(),
                 registrationManagementService(),
                 credentialsManagementService(),
-                eventSenders());
+                eventSenderProvider());
         credentialsService.setDeviceAndGatewayAutoProvisioner(deviceAndGatewayAutoProvisioner);
         return credentialsService;
     }

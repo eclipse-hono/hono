@@ -35,7 +35,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.eclipse.hono.client.telemetry.EventSender;
-import org.eclipse.hono.client.util.MessagingClients;
+import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.deviceregistry.DeviceRegistryTestUtils;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 import org.eclipse.hono.deviceregistry.service.device.EdgeDeviceAutoProvisioner;
@@ -94,25 +94,25 @@ public class FileBasedRegistrationServiceTest implements AbstractRegistrationSer
         registrationService = new FileBasedRegistrationService(vertx);
         registrationService.setConfig(registrationConfig);
 
-        final MessagingClients<EventSender> messagingClients = mockEventSenders();
+        final MessagingClientProvider<EventSender> eventSenderProvider = mockEventSenders();
 
         final EdgeDeviceAutoProvisioner edgeDeviceAutoProvisioner = new EdgeDeviceAutoProvisioner(
                 vertx,
                 registrationService,
-                messagingClients,
+                eventSenderProvider,
                 new AutoProvisionerConfigProperties(),
                 NoopTracerFactory.create());
 
         registrationService.setEdgeDeviceAutoProvisioner(edgeDeviceAutoProvisioner);
     }
 
-    private MessagingClients<EventSender> mockEventSenders() {
+    private MessagingClientProvider<EventSender> mockEventSenders() {
         final EventSender eventSender = mock(EventSender.class);
         when(eventSender.getMessagingType()).thenReturn(MessagingType.amqp);
         when(eventSender.start()).thenReturn(Future.succeededFuture());
         when(eventSender.stop()).thenReturn(Future.succeededFuture());
 
-        return new MessagingClients<EventSender>().setClient(eventSender);
+        return new MessagingClientProvider<EventSender>().setClient(eventSender);
     }
 
     @Override

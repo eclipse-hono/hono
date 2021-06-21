@@ -32,7 +32,7 @@ import java.util.Optional;
 
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.telemetry.EventSender;
-import org.eclipse.hono.client.util.MessagingClients;
+import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.device.Device;
@@ -105,7 +105,7 @@ class EdgeDeviceAutoProvisionerTest {
         autoProvisioner = new EdgeDeviceAutoProvisioner(
                 vertx,
                 deviceManagementService,
-                new MessagingClients<EventSender>().setClient(sender),
+                new MessagingClientProvider<EventSender>().setClient(sender),
                 new AutoProvisionerConfigProperties(),
                 NoopTracerFactory.create());
 

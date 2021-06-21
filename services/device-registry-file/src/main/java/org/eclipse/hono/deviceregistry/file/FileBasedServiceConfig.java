@@ -23,7 +23,7 @@ import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.client.telemetry.kafka.KafkaBasedEventSender;
-import org.eclipse.hono.client.util.MessagingClients;
+import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
@@ -172,9 +172,9 @@ public class FileBasedServiceConfig {
      */
     @Bean
     @Scope("prototype")
-    public MessagingClients<EventSender> eventSenders() {
+    public MessagingClientProvider<EventSender> eventSenderProvider() {
 
-        final MessagingClients<EventSender> result = new MessagingClients<>();
+        final MessagingClientProvider<EventSender> result = new MessagingClientProvider<>();
 
         if (downstreamSenderConfig().isHostConfigured()) {
             result.setClient(new ProtonBasedDownstreamSender(
@@ -248,7 +248,7 @@ public class FileBasedServiceConfig {
         final EdgeDeviceAutoProvisioner edgeDeviceAutoProvisioner = new EdgeDeviceAutoProvisioner(
                 vertx,
                 registrationService,
-                eventSenders(),
+                eventSenderProvider(),
                 autoProvisionerConfigProperties(),
                 tracer);
 
@@ -262,7 +262,7 @@ public class FileBasedServiceConfig {
         final FileBasedDeviceBackend fileBasedDeviceBackend = new FileBasedDeviceBackend(registrationService,
                 credentialsService, tenantInformationService);
         final DeviceAndGatewayAutoProvisioner deviceAndGatewayAutoProvisioner = new DeviceAndGatewayAutoProvisioner(
-                vertx, fileBasedDeviceBackend, fileBasedDeviceBackend, eventSenders());
+                vertx, fileBasedDeviceBackend, fileBasedDeviceBackend, eventSenderProvider());
         fileBasedDeviceBackend.setDeviceAndGatewayAutoProvisioner(deviceAndGatewayAutoProvisioner);
 
         return fileBasedDeviceBackend;

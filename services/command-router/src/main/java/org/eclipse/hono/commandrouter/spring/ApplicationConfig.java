@@ -25,7 +25,7 @@ import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
 import org.eclipse.hono.client.registry.amqp.ProtonBasedTenantClient;
-import org.eclipse.hono.client.util.MessagingClients;
+import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.commandrouter.CacheBasedDeviceConnectionService;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterAmqpServer;
@@ -234,9 +234,9 @@ public class ApplicationConfig {
         final TenantClient tenantClient = tenantClient();
 
         final CommandTargetMapper commandTargetMapper = CommandTargetMapper.create(registrationClient, deviceConnectionInfo, getTracer());
-        final MessagingClients<CommandConsumerFactory> commandConsumerFactories = new MessagingClients<>();
+        final MessagingClientProvider<CommandConsumerFactory> commandConsumerFactoryProvider = new MessagingClientProvider<>();
         if (kafkaProducerConfig().isConfigured() && kafkaConsumerConfig().isConfigured()) {
-            commandConsumerFactories.setClient(new KafkaBasedCommandConsumerFactoryImpl(
+            commandConsumerFactoryProvider.setClient(new KafkaBasedCommandConsumerFactoryImpl(
                     vertx(),
                     tenantClient,
                     commandTargetMapper,
@@ -246,7 +246,7 @@ public class ApplicationConfig {
                     getTracer()));
         }
         if (commandConsumerFactoryConfig().isHostConfigured()) {
-            commandConsumerFactories.setClient(new ProtonBasedCommandConsumerFactoryImpl(
+            commandConsumerFactoryProvider.setClient(new ProtonBasedCommandConsumerFactoryImpl(
                     commandConsumerConnection(),
                     tenantClient,
                     commandTargetMapper,
@@ -257,7 +257,7 @@ public class ApplicationConfig {
                 registrationClient,
                 tenantClient,
                 deviceConnectionInfo,
-                commandConsumerFactories,
+                commandConsumerFactoryProvider,
                 getTracer());
     }
 

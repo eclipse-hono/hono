@@ -22,7 +22,7 @@ import java.util.Map;
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.TelemetrySender;
-import org.eclipse.hono.client.util.MessagingClients;
+import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.util.MessagingClient;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.TenantConstants;
@@ -40,14 +40,14 @@ public class AdapterMessagingClientsTest {
     private final TelemetrySender kafkaTelemetrySender = mockMessagingClient(TelemetrySender.class, MessagingType.kafka);
     private final EventSender amqpEventSender = mockMessagingClient(EventSender.class, MessagingType.amqp);
 
-    private final MessagingClients<TelemetrySender> telemetrySenders = new MessagingClients<TelemetrySender>()
+    private final MessagingClientProvider<TelemetrySender> telemetrySenderProvider = new MessagingClientProvider<TelemetrySender>()
             .setClient(mockMessagingClient(TelemetrySender.class, MessagingType.amqp))
             .setClient(kafkaTelemetrySender);
 
-    private final MessagingClients<EventSender> eventSenders = new MessagingClients<EventSender>()
+    private final MessagingClientProvider<EventSender> eventSenderProvider = new MessagingClientProvider<EventSender>()
             .setClient(amqpEventSender)
             .setClient(mockMessagingClient(EventSender.class, MessagingType.kafka));
-    private final MessagingClients<CommandResponseSender> commandResponseSenders = new MessagingClients<CommandResponseSender>()
+    private final MessagingClientProvider<CommandResponseSender> commandResponseSenderProvider = new MessagingClientProvider<CommandResponseSender>()
             .setClient(mockMessagingClient(CommandResponseSender.class, MessagingType.amqp))
             .setClient(mockMessagingClient(CommandResponseSender.class, MessagingType.kafka));
 
@@ -62,7 +62,8 @@ public class AdapterMessagingClientsTest {
     @Test
     public void testGetClientConfiguredOnTenant() {
 
-        final AdapterMessagingClients underTest = new AdapterMessagingClients(telemetrySenders, eventSenders, commandResponseSenders);
+        final AdapterMessagingClients underTest = new AdapterMessagingClients(telemetrySenderProvider,
+                eventSenderProvider, commandResponseSenderProvider);
 
         assertThat(underTest.getTelemetrySender(TenantObject.from(TENANT, true).setProperty(
                 TenantConstants.FIELD_EXT, extensionFieldKafka))).isEqualTo(kafkaTelemetrySender);

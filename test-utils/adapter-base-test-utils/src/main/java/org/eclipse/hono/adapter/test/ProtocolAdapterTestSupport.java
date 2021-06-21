@@ -19,7 +19,7 @@ import org.eclipse.hono.adapter.AdapterMessagingClients;
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.TelemetrySender;
-import org.eclipse.hono.client.util.MessagingClients;
+import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 
 /**
@@ -44,14 +44,14 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
     /**
      * Creates messaging clients from the downstream senders.
      *
-     * @return The clients
+     * @return The clients.
      */
     protected AdapterMessagingClients createMessagingClients() {
 
         return new AdapterMessagingClients(
-                new MessagingClients<TelemetrySender>().setClient(telemetrySender),
-                new MessagingClients<EventSender>().setClient(eventSender),
-                new MessagingClients<CommandResponseSender>().setClient(commandResponseSender));
+                new MessagingClientProvider<TelemetrySender>().setClient(telemetrySender),
+                new MessagingClientProvider<EventSender>().setClient(eventSender),
+                new MessagingClientProvider<CommandResponseSender>().setClient(commandResponseSender));
     }
 
     /**

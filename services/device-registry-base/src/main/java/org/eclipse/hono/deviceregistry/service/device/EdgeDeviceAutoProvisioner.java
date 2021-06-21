@@ -19,7 +19,7 @@ import java.util.Optional;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.telemetry.EventSender;
-import org.eclipse.hono.client.util.MessagingClients;
+import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
@@ -48,17 +48,17 @@ public class EdgeDeviceAutoProvisioner extends AbstractAutoProvisioningEventSend
      *
      * @param vertx The vert.x instance.
      * @param deviceManagementService The device management service instance.
-     * @param eventClients The messaging clients to send auto-provisioned events.
+     * @param eventSenderProvider The provider for the messaging client to send auto-provisioned events.
      * @param config The auto-provisioning configuration.
      * @param tracer The OpenTracing tracer instance.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public EdgeDeviceAutoProvisioner(final Vertx vertx,
             final DeviceManagementService deviceManagementService,
-            final MessagingClients<EventSender> eventClients,
+            final MessagingClientProvider<EventSender> eventSenderProvider,
             final AutoProvisionerConfigProperties config,
             final Tracer tracer) {
-        super(vertx, deviceManagementService, eventClients);
+        super(vertx, deviceManagementService, eventSenderProvider);
         this.config = Objects.requireNonNull(config);
         this.tracer = Objects.requireNonNull(tracer);
     }
