@@ -18,13 +18,21 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.longThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
+import java.time.Clock;
 import java.time.Duration;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.IntStream;
 
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.message.Message;
@@ -33,15 +41,16 @@ import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
-import org.eclipse.hono.client.command.amqp.ProtonBasedCommandRouterClient;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.CacheDirective;
+import org.eclipse.hono.util.CommandRouterConstants;
 import org.eclipse.hono.util.CommandRouterConstants.CommandRouterAction;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 
 import io.opentracing.Span;
 import io.opentracing.Tracer;
@@ -50,6 +59,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -59,7 +69,6 @@ import io.vertx.proton.ProtonMessageHandler;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
 import io.vertx.proton.ProtonSender;
-
 
 /**
  * Tests verifying behavior of {@link ProtonBasedCommandRouterClient}.
@@ -91,6 +100,7 @@ public class ProtonBasedCommandRouterClientTest {
         sender = AmqpClientUnitTestHelper.mockProtonSender();
 
         final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
+        config.setRequestTimeout(0); // don't let requestTimeout timer be started
         connection = AmqpClientUnitTestHelper.mockHonoConnection(vertx, config, tracer);
         when(connection.isConnected(anyLong())).thenReturn(Future.succeededFuture());
         when(connection.createReceiver(anyString(), any(ProtonQoS.class), any(ProtonMessageHandler.class), VertxMockSupport.anyHandler()))
@@ -107,10 +117,10 @@ public class ProtonBasedCommandRouterClientTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testSetLastKnownGatewayForDeviceSuccess(final VertxTestContext ctx) {
+    public void testSetLastKnownGatewaysSuccess(final VertxTestContext ctx) {
 
         // WHEN setting the last known gateway
-        client.setLastKnownGatewayForDevice("tenant", "deviceId", "gatewayId", span.context())
+        client.setLastKnownGateways("tenant", Map.of("deviceId", "gatewayId"), span.context())
                 .onComplete(ctx.succeeding(r -> {
                     ctx.verify(() -> {
                         // THEN the response has been handled and the span is finished
@@ -173,28 +183,230 @@ public class ProtonBasedCommandRouterClientTest {
     }
 
     /**
-     * Verifies that a client invocation of the <em>set-last-known-gateway</em> operation fails
-     * if the command router service cannot be reached.
-     *
-     * @param ctx The vert.x test context.
+     * Verifies that multiple client invocations of the <em>set-last-known-gateway</em> operation result
+     * in batch requests to the command router service.
      */
     @Test
-    public void testSetLastKnownGatewayForDeviceFailsWithSendError(final VertxTestContext ctx) {
+    public void testSetLastKnownGatewayForDeviceDoesBatchRequests() {
 
-        // GIVEN a client with no credit left
-        when(sender.sendQueueFull()).thenReturn(true);
+        final String tenantId1 = "tenantId1";
+        final String tenantId2 = "tenantId2";
+        final String tenantId3 = "tenantId3";
+        final String deviceId1 = "deviceId1";
+        final String deviceId2 = "deviceId2";
+        final String gatewayId = "gatewayId";
+
+        final AtomicReference<Handler<Long>> timerHandlerRef = new AtomicReference<>();
+        when(connection.getVertx().setTimer(
+                eq(ProtonBasedCommandRouterClient.SET_LAST_KNOWN_GATEWAY_UPDATE_INTERVAL_MILLIS),
+                VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
+            final Handler<Long> handler = invocation.getArgument(1);
+            timerHandlerRef.set(handler);
+            return 1L;
+        });
+
+        // WHEN setting last known gateway information for multiple devices (before the update timer interval has elapsed)
+        client.setLastKnownGatewayForDevice(tenantId3, deviceId1, gatewayId, span.context());
+        client.setLastKnownGatewayForDevice(tenantId1, deviceId1, gatewayId, span.context());
+        client.setLastKnownGatewayForDevice(tenantId1, deviceId2, gatewayId, span.context());
+        client.setLastKnownGatewayForDevice(tenantId2, deviceId1, gatewayId, span.context());
+        client.setLastKnownGatewayForDevice(tenantId2, deviceId2, gatewayId, span.context());
+
+        assertThat(timerHandlerRef.get()).isNotNull();
+        timerHandlerRef.get().handle(1L);
+
+        // THEN there are requests being sent for each of the tenants in the order of the setLastKnownGatewayForDevice invocations
+        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(sender, times(3)).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
+        final List<Message> sentMessages = messageCaptor.getAllValues();
+
+        assertThat(sentMessages.size()).isEqualTo(3);
+
+        // first message for tenant3 - as single device request
+        assertThat(sentMessages.get(0).getAddress())
+                .isEqualTo(String.format("%s/%s", CommandRouterConstants.COMMAND_ROUTER_ENDPOINT, tenantId3));
+        assertThat(MessageHelper.getDeviceId(sentMessages.get(0))).isEqualTo(deviceId1);
+
+        assertThat(sentMessages.get(1).getAddress())
+                .isEqualTo(String.format("%s/%s", CommandRouterConstants.COMMAND_ROUTER_ENDPOINT, tenantId1));
+        final JsonObject jsonPayloadSecondMsg = MessageHelper.getJsonPayload(sentMessages.get(1));
+        assertThat(jsonPayloadSecondMsg).isNotNull();
+        assertThat(jsonPayloadSecondMsg.getString(deviceId1)).isEqualTo(gatewayId);
+        assertThat(jsonPayloadSecondMsg.getString(deviceId2)).isEqualTo(gatewayId);
+
+        assertThat(sentMessages.get(2).getAddress())
+                .isEqualTo(String.format("%s/%s", CommandRouterConstants.COMMAND_ROUTER_ENDPOINT, tenantId2));
+        final JsonObject jsonPayloadThirdMsg = MessageHelper.getJsonPayload(sentMessages.get(2));
+        assertThat(jsonPayloadThirdMsg).isNotNull();
+        assertThat(jsonPayloadThirdMsg.getString(deviceId1)).isEqualTo(gatewayId);
+        assertThat(jsonPayloadThirdMsg.getString(deviceId2)).isEqualTo(gatewayId);
+    }
+
+    /**
+     * Verifies that multiple client invocations of the <em>set-last-known-gateway</em> operation result
+     * in batch requests to the command router service, with the requests having a limited size.
+     */
+    @Test
+    public void testSetLastKnownGatewayRequestsDontExceedSizeLimit() {
+
+        final String tenantId = "tenantId";
+        final String gatewayId = "gatewayId";
+        final int numDevices = ProtonBasedCommandRouterClient.SET_LAST_KNOWN_GATEWAY_UPDATE_MAX_ENTRIES + 1;
+
+        final AtomicReference<Handler<Long>> timerHandlerRef = new AtomicReference<>();
+        when(connection.getVertx().setTimer(
+                eq(ProtonBasedCommandRouterClient.SET_LAST_KNOWN_GATEWAY_UPDATE_INTERVAL_MILLIS),
+                VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
+            final Handler<Long> handler = invocation.getArgument(1);
+            timerHandlerRef.set(handler);
+            return 1L;
+        });
+
+        // WHEN setting last known gateway information for multiple devices (before the update timer interval has elapsed)
+        IntStream.range(0, numDevices).forEach(idx -> {
+            client.setLastKnownGatewayForDevice(tenantId, "device_" + idx, gatewayId, span.context());
+        });
+
+        assertThat(timerHandlerRef.get()).isNotNull();
+        timerHandlerRef.get().handle(1L);
+
+        // THEN there is first one message being sent with the max number of entries
+        final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
+
+        assertThat(sentMessage.getAddress())
+                .isEqualTo(String.format("%s/%s", CommandRouterConstants.COMMAND_ROUTER_ENDPOINT, tenantId));
+        final JsonObject jsonPayloadFirstMsg = MessageHelper.getJsonPayload(sentMessage);
+        assertThat(jsonPayloadFirstMsg).isNotNull();
+        assertThat(jsonPayloadFirstMsg.size()).isEqualTo(ProtonBasedCommandRouterClient.SET_LAST_KNOWN_GATEWAY_UPDATE_MAX_ENTRIES);
+        IntStream.range(0, ProtonBasedCommandRouterClient.SET_LAST_KNOWN_GATEWAY_UPDATE_MAX_ENTRIES).forEach(idx -> {
+            assertThat(jsonPayloadFirstMsg.getString("device_" + idx)).isEqualTo(gatewayId);
+        });
+
+        // trigger completion of request
+        final Message response = createNoContentResponseMessage(sentMessage.getMessageId());
+        AmqpClientUnitTestHelper.assertReceiverLinkCreated(connection).handle(mock(ProtonDelivery.class), response);
+
+        // AND THEN there is a 2nd message being sent with the remaining entries (just one)
+        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(sender, times(2)).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
+        final Message sentMessage2 = messageCaptor.getAllValues().get(1);
+
+        assertThat(sentMessage2.getAddress())
+                .isEqualTo(String.format("%s/%s", CommandRouterConstants.COMMAND_ROUTER_ENDPOINT, tenantId));
+        assertThat(MessageHelper.getDeviceId(sentMessage2)).isEqualTo("device_100");
+    }
+
+    /**
+     * Verifies that a new <em>set-last-known-gateway</em> request is triggered right away if
+     * the preceding one took longer than the interval in which these kinds of requests should be sent.
+     */
+    @Test
+    public void testSetLastKnownGatewaysIsCalledRightAwayAfterPreviousRequestTookLongerThanInternal() {
+
+        final String tenantId = "tenantId";
+        final String gatewayId = "gatewayId";
+
+        final List<Handler<Long>> timerHandlers = new LinkedList<>();
+        when(connection.getVertx().setTimer(
+                eq(ProtonBasedCommandRouterClient.SET_LAST_KNOWN_GATEWAY_UPDATE_INTERVAL_MILLIS),
+                VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
+            final Handler<Long> handler = invocation.getArgument(1);
+            timerHandlers.add(handler);
+            return 1L;
+        });
 
         // WHEN setting last known gateway information
-        client.setLastKnownGatewayForDevice("tenant", "deviceId", "gatewayId", span.context())
-                .onComplete(ctx.failing(t -> {
-                    ctx.verify(() -> {
-                        // THEN the invocation fails and the span is marked as erroneous
-                        verify(span).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
-                        // and the span is finished
-                        verify(span).finish();
-                    });
-                    ctx.completeNow();
-                }));
+        client.setLastKnownGatewayForDevice(tenantId, "deviceId", gatewayId, span.context());
+
+        assertThat(timerHandlers.size()).isEqualTo(1);
+        timerHandlers.get(0).handle(1L);
+
+        // THEN there is first one message being sent
+        final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
+
+        assertThat(sentMessage.getAddress())
+                .isEqualTo(String.format("%s/%s", CommandRouterConstants.COMMAND_ROUTER_ENDPOINT, tenantId));
+        assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo("deviceId");
+
+        // AND WHEN a gateway gets set for another device while the first request hasn't finished
+        client.setLastKnownGatewayForDevice(tenantId, "deviceId2", gatewayId, span.context());
+        // AND the request takes longer than the update interval
+        client.setClock(Clock.offset(Clock.systemUTC(),
+                Duration.ofMillis(ProtonBasedCommandRouterClient.SET_LAST_KNOWN_GATEWAY_UPDATE_INTERVAL_MILLIS)));
+
+        // THEN upon completion of the request...
+        final Message response = createNoContentResponseMessage(sentMessage.getMessageId());
+        AmqpClientUnitTestHelper.assertReceiverLinkCreated(connection).handle(mock(ProtonDelivery.class), response);
+
+        // ... a new request gets sent right away for the other device
+        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(sender, times(2)).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
+        final Message sentMessage2 = messageCaptor.getAllValues().get(1);
+
+        assertThat(sentMessage2.getAddress())
+                .isEqualTo(String.format("%s/%s", CommandRouterConstants.COMMAND_ROUTER_ENDPOINT, tenantId));
+        assertThat(MessageHelper.getDeviceId(sentMessage2)).isEqualTo("deviceId2");
+    }
+
+    /**
+     * Verifies that a new <em>set-last-known-gateway</em> request is scheduled after the defined update interval
+     * has elapsed, taking the processing time of the previous request into account.
+     */
+    @Test
+    public void testSetLastKnownGatewayRequestsAreTriggeredAfterDefinedIntervalElapsed() {
+
+        final String tenantId = "tenantId";
+        final String gatewayId = "gatewayId";
+
+        final List<Handler<Long>> timerHandlers = new LinkedList<>();
+        when(connection.getVertx().setTimer(
+                longThat(delay -> 0 < delay
+                        && delay <= ProtonBasedCommandRouterClient.SET_LAST_KNOWN_GATEWAY_UPDATE_INTERVAL_MILLIS),
+                VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
+            final Handler<Long> handler = invocation.getArgument(1);
+            timerHandlers.add(handler);
+            return 1L;
+        });
+
+        // WHEN setting last known gateway information
+        client.setLastKnownGatewayForDevice(tenantId, "deviceId", gatewayId, span.context());
+
+        assertThat(timerHandlers.size()).isEqualTo(1);
+        timerHandlers.get(0).handle(1L);
+
+        // THEN there is first one message being sent
+        final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
+
+        assertThat(sentMessage.getAddress())
+                .isEqualTo(String.format("%s/%s", CommandRouterConstants.COMMAND_ROUTER_ENDPOINT, tenantId));
+        assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo("deviceId");
+
+        // AND WHEN a gateway gets set for another device while the first request hasn't finished
+        client.setLastKnownGatewayForDevice(tenantId, "deviceId2", gatewayId, span.context());
+        final Duration firstRequestProcessingDuration = Duration.ofMillis(10);
+        client.setClock(Clock.offset(Clock.systemUTC(), firstRequestProcessingDuration));
+
+        // THEN upon completion of the request...
+        final Message response = createNoContentResponseMessage(sentMessage.getMessageId());
+        AmqpClientUnitTestHelper.assertReceiverLinkCreated(connection).handle(mock(ProtonDelivery.class), response);
+
+        // ... sending a new request for the other device gets scheduled
+        final ArgumentCaptor<Long> timerDelayCaptor = ArgumentCaptor.forClass(Long.class);
+        verify(connection.getVertx(), times(2)).setTimer(timerDelayCaptor.capture(), VertxMockSupport.anyHandler());
+        assertThat(timerDelayCaptor.getValue()).isGreaterThan(firstRequestProcessingDuration.toMillis());
+
+        // AND WHEN the timer completes
+        assertThat(timerHandlers.size()).isEqualTo(2);
+        timerHandlers.get(1).handle(1L);
+
+        // THEN the second request gets sent
+        final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+        verify(sender, times(2)).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
+        final Message sentMessage2 = messageCaptor.getAllValues().get(1);
+
+        assertThat(sentMessage2.getAddress())
+                .isEqualTo(String.format("%s/%s", CommandRouterConstants.COMMAND_ROUTER_ENDPOINT, tenantId));
+        assertThat(MessageHelper.getDeviceId(sentMessage2)).isEqualTo("deviceId2");
     }
 
     /**
@@ -282,9 +494,9 @@ public class ProtonBasedCommandRouterClientTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testSetLastKnownGatewayForDeviceFailsWithRejectedRequest(final VertxTestContext ctx) {
+    public void testSetLastKnownGatewaysFailsWithRejectedRequest(final VertxTestContext ctx) {
 
-        // GIVEN a client with no credit left
+        // GIVEN a remote peer returning a Rejected disposition
         final ProtonDelivery update = mock(ProtonDelivery.class);
         when(update.getRemoteState()).thenReturn(new Rejected());
         when(update.remotelySettled()).thenReturn(true);
@@ -295,7 +507,7 @@ public class ProtonBasedCommandRouterClientTest {
         });
 
         // WHEN setting last known gateway information
-        client.setLastKnownGatewayForDevice("tenant", "deviceId", "gatewayId", span.context())
+        client.setLastKnownGateways("tenant", Map.of("deviceId", "gatewayId"), span.context())
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
@@ -317,7 +529,7 @@ public class ProtonBasedCommandRouterClientTest {
     @Test
     public void testRegisterCommandConsumerFailsWithRejectedRequest(final VertxTestContext ctx) {
 
-        // GIVEN a client with no credit left
+        // GIVEN a remote peer returning a Rejected disposition
         final ProtonDelivery update = mock(ProtonDelivery.class);
         when(update.getRemoteState()).thenReturn(new Rejected());
         when(update.remotelySettled()).thenReturn(true);
@@ -350,7 +562,7 @@ public class ProtonBasedCommandRouterClientTest {
     @Test
     public void testUnregisterCommandConsumerFailsWithRejectedRequest(final VertxTestContext ctx) {
 
-        // GIVEN a client with no credit left
+        // GIVEN a remote peer returning a Rejected disposition
         final ProtonDelivery update = mock(ProtonDelivery.class);
         when(update.getRemoteState()).thenReturn(new Rejected());
         when(update.remotelySettled()).thenReturn(true);
@@ -379,13 +591,13 @@ public class ProtonBasedCommandRouterClientTest {
      * request message sent to the command router service.
      */
     @Test
-    public void testSetLastKnownGatewayForDeviceIncludesRequiredInformationInRequest() {
+    public void testSetLastKnownGatewaysForSingleDeviceIncludesRequiredInformationInRequest() {
 
         final String deviceId = "deviceId";
         final String gatewayId = "gatewayId";
 
         // WHEN setting last known gateway information
-        client.setLastKnownGatewayForDevice("tenant", deviceId, gatewayId, span.context());
+        client.setLastKnownGateways("tenant", Map.of(deviceId, gatewayId), span.context());
 
         // THEN the message being sent contains the device ID in its properties
         final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
@@ -396,6 +608,34 @@ public class ProtonBasedCommandRouterClientTest {
         assertThat(sentMessage.getMessageId()).isNotNull();
         assertThat(sentMessage.getSubject()).isEqualTo(CommandRouterAction.SET_LAST_KNOWN_GATEWAY.getSubject());
         assertThat(MessageHelper.getJsonPayload(sentMessage)).isNull();
+    }
+
+    /**
+     * Verifies that the client includes the required information in the <em>set-last-known-gateway</em> batch operation
+     * request message sent to the command router service.
+     */
+    @Test
+    public void testSetLastKnownGatewaysForMultipleDevicesIncludesRequiredInformationInRequest() {
+
+        final String deviceId = "deviceId";
+        final String deviceId2 = "deviceId2";
+        final String gatewayId = "gatewayId";
+
+        // WHEN setting last known gateway information for multiple devices
+        client.setLastKnownGateways("tenant", Map.of(deviceId, gatewayId, deviceId2, gatewayId), span.context());
+
+        // THEN the message being sent contains the device IDs in its payload
+        final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
+        assertThat(MessageHelper.getDeviceId(sentMessage)).isNull();
+        assertThat(MessageHelper.getApplicationProperty(sentMessage.getApplicationProperties(),
+                MessageHelper.APP_PROPERTY_GATEWAY_ID, String.class))
+                .isNull();
+        assertThat(sentMessage.getMessageId()).isNotNull();
+        assertThat(sentMessage.getSubject()).isEqualTo(CommandRouterAction.SET_LAST_KNOWN_GATEWAY.getSubject());
+        final JsonObject jsonPayload = MessageHelper.getJsonPayload(sentMessage);
+        assertThat(jsonPayload).isNotNull();
+        assertThat(jsonPayload.getString(deviceId)).isEqualTo(gatewayId);
+        assertThat(jsonPayload.getString(deviceId2)).isEqualTo(gatewayId);
     }
 
     /**

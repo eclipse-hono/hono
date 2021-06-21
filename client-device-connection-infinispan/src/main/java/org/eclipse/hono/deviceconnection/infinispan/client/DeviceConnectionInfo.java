@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,7 @@
 package org.eclipse.hono.deviceconnection.infinispan.client;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.Set;
 
 import io.opentracing.Span;
@@ -46,6 +47,30 @@ public interface DeviceConnectionInfo {
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     Future<Void> setLastKnownGatewayForDevice(String tenant, String deviceId, String gatewayId, Span span);
+
+    /**
+     * For a given list of device and gateway combinations, sets the gateway as the last gateway that acted on behalf
+     * of the device.
+     * <p>
+     * If a device connects directly instead of through a gateway, the device identifier itself is to be used as
+     * gateway value.
+     *
+     * @param tenant The tenant that the device belongs to.
+     * @param deviceIdToGatewayIdMap The map containing device identifiers and associated gateway identifiers. The
+     *                               gateway identifier may be the same as the device identifier if the device is
+     *                               (currently) not connected via a gateway but directly to a protocol adapter.
+     * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
+     *            An implementation should log (error) events on this span and it may set tags and use this span as the
+     *            parent for any spans created in this method.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will be succeeded if the device connection information has been updated.
+     *         Otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
+     *         The outcome is indeterminate if any of the entries cannot be processed by an implementation.
+     *         In such a case, client code should assume that none of the entries have been updated.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    Future<Void> setLastKnownGatewayForDevice(String tenant, Map<String, String> deviceIdToGatewayIdMap, Span span);
 
     /**
      * Gets the gateway that last acted on behalf of a device.

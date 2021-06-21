@@ -79,9 +79,6 @@ public final class CacheBasedDeviceConnectionClient implements DeviceConnectionC
         return finishSpan(connectionInfoCache.setLastKnownGatewayForDevice(tenantId, deviceId, gatewayId, span), span);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<JsonObject> getLastKnownGatewayForDevice(
             final String tenantId,
@@ -94,9 +91,6 @@ public final class CacheBasedDeviceConnectionClient implements DeviceConnectionC
         return finishSpan(connectionInfoCache.getLastKnownGatewayForDevice(tenantId, deviceId, span), span);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<Void> setCommandHandlingAdapterInstance(
             final String tenantId,
@@ -114,9 +108,6 @@ public final class CacheBasedDeviceConnectionClient implements DeviceConnectionC
         return finishSpan(connectionInfoCache.setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, lifespan, span), span);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<Void> removeCommandHandlingAdapterInstance(
             final String tenantId,
@@ -174,9 +165,6 @@ public final class CacheBasedDeviceConnectionClient implements DeviceConnectionC
         });
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<Void> start() {
         if (connectionInfoCache instanceof Lifecycle) {
@@ -186,9 +174,6 @@ public final class CacheBasedDeviceConnectionClient implements DeviceConnectionC
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<Void> stop() {
         if (connectionInfoCache instanceof Lifecycle) {
@@ -198,9 +183,6 @@ public final class CacheBasedDeviceConnectionClient implements DeviceConnectionC
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
         if (connectionInfoCache instanceof ServiceClient) {
@@ -208,9 +190,6 @@ public final class CacheBasedDeviceConnectionClient implements DeviceConnectionC
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
         if (connectionInfoCache instanceof ServiceClient) {

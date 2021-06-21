@@ -14,6 +14,7 @@ package org.eclipse.hono.service.commandrouter;
 
 import java.net.HttpURLConnection;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -36,6 +37,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 /**
  * An {@code AmqpEndpoint} for managing command router information.
@@ -95,8 +97,9 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
     protected Future<Message> processSetLastKnownGatewayRequest(final Message request,
             final ResourceIdentifier targetAddress, final SpanContext spanContext) {
         final String tenantId = targetAddress.getTenantId();
-        final String deviceId = MessageHelper.getDeviceId(request);
-        final String gatewayId = MessageHelper.getGatewayId(request);
+
+        final String deviceIdAppProperty = MessageHelper.getDeviceId(request);
+        final String gatewayIdAppProperty = MessageHelper.getGatewayId(request);
 
         final Span span = TracingHelper.buildServerChildSpan(
                 tracer,
@@ -105,26 +108,62 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
                 getClass().getSimpleName()
         ).start();
 
-        final Future<Message> resultFuture;
-        if (tenantId == null || deviceId == null || gatewayId == null) {
-            TracingHelper.logError(span, "missing tenant, device and/or gateway");
-            resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
+        final Future<CommandRouterResult> resultFuture;
+        if (tenantId == null) {
+            TracingHelper.logError(span, "missing tenant");
+            resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "missing tenant"));
         } else {
-            logger.debug("setting last known gateway for tenant [{}], device [{}] to {}", tenantId, deviceId, gatewayId);
+            if (deviceIdAppProperty != null && gatewayIdAppProperty != null) {
+                logger.debug("setting last known gateway for tenant [{}], device [{}] to {}", tenantId, deviceIdAppProperty, gatewayIdAppProperty);
 
-            TracingHelper.TAG_TENANT_ID.set(span, tenantId);
-            TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
-            TracingHelper.TAG_GATEWAY_ID.set(span, gatewayId);
+                TracingHelper.TAG_TENANT_ID.set(span, tenantId);
+                TracingHelper.TAG_DEVICE_ID.set(span, deviceIdAppProperty);
+                TracingHelper.TAG_GATEWAY_ID.set(span, gatewayIdAppProperty);
+                if (MessageHelper.getPayloadSize(request) != 0) {
+                    logger.debug("ignoring payload in last known gateway request containing device/gateway properties");
+                }
+                resultFuture = getService().setLastKnownGatewayForDevice(tenantId, deviceIdAppProperty, gatewayIdAppProperty, span);
 
-            resultFuture = getService().setLastKnownGatewayForDevice(tenantId, deviceId, gatewayId, span)
-                    .map(res -> CommandRouterConstants.getAmqpReply(
-                            CommandRouterConstants.COMMAND_ROUTER_ENDPOINT,
-                            tenantId,
-                            request,
-                            res)
-                    );
+            } else if (MessageHelper.getPayloadSize(request) != 0) {
+                TracingHelper.TAG_TENANT_ID.set(span, tenantId);
+
+                final Buffer payload = MessageHelper.getPayload(request);
+                resultFuture = parseSetLastKnownGatewayJson(payload)
+                        .compose(deviceToGatewayMap -> {
+                            logger.debug("setting {} last known gateway entries for tenant [{}]", deviceToGatewayMap.size(), tenantId);
+                            span.log(Map.of("no_of_entries", deviceToGatewayMap.size()));
+                            return getService().setLastKnownGatewayForDevice(tenantId, deviceToGatewayMap, span);
+                        });
+            } else {
+                final String error = "either device_id and gateway_id application properties or alternatively a JSON payload must be set";
+                TracingHelper.logError(span, error);
+                resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, error));
+            }
         }
-        return finishSpanOnFutureCompletion(span, resultFuture);
+        return finishSpanOnFutureCompletion(span, resultFuture.map(res -> CommandRouterConstants.getAmqpReply(
+                CommandRouterConstants.COMMAND_ROUTER_ENDPOINT,
+                tenantId,
+                request,
+                res)));
+    }
+
+    private Future<Map<String, String>> parseSetLastKnownGatewayJson(final Buffer payload) {
+        final Promise<Map<String, String>> result = Promise.promise();
+        try {
+            final Map<String, String> resultMap = new HashMap<>();
+            final JsonObject jsonObject = payload.toJsonObject();
+            jsonObject.forEach(entry -> {
+                if (entry.getValue() instanceof String) {
+                    // key is device id, value is gateway id
+                    resultMap.put(entry.getKey(), (String) entry.getValue());
+                }
+            });
+            result.complete(resultMap);
+        } catch (final DecodeException e) {
+            result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                    "payload must contain a JSON object if device_id and gateway_id application properties are not set"));
+        }
+        return result.future();
     }
 
     /**

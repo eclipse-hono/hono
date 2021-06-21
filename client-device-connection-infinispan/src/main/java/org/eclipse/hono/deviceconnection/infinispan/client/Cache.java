@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -66,6 +66,28 @@ public interface Cache<K, V> {
     Future<V> put(K key, V value, long lifespan, TimeUnit lifespanUnit);
 
     /**
+     * Puts all values of the given map to the cache.
+     *
+     * @param data The map with the entries to add.
+     * @return A succeeded future if the operation succeeded.
+     *         A failed future if there was an error storing the entries in the cache.
+     * @throws NullPointerException if data is {@code null}.
+     */
+    Future<Void> putAll(Map<? extends K, ? extends V> data);
+
+    /**
+     * Puts all values of the given map to the cache.
+     *
+     * @param data The map with the entries to add.
+     * @param lifespan The lifespan of the entries. A negative value is interpreted as an unlimited lifespan.
+     * @param lifespanUnit The time unit for the lifespan.
+     * @return A succeeded future if the operation succeeded.
+     *         A failed future if there was an error storing the entries in the cache.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    Future<Void> putAll(Map<? extends K, ? extends V> data, long lifespan, TimeUnit lifespanUnit);
+
+    /**
      * Gets a value from the cache.
      *
      * @param key The key.
@@ -77,7 +99,7 @@ public interface Cache<K, V> {
     Future<V> get(K key);
 
     /**
-     * Remove a key/value mapping from the cache.
+     * Removes a key/value mapping from the cache.
      *
      * @param key The key.
      * @param value The value.

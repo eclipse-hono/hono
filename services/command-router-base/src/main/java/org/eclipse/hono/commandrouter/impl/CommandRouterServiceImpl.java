@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -173,6 +174,13 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
             final String gatewayId, final Span span) {
 
         return deviceConnectionInfo.setLastKnownGatewayForDevice(tenantId, deviceId, gatewayId, span)
+                .map(ok -> CommandRouterResult.from(HttpURLConnection.HTTP_NO_CONTENT));
+    }
+
+    @Override
+    public Future<CommandRouterResult> setLastKnownGatewayForDevice(final String tenantId,
+            final Map<String, String> deviceIdToGatewayIdMap, final Span span) {
+        return deviceConnectionInfo.setLastKnownGatewayForDevice(tenantId, deviceIdToGatewayIdMap, span)
                 .map(ok -> CommandRouterResult.from(HttpURLConnection.HTTP_NO_CONTENT));
     }
 

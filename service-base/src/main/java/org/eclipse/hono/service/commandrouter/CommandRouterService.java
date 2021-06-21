@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,6 +15,7 @@ package org.eclipse.hono.service.commandrouter;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
@@ -47,6 +48,27 @@ public interface CommandRouterService {
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     Future<CommandRouterResult> setLastKnownGatewayForDevice(String tenantId, String deviceId, String gatewayId,
+            Span span);
+
+    /**
+     * For a given list of device and gateway combinations, sets the gateway as the last gateway that acted on behalf
+     * of the device.
+     * <p>
+     * If a device connects directly instead of through a gateway, the device identifier itself is to be used as
+     * gateway value.
+     *
+     * @param tenantId The tenant id.
+     * @param deviceIdToGatewayIdMap The map containing device identifiers and associated gateway identifiers. The
+     *                               gateway identifier may be the same as the device identifier if last message came
+     *                               from the device directly.
+     * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
+     *            An implementation should log (error) events on this span and it may set tags and use this span as the
+     *            parent for any spans created in this method.
+     * @return A future indicating the outcome of the operation.
+     *             The <em>status</em> will be <em>204 No Content</em> if the operation completed successfully.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    Future<CommandRouterResult> setLastKnownGatewayForDevice(String tenantId, Map<String, String> deviceIdToGatewayIdMap,
             Span span);
 
     /**

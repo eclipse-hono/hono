@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -75,18 +75,12 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
      */
     protected abstract boolean isStarted();
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<Void> start() {
         LOG.info("starting cache");
         return connectToCache();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<Void> stop() {
         LOG.info("stopping cache");
@@ -153,37 +147,14 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
         // nothing done by default
     }
 
-    /**
-     * Puts a value to the cache.
-     *
-     * @param key The key.
-     * @param value The value.
-     * @return A succeeded future containing the previous value or {@code null} if the
-     *         cache didn't contain the key yet.
-     *         A failed future if the value could not be stored in the cache.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
     @Override
     public Future<V> put(final K key, final V value) {
         Objects.requireNonNull(key);
         Objects.requireNonNull(value);
 
         return withCache(cache -> cache.putAsync(key, value));
-
     }
 
-    /**
-     * Puts a value to the cache.
-     *
-     * @param key The key.
-     * @param value The value.
-     * @param lifespan The lifespan of the entry. A negative value is interpreted as an unlimited lifespan.
-     * @param lifespanUnit The time unit for the lifespan.
-     * @return A succeeded future containing the previous value or {@code null} if the
-     *         cache didn't contain the key yet.
-     *         A failed future if the value could not be stored in the cache.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
     @Override
     public Future<V> put(final K key, final V value, final long lifespan, final TimeUnit lifespanUnit) {
         Objects.requireNonNull(key);
@@ -191,36 +162,31 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
         Objects.requireNonNull(lifespanUnit);
 
         return withCache(cache -> cache.putAsync(key, value, lifespan, lifespanUnit));
-
     }
 
-    /**
-     * Removes a key/value mapping from the cache.
-     *
-     * @param key The key.
-     * @param value The value.
-     * @return {@code true} if the key was mapped to the value, {@code false}
-     *         otherwise.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
+    @Override
+    public Future<Void> putAll(final Map<? extends K, ? extends V> data) {
+        Objects.requireNonNull(data);
+
+        return withCache(cache -> cache.putAllAsync(data));
+    }
+
+    @Override
+    public Future<Void> putAll(final Map<? extends K, ? extends V> data, final long lifespan, final TimeUnit lifespanUnit) {
+        Objects.requireNonNull(data);
+        Objects.requireNonNull(lifespanUnit);
+
+        return withCache(cache -> cache.putAllAsync(data, lifespan, lifespanUnit));
+    }
+
     @Override
     public Future<Boolean> remove(final K key, final V value) {
         Objects.requireNonNull(key);
         Objects.requireNonNull(value);
 
         return withCache(cache -> cache.removeAsync(key, value));
-
     }
 
-    /**
-     * Gets a value from the cache.
-     *
-     * @param key The key.
-     * @return A succeeded future containing the value or {@code null} if the
-     *         cache didn't contain the key yet.
-     *         A failed future if the value could not be read from the cache.
-     * @throws NullPointerException if key is {@code null}.
-     */
     @Override
     public Future<V> get(final K key) {
         Objects.requireNonNull(key);
@@ -229,19 +195,11 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
 
     }
 
-    /**
-     * Gets the values for the specified keys from the cache.
-     *
-     * @param keys The keys.
-     * @return A succeeded future containing a map with key/value pairs.
-     * @throws NullPointerException if keys is {@code null}.
-     */
     @Override
     public Future<Map<K, V>> getAll(final Set<? extends K> keys) {
         Objects.requireNonNull(keys);
 
         return withCache(cache -> cache.getAllAsync(keys));
-
     }
 
     /**
@@ -254,7 +212,6 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
 
         return Future.failedFuture(new ServerErrorException(
                 HttpURLConnection.HTTP_UNAVAILABLE, "no connection to data grid"));
-
     }
 
 }
