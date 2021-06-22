@@ -30,10 +30,10 @@ import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests verifying behavior of {@link AdapterMessagingClients}.
+ * Tests verifying behavior of {@link MessagingClientProviders}.
  *
  */
-public class AdapterMessagingClientsTest {
+public class MessagingClientProvidersTest {
 
     private static final String TENANT = "tenant";
 
@@ -62,7 +62,7 @@ public class AdapterMessagingClientsTest {
     @Test
     public void testGetClientConfiguredOnTenant() {
 
-        final AdapterMessagingClients underTest = new AdapterMessagingClients(telemetrySenderProvider,
+        final MessagingClientProviders underTest = new MessagingClientProviders(telemetrySenderProvider,
                 eventSenderProvider, commandResponseSenderProvider);
 
         assertThat(underTest.getTelemetrySender(TenantObject.from(TENANT, true).setProperty(

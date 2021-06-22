@@ -15,7 +15,7 @@ package org.eclipse.hono.adapter.spring;
 
 import java.util.Optional;
 
-import org.eclipse.hono.adapter.AdapterMessagingClients;
+import org.eclipse.hono.adapter.MessagingClientProviders;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.command.CommandResponseSender;
@@ -57,7 +57,7 @@ public abstract class AbstractMessagingClientConfig implements ComponentNameProv
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
     /**
-     * Creates new messaging clients according to the configuration in use.
+     * Creates new messaging client providers according to the configuration in use.
      *
      * @param samplerFactory The sampler factory to use.
      * @param tracer The tracer instance.
@@ -65,7 +65,7 @@ public abstract class AbstractMessagingClientConfig implements ComponentNameProv
      * @param adapterProperties The adapter's configuration properties.
      * @return The created messaging clients.
      */
-    protected AdapterMessagingClients messagingClients(
+    protected MessagingClientProviders messagingClientProviders(
             final SendMessageSampler.Factory samplerFactory,
             final Tracer tracer,
             final Vertx vertx,
@@ -108,7 +108,7 @@ public abstract class AbstractMessagingClientConfig implements ComponentNameProv
                             adapterProperties.isJmsVendorPropsEnabled()));
         }
 
-        return new AdapterMessagingClients(telemetrySenderProvider, eventSenderProvider, commandResponseSenderProvider);
+        return new MessagingClientProviders(telemetrySenderProvider, eventSenderProvider, commandResponseSenderProvider);
     }
 
     /**

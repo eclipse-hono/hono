@@ -15,7 +15,7 @@
 package org.eclipse.hono.adapter.test;
 
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
-import org.eclipse.hono.adapter.AdapterMessagingClients;
+import org.eclipse.hono.adapter.MessagingClientProviders;
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.TelemetrySender;
@@ -42,13 +42,13 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
     protected abstract C givenDefaultConfigurationProperties();
 
     /**
-     * Creates messaging clients from the downstream senders.
+     * Creates messaging client providers from the downstream senders.
      *
-     * @return The clients.
+     * @return The client providers.
      */
-    protected AdapterMessagingClients createMessagingClients() {
+    protected MessagingClientProviders createMessagingClientProviders() {
 
-        return new AdapterMessagingClients(
+        return new MessagingClientProviders(
                 new MessagingClientProvider<TelemetrySender>().setClient(telemetrySender),
                 new MessagingClientProvider<EventSender>().setClient(eventSender),
                 new MessagingClientProvider<CommandResponseSender>().setClient(commandResponseSender));
@@ -65,6 +65,6 @@ public abstract class ProtocolAdapterTestSupport<C extends ProtocolAdapterProper
         adapter.setCommandRouterClient(commandRouterClient);
         adapter.setRegistrationClient(registrationClient);
         adapter.setTenantClient(tenantClient);
-        adapter.setMessagingClients(createMessagingClients());
+        adapter.setMessagingClientProviders(createMessagingClientProviders());
     }
 }

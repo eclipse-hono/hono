@@ -105,7 +105,7 @@ public class AbstractProtocolAdapterBaseTest {
     private CommandResponseSender amqpCommandResponseSender;
     private CommandResponseSender kafkaCommandResponseSender;
     private CommandRouterClient commandRouterClient;
-    private AdapterMessagingClients messagingClients;
+    private MessagingClientProviders messagingClientProviders;
 
     /**
      * Sets up the fixture.
@@ -149,7 +149,7 @@ public class AbstractProtocolAdapterBaseTest {
                 .setClient(amqpCommandResponseSender)
                 .setClient(kafkaCommandResponseSender);
 
-        messagingClients = new AdapterMessagingClients(
+        messagingClientProviders = new MessagingClientProviders(
                 telemetrySenderProvider,
                 eventSenderProvider,
                 commandResponseSenderProvider);
@@ -173,7 +173,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.setCredentialsClient(credentialsClient);
         adapter.setRegistrationClient(registrationClient);
         adapter.setTenantClient(tenantClient);
-        adapter.setMessagingClients(messagingClients);
+        adapter.setMessagingClientProviders(messagingClientProviders);
     }
 
     private void givenAnAdapterConfiguredWithServiceClients(

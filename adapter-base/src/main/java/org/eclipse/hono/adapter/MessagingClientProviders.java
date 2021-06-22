@@ -27,11 +27,11 @@ import io.vertx.core.Future;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 
 /**
- * A wrapper around the messaging clients required by protocol adapters.
+ * A wrapper around the providers for the messaging clients required by protocol adapters.
  * <p>
- * It contains clients for each of Hono's south bound API endpoints.
+ * It contains the providers for the clients for each of Hono's south bound API endpoints.
  */
-public final class AdapterMessagingClients implements Lifecycle {
+public final class MessagingClientProviders implements Lifecycle {
 
     private final MessagingClientProvider<TelemetrySender> telemetrySenderProvider;
     private final MessagingClientProvider<EventSender> eventSenderProvider;
@@ -46,7 +46,7 @@ public final class AdapterMessagingClients implements Lifecycle {
      * @throws NullPointerException if any of the parameters are {@code null}.
      * @throws IllegalArgumentException if any of the providers does not contain at least one client implementation.
      */
-    public AdapterMessagingClients(
+    public MessagingClientProviders(
             final MessagingClientProvider<TelemetrySender> telemetrySenderProvider,
             final MessagingClientProvider<EventSender> eventSenderProvider,
             final MessagingClientProvider<CommandResponseSender> commandResponseSenderProvider) {

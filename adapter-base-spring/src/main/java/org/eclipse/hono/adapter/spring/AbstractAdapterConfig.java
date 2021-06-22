@@ -19,7 +19,7 @@ import java.util.Optional;
 import java.util.concurrent.Executors;
 
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
-import org.eclipse.hono.adapter.AdapterMessagingClients;
+import org.eclipse.hono.adapter.MessagingClientProviders;
 import org.eclipse.hono.adapter.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.adapter.monitoring.ConnectionEventProducerConfig;
 import org.eclipse.hono.adapter.monitoring.HonoEventConnectionEventProducer;
@@ -123,7 +123,8 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
 
         final KafkaAdminClientConfigProperties kafkaAdminClientConfig = kafkaAdminClientConfig();
         final KafkaConsumerConfigProperties kafkaConsumerConfig = kafkaConsumerConfig();
-        final AdapterMessagingClients messagingClients = messagingClients(samplerFactory, getTracer(), vertx(), adapterProperties);
+        final MessagingClientProviders messagingClientProviders = messagingClientProviders(samplerFactory, getTracer(),
+                vertx(), adapterProperties);
 
         final TenantClient tenantClient = tenantClient(samplerFactory);
         final DeviceRegistrationClient registrationClient = registrationClient(samplerFactory);
@@ -147,8 +148,8 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
                 commandConsumerFactory.registerInternalCommandConsumer(
                         (id, handlers) -> new ProtonBasedInternalCommandConsumer(commandConsumerConnection(vertx()), id, handlers));
             }
-            final CommandResponseSender kafkaCommandResponseSender = messagingClients.getCommandResponseSenderProvider()
-                    .getClient(MessagingType.kafka);
+            final CommandResponseSender kafkaCommandResponseSender = messagingClientProviders
+                    .getCommandResponseSenderProvider().getClient(MessagingType.kafka);
             if (kafkaAdminClientConfig.isConfigured() && kafkaConsumerConfig.isConfigured()
                     && kafkaCommandResponseSender != null) {
                 commandConsumerFactory.registerInternalCommandConsumer(
@@ -158,7 +159,7 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
             adapter.setCommandConsumerFactory(commandConsumerFactory);
         }
 
-        adapter.setMessagingClients(messagingClients);
+        adapter.setMessagingClientProviders(messagingClientProviders);
         Optional.ofNullable(connectionEventProducer())
             .ifPresent(adapter::setConnectionEventProducer);
         adapter.setCredentialsClient(credentialsClient(samplerFactory));

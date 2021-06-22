@@ -101,7 +101,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     private DeviceRegistrationClient registrationClient;
     private ResourceLimitChecks resourceLimitChecks = new NoopResourceLimitChecks();
     private TenantClient tenantClient;
-    private AdapterMessagingClients messagingClients;
+    private MessagingClientProviders messagingClientProviders;
 
     /**
      * Adds a Micrometer sample to a command context.
@@ -168,29 +168,29 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Sets the clients to use for messaging.
+     * Sets the client providers to use for messaging.
      *
-     * @param messagingClients The messaging clients.
-     * @throws NullPointerException if the messaging clients is {@code null}.
+     * @param messagingClientProviders The messaging client providers.
+     * @throws NullPointerException if messagingClientProviders is {@code null}.
      */
-    public void setMessagingClients(final AdapterMessagingClients messagingClients) {
-        Objects.requireNonNull(messagingClients);
-        this.messagingClients = messagingClients;
+    public void setMessagingClientProviders(final MessagingClientProviders messagingClientProviders) {
+        Objects.requireNonNull(messagingClientProviders);
+        this.messagingClientProviders = messagingClientProviders;
     }
 
     @Override
     public final TelemetrySender getTelemetrySender(final TenantObject tenant) {
-        return messagingClients.getTelemetrySender(tenant);
+        return messagingClientProviders.getTelemetrySender(tenant);
     }
 
     @Override
     public final EventSender getEventSender(final TenantObject tenant) {
-        return messagingClients.getEventSender(tenant);
+        return messagingClientProviders.getEventSender(tenant);
     }
 
     @Override
     public final CommandResponseSender getCommandResponseSender(final TenantObject tenant) {
-        return messagingClients.getCommandResponseSender(tenant);
+        return messagingClientProviders.getCommandResponseSender(tenant);
     }
 
     /**
@@ -323,8 +323,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             result.fail(new IllegalStateException("adapter does not define a typeName"));
         } else if (tenantClient == null) {
             result.fail(new IllegalStateException("Tenant client must be set"));
-        } else if (messagingClients == null) {
-            result.fail(new IllegalStateException("Downstream messaging clients must be set"));
+        } else if (messagingClientProviders == null) {
+            result.fail(new IllegalStateException("Downstream messaging client providers must be set"));
         } else if (registrationClient == null) {
             result.fail(new IllegalStateException("Device Registration client must be set"));
         } else if (credentialsClient == null) {
@@ -337,7 +337,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
             log.info("using ResourceLimitChecks [{}]", resourceLimitChecks.getClass().getName());
 
-            messagingClients.start();
+            messagingClientProviders.start();
             tenantClient.start();
             registrationClient.start();
             credentialsClient.start();
@@ -388,7 +388,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         results.add(credentialsClient.stop());
         results.add(commandConsumerFactory.stop());
         results.add(commandRouterClient.stop());
-        results.add(messagingClients.stop());
+        results.add(messagingClientProviders.stop());
         return CompositeFuture.all(results);
     }
 
@@ -704,7 +704,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         Objects.requireNonNull(response);
         Objects.requireNonNull(tenant);
 
-        final CommandResponseSender sender = messagingClients.getCommandResponseSender(tenant);
+        final CommandResponseSender sender = messagingClientProviders.getCommandResponseSender(tenant);
         return sender.sendCommandResponse(response, context);
     }
 
@@ -909,7 +909,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         if (commandRouterClient instanceof ServiceClient) {
             ((ServiceClient) commandRouterClient).registerReadinessChecks(handler);
         }
-        messagingClients.registerReadinessChecks(handler);
+        messagingClientProviders.registerReadinessChecks(handler);
     }
 
     /**
@@ -937,7 +937,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         if (commandRouterClient instanceof ServiceClient) {
             ((ServiceClient) commandRouterClient).registerLivenessChecks(handler);
         }
-        messagingClients.registerLivenessChecks(handler);
+        messagingClientProviders.registerLivenessChecks(handler);
     }
 
     /**

@@ -21,7 +21,7 @@ import java.util.concurrent.Executors;
 import javax.inject.Inject;
 
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
-import org.eclipse.hono.adapter.AdapterMessagingClients;
+import org.eclipse.hono.adapter.MessagingClientProviders;
 import org.eclipse.hono.adapter.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.adapter.monitoring.HonoEventConnectionEventProducer;
 import org.eclipse.hono.adapter.monitoring.LoggingConnectionEventProducer;
@@ -215,8 +215,8 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                             protocolAdapterProperties.isJmsVendorPropsEnabled()));
         }
 
-        final AdapterMessagingClients messagingClients = new AdapterMessagingClients(telemetrySenderProvider, eventSenderProvider,
-                commandResponseSenderProvider);
+        final MessagingClientProviders messagingClientProviders = new MessagingClientProviders(telemetrySenderProvider,
+                eventSenderProvider, commandResponseSenderProvider);
 
         if (commandRouterConfig.isHostConfigured()) {
             final CommandRouterClient commandRouterClient = commandRouterClient();
@@ -225,8 +225,8 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             commandConsumerFactory.registerInternalCommandConsumer(
                     (id, handlers) -> new ProtonBasedInternalCommandConsumer(commandConsumerConnection(), id, handlers));
 
-            final CommandResponseSender kafkaCommandResponseSender = messagingClients.getCommandResponseSenderProvider()
-                    .getClient(MessagingType.kafka);
+            final CommandResponseSender kafkaCommandResponseSender = messagingClientProviders
+                    .getCommandResponseSenderProvider().getClient(MessagingType.kafka);
             if (kafkaAdminClientConfig.isConfigured() && kafkaConsumerConfig.isConfigured()
                     && kafkaCommandResponseSender != null) {
                 commandConsumerFactory.registerInternalCommandConsumer(
@@ -242,7 +242,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         }
 
         final var tenantClient = tenantClient();
-        adapter.setMessagingClients(messagingClients);
+        adapter.setMessagingClientProviders(messagingClientProviders);
         Optional.ofNullable(connectionEventProducer())
             .ifPresent(adapter::setConnectionEventProducer);
         adapter.setCredentialsClient(credentialsClient());
