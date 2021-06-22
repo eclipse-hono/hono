@@ -14,6 +14,7 @@ package org.eclipse.hono.service.management.device;
 
 import java.time.Instant;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 import org.eclipse.hono.service.management.BaseDto;
@@ -54,7 +55,6 @@ public class DeviceDto extends BaseDto<Device> {
      * @param supplier The supplier to use for creating the concrete DTO instance.
      * @param tenantId The identifier of the tenant that the device belongs to.
      * @param deviceId The identifier of the device.
-     * @param autoProvisioned {@code true} if this device has been auto-provisioned or {@code null} if unknown.
      * @param device The device configuration to write to the store.
      * @param version The object's (initial) resource version.
      *
@@ -67,7 +67,6 @@ public class DeviceDto extends BaseDto<Device> {
             final Supplier<T> supplier,
             final String tenantId,
             final String deviceId,
-            final Boolean autoProvisioned,
             final Device device,
             final String version) {
 
@@ -80,9 +79,10 @@ public class DeviceDto extends BaseDto<Device> {
         final T deviceDto = BaseDto.forCreation(supplier, device.withoutStatus(), version);
         deviceDto.setTenantId(tenantId);
         deviceDto.setDeviceId(deviceId);
-        deviceDto.setDeviceStatus(new DeviceStatus()
-                .setAutoProvisioned(autoProvisioned)
-        );
+        final Boolean autoProvisioned = Optional.ofNullable(device.getStatus())
+                .map(DeviceStatus::isAutoProvisioned)
+                .orElse(false);
+        deviceDto.setDeviceStatus(new DeviceStatus().setAutoProvisioned(autoProvisioned));
 
         return deviceDto;
     }
@@ -134,8 +134,6 @@ public class DeviceDto extends BaseDto<Device> {
      * @param supplier The supplier to use for creating the concrete DTO instance.
      * @param tenantId The identifier of the tenant that the device belongs to.
      * @param deviceId The identifier of the device.
-     * @param autoProvisioningNotificationSent {@code true} if the an <em>auto-provisioning notification</em> has been
-     *                                         published for this device or {@code null} if unknown.
      * @param device The device configuration to write to the store.
      * @param version The resource version of the object in the store to be updated or {@code null} if the
      *                device's data should be updated regardless of the resource version.
@@ -149,7 +147,6 @@ public class DeviceDto extends BaseDto<Device> {
             final Supplier<T> supplier,
             final String tenantId,
             final String deviceId,
-            final Boolean autoProvisioningNotificationSent,
             final Device device,
             final String version) {
 
@@ -161,9 +158,10 @@ public class DeviceDto extends BaseDto<Device> {
         final T deviceDto = BaseDto.forUpdate(supplier, device.withoutStatus(), version);
         deviceDto.setTenantId(tenantId);
         deviceDto.setDeviceId(deviceId);
-        deviceDto.setDeviceStatus(new DeviceStatus()
-                .setAutoProvisioningNotificationSent(autoProvisioningNotificationSent)
-        );
+        final Boolean notificationSent = Optional.ofNullable(device.getStatus())
+                .map(DeviceStatus::isAutoProvisioningNotificationSent)
+                .orElse(false);
+        deviceDto.setDeviceStatus(new DeviceStatus().setAutoProvisioningNotificationSent(notificationSent));
 
         return deviceDto;
     }

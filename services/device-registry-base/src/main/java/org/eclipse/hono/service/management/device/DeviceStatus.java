@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,19 +17,20 @@ import java.util.Optional;
 
 import org.eclipse.hono.util.RegistryManagementConstants;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * A status used in Device value object.
  */
-@JsonInclude(value = JsonInclude.Include.NON_NULL)
+@JsonInclude(value = JsonInclude.Include.NON_DEFAULT)
 public final class DeviceStatus extends Status<DeviceStatus> {
 
-    private Boolean autoProvisioned;
+    @JsonProperty(RegistryManagementConstants.FIELD_AUTO_PROVISIONED)
+    private boolean autoProvisioned = false;
 
-    private Boolean autoProvisioningNotificationSent;
+    @JsonProperty(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT)
+    private boolean autoProvisioningNotificationSent = false;
 
     /**
      * Checks if this device was created by Hono's auto-provisioning capability.
@@ -38,56 +39,46 @@ public final class DeviceStatus extends Status<DeviceStatus> {
      *
      * @return {@code true} if this device was auto-provisioned.
      */
-    @JsonProperty(RegistryManagementConstants.FIELD_AUTO_PROVISIONED)
     public boolean isAutoProvisioned() {
-        return Optional.ofNullable(autoProvisioned).orElse(false);
+        return autoProvisioned;
     }
 
     /**
-     * Marks this device as auto-provisioned/manually provisioned.
+     * Sets whether this device has been provisioned automatically.
+     * <p>
+     * The default value of this property is {@code false}.
      *
-     * @param autoProvisioned {@code true}, if auto-provisioned. May be {@code null} which then defaults to false.
+     * @param autoProvisioned {@code true} if this device has been provisioned automatically.
      *
      * @return a reference to this for fluent use.
      */
     public DeviceStatus setAutoProvisioned(final Boolean autoProvisioned) {
-        this.autoProvisioned = autoProvisioned;
+        this.autoProvisioned = Optional.ofNullable(autoProvisioned).orElse(false);
         return this;
     }
 
     /**
-     * Checks if a notification of this device having been auto-provisioned has been sent to the northbound application.
+     * Checks if a notification has been published, indicating that this device has been provisioned automatically.
      * <p>
      * The default value of this property is {@code false}.
      *
-     * @return {@code true} if the notification has been sent.
+     * @return {@code true} if the notification has already been sent.
      */
-    @JsonProperty(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT)
     public boolean isAutoProvisioningNotificationSent() {
-        return Optional.ofNullable(autoProvisioningNotificationSent).orElse(false);
-    }
-
-    /**
-     * Gets the underlying property of {@link #isAutoProvisioningNotificationSent()} in order to determine if this
-     * object actually contains an explicitly set or just the initialized value.
-     *
-     * @return The underlying property of {@link #isAutoProvisioningNotificationSent()}.
-     */
-    @JsonIgnore
-    public Boolean getAutoProvisioningNotificationSentSetInternal() {
         return autoProvisioningNotificationSent;
     }
 
     /**
-     * Marks this device's auto-provisioning as having been sent.
+     * Sets whether a notification has been published, indicating that this device has been provisioned automatically.
+     * <p>
+     * The default value of this property is {@code false}.
      *
-     * @param autoProvisioningNotificationSent {@code true}, if the notification has been sent.
-     *                                                     May be {@code null} which then defaults to false.
+     * @param notificationSent {@code true} if the notification has already been sent.
      *
      * @return a reference to this for fluent use.
      */
-    public DeviceStatus setAutoProvisioningNotificationSent(final Boolean autoProvisioningNotificationSent) {
-        this.autoProvisioningNotificationSent = autoProvisioningNotificationSent;
+    public DeviceStatus setAutoProvisioningNotificationSent(final Boolean notificationSent) {
+        this.autoProvisioningNotificationSent = Optional.ofNullable(notificationSent).orElse(false);
         return this;
     }
 }

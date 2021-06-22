@@ -198,25 +198,39 @@ public class DeviceTest {
         assertThat(json).isNotNull();
         assertThat(json.getString("upstream-message-mapper")).isEqualTo("test");
     }
+
     /**
-     * Tests that the status property is serialized to JSON.
+     * Verifies that the status property is correctly serialized to JSON.
      */
     @Test
     public void testEncodeStatus() {
         final var device = new Device();
         device.setStatus(new DeviceStatus()
                 .setAutoProvisioned(true)
-                .setAutoProvisioningNotificationSent(true)
                 .setCreationTime(Instant.now()));
 
-        final var json = JsonObject.mapFrom(device);
+        var json = JsonObject.mapFrom(device);
 
         assertThat(json).isNotNull();
 
-        final JsonObject status = json.getJsonObject(RegistryManagementConstants.FIELD_STATUS);
+        JsonObject status = json.getJsonObject(RegistryManagementConstants.FIELD_STATUS);
         assertThat(status).isNotNull();
         assertThat(status.getString(RegistryManagementConstants.FIELD_STATUS_CREATION_DATE)).isNotEmpty();
+        assertThat(status.getString(RegistryManagementConstants.FIELD_STATUS_LAST_UPDATE)).isNull();
         assertThat(status.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED)).isTrue();
+        assertThat(status.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT)).isNull();
+
+        device.setStatus(new DeviceStatus()
+                .setAutoProvisioningNotificationSent(true)
+                .setLastUpdate(Instant.now()));
+        json = JsonObject.mapFrom(device);
+        assertThat(json).isNotNull();
+
+        status = json.getJsonObject(RegistryManagementConstants.FIELD_STATUS);
+        assertThat(status).isNotNull();
+        assertThat(status.getString(RegistryManagementConstants.FIELD_STATUS_CREATION_DATE)).isNull();
+        assertThat(status.getString(RegistryManagementConstants.FIELD_STATUS_LAST_UPDATE)).isNotEmpty();
+        assertThat(status.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED)).isNull();
         assertThat(status.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT)).isTrue();
     }
 

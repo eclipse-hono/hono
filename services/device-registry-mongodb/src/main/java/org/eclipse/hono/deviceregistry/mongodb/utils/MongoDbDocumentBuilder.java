@@ -78,11 +78,8 @@ public final class MongoDbDocumentBuilder {
         forUpdateOf((BaseDto<?>) deviceDto);
 
         final JsonObject updateDocument = document.getJsonObject(MONGODB_OPERATOR_SET);
-
-        if (deviceDto.getDeviceStatus().getAutoProvisioningNotificationSentSetInternal() != null) {
-            updateDocument.put(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT,
-                    deviceDto.getDeviceStatus().getAutoProvisioningNotificationSentSetInternal());
-        }
+        updateDocument.put(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT,
+                deviceDto.getDeviceStatus().isAutoProvisioningNotificationSent());
 
         return this;
     }
@@ -128,7 +125,7 @@ public final class MongoDbDocumentBuilder {
      * @return a reference to this for fluent use.
      */
     public MongoDbDocumentBuilder withTenantId(final String tenantId) {
-        document.put(RegistrationConstants.FIELD_PAYLOAD_TENANT_ID, tenantId);
+        document.put(BaseDto.FIELD_TENANT_ID, tenantId);
         return this;
     }
 

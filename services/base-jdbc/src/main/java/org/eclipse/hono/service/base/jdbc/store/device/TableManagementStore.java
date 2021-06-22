@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -219,8 +219,7 @@ public class TableManagementStore extends AbstractDeviceStore {
                 .withTag(TracingHelper.TAG_DEVICE_ID, key.getDeviceId())
                 .start();
 
-        final JdbcBasedDeviceDto deviceDto = JdbcBasedDeviceDto.forCreation(key,
-                device.getStatus() != null ? device.getStatus().isAutoProvisioned() : false, device);
+        final JdbcBasedDeviceDto deviceDto = JdbcBasedDeviceDto.forCreation(key, device);
         return SQL
 
                 .runTransactionally(this.client, this.tracer, span.context(), (connection, context) -> {
@@ -371,9 +370,7 @@ public class TableManagementStore extends AbstractDeviceStore {
                 .<Set<String>>map(HashSet::new)
                 .orElse(Collections.emptySet());
 
-        final JdbcBasedDeviceDto deviceDto = JdbcBasedDeviceDto.forUpdate(key,
-                device.getStatus() != null ? device.getStatus().getAutoProvisioningNotificationSentSetInternal() : null,
-                device);
+        final JdbcBasedDeviceDto deviceDto = JdbcBasedDeviceDto.forUpdate(key, device);
         return SQL
                 .runTransactionally(this.client, this.tracer, span.context(), (connection, context) ->
 
@@ -398,7 +395,8 @@ public class TableManagementStore extends AbstractDeviceStore {
                                             map.put("expected_version", version);
                                             map.put("next_version", deviceDto.getVersion());
                                             map.put("updated_on", Timestamp.from(deviceDto.getUpdatedOn()));
-                                            map.put("auto_provisioning_notification_sent", deviceDto.getDeviceStatus().getAutoProvisioningNotificationSentSetInternal());
+                                            map.put("auto_provisioning_notification_sent",
+                                                    deviceDto.getDeviceStatus().isAutoProvisioningNotificationSent());
                                         })
                                         .trace(this.tracer, span.context()).update(connection)
 

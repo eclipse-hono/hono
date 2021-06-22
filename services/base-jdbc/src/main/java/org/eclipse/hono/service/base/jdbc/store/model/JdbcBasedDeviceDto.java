@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,7 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.service.base.jdbc.store.model;
 
-import java.util.Optional;
 import java.util.UUID;
 
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
@@ -32,16 +31,14 @@ public class JdbcBasedDeviceDto extends DeviceDto {
      * Constructs a new DTO for use with the <b>creation of a new</b> persistent entry.
      *
      * @param deviceKey The key of the device.
-     * @param autoProvisioned Marks this device as being auto-provisioned.
      * @param device The data of the DTO.
      *
      * @return A DTO instance for creating a new entry.
      */
-    public static JdbcBasedDeviceDto forCreation(final DeviceKey deviceKey, final Boolean autoProvisioned, final Device device) {
+    public static JdbcBasedDeviceDto forCreation(final DeviceKey deviceKey, final Device device) {
 
         return DeviceDto.forCreation(JdbcBasedDeviceDto::new, deviceKey.getTenantId(),
                 deviceKey.getDeviceId(),
-                autoProvisioned,
                 device,
                 UUID.randomUUID().toString());
     }
@@ -57,7 +54,9 @@ public class JdbcBasedDeviceDto extends DeviceDto {
      */
     public static JdbcBasedDeviceDto forRead(final String tenantId, final String deviceId, final JsonObject recordJson) {
 
-        return DeviceDto.forRead(JdbcBasedDeviceDto::new, tenantId,
+        return DeviceDto.forRead(
+                JdbcBasedDeviceDto::new,
+                tenantId,
                 deviceId,
                 Json.decodeValue(recordJson.getString("data"), Device.class),
                 new DeviceStatus()
@@ -65,25 +64,23 @@ public class JdbcBasedDeviceDto extends DeviceDto {
                     .setAutoProvisioningNotificationSent(recordJson.getBoolean("auto_provisioning_notification_sent")),
                 recordJson.getInstant("created"),
                 recordJson.getInstant("updated_on"),
-                Optional.ofNullable(recordJson.getString("version")).orElse(null));
+                recordJson.getString("version"));
     }
 
     /**
      * Constructs a new DTO for use with the <b>updating</b> a persistent entry.
      *
      * @param deviceKey The key of the device.
-     * @param autoProvisioningNotificationSent Marks the auto-provisioning notification for this device as sent.
      * @param device The data of the DTO.
      *
      * @return A DTO instance for updating an entry.
      */
-    public static JdbcBasedDeviceDto forUpdate(final DeviceKey deviceKey, final Boolean autoProvisioningNotificationSent, final Device device) {
+    public static JdbcBasedDeviceDto forUpdate(final DeviceKey deviceKey, final Device device) {
 
         return DeviceDto.forUpdate(JdbcBasedDeviceDto::new,
                 deviceKey.getTenantId(),
                 deviceKey.getDeviceId(),
-                autoProvisioningNotificationSent,
-                device.withoutStatus(),
+                device,
                 UUID.randomUUID().toString());
     }
 

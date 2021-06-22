@@ -322,7 +322,8 @@ public class FileBasedCredentialsServiceTest implements AbstractCredentialsServi
         final Promise<Void> startTracker = Promise.promise();
         startTracker.future()
                 // THEN the credentials from the file are read in
-                .compose(s -> assertRegistered(getCredentialsService(),
+                .compose(s -> assertRegistered(
+                        getCredentialsService(),
                         Constants.DEFAULT_TENANT, "sensor1",
                         CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD))
                 .compose(s -> getCredentialsManagementService()

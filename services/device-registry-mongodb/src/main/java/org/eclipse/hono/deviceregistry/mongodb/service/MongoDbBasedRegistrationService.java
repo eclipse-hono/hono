@@ -184,10 +184,12 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         return tenantInformationService.getTenant(tenantId, span)
                 .compose(tenant -> checkDeviceLimitReached(tenant, tenantId))
                 .compose(ok -> {
-                    final DeviceDto deviceDto = DeviceDto.forCreation(MongoDbBasedDeviceDto::new, tenantId,
+                    final DeviceDto deviceDto = DeviceDto.forCreation(
+                            MongoDbBasedDeviceDto::new,
+                            tenantId,
                             deviceId.orElseGet(() -> DeviceRegistryUtils.getUniqueIdentifier()),
-                            device.getStatus() != null ? device.getStatus().isAutoProvisioned() : false,
-                            device, new Versioned<>(device).getVersion());
+                            device,
+                            new Versioned<>(device).getVersion());
                     return processCreateDevice(
                             deviceDto,
                             span);
@@ -253,9 +255,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
         Objects.requireNonNull(span);
 
         return tenantInformationService.getTenant(tenantId, span)
-                .compose(deviceDto -> processUpdateDevice(tenantId, deviceId,
-                        device.getStatus() != null ? device.getStatus().getAutoProvisioningNotificationSentSetInternal() : null,
-                        device, resourceVersion, span))
+                .compose(deviceDto -> processUpdateDevice(tenantId, deviceId, device, resourceVersion, span))
                 .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
     }
 
@@ -437,7 +437,6 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
     private Future<OperationResult<Id>> processUpdateDevice(
             final String tenantId,
             final String deviceId,
-            final Boolean autoProvisioningNotificationSent,
             final Device device,
             final Optional<String> resourceVersion,
             final Span span) {
@@ -451,11 +450,20 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
 
         final Promise<JsonObject> updateDevicePromise = Promise.promise();
 
-        final DeviceDto deviceDto = DeviceDto.forUpdate(MongoDbBasedDeviceDto::new, tenantId, deviceId, autoProvisioningNotificationSent, device, new Versioned<>(device).getVersion());
+        final DeviceDto deviceDto = DeviceDto.forUpdate(
+                MongoDbBasedDeviceDto::new,
+                tenantId,
+                deviceId,
+                device,
+                new Versioned<>(device).getVersion());
 
-        mongoClient.findOneAndUpdateWithOptions(config.getCollectionName(), updateDeviceQuery,
+        mongoClient.findOneAndUpdateWithOptions(
+                config.getCollectionName(),
+                updateDeviceQuery,
                 MongoDbDocumentBuilder.builder().forUpdateOf(deviceDto).document(),
-                new FindOptions(), new UpdateOptions().setReturningNewDocument(true), updateDevicePromise);
+                new FindOptions(),
+                new UpdateOptions().setReturningNewDocument(true),
+                updateDevicePromise);
 
         return updateDevicePromise.future()
                 .compose(result -> Optional.ofNullable(result)

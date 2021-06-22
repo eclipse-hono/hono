@@ -52,7 +52,7 @@ public class MongoDbBasedDeviceDtoTest {
         device.setStatus(deviceStatus);
         final String version = "spam";
 
-        final var deviceDto = MongoDbBasedDeviceDto.forCreation(MongoDbBasedDeviceDto::new, tenantId, deviceId, true, device, version);
+        final var deviceDto = MongoDbBasedDeviceDto.forCreation(MongoDbBasedDeviceDto::new, tenantId, deviceId, device, version);
         final var json = JsonObject.mapFrom(deviceDto);
 
         LOG.debug("DTO for create:{}{}", System.lineSeparator(), json.encodePrettily());
@@ -87,13 +87,13 @@ public class MongoDbBasedDeviceDtoTest {
         final var futureInstant = Instant.now().plusSeconds(3600);
         final DeviceStatus deviceStatus = new DeviceStatus()
                 // make sure that these values do not interfere with the corresponding properties of DeviceDto's parent classes
-                .setAutoProvisioningNotificationSent(false)
+                .setAutoProvisioningNotificationSent(true)
                 .setLastUpdate(futureInstant);
         final Device device = new Device();
         device.setStatus(deviceStatus);
         final String version = "spam";
 
-        final var deviceDto = MongoDbBasedDeviceDto.forUpdate(MongoDbBasedDeviceDto::new, tenantId, deviceId, true, device, version);
+        final var deviceDto = MongoDbBasedDeviceDto.forUpdate(MongoDbBasedDeviceDto::new, tenantId, deviceId, device, version);
         final var json = JsonObject.mapFrom(deviceDto);
 
         LOG.debug("DTO for update:{}{}", System.lineSeparator(), json.encodePrettily());

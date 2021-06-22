@@ -269,8 +269,10 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
                             .put(RegistryManagementConstants.FIELD_STATUS_CREATION_DATE, deviceEntry.getValue().getCreationTime())
                             .put(RegistryManagementConstants.FIELD_STATUS_LAST_UPDATE, deviceEntry.getValue().getUpdatedOn())
                             .put(RegistryManagementConstants.FIELD_STATUS_LAST_USER, deviceEntry.getValue().getLastUser())
-                            .put(RegistryManagementConstants.FIELD_AUTO_PROVISIONED, deviceEntry.getValue().getDeviceStatus().getAutoProvisioningNotificationSentSetInternal())
-                            .put(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT, deviceEntry.getValue().getDeviceStatus().getAutoProvisioningNotificationSentSetInternal())
+                            .put(RegistryManagementConstants.FIELD_AUTO_PROVISIONED,
+                                    deviceEntry.getValue().getDeviceStatus().isAutoProvisioned())
+                            .put(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT,
+                                    deviceEntry.getValue().getDeviceStatus().isAutoProvisioningNotificationSent())
                             .put(RegistrationConstants.FIELD_DATA, mapToStoredJson(deviceEntry.getValue().getData())));
                     idCount.incrementAndGet();
                 }
@@ -469,7 +471,12 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
             return Result.from(HttpURLConnection.HTTP_FORBIDDEN, OperationResult::empty);
         }
 
-        final FileBasedDeviceDto deviceDto = FileBasedDeviceDto.forCreation(FileBasedDeviceDto::new, tenantId, deviceIdValue, autoProvisioned, device, new Versioned<>(device).getVersion());
+        final FileBasedDeviceDto deviceDto = FileBasedDeviceDto.forCreation(
+                FileBasedDeviceDto::new,
+                tenantId,
+                deviceIdValue,
+                device,
+                new Versioned<>(device).getVersion());
         if (devices.putIfAbsent(deviceIdValue, deviceDto) == null) {
             dirty.set(true);
             return OperationResult.ok(HttpURLConnection.HTTP_CREATED,
@@ -521,14 +528,16 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
             return Result.from(HttpURLConnection.HTTP_NOT_FOUND, OperationResult::empty);
         }
 
-        final Versioned<Device> newDevice = new Versioned<>(currentDevice.getVersion(), currentDevice.getData()).update(resourceVersion, () -> device);
+        final Versioned<Device> newDevice = new Versioned<>(currentDevice.getVersion(), currentDevice.getData())
+                .update(resourceVersion, () -> device);
         if (newDevice == null) {
             TracingHelper.logError(span, "Resource Version mismatch");
             return Result.from(HttpURLConnection.HTTP_PRECON_FAILED, OperationResult::empty);
         }
 
-        final FileBasedDeviceDto deviceDto = FileBasedDeviceDto.forUpdate(tenantId, deviceId,
-                device.getStatus() != null ? device.getStatus().getAutoProvisioningNotificationSentSetInternal() : null,
+        final FileBasedDeviceDto deviceDto = FileBasedDeviceDto.forUpdate(
+                tenantId,
+                deviceId,
                 newDevice.getValue())
             .merge(currentDevice);
         devices.put(deviceId, deviceDto);
@@ -742,13 +751,12 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
         public static FileBasedDeviceDto forUpdate(
                 final String tenantId,
                 final String deviceId,
-                final Boolean autoProvisioningNotificationSent,
                 final Device device) {
 
-            return DeviceDto.forUpdate(FileBasedDeviceDto::new,
+            return DeviceDto.forUpdate(
+                    FileBasedDeviceDto::new,
                     tenantId,
                     deviceId,
-                    autoProvisioningNotificationSent,
                     device.withoutStatus(),
                     UUID.randomUUID().toString());
         }
@@ -764,12 +772,8 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
             if (other != null) {
                 setCreationTime(other.getCreationTime());
                 getDeviceStatus().setAutoProvisioned(other.getDeviceStatus().isAutoProvisioned());
-
-                if (getDeviceStatus().getAutoProvisioningNotificationSentSetInternal() == null) {
-                    getDeviceStatus().setAutoProvisioningNotificationSent(
-                            other.getDeviceStatus().getAutoProvisioningNotificationSentSetInternal()
-                    );
-                }
+                getDeviceStatus().setAutoProvisioningNotificationSent(
+                        other.getDeviceStatus().isAutoProvisioningNotificationSent());
             }
             return this;
         }
