@@ -17,6 +17,7 @@ package org.eclipse.hono.client.telemetry;
 import java.util.Map;
 
 import org.eclipse.hono.util.Lifecycle;
+import org.eclipse.hono.util.MessagingClient;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.TenantObject;
@@ -28,7 +29,7 @@ import io.vertx.core.buffer.Buffer;
 /**
  * A client for publishing telemetry data originating from devices to downstream consumers.
  */
-public interface TelemetrySender extends Lifecycle {
+public interface TelemetrySender extends MessagingClient, Lifecycle {
 
     /**
      * Sends telemetry data originating from a device to downstream consumers.

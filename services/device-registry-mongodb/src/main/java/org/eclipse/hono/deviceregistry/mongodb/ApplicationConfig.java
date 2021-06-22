@@ -24,7 +24,7 @@ import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.client.telemetry.kafka.KafkaBasedEventSender;
-import org.eclipse.hono.client.util.MessagingClient;
+import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ServerConfig;
@@ -66,7 +66,6 @@ import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.service.tenant.DelegatingTenantAmqpEndpoint;
 import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.MessagingType;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
@@ -323,25 +322,21 @@ public class ApplicationConfig {
      */
     @Bean
     @Scope("prototype")
-    public MessagingClient<EventSender> eventSenders() {
+    public MessagingClientProvider<EventSender> eventSenderProvider() {
 
-        final MessagingClient<EventSender> result = new MessagingClient<>();
+        final MessagingClientProvider<EventSender> result = new MessagingClientProvider<>();
 
         if (downstreamSenderConfig().isHostConfigured()) {
-            result.setClient(
-                    MessagingType.amqp,
-                    new ProtonBasedDownstreamSender(
-                            HonoConnection.newConnection(vertx(), downstreamSenderConfig(), tracer()),
-                            SendMessageSampler.Factory.noop(),
-                            true,
-                            true));
+            result.setClient(new ProtonBasedDownstreamSender(
+                    HonoConnection.newConnection(vertx(), downstreamSenderConfig(), tracer()),
+                    SendMessageSampler.Factory.noop(),
+                    true,
+                    true));
         }
 
         if (kafkaProducerConfig().isConfigured()) {
             final KafkaProducerFactory<String, Buffer> factory = KafkaProducerFactory.sharedProducerFactory(vertx());
-            result.setClient(
-                    MessagingType.kafka,
-                    new KafkaBasedEventSender(factory, kafkaProducerConfig(), true, tracer()));
+            result.setClient(new KafkaBasedEventSender(factory, kafkaProducerConfig(), true, tracer()));
         }
 
         healthCheckServer().registerHealthCheckResources(ServiceClientAdapter.forClient(result));
@@ -391,7 +386,7 @@ public class ApplicationConfig {
         final EdgeDeviceAutoProvisioner edgeDeviceAutoProvisioner = new EdgeDeviceAutoProvisioner(
                 vertx(),
                 service,
-                eventSenders(),
+                eventSenderProvider(),
                 autoProvisionerConfigProperties(),
                 tracer());
 
@@ -470,7 +465,7 @@ public class ApplicationConfig {
         final MongoDbBasedDeviceBackend service = new MongoDbBasedDeviceBackend(registrationService(),
                 credentialsService(), tenantInformationService());
         final DeviceAndGatewayAutoProvisioner deviceAndGatewayAutoProvisioner = new DeviceAndGatewayAutoProvisioner(
-                vertx(), service, service, eventSenders());
+                vertx(), service, service, eventSenderProvider());
         service.setDeviceAndGatewayAutoProvisioner(deviceAndGatewayAutoProvisioner);
 
         return new DelegatingCredentialsAmqpEndpoint<CredentialsService>(vertx(), service);

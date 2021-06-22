@@ -29,7 +29,7 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
-import org.eclipse.hono.client.util.MessagingClient;
+import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterServiceConfigProperties;
@@ -66,7 +66,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
     private final DeviceRegistrationClient registrationClient;
     private final TenantClient tenantClient;
     private final DeviceConnectionInfo deviceConnectionInfo;
-    private final MessagingClient<CommandConsumerFactory> commandConsumerFactories;
+    private final MessagingClientProvider<CommandConsumerFactory> commandConsumerFactoryProvider;
     private final Tracer tracer;
     private final Deque<Pair<String, Integer>> tenantsToEnable = new LinkedList<>();
     private final Set<String> reenabledTenants = new HashSet<>();
@@ -86,7 +86,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
      * @param registrationClient The device registration client.
      * @param tenantClient The tenant client.
      * @param deviceConnectionInfo The client for accessing device connection data.
-     * @param commandConsumerFactories The factories to use for creating clients to receive commands.
+     * @param commandConsumerFactoryProvider The factory provider to use for creating clients to receive commands.
      * @param tracer The Open Tracing tracer to use for tracking processing of requests.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
@@ -95,14 +95,14 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
             final DeviceRegistrationClient registrationClient,
             final TenantClient tenantClient,
             final DeviceConnectionInfo deviceConnectionInfo,
-            final MessagingClient<CommandConsumerFactory> commandConsumerFactories,
+            final MessagingClientProvider<CommandConsumerFactory> commandConsumerFactoryProvider,
             final Tracer tracer) {
 
         this.config = Objects.requireNonNull(config);
         this.registrationClient = Objects.requireNonNull(registrationClient);
         this.tenantClient = Objects.requireNonNull(tenantClient);
         this.deviceConnectionInfo = Objects.requireNonNull(deviceConnectionInfo);
-        this.commandConsumerFactories = Objects.requireNonNull(commandConsumerFactories);
+        this.commandConsumerFactoryProvider = Objects.requireNonNull(commandConsumerFactoryProvider);
         this.tracer = Objects.requireNonNull(tracer);
     }
 
@@ -125,8 +125,8 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
                 return Future.failedFuture(new IllegalStateException("Service must be started in a Vert.x context"));
             }
         }
-        if (!commandConsumerFactories.containsImplementations()) {
-            return Future.failedFuture("no command consumer factories set");
+        if (!commandConsumerFactoryProvider.containsImplementations()) {
+            return Future.failedFuture("no command consumer factory provider set");
         }
 
         if (running.compareAndSet(false, true)) {
@@ -135,7 +135,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
             if (deviceConnectionInfo instanceof Lifecycle) {
                 ((Lifecycle) deviceConnectionInfo).start();
             }
-            commandConsumerFactories.start();
+            commandConsumerFactoryProvider.start();
         }
 
         return Future.succeededFuture();
@@ -153,7 +153,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
             if (deviceConnectionInfo instanceof Lifecycle) {
                 results.add(((Lifecycle) deviceConnectionInfo).stop());
             }
-            results.add(commandConsumerFactories.stop());
+            results.add(commandConsumerFactoryProvider.stop());
             tenantsToEnable.clear();
             return CompositeFuture.all(results)
                     .onFailure(t -> {
@@ -182,7 +182,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
             final Span span) {
 
         return tenantClient.get(tenantId, span.context())
-                .compose(tenantObject -> commandConsumerFactories.getClient(tenantObject)
+                .compose(tenantObject -> commandConsumerFactoryProvider.getClient(tenantObject)
                         .createCommandConsumer(tenantId, span.context()))
                 .compose(v -> deviceConnectionInfo
                         .setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, getSanitizedLifespan(lifespan), span)
@@ -290,7 +290,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
         final var logEntries = new HashMap<String, Object>(2);
         logEntries.put("attempt#", attempt.two());
         tenantClient.get(attempt.one(), span.context())
-            .map(tenantObject -> commandConsumerFactories.getClient(tenantObject))
+            .map(tenantObject -> commandConsumerFactoryProvider.getClient(tenantObject))
             .map(factory -> factory.createCommandConsumer(attempt.one(), span.context()))
             .onSuccess(ok -> {
                 logEntries.put(Fields.MESSAGE, "successfully created command consumer");
@@ -326,7 +326,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
         if (deviceConnectionInfo instanceof ServiceClient) {
             ((ServiceClient) deviceConnectionInfo).registerReadinessChecks(handler);
         }
-        commandConsumerFactories.registerReadinessChecks(handler);
+        commandConsumerFactoryProvider.registerReadinessChecks(handler);
     }
 
     @Override
@@ -341,7 +341,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
         if (deviceConnectionInfo instanceof ServiceClient) {
             ((ServiceClient) deviceConnectionInfo).registerLivenessChecks(handler);
         }
-        commandConsumerFactories.registerLivenessChecks(handler);
+        commandConsumerFactoryProvider.registerLivenessChecks(handler);
     }
 
     /**

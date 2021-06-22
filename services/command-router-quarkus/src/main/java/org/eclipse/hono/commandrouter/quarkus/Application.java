@@ -28,7 +28,7 @@ import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
 import org.eclipse.hono.client.registry.amqp.ProtonBasedTenantClient;
-import org.eclipse.hono.client.util.MessagingClient;
+import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterAmqpServer;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
@@ -47,7 +47,6 @@ import org.eclipse.hono.service.commandrouter.DelegatingCommandRouterAmqpEndpoin
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.quarkus.AbstractServiceApplication;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
@@ -196,7 +195,7 @@ public class Application extends AbstractServiceApplication {
                 registrationClient,
                 tenantClient,
                 deviceConnectionInfo,
-                commandConsumerFactories(tenantClient, commandTargetMapper),
+                commandConsumerFactoryProvider(tenantClient, commandTargetMapper),
                 tracer);
     }
 
@@ -206,12 +205,12 @@ public class Application extends AbstractServiceApplication {
         return commandConsumerFactoryConfig;
     }
 
-    private MessagingClient<CommandConsumerFactory> commandConsumerFactories(final TenantClient tenantClient,
+    private MessagingClientProvider<CommandConsumerFactory> commandConsumerFactoryProvider(final TenantClient tenantClient,
             final CommandTargetMapper commandTargetMapper) {
 
-        final MessagingClient<CommandConsumerFactory> commandConsumerFactories = new MessagingClient<>();
+        final MessagingClientProvider<CommandConsumerFactory> commandConsumerFactoryProvider = new MessagingClientProvider<>();
         if (kafkaProducerConfig.isConfigured() && kafkaConsumerConfig.isConfigured()) {
-            commandConsumerFactories.setClient(MessagingType.kafka, new KafkaBasedCommandConsumerFactoryImpl(
+            commandConsumerFactoryProvider.setClient(new KafkaBasedCommandConsumerFactoryImpl(
                     vertx,
                     tenantClient,
                     commandTargetMapper,
@@ -222,13 +221,13 @@ public class Application extends AbstractServiceApplication {
         }
         final ClientConfigProperties commandConsumerFactoryConfig = commandConsumerFactoryConfig();
         if (commandConsumerFactoryConfig.isHostConfigured()) {
-            commandConsumerFactories.setClient(MessagingType.amqp, new ProtonBasedCommandConsumerFactoryImpl(
+            commandConsumerFactoryProvider.setClient(new ProtonBasedCommandConsumerFactoryImpl(
                     HonoConnection.newConnection(vertx, commandConsumerFactoryConfig, tracer),
                     tenantClient,
                     commandTargetMapper,
                     SendMessageSampler.Factory.noop()));
         }
-        return commandConsumerFactories;
+        return commandConsumerFactoryProvider;
     }
 
     private RequestResponseClientConfigProperties registrationServiceClientConfig() {

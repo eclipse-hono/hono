@@ -33,7 +33,7 @@ import java.util.List;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
-import org.eclipse.hono.client.util.MessagingClient;
+import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterServiceConfigProperties;
 import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
@@ -77,10 +77,11 @@ public class CommandRouterServiceImplTest {
         });
         final var deviceConnectionInfo = mock(DeviceConnectionInfo.class);
         commandConsumerFactory = mock(CommandConsumerFactory.class);
+        when(commandConsumerFactory.getMessagingType()).thenReturn(MessagingType.amqp);
         when(commandConsumerFactory.start()).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.stop()).thenReturn(Future.succeededFuture());
-        final MessagingClient<CommandConsumerFactory> factories = new MessagingClient<>();
-        factories.setClient(MessagingType.amqp, commandConsumerFactory);
+        final MessagingClientProvider<CommandConsumerFactory> factoryProvider = new MessagingClientProvider<>();
+        factoryProvider.setClient(commandConsumerFactory);
         vertx = mock(Vertx.class);
         context = VertxMockSupport.mockContext(vertx);
         when(context.owner()).thenReturn(vertx);
@@ -89,7 +90,7 @@ public class CommandRouterServiceImplTest {
                 registrationClient,
                 tenantClient,
                 deviceConnectionInfo,
-                factories,
+                factoryProvider,
                 NoopTracerFactory.create());
         service.setContext(context);
         service.start();

@@ -18,7 +18,7 @@ import java.util.Objects;
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.TelemetrySender;
-import org.eclipse.hono.client.util.MessagingClient;
+import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.TenantObject;
 
@@ -27,46 +27,46 @@ import io.vertx.core.Future;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 
 /**
- * A wrapper around the messaging clients required by protocol adapters.
+ * A wrapper around the providers for the messaging clients required by protocol adapters.
  * <p>
- * It contains clients for each of Hono's south bound API endpoints.
+ * It contains the providers for the clients for each of Hono's south bound API endpoints.
  */
-public final class MessagingClients implements Lifecycle {
+public final class MessagingClientProviders implements Lifecycle {
 
-    private final MessagingClient<TelemetrySender> telemetrySenders;
-    private final MessagingClient<EventSender> eventSenders;
-    private final MessagingClient<CommandResponseSender> commandResponseSenders;
+    private final MessagingClientProvider<TelemetrySender> telemetrySenderProvider;
+    private final MessagingClientProvider<EventSender> eventSenderProvider;
+    private final MessagingClientProvider<CommandResponseSender> commandResponseSenderProvider;
 
     /**
      * Creates a new instance.
      *
-     * @param telemetrySenders The clients for sending telemetry messages downstream.
-     * @param eventSenders The clients for sending events downstream.
-     * @param commandResponseSenders The clients for sending command response messages downstream.
+     * @param telemetrySenderProvider The provider for the client for sending telemetry messages downstream.
+     * @param eventSenderProvider The provider for the client for sending events downstream.
+     * @param commandResponseSenderProvider The provider for the client for sending command response messages downstream.
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @throws IllegalArgumentException if any of the senders does not contain at least one client implementation.
+     * @throws IllegalArgumentException if any of the providers does not contain at least one client implementation.
      */
-    public MessagingClients(
-            final MessagingClient<TelemetrySender> telemetrySenders,
-            final MessagingClient<EventSender> eventSenders,
-            final MessagingClient<CommandResponseSender> commandResponseSenders) {
+    public MessagingClientProviders(
+            final MessagingClientProvider<TelemetrySender> telemetrySenderProvider,
+            final MessagingClientProvider<EventSender> eventSenderProvider,
+            final MessagingClientProvider<CommandResponseSender> commandResponseSenderProvider) {
 
-        Objects.requireNonNull(telemetrySenders);
-        Objects.requireNonNull(eventSenders);
-        Objects.requireNonNull(commandResponseSenders);
+        Objects.requireNonNull(telemetrySenderProvider);
+        Objects.requireNonNull(eventSenderProvider);
+        Objects.requireNonNull(commandResponseSenderProvider);
 
-        if (!telemetrySenders.containsImplementations()) {
+        if (!telemetrySenderProvider.containsImplementations()) {
             throw new IllegalArgumentException("at least one TelemetrySender implementation must be set");
         }
-        if (!eventSenders.containsImplementations()) {
+        if (!eventSenderProvider.containsImplementations()) {
             throw new IllegalArgumentException("at least one EventSender implementation must be set");
         }
-        if (!commandResponseSenders.containsImplementations()) {
+        if (!commandResponseSenderProvider.containsImplementations()) {
             throw new IllegalArgumentException("at least one CommandResponseSender implementation must be set");
         }
-        this.telemetrySenders = telemetrySenders;
-        this.eventSenders = eventSenders;
-        this.commandResponseSenders = commandResponseSenders;
+        this.telemetrySenderProvider = telemetrySenderProvider;
+        this.eventSenderProvider = eventSenderProvider;
+        this.commandResponseSenderProvider = commandResponseSenderProvider;
     }
 
     /**
@@ -76,7 +76,7 @@ public final class MessagingClients implements Lifecycle {
      * @return The client.
      */
     public EventSender getEventSender(final TenantObject tenant) {
-        return eventSenders.getClient(tenant);
+        return eventSenderProvider.getClient(tenant);
     }
 
     /**
@@ -86,7 +86,7 @@ public final class MessagingClients implements Lifecycle {
      * @return The client.
      */
     public TelemetrySender getTelemetrySender(final TenantObject tenant) {
-        return telemetrySenders.getClient(tenant);
+        return telemetrySenderProvider.getClient(tenant);
     }
 
     /**
@@ -96,7 +96,7 @@ public final class MessagingClients implements Lifecycle {
      * @return The client.
      */
     public CommandResponseSender getCommandResponseSender(final TenantObject tenant) {
-        return commandResponseSenders.getClient(tenant);
+        return commandResponseSenderProvider.getClient(tenant);
     }
 
     /**
@@ -104,8 +104,8 @@ public final class MessagingClients implements Lifecycle {
      *
      * @return The clients.
      */
-    public MessagingClient<TelemetrySender> getTelemetrySenders() {
-        return telemetrySenders;
+    public MessagingClientProvider<TelemetrySender> getTelemetrySenderProvider() {
+        return telemetrySenderProvider;
     }
 
     /**
@@ -113,8 +113,8 @@ public final class MessagingClients implements Lifecycle {
      *
      * @return The clients.
      */
-    public MessagingClient<EventSender> getEventSenders() {
-        return eventSenders;
+    public MessagingClientProvider<EventSender> getEventSenderProvider() {
+        return eventSenderProvider;
     }
 
     /**
@@ -122,25 +122,25 @@ public final class MessagingClients implements Lifecycle {
      *
      * @return The clients.
      */
-    public MessagingClient<CommandResponseSender> getCommandResponseSenders() {
-        return commandResponseSenders;
+    public MessagingClientProvider<CommandResponseSender> getCommandResponseSenderProvider() {
+        return commandResponseSenderProvider;
     }
 
     @Override
     public Future<Void> start() {
 
         return CompositeFuture.all(
-                telemetrySenders.start(),
-                eventSenders.start(),
-                commandResponseSenders.start()).mapEmpty();
+                telemetrySenderProvider.start(),
+                eventSenderProvider.start(),
+                commandResponseSenderProvider.start()).mapEmpty();
     }
 
     @Override
     public Future<Void> stop() {
         return CompositeFuture.all(
-                telemetrySenders.stop(),
-                eventSenders.stop(),
-                commandResponseSenders.stop()).mapEmpty();
+                telemetrySenderProvider.stop(),
+                eventSenderProvider.stop(),
+                commandResponseSenderProvider.stop()).mapEmpty();
     }
 
     /**
@@ -149,9 +149,9 @@ public final class MessagingClients implements Lifecycle {
      * @param handler The handler to register the checks with.
      */
     public void registerLivenessChecks(final HealthCheckHandler handler) {
-        telemetrySenders.registerLivenessChecks(handler);
-        eventSenders.registerLivenessChecks(handler);
-        commandResponseSenders.registerLivenessChecks(handler);
+        telemetrySenderProvider.registerLivenessChecks(handler);
+        eventSenderProvider.registerLivenessChecks(handler);
+        commandResponseSenderProvider.registerLivenessChecks(handler);
     }
 
     /**
@@ -160,8 +160,8 @@ public final class MessagingClients implements Lifecycle {
      * @param handler The handler to register the checks with.
      */
     public void registerReadinessChecks(final HealthCheckHandler handler) {
-        telemetrySenders.registerReadinessChecks(handler);
-        eventSenders.registerReadinessChecks(handler);
-        commandResponseSenders.registerReadinessChecks(handler);
+        telemetrySenderProvider.registerReadinessChecks(handler);
+        eventSenderProvider.registerReadinessChecks(handler);
+        commandResponseSenderProvider.registerReadinessChecks(handler);
     }
 }

@@ -23,7 +23,7 @@ import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.client.telemetry.kafka.KafkaBasedEventSender;
-import org.eclipse.hono.client.util.MessagingClient;
+import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
@@ -43,7 +43,6 @@ import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.tenant.DelegatingTenantManagementHttpEndpoint;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.MessagingType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -173,25 +172,21 @@ public class FileBasedServiceConfig {
      */
     @Bean
     @Scope("prototype")
-    public MessagingClient<EventSender> eventSenders() {
+    public MessagingClientProvider<EventSender> eventSenderProvider() {
 
-        final MessagingClient<EventSender> result = new MessagingClient<>();
+        final MessagingClientProvider<EventSender> result = new MessagingClientProvider<>();
 
         if (downstreamSenderConfig().isHostConfigured()) {
-            result.setClient(
-                    MessagingType.amqp,
-                    new ProtonBasedDownstreamSender(
-                            HonoConnection.newConnection(vertx, downstreamSenderConfig(), tracer),
-                            SendMessageSampler.Factory.noop(),
-                            true,
-                            true));
+            result.setClient(new ProtonBasedDownstreamSender(
+                    HonoConnection.newConnection(vertx, downstreamSenderConfig(), tracer),
+                    SendMessageSampler.Factory.noop(),
+                    true,
+                    true));
         }
 
         if (kafkaProducerConfig().isConfigured()) {
             final KafkaProducerFactory<String, Buffer> factory = KafkaProducerFactory.sharedProducerFactory(vertx);
-            result.setClient(
-                    MessagingType.kafka,
-                    new KafkaBasedEventSender(factory, kafkaProducerConfig(), true, tracer));
+            result.setClient(new KafkaBasedEventSender(factory, kafkaProducerConfig(), true, tracer));
         }
 
         healthCheckServer.registerHealthCheckResources(ServiceClientAdapter.forClient(result));
@@ -253,7 +248,7 @@ public class FileBasedServiceConfig {
         final EdgeDeviceAutoProvisioner edgeDeviceAutoProvisioner = new EdgeDeviceAutoProvisioner(
                 vertx,
                 registrationService,
-                eventSenders(),
+                eventSenderProvider(),
                 autoProvisionerConfigProperties(),
                 tracer);
 
@@ -267,7 +262,7 @@ public class FileBasedServiceConfig {
         final FileBasedDeviceBackend fileBasedDeviceBackend = new FileBasedDeviceBackend(registrationService,
                 credentialsService, tenantInformationService);
         final DeviceAndGatewayAutoProvisioner deviceAndGatewayAutoProvisioner = new DeviceAndGatewayAutoProvisioner(
-                vertx, fileBasedDeviceBackend, fileBasedDeviceBackend, eventSenders());
+                vertx, fileBasedDeviceBackend, fileBasedDeviceBackend, eventSenderProvider());
         fileBasedDeviceBackend.setDeviceAndGatewayAutoProvisioner(deviceAndGatewayAutoProvisioner);
 
         return fileBasedDeviceBackend;
@@ -288,9 +283,6 @@ public class FileBasedServiceConfig {
      */
     public static class DeprecatedEndpointConfigCondition implements Condition {
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         public boolean matches(final ConditionContext context, final AnnotatedTypeMetadata metadata) {
             return propertiesUsed(context.getEnvironment(), "rest");

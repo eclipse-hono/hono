@@ -25,7 +25,7 @@ import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
 import org.eclipse.hono.client.registry.amqp.ProtonBasedTenantClient;
-import org.eclipse.hono.client.util.MessagingClient;
+import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.commandrouter.CacheBasedDeviceConnectionService;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterAmqpServer;
@@ -56,7 +56,6 @@ import org.eclipse.hono.service.metric.spring.PrometheusSupport;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.CommandRouterConstants;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -235,9 +234,9 @@ public class ApplicationConfig {
         final TenantClient tenantClient = tenantClient();
 
         final CommandTargetMapper commandTargetMapper = CommandTargetMapper.create(registrationClient, deviceConnectionInfo, getTracer());
-        final MessagingClient<CommandConsumerFactory> commandConsumerFactories = new MessagingClient<>();
+        final MessagingClientProvider<CommandConsumerFactory> commandConsumerFactoryProvider = new MessagingClientProvider<>();
         if (kafkaProducerConfig().isConfigured() && kafkaConsumerConfig().isConfigured()) {
-            commandConsumerFactories.setClient(MessagingType.kafka, new KafkaBasedCommandConsumerFactoryImpl(
+            commandConsumerFactoryProvider.setClient(new KafkaBasedCommandConsumerFactoryImpl(
                     vertx(),
                     tenantClient,
                     commandTargetMapper,
@@ -247,7 +246,7 @@ public class ApplicationConfig {
                     getTracer()));
         }
         if (commandConsumerFactoryConfig().isHostConfigured()) {
-            commandConsumerFactories.setClient(MessagingType.amqp, new ProtonBasedCommandConsumerFactoryImpl(
+            commandConsumerFactoryProvider.setClient(new ProtonBasedCommandConsumerFactoryImpl(
                     commandConsumerConnection(),
                     tenantClient,
                     commandTargetMapper,
@@ -258,7 +257,7 @@ public class ApplicationConfig {
                 registrationClient,
                 tenantClient,
                 deviceConnectionInfo,
-                commandConsumerFactories,
+                commandConsumerFactoryProvider,
                 getTracer());
     }
 

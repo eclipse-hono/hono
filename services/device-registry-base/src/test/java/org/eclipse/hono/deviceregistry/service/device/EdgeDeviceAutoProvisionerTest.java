@@ -32,7 +32,7 @@ import java.util.Optional;
 
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.telemetry.EventSender;
-import org.eclipse.hono.client.util.MessagingClient;
+import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.device.Device;
@@ -92,6 +92,7 @@ class EdgeDeviceAutoProvisionerTest {
         deviceManagementService = mock(DeviceManagementService.class);
 
         sender = mock(EventSender.class);
+        when(sender.getMessagingType()).thenReturn(MessagingType.amqp);
         when(sender.sendEvent(
                 any(TenantObject.class),
                 any(RegistrationAssertion.class),
@@ -104,7 +105,7 @@ class EdgeDeviceAutoProvisionerTest {
         autoProvisioner = new EdgeDeviceAutoProvisioner(
                 vertx,
                 deviceManagementService,
-                new MessagingClient<EventSender>().setClient(MessagingType.amqp, sender),
+                new MessagingClientProvider<EventSender>().setClient(sender),
                 new AutoProvisionerConfigProperties(),
                 NoopTracerFactory.create());
 

@@ -13,6 +13,7 @@
 package org.eclipse.hono.client.command;
 
 import org.eclipse.hono.util.Lifecycle;
+import org.eclipse.hono.util.MessagingClient;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
@@ -20,7 +21,7 @@ import io.vertx.core.Future;
 /**
  * A client for publishing a device's response to a command received from a downstream application.
  */
-public interface CommandResponseSender extends Lifecycle {
+public interface CommandResponseSender extends MessagingClient, Lifecycle {
 
     /**
      * Sends a device's response to a command.

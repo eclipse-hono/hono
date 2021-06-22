@@ -15,6 +15,7 @@ package org.eclipse.hono.commandrouter;
 
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.Lifecycle;
+import org.eclipse.hono.util.MessagingClient;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
@@ -22,7 +23,7 @@ import io.vertx.core.Future;
 /**
  * A factory for creating consumers of command &amp; control messages.
  */
-public interface CommandConsumerFactory extends Lifecycle {
+public interface CommandConsumerFactory extends MessagingClient, Lifecycle {
 
     /**
      * Creates a command consumer to receive commands for the given tenant.

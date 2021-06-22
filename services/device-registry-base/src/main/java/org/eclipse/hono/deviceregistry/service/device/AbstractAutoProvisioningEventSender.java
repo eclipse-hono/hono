@@ -20,7 +20,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.client.telemetry.EventSender;
-import org.eclipse.hono.client.util.MessagingClient;
+import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
@@ -50,7 +50,7 @@ public abstract class AbstractAutoProvisioningEventSender implements Lifecycle {
      */
     protected final Logger LOG = LoggerFactory.getLogger(getClass());
     protected final DeviceManagementService deviceManagementService;
-    protected final MessagingClient<EventSender> eventClients;
+    protected final MessagingClientProvider<EventSender> eventSenderProvider;
     protected final Vertx vertx;
 
     private final AtomicBoolean started = new AtomicBoolean(false);
@@ -60,19 +60,19 @@ public abstract class AbstractAutoProvisioningEventSender implements Lifecycle {
      *
      * @param vertx The vert.x instance to use.
      * @param deviceManagementService The device management service.
-     * @param eventClients The messaging clients to send auto-provisioned events.
+     * @param eventSenderProvider The provider for the messaging client to send auto-provisioned events.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public AbstractAutoProvisioningEventSender(final Vertx vertx,
             final DeviceManagementService deviceManagementService,
-            final MessagingClient<EventSender> eventClients) {
+            final MessagingClientProvider<EventSender> eventSenderProvider) {
         Objects.requireNonNull(vertx);
         Objects.requireNonNull(deviceManagementService);
-        Objects.requireNonNull(eventClients);
+        Objects.requireNonNull(eventSenderProvider);
 
         this.vertx = vertx;
         this.deviceManagementService = deviceManagementService;
-        this.eventClients = eventClients;
+        this.eventSenderProvider = eventSenderProvider;
     }
 
     /**
@@ -87,7 +87,7 @@ public abstract class AbstractAutoProvisioningEventSender implements Lifecycle {
             // decouple establishment of the sender's downstream connection from this component's
             // start-up process and instead rely on the event sender's readiness check to succeed
             // once the connection has been established
-            eventClients.start();
+            eventSenderProvider.start();
         }
         return Future.succeededFuture();
     }
@@ -101,7 +101,7 @@ public abstract class AbstractAutoProvisioningEventSender implements Lifecycle {
     public final Future<Void> stop() {
         if (started.compareAndSet(true, false)) {
             LOG.debug("shutting down");
-            return eventClients.stop();
+            return eventSenderProvider.stop();
         } else {
             return Future.succeededFuture();
         }
@@ -140,7 +140,7 @@ public abstract class AbstractAutoProvisioningEventSender implements Lifecycle {
         // TODO to remove once able to send events without providing an argument of type TenantObject
         final TenantObject tenantConfig = DeviceRegistryUtils.convertTenant(tenantId, tenant)
                 .mapTo(TenantObject.class);
-        final EventSender eventSender = eventClients.getClient(tenantConfig);
+        final EventSender eventSender = eventSenderProvider.getClient(tenantConfig);
 
         return eventSender
                 .sendEvent(tenantConfig, new RegistrationAssertion(deviceId),
