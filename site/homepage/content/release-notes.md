@@ -29,6 +29,9 @@ description = "Information about changes in recent Hono releases. Includes new f
   However, the admin guides did not cover the corresponding `HONO_REGISTRY_HTTP_MAXPAYLOADSIZE` configuration variable
   yet. The `/devices` resources have been added to the scope of the feature and the admin guides have been amended
   accordingly.
+* The protocol adapters now invoke the *set last known gateway* Command Router service operation a lot less frequently,
+  reducing the load on the Command Router component if gateways send messages on behalf of devices at a high rate.
+  The *last known gateway* entry for a device is now set with a delay of at most 400ms as part of a batch request.
 
 ### Deprecations
 
@@ -48,6 +51,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   *command*, *command-amqp*, *command-kafka*, *registry*, *registry-amqp*, *telemetry*, *telemetry-amqp* and
   *telemetry-kafka*. This allows Hono's components to define more specific dependencies on client classes
   that they require. This change should have no effect on application clients.
+* The *set last known gateway* Command Router API operation has been extended to also support setting multiple
+  values in one request.
 
 ## End of life
 
