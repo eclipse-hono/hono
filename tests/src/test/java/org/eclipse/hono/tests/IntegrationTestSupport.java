@@ -79,6 +79,7 @@ import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.Pair;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
@@ -1462,11 +1463,64 @@ public final class IntegrationTestSupport {
     }
 
     /**
+     * Verifies that a device status' auto provisioning properties have certain values.
+     *
+     * @param deviceStatus The device status object.
+     * @param expectedAutoProvisionedStatus The value to compare the auto-provisioned property to.
+     * @param expectedNotificationSentStatus The value to compare the auto-provisioning-notification-sent property to.
+     * @throws AssertionError if any of the checks fail.
+     */
+    public static void assertDeviceStatusProperties(
+            final JsonObject deviceStatus,
+            final boolean expectedAutoProvisionedStatus,
+            final boolean expectedNotificationSentStatus) {
+
+        assertThat(deviceStatus).as("device registation info contains status").isNotNull();
+        assertThat(deviceStatus.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED))
+            .as("auto-provisioned property has value %s", expectedAutoProvisionedStatus)
+            .isTrue();
+        assertThat(deviceStatus.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT))
+            .as("auto-provisioning-notification-sent property has value %s", expectedNotificationSentStatus)
+            .isTrue();
+    }
+
+    /**
+     * Creates a consumer for an expected auto-provisioning notification.
+     *
+     * @param ctx The test context to fail if the notification event does not contain all required properties.
+     * @param autoProvisionedDeviceIdentifier The promise to complete with the auto-provisioned device's identifier.
+     * @param tenantId The tenant for which the consumer should be created.
+     *
+     * @return A succeeded future if the message consumer has been created successfully.
+     */
+    public Future<Void> createAutoProvisioningNotificationConsumer(
+            final VertxTestContext ctx,
+            final Promise<String> autoProvisionedDeviceIdentifier,
+            final String tenantId) {
+
+        return applicationClient.createEventConsumer(
+                tenantId,
+                msg -> {
+                    ctx.verify(() -> {
+                        if (msg.getContentType().equals(EventConstants.CONTENT_TYPE_DEVICE_PROVISIONING_NOTIFICATION)) {
+                            assertThat(msg.getTenantId()).isEqualTo(tenantId);
+                            assertThat(getRegistrationStatus(msg)).isEqualTo(EventConstants.RegistrationStatus.NEW.name());
+                            autoProvisionedDeviceIdentifier.complete(msg.getDeviceId());
+                        }
+                    });
+                },
+                close -> {})
+            .mapEmpty();
+    }
+
+    /**
      * Create an event and a telemetry consumer which verify that at least one empty notification and at
      * least one further message, be it an event or telemetry, was received according to the specification
      * of gateway-based auto-provisioning.
      *
      * @param ctx The test context to fail if the notification event does not contain all required properties.
+     * @param provisioningNotificationReceived The promise to complete, once the provisioning notification has been
+     *                                         received.
      * @param tenantId The tenant for which the consumer should be created.
      * @param deviceId The id of the device which sent the messages.
      *
@@ -1474,6 +1528,7 @@ public final class IntegrationTestSupport {
      */
     public Future<Void> createAutoProvisioningMessageConsumers(
             final VertxTestContext ctx,
+            final Promise<Void> provisioningNotificationReceived,
             final String tenantId,
             final String deviceId) {
 
@@ -1488,6 +1543,7 @@ public final class IntegrationTestSupport {
                             assertThat(msg.getTenantId()).isEqualTo(tenantId);
                             assertThat(getRegistrationStatus(msg)).isEqualTo(EventConstants.RegistrationStatus.NEW.name());
                             messagesReceived.flag();
+                            provisioningNotificationReceived.complete();
                         } else {
                             messagesReceived.flag();
                         }

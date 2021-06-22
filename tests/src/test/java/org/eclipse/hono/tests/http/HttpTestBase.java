@@ -894,9 +894,10 @@ import io.vertx.junit5.VertxTestContext;
         final String gatewayId = helper.getRandomDeviceId(tenantId);
         final Device gateway = new Device()
                 .setAuthorities(Collections.singleton(RegistryManagementConstants.AUTHORITY_AUTO_PROVISIONING_ENABLED));
-
         final String edgeDeviceId = helper.getRandomDeviceId(tenantId);
-        helper.createAutoProvisioningMessageConsumers(ctx, tenantId, edgeDeviceId)
+        final Promise<Void> provisioningNotificationReceived = Promise.promise();
+
+        helper.createAutoProvisioningMessageConsumers(ctx, provisioningNotificationReceived, tenantId, edgeDeviceId)
                 .compose(ok -> helper.registry.addDeviceForTenant(tenantId, tenant, gatewayId, gateway, PWD))
                 .compose(ok -> {
                     final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
@@ -907,12 +908,23 @@ import io.vertx.junit5.VertxTestContext;
                     final String uri = String.format("%s/%s/%s", getEndpointUri(), tenantId, edgeDeviceId);
 
                     return httpClient.update(
-                            uri,
-                            Buffer.buffer("hello"),
-                            requestHeaders,
-                            ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED));
+                                uri,
+                                Buffer.buffer("hello"),
+                                requestHeaders,
+                                ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED));
                 })
-                .onComplete(ctx.succeeding());
+                .compose(ok -> provisioningNotificationReceived.future())
+                .compose(ok -> helper.registry.getRegistrationInfo(tenantId, edgeDeviceId))
+                .onComplete(ctx.succeeding(registrationResult -> {
+                    ctx.verify(() -> {
+                        final var info = registrationResult.bodyAsJsonObject();
+                        IntegrationTestSupport.assertDeviceStatusProperties(
+                                info.getJsonObject(RegistryManagementConstants.FIELD_STATUS),
+                                true,
+                                true);
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**

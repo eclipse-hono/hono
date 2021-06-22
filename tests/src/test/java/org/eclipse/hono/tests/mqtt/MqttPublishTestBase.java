@@ -16,11 +16,11 @@ package org.eclipse.hono.tests.mqtt;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.HttpURLConnection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -256,17 +256,29 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
 
         final String gatewayId = helper.getRandomDeviceId(tenantId);
         final Device gateway = new Device()
-                .setAuthorities(Collections.singleton(RegistryManagementConstants.AUTHORITY_AUTO_PROVISIONING_ENABLED));
-
+                .setAuthorities(Set.of(RegistryManagementConstants.AUTHORITY_AUTO_PROVISIONING_ENABLED));
         final String edgeDeviceId = helper.getRandomDeviceId(tenantId);
-        helper.createAutoProvisioningMessageConsumers(ctx, tenantId, edgeDeviceId)
+        final Promise<Void> provisioningNotificationReceived = Promise.promise();
+
+        helper.createAutoProvisioningMessageConsumers(ctx, provisioningNotificationReceived, tenantId, edgeDeviceId)
             .compose(ok -> helper.registry.addDeviceForTenant(tenantId, tenant, gatewayId, gateway, password))
             .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(gatewayId, tenantId), password))
             .compose(ok -> {
                 customizeConnectedClient();
                 return send(tenantId, edgeDeviceId, Buffer.buffer("hello".getBytes()), false, null);
             })
-            .onComplete(ctx.succeeding());
+            .compose(ok -> provisioningNotificationReceived.future())
+            .compose(ok -> helper.registry.getRegistrationInfo(tenantId, edgeDeviceId))
+            .onComplete(ctx.succeeding(registrationResult -> {
+                ctx.verify(() -> {
+                    final var info = registrationResult.bodyAsJsonObject();
+                    IntegrationTestSupport.assertDeviceStatusProperties(
+                            info.getJsonObject(RegistryManagementConstants.FIELD_STATUS),
+                            true,
+                            true);
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**

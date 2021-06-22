@@ -235,9 +235,10 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                 .setAuthorities(Collections.singleton(RegistryManagementConstants.AUTHORITY_AUTO_PROVISIONING_ENABLED));
 
         final String username = IntegrationTestSupport.getUsername(gatewayId, tenantId);
-
         final String edgeDeviceId = helper.getRandomDeviceId(tenantId);
-        helper.createAutoProvisioningMessageConsumers(ctx, tenantId, edgeDeviceId)
+        final Promise<Void> provisioningNotificationReceived = Promise.promise();
+
+        helper.createAutoProvisioningMessageConsumers(ctx, provisioningNotificationReceived, tenantId, edgeDeviceId)
                 .compose(ok -> helper.registry.addDeviceForTenant(tenantId, new Tenant(), gatewayId, gateway, DEVICE_PASSWORD))
                 .compose(ok -> connectToAdapter(username, DEVICE_PASSWORD))
                 .compose(con -> createProducer(null, ProtonQoS.AT_LEAST_ONCE))
@@ -254,7 +255,18 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
 
                     return result.future();
                 })
-                .onComplete(ctx.succeeding());
+                .compose(ok -> provisioningNotificationReceived.future())
+                .compose(ok -> helper.registry.getRegistrationInfo(tenantId, edgeDeviceId))
+                .onComplete(ctx.succeeding(registrationResult -> {
+                    ctx.verify(() -> {
+                        final var info = registrationResult.bodyAsJsonObject();
+                        IntegrationTestSupport.assertDeviceStatusProperties(
+                                info.getJsonObject(RegistryManagementConstants.FIELD_STATUS),
+                                true,
+                                true);
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**

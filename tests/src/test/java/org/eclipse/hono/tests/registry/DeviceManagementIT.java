@@ -862,8 +862,12 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
 
         // internal status is not decoded from JSON as users should not be allowed to change internal status
         final JsonObject actualDeviceStatus = actualDeviceJson.getJsonObject(RegistryManagementConstants.FIELD_STATUS);
-        assertThat(actualDeviceStatus.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED)).isFalse();
-        assertThat(actualDeviceStatus.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT)).isFalse();
+        assertThat(actualDeviceStatus.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED))
+            .as("auto-provisioned property is either not included in response or has value false")
+            .matches(b -> b == null || !b.booleanValue());
+        assertThat(actualDeviceStatus.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT))
+            .as("auto-provisioning-notification-sent property is either not included in response or has value false")
+            .matches(b -> b == null || !b.booleanValue());
 
         final Device actualDevice = actualDeviceJson.mapTo(Device.class);
         final Comparator<Instant> close = (Instant d1, Instant d2) -> d1.compareTo(d2) < 1000 ? 0 : 1;

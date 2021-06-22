@@ -31,12 +31,14 @@ import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import io.vertx.core.Promise;
 import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
@@ -114,15 +116,28 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
     public void testConnectSucceedsWithAutoProvisioning(final VertxTestContext ctx) {
         final String tenantId = helper.getRandomTenantId();
         final SelfSignedCertificate deviceCert = SelfSignedCertificate.create(UUID.randomUUID().toString());
+        final Promise<String> autoProvisionedDeviceId = Promise.promise();
 
-        helper.getCertificate(deviceCert.certificatePath())
-                .compose(cert -> {
-                    final var tenant = Tenants.createTenantForTrustAnchor(cert);
-                    tenant.getTrustedCertificateAuthorities().get(0).setAutoProvisioningEnabled(true);
-                    return helper.registry.addTenant(tenantId, tenant);
-                })
-                .compose(ok -> connectToAdapter(deviceCert))
-                .onComplete(ctx.completing());
+        helper.createAutoProvisioningNotificationConsumer(ctx, autoProvisionedDeviceId, tenantId)
+            .compose(ok -> helper.getCertificate(deviceCert.certificatePath()))
+            .compose(cert -> {
+                final var tenant = Tenants.createTenantForTrustAnchor(cert);
+                tenant.getTrustedCertificateAuthorities().get(0).setAutoProvisioningEnabled(true);
+                return helper.registry.addTenant(tenantId, tenant);
+            })
+            .compose(ok -> connectToAdapter(deviceCert))
+            .compose(ok -> autoProvisionedDeviceId.future())
+            .compose(deviceId -> helper.registry.getRegistrationInfo(tenantId, deviceId))
+            .onComplete(ctx.succeeding(registrationResult -> {
+                ctx.verify(() -> {
+                    final var info = registrationResult.bodyAsJsonObject();
+                    IntegrationTestSupport.assertDeviceStatusProperties(
+                            info.getJsonObject(RegistryManagementConstants.FIELD_STATUS),
+                            true,
+                            true);
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**

@@ -67,13 +67,7 @@ public class TelemetryMqttQoS0IT extends MqttPublishTestBase {
                     getQos(),
                     false, // is duplicate
                     false, // is retained
-                    sendAttempt -> {
-                        if (sendAttempt.succeeded()) {
-                            result.complete(sendAttempt.result());
-                        } else {
-                            result.fail(sendAttempt.cause());
-                        }
-                    });
+                    result);
         });
         return result.future();
     }
