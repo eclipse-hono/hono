@@ -1467,21 +1467,22 @@ public final class IntegrationTestSupport {
      *
      * @param deviceStatus The device status object.
      * @param expectedAutoProvisionedStatus The value to compare the auto-provisioned property to.
-     * @param expectedNotificationSentStatus The value to compare the auto-provisioning-notification-sent property to.
      * @throws AssertionError if any of the checks fail.
      */
     public static void assertDeviceStatusProperties(
             final JsonObject deviceStatus,
-            final boolean expectedAutoProvisionedStatus,
-            final boolean expectedNotificationSentStatus) {
+            final boolean expectedAutoProvisionedStatus) {
 
         assertThat(deviceStatus).as("device registation info contains status").isNotNull();
-        assertThat(deviceStatus.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED))
-            .as("auto-provisioned property has value %s", expectedAutoProvisionedStatus)
-            .isTrue();
-        assertThat(deviceStatus.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT))
-            .as("auto-provisioning-notification-sent property has value %s", expectedNotificationSentStatus)
-            .isTrue();
+        if (expectedAutoProvisionedStatus) {
+            assertThat(deviceStatus.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED))
+                .as("auto-provisioned property has value true")
+                .isTrue();
+        } else {
+            assertThat(deviceStatus.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED))
+            .as("auto-provisioned property is either missing or has value false")
+            .matches(b -> b == null || !b.booleanValue());
+        }
     }
 
     /**

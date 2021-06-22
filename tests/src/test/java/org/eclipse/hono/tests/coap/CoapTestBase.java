@@ -537,7 +537,6 @@ public abstract class CoapTestBase {
                         final var info = registrationResult.bodyAsJsonObject();
                         IntegrationTestSupport.assertDeviceStatusProperties(
                                 info.getJsonObject(RegistryManagementConstants.FIELD_STATUS),
-                                true,
                                 true);
                     });
                     ctx.completeNow();

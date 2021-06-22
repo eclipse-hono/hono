@@ -274,7 +274,6 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
                     final var info = registrationResult.bodyAsJsonObject();
                     IntegrationTestSupport.assertDeviceStatusProperties(
                             info.getJsonObject(RegistryManagementConstants.FIELD_STATUS),
-                            true,
                             true);
                 });
                 ctx.completeNow();

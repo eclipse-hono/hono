@@ -920,7 +920,6 @@ import io.vertx.junit5.VertxTestContext;
                         final var info = registrationResult.bodyAsJsonObject();
                         IntegrationTestSupport.assertDeviceStatusProperties(
                                 info.getJsonObject(RegistryManagementConstants.FIELD_STATUS),
-                                true,
                                 true);
                     });
                     ctx.completeNow();
