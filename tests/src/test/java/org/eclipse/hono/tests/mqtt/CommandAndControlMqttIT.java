@@ -485,6 +485,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                     ctx.failNow(new IllegalStateException("should not have received command"));
                 }, endpointConfig, MqttQoS.AT_MOST_ONCE))
                 .compose(ok -> helper.createGenericKafkaSender().onSuccess(kafkaSenderRef::set).mapEmpty())
+                .compose(ok -> kafkaAsyncErrorResponseConsumer)
                 .onComplete(setup.succeeding(v -> ready.flag()));
 
         assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
