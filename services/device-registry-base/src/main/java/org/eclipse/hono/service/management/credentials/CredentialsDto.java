@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.deviceregistry.mongodb.model;
+package org.eclipse.hono.service.management.credentials;
 
 import java.net.HttpURLConnection;
 import java.time.Instant;
@@ -23,7 +23,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.management.BaseDto;
-import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -69,7 +68,7 @@ public final class CredentialsDto extends BaseDto<List<CommonCredential>> {
      *
      * @return The DTO.
      *
-     * @throws NullPointerException if tenant ID or device ID are {@code null}.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      * @throws ClientErrorException if any of the credentials checks fail.
      */
     public static CredentialsDto forCreation(
@@ -89,6 +88,42 @@ public final class CredentialsDto extends BaseDto<List<CommonCredential>> {
     }
 
     /**
+     * Creates a DTO for credentials read from the persistent store.
+     *
+     * @param tenantId The identifier of the tenant that the device belongs to.
+     * @param deviceId The identifier of the device that the credentials belong to.
+     * @param credentials The list of credentials from the store.
+     * @param created The point in time when the credentials were created initially in the store (may be {@code null}).
+     * @param updated The point in time when the credentials were updated most recently in the store (may be {@code null}).
+     * @param version The resource version of the credentials in the store.
+     *
+     * @return The DTO.
+     * @throws NullPointerException if tenant ID, device ID or credentials are {@code null}.
+     */
+    public static CredentialsDto forRead(
+            final String tenantId,
+            final String deviceId,
+            final List<CommonCredential> credentials,
+            final Instant created,
+            final Instant updated,
+            final String version) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+
+        final CredentialsDto credentialsDto = BaseDto.forRead(
+                CredentialsDto::new,
+                credentials,
+                created,
+                updated,
+                version);
+        credentialsDto.setTenantId(tenantId);
+        credentialsDto.setDeviceId(deviceId);
+
+        return credentialsDto;
+    }
+
+    /**
      * Creates a DTO for updating credentials.
      * <p>
      * This method also makes sure that the identifiers of the credentials'
@@ -100,7 +135,7 @@ public final class CredentialsDto extends BaseDto<List<CommonCredential>> {
      * @param version The resource version of the object in the store to be updated.
      *
      * @return The DTO.
-     * @throws NullPointerException if tenant ID or device ID are {@code null}.
+     * @throws NullPointerException if tenant ID, device ID or credentials are {@code null}.
      * @throws ClientErrorException if any of the credentials checks fail.
      */
     public static CredentialsDto forUpdate(
@@ -177,6 +212,12 @@ public final class CredentialsDto extends BaseDto<List<CommonCredential>> {
         super.setData(data);
     }
 
+    @Override
+    @JsonProperty(FIELD_CREDENTIALS)
+    public List<CommonCredential> getData() {
+        return super.getData();
+    }
+
     /**
      * Checks if the secrets contained in this DTO need to be merged with
      * existing credentials.
@@ -201,25 +242,30 @@ public final class CredentialsDto extends BaseDto<List<CommonCredential>> {
     }
 
     /**
-     * Merges the secrets of the given credential DTO with that of the current one.
+     * Merges the secrets of the given credential DTO with those of this one.
      *
-     * @param otherCredentialsDto The credential DTO to be merged.
-     * @return  a reference to this for fluent use.
+     * @param otherCredentialsDto The DTO to be merged into this one.
+     * @return A reference to this for fluent use.
      * @throws NullPointerException if the given credentials DTO is {@code null}.
+     * @throws IllegalArgumentException if the given credentials DTO does not contain any credentials
      */
     @JsonIgnore
     public CredentialsDto merge(final CredentialsDto otherCredentialsDto) {
         Objects.requireNonNull(otherCredentialsDto);
 
-        Optional.ofNullable(otherCredentialsDto.getCredentials())
-                .ifPresent(credentialsToMerge -> this.getData()
-                        .forEach(credential -> findCredentialByIdAndType(credential.getAuthId(), credential.getType(),
-                                credentialsToMerge)
-                                        .ifPresent(credential::merge)));
+        final var credentialsToMerge = otherCredentialsDto.getCredentials();
+        if (credentialsToMerge == null || credentialsToMerge.isEmpty()) {
+            throw new IllegalArgumentException("DTO does not contain any credentials");
+        } else {
+            this.getData().forEach(credential -> findCredentialByIdAndType(
+                    credential.getAuthId(),
+                    credential.getType(),
+                    credentialsToMerge).ifPresent(credential::merge));
 
-        setUpdatedOn(Instant.now());
+            setUpdatedOn(Instant.now());
+            return this;
+        }
 
-        return this;
     }
 
     @JsonIgnore
@@ -231,11 +277,5 @@ public final class CredentialsDto extends BaseDto<List<CommonCredential>> {
         return credentials.stream()
                 .filter(credential -> authId.equals(credential.getAuthId()) && authType.equals(credential.getType()))
                 .findFirst();
-    }
-
-    @Override
-    @JsonProperty(FIELD_CREDENTIALS)
-    public List<CommonCredential> getData() {
-        return super.getData();
     }
 }

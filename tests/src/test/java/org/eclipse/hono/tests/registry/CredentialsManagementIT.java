@@ -105,11 +105,9 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
         resourceVersion = new AtomicReference<>();
         hashedPasswordCredential = IntegrationTestSupport.createPasswordCredential(authId, ORIG_BCRYPT_PWD);
         pskCredentials = IntegrationTestSupport.createPskCredentials(authId, "secret");
-        registry
-                .addTenant(tenantId)
-                .flatMap(x -> registry.registerDevice(tenantId, deviceId))
-                .onComplete(ctx.completing());
-
+        registry.addTenant(tenantId)
+            .compose(response -> registry.registerDevice(tenantId, deviceId))
+            .onComplete(ctx.completing());
     }
 
     private static void assertResourceVersionHasChanged(final AtomicReference<String> originalVersion, final MultiMap responseHeaders) {
@@ -356,6 +354,27 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
                 context,
                 new JsonArray().add(credentials),
                 HttpURLConnection.HTTP_BAD_REQUEST);
+    }
+
+    /**
+     * Verifies that the service rejects a request to update an empty set of credentials with
+     * hashed-password credentials containing a secret that has an ID.
+     *
+     * @param context The vert.x test context.
+     */
+    @Test
+    public void testAddCredentialsFailsForSecretWithId(final VertxTestContext context) {
+
+        // GIVEN a device with an empty set of credentials
+        // WHEN trying to add password credentials with a secret that has an ID
+        final var secretWithId = new JsonObject().put(RegistryManagementConstants.FIELD_ID, "secret-one");
+
+        final var payload = new JsonArray().add(new JsonObject()
+                .put(RegistryManagementConstants.FIELD_TYPE, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD)
+                .put(RegistryManagementConstants.FIELD_AUTH_ID, "bumlux")
+                .put(RegistryManagementConstants.FIELD_SECRETS, new JsonArray().add(secretWithId)));
+
+        testAddCredentialsWithErroneousPayload(context, payload, HttpURLConnection.HTTP_BAD_REQUEST);
     }
 
     private void testAddCredentialsWithErroneousPayload(

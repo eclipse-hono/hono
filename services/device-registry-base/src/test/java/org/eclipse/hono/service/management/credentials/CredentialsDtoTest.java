@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.deviceregistry.mongodb.model;
+package org.eclipse.hono.service.management.credentials;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.management.credentials.Credentials;
+import org.eclipse.hono.service.management.credentials.CredentialsDto;
 import org.eclipse.hono.service.management.credentials.PskCredential;
 import org.eclipse.hono.service.management.credentials.PskSecret;
 import org.junit.jupiter.api.BeforeEach;

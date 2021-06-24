@@ -475,6 +475,7 @@ public final class FileBasedCredentialsService extends AbstractCredentialsManage
 
         for (final CommonCredential credential : updatedCredentials) {
 
+            final boolean credentialRequiresMerging = credential.getSecrets().stream().anyMatch(s -> s.getId() != null);
             final JsonObject credentialObject = JsonObject.mapFrom(credential);
             credentialObject.put(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
 
@@ -527,6 +528,10 @@ public final class FileBasedCredentialsService extends AbstractCredentialsManage
                     }
                 }
 
+            } else if (credentialRequiresMerging) {
+                LOG.debug("credentials [type: {}] require merging but no credentials of matching type are on record",
+                        type);
+                return OperationResult.empty(HttpURLConnection.HTTP_BAD_REQUEST);
             }
 
             // make sure every secret has or gets a unique ID
@@ -551,6 +556,11 @@ public final class FileBasedCredentialsService extends AbstractCredentialsManage
         final String newVersion = DeviceRegistryUtils.getUniqueIdentifier();
         setResourceVersion(tenantId, deviceId, newVersion);
         return OperationResult.ok(HttpURLConnection.HTTP_NO_CONTENT, null, Optional.empty(), Optional.of(newVersion));
+    }
+
+    private boolean requiresMerging(final CommonCredential credential) {
+        return credential.getSecrets().stream()
+                .anyMatch(s -> s.getId() != null);
     }
 
     private boolean hasUniqueSecretIds(final JsonObject credentialObject) {
