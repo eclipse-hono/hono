@@ -22,7 +22,8 @@ hono:
     amqpHostname: hono-internal
     keyPath: /etc/hono/certs/http-adapter-key.pem
     certPath: /etc/hono/certs/http-adapter-cert.pem
-    trustStorePath: /etc/hono/certs/trusted-certs.pem
+    trustStorePath: /etc/hono/certs/trustStore.jks
+    trustStorePassword: "file:/etc/hono/certs/trust-store-password"
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
@@ -69,7 +70,8 @@ hono:
     amqpHostname: hono-internal
     keyPath: /etc/hono/certs/http-adapter-key.pem
     certPath: /etc/hono/certs/http-adapter-cert.pem
-    trustStorePath: /etc/hono/certs/trusted-certs.pem
+    trustStorePath: /etc/hono/certs/trustStore.jks
+    trustStorePassword: "file:/etc/hono/certs/trust-store-password"
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}

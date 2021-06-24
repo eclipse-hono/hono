@@ -13,12 +13,19 @@
 
 package org.eclipse.hono.config;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.PortConfigurationHelper;
@@ -38,6 +45,11 @@ import io.vertx.core.net.TrustOptions;
  *
  */
 public abstract class AbstractConfig {
+
+    /**
+     * The prefix indicating a file path.
+     */
+    public static final String PREFIX_FILE = "file:";
 
     /**
      *  A logger to be shared with subclasses.
@@ -92,6 +104,45 @@ public abstract class AbstractConfig {
     }
 
     /**
+     * Gets the password represented by a property value.
+     * <p>
+     * This method determines the password as follows:
+     * <ol>
+     * <li>If the given value does not start with {@value #PREFIX_FILE}, then the password is the given value.</li>
+     * <li>Otherwise the password is the UTF-8 encoded string represented by the first line read from the
+     * file indicated by the property's value after the {@value #PREFIX_FILE} prefix.</li>
+     * </ol>
+     *
+     * @param purpose A (very) short description of the context in which the password is being used.
+     * @param value The property value to determine the password from.
+     * @return The password.
+     */
+    protected final String getPassword(final String purpose, final String value) {
+
+        Objects.requireNonNull(purpose);
+        Objects.requireNonNull(value);
+
+        if (!value.startsWith(PREFIX_FILE)) {
+            return value;
+        }
+
+        final String fsPath = value.substring(PREFIX_FILE.length());
+        final File file = new File(fsPath);
+        if (!file.exists()) {
+            LOG.warn("cannot read {} password, file [{}] does not exist", purpose, fsPath);
+            return null;
+        }
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
+            LOG.debug("reading {} password from [{}]", purpose, fsPath);
+            return reader.readLine();
+        } catch (IOException e) {
+            LOG.warn("could not read {} password from file [{}]", purpose, fsPath, e);
+            return null;
+        }
+    }
+
+    /**
      * Checks if a given port number is valid.
      *
      * @param port The port number.
@@ -123,7 +174,7 @@ public abstract class AbstractConfig {
     }
 
     /**
-     * Gets the path to the PKCS12 key store to load certificates of trusted CAs from.
+     * Gets the path to the key store to load certificates of trusted CAs from.
      *
      * @return The absolute path to the key store or {@code null} if not set.
      */
@@ -132,7 +183,7 @@ public abstract class AbstractConfig {
     }
 
     /**
-     * Sets the path to the PKCS12 key store to load certificates of trusted CAs from.
+     * Sets the path to the key store to load certificates of trusted CAs from.
      *
      * @param trustStorePath The absolute path to the key store.
      */
@@ -141,17 +192,26 @@ public abstract class AbstractConfig {
     }
 
     /**
-     * Gets the password for accessing the PKCS12 key store containing the certificates of trusted CAs.
+     * Gets the password for accessing the key store containing the certificates of trusted CAs.
      *
      * @return The password or {@code null} if no password is set.
      * @see #getTrustStorePath()
+     * @see #setTrustStorePassword(String)
      */
     public final String getTrustStorePassword() {
+        this.trustStorePassword = Optional.ofNullable(trustStorePassword)
+                .map(v -> getPassword("trust store", v))
+                .orElse(null);
         return trustStorePassword;
     }
 
     /**
-     * Sets the password for accessing the PKCS12 key store containing the certificates of trusted CAs.
+     * Sets the password for accessing the key store containing the certificates of trusted CAs.
+     * <p>
+     * The password can be set either explicitly or implicitly by specifying the path to a file from where the
+     * password will be read. In the latter case, the value to set is the (absolute) path to the file prefixed
+     * by {@value #PREFIX_FILE}. To read the password from file <em>/etc/hono/password</em>, this property
+     * would need to be set to value {@code file:/etc/hono/password}.
      *
      * @param trustStorePassword The password to set.
      * @see #setTrustStorePath(String)
@@ -218,7 +278,7 @@ public abstract class AbstractConfig {
     }
 
     /**
-     * Gets the absolute path to the PKCS12 key store containing the private key
+     * Gets the absolute path to the key store containing the private key
      * and certificate chain that will be used for authentication to peers.
      *
      * @return The path or {@code null} if no path has been set.
@@ -228,7 +288,7 @@ public abstract class AbstractConfig {
     }
 
     /**
-     * Sets the absolute path to the PKCS12 key store containing the private key and certificate chain that should be
+     * Sets the absolute path to the key store containing the private key and certificate chain that should be
      * used for authentication to peers.
      *
      * @param keyStorePath The path.
@@ -238,18 +298,27 @@ public abstract class AbstractConfig {
     }
 
     /**
-     * Gets the password for the PKCS12 key store containing the private key and certificate chain that should be used
+     * Gets the password for the key store containing the private key and certificate chain that should be used
      * for authentication to peers.
      *
      * @return The password or {@code null} if no password has been set.
+     * @see #setKeyStorePassword(String)
      */
     public final String getKeyStorePassword() {
+        this.keyStorePassword = Optional.ofNullable(keyStorePassword)
+                .map(v -> getPassword("key store", v))
+                .orElse(null);
         return keyStorePassword;
     }
 
     /**
-     * Sets the password for the PKCS12 key store containing the private key and certificate chain that should be used
+     * Sets the password for the key store containing the private key and certificate chain that should be used
      * for authentication to peers.
+     * <p>
+     * The password can be set either explicitly or implicitly by specifying the path to a file from where the
+     * password will be read. In the latter case, the value to set is the (absolute) path to the file prefixed
+     * by {@value #PREFIX_FILE}. To read the password from file <em>/etc/hono/password</em>, this property
+     * would need to be set to value {@code file:/etc/hono/password}.
      *
      * @param keyStorePassword The password.
      */

@@ -192,6 +192,30 @@ public class AbstractConfigTest {
         assertThat(newConfig.getTrustStorePath()).isEqualTo("truststore/path");
     }
 
+    /**
+     * Verifies that the password for accessing the key store can be read from a file.
+     */
+    @Test
+    public void testGetKeyStorePasswordReadsPasswordFromFile() {
+        cfg.setKeyStorePassword("file:target/test-classes/test-password-file");
+        assertThat(cfg.getKeyStorePassword()).isEqualTo("test-password");
+
+        cfg.setKeyStorePassword("file:/non-existing-file");
+        assertThat(cfg.getKeyStorePassword()).isNull();
+    }
+
+    /**
+     * Verifies that the password for accessing the key store can be read from a file.
+     */
+    @Test
+    public void testGetTrustStorePasswordReadsPasswordFromFile() {
+        cfg.setTrustStorePassword("file:target/test-classes/test-password-file");
+        assertThat(cfg.getTrustStorePassword()).isEqualTo("test-password");
+
+        cfg.setTrustStorePassword("file:/non-existing-file");
+        assertThat(cfg.getTrustStorePassword()).isNull();
+    }
+
     private static class TestConfig extends AbstractConfig {
         private TestConfig() {
             super();
