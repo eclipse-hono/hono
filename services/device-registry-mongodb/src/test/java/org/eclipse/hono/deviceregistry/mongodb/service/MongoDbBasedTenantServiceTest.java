@@ -15,6 +15,7 @@ package org.eclipse.hono.deviceregistry.mongodb.service;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedTenantsConfigProperties;
+import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedTenantDao;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.service.tenant.AbstractTenantServiceTest;
 import org.eclipse.hono.service.tenant.TenantService;
@@ -29,26 +30,25 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.mongo.MongoClient;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
 /**
- * Tests for {@link MongoDbBasedTenantService}.
+ * Tests for {@link MongoDbBasedTenantService} and {@link MongoDbBasedTenantManagementService}.
  */
 @ExtendWith(VertxExtension.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+@Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 class MongoDbBasedTenantServiceTest implements AbstractTenantServiceTest {
 
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedTenantServiceTest.class);
 
     private final MongoDbBasedTenantsConfigProperties config = new MongoDbBasedTenantsConfigProperties();
     private MongoDbBasedTenantService tenantService;
+    private MongoDbBasedTenantManagementService tenantManagementService;
+    private MongoDbBasedTenantDao dao;
     private Vertx vertx;
-    private MongoClient mongoClient;
 
     /**
      * Starts up the service.
@@ -59,12 +59,10 @@ class MongoDbBasedTenantServiceTest implements AbstractTenantServiceTest {
     public void startService(final VertxTestContext testContext) {
 
         vertx = Vertx.vertx();
-        mongoClient = MongoDbTestUtils.getMongoClient(vertx, "hono-tenants-test");
-        tenantService = new MongoDbBasedTenantService(
-                vertx,
-                mongoClient,
-                config);
-        tenantService.createIndices().onComplete(testContext.completing());
+        dao = MongoDbTestUtils.getTenantDao(vertx, "hono-tenants-test");
+        tenantService = new MongoDbBasedTenantService(dao, config);
+        tenantManagementService = new MongoDbBasedTenantManagementService(dao, config);
+        dao.createIndices().onComplete(testContext.completing());
     }
 
     /**
@@ -84,25 +82,15 @@ class MongoDbBasedTenantServiceTest implements AbstractTenantServiceTest {
      */
     @AfterEach
     public void cleanCollection(final VertxTestContext testContext) {
-        mongoClient.removeDocuments(
-                config.getCollectionName(),
-                new JsonObject(),
-                testContext.completing());
+        dao.deleteAllFromCollection().onComplete(testContext.completing());
     }
 
     /**
-     * Cleans up fixture.
-     *
-     * @param testContext The test context to use for running asynchronous tests.
+     * Releases the connection to the Mongo DB.
      */
     @AfterAll
-    public void finishTest(final VertxTestContext testContext) {
-
-        mongoClient.close();
-        tenantService.stop()
-            .onComplete(s -> {
-                vertx.close(testContext.completing());
-            });
+    public void closeDao() {
+        dao.close();
     }
 
     @Override
@@ -112,6 +100,6 @@ class MongoDbBasedTenantServiceTest implements AbstractTenantServiceTest {
 
     @Override
     public TenantManagementService getTenantManagementService() {
-        return tenantService;
+        return tenantManagementService;
     }
 }

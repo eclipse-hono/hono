@@ -14,295 +14,45 @@
 package org.eclipse.hono.deviceregistry.mongodb.service;
 
 import java.net.HttpURLConnection;
-import java.util.ArrayList;
-import java.util.ConcurrentModificationException;
-import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
 import javax.security.auth.x500.X500Principal;
 
-import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedTenantsConfigProperties;
-import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbCallExecutor;
-import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDeviceRegistryUtils;
-import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDocumentBuilder;
-import org.eclipse.hono.deviceregistry.service.tenant.AbstractTenantManagementService;
+import org.eclipse.hono.deviceregistry.mongodb.model.TenantDao;
+import org.eclipse.hono.deviceregistry.service.tenant.AbstractTenantService;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
-import org.eclipse.hono.deviceregistry.util.Versioned;
-import org.eclipse.hono.service.HealthCheckProvider;
-import org.eclipse.hono.service.management.Filter;
-import org.eclipse.hono.service.management.Id;
-import org.eclipse.hono.service.management.OperationResult;
-import org.eclipse.hono.service.management.Result;
-import org.eclipse.hono.service.management.SearchResult;
-import org.eclipse.hono.service.management.Sort;
-import org.eclipse.hono.service.management.tenant.Tenant;
-import org.eclipse.hono.service.management.tenant.TenantDto;
-import org.eclipse.hono.service.management.tenant.TenantManagementService;
-import org.eclipse.hono.service.management.tenant.TenantWithId;
-import org.eclipse.hono.service.tenant.TenantService;
-import org.eclipse.hono.tracing.TracingHelper;
-import org.eclipse.hono.util.Lifecycle;
-import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantResult;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
-import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.healthchecks.HealthCheckHandler;
-import io.vertx.ext.healthchecks.Status;
-import io.vertx.ext.mongo.FindOptions;
-import io.vertx.ext.mongo.IndexOptions;
-import io.vertx.ext.mongo.MongoClient;
-import io.vertx.ext.mongo.UpdateOptions;
 
 /**
- * An implementation of the tenant service and the tenant management service
- * that uses a mongodb database to store tenants.
- * <p>
- * On startup this adapter tries to find the tenant collection, if not found, it gets created.
- *
- * @see <a href="https://www.eclipse.org/hono/docs/api/tenant/">Tenant API</a>
- * @see <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>
+ * A Tenant service implementation that retrieves tenant data from a MongoDB.
  */
-public final class MongoDbBasedTenantService extends AbstractTenantManagementService
-        implements TenantService, TenantManagementService, Lifecycle, HealthCheckProvider {
+public final class MongoDbBasedTenantService extends AbstractTenantService {
 
-    private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedTenantService.class);
-
-    private final MongoClient mongoClient;
-    private final MongoDbCallExecutor mongoDbCallExecutor;
+    private final TenantDao dao;
     private final MongoDbBasedTenantsConfigProperties config;
-    private final AtomicBoolean creatingIndices = new AtomicBoolean(false);
-    private final AtomicBoolean indicesCreated = new AtomicBoolean(false);
 
     /**
-     * Creates a new service for configuration properties.
+     * Creates a new service for a data access object.
      *
-     * @param vertx The vert.x instance to run on.
-     * @param mongoClient The client for accessing the Mongo DB instance.
+     * @param tenantDao The data access object to use for accessing data in the MongoDB.
      * @param config The properties for configuring this service.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public MongoDbBasedTenantService(
-            final Vertx vertx,
-            final MongoClient mongoClient,
+            final TenantDao tenantDao,
             final MongoDbBasedTenantsConfigProperties config) {
 
-        Objects.requireNonNull(vertx);
-        Objects.requireNonNull(mongoClient);
+        Objects.requireNonNull(tenantDao);
         Objects.requireNonNull(config);
 
-        this.mongoClient = mongoClient;
-        this.mongoDbCallExecutor = new MongoDbCallExecutor(vertx, mongoClient);
-        this.config = Objects.requireNonNull(config);
-    }
-
-    Future<Void> createIndices() {
-        if (creatingIndices.compareAndSet(false, true)) {
-            // create unique index on tenant ID
-            return mongoDbCallExecutor.createIndex(
-                    config.getCollectionName(),
-                    new JsonObject().put(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, 1),
-                    new IndexOptions().unique(true))
-                // create unique index on tenant.trusted-ca.subject-dn
-                // to ensure that two tenants never share a trusted-ca
-                .compose(ok -> mongoDbCallExecutor.createIndex(
-                        config.getCollectionName(),
-                        new JsonObject().put(RegistryManagementConstants.FIELD_TENANT + "." +
-                                RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA + "." +
-                                RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN, 1),
-                        new IndexOptions().unique(true)
-                                .partialFilterExpression(new JsonObject().put(
-                                        RegistryManagementConstants.FIELD_TENANT + "." +
-                                                RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA,
-                                        new JsonObject().put("$exists", true)))))
-                .onSuccess(ok -> indicesCreated.set(true))
-                .onComplete(r -> creatingIndices.set(false));
-        } else {
-            return Future.failedFuture(new ConcurrentModificationException("already trying to create indices"));
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     * <p>
-     * Registers a check that, when invoked, verifies that Tenant collection related indices have been
-     * created and, if not, triggers the creation of the indices (again).
-     */
-    @Override
-    public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
-        readinessHandler.register(
-                "tenants-indices-created-" + UUID.randomUUID(),
-                status -> {
-                    if (indicesCreated.get()) {
-                        status.tryComplete(Status.OK());
-                    } else {
-                        LOG.debug("tenants-indices not (yet) created");
-                        status.tryComplete(Status.KO());
-                        createIndices();
-                    }
-                });
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
-        // nothing to register
-    }
-
-    @Override
-    public Future<Void> start() {
-
-        createIndices();
-        LOG.info("MongoDB Tenant service started");
-        return Future.succeededFuture();
-    }
-
-    @Override
-    public Future<Void>  stop() {
-        this.mongoClient.close();
-        return Future.succeededFuture();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Future<OperationResult<Void>> processUpdateTenant(
-            final String tenantId,
-            final Tenant tenantObj,
-            final Optional<String> resourceVersion,
-            final Span span) {
-
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(tenantObj);
-        Objects.requireNonNull(resourceVersion);
-        Objects.requireNonNull(span);
-
-        return modifyTenant(tenantId, tenantObj, resourceVersion, span)
-                .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
-    }
-
-    private Future<OperationResult<Void>> modifyTenant(
-            final String tenantId,
-            final Tenant newTenant,
-            final Optional<String> resourceVersion,
-            final Span span) {
-
-        final JsonObject updateTenantQuery = MongoDbDocumentBuilder.builder()
-                .withVersion(resourceVersion)
-                .withTenantId(tenantId)
-                .document();
-
-        final Promise<JsonObject> updateTenantPromise = Promise.promise();
-        final TenantDto newTenantDto = TenantDto.forUpdate(tenantId, newTenant, new Versioned<>(newTenant).getVersion());
-        mongoClient.findOneAndReplaceWithOptions(config.getCollectionName(), updateTenantQuery,
-                JsonObject.mapFrom(newTenantDto), new FindOptions(), new UpdateOptions().setReturningNewDocument(true),
-                updateTenantPromise);
-
-        return updateTenantPromise.future()
-                .compose(updateResult -> Optional.ofNullable(updateResult)
-                        .map(updated -> {
-                            span.log("successfully updated tenant");
-                            return Future.succeededFuture(OperationResult.ok(
-                                    HttpURLConnection.HTTP_NO_CONTENT,
-                                    (Void) null,
-                                    Optional.empty(),
-                                    Optional.of(updateResult.getString(TenantDto.FIELD_VERSION))));
-                        })
-                        .orElseGet(() -> MongoDbDeviceRegistryUtils.checkForVersionMismatchAndFail(
-                                tenantId, resourceVersion, findTenant(tenantId)))
-                )
-                .recover(error -> {
-                    if (MongoDbDeviceRegistryUtils.isDuplicateKeyError(error)) {
-                        LOG.debug(
-                                "conflict updating tenant [{}]. An existing tenant uses a certificate authority with the same Subject DN",
-                                tenantId,
-                                error);
-                        TracingHelper.logError(span,
-                                "an existing tenant uses a certificate authority with the same Subject DN", error);
-                        return Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_CONFLICT));
-                    }
-                    return Future.failedFuture(error);
-                });
-    }
-
-    @Override
-    public Future<Result<Void>> deleteTenant(final String tenantId, final Optional<String> resourceVersion,
-            final Span span) {
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(resourceVersion);
-        Objects.requireNonNull(span);
-
-        return processDeleteTenant(tenantId, resourceVersion, span)
-                .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
-    }
-
-    private Future<Result<Void>> processDeleteTenant(final String tenantId, final Optional<String> resourceVersion,
-            final Span span) {
-
-        final JsonObject deleteTenantQuery = MongoDbDocumentBuilder.builder()
-                .withVersion(resourceVersion)
-                .withTenantId(tenantId)
-                .document();
-
-        final Promise<JsonObject> deleteTenantPromise = Promise.promise();
-        mongoClient.findOneAndDelete(config.getCollectionName(), deleteTenantQuery, deleteTenantPromise);
-        return deleteTenantPromise.future()
-                .compose(tenantDtoResult -> Optional.ofNullable(tenantDtoResult)
-                        .map(deleted -> {
-                            span.log("successfully deleted tenant");
-                            return Future.succeededFuture(Result.<Void> from(HttpURLConnection.HTTP_NO_CONTENT));
-                        })
-                        .orElseGet(() -> MongoDbDeviceRegistryUtils.checkForVersionMismatchAndFail(tenantId,
-                                resourceVersion, findTenant(tenantId))));
-    }
-
-    @Override
-    public Future<OperationResult<SearchResult<TenantWithId>>> searchTenants(
-            final int pageSize,
-            final int pageOffset,
-            final List<Filter> filters,
-            final List<Sort> sortOptions,
-            final Span span) {
-
-        Objects.requireNonNull(filters);
-        Objects.requireNonNull(sortOptions);
-        Objects.requireNonNull(span);
-
-        final JsonObject filterDocument = MongoDbDocumentBuilder.builder()
-                .withTenantFilters(filters)
-                .document();
-        final JsonObject sortDocument = MongoDbDocumentBuilder.builder()
-                .withTenantSortOptions(sortOptions)
-                .document();
-
-        return MongoDbDeviceRegistryUtils.processSearchResource(
-                mongoClient,
-                config.getCollectionName(),
-                pageSize,
-                pageOffset,
-                filterDocument,
-                sortDocument,
-                MongoDbBasedTenantService::getTenantsWithId)
-                .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
-    }
-
-    @Override
-    public Future<TenantResult<JsonObject>> get(final String tenantId) {
-        return get(tenantId, NoopSpan.INSTANCE);
+        this.dao = tenantDao;
+        this.config = config;
     }
 
     @Override
@@ -310,23 +60,12 @@ public final class MongoDbBasedTenantService extends AbstractTenantManagementSer
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(span);
 
-        return readTenant(tenantId, span)
-                .compose(tenantDtoResult -> {
-                    if (tenantDtoResult.getStatus() != HttpURLConnection.HTTP_OK) {
-                        TracingHelper.logError(span, "tenant not found");
-                        return Future.succeededFuture(TenantResult.from(HttpURLConnection.HTTP_NOT_FOUND));
-                    }
-                    return Future.succeededFuture(TenantResult.from(
+        return dao.getById(tenantId, span.context())
+                .map(tenantDto -> TenantResult.from(
                             HttpURLConnection.HTTP_OK,
-                            DeviceRegistryUtils
-                                    .convertTenant(tenantId, tenantDtoResult.getPayload(), true),
-                            DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge())));
-                });
-    }
-
-    @Override
-    public Future<TenantResult<JsonObject>> get(final X500Principal subjectDn) {
-        return get(subjectDn, NoopSpan.INSTANCE);
+                            DeviceRegistryUtils.convertTenant(tenantId, tenantDto.getData(), true),
+                            DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge())))
+                .otherwise(t -> TenantResult.from(ServiceInvocationException.extractStatusCode(t)));
     }
 
     @Override
@@ -334,168 +73,11 @@ public final class MongoDbBasedTenantService extends AbstractTenantManagementSer
         Objects.requireNonNull(subjectDn);
         Objects.requireNonNull(span);
 
-        return findTenant(subjectDn)
-                .compose(tenantDtoResult -> Future.succeededFuture(TenantResult.from(
+        return dao.getBySubjectDn(subjectDn, span.context())
+            .map(tenantDto -> TenantResult.from(
                         HttpURLConnection.HTTP_OK,
-                        DeviceRegistryUtils.convertTenant(tenantDtoResult.getTenantId(),
-                                                          tenantDtoResult.getData(), true),
-                        DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge()))))
-                .recover(error -> {
-                    TracingHelper.logError(span, "no tenant found for subject DN", error);
-                    return Future.succeededFuture(TenantResult.from(HttpURLConnection.HTTP_NOT_FOUND));
-                });
-    }
-
-    @Override
-    public Future<OperationResult<Tenant>> readTenant(final String tenantId, final Span span) {
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(span);
-
-        return processReadTenant(tenantId)
-                .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
-    }
-
-    private Future<OperationResult<Tenant>> processReadTenant(final String tenantId) {
-
-        return findTenant(tenantId)
-                .compose(tenantDtoResult -> Future.succeededFuture(OperationResult.ok(
-                        HttpURLConnection.HTTP_OK,
-                        tenantDtoResult.getData(),
-                        Optional.ofNullable(DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge())),
-                        Optional.ofNullable(tenantDtoResult.getVersion()))));
-
-    }
-
-    /**
-     * Gets a tenant dto by tenant id.
-     *
-     * @param tenantId the tenant id.
-     * @return A future indicating the outcome of the operation.
-     *         <p>
-     *         The future with a {@link TenantDto} be provided if found.
-     *         Otherwise the future will fail with
-     *         a {@link ClientErrorException} with {@link HttpURLConnection#HTTP_NOT_FOUND}.
-     * @throws NullPointerException if the parameter is {@code null}.
-     */
-    private Future<TenantDto> findTenant(final String tenantId) {
-        Objects.requireNonNull(tenantId);
-
-        final JsonObject findTenantQuery = MongoDbDocumentBuilder.builder().withTenantId(tenantId).document();
-        return findTenant(findTenantQuery);
-    }
-
-    /**
-     * Fetches tenant by subject DN.
-     *
-     * @param subjectDn the subject DN.
-     * @return A future indicating the outcome of the operation.
-     *         <p>
-     *         The future with a {@link TenantDto} be provided if found.
-     *         Otherwise the future will fail with
-     *         a {@link ClientErrorException} with {@link HttpURLConnection#HTTP_NOT_FOUND}.
-     * @throws NullPointerException if the parameter is {@code null}.
-     */
-    private Future<TenantDto> findTenant(final X500Principal subjectDn) {
-        Objects.requireNonNull(subjectDn);
-
-        final JsonObject findTenantQuery = MongoDbDocumentBuilder.builder()
-                        .withCa(subjectDn.getName())
-                        .document();
-
-        return findTenant(findTenantQuery);
-    }
-
-    /**
-     * Gets a tenant dto by a json-based query.
-     *
-     * @param findQuery the tenant query.
-     * @return A future indicating the outcome of the operation.
-     *         <p>
-     *         The future with a {@link TenantDto} be provided if found.
-     *         Otherwise the future will fail with
-     *         a {@link ClientErrorException} with {@link HttpURLConnection#HTTP_NOT_FOUND}.
-     * @throws NullPointerException if the parameter is {@code null}.
-     */
-    private Future<TenantDto> findTenant(final JsonObject findQuery) {
-        Objects.requireNonNull(findQuery);
-
-        final Promise<JsonObject> findTenantPromise = Promise.promise();
-        mongoClient.findOne(config.getCollectionName(), findQuery, new JsonObject(), findTenantPromise);
-        return findTenantPromise.future()
-                .compose(tenantJsonResult -> Optional.ofNullable(tenantJsonResult)
-                        .map(tenantJson -> Future.succeededFuture(TenantDto.forRead(tenantJsonResult.getString(TenantDto.FIELD_TENANT_ID),
-                                tenantJsonResult.getJsonObject(TenantDto.FIELD_TENANT).mapTo(Tenant.class),
-                                tenantJsonResult.getInstant(TenantDto.FIELD_CREATED),
-                                tenantJsonResult.getInstant(TenantDto.FIELD_UPDATED_ON),
-                                tenantJsonResult.getString(TenantDto.FIELD_VERSION))))
-                        .orElseGet(
-                                () -> Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND))));
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Future<OperationResult<Id>> processCreateTenant(
-            final String tenantId,
-            final Tenant tenantObj,
-            final Span span) {
-
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(tenantObj);
-        Objects.requireNonNull(span);
-
-        return addTenant(tenantId, tenantObj, span)
-                .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
-    }
-
-    private Future<OperationResult<Id>> addTenant(final String tenantId, final Tenant tenantObj,
-            final Span span) {
-
-        final TenantDto newTenantDto = TenantDto.forCreation(tenantId, tenantObj, new Versioned<>(tenantObj).getVersion());
-
-        // the tenantId is either the ID provided by the client
-        // or a newly created random ID
-        TracingHelper.TAG_TENANT_ID.set(span, tenantId);
-
-        final JsonObject newTenantDtoJson = JsonObject.mapFrom(newTenantDto);
-        final Promise<String> createTenantPromise = Promise.promise();
-        mongoClient.insert(config.getCollectionName(), newTenantDtoJson, createTenantPromise);
-        return createTenantPromise.future()
-                .compose(tenantObjectIdResult -> {
-                    span.log("successfully created tenant");
-                    return Future.succeededFuture(OperationResult.ok(
-                            HttpURLConnection.HTTP_CREATED,
-                            Id.of(tenantId),
-                            Optional.empty(),
-                            Optional.of(newTenantDto.getVersion())));
-                })
-                .recover(error -> {
-                    if (MongoDbDeviceRegistryUtils.isDuplicateKeyError(error)) {
-                        LOG.debug(
-                                "tenant [{}] already exists or an existing tenant uses a certificate authority with the same Subject DN",
-                                tenantId, error);
-                        TracingHelper.logError(span,
-                                "tenant with the given identifier already exists or an existing tenant uses a certificate authority with the same Subject DN",
-                                error);
-                        return Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_CONFLICT));
-                    } else {
-                        LOG.error("error adding tenant [{}]", tenantId, error);
-                        TracingHelper.logError(span, "error adding Tenant", error);
-                        return Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_INTERNAL_ERROR));
-                    }
-                });
-    }
-
-
-    private static List<TenantWithId> getTenantsWithId(final JsonObject searchResult) {
-        return Optional.ofNullable(searchResult.getJsonArray(RegistryManagementConstants.FIELD_RESULT_SET_PAGE))
-                .map(tenants -> tenants.stream()
-                        .filter(JsonObject.class::isInstance)
-                        .map(JsonObject.class::cast)
-                        .map(json -> json.mapTo(TenantDto.class))
-                        .map(tenantDto -> TenantWithId.from(tenantDto.getTenantId(), tenantDto.getData()))
-                        .collect(Collectors.toList()))
-                .orElseGet(ArrayList::new);
+                        DeviceRegistryUtils.convertTenant(tenantDto.getTenantId(), tenantDto.getData(), true),
+                        DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge())))
+            .otherwise(t -> TenantResult.from(ServiceInvocationException.extractStatusCode(t)));
     }
 }

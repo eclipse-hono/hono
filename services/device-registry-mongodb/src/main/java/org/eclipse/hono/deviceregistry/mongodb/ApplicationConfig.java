@@ -34,15 +34,18 @@ import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedCredentialsCon
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedTenantsConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbConfigProperties;
+import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedTenantDao;
+import org.eclipse.hono.deviceregistry.mongodb.model.TenantDao;
+import org.eclipse.hono.deviceregistry.mongodb.service.DaoBasedTenantInformationService;
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedCredentialsService;
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedDeviceBackend;
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedRegistrationService;
+import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedTenantManagementService;
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedTenantService;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryAmqpServer;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 import org.eclipse.hono.deviceregistry.service.device.EdgeDeviceAutoProvisioner;
-import org.eclipse.hono.deviceregistry.service.tenant.DefaultTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.util.ServiceClientAdapter;
 import org.eclipse.hono.service.HealthCheckServer;
@@ -245,7 +248,7 @@ public class ApplicationConfig {
      */
     @Bean
     @ConfigurationProperties(prefix = "hono.tenant.svc")
-    public MongoDbBasedTenantsConfigProperties tenantsServiceProperties() {
+    public MongoDbBasedTenantsConfigProperties tenantServiceProperties() {
         return new MongoDbBasedTenantsConfigProperties();
     }
 
@@ -414,31 +417,52 @@ public class ApplicationConfig {
     }
 
     /**
-     * Exposes the MongoDB tenant service as a Spring bean.
+     * Creates a Data Access Object for tenant data.
      *
-     * @return The MongoDB tenant service.
+     * @return The DAO.
      */
     @Bean
-    @Scope("prototype")
-    public MongoDbBasedTenantService tenantService() {
-        final var service = new MongoDbBasedTenantService(
+    public TenantDao tenantDao() {
+        final var dao =  new MongoDbBasedTenantDao(
+                mongoDbConfigProperties(),
+                tenantServiceProperties().getCollectionName(),
                 vertx(),
-                mongoClient(),
-                tenantsServiceProperties()
-        );
-        healthCheckServer().registerHealthCheckResources(service);
-        return service;
+                tracer());
+        healthCheckServer().registerHealthCheckResources(dao);
+        return dao;
     }
 
     /**
-     * Exposes the tenant information service based on the MongoDB tenant management service as a Spring Bean.
+     * Exposes the MongoDB tenant service as a Spring bean.
      *
-     * @return The bean instance.
+     * @return The service.
      */
     @Bean
-    @Scope("prototype")
+    public TenantService tenantService() {
+        return new MongoDbBasedTenantService(tenantDao(), tenantServiceProperties()
+        );
+    }
+
+    /**
+     * Creates a Tenant management service instance.
+     *
+     * @return The service.
+     */
+    @Bean
+    public TenantManagementService tenantManagementService() {
+        return new MongoDbBasedTenantManagementService(
+                tenantDao(),
+                tenantServiceProperties());
+    }
+
+    /**
+     * Exposes a tenant information service instance as a Spring Bean.
+     *
+     * @return The service instance.
+     */
+    @Bean
     public TenantInformationService tenantInformationService() {
-        return new DefaultTenantInformationService(tenantService());
+        return new DaoBasedTenantInformationService(tenantDao());
     }
 
     /**
@@ -585,8 +609,9 @@ public class ApplicationConfig {
      * @return The handler.
      */
     @Bean
-    @Scope("prototype")
     public HttpEndpoint tenantHttpEndpoint() {
-        return new DelegatingTenantManagementHttpEndpoint<TenantManagementService>(vertx(), tenantService());
+        return new DelegatingTenantManagementHttpEndpoint<TenantManagementService>(
+                vertx(),
+                tenantManagementService());
     }
 }

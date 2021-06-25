@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,10 +12,10 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.mongodb.service;
 
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedTenantsConfigProperties;
+import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedTenantDao;
 import org.eclipse.hono.service.management.tenant.AbstractTenantManagementSearchTenantsTest;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.junit.jupiter.api.AfterAll;
@@ -28,26 +28,24 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.opentracing.Span;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.mongo.MongoClient;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
 /**
- * Tests for {@link MongoDbBasedTenantService#searchTenants(int, int, List, List, Span)}.
+ * Tests verifying tenant search functionality of {@link MongoDbBasedTenantManagementService}.
  */
 @ExtendWith(VertxExtension.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
 public class MongoDBBasedTenantManagementSearchTenantsTest implements AbstractTenantManagementSearchTenantsTest {
-    private static final Logger log = LoggerFactory.getLogger(MongoDBBasedTenantManagementSearchTenantsTest.class);
-    private MongoClient mongoClient;
+
+    private static final Logger LOG = LoggerFactory.getLogger(MongoDBBasedTenantManagementSearchTenantsTest.class);
+
     private final MongoDbBasedTenantsConfigProperties config = new MongoDbBasedTenantsConfigProperties();
-    private MongoDbBasedTenantService tenantManagementService;
-    private Vertx vertx;
+    private MongoDbBasedTenantManagementService tenantManagementService;
+    private MongoDbBasedTenantDao dao;
 
     /**
      * Starts up the service.
@@ -56,10 +54,9 @@ public class MongoDBBasedTenantManagementSearchTenantsTest implements AbstractTe
      */
     @BeforeAll
     public void setup(final VertxTestContext testContext) {
-        vertx = Vertx.vertx();
-        mongoClient = MongoDbTestUtils.getMongoClient(vertx, "hono-search-tenants-test");
-        tenantManagementService = new MongoDbBasedTenantService(vertx, mongoClient, config);
-        tenantManagementService.createIndices().onComplete(testContext.completing());
+        dao = MongoDbTestUtils.getTenantDao(Vertx.vertx(), "hono-search-tenants-test");
+        tenantManagementService = new MongoDbBasedTenantManagementService(dao, config);
+        dao.createIndices().onComplete(testContext.completing());
     }
 
     /**
@@ -69,7 +66,7 @@ public class MongoDBBasedTenantManagementSearchTenantsTest implements AbstractTe
      */
     @BeforeEach
     public void setup(final TestInfo testInfo) {
-        log.info("running {}", testInfo.getDisplayName());
+        LOG.info("running {}", testInfo.getDisplayName());
     }
 
     /**
@@ -79,22 +76,15 @@ public class MongoDBBasedTenantManagementSearchTenantsTest implements AbstractTe
      */
     @AfterEach
     public void cleanCollection(final VertxTestContext testContext) {
-        mongoClient.removeDocuments(
-                config.getCollectionName(),
-                new JsonObject(),
-                testContext.completing());
+        dao.deleteAllFromCollection().onComplete(testContext.completing());
     }
 
     /**
-     * Cleans up fixture.
-     *
-     * @param testContext The test context to use for running asynchronous tests.
+     * Releases the connection to the Mongo DB.
      */
     @AfterAll
-    public void finishTest(final VertxTestContext testContext) {
-        mongoClient.close();
-        tenantManagementService.stop()
-                .onComplete(s -> vertx.close(testContext.completing()));
+    public void closeDao() {
+        dao.close();
     }
 
     @Override
