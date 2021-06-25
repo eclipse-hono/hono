@@ -11,13 +11,12 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.deviceregistry.mongodb.model;
+package org.eclipse.hono.service.management.tenant;
 
 import java.time.Instant;
 import java.util.Objects;
 
 import org.eclipse.hono.service.management.BaseDto;
-import org.eclipse.hono.service.management.tenant.Tenant;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
