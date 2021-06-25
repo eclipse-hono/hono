@@ -116,6 +116,7 @@ public abstract class AbstractConfig {
      * @param purpose A (very) short description of the context in which the password is being used.
      * @param value The property value to determine the password from.
      * @return The password.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     protected final String getPassword(final String purpose, final String value) {
 
