@@ -27,7 +27,6 @@ import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedTenantsConfigProperties;
-import org.eclipse.hono.deviceregistry.mongodb.model.TenantDto;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbCallExecutor;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDocumentBuilder;
@@ -42,6 +41,7 @@ import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.SearchResult;
 import org.eclipse.hono.service.management.Sort;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.service.management.tenant.TenantDto;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.service.management.tenant.TenantWithId;
 import org.eclipse.hono.service.tenant.TenantService;
