@@ -71,7 +71,7 @@
       for checking if a native TLS implementation can/should be used so that we do not require
       netty-tcnative to be on the build path.
     -->
-    <netty.version>4.1.58.Final</netty.version>
+    <netty.version>4.1.61.Final</netty.version>
     <netty.tcnative.version>2.0.36.Final</netty.tcnative.version>
     <opentracing.version>0.33.0</opentracing.version>
     <opentracing-resolver.version>0.1.8</opentracing-resolver.version>
