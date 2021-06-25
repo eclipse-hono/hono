@@ -32,6 +32,9 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The protocol adapters now invoke the *set last known gateway* Command Router service operation a lot less frequently,
   reducing the load on the Command Router component if gateways send messages on behalf of devices at a high rate.
   The *last known gateway* entry for a device is now set with a delay of at most 400ms as part of a batch request.
+* The `keyStorePassword` and `trustStorePassword` properties of the Hono clients now also support specifying a file
+  to read the password from. If the property value starts with `file:` then the value after the prefix is interpreted as
+  as the path to a file to read the password from.
 
 ### Deprecations
 

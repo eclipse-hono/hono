@@ -560,7 +560,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                   <includes>
                     *.pem,
                     *.p12,
-                    *.jks
+                    *.jks,
+                    *-password
                   </includes>
                   <useSubDirectoryPerArtifact>false</useSubDirectoryPerArtifact>
                   <stripClassifier>true</stripClassifier>
@@ -1225,7 +1226,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                             <outputDirectory>etc/hono/certs</outputDirectory>
                             <includes>
                               <include>http-adapter-*.pem</include>
-                              <include>trusted-certs.pem</include>
+                              <include>trustStore.jks</include>
+                              <include>trust-store-password</include>
                             </includes>
                           </fileSet>
                         </fileSets>

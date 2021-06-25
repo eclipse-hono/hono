@@ -17,6 +17,7 @@
 DIR=certs
 HONO_TRUST_STORE=trustStore.jks
 HONO_TRUST_STORE_PWD=honotrust
+HONO_TRUST_STORE_PWD_FILE=trust-store-password
 AUTH_SERVER_KEY_STORE=authServerKeyStore.p12
 AUTH_SERVER_KEY_STORE_PWD=authkeys
 DEVCON_SERVER_KEY_STORE=deviceConnectionKeyStore.p12
@@ -86,6 +87,7 @@ rm $DIR/*.pem
 rm $DIR/*.p12
 rm $DIR/*.jks
 rm $DIR/*.properties
+rm $DIR/$HONO_TRUST_STORE_PWD_FILE
 else
 mkdir $DIR
 fi
@@ -108,6 +110,7 @@ echo ""
 echo "creating JKS trust store ($DIR/$HONO_TRUST_STORE) containing CA certificate"
 keytool -import -trustcacerts -noprompt -alias root -file $DIR/root-cert.pem -keystore $DIR/$HONO_TRUST_STORE -storepass $HONO_TRUST_STORE_PWD
 keytool -import -trustcacerts -noprompt -alias ca -file $DIR/ca-cert.pem -keystore $DIR/$HONO_TRUST_STORE -storepass $HONO_TRUST_STORE_PWD
+echo $HONO_TRUST_STORE_PWD > $DIR/$HONO_TRUST_STORE_PWD_FILE
 
 echo ""
 echo "creating CA key and certificate for DEFAULT_TENANT"
