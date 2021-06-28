@@ -230,4 +230,15 @@ public final class CommandResponse {
     public int getStatus() {
         return status;
     }
+
+    @Override
+    public String toString() {
+        return "CommandResponse{" + "tenantId='" + tenantId + '\''
+                + ", deviceId='" + deviceId + '\''
+                + ", contentType='" + contentType + '\''
+                + ", status=" + status
+                + ", correlationId='" + correlationId + '\''
+                + ", replyToId='" + replyToId + '\''
+                + '}';
+    }
 }

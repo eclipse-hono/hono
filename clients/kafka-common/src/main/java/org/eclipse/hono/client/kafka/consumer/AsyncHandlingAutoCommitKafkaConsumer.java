@@ -290,12 +290,12 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
         while (partitionOffsetsIterator.hasNext()) {
             final var topicPartitionOffsetsEntry = partitionOffsetsIterator.next();
             if (!currentlyAssignedPartitions.contains(topicPartitionOffsetsEntry.getKey())) {
-                if (!topicPartitionOffsetsEntry.getValue().allCompleted()) {
-                    log.debug("partition [{}] not assigned to consumer anymore but not all entries completed yet!",
-                            topicPartitionOffsetsEntry.getKey());
-                } else if (topicPartitionOffsetsEntry.getValue().needsCommit()) {
-                    log.warn("partition [{}] not assigned to consumer anymore but offset corresponding to the latest handled record hasn't been committed yet!",
-                            topicPartitionOffsetsEntry.getKey());
+                if (topicPartitionOffsetsEntry.getValue().needsCommit()) {
+                    log.warn("partition [{}] not assigned to consumer anymore but latest handled record offset hasn't been committed yet! {}",
+                            topicPartitionOffsetsEntry.getKey(), topicPartitionOffsetsEntry.getValue().getStateInfo());
+                } else if (!topicPartitionOffsetsEntry.getValue().allCompleted()) {
+                    log.debug("partition [{}] not assigned to consumer anymore but not all read records have been fully processed yet! {}",
+                            topicPartitionOffsetsEntry.getKey(), topicPartitionOffsetsEntry.getValue().getStateInfo());
                 } else {
                     log.trace("partition [{}] not assigned to consumer anymore; no still outstanding offset commits there",
                             topicPartitionOffsetsEntry.getKey());
@@ -420,11 +420,25 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
 
         /**
          * Checks whether there is an already completed record whose offset hasn't been committed yet.
+         *
          * @return {@code true} if an offset commit is needed for this TopicPartition.
          */
         public boolean needsCommit() {
             cleanupAndUpdateLastCompletedOffset();
             return lastSequentiallyCompletedOffset != -1 && lastSequentiallyCompletedOffset != lastCommittedOffset;
+        }
+
+        /**
+         * Gets information about the state of this object suitable for log output.
+         *
+         * @return The info string.
+         */
+        public String getStateInfo() {
+            cleanupAndUpdateLastCompletedOffset();
+            return '{' + "lastSequentiallyCompletedOffset=" + lastSequentiallyCompletedOffset
+                    + ", lastCommittedOffset=" + lastCommittedOffset
+                    + (queue.size() <= 20 ? ", queue=" + queue : ", queue.size=" + queue.size())
+                    + '}';
         }
     }
 
@@ -464,6 +478,11 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
          */
         public boolean isHandlingComplete() {
             return handlingComplete.get();
+        }
+
+        @Override
+        public String toString() {
+            return offset  + (handlingComplete.get() ? " (completed)" : "");
         }
     }
 }

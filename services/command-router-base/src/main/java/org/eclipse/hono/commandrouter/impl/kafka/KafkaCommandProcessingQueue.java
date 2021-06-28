@@ -135,9 +135,10 @@ public class KafkaCommandProcessingQueue {
             final var commandQueueEntry = commandQueuesIterator.next();
             if (!partitions.contains(commandQueueEntry.getKey())) {
                 if (commandQueueEntry.getValue().isEmpty()) {
-                    LOG.debug("partition {} not being handled anymore; command queue is empty", commandQueueEntry.getKey());
+                    LOG.debug("partition [{}] isn't being handled anymore; command queue is empty", commandQueueEntry.getKey());
                 } else {
-                    LOG.info("partition {} not being handled anymore but its command queue isn't empty!", commandQueueEntry.getKey());
+                    LOG.info("partition [{}] isn't being handled anymore but its command queue isn't empty! [queue size: {}]",
+                            commandQueueEntry.getKey(), commandQueueEntry.getValue().getSize());
                     commandQueueEntry.getValue().markAsUnusedAndClear();
                 }
                 commandQueuesIterator.remove();
@@ -194,6 +195,14 @@ public class KafkaCommandProcessingQueue {
         }
 
         /**
+         * Gets the size of this queue.
+         * @return The queue size.
+         */
+        public int getSize() {
+            return queue.size();
+        }
+
+        /**
          * Releases any contained commands waiting to be sent and clears the queue.
          */
         public void markAsUnusedAndClear() {
@@ -242,11 +251,12 @@ public class KafkaCommandProcessingQueue {
                 // given command is not next-in-line;
                 // that means determining its target adapter instance has finished sooner (maybe because of fewer data-grid requests)
                 // compared to a command that was received earlier
-                LOG.debug("sending of command with offset {} gets delayed; waiting for processing of offset {} [delayed {}]",
-                        getRecordOffset(commandContext), getRecordOffset(queue.peek()), commandContext.getCommand());
+                LOG.debug("sending of command with offset {} gets delayed; waiting for processing of offset {} [queue size: {}; delayed {}]",
+                        getRecordOffset(commandContext), getRecordOffset(queue.peek()), queue.size(), commandContext.getCommand());
                 commandContext.getTracingSpan()
-                        .log(String.format("waiting for an earlier command with offset %d to be processed first",
-                                getRecordOffset(queue.peek())));
+                        .log(String.format("waiting for an earlier command with offset %d to be processed first [queue size: %d]",
+                                getRecordOffset(queue.peek()), queue.size()));
+                commandContext.getTracingSpan().setTag("processing_delayed", true);
                 commandContext.put(KEY_COMMAND_SEND_ACTION_SUPPLIER_AND_RESULT_PROMISE, Pair
                         .of(sendActionSupplier, resultPromise));
             }
@@ -259,7 +269,7 @@ public class KafkaCommandProcessingQueue {
                 final Promise<Void> sendActionCompletedPromise,
                 final boolean completedPromiseJustCreated) {
 
-            LOG.trace("sending [{}]", commandContext.getCommand());
+            LOG.trace("apply send action on [{}]", commandContext.getCommand());
             final Future<Void> sendActionFuture = sendActionSupplier.get();
             sendActionFuture.onComplete(sendActionCompletedPromise);
 

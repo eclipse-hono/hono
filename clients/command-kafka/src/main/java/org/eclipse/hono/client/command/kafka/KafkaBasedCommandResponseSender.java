@@ -59,8 +59,7 @@ public class KafkaBasedCommandResponseSender extends AbstractKafkaBasedMessageSe
         Objects.requireNonNull(response);
 
         final HonoTopic topic = new HonoTopic(HonoTopic.Type.COMMAND_RESPONSE, response.getTenantId());
-        log.trace("send command [response topic : {}, tenant-id: {}, device-id: {}, correlation-id: {}",
-                topic, response.getTenantId(), response.getDeviceId(), response.getCorrelationId());
+        log.trace("publish command response [{}]", response);
 
         return sendAndWaitForOutcome(topic.toString(), response.getTenantId(), response.getDeviceId(),
                 response.getPayload(), getHeaders(response), context);

@@ -227,8 +227,8 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
                     return sendCommand(tenantId, deviceId, command, contentType, data, correlationId, properties,
                             true, span.context())
                                     .onSuccess(sent -> {
-                                        LOGGER.debug("sent command [correlation-id: {}] and waiting for response", correlationId);
-                                        span.log("sent command and waiting for response");
+                                        LOGGER.debug("sent command [correlation-id: {}], waiting for response", correlationId);
+                                        span.log("sent command, waiting for response");
                                     })
                                     .onFailure(error -> {
                                         LOGGER.debug("error sending command", error);

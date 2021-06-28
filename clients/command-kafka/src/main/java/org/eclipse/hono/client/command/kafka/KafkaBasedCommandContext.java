@@ -181,8 +181,14 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
                 correlationId,
                 "");
         return commandResponseSender.sendCommandResponse(commandResponse, span.context())
-                .onFailure(thr -> TracingHelper.logError(span, "failed to publish command response message", thr))
-                .onSuccess(v -> span.log("published error command response"));
+                .onFailure(thr -> {
+                    LOG.debug("failed to publish command response [{}]", commandResponse, thr);
+                    TracingHelper.logError(span, "failed to publish command response message", thr);
+                })
+                .onSuccess(v -> {
+                    LOG.debug("published error command response [{}]", commandResponse);
+                    span.log("published error command response");
+                });
     }
 
     private String getCorrelationId() {
