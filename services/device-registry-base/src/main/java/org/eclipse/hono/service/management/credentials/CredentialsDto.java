@@ -255,7 +255,7 @@ public final class CredentialsDto extends BaseDto<List<CommonCredential>> {
 
         final var credentialsToMerge = otherCredentialsDto.getCredentials();
         if (credentialsToMerge == null || credentialsToMerge.isEmpty()) {
-            throw new IllegalArgumentException("DTO does not contain any credentials");
+            throw new IllegalArgumentException("no credentials on record for device");
         } else {
             this.getData().forEach(credential -> findCredentialByIdAndType(
                     credential.getAuthId(),
