@@ -255,14 +255,18 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
                         log.trace("do periodic commit; offsets: [{}]", HonoKafkaConsumerHelper.getOffsetsDebugString(offsets));
                     }
                     final Consumer<String, Buffer> wrappedConsumer = getKafkaConsumer().asStream().unwrap();
-                    wrappedConsumer.commitAsync(offsets, (committedOffsets, error) -> {
-                        if (error != null) {
-                            log.info("periodic commit failed: {}", error.toString());
-                        } else {
-                            log.trace("periodic commit succeeded");
-                            setCommittedOffsets(committedOffsets);
-                        }
-                    });
+                    try {
+                        wrappedConsumer.commitAsync(offsets, (committedOffsets, error) -> {
+                            if (error != null) {
+                                log.info("periodic commit failed: {}", error.toString());
+                            } else {
+                                log.trace("periodic commit succeeded");
+                                setCommittedOffsets(committedOffsets);
+                            }
+                        });
+                    } catch (final Exception ex) {
+                        log.error("error doing periodic commit", ex);
+                    }
                 } else {
                     log.trace("skip periodic commit - no offsets to commit");
                 }

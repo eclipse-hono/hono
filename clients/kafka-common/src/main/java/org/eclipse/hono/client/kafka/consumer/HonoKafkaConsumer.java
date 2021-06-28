@@ -550,7 +550,11 @@ public class HonoKafkaConsumer implements Lifecycle {
         if (!stopCalled.get()) {
             kafkaConsumerWorker.submit(() -> {
                 if (!stopCalled.get()) {
-                    handler.handle(null);
+                    try {
+                        handler.handle(null);
+                    } catch (final Exception ex) {
+                        log.error("error running task on Kafka worker thread", ex);
+                    }
                 }
             });
         }
