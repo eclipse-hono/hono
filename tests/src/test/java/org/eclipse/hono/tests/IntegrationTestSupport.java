@@ -1473,7 +1473,7 @@ public final class IntegrationTestSupport {
             final JsonObject deviceStatus,
             final boolean expectedAutoProvisionedStatus) {
 
-        assertThat(deviceStatus).as("device registation info contains status").isNotNull();
+        assertThat(deviceStatus).as("device registration info contains status").isNotNull();
         if (expectedAutoProvisionedStatus) {
             assertThat(deviceStatus.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED))
                 .as("auto-provisioned property has value true")

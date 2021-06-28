@@ -256,7 +256,7 @@ public class ProtonBasedApplicationClient extends ProtonBasedCommandSender imple
                 @Override
                 public Future<Void> close() {
                     return recv.close();
-                };
+                }
             });
     }
 
@@ -291,7 +291,7 @@ public class ProtonBasedApplicationClient extends ProtonBasedCommandSender imple
                 @Override
                 public Future<Void> close() {
                     return recv.close();
-                };
+                }
             });
     }
 

@@ -51,7 +51,7 @@ The registry can be configured with a global limit for the number of devices tha
 The value can be set via the registry's *HONO_REGISTRY_SVC_MAX_DEVICES_PER_TENANT* configuration variable.
 The maximum number of devices allowed for a particular tenant is determined as follows:
 
-1. If the tenants's *registration-limits*/*max-devices* property has a value > -1 then that value is used as the limit.
+1. If the tenant's *registration-limits*/*max-devices* property has a value > -1 then that value is used as the limit.
 1. Otherwise, if the *HONO_REGISTRY_SVC_MAX_DEVICES_PER_TENANT* configuration variable has a value > -1 then that value
    is used as the limit.
 1. Otherwise, the number of devices is unlimited.

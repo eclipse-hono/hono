@@ -119,7 +119,7 @@ public class KafkaBasedEventSenderTest {
 
     /**
      * Verifies that
-     * {@link KafkaBasedEventSender#sendEvent(TenantObject, RegistrationAssertion, String, Buffer, Map, SpanContext)}
+     * {@link KafkaBasedEventSender#sendEvent(TenantObject, RegistrationAssertion, String, Buffer, Map, io.opentracing.SpanContext)}
      * throws a nullpointer exception if a mandatory parameter is {@code null}.
      */
     @Test

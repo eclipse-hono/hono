@@ -138,7 +138,7 @@ public class PrometheusBasedResourceLimitChecksTest {
         // THEN both invocations return the same incomplete future
         assertThat(resultOne.isDone()).isFalse();
         assertThat(resultTwo.isDone()).isFalse();
-        assertThat(resultTwo == resultOne);
+        assertThat(resultTwo == resultOne).isTrue();
         // but the computation of the value has been triggered once only
         assertThat(computationsTriggered.get()).isEqualTo(1);
 
@@ -152,7 +152,7 @@ public class PrometheusBasedResourceLimitChecksTest {
         assertThat(computationsTriggered.get()).isEqualTo(1);
 
         // but instead returns the existing completed future
-        assertThat(resultThree == resultOne);
+        assertThat(resultThree == resultOne).isTrue();
         assertThat(resultThree.isDone()).isTrue();
         try {
             assertThat(resultThree.get()).isEqualTo(5L);

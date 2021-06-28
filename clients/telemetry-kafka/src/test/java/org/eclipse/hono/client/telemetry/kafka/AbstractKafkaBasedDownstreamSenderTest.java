@@ -29,7 +29,6 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.kafka.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
-import org.eclipse.hono.client.telemetry.kafka.AbstractKafkaBasedDownstreamSender;
 import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
@@ -423,7 +422,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
 
     /**
      * Verifies that
-     * {@link AbstractKafkaBasedDownstreamSender#send(HonoTopic, org.eclipse.hono.util.TenantObject, org.eclipse.hono.util.RegistrationAssertion, QoS, String, Buffer, Map, SpanContext)}
+     * {@link AbstractKafkaBasedDownstreamSender#send(HonoTopic, org.eclipse.hono.util.TenantObject, org.eclipse.hono.util.RegistrationAssertion, QoS, String, Buffer, Map, io.opentracing.SpanContext)}
      * throws a nullpointer exception if a mandatory parameter is {@code null}.
      */
     @Test

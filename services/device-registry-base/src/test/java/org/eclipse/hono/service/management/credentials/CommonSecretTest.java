@@ -40,10 +40,10 @@ public class CommonSecretTest {
      * <p>
      * In particular, adds
      * <ul>
-     * <li>an {@value RegistryManagementConstants.FIELD_ID} property with value {@code 1234}</li>
-     * <li>a {@value RegistryManagementConstants.FIELD_COMMENT} property with value {@code a comment}</li>
-     * <li>a {@value RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE} property with value {@code 2017-05-01T14:00:00+01:00}</li>
-     * <li>a {@value RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER} property with value {@code 2018-01-01T00:00:00Z}</li>
+     * <li>an {@value RegistryManagementConstants#FIELD_ID} property with value {@code 1234}</li>
+     * <li>a {@value RegistryManagementConstants#FIELD_COMMENT} property with value {@code a comment}</li>
+     * <li>a {@value RegistryManagementConstants#FIELD_SECRETS_NOT_BEFORE} property with value {@code 2017-05-01T14:00:00+01:00}</li>
+     * <li>a {@value RegistryManagementConstants#FIELD_SECRETS_NOT_AFTER} property with value {@code 2018-01-01T00:00:00Z}</li>
      * </ul>
      *
      * @param <T> The type of secret.
