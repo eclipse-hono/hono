@@ -328,9 +328,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         return result.future();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected final void doStart(final Promise<Void> startPromise) {
 
@@ -362,9 +359,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 () -> metrics.getNumberOfConnections(), getConfig());
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected final void doStop(final Promise<Void> stopPromise) {
 
@@ -397,6 +391,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     final void handleEndpointConnection(final MqttEndpoint endpoint) {
 
         log.debug("connection request from client [client-id: {}]", endpoint.clientIdentifier());
+        final String cipherSuite = Optional.ofNullable(endpoint.sslSession()).map(SSLSession::getCipherSuite)
+                .orElse(null);
         final Span span = tracer.buildSpan("CONNECT")
                 .ignoreActiveSpan()
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
@@ -427,7 +423,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 metrics.reportConnectionAttempt(
                         ConnectionAttemptOutcome.SUCCEEDED,
                         Optional.ofNullable(authenticatedDevice).map(Device::getTenantId).orElse(null),
-                        Optional.ofNullable(endpoint.sslSession()).map(SSLSession::getCipherSuite).orElse(null));
+                        cipherSuite);
             })
             .onFailure(t -> {
                 if (!connectionClosedPrematurely.get()) {
@@ -438,21 +434,15 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     rejectConnectionRequest(endpoint, code, span);
                     TracingHelper.logError(span, t);
                 }
-                reportFailedConnectionAttempt(t, endpoint);
+                metrics.reportConnectionAttempt(
+                        AbstractProtocolAdapterBase.getOutcome(t),
+                        t instanceof ServiceInvocationException
+                                ? ((ServiceInvocationException) t).getTenant()
+                                : null,
+                        cipherSuite);
             })
             .onComplete(result -> span.finish());
 
-    }
-
-    private void reportFailedConnectionAttempt(final Throwable error, final MqttEndpoint endpoint) {
-
-        final String tenantId = error instanceof ServiceInvocationException
-                ? ((ServiceInvocationException) error).getTenant()
-                : null;
-        metrics.reportConnectionAttempt(
-                AbstractProtocolAdapterBase.getOutcome(error),
-                tenantId,
-                Optional.ofNullable(endpoint.sslSession()).map(SSLSession::getCipherSuite).orElse(null));
     }
 
     private Future<Device> handleConnectionRequest(final MqttEndpoint endpoint,
