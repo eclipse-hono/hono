@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedCredentialsConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
+import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedDeviceDao;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
 import org.eclipse.hono.service.credentials.AbstractCredentialsServiceTest;
@@ -75,20 +76,26 @@ public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsSer
     private final MongoDbBasedRegistrationConfigProperties registrationServiceConfig = new MongoDbBasedRegistrationConfigProperties();
 
     private MongoClient mongoClient;
+    private MongoDbBasedDeviceDao deviceDao;
     private MongoDbBasedCredentialsService credentialsService;
-    private MongoDbBasedRegistrationService registrationService;
+    private MongoDbBasedDeviceManagementService deviceManagementService;
     private MongoDbBasedDeviceBackend deviceBackendService;
     private TenantInformationService tenantInformationService;
     private Vertx vertx;
 
     /**
      * Creates the MongoDB client.
+     *
+     * @param ctx The test context to use for running asynchronous tests.
      */
     @BeforeAll
-    public void createMongoDbClient() {
+    public void createMongoDbClient(final VertxTestContext ctx) {
 
         vertx = Vertx.vertx();
         mongoClient = MongoDbTestUtils.getMongoClient(vertx, "hono-credentials-test");
+        deviceDao = MongoDbTestUtils.getDeviceDao(vertx, "hono-credentials-test");
+        deviceManagementService = new MongoDbBasedDeviceManagementService(deviceDao, registrationServiceConfig);
+        deviceDao.createIndices().onComplete(ctx.completing());
     }
 
     /**
@@ -117,19 +124,12 @@ public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsSer
                 credentialsServiceConfig,
                 new SpringBasedHonoPasswordEncoder());
         credentialsService.setTenantInformationService(tenantInformationService);
-        registrationService = new MongoDbBasedRegistrationService(
-                vertx,
-                mongoClient,
-                registrationServiceConfig);
-        registrationService.setTenantInformationService(tenantInformationService);
+        deviceManagementService.setTenantInformationService(tenantInformationService);
         deviceBackendService = new MongoDbBasedDeviceBackend(
-                this.registrationService,
+                this.deviceManagementService,
                 this.credentialsService,
                 tenantInformationService);
-        // start services sequentially as concurrent startup seems to cause
-        // concurrency issues sometimes
         credentialsService.createIndices()
-            .compose(ok -> registrationService.createIndices())
             .onComplete(testContext.completing());
     }
 
@@ -145,10 +145,8 @@ public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsSer
                 credentialsServiceConfig.getCollectionName(),
                 new JsonObject(),
                 testContext.succeeding(ok -> clean.flag()));
-        mongoClient.removeDocuments(
-                registrationServiceConfig.getCollectionName(),
-                new JsonObject(),
-                testContext.succeeding(ok -> clean.flag()));
+        deviceDao.deleteAllFromCollection()
+            .onComplete(testContext.succeeding(ok -> clean.flag()));
     }
 
     /**
@@ -159,9 +157,8 @@ public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsSer
     @AfterAll
     public void finishTest(final VertxTestContext testContext) {
 
-        final Checkpoint shutdown = testContext.checkpoint(3);
+        final Checkpoint shutdown = testContext.checkpoint(2);
         credentialsService.stop().onComplete(s -> shutdown.flag());
-        registrationService.stop().onComplete(s -> shutdown.flag());
         vertx.close(s -> shutdown.flag());
     }
 

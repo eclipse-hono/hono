@@ -18,7 +18,8 @@ import java.util.Optional;
 import java.util.function.Supplier;
 
 import org.eclipse.hono.service.management.BaseDto;
-import org.eclipse.hono.util.RegistryManagementConstants;
+import org.eclipse.hono.service.management.device.Device;
+import org.eclipse.hono.service.management.device.DeviceStatus;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -35,8 +36,12 @@ public class DeviceDto extends BaseDto<Device> {
      * The name of the JSON property containing the device data.
      */
     public static final String FIELD_DEVICE = "device";
+    /**
+     * The name of the JSON property containing the device's identifier.
+     */
+    public static final String FIELD_DEVICE_ID = "device-id";
 
-    @JsonProperty(value = RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID)
+    @JsonProperty(value = FIELD_DEVICE_ID)
     private String deviceId;
 
     @JsonIgnore

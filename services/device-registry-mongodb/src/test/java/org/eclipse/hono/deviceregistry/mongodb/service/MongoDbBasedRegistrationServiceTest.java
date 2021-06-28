@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
+import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedDeviceDao;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 import org.eclipse.hono.deviceregistry.service.device.EdgeDeviceAutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
@@ -52,47 +53,54 @@ import io.opentracing.noop.NoopSpan;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.mongo.MongoClient;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
 /**
- * Tests for {@link MongoDbBasedRegistrationService}.
+ * Tests verifying behavior of {@link MongoDbBasedRegistrationService} and
+ * {@link MongoDbBasedDeviceManagementService}.
  */
 @ExtendWith(VertxExtension.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+@Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class MongoDbBasedRegistrationServiceTest implements AbstractRegistrationServiceTest {
 
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedRegistrationServiceTest.class);
 
     private final MongoDbBasedRegistrationConfigProperties config = new MongoDbBasedRegistrationConfigProperties();
-    private MongoClient mongoClient;
+
+    private MongoDbBasedDeviceDao dao;
     private MongoDbBasedRegistrationService registrationService;
+    private MongoDbBasedDeviceManagementService deviceManagementService;
     private TenantInformationService tenantInformationService;
     private Vertx vertx;
 
     /**
      * Starts up the service.
+     *
+     * @param testContext The test context to use for running asynchronous tests.
      */
     @BeforeAll
-    public void setup() {
+    public void startService(final VertxTestContext testContext) {
 
         vertx = Vertx.vertx();
-        mongoClient = MongoDbTestUtils.getMongoClient(vertx, "hono-devices-test");
+        dao = MongoDbTestUtils.getDeviceDao(vertx, "hono-devices-test");
+        registrationService = new MongoDbBasedRegistrationService(dao);
+        deviceManagementService = new MongoDbBasedDeviceManagementService(dao, config);
+        dao.createIndices().onComplete(testContext.completing());
     }
 
     /**
      * Starts up the service.
      *
      * @param testInfo Test case meta information.
-     * @param testContext The test context to use for running asynchronous tests.
      */
     @BeforeEach
-    public void setup(final TestInfo testInfo, final VertxTestContext testContext) {
+    public void setup(final TestInfo testInfo) {
+
         LOG.info("running {}", testInfo.getDisplayName());
+
         tenantInformationService = mock(TenantInformationService.class);
         when(tenantInformationService.getTenant(anyString(), any())).thenReturn(Future.succeededFuture(new Tenant()));
         when(tenantInformationService.tenantExists(anyString(), any())).thenAnswer(invocation -> {
@@ -102,22 +110,17 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
                     Optional.empty(),
                     Optional.empty()));
         });
-        registrationService = new MongoDbBasedRegistrationService(
-                vertx,
-                mongoClient,
-                config);
 
         final EdgeDeviceAutoProvisioner edgeDeviceAutoProvisioner = new EdgeDeviceAutoProvisioner(
                 vertx,
-                registrationService,
+                deviceManagementService,
                 mockEventSenders(),
                 new AutoProvisionerConfigProperties(),
                 NoopTracerFactory.create());
 
         registrationService.setEdgeDeviceAutoProvisioner(edgeDeviceAutoProvisioner);
         registrationService.setTenantInformationService(tenantInformationService);
-
-        registrationService.createIndices().onComplete(testContext.completing());
+        deviceManagementService.setTenantInformationService(tenantInformationService);
     }
 
     /**
@@ -127,23 +130,15 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
      */
     @AfterEach
     public void cleanCollection(final VertxTestContext testContext) {
-        mongoClient.removeDocuments(
-                config.getCollectionName(),
-                new JsonObject(),
-                testContext.completing());
+        dao.deleteAllFromCollection().onComplete(testContext.completing());
     }
 
     /**
-     * Cleans up fixture.
-     *
-     * @param testContext The test context to use for running asynchronous tests.
+     * Releases the connection to the Mongo DB.
      */
     @AfterAll
-    public void finishTest(final VertxTestContext testContext) {
-
-        mongoClient.close();
-        registrationService.stop()
-            .onComplete(s -> vertx.close(testContext.completing()));
+    public void closeDao() {
+        dao.close();
     }
 
     @Override
@@ -153,7 +148,7 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
 
     @Override
     public DeviceManagementService getDeviceManagementService() {
-        return this.registrationService;
+        return this.deviceManagementService;
     }
 
     private MessagingClientProvider<EventSender> mockEventSenders() {

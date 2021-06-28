@@ -25,8 +25,8 @@ import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.Sort;
 import org.eclipse.hono.service.management.credentials.CredentialsDto;
 import org.eclipse.hono.service.management.device.DeviceDto;
+import org.eclipse.hono.service.management.tenant.TenantDto;
 import org.eclipse.hono.util.AuthenticationConstants;
-import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -46,7 +46,7 @@ public final class MongoDbDocumentBuilder {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final JsonPointer FIELD_ID = JsonPointer.from("/id");
     private static final String TENANT_TRUSTED_CA_SUBJECT_PATH = String.format("%s.%s.%s",
-            RegistryManagementConstants.FIELD_TENANT,
+            TenantDto.FIELD_TENANT,
             RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA,
             AuthenticationConstants.FIELD_SUBJECT_DN);
     private static final String MONGODB_OPERATOR_ELEM_MATCH = "$elemMatch";
@@ -136,7 +136,7 @@ public final class MongoDbDocumentBuilder {
      * @return a reference to this for fluent use.
      */
     public MongoDbDocumentBuilder withDeviceId(final String deviceId) {
-        document.put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
+        document.put(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
         return this;
     }
 

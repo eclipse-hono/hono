@@ -32,6 +32,7 @@ import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceAndGatewayAutoProvisioner;
 import org.eclipse.hono.service.management.device.DeviceBackend;
 import org.eclipse.hono.service.management.device.DeviceWithId;
+import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.Lifecycle;
@@ -55,7 +56,7 @@ import io.vertx.core.json.JsonObject;
  * A device backend that keeps all data in memory but is backed by a file. This is done by leveraging and unifying
  * {@link FileBasedRegistrationService} and {@link FileBasedCredentialsService}
  */
-public class FileBasedDeviceBackend implements DeviceBackend, Lifecycle {
+public class FileBasedDeviceBackend implements DeviceBackend, RegistrationService, Lifecycle {
 
     private static final Logger LOG = LoggerFactory.getLogger(FileBasedDeviceBackend.class);
 
