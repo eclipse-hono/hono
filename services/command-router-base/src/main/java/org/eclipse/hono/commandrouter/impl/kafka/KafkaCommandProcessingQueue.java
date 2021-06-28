@@ -206,7 +206,9 @@ public class KafkaCommandProcessingQueue {
          * Releases any contained commands waiting to be sent and clears the queue.
          */
         public void markAsUnusedAndClear() {
-            queue.forEach(commandContext -> {
+            final LinkedList<KafkaBasedCommandContext> queueCopy = new LinkedList<>(queue);
+            queue.clear();
+            queueCopy.forEach(commandContext -> {
                 final var actionAppliedPair = getSendActionSupplierAndResultPromise(commandContext);
                 if (actionAppliedPair != null) {
                     // command is ready to be sent but waiting for the processing of an earlier entry
@@ -217,7 +219,6 @@ public class KafkaCommandProcessingQueue {
                     actionAppliedPair.two().fail(error);
                 } // in the else case let the applySendCommandAction() method release the command eventually
             });
-            queue.clear();
         }
 
         /**
