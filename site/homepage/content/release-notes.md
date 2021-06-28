@@ -4,6 +4,13 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
+## 1.8.2 (not released yet)
+
+### Fixes & Enhancements
+
+* The MQTT adapter didn't close the CONNECT tracing span and didn't report metrics on failed connection attempts. This
+  has been fixed.
+
 ## 1.8.1
 
 ### Fixes & Enhancements
