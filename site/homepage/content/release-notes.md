@@ -10,6 +10,10 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 * The MQTT adapter didn't close the CONNECT tracing span and didn't report metrics on failed connection attempts. This
   has been fixed.
+* The registry implementations failed to reject a request to update a device's empty set of credentials, e.g. right
+  after the device has been created, if the request contained a secret having an ID. In fact, the registry
+  implementations would have accepted such a request even if the secrets did not contain a password/key/etc at all
+  but only the identifier. This has been fixed.
 
 ## 1.8.1
 

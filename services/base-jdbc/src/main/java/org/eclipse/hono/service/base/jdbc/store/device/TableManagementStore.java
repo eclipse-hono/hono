@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.service.base.jdbc.store.device;
 
-import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Collections;
 import java.util.HashSet;
@@ -26,9 +25,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
-import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.util.Versioned;
-import org.eclipse.hono.service.base.jdbc.store.DuplicateKeyException;
 import org.eclipse.hono.service.base.jdbc.store.EntityNotFoundException;
 import org.eclipse.hono.service.base.jdbc.store.OptimisticLockingException;
 import org.eclipse.hono.service.base.jdbc.store.SQL;
@@ -36,8 +33,7 @@ import org.eclipse.hono.service.base.jdbc.store.Statement;
 import org.eclipse.hono.service.base.jdbc.store.StatementConfiguration;
 import org.eclipse.hono.service.base.jdbc.store.model.JdbcBasedDeviceDto;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
-import org.eclipse.hono.service.management.credentials.CommonCredentials;
-import org.eclipse.hono.service.management.credentials.CommonSecret;
+import org.eclipse.hono.service.management.credentials.CredentialsDto;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.slf4j.Logger;
@@ -203,9 +199,9 @@ public class TableManagementStore extends AbstractDeviceStore {
      * {@code tenant_id}, {@code device_id}, {@code version}, and {@code data}.
      * <p>
      * It returns the plain update result. In case a device with the same ID already
-     * exists, the underlying database must throw an {@link SQLException}, indicating
+     * exists, the underlying database must throw an {@link java.sql.SQLException}, indicating
      * a duplicate entity or constraint violation. This will be translated into a
-     * failed future with an {@link DuplicateKeyException}.
+     * failed future with an {@link org.eclipse.hono.service.base.jdbc.store.DuplicateKeyException}.
      *
      * @param key The key of the device to create.
      * @param device The device data.
@@ -242,7 +238,7 @@ public class TableManagementStore extends AbstractDeviceStore {
                             .update(this.client)
                             .recover(SQL::translateException)
 
-                            .flatMap(x -> createGroups(connection, key, new HashSet<>(device.getMemberOf()), context));
+                            .compose(x -> createGroups(connection, key, new HashSet<>(device.getMemberOf()), context));
 
                 })
 
@@ -319,8 +315,13 @@ public class TableManagementStore extends AbstractDeviceStore {
      * @param span The span to contribute to.
      * @return A future, tracking the outcome of the operation.
      */
-    protected Future<UpdateResult> updateJsonField(final DeviceKey key, final Statement statement, final String jsonValue, final Optional<String> resourceVersion,
-                                                   final String nextVersion, final Span span) {
+    protected Future<UpdateResult> updateJsonField(
+            final DeviceKey key,
+            final Statement statement,
+            final String jsonValue,
+            final Optional<String> resourceVersion,
+            final String nextVersion,
+            final Span span) {
 
         final var expanded = statement.expand(map -> {
             map.put("tenant_id", key.getTenantId());
@@ -358,7 +359,11 @@ public class TableManagementStore extends AbstractDeviceStore {
      * @param spanContext The span to contribute to.
      * @return A future, tracking the outcome of the operation.
      */
-    public Future<Versioned<Void>> updateDevice(final DeviceKey key, final Device device, final Optional<String> resourceVersion, final SpanContext spanContext) {
+    public Future<Versioned<Void>> updateDevice(
+            final DeviceKey key,
+            final Device device,
+            final Optional<String> resourceVersion,
+            final SpanContext spanContext) {
 
         final Span span = TracingHelper.buildChildSpan(this.tracer, spanContext, "update device", getClass().getSimpleName())
                 .withTag(TracingHelper.TAG_TENANT_ID, key.getTenantId())
@@ -380,17 +385,17 @@ public class TableManagementStore extends AbstractDeviceStore {
                         readDeviceForUpdate(connection, key, context)
 
                                 // check if we got back a result, if not this will abort early
-                                .flatMap(result -> extractVersionForUpdate(result, resourceVersion))
+                                .compose(result -> extractVersionForUpdate(result, resourceVersion))
 
                                 // take the version and start processing on
-                                .flatMap(version -> deleteGroups(connection, key, context)
+                                .compose(version -> deleteGroups(connection, key, context)
                                         .map(version))
 
-                                .flatMap(version -> createGroups(connection, key, memberOf, context)
+                                .compose(version -> createGroups(connection, key, memberOf, context)
                                         .map(version))
 
                                 // update the version, this will release the lock
-                                .flatMap(version -> this.updateRegistrationVersionedStatement
+                                .compose(version -> this.updateRegistrationVersionedStatement
                                         .expand(map -> {
                                             map.put("tenant_id", deviceDto.getTenantId());
                                             map.put("device_id", deviceDto.getDeviceId());
@@ -403,7 +408,7 @@ public class TableManagementStore extends AbstractDeviceStore {
                                         .trace(this.tracer, span.context()).update(connection)
 
                                         // check the update outcome
-                                        .flatMap(TableManagementStore::checkUpdateOutcome)
+                                        .compose(TableManagementStore::checkUpdateOutcome)
                                         .map(version)
                                 )
 
@@ -471,7 +476,10 @@ public class TableManagementStore extends AbstractDeviceStore {
      * @param spanContext The span to contribute to.
      * @return A future, tracking the outcome of the operation.
      */
-    public Future<UpdateResult> deleteDevice(final DeviceKey key, final Optional<String> resourceVersion, final SpanContext spanContext) {
+    public Future<UpdateResult> deleteDevice(
+            final DeviceKey key,
+            final Optional<String> resourceVersion,
+            final SpanContext spanContext) {
 
         final Span span = TracingHelper.buildChildSpan(this.tracer, spanContext, "delete device", getClass().getSimpleName())
                 .withTag(TracingHelper.TAG_TENANT_ID, key.getTenantId())
@@ -536,7 +544,7 @@ public class TableManagementStore extends AbstractDeviceStore {
     /**
      * Set all credentials for a device.
      * <p>
-     * This will set/replace all credentials of the device. If the device does not exists, the result
+     * This will set/update all credentials of the device. If the device does not exist, the result
      * will be {@code false}. If the update was successful, then the result will be {@code true}.
      * If the resource version was provided, but the provided version was no longer the current version,
      * then the future will fail with a {@link OptimisticLockingException}.
@@ -547,8 +555,11 @@ public class TableManagementStore extends AbstractDeviceStore {
      * @param spanContext The span to contribute to.
      * @return A future, tracking the outcome of the operation.
      */
-    public Future<Versioned<Boolean>> setCredentials(final DeviceKey key, final List<CommonCredential> credentials, final Optional<String> resourceVersion,
-                                                     final SpanContext spanContext) {
+    public Future<Versioned<Boolean>> setCredentials(
+            final DeviceKey key,
+            final List<CommonCredential> credentials,
+            final Optional<String> resourceVersion,
+            final SpanContext spanContext) {
 
         final Span span = TracingHelper.buildChildSpan(this.tracer, spanContext, "set credentials", getClass().getSimpleName())
                 .withTag(TracingHelper.TAG_TENANT_ID, key.getTenantId())
@@ -565,23 +576,32 @@ public class TableManagementStore extends AbstractDeviceStore {
                 readDeviceForUpdate(connection, key, context)
 
                         // check if we got back a result, if not this will abort early
-                        .flatMap(result -> extractVersionForUpdate(result, resourceVersion))
+                        .compose(result -> extractVersionForUpdate(result, resourceVersion))
 
                         // take the version and start processing on
-                        .flatMap(version -> Future.succeededFuture()
+                        .compose(version -> Future.succeededFuture()
 
-                                .flatMap(x -> this.readCredentialsStatement
-                                        // get the current credentials set
-                                        .expand(map -> {
-                                            map.put("tenant_id", key.getTenantId());
-                                            map.put("device_id", key.getDeviceId());
-                                        })
-                                        .trace(this.tracer, span.context())
-                                        .query(connection)
-                                        .map(this::parseCredentials)
-                                )
+                                .compose(x -> {
+                                    final Promise<CredentialsDto> result = Promise.promise();
+                                    final var updatedCredentialsDto = CredentialsDto.forUpdate(
+                                            key.getTenantId(),
+                                            key.getDeviceId(),
+                                            credentials,
+                                            null);
 
-                                .flatMap(currentCredentials -> this.deleteAllCredentialsStatement
+                                    if (updatedCredentialsDto.requiresMerging()) {
+                                        getCredentialsDto(key, connection, span)
+                                            .map(updatedCredentialsDto::merge)
+                                            .onComplete(result);
+                                    } else {
+                                        // simply replace the existing credentials with the
+                                        // updated ones provided by the client
+                                        result.complete(updatedCredentialsDto);
+                                    }
+                                    return result.future();
+                                })
+
+                                .compose(updatedCredentials -> this.deleteAllCredentialsStatement
                                         // delete the existing entries
                                         .expand(map -> {
                                             map.put("tenant_id", key.getTenantId());
@@ -589,13 +609,13 @@ public class TableManagementStore extends AbstractDeviceStore {
                                         })
                                         .trace(this.tracer, span.context())
                                         .update(connection)
-                                        .map(currentCredentials)
+                                        .map(updatedCredentials)
                                 )
 
-                                .map(currentCredentials -> processSecrets(credentials, currentCredentials))
-
                                 // then create new entries
-                                .flatMap(newCredentials -> CompositeFuture.all(newCredentials.stream()
+                                .compose(updatedCredentials -> {
+                                    updatedCredentials.createMissingSecretIds();
+                                    return CompositeFuture.all(updatedCredentials.getData().stream()
                                         .map(JsonObject::mapFrom)
                                         .filter(c -> c.containsKey("type") && c.containsKey("auth-id"))
                                         .map(c -> this.insertCredentialEntryStatement
@@ -609,10 +629,11 @@ public class TableManagementStore extends AbstractDeviceStore {
                                                 .trace(this.tracer, span.context())
                                                 .update(connection))
                                         .collect(Collectors.toList()))
-                                        .mapEmpty())
+                                        .mapEmpty();
+                                })
 
                                 // update the version, this will release the lock
-                                .flatMap(x -> this.updateDeviceVersionStatement
+                                .compose(x -> this.updateDeviceVersionStatement
                                         .expand(map -> {
                                             map.put("tenant_id", key.getTenantId());
                                             map.put("device_id", key.getDeviceId());
@@ -623,7 +644,7 @@ public class TableManagementStore extends AbstractDeviceStore {
                                         .update(connection)
 
                                         // check the update outcome
-                                        .flatMap(TableManagementStore::checkUpdateOutcome))
+                                        .compose(TableManagementStore::checkUpdateOutcome))
 
                                 .map(true)
 
@@ -637,38 +658,27 @@ public class TableManagementStore extends AbstractDeviceStore {
 
     }
 
-    /**
-     * Process credentials, create IDs, and merge updates.
-     *
-     * @param newCredentials The new credentials.
-     * @param currentCredentials The current credentials.
-     * @return The credentials to store.
-     */
-    private List<CommonCredential> processSecrets(
-            final List<CommonCredential> newCredentials,
-            final List<CommonCredential> currentCredentials) {
+    private Future<CredentialsDto> getCredentialsDto(
+            final DeviceKey key,
+            final SQLConnection connection,
+            final Span span) {
 
-        for (CommonCredential credential : newCredentials) {
-
-            final var other =  CommonCredentials.findByOtherCredential(currentCredentials, credential);
-
-            // merge in existing secrets
-            other.ifPresent(credential::merge);
-
-            // create IDs for new secrets
-            for (CommonSecret secret : credential.getSecrets()) {
-
-                if (secret.getId() == null || secret.getId().isEmpty()) {
-                    // new entry, create ID and continue
-                    secret.setId(DeviceRegistryUtils.getUniqueIdentifier());
-                }
-
-            }
-
-        }
-
-        return newCredentials;
-
+        return readCredentialsStatement
+                // get the current credentials set
+                .expand(map -> {
+                    map.put("tenant_id", key.getTenantId());
+                    map.put("device_id", key.getDeviceId());
+                })
+                .trace(this.tracer, span.context())
+                .query(connection)
+                .map(this::parseCredentials)
+                .map(existingCredentials -> CredentialsDto.forRead(
+                        key.getTenantId(),
+                        key.getDeviceId(),
+                        existingCredentials,
+                        null,
+                        null,
+                        null));
     }
 
     private <T> Future<T> recoverNotFound(final Span span, final Throwable err, final Supplier<T> orProvider) {
@@ -750,17 +760,17 @@ public class TableManagementStore extends AbstractDeviceStore {
 
         return promise.future()
 
-                .flatMap(connection -> readDevice(connection, key, span)
+                .compose(connection -> readDevice(connection, key, span)
 
                         // check if we got back a result, if not this will abort early
 
-                        .flatMap(result -> extractVersionForUpdate(result, Optional.empty()))
+                        .compose(result -> extractVersionForUpdate(result, Optional.empty()))
 
                         // read credentials
 
-                        .flatMap(version -> expanded.trace(this.tracer, span.context()).query(connection)
+                        .compose(version -> expanded.trace(this.tracer, span.context()).query(connection)
 
-                                .flatMap(r -> {
+                                .compose(r -> {
 
                                     span.log(Map.of(
                                             Fields.EVENT, "read result",

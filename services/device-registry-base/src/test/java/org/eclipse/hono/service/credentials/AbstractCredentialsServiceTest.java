@@ -918,6 +918,38 @@ public interface AbstractCredentialsServiceTest {
         phase2.future().onComplete(ctx.succeeding(s -> ctx.completeNow()));
     }
 
+
+    /**
+     * Verifies that a request to update an empty set of credentials fails with a 400 status code
+     * if any of the updated credentials contain a secret having an ID.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    default void testUpdateEmptyCredentialsFailsForSecretWithId(final VertxTestContext ctx) {
+        final var tenantId = UUID.randomUUID().toString();
+        final var deviceId = UUID.randomUUID().toString();
+
+        getDeviceManagementService().createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
+            .compose(ok -> {
+                final var secret = new PasswordSecret();
+                secret.setId("any-id");
+                final var updatedCredentials = new PasswordCredential("device1", List.of(secret));
+                return getCredentialsManagementService().updateCredentials(
+                        tenantId,
+                        deviceId,
+                        List.of(updatedCredentials),
+                        Optional.empty(),
+                        NoopSpan.INSTANCE);
+            })
+            .onComplete(ctx.succeeding(r -> {
+                ctx.verify(() -> {
+                    assertThat(r.getStatus()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
+                });
+                ctx.completeNow();
+            }));
+    }
+
     /**
      * Verifies that existing credentials and secrets are deleted when they are omitted from
      * the body of an update Credentials request.
