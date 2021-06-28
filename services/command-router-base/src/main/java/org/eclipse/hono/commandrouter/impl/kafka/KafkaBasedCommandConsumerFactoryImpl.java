@@ -58,6 +58,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
 
     private static final Pattern COMMANDS_TOPIC_PATTERN = Pattern
             .compile(Pattern.quote(HonoTopic.Type.COMMAND.prefix) + ".*");
+    private static final String DEFAULT_GROUP_ID = "cmd-router-group";
 
     private final Vertx vertx;
     private final TenantClient tenantClient;
@@ -67,6 +68,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
     private final KafkaBasedInternalCommandSender internalCommandSender;
     private final KafkaBasedCommandResponseSender kafkaBasedCommandResponseSender;
 
+    private String groupId = DEFAULT_GROUP_ID;
     private KafkaBasedMappingAndDelegatingCommandHandler commandHandler;
     private AsyncHandlingAutoCommitKafkaConsumer kafkaConsumer;
 
@@ -106,6 +108,25 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
                 tracer);
     }
 
+    /**
+     * Sets the group identifier for the Kafka consumer.
+     * <p>
+     * Must be invoked before {@link #start()}.
+     * TODO this method should become obsolete once the configs of the Hono components support multiple
+     *      specific consumer configurations; then the group id value should be taken from there.
+     *
+     * @param groupId The group id to use.
+     * @throws IllegalStateException If this factory has already been started.
+     * @throws NullPointerException If groupId is {@code null}.
+     */
+    public void setGroupId(final String groupId) {
+        Objects.requireNonNull(groupId);
+        if (kafkaConsumer != null) {
+            throw new IllegalStateException("must be invoked before start()");
+        }
+        this.groupId = groupId;
+    }
+
     @Override
     public MessagingType getMessagingType() {
         return MessagingType.kafka;
@@ -122,7 +143,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
                 commandTargetMapper, internalCommandSender, kafkaBasedCommandResponseSender, tracer);
 
         final Map<String, String> consumerConfig = kafkaConsumerConfig.getConsumerConfig("consumer");
-        consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, "cmd-router-group");
+        consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
         kafkaConsumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, COMMANDS_TOPIC_PATTERN,
                 commandHandler::mapAndDelegateIncomingCommandMessage, consumerConfig);
         kafkaConsumer.setOnRebalanceDoneHandler(
@@ -134,7 +155,9 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
 
     @Override
     public Future<Void> stop() {
-        return CompositeFuture.all(commandHandler.stop(), kafkaConsumer.stop())
+        return CompositeFuture
+                .join(kafkaConsumer.stop(), commandHandler.stop(), internalCommandSender.stop(),
+                        kafkaBasedCommandResponseSender.stop())
                 .mapEmpty();
     }
 

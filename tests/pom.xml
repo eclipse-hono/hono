@@ -209,6 +209,11 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-service-command-router-base</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
       <artifactId>core-test-utils</artifactId>
       <scope>test</scope>
     </dependency>
