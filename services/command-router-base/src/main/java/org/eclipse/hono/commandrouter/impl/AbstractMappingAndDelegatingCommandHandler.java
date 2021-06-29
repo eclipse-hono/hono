@@ -14,6 +14,7 @@ package org.eclipse.hono.commandrouter.impl;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.NoConsumerException;
@@ -29,11 +30,14 @@ import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.Lifecycle;
+import org.eclipse.hono.util.MessagingType;
+import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
 
 /**
  * Handler for mapping received commands to the corresponding target protocol adapter instance
@@ -79,6 +83,13 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
     }
 
     /**
+     * Gets the messaging type this handler uses.
+     *
+     * @return The used messaging type.
+     */
+    protected abstract MessagingType getMessagingType();
+
+    /**
      * Delegates an incoming command to the protocol adapter instance that the target
      * device is connected to.
      * <p>
@@ -103,8 +114,21 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
                             commandContext.getTracingSpan());
                     return tenantObject;
                 })
-                .compose(tenantObject -> commandTargetMapper.getTargetGatewayAndAdapterInstance(command.getTenant(),
-                        command.getDeviceId(), commandContext.getTracingContext()))
+                .compose(tenantObject -> {
+                    // check whether the handler messaging type is equal to the messaging type of the tenant (if set)
+                    final MessagingType tenantMessagingType = Optional
+                            .ofNullable(tenantObject.getProperty(TenantConstants.FIELD_EXT, JsonObject.class))
+                            .map(ext -> ext.getString(TenantConstants.FIELD_EXT_MESSAGING_TYPE))
+                            .map(MessagingType::valueOf).orElse(null);
+                    if (tenantMessagingType != null && getMessagingType() != tenantMessagingType) {
+                        log.info("command received via {} but tenant is configured to use {} [{}]", getMessagingType(),
+                                tenantMessagingType, commandContext.getCommand());
+                        commandContext.getTracingSpan().log(String.format("command received via %s but tenant is configured to use %s",
+                                getMessagingType(), tenantMessagingType));
+                    }
+                    return commandTargetMapper.getTargetGatewayAndAdapterInstance(command.getTenant(),
+                            command.getDeviceId(), commandContext.getTracingContext());
+                })
                 .recover(cause -> {
                     final Throwable error;
                     if (tenantObjectFuture.failed() && ServiceInvocationException

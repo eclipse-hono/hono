@@ -40,6 +40,7 @@ import org.eclipse.hono.service.commandrouter.CommandRouterResult;
 import org.eclipse.hono.service.commandrouter.CommandRouterService;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Lifecycle;
+import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -190,8 +191,29 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
             final Span span) {
 
         return tenantClient.get(tenantId, span.context())
-                .compose(tenantObject -> commandConsumerFactoryProvider.getClient(tenantObject)
-                        .createCommandConsumer(tenantId, span.context()))
+                .compose(tenantObject -> {
+                    final CommandConsumerFactory primaryFactory = commandConsumerFactoryProvider.getClient(tenantObject);
+                    final Future<Void> primaryConsumerFuture = primaryFactory.createCommandConsumer(tenantId, span.context());
+
+                    if (primaryFactory.getMessagingType() == MessagingType.kafka
+                            && commandConsumerFactoryProvider.getClient(MessagingType.amqp) != null) {
+                        // tenant is configured to use Kafka but AMQP is also configured
+                        span.log("also creating secondary, AMQP-based consumer");
+                        final Future<Void> amqpConsumerFuture = commandConsumerFactoryProvider.getClient(MessagingType.amqp)
+                                .createCommandConsumer(tenantId, span.context());
+                        return CompositeFuture.join(primaryConsumerFuture, amqpConsumerFuture)
+                                .map(v -> (Void) null)
+                                .recover(thr -> {
+                                    if (amqpConsumerFuture.failed()) {
+                                        span.log("ignoring failure to create secondary, AMQP-based command consumer");
+                                    }
+                                    return primaryConsumerFuture;
+                                });
+                    }
+                    // the reverse case of an AMQP-configured tenant while Kafka is available is handled implicitly
+                    // because of the Kafka wildcard topic subscription (no auto-creation triggered in that case)
+                    return primaryConsumerFuture;
+                })
                 .compose(v -> deviceConnectionInfo
                         .setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, getSanitizedLifespan(lifespan), span)
                         .recover(thr -> {

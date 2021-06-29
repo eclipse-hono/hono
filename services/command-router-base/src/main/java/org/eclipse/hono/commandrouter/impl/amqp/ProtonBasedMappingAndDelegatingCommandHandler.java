@@ -29,6 +29,7 @@ import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.commandrouter.impl.AbstractMappingAndDelegatingCommandHandler;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.Strings;
 
@@ -57,6 +58,11 @@ public class ProtonBasedMappingAndDelegatingCommandHandler extends AbstractMappi
             final CommandTargetMapper commandTargetMapper) {
         super(tenantClient, commandTargetMapper, new ProtonBasedInternalCommandSender(connection));
         this.tracer = connection.getTracer();
+    }
+
+    @Override
+    protected final MessagingType getMessagingType() {
+        return MessagingType.amqp;
     }
 
     /**

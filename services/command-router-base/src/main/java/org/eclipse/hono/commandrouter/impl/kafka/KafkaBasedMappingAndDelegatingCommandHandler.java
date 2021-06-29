@@ -24,6 +24,7 @@ import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.commandrouter.impl.AbstractMappingAndDelegatingCommandHandler;
+import org.eclipse.hono.util.MessagingType;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
@@ -63,6 +64,11 @@ public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappin
         this.commandQueue = Objects.requireNonNull(commandQueue);
         this.kafkaBasedCommandResponseSender = Objects.requireNonNull(kafkaBasedCommandResponseSender);
         this.tracer = Objects.requireNonNull(tracer);
+    }
+
+    @Override
+    protected final MessagingType getMessagingType() {
+        return MessagingType.kafka;
     }
 
     /**

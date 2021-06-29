@@ -23,13 +23,13 @@ import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.header.internals.RecordHeader;
 import org.eclipse.hono.client.command.CommandResponse;
 import org.eclipse.hono.client.command.Commands;
-import org.eclipse.hono.client.command.kafka.KafkaBasedCommandResponseSender;
 import org.eclipse.hono.client.kafka.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.MessagingType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -70,7 +70,7 @@ public class KafkaBasedCommandResponseSenderTest {
         final int status = 200;
         final CommandResponse commandResponse = CommandResponse.fromAddressAndCorrelationId(
                 String.format("%s/%s/%s", CommandConstants.COMMAND_RESPONSE_ENDPOINT, tenantId,
-                        Commands.getDeviceFacingReplyToId("", deviceId)),
+                        Commands.getDeviceFacingReplyToId("", deviceId, MessagingType.kafka)),
                 correlationId,
                 Buffer.buffer(payload),
                 contentType,

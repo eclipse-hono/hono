@@ -995,7 +995,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 msg.setReplyTo(String.format("%s/%s/%s",
                         CommandConstants.COMMAND_RESPONSE_ENDPOINT,
                         command.getTenant(),
-                        Commands.getDeviceFacingReplyToId(command.getReplyToId(), command.getDeviceId())));
+                        Commands.getDeviceFacingReplyToId(command.getReplyToId(), command.getDeviceId(), command.getMessagingType())));
             }
 
             final Long timerId = getConfig().getSendMessageToDeviceTimeout() < 1 ? null

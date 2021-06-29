@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.client.command;
 
+import org.eclipse.hono.util.MessagingType;
+
 import io.opentracing.Span;
 import io.vertx.core.buffer.Buffer;
 
@@ -148,7 +150,9 @@ public interface Command {
      * Gets this command's reply-to-id as given in the incoming command message.
      * <p>
      * Note that an outgoing command message targeted at the device will contain an
-     * adapted reply-to address containing the device id.
+     * adapted reply-to address containing the device id and the type of messaging
+     * infrastructure over which the command was received (see
+     * {@link Commands#getDeviceFacingReplyToId(String, String, MessagingType)}).
      * <p>
      * For certain command &amp; control implementations (e.g. using Kafka), the command
      * message doesn't contain such an id, so that this method will always return
@@ -166,6 +170,13 @@ public interface Command {
      * @throws IllegalStateException if this command is invalid.
      */
     String getCorrelationId();
+
+    /**
+     * Gets the type of the messaging system on which the command was received.
+     *
+     * @return The messaging type.
+     */
+    MessagingType getMessagingType();
 
     /**
      * Logs information about the command.

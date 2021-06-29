@@ -217,6 +217,7 @@ public abstract class ProtocolAdapterMockSupport {
      * @param contentType The type of the payload or {@code null} if the command has no payload.
      * @param payload The command's payload.
      * @param replyToId The reply-to-id to use.
+     * @param messagingType The type of messaging system to use.
      * @return The mocked context.
      */
     protected CommandContext givenARequestResponseCommandContext(
@@ -225,9 +226,10 @@ public abstract class ProtocolAdapterMockSupport {
             final String name,
             final String replyToId,
             final String contentType,
-            final Buffer payload) {
+            final Buffer payload,
+            final MessagingType messagingType) {
 
-        final Command command = newRequestResponseCommand(tenantId, deviceId, name, replyToId, contentType, payload);
+        final Command command = newRequestResponseCommand(tenantId, deviceId, name, replyToId, contentType, payload, messagingType);
 
         final CommandContext context = mock(CommandContext.class);
         when(context.getCommand()).thenReturn(command);
@@ -261,11 +263,13 @@ public abstract class ProtocolAdapterMockSupport {
             final String name,
             final String replyToId,
             final String contentType,
-            final Buffer payload) {
+            final Buffer payload,
+            final MessagingType messagingType) {
 
         final Command command = newOneWayCommand(tenantId, deviceId, name, contentType, payload);
         when(command.isOneWay()).thenReturn(false);
-        when(command.getRequestId()).thenReturn(Commands.getRequestId("correlation-id", replyToId, deviceId));
+        when(command.getRequestId())
+                .thenReturn(Commands.encodeRequestIdParameters("correlation-id", replyToId, deviceId, messagingType));
         return command;
     }
 

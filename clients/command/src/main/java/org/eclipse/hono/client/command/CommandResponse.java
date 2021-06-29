@@ -16,6 +16,7 @@ package org.eclipse.hono.client.command;
 import java.util.Objects;
 import java.util.function.Predicate;
 
+import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.Pair;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
@@ -42,6 +43,7 @@ public final class CommandResponse {
     private final int status;
     private final String correlationId;
     private final String replyToId;
+    private final MessagingType messagingType;
 
     /**
      * Creates a command response.
@@ -53,7 +55,8 @@ public final class CommandResponse {
      * @param status The HTTP status code indicating the outcome of the command.
      * @param correlationId The correlation ID of the command that this is the response for.
      * @param replyToId The replyTo ID of the command message.
-     * @throws NullPointerException if tenantId, deviceId, correlationId or replyToId is {@code null}.
+     * @param messagingType The type of the messaging system via which the command message was received.
+     * @throws NullPointerException if tenantId, deviceId, correlationId, replyToId or messagingType is {@code null}.
      */
     public CommandResponse(
             final String tenantId,
@@ -62,7 +65,8 @@ public final class CommandResponse {
             final String contentType,
             final int status,
             final String correlationId,
-            final String replyToId) {
+            final String replyToId,
+            final MessagingType messagingType) {
 
         this.tenantId = Objects.requireNonNull(tenantId);
         this.deviceId = Objects.requireNonNull(deviceId);
@@ -71,6 +75,7 @@ public final class CommandResponse {
         this.status = status;
         this.correlationId = Objects.requireNonNull(correlationId);
         this.replyToId = Objects.requireNonNull(replyToId);
+        this.messagingType = Objects.requireNonNull(messagingType);
     }
 
     /**
@@ -105,16 +110,16 @@ public final class CommandResponse {
             return null;
         }
         try {
-            final Pair<String, String> correlationAndReplyToId = Commands
-                    .getCorrelationAndReplyToId(requestId, deviceId);
+            final CommandRequestIdParameters requestParams = Commands.decodeRequestIdParameters(requestId, deviceId);
             return new CommandResponse(
                     tenantId,
                     deviceId,
                     payload,
                     contentType,
                     status,
-                    correlationAndReplyToId.one(),
-                    correlationAndReplyToId.two());
+                    requestParams.getCorrelationId(),
+                    requestParams.getReplyToId(),
+                    requestParams.getMessagingType());
         } catch (final IllegalArgumentException e) {
             LOG.debug("error creating CommandResponse", e);
             return null;
@@ -125,7 +130,7 @@ public final class CommandResponse {
      * Creates a response for a given response message address and correlation ID.
      *
      * @param address The address of the response message. It has to contain a tenant segment followed by the segments
-     *                returned by {@link Commands#getDeviceFacingReplyToId(String, String)}.
+     *                returned by {@link Commands#getDeviceFacingReplyToId(String, String, MessagingType)}.
      * @param correlationId The correlation ID of the command that this is the response for.
      * @param payload The payload of the response or {@code null} if the response has no payload.
      * @param contentType The contentType of the response or {@code null} if the response has no payload.
@@ -158,8 +163,10 @@ public final class CommandResponse {
         }
         try {
             // resource.getPathWithoutBase() represents the result of Commands.getDeviceFacingReplyToId()
-            final String replyToId = Commands.getOriginalReplyToId(resource.getPathWithoutBase(), deviceId);
-            return new CommandResponse(tenantId, deviceId, payload, contentType, status, correlationId, replyToId);
+            final Pair<String, MessagingType> replyToIdMessagingTypePair = Commands
+                    .getOriginalReplyToIdAndMessagingType(resource.getPathWithoutBase(), deviceId);
+            return new CommandResponse(tenantId, deviceId, payload, contentType, status, correlationId,
+                    replyToIdMessagingTypePair.one(), replyToIdMessagingTypePair.two());
         } catch (final IllegalArgumentException e) {
             LOG.debug("error creating CommandResponse: invalid address, invalid last path component", e);
             return null;
@@ -205,6 +212,9 @@ public final class CommandResponse {
 
     /**
      * Gets the reply-to identifier that is either part of the request ID or the response address.
+     * <p>
+     * This may or may not start with the device identifier, depending on whether that was the case for the reply-to
+     * identifier in the original command.
      *
      * @return The identifier.
      */
@@ -231,6 +241,15 @@ public final class CommandResponse {
         return status;
     }
 
+    /**
+     * Gets the type of the messaging system on which the command was received.
+     *
+     * @return The messaging type.
+     */
+    public MessagingType getMessagingType() {
+        return messagingType;
+    }
+
     @Override
     public String toString() {
         return "CommandResponse{" + "tenantId='" + tenantId + '\''
@@ -239,6 +258,7 @@ public final class CommandResponse {
                 + ", status=" + status
                 + ", correlationId='" + correlationId + '\''
                 + ", replyToId='" + replyToId + '\''
+                + ", messagingType='" + messagingType + '\''
                 + '}';
     }
 }

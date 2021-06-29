@@ -41,6 +41,7 @@ import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -87,7 +88,8 @@ public class CommandResponseResourceTest extends ResourceTestBase {
             .thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN)));
 
         // WHEN a device publishes an command response
-        final String reqId = Commands.getRequestId("correlation", "replyToId", "device");
+        final String reqId = Commands.encodeRequestIdParameters("correlation", "replyToId", "device",
+                MessagingType.amqp);
         final Buffer payload = Buffer.buffer("some payload");
         final OptionSet options = new OptionSet();
         options.addUriPath(CommandConstants.COMMAND_RESPONSE_ENDPOINT).addUriPath(reqId);
@@ -135,7 +137,8 @@ public class CommandResponseResourceTest extends ResourceTestBase {
         final CommandResponseSender sender = givenACommandResponseSenderForAnyTenant(outcome);
 
         // WHEN a device publishes an command response
-        final String reqId = Commands.getRequestId("correlation", "replyToId", "device");
+        final String reqId = Commands.encodeRequestIdParameters("correlation", "replyToId", "device",
+                MessagingType.amqp);
         final Buffer payload = Buffer.buffer("some payload");
         final OptionSet options = new OptionSet();
         options.addUriPath(CommandConstants.COMMAND_RESPONSE_ENDPOINT).addUriPath(reqId);
@@ -184,7 +187,8 @@ public class CommandResponseResourceTest extends ResourceTestBase {
         final CommandResponseSender sender = givenACommandResponseSenderForAnyTenant(outcome);
 
         // WHEN a device publishes an command response
-        final String reqId = Commands.getRequestId("correlation", "replyToId", "device");
+        final String reqId = Commands.encodeRequestIdParameters("correlation", "replyToId", "device",
+                MessagingType.amqp);
         final Buffer payload = Buffer.buffer("some payload");
         final OptionSet options = new OptionSet();
         options.addUriPath(CommandConstants.COMMAND_RESPONSE_ENDPOINT).addUriPath(reqId);

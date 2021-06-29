@@ -27,6 +27,7 @@ import org.eclipse.hono.client.command.Commands;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.Strings;
 
@@ -67,7 +68,7 @@ public final class ProtonBasedCommand implements Command {
         this.deviceId = Objects.requireNonNull(deviceId);
         this.correlationId = correlationId;
         this.replyToId = replyToId;
-        requestId = Commands.getRequestId(correlationId, replyToId, deviceId);
+        requestId = Commands.encodeRequestIdParameters(correlationId, replyToId, deviceId, MessagingType.amqp);
     }
 
     /**
@@ -181,6 +182,11 @@ public final class ProtonBasedCommand implements Command {
      */
     Message getMessage() {
         return message;
+    }
+
+    @Override
+    public MessagingType getMessagingType() {
+        return MessagingType.amqp;
     }
 
     @Override
@@ -312,7 +318,7 @@ public final class ProtonBasedCommand implements Command {
         if (isValid()) {
             TracingHelper.TAG_CORRELATION_ID.set(span, getCorrelationId());
             final Map<String, String> items = new HashMap<>(5);
-            items.put(Fields.EVENT, "received command message");
+            items.put(Fields.EVENT, "received command message via AMQP");
             items.put("to", message.getAddress());
             items.put("reply-to", message.getReplyTo());
             items.put("name", getName());

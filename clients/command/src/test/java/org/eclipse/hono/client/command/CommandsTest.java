@@ -15,7 +15,7 @@ package org.eclipse.hono.client.command;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.eclipse.hono.client.command.Commands;
+import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.Pair;
 import org.junit.jupiter.api.Test;
 
@@ -29,56 +29,79 @@ public class CommandsTest {
      * Verifies that getting the request id with non-empty parameters returns the expected value.
      */
     @Test
-    public void testGetRequestId() {
+    public void testEncodeRequestIdParameters() {
         final String correlationId = "myCorrelationId";
         final String replyToId = "myReplyToId";
         final String deviceId = "myDeviceId";
-        final String requestId = Commands.getRequestId(correlationId, replyToId, deviceId);
+        final String requestId = Commands.encodeRequestIdParameters(correlationId, replyToId, deviceId, MessagingType.kafka);
         assertThat(requestId).isNotNull();
         assertThat(requestId.contains(correlationId)).isTrue();
         assertThat(requestId.contains(replyToId)).isTrue();
 
         // do the reverse operation
-        final Pair<String, String> correlationAndReplyId = Commands.getCorrelationAndReplyToId(requestId, deviceId);
-        assertThat(correlationAndReplyId.one()).isEqualTo(correlationId);
-        assertThat(correlationAndReplyId.two()).isEqualTo(replyToId);
+        final CommandRequestIdParameters requestIdParams = Commands.decodeRequestIdParameters(requestId, deviceId);
+        assertThat(requestIdParams.getCorrelationId()).isEqualTo(correlationId);
+        assertThat(requestIdParams.getReplyToId()).isEqualTo(replyToId);
+        assertThat(requestIdParams.getMessagingType()).isEqualTo(MessagingType.kafka);
+    }
+
+    /**
+     * Verifies that getting the request id with non-empty parameters and messaging type AMQP returns the expected value.
+     */
+    @Test
+    public void testEncodeRequestIdParametersWithMessagingTypeAmqp() {
+        final String correlationId = "myCorrelationId";
+        final String replyToId = "myReplyToId";
+        final String deviceId = "myDeviceId";
+        final String requestId = Commands.encodeRequestIdParameters(correlationId, replyToId, deviceId, MessagingType.amqp);
+        assertThat(requestId).isNotNull();
+        assertThat(requestId.contains(correlationId)).isTrue();
+        assertThat(requestId.contains(replyToId)).isTrue();
+
+        // do the reverse operation
+        final CommandRequestIdParameters requestIdParams = Commands.decodeRequestIdParameters(requestId, deviceId);
+        assertThat(requestIdParams.getCorrelationId()).isEqualTo(correlationId);
+        assertThat(requestIdParams.getReplyToId()).isEqualTo(replyToId);
+        assertThat(requestIdParams.getMessagingType()).isEqualTo(MessagingType.amqp);
     }
 
     /**
      * Verifies that getting the request id with a replyToId starting with the deviceId returns the expected value.
      */
     @Test
-    public void testGetRequestIdWithReplyToIdContainingDeviceId() {
+    public void testEncodeRequestIdParametersWithReplyToIdContainingDeviceId() {
         final String correlationId = "myCorrelationId";
         final String deviceId = "myDeviceId";
         final String replyToId = deviceId + "/myReplyId";
-        final String requestId = Commands.getRequestId(correlationId, replyToId, deviceId);
+        final String requestId = Commands.encodeRequestIdParameters(correlationId, replyToId, deviceId, MessagingType.kafka);
         assertThat(requestId).isNotNull();
         assertThat(requestId.contains(correlationId)).isTrue();
         assertThat(requestId.contains(replyToId)).isFalse();
         assertThat(requestId.contains("myReplyId")).isTrue();
 
         // do the reverse operation
-        final Pair<String, String> correlationAndReplyId = Commands.getCorrelationAndReplyToId(requestId, deviceId);
-        assertThat(correlationAndReplyId.one()).isEqualTo(correlationId);
-        assertThat(correlationAndReplyId.two()).isEqualTo(replyToId);
+        final CommandRequestIdParameters requestIdParams = Commands.decodeRequestIdParameters(requestId, deviceId);
+        assertThat(requestIdParams.getCorrelationId()).isEqualTo(correlationId);
+        assertThat(requestIdParams.getReplyToId()).isEqualTo(replyToId);
+        assertThat(requestIdParams.getMessagingType()).isEqualTo(MessagingType.kafka);
     }
 
     /**
      * Verifies that getting the request id without a given correlation id returns a non-null value.
      */
     @Test
-    public void testGetRequestIdUsingOnlyCorrelationId() {
+    public void testEncodeRequestIdParametersUsingOnlyCorrelationId() {
         final String correlationId = "myCorrelationId";
         final String deviceId = "myDeviceId";
-        final String requestId = Commands.getRequestId(correlationId);
+        final String requestId = Commands.encodeRequestIdParameters(correlationId, MessagingType.kafka);
         assertThat(requestId).isNotNull();
         assertThat(requestId.contains(correlationId)).isTrue();
 
         // do the reverse operation
-        final Pair<String, String> correlationAndReplyId = Commands.getCorrelationAndReplyToId(requestId, deviceId);
-        assertThat(correlationAndReplyId.one()).isEqualTo(correlationId);
-        assertThat(correlationAndReplyId.two()).isEmpty();
+        final CommandRequestIdParameters requestIdParams = Commands.decodeRequestIdParameters(requestId, deviceId);
+        assertThat(requestIdParams.getCorrelationId()).isEqualTo(correlationId);
+        assertThat(requestIdParams.getReplyToId()).isEmpty();
+        assertThat(requestIdParams.getMessagingType()).isEqualTo(MessagingType.kafka);
     }
 
     /**
@@ -88,12 +111,31 @@ public class CommandsTest {
     public void testGetDeviceFacingReplyToId() {
         final String replyToId = "replyToId";
         final String deviceId = "deviceId";
-        final String deviceFacingReplyToId = Commands.getDeviceFacingReplyToId(replyToId, deviceId);
+        final String deviceFacingReplyToId = Commands.getDeviceFacingReplyToId(replyToId, deviceId, MessagingType.kafka);
         assertThat(deviceFacingReplyToId).contains(deviceId);
 
         // do the reverse operation
-        final String originalReplyToId = Commands.getOriginalReplyToId(deviceFacingReplyToId, deviceId);
-        assertThat(originalReplyToId).isEqualTo(replyToId);
+        final Pair<String, MessagingType> originalReplyToIdMessagingTypePair = Commands
+                .getOriginalReplyToIdAndMessagingType(deviceFacingReplyToId, deviceId);
+        assertThat(originalReplyToIdMessagingTypePair.one()).isEqualTo(replyToId);
+        assertThat(originalReplyToIdMessagingTypePair.two()).isEqualTo(MessagingType.kafka);
+    }
+
+    /**
+     * Verifies that getting the device-facing-reply-id with messaging type set to AMQP returns the expected result.
+     */
+    @Test
+    public void testGetDeviceFacingReplyToIdWithMessagingTypeAmqp() {
+        final String replyToId = "replyToId";
+        final String deviceId = "deviceId";
+        final String deviceFacingReplyToId = Commands.getDeviceFacingReplyToId(replyToId, deviceId, MessagingType.amqp);
+        assertThat(deviceFacingReplyToId).contains(deviceId);
+
+        // do the reverse operation
+        final Pair<String, MessagingType> originalReplyToIdMessagingTypePair = Commands
+                .getOriginalReplyToIdAndMessagingType(deviceFacingReplyToId, deviceId);
+        assertThat(originalReplyToIdMessagingTypePair.one()).isEqualTo(replyToId);
+        assertThat(originalReplyToIdMessagingTypePair.two()).isEqualTo(MessagingType.amqp);
     }
 
     /**
@@ -104,14 +146,16 @@ public class CommandsTest {
     public void testGetDeviceFacingReplyToIdWithReplyToIdContainingDeviceId() {
         final String deviceId = "deviceId";
         final String replyToId = deviceId + "/myReplyId";
-        final String deviceFacingReplyToId = Commands.getDeviceFacingReplyToId(replyToId, deviceId);
+        final String deviceFacingReplyToId = Commands.getDeviceFacingReplyToId(replyToId, deviceId, MessagingType.kafka);
         assertThat(deviceFacingReplyToId).startsWith(deviceId);
         assertThat(deviceFacingReplyToId).doesNotContain(replyToId);
         assertThat(deviceFacingReplyToId).endsWith("myReplyId");
 
         // do the reverse operation
-        final String originalReplyToId = Commands.getOriginalReplyToId(deviceFacingReplyToId, deviceId);
-        assertThat(originalReplyToId).isEqualTo(replyToId);
+        final Pair<String, MessagingType> originalReplyToIdMessagingTypePair = Commands
+                .getOriginalReplyToIdAndMessagingType(deviceFacingReplyToId, deviceId);
+        assertThat(originalReplyToIdMessagingTypePair.one()).isEqualTo(replyToId);
+        assertThat(originalReplyToIdMessagingTypePair.two()).isEqualTo(MessagingType.kafka);
     }
 
     /**
@@ -120,11 +164,13 @@ public class CommandsTest {
     @Test
     public void testGetDeviceFacingReplyToIdForNullReplyToId() {
         final String deviceId = "deviceId";
-        final String deviceFacingReplyToId = Commands.getDeviceFacingReplyToId(null, deviceId);
+        final String deviceFacingReplyToId = Commands.getDeviceFacingReplyToId(null, deviceId, MessagingType.kafka);
         assertThat(deviceFacingReplyToId).contains(deviceId);
 
         // do the reverse operation
-        final String originalReplyToId = Commands.getOriginalReplyToId(deviceFacingReplyToId, deviceId);
-        assertThat(originalReplyToId).isEqualTo("");
+        final Pair<String, MessagingType> originalReplyToIdMessagingTypePair = Commands
+                .getOriginalReplyToIdAndMessagingType(deviceFacingReplyToId, deviceId);
+        assertThat(originalReplyToIdMessagingTypePair.one()).isEqualTo("");
+        assertThat(originalReplyToIdMessagingTypePair.two()).isEqualTo(MessagingType.kafka);
     }
 }
