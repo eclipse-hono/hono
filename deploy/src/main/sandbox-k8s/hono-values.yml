@@ -1,0 +1,243 @@
+#
+# Copyright (c) 2021 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Eclipse Public License 2.0 which is available at
+# http://www.eclipse.org/legal/epl-2.0
+#
+# SPDX-License-Identifier: EPL-2.0
+#
+
+honoImagesType: "quarkus-native"
+
+useLoadBalancer: true
+
+messagingNetworkTypes:
+  - "amqp"
+  - "kafka"
+
+amqpMessagingNetworkExample:
+  enabled: true
+  dispatchRouter:
+    keyFile: "/etc/external-tls/tls.key"
+    certFile: "/etc/external-tls/tls.crt"
+    uidFormat: "n"
+    adapterUids: "hono.eclipseprojects.io"
+    extraSecretMounts:
+      sandbox:
+        secretName: "sandbox-tls"
+        mountPath: "/etc/external-tls"
+
+kafkaMessagingClusterExample:
+  enabled: true
+
+adapters:
+  http:
+    enabled: true
+    hono:
+      healthCheck:
+        port: 8088
+        bindAddress: "0.0.0.0"
+        keyPath: "/etc/external-tls/tls.key"
+        certPath: "/etc/external-tls/tls.crt"
+      http:
+        bindAddress: "0.0.0.0"
+        keyPath: "/etc/external-tls/tls.key"
+        certPath: "/etc/external-tls/tls.crt"
+        insecurePortEnabled: true
+        insecurePortBindAddress: "0.0.0.0"
+        jmsVendorPropsEnabled: true
+        maxPayloadSize: 8096
+        tenantIdleTimeout: "1h"
+    extraSecretMounts:
+      sandbox:
+        secretName: "sandbox-tls"
+        mountPath: "/etc/external-tls"
+    resources:
+      requests:
+        cpu:
+        memory: "96Mi"
+      limits:
+        cpu:
+        memory: "96Mi"
+
+  mqtt:
+    enabled: true
+    hono:
+      healthCheck:
+        port: 8088
+        bindAddress: "0.0.0.0"
+        keyPath: "/etc/external-tls/tls.key"
+        certPath: "/etc/external-tls/tls.crt"
+      mqtt:
+        bindAddress: "0.0.0.0"
+        keyPath: "/etc/external-tls/tls.key"
+        certPath: "/etc/external-tls/tls.crt"
+        insecurePortEnabled: true
+        insecurePortBindAddress: "0.0.0.0"
+        jmsVendorPropsEnabled: true
+        maxPayloadSize: 8096
+        tenantIdleTimeout: "1h"
+        maxConnections: 200
+    extraSecretMounts:
+      sandbox:
+        secretName: "sandbox-tls"
+        mountPath: "/etc/external-tls"
+    resources:
+      requests:
+        cpu:
+        memory: "96Mi"
+      limits:
+        cpu:
+        memory: "96Mi"
+
+  amqp:
+    enabled: true
+    hono:
+      healthCheck:
+        port: 8088
+        bindAddress: "0.0.0.0"
+        keyPath: "/etc/external-tls/tls.key"
+        certPath: "/etc/external-tls/tls.crt"
+      amqp:
+        bindAddress: "0.0.0.0"
+        keyPath: "/etc/external-tls/tls.key"
+        certPath: "/etc/external-tls/tls.crt"
+        insecurePortEnabled: true
+        insecurePortBindAddress: "0.0.0.0"
+        tenantIdleTimeout: "1h"
+        maxConnections: 200
+    extraSecretMounts:
+      sandbox:
+        secretName: "sandbox-tls"
+        mountPath: "/etc/external-tls"
+    resources:
+      requests:
+        cpu:
+        memory: "96Mi"
+      limits:
+        cpu:
+        memory: "96Mi"
+
+  coap:
+    enabled: true
+    hono:
+      healthCheck:
+        port: 8088
+        bindAddress: "0.0.0.0"
+        keyPath: "/etc/external-tls/tls.key"
+        certPath: "/etc/external-tls/tls.crt"
+      coap:
+        bindAddress: "0.0.0.0"
+        port: 5684
+        insecurePortEnabled: true
+        keyPath: "/etc/external-tls/tls.key"
+        certPath: "/etc/external-tls/tls.crt"
+        tenantIdleTimeout: "1h"
+        maxConnections: 400
+    extraSecretMounts:
+      sandbox:
+        secretName: "sandbox-tls"
+        mountPath: "/etc/external-tls"
+    resources:
+      requests:
+        cpu:
+        memory: "96Mi"
+      limits:
+        cpu:
+        memory: "96Mi"
+
+  kura:
+    enabled: false
+
+  lora:
+    enabled: false
+
+  amqpMessagingNetworkSpec:
+    keyPath: "/etc/external-tls/tls.key"
+    certPath: "/etc/external-tls/tls.crt"
+    hostnameVerificationRequired: false
+  commandAndControlSpec:
+    keyPath: "/etc/external-tls/tls.key"
+    certPath: "/etc/external-tls/tls.crt"
+    hostnameVerificationRequired: false
+
+authServer:
+  resources:
+    requests:
+      cpu:
+      memory: "32Mi"
+    limits:
+      cpu:
+      memory: "32Mi"
+
+deviceRegistryExample:
+  type: "embedded"
+  hono:
+    registry:
+      amqp:
+        bindAddress: "0.0.0.0"
+        keyPath: "/etc/external-tls/tls.key"
+        certPath: "/etc/external-tls/tls.crt"
+      http:
+        authenticationRequired: false
+        bindAddress: "0.0.0.0"
+        keyPath: "/etc/external-tls/tls.key"
+        certPath: "/etc/external-tls/tls.crt"
+        insecurePortEnabled: true
+        insecurePortBindAddress: "0.0.0.0"
+  extraSecretMounts:
+    sandbox:
+      secretName: "sandbox-tls"
+      mountPath: "/etc/external-tls"
+  resources:
+    requests:
+      cpu:
+      memory: "300Mi"
+    limits:
+      cpu:
+      memory: "300Mi"
+
+commandRouterService:
+  extraSecretMounts:
+    sandbox:
+      secretName: "sandbox-tls"
+      mountPath: "/etc/external-tls"
+  resources:
+    requests:
+      cpu:
+      memory: "128Mi"
+    limits:
+      cpu:
+      memory: "128Mi"
+
+kafka:
+  auth:
+    clientProtocol: "sasl" # no TLS. That would be "sasl_tls"
+  persistence:
+    size: 200Mi
+  zookeeper:
+    persistence:
+      size: 200Mi
+  externalAccess:
+    service:
+      type: "LoadBalancer"
+    autoDiscovery:
+      resources:
+        requests:
+          cpu: 100m
+  resources:
+    requests:
+      cpu: 100m
+
+jaegerBackendExample:
+  enabled: false
+
+prometheus:
+  createInstance: false
+
+grafana:
+  enabled: false
