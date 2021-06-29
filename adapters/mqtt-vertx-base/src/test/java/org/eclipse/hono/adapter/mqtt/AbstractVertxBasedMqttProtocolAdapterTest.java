@@ -56,6 +56,7 @@ import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantObject;
@@ -1297,7 +1298,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
 
         adapter.uploadMessage(newMqttContext(msg, mockEndpoint(), span),
                 ResourceIdentifier.fromString(String.format("%s/tenant/device/res/%s/200", getCommandEndpoint(),
-                        Commands.getRequestId("cmd123", "to", "deviceId"))),
+                        Commands.encodeRequestIdParameters("cmd123", "to", "deviceId", MessagingType.amqp))),
                 msg)
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {

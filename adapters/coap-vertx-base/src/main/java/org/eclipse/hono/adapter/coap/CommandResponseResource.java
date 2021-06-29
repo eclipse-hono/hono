@@ -162,7 +162,8 @@ public class CommandResponseResource extends AbstractHonoResource {
 
                     return CompositeFuture.all(tenantValidationTracker, deviceRegistrationTracker);
                 })
-                .compose(ok -> getAdapter().getCommandResponseSender(tenantTracker.result())
+                .compose(ok -> getAdapter()
+                        .getCommandResponseSender(commandResponseTracker.result().getMessagingType(), tenantTracker.result())
                         .sendCommandResponse(commandResponseTracker.result(), currentSpan.context()))
                 .onSuccess(ok -> {
                     LOG.trace("forwarded command response [command-request-id: {}] to downstream application",

@@ -19,6 +19,7 @@ import java.util.Objects;
 
 import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +49,11 @@ public final class ProtonBasedLegacyCommandWrapper implements Command {
         if (Strings.isNullOrEmpty(command.getTenant()) || Strings.isNullOrEmpty(command.getOriginalDeviceId())) {
             LOG.warn("given command expected to have a valid tenant/device id: {}", command);
         }
+    }
+
+    @Override
+    public MessagingType getMessagingType() {
+        return MessagingType.amqp;
     }
 
     @Override

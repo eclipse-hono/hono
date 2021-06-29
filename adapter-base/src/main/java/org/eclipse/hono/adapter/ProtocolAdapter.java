@@ -23,6 +23,7 @@ import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.TelemetrySender;
+import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.TelemetryExecutionContext;
 import org.eclipse.hono.util.TenantObject;
@@ -98,11 +99,16 @@ public interface ProtocolAdapter {
 
     /**
      * Gets the client being used for sending command response messages downstream.
+     * <p>
+     * Per default, the client using the given messaging type will be chosen. Only if
+     * no such client is available, the client will be determined using the messaging
+     * type configured for the given tenant (if set) or using the overall default type.
      *
+     * @param messagingType The type of messaging system to use.
      * @param tenant The tenant for which to send messages.
      * @return The sender.
      */
-    CommandResponseSender getCommandResponseSender(TenantObject tenant);
+    CommandResponseSender getCommandResponseSender(MessagingType messagingType, TenantObject tenant);
 
         /**
      * Gets an assertion of a device's registration status.

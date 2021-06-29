@@ -73,6 +73,7 @@ import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
@@ -669,7 +670,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
         // WHEN an unauthenticated device publishes a command response
         final String replyToAddress = String.format("%s/%s/%s", getCommandResponseEndpoint(), TEST_TENANT_ID,
-                Commands.getDeviceFacingReplyToId("test-reply-id", TEST_DEVICE));
+                Commands.getDeviceFacingReplyToId("test-reply-id", TEST_DEVICE, MessagingType.amqp));
 
         final Map<String, Object> propertyMap = new HashMap<>();
         propertyMap.put(MessageHelper.APP_PROPERTY_STATUS, 200);
@@ -715,7 +716,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
         // WHEN an unauthenticated device publishes a command response
         final String replyToAddress = String.format("%s/%s/%s", getCommandResponseEndpoint(), TEST_TENANT_ID,
-                Commands.getDeviceFacingReplyToId("test-reply-id", TEST_DEVICE));
+                Commands.getDeviceFacingReplyToId("test-reply-id", TEST_DEVICE, MessagingType.amqp));
 
         final Map<String, Object> propertyMap = new HashMap<>();
         propertyMap.put(MessageHelper.APP_PROPERTY_STATUS, 200);
@@ -1021,7 +1022,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     public void testMessageLimitExceededForACommandResponseMessage(final VertxTestContext ctx) {
 
         final String replyToAddress = String.format("%s/%s/%s", getCommandResponseEndpoint(), TEST_TENANT_ID,
-                Commands.getDeviceFacingReplyToId("test-reply-id", TEST_DEVICE));
+                Commands.getDeviceFacingReplyToId("test-reply-id", TEST_DEVICE, MessagingType.amqp));
         final Buffer payload = Buffer.buffer("payload");
         final Message message = getFakeMessage(replyToAddress, payload);
         message.setCorrelationId("correlation-id");

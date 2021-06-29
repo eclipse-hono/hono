@@ -29,9 +29,9 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.client.command.CommandResponse;
 import org.eclipse.hono.client.command.Commands;
-import org.eclipse.hono.client.command.amqp.ProtonBasedCommandResponseSender;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.test.TracingMockSupport;
+import org.eclipse.hono.util.MessagingType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -99,7 +99,7 @@ public class ProtonBasedCommandResponseSenderTest {
 
         // WHEN sending a command response message
         final CommandResponse commandResponse = CommandResponse.fromRequestId(
-                Commands.getRequestId(CORRELATION_ID, REPLY_TO_ID, DEVICE_ID),
+                Commands.encodeRequestIdParameters(CORRELATION_ID, REPLY_TO_ID, DEVICE_ID, MessagingType.amqp),
                 TENANT_ID,
                 DEVICE_ID,
                 null,

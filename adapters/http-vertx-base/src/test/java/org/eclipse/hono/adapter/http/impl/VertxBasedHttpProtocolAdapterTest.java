@@ -40,6 +40,7 @@ import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.JsonHelper;
+import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.QoS;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -424,7 +425,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         givenATelemetrySenderForAnyTenant();
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
         final CommandContext commandContext = givenARequestResponseCommandContext(
-                "DEFAULT_TENANT", "device_1", "doThis", "reply-to-id", null, null);
+                "DEFAULT_TENANT", "device_1", "doThis", "reply-to-id", null, null, MessagingType.amqp);
         final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"), VertxMockSupport.anyHandler(), any(), any()))

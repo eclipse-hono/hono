@@ -45,6 +45,7 @@ import org.eclipse.hono.client.command.CommandConsumerFactory;
 import org.eclipse.hono.client.command.CommandResponse;
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.command.CommandRouterClient;
+import org.eclipse.hono.client.command.Commands;
 import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
@@ -720,25 +721,69 @@ public class AbstractProtocolAdapterBaseTest {
     }
 
     /**
-     * Verifies that when the messaging to be used is configured for a tenant, then this is used for command response
-     * messages.
+     * Verifies that the messaging type encoded in a command response message is getting used when sending the
+     * command response.
      */
     @Test
-    public void testGetCommandResponseSenderConfiguredOnTenant() {
-        final CommandResponse response = CommandResponse.fromAddressAndCorrelationId("x/y/z/12", "", Buffer.buffer(),
-                null, 200);
+    public void testGetCommandResponseSenderSetOnCommandResponse() {
+        final CommandResponse kafkaResponse = CommandResponse.fromRequestId(
+                Commands.encodeRequestIdParameters("", "replyTo", "4711", MessagingType.kafka),
+                Constants.DEFAULT_TENANT,
+                "4711",
+                null,
+                null,
+                HttpURLConnection.HTTP_OK);
         final TenantObject tenant = new TenantObject("tenant", true);
 
         tenant.setProperty(TenantConstants.FIELD_EXT,
                 Map.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE, MessagingType.amqp.name()));
-        adapter.sendCommandResponse(response, tenant, null);
-        verify(amqpCommandResponseSender).sendCommandResponse(any(), any());
-        verify(kafkaCommandResponseSender, never()).sendCommandResponse(any(), any());
+        adapter.sendCommandResponse(kafkaResponse, tenant, null);
+        verify(kafkaCommandResponseSender).sendCommandResponse(any(), any());
+        verify(amqpCommandResponseSender, never()).sendCommandResponse(any(), any());
+
+        final CommandResponse amqpResponse = CommandResponse.fromRequestId(
+                Commands.encodeRequestIdParameters("", "replyTo", "4711", MessagingType.amqp),
+                Constants.DEFAULT_TENANT,
+                "4711",
+                null,
+                null,
+                HttpURLConnection.HTTP_OK);
 
         tenant.setProperty(TenantConstants.FIELD_EXT,
                 Map.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE, MessagingType.kafka.name()));
-        adapter.sendCommandResponse(response, tenant, null);
-        verify(kafkaCommandResponseSender).sendCommandResponse(any(), any());
+        adapter.sendCommandResponse(amqpResponse, tenant, null);
+        verify(amqpCommandResponseSender).sendCommandResponse(any(), any());
+    }
+
+    /**
+     * Verifies that when the messaging system to be used, as configured for the command response, is not available,
+     * then the messaging system type configuration from the tenant is used.
+     */
+    @Test
+    public void testGetCommandResponseSenderConfiguredOnTenant() {
+        final var commandResponseSenderProvider = new MessagingClientProvider<CommandResponseSender>()
+                .setClient(amqpCommandResponseSender);
+        messagingClientProviders = new MessagingClientProviders(
+                new MessagingClientProvider<TelemetrySender>().setClient(amqpTelemetrySender),
+                new MessagingClientProvider<EventSender>().setClient(amqpEventSender),
+                commandResponseSenderProvider);
+        properties = new ProtocolAdapterProperties();
+        adapter = newProtocolAdapter(properties, ADAPTER_NAME);
+        setCollaborators(adapter);
+
+        final CommandResponse kafkaResponse = CommandResponse.fromRequestId(
+                Commands.encodeRequestIdParameters("", "replyTo", "4711", MessagingType.kafka),
+                Constants.DEFAULT_TENANT,
+                "4711",
+                null,
+                null,
+                HttpURLConnection.HTTP_OK);
+        final TenantObject tenant = new TenantObject("tenant", true);
+
+        tenant.setProperty(TenantConstants.FIELD_EXT,
+                Map.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE, MessagingType.amqp.name()));
+        adapter.sendCommandResponse(kafkaResponse, tenant, null);
+        verify(amqpCommandResponseSender).sendCommandResponse(any(), any());
     }
 
     private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(

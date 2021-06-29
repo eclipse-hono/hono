@@ -29,6 +29,7 @@ import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MapBasedExecutionContext;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.MessagingType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -179,7 +180,8 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
                 CommandConstants.CONTENT_TYPE_DELIVERY_FAILURE_NOTIFICATION,
                 status,
                 correlationId,
-                "");
+                "",
+                MessagingType.kafka);
         return commandResponseSender.sendCommandResponse(commandResponse, span.context())
                 .onFailure(thr -> {
                     LOG.debug("failed to publish command response [{}]", commandResponse, thr);

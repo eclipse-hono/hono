@@ -34,6 +34,7 @@ import org.eclipse.californium.core.network.Exchange.Origin;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.TelemetryExecutionContext;
 import org.eclipse.hono.util.TenantObject;
@@ -85,7 +86,7 @@ abstract class ResourceTestBase extends CoapProtocolAdapterMockSupport<CoapProto
         adapter = mock(CoapProtocolAdapter.class);
         when(adapter.checkMessageLimit(any(TenantObject.class), anyLong(), any())).thenReturn(Future.succeededFuture());
         when(adapter.getCommandConsumerFactory()).thenReturn(commandConsumerFactory);
-        when(adapter.getCommandResponseSender(any(TenantObject.class))).thenReturn(commandResponseSender);
+        when(adapter.getCommandResponseSender(any(MessagingType.class), any(TenantObject.class))).thenReturn(commandResponseSender);
         when(adapter.getConfig()).thenReturn(configuration);
         when(adapter.getDownstreamMessageProperties(any(TelemetryExecutionContext.class))).thenReturn(new HashMap<>());
         when(adapter.getEventSender(any(TenantObject.class))).thenReturn(eventSender);

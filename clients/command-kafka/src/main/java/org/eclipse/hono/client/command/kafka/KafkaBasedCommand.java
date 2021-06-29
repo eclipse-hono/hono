@@ -25,6 +25,7 @@ import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.Strings;
 
 import io.opentracing.Span;
@@ -71,7 +72,7 @@ public final class KafkaBasedCommand implements Command {
         this.subject = subject;
         this.contentType = contentType;
         this.responseRequired = responseRequired;
-        requestId = Commands.getRequestId(correlationId);
+        requestId = Commands.encodeRequestIdParameters(correlationId, MessagingType.kafka);
     }
 
     /**
@@ -184,6 +185,11 @@ public final class KafkaBasedCommand implements Command {
                 subject,
                 contentType,
                 responseRequired);
+    }
+
+    @Override
+    public MessagingType getMessagingType() {
+        return MessagingType.kafka;
     }
 
     @Override
@@ -325,7 +331,7 @@ public final class KafkaBasedCommand implements Command {
         if (isValid()) {
             TracingHelper.TAG_CORRELATION_ID.set(span, correlationId);
             final Map<String, Object> items = new HashMap<>(3);
-            items.put(Fields.EVENT, "received command message");
+            items.put(Fields.EVENT, "received command message via Kafka");
             items.put("subject", subject);
             items.put("content-type", contentType);
             span.log(items);

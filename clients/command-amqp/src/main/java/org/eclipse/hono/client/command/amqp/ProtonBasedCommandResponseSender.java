@@ -28,6 +28,7 @@ import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
 
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.proton.ProtonHelper;
@@ -89,9 +90,6 @@ public class ProtonBasedCommandResponseSender extends AbstractServiceClient impl
         return msg;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<Void> sendCommandResponse(final CommandResponse response, final SpanContext context) {
 
@@ -101,7 +99,12 @@ public class ProtonBasedCommandResponseSender extends AbstractServiceClient impl
                 .recover(thr -> Future.failedFuture(StatusCodeMapper.toServerError(thr)))
                 .compose(sender -> {
                     final Message msg = createDownstreamMessage(response);
-                    return sender.sendAndWaitForOutcome(msg, newChildSpan(context, "forward Command response"))
+                    final Span span = newChildSpan(context, "forward Command response");
+                    if (response.getMessagingType() != getMessagingType()) {
+                        span.log(String.format("using messaging type %s instead of type %s used for the original command",
+                                getMessagingType(), response.getMessagingType()));
+                    }
+                    return sender.sendAndWaitForOutcome(msg, span)
                             .onComplete(delivery -> sender.close());
                 })
                 .mapEmpty();

@@ -11,7 +11,6 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-
 package org.eclipse.hono.commandrouter.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,6 +28,7 @@ import java.net.HttpURLConnection;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
@@ -39,26 +39,32 @@ import org.eclipse.hono.commandrouter.CommandRouterServiceConfigProperties;
 import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.MessagingType;
+import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
+import io.opentracing.SpanContext;
 import io.opentracing.noop.NoopSpan;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 /**
  * Tests verifying behavior of {@link CommandRouterServiceImpl}.
  *
  */
+@ExtendWith(VertxExtension.class)
 public class CommandRouterServiceImplTest {
 
     private CommandRouterServiceImpl service;
-    private CommandConsumerFactory commandConsumerFactory;
+    private MessagingClientProvider<CommandConsumerFactory> commandConsumerFactoryProvider;
+    private CommandConsumerFactory amqpCommandConsumerFactory;
     private Context context;
     private Vertx vertx;
     private TenantClient tenantClient;
@@ -76,12 +82,15 @@ public class CommandRouterServiceImplTest {
             return Future.succeededFuture(TenantObject.from(invocation.getArgument(0)));
         });
         final var deviceConnectionInfo = mock(DeviceConnectionInfo.class);
-        commandConsumerFactory = mock(CommandConsumerFactory.class);
-        when(commandConsumerFactory.getMessagingType()).thenReturn(MessagingType.amqp);
-        when(commandConsumerFactory.start()).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.stop()).thenReturn(Future.succeededFuture());
-        final MessagingClientProvider<CommandConsumerFactory> factoryProvider = new MessagingClientProvider<>();
-        factoryProvider.setClient(commandConsumerFactory);
+        when(deviceConnectionInfo.setCommandHandlingAdapterInstance(anyString(), anyString(), anyString(), any(), any()))
+                .thenReturn(Future.succeededFuture());
+        amqpCommandConsumerFactory = mock(CommandConsumerFactory.class);
+        when(amqpCommandConsumerFactory.getMessagingType()).thenReturn(MessagingType.amqp);
+        when(amqpCommandConsumerFactory.start()).thenReturn(Future.succeededFuture());
+        when(amqpCommandConsumerFactory.stop()).thenReturn(Future.succeededFuture());
+        when(amqpCommandConsumerFactory.createCommandConsumer(anyString(), any())).thenReturn(Future.succeededFuture());
+        commandConsumerFactoryProvider = new MessagingClientProvider<>();
+        commandConsumerFactoryProvider.setClient(amqpCommandConsumerFactory);
         vertx = mock(Vertx.class);
         context = VertxMockSupport.mockContext(vertx);
         when(context.owner()).thenReturn(vertx);
@@ -90,10 +99,48 @@ public class CommandRouterServiceImplTest {
                 registrationClient,
                 tenantClient,
                 deviceConnectionInfo,
-                factoryProvider,
+                commandConsumerFactoryProvider,
                 NoopTracerFactory.create());
         service.setContext(context);
         service.start();
+    }
+
+    /**
+     * Verifies that a command consumer gets registered in both AMQP and Kafka messaging systems if both are available
+     * and the tenant is configured to use Kafka.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testRegisterCommandRouterAlsoUsingAmqpMessagingSystem(final VertxTestContext ctx) {
+        // GIVEN a tenant configured to use a Kafka messaging system
+        final String tenantId = "tenant";
+        final TenantObject tenant = new TenantObject(tenantId, true);
+        tenant.setProperty(TenantConstants.FIELD_EXT,
+                Map.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE, MessagingType.kafka.name()));
+        when(tenantClient.get(eq(tenantId), any(SpanContext.class))).thenReturn(Future.succeededFuture(tenant));
+        // AND a commandConsumerFactoryProvider with both AMQP (see setUp()) and Kafka client providers
+        final CommandConsumerFactory kafkaCommandConsumerFactory = mock(CommandConsumerFactory.class);
+        when(kafkaCommandConsumerFactory.getMessagingType()).thenReturn(MessagingType.kafka);
+        when(kafkaCommandConsumerFactory.start()).thenReturn(Future.succeededFuture());
+        when(kafkaCommandConsumerFactory.stop()).thenReturn(Future.succeededFuture());
+        when(kafkaCommandConsumerFactory.createCommandConsumer(anyString(), any())).thenReturn(Future.succeededFuture());
+        commandConsumerFactoryProvider.setClient(kafkaCommandConsumerFactory);
+        // let the AMQP client consumer creation fail
+        when(amqpCommandConsumerFactory.createCommandConsumer(anyString(), any())).thenReturn(Future.failedFuture("expected failure"));
+
+        // WHEN registering a command consumer for the tenant
+        service.registerCommandConsumer(tenantId, "deviceId", "adapterInstanceId", null, NoopSpan.INSTANCE)
+                .onComplete(ctx.succeeding(res -> {
+                    ctx.verify(() -> {
+                        // THEN both kinds of consumer clients get used
+                        verify(kafkaCommandConsumerFactory).createCommandConsumer(anyString(), any());
+                        verify(amqpCommandConsumerFactory).createCommandConsumer(anyString(), any());
+                        // and the register operation succeeds even though the AMQP client registration failed
+                        assertThat(res.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT);
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**
@@ -113,13 +160,13 @@ public class CommandRouterServiceImplTest {
         // WHEN submitting the first list of tenants to enable
         service.enableCommandRouting(firstTenants, NoopSpan.INSTANCE);
         // THEN no command consumer has been created yet
-        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
+        verify(amqpCommandConsumerFactory, never()).createCommandConsumer(anyString(), any());
         // AND a task for processing the first tenant has been scheduled
         assertThat(eventLoop).hasSize(1);
         // WHEN submitting the second list of tenants
         service.enableCommandRouting(secondTenants, NoopSpan.INSTANCE);
         // still no command consumer has been created
-        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
+        verify(amqpCommandConsumerFactory, never()).createCommandConsumer(anyString(), any());
         // AND no additional task has been scheduled
         assertThat(eventLoop).hasSize(1);
 
@@ -127,25 +174,25 @@ public class CommandRouterServiceImplTest {
         final var task = eventLoop.pollFirst();
         task.handle(null);
         // THEN a command consumer is being created
-        verify(commandConsumerFactory).createCommandConsumer(eq("tenant1"), any());
+        verify(amqpCommandConsumerFactory).createCommandConsumer(eq("tenant1"), any());
         // AND a new task has been added to the event loop
         assertThat(eventLoop).hasSize(1);
         // WHEN running the next task on the event loop
         eventLoop.pollFirst().handle(null);
         // THEN a command consumer is being created
-        verify(commandConsumerFactory).createCommandConsumer(eq("tenant2"), any());
+        verify(amqpCommandConsumerFactory).createCommandConsumer(eq("tenant2"), any());
         // AND a new task has been added to the event loop
         assertThat(eventLoop).hasSize(1);
         // WHEN running the next task on the event loop
         eventLoop.pollFirst().handle(null);
         // THEN a single command consumer is being created for the duplicate tenant3 ID
-        verify(commandConsumerFactory).createCommandConsumer(eq("tenant3"), any());
+        verify(amqpCommandConsumerFactory).createCommandConsumer(eq("tenant3"), any());
         // AND a new task has been added to the event loop
         assertThat(eventLoop).hasSize(1);
         // WHEN running the next task on the event loop
         eventLoop.pollFirst().handle(null);
         // THEN a command consumer is being created
-        verify(commandConsumerFactory).createCommandConsumer(eq("tenant4"), any());
+        verify(amqpCommandConsumerFactory).createCommandConsumer(eq("tenant4"), any());
         // AND no new task has been added to the event loop
         assertThat(eventLoop).isEmpty();
     }
@@ -181,7 +228,7 @@ public class CommandRouterServiceImplTest {
         final List<String> firstTenants = List.of("tenant1");
         service.enableCommandRouting(firstTenants, NoopSpan.INSTANCE);
         // THEN no command consumer has been created yet
-        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
+        verify(amqpCommandConsumerFactory, never()).createCommandConsumer(anyString(), any());
         // AND a first task to process the first tenant ID has been scheduled
         verify(context).runOnContext(VertxMockSupport.anyHandler());
         assertThat(eventLoop).hasSize(1);
@@ -189,7 +236,7 @@ public class CommandRouterServiceImplTest {
         // WHEN running the next task on the event loop
         eventLoop.pollFirst().handle(null);
         // THEN no command consumer has been created yet
-        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
+        verify(amqpCommandConsumerFactory, never()).createCommandConsumer(anyString(), any());
         // AND a new task for retrying the attempt has been scheduled with a
         // delay corresponding to the number of unsuccessful attempts that have been made
         verify(vertx).setTimer(eq(400L), VertxMockSupport.anyHandler());
@@ -198,7 +245,7 @@ public class CommandRouterServiceImplTest {
         // WHEN running the next task on the event loop
         eventLoop.pollFirst().handle(null);
         // THEN no command consumer has been created yet
-        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
+        verify(amqpCommandConsumerFactory, never()).createCommandConsumer(anyString(), any());
         // AND a new task for retrying the attempt has been scheduled with the
         // delay corresponding to the number of unsuccessful attempts that have been made
         verify(vertx).setTimer(eq(800L), VertxMockSupport.anyHandler());
@@ -207,7 +254,7 @@ public class CommandRouterServiceImplTest {
         // WHEN running the next task on the event loop
         eventLoop.pollFirst().handle(null);
         // THEN no command consumer has been created yet
-        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
+        verify(amqpCommandConsumerFactory, never()).createCommandConsumer(anyString(), any());
         // AND a new task for retrying the attempt has been scheduled with a
         // delay corresponding to the number of unsuccessful attempts that have been made
         verify(vertx).setTimer(eq(1600L), VertxMockSupport.anyHandler());
@@ -221,7 +268,7 @@ public class CommandRouterServiceImplTest {
         // WHEN running the next task on the event loop
         eventLoop.pollFirst().handle(null);
         // THEN no command consumer has been created yet
-        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
+        verify(amqpCommandConsumerFactory, never()).createCommandConsumer(anyString(), any());
         // AND a new task for retrying the attempt has been scheduled with a
         // delay corresponding to the number of unsuccessful attempts that have been made
         verify(vertx).setTimer(eq(3200L), VertxMockSupport.anyHandler());
@@ -230,7 +277,7 @@ public class CommandRouterServiceImplTest {
         // WHEN running the next task on the event loop
         eventLoop.pollFirst().handle(null);
         // THEN no command consumer has been created yet
-        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
+        verify(amqpCommandConsumerFactory, never()).createCommandConsumer(anyString(), any());
         // AND a new task for retrying the attempt has been scheduled with a
         // delay corresponding to the number of unsuccessful attempts that have been made
         verify(vertx).setTimer(eq(6400L), VertxMockSupport.anyHandler());
@@ -239,7 +286,7 @@ public class CommandRouterServiceImplTest {
         // WHEN running the next task on the event loop
         eventLoop.pollFirst().handle(null);
         // THEN no command consumer has been created yet
-        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
+        verify(amqpCommandConsumerFactory, never()).createCommandConsumer(anyString(), any());
         // AND a new task for retrying the attempt has been scheduled with maximum delay
         verify(vertx).setTimer(eq(10000L), VertxMockSupport.anyHandler());
         assertThat(eventLoop).hasSize(1);
@@ -247,7 +294,7 @@ public class CommandRouterServiceImplTest {
         // WHEN running the next task on the event loop
         eventLoop.pollFirst().handle(null);
         // THEN a command consumer has been created for the tenant
-        verify(commandConsumerFactory).createCommandConsumer(eq("tenant1"), any());
+        verify(amqpCommandConsumerFactory).createCommandConsumer(eq("tenant1"), any());
         // AND no new task for retrying the attempt has been added to the event loop
         assertThat(eventLoop).hasSize(0);
     }
@@ -269,7 +316,7 @@ public class CommandRouterServiceImplTest {
         service.enableCommandRouting(firstTenants, NoopSpan.INSTANCE);
 
         // THEN no command consumer has been created yet
-        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
+        verify(amqpCommandConsumerFactory, never()).createCommandConsumer(anyString(), any());
         // BUT a first task to process the first tenant ID has been scheduled
         verify(context).runOnContext(VertxMockSupport.anyHandler());
         assertThat(eventLoop).hasSize(1);
@@ -284,9 +331,8 @@ public class CommandRouterServiceImplTest {
         // WHEN running the next task on the event loop
         eventLoop.pollFirst().handle(null);
         // THEN no command consumer has been created
-        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), any());
+        verify(amqpCommandConsumerFactory, never()).createCommandConsumer(anyString(), any());
         // AND no new task has been scheduled
         assertThat(eventLoop).hasSize(0);
-        // AND 
     }
 }

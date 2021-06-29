@@ -60,6 +60,9 @@ public class KafkaBasedCommandResponseSender extends AbstractKafkaBasedMessageSe
 
         final HonoTopic topic = new HonoTopic(HonoTopic.Type.COMMAND_RESPONSE, response.getTenantId());
         log.trace("publish command response [{}]", response);
+        if (response.getMessagingType() != getMessagingType()) {
+            // TODO log to span
+        }
 
         return sendAndWaitForOutcome(topic.toString(), response.getTenantId(), response.getDeviceId(),
                 response.getPayload(), getHeaders(response), context);

@@ -50,6 +50,7 @@ import org.eclipse.hono.service.util.ServiceBaseUtils;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -189,8 +190,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     @Override
-    public final CommandResponseSender getCommandResponseSender(final TenantObject tenant) {
-        return messagingClientProviders.getCommandResponseSender(tenant);
+    public final CommandResponseSender getCommandResponseSender(final MessagingType messagingType, final TenantObject tenant) {
+        return messagingClientProviders.getCommandResponseSender(messagingType, tenant);
     }
 
     /**
@@ -704,7 +705,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         Objects.requireNonNull(response);
         Objects.requireNonNull(tenant);
 
-        final CommandResponseSender sender = messagingClientProviders.getCommandResponseSender(tenant);
+        final CommandResponseSender sender = messagingClientProviders
+                .getCommandResponseSender(response.getMessagingType(), tenant);
         return sender.sendCommandResponse(response, context);
     }
 

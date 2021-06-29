@@ -14,13 +14,17 @@
 package org.eclipse.hono.adapter;
 
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.TelemetrySender;
 import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.util.Lifecycle;
+import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.TenantObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -32,6 +36,8 @@ import io.vertx.ext.healthchecks.HealthCheckHandler;
  * It contains the providers for the clients for each of Hono's south bound API endpoints.
  */
 public final class MessagingClientProviders implements Lifecycle {
+
+    private static final Logger LOG = LoggerFactory.getLogger(MessagingClientProviders.class);
 
     private final MessagingClientProvider<TelemetrySender> telemetrySenderProvider;
     private final MessagingClientProvider<EventSender> eventSenderProvider;
@@ -92,11 +98,17 @@ public final class MessagingClientProviders implements Lifecycle {
     /**
      * Gets a client for sending command response messages using a particular messaging system.
      *
+     * @param messagingType The type of messaging system to use.
      * @param tenant The tenant to get the client for.
      * @return The client.
      */
-    public CommandResponseSender getCommandResponseSender(final TenantObject tenant) {
-        return commandResponseSenderProvider.getClient(tenant);
+    public CommandResponseSender getCommandResponseSender(final MessagingType messagingType, final TenantObject tenant) {
+        return Optional.ofNullable(commandResponseSenderProvider.getClient(messagingType))
+                .orElseGet(() -> {
+                    LOG.info("no command response sender provider set for {} messaging type, using tenant or global default",
+                            messagingType);
+                    return commandResponseSenderProvider.getClient(tenant);
+                });
     }
 
     /**
