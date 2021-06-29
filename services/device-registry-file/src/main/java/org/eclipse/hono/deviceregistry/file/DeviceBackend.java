@@ -10,10 +10,11 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.service.management.device;
+package org.eclipse.hono.deviceregistry.file;
 
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
+import org.eclipse.hono.service.management.device.DeviceManagementService;
 
 /**
  * Unifying interface for implementing device backend.

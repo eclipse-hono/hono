@@ -27,7 +27,6 @@ import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbConfigProperties;
-import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDocumentBuilder;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.management.Filter;
@@ -184,7 +183,7 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                     return tenantConfig.getVersion();
                 })
                 .recover(error -> {
-                    if (MongoDbDeviceRegistryUtils.isDuplicateKeyError(error)) {
+                    if (MongoDbBasedDao.isDuplicateKeyError(error)) {
                         return Future.failedFuture(new ClientErrorException(
                                 tenantConfig.getTenantId(),
                                 HttpURLConnection.HTTP_CONFLICT,
@@ -318,7 +317,7 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
         return updateTenantPromise.future()
                 .compose(updateResult -> {
                     if (updateResult == null) {
-                        return MongoDbDeviceRegistryUtils.checkForVersionMismatchAndFail(
+                        return MongoDbBasedDao.checkForVersionMismatchAndFail(
                                 tenantConfig.getTenantId(), resourceVersion, getById(tenantConfig.getTenantId()));
                     } else {
                         LOG.debug("successfully updated tenant [tenant-id: {}]", tenantConfig.getTenantId());
@@ -327,7 +326,7 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                     }
                 })
                 .recover(error -> {
-                    if (MongoDbDeviceRegistryUtils.isDuplicateKeyError(error)) {
+                    if (MongoDbBasedDao.isDuplicateKeyError(error)) {
                         LOG.debug(
                                 "conflict updating tenant [{}]. An existing tenant uses a certificate authority with the same Subject DN",
                                 tenantConfig.getTenantId(),
@@ -376,7 +375,7 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                             span.log("successfully deleted tenant");
                             return Future.succeededFuture((Void) null);
                         })
-                        .orElseGet(() -> MongoDbDeviceRegistryUtils.checkForVersionMismatchAndFail(tenantId,
+                        .orElseGet(() -> MongoDbBasedDao.checkForVersionMismatchAndFail(tenantId,
                                 resourceVersion, getById(tenantId))))
                 .recover(this::mapError)
                 .onFailure(t -> TracingHelper.logError(span, "error deleting tenant", t))

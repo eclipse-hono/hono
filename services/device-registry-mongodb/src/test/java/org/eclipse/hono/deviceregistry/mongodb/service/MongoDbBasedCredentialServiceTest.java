@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedCredentialsConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
+import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedCredentialsDao;
 import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedDeviceDao;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
@@ -53,10 +54,9 @@ import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.mongo.MongoClient;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
@@ -75,37 +75,49 @@ public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsSer
     private final MongoDbBasedCredentialsConfigProperties credentialsServiceConfig = new MongoDbBasedCredentialsConfigProperties();
     private final MongoDbBasedRegistrationConfigProperties registrationServiceConfig = new MongoDbBasedRegistrationConfigProperties();
 
-    private MongoClient mongoClient;
+    private MongoDbBasedCredentialsDao credentialsDao;
     private MongoDbBasedDeviceDao deviceDao;
     private MongoDbBasedCredentialsService credentialsService;
+    private MongoDbBasedCredentialsManagementService credentialsManagementService;
     private MongoDbBasedDeviceManagementService deviceManagementService;
-    private MongoDbBasedDeviceBackend deviceBackendService;
     private TenantInformationService tenantInformationService;
     private Vertx vertx;
 
     /**
-     * Creates the MongoDB client.
+     * Creates the services under test.
      *
      * @param ctx The test context to use for running asynchronous tests.
      */
     @BeforeAll
-    public void createMongoDbClient(final VertxTestContext ctx) {
+    public void createServices(final VertxTestContext ctx) {
 
         vertx = Vertx.vertx();
-        mongoClient = MongoDbTestUtils.getMongoClient(vertx, "hono-credentials-test");
+
+        credentialsDao = MongoDbTestUtils.getCredentialsDao(vertx, "hono-credentials-test");
+        credentialsService = new MongoDbBasedCredentialsService(credentialsDao, credentialsServiceConfig);
+        credentialsManagementService = new MongoDbBasedCredentialsManagementService(
+                vertx,
+                credentialsDao,
+                credentialsServiceConfig,
+                new SpringBasedHonoPasswordEncoder());
+
         deviceDao = MongoDbTestUtils.getDeviceDao(vertx, "hono-credentials-test");
-        deviceManagementService = new MongoDbBasedDeviceManagementService(deviceDao, registrationServiceConfig);
-        deviceDao.createIndices().onComplete(ctx.completing());
+        deviceManagementService = new MongoDbBasedDeviceManagementService(
+                deviceDao,
+                credentialsDao,
+                registrationServiceConfig);
+
+        CompositeFuture.all(deviceDao.createIndices(), credentialsDao.createIndices())
+            .onComplete(ctx.completing());
     }
 
     /**
      * Starts up the service.
      *
      * @param testInfo Test case meta information.
-     * @param testContext The test context to use for running asynchronous tests.
      */
     @BeforeEach
-    public void setup(final TestInfo testInfo, final VertxTestContext testContext) {
+    public void setup(final TestInfo testInfo) {
         LOG.info("running {}", testInfo.getDisplayName());
 
         tenantInformationService = mock(TenantInformationService.class);
@@ -118,19 +130,9 @@ public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsSer
                     Optional.empty()));
         });
 
-        credentialsService = new MongoDbBasedCredentialsService(
-                vertx,
-                mongoClient,
-                credentialsServiceConfig,
-                new SpringBasedHonoPasswordEncoder());
         credentialsService.setTenantInformationService(tenantInformationService);
+        credentialsManagementService.setTenantInformationService(tenantInformationService);
         deviceManagementService.setTenantInformationService(tenantInformationService);
-        deviceBackendService = new MongoDbBasedDeviceBackend(
-                this.deviceManagementService,
-                this.credentialsService,
-                tenantInformationService);
-        credentialsService.createIndices()
-            .onComplete(testContext.completing());
     }
 
     /**
@@ -141,10 +143,8 @@ public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsSer
     @AfterEach
     public void cleanCollection(final VertxTestContext testContext) {
         final Checkpoint clean = testContext.checkpoint(2);
-        mongoClient.removeDocuments(
-                credentialsServiceConfig.getCollectionName(),
-                new JsonObject(),
-                testContext.succeeding(ok -> clean.flag()));
+        credentialsDao.deleteAllFromCollection()
+            .onComplete(testContext.succeeding(ok -> clean.flag()));
         deviceDao.deleteAllFromCollection()
             .onComplete(testContext.succeeding(ok -> clean.flag()));
     }
@@ -157,10 +157,9 @@ public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsSer
     @AfterAll
     public void finishTest(final VertxTestContext testContext) {
 
-        final Checkpoint shutdown = testContext.checkpoint(2);
-        credentialsService.stop().onComplete(s -> shutdown.flag());
+        credentialsDao.close();
         deviceDao.close();
-        vertx.close(s -> shutdown.flag());
+        vertx.close(s -> testContext.completeNow());
     }
 
     @Override
@@ -170,44 +169,12 @@ public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsSer
 
     @Override
     public CredentialsManagementService getCredentialsManagementService() {
-        return this.credentialsService;
+        return this.credentialsManagementService;
     }
 
     @Override
     public DeviceManagementService getDeviceManagementService() {
-        return this.deviceBackendService;
-    }
-
-    /**
-     * Verifies that a request to add credentials for a device fails with a 403 status code
-     * if the number of credentials exceeds the tenant's configured limit.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testAddCredentialsFailsForExceededCredentialsPerDeviceLimit(final VertxTestContext ctx) {
-        final var tenantId = UUID.randomUUID().toString();
-        final var deviceId = UUID.randomUUID().toString();
-
-        when(tenantInformationService.getTenant(anyString(), any()))
-            .thenReturn(Future.succeededFuture(new Tenant().setRegistrationLimits(
-                    new RegistrationLimits().setMaxCredentialsPerDevice(1))));
-
-        credentialsService.addCredentials(
-                    tenantId,
-                    deviceId,
-                    List.of(
-                            Credentials.createPasswordCredential("device1", "secret"),
-                            Credentials.createPasswordCredential("device2", "secret")),
-                    Optional.empty(),
-                    NoopSpan.INSTANCE)
-            .onComplete(ctx.succeeding(r -> {
-                ctx.verify(() -> {
-                    verify(tenantInformationService).getTenant(eq(tenantId), any(Span.class));
-                    assertThat(r.getStatus()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
-                });
-                ctx.completeNow();
-            }));
+        return this.deviceManagementService;
     }
 
     /**
@@ -225,7 +192,7 @@ public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsSer
             .thenReturn(Future.succeededFuture(new Tenant().setRegistrationLimits(
                     new RegistrationLimits().setMaxCredentialsPerDevice(1))));
 
-        credentialsService.updateCredentials(
+        credentialsManagementService.updateCredentials(
                 tenantId,
                 deviceId,
                 List.of(

@@ -24,7 +24,6 @@ import java.net.HttpURLConnection;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -818,11 +817,10 @@ public interface AbstractCredentialsServiceTest {
         final String deviceId = UUID.randomUUID().toString();
         final String authId = UUID.randomUUID().toString();
 
-        final CommonCredential credential = Credentials.createPasswordCredential(authId, "bar");
-        final CommonCredential disabledCredential = Credentials.createPSKCredential(authId, "baz");
-        disabledCredential.setEnabled(false);
+        final var credential = Credentials.createPasswordCredential(authId, "bar");
+        final var disabledCredential = Credentials.createPSKCredential(authId, "baz").setEnabled(false);
 
-        final List<CommonCredential> credentials = Arrays.asList(credential, disabledCredential);
+        final List<CommonCredential> credentials = List.of(credential, disabledCredential);
 
         // create device & set credentials
 

@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
+import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedCredentialsDao;
 import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedDeviceDao;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 import org.eclipse.hono.deviceregistry.service.device.EdgeDeviceAutoProvisioner;
@@ -51,6 +52,7 @@ import org.slf4j.LoggerFactory;
 
 import io.opentracing.noop.NoopSpan;
 import io.opentracing.noop.NoopTracerFactory;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.Timeout;
@@ -70,7 +72,8 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
 
     private final MongoDbBasedRegistrationConfigProperties config = new MongoDbBasedRegistrationConfigProperties();
 
-    private MongoDbBasedDeviceDao dao;
+    private MongoDbBasedDeviceDao deviceDao;
+    private MongoDbBasedCredentialsDao credentialsDao;
     private MongoDbBasedRegistrationService registrationService;
     private MongoDbBasedDeviceManagementService deviceManagementService;
     private TenantInformationService tenantInformationService;
@@ -85,10 +88,21 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
     public void startService(final VertxTestContext testContext) {
 
         vertx = Vertx.vertx();
-        dao = MongoDbTestUtils.getDeviceDao(vertx, "hono-devices-test");
-        registrationService = new MongoDbBasedRegistrationService(dao);
-        deviceManagementService = new MongoDbBasedDeviceManagementService(dao, config);
-        dao.createIndices().onComplete(testContext.completing());
+        deviceDao = MongoDbTestUtils.getDeviceDao(vertx, "hono-devices-test");
+        credentialsDao = MongoDbTestUtils.getCredentialsDao(vertx, "hono-devices-test");
+        deviceManagementService = new MongoDbBasedDeviceManagementService(deviceDao, credentialsDao, config);
+
+        final EdgeDeviceAutoProvisioner edgeDeviceAutoProvisioner = new EdgeDeviceAutoProvisioner(
+                vertx,
+                deviceManagementService,
+                mockEventSenders(),
+                new AutoProvisionerConfigProperties(),
+                NoopTracerFactory.create());
+
+        registrationService = new MongoDbBasedRegistrationService(deviceDao);
+        registrationService.setEdgeDeviceAutoProvisioner(edgeDeviceAutoProvisioner);
+
+        CompositeFuture.all(deviceDao.createIndices(), credentialsDao.createIndices()).onComplete(testContext.completing());
     }
 
     /**
@@ -111,14 +125,6 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
                     Optional.empty()));
         });
 
-        final EdgeDeviceAutoProvisioner edgeDeviceAutoProvisioner = new EdgeDeviceAutoProvisioner(
-                vertx,
-                deviceManagementService,
-                mockEventSenders(),
-                new AutoProvisionerConfigProperties(),
-                NoopTracerFactory.create());
-
-        registrationService.setEdgeDeviceAutoProvisioner(edgeDeviceAutoProvisioner);
         registrationService.setTenantInformationService(tenantInformationService);
         deviceManagementService.setTenantInformationService(tenantInformationService);
     }
@@ -130,7 +136,10 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
      */
     @AfterEach
     public void cleanCollection(final VertxTestContext testContext) {
-        dao.deleteAllFromCollection().onComplete(testContext.completing());
+        CompositeFuture.all(
+                deviceDao.deleteAllFromCollection(),
+                credentialsDao.deleteAllFromCollection())
+            .onComplete(testContext.completing());
     }
 
     /**
@@ -138,7 +147,8 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
      */
     @AfterAll
     public void closeDao() {
-        dao.close();
+        deviceDao.close();
+        credentialsDao.close();
     }
 
     @Override

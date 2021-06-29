@@ -26,7 +26,6 @@ import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbConfigProperties;
-import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDocumentBuilder;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.management.Filter;
@@ -181,7 +180,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                     return deviceConfig.getVersion();
                 })
                 .recover(error -> {
-                    if (MongoDbDeviceRegistryUtils.isDuplicateKeyError(error)) {
+                    if (MongoDbBasedDao.isDuplicateKeyError(error)) {
                         LOG.debug("device [{}] already exists for tenant [{}]",
                                 deviceConfig.getDeviceId(), deviceConfig.getTenantId(), error);
                         TracingHelper.logError(span, "device already exists");
@@ -390,7 +389,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
         return updateDevicePromise.future()
                 .compose(result -> {
                     if (result == null) {
-                        return MongoDbDeviceRegistryUtils.checkForVersionMismatchAndFail(
+                        return MongoDbBasedDao.checkForVersionMismatchAndFail(
                                 deviceConfig.getDeviceId(),
                                 resourceVersion,
                                 getById(deviceConfig.getTenantId(), deviceConfig.getDeviceId()));
@@ -437,7 +436,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
         return deleteDevicePromise.future()
                 .compose(result -> {
                     if (result == null) {
-                        return MongoDbDeviceRegistryUtils.checkForVersionMismatchAndFail(
+                        return MongoDbBasedDao.checkForVersionMismatchAndFail(
                                 deviceId,
                                 resourceVersion,
                                 getById(tenantId, deviceId));

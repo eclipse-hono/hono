@@ -30,7 +30,6 @@ import org.eclipse.hono.service.management.Sort;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceAndGatewayAutoProvisioner;
-import org.eclipse.hono.service.management.device.DeviceBackend;
 import org.eclipse.hono.service.management.device.DeviceWithId;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.util.Constants;

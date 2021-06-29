@@ -34,13 +34,15 @@ import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedCredentialsCon
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedTenantsConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbConfigProperties;
+import org.eclipse.hono.deviceregistry.mongodb.model.CredentialsDao;
 import org.eclipse.hono.deviceregistry.mongodb.model.DeviceDao;
+import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedCredentialsDao;
 import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedDeviceDao;
 import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedTenantDao;
 import org.eclipse.hono.deviceregistry.mongodb.model.TenantDao;
 import org.eclipse.hono.deviceregistry.mongodb.service.DaoBasedTenantInformationService;
+import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedCredentialsManagementService;
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedCredentialsService;
-import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedDeviceBackend;
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedDeviceManagementService;
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedRegistrationService;
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedTenantManagementService;
@@ -405,7 +407,7 @@ public class ApplicationConfig {
      */
     @Bean
     @Scope("prototype")
-    public MongoDbBasedRegistrationService registrationService() {
+    public RegistrationService registrationService() {
 
         final EdgeDeviceAutoProvisioner edgeDeviceAutoProvisioner = new EdgeDeviceAutoProvisioner(
                 vertx(),
@@ -425,26 +427,66 @@ public class ApplicationConfig {
      * @return The service.
      */
     @Bean
-    public MongoDbBasedDeviceManagementService deviceManagementService() {
-        return new MongoDbBasedDeviceManagementService(deviceDao(), registrationServiceProperties());
+    public DeviceManagementService deviceManagementService() {
+        return new MongoDbBasedDeviceManagementService(deviceDao(), credentialsDao(), registrationServiceProperties());
+    }
+
+    /**
+     * Creates a Data Access Object for credentials data.
+     *
+     * @return The DAO.
+     */
+    @Bean
+    public CredentialsDao credentialsDao() {
+        final var dao =  new MongoDbBasedCredentialsDao(
+                mongoDbConfigProperties(),
+                credentialsServiceProperties().getCollectionName(),
+                vertx(),
+                tracer());
+        healthCheckServer().registerHealthCheckResources(dao);
+        return dao;
     }
 
     /**
      * Exposes the MongoDB credentials service as a Spring bean.
+     * <p>
+     * This bean is defined as a prototype in order to make sure that each set of event senders
+     * is used by a single dedicated registration service instance only. This is necessary because during start up,
+     * the registration service will implicitly invoke {@link MessagingClientProvider#start()} in order
+     * to establish the senders' connection to the messaging infrastructure. For the AMQP 1.0 based senders,
+     * this connection needs to be established on the verticle's event loop thread in order to work properly.
      *
-     * @return The MongoDB credentials service.
+     * @return The service instance.
      */
     @Bean
     @Scope("prototype")
     public MongoDbBasedCredentialsService credentialsService() {
-        final var service = new MongoDbBasedCredentialsService(
+
+        final var provisioner = new DeviceAndGatewayAutoProvisioner(
                 vertx(),
-                mongoClient(),
-                credentialsServiceProperties(),
-                passwordEncoder()
-        );
-        healthCheckServer().registerHealthCheckResources(service);
+                deviceManagementService(),
+                credentialsManagementService(),
+                eventSenderProvider());
+
+        final var service = new MongoDbBasedCredentialsService(
+                credentialsDao(),
+                credentialsServiceProperties());
+        service.setTenantInformationService(tenantInformationService());
+        service.setDeviceAndGatewayAutoProvisioner(provisioner);
         return service;
+    }
+    /**
+     * Creates a Mongo DB based credentials management service.
+     *
+     * @return The service.
+     */
+    @Bean
+    public CredentialsManagementService credentialsManagementService() {
+        return new MongoDbBasedCredentialsManagementService(
+                vertx(),
+                credentialsDao(),
+                credentialsServiceProperties(),
+                passwordEncoder());
     }
 
     /**
@@ -515,17 +557,7 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public AmqpEndpoint credentialsAmqpEndpoint() {
-        // need to use backend service because the Credentials service's "get" operation
-        // supports auto-provisioning and thus needs to be able to create a device on the fly
-        final MongoDbBasedDeviceBackend service = new MongoDbBasedDeviceBackend(
-                deviceManagementService(),
-                credentialsService(),
-                tenantInformationService());
-        final DeviceAndGatewayAutoProvisioner deviceAndGatewayAutoProvisioner = new DeviceAndGatewayAutoProvisioner(
-                vertx(), service, service, eventSenderProvider());
-        service.setDeviceAndGatewayAutoProvisioner(deviceAndGatewayAutoProvisioner);
-
-        return new DelegatingCredentialsAmqpEndpoint<CredentialsService>(vertx(), service);
+        return new DelegatingCredentialsAmqpEndpoint<CredentialsService>(vertx(), credentialsService());
     }
 
     /**
@@ -615,13 +647,7 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public HttpEndpoint deviceHttpEndpoint() {
-        // need to use backend service because creating a device implicitly
-        // creates (empty) credentials as well for the device
-        final var service = new MongoDbBasedDeviceBackend(
-                deviceManagementService(),
-                credentialsService(),
-                tenantInformationService());
-        return new DelegatingDeviceManagementHttpEndpoint<DeviceManagementService>(vertx(), service);
+        return new DelegatingDeviceManagementHttpEndpoint<DeviceManagementService>(vertx(), deviceManagementService());
     }
 
     /**
@@ -633,8 +659,9 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public HttpEndpoint credentialsHttpEndpoint() {
-        return new DelegatingCredentialsManagementHttpEndpoint<CredentialsManagementService>(vertx(),
-                credentialsService());
+        return new DelegatingCredentialsManagementHttpEndpoint<CredentialsManagementService>(
+                vertx(),
+                credentialsManagementService());
     }
 
     /**
