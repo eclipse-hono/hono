@@ -50,6 +50,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.micrometer.core.instrument.Timer.Sample;
+import io.opentracing.References;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
@@ -338,10 +339,8 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                     return CompositeFuture.all(sendResult, responseReady.future()).mapEmpty();
                 }).map(proceed -> {
                     // downstream message sent and (if ttd was set) command was received or ttd has timed out
-                    final Future<Void> commandConsumerClosedTracker = commandConsumerTracker.result() != null
-                            ? commandConsumerTracker.result().close(currentSpan.context())
-                                    .onFailure(thr -> TracingHelper.logError(currentSpan, thr))
-                            : Future.succeededFuture();
+                    Optional.ofNullable(commandConsumerTracker.result())
+                            .ifPresent(consumer -> consumer.close(null));
 
                     final CommandContext commandContext = context.get(CommandContext.KEY_COMMAND_CONTEXT);
                     final Response response = new Response(ResponseCode.CHANGED);
@@ -370,7 +369,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                             context.getTimer());
 
                     context.respond(response);
-                    commandConsumerClosedTracker.onComplete(res -> currentSpan.finish());
+                    currentSpan.finish();
                     return null;
 
                 }).recover(t -> {
@@ -490,20 +489,17 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
         Objects.requireNonNull(responseReady);
         Objects.requireNonNull(uploadMessageSpan);
 
-        final AtomicBoolean requestProcessed = new AtomicBoolean(false);
-
         if (ttdSecs == null || ttdSecs <= 0) {
             // no need to wait for a command
-            if (requestProcessed.compareAndSet(false, true)) {
-                responseReady.handle(Future.succeededFuture());
-            }
+            responseReady.handle(Future.succeededFuture());
             return Future.succeededFuture();
         }
+        final AtomicBoolean requestProcessed = new AtomicBoolean(false);
         uploadMessageSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_TTD, ttdSecs);
 
         final Span waitForCommandSpan = TracingHelper
                 .buildChildSpan(getTracer(), uploadMessageSpan.context(),
-                        "wait for command", getAdapter().getTypeName())
+                        "create consumer and wait for command", getAdapter().getTypeName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
                 .withTag(TracingHelper.TAG_TENANT_ID, tenantObject.getTenantId())
                 .withTag(TracingHelper.TAG_DEVICE_ID, deviceId)
@@ -511,14 +507,25 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
 
         final Handler<CommandContext> commandHandler = commandContext -> {
 
+            waitForCommandSpan.finish();
+            final Span processCommandSpan = TracingHelper
+                    .buildFollowsFromSpan(getTracer(), waitForCommandSpan.context(), "process received command")
+                    .withTag(Tags.COMPONENT.getKey(), getAdapter().getTypeName())
+                    .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
+                    .withTag(TracingHelper.TAG_TENANT_ID, tenantObject.getTenantId())
+                    .withTag(TracingHelper.TAG_DEVICE_ID, deviceId)
+                    // add reference to the trace started in the command router when the command was first received
+                    .addReference(References.FOLLOWS_FROM, commandContext.getTracingContext())
+                    .start();
+
             Tags.COMPONENT.set(commandContext.getTracingSpan(), getAdapter().getTypeName());
-            commandContext.logCommandToSpan(waitForCommandSpan);
+            commandContext.logCommandToSpan(processCommandSpan);
             final Command command = commandContext.getCommand();
             final Sample commandSample = getAdapter().getMetrics().startTimer();
-            if (isCommandValid(command, waitForCommandSpan)) {
+            if (isCommandValid(command, processCommandSpan)) {
 
                 if (requestProcessed.compareAndSet(false, true)) {
-                    getAdapter().checkMessageLimit(tenantObject, command.getPayloadSize(), waitForCommandSpan.context())
+                    getAdapter().checkMessageLimit(tenantObject, command.getPayloadSize(), processCommandSpan.context())
                             .onComplete(result -> {
                                 if (result.succeeded()) {
                                     addMicrometerSample(commandContext, commandSample);
@@ -526,7 +533,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                                     context.put(CommandContext.KEY_COMMAND_CONTEXT, commandContext);
                                 } else {
                                     commandContext.reject(result.cause());
-                                    TracingHelper.logError(waitForCommandSpan, "rejected command for device", result.cause());
+                                    TracingHelper.logError(processCommandSpan, "rejected command for device", result.cause());
                                     getAdapter().getMetrics().reportCommand(
                                             command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                                             tenantObject.getTenantId(),
@@ -538,6 +545,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                                 cancelCommandReceptionTimer(context);
                                 setTtdStatus(context, TtdStatus.COMMAND);
                                 responseReady.handle(Future.succeededFuture());
+                                processCommandSpan.finish();
                             });
                 } else {
                     final String errorMsg = "waiting time for command has elapsed or another command has already been processed";
@@ -550,6 +558,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                             command.getPayloadSize(),
                             commandSample);
                     commandContext.release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, errorMsg));
+                    processCommandSpan.finish();
                 }
 
             } else {
@@ -562,6 +571,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                         commandSample);
                 LOG.debug("command message is invalid: {}", command);
                 commandContext.reject("malformed command message");
+                processCommandSpan.finish();
             }
         };
 
@@ -584,19 +594,31 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                     waitForCommandSpan.context());
         }
         return commandConsumerFuture
+                .onFailure(thr -> {
+                    TracingHelper.logError(waitForCommandSpan, thr);
+                    waitForCommandSpan.finish();
+                })
                 .map(consumer -> {
                     if (!requestProcessed.get()) {
                         // if the request was not responded already, add a timer for triggering an empty response
                         addCommandReceptionTimer(context, requestProcessed, responseReady, ttdSecs, waitForCommandSpan);
                         context.startAcceptTimer(vertx, tenantObject, getAdapter().getConfig().getTimeoutToAck());
                     }
-                    // wrap the consumer so that when it is closed, the waitForCommandSpan will be finished as well
+                    // wrap the consumer so that when it is closed, a separate FOLLOWS_FROM span is created
+                    // for unregistering the command consumer (which is something the parent request span doesn't wait for)
                     return new CommandConsumer() {
                         @Override
                         public Future<Void> close(final SpanContext ignored) {
-                            return consumer.close(waitForCommandSpan.context())
-                                    .onFailure(thr -> TracingHelper.logError(waitForCommandSpan, thr))
-                                    .onComplete(ar -> waitForCommandSpan.finish());
+                            final Span closeConsumerSpan = TracingHelper
+                                    .buildFollowsFromSpan(getTracer(), waitForCommandSpan.context(), "close consumer")
+                                    .withTag(Tags.COMPONENT.getKey(), getAdapter().getTypeName())
+                                    .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
+                                    .withTag(TracingHelper.TAG_TENANT_ID, tenantObject.getTenantId())
+                                    .withTag(TracingHelper.TAG_DEVICE_ID, deviceId)
+                                    .start();
+                            return consumer.close(closeConsumerSpan.context())
+                                    .onFailure(thr -> TracingHelper.logError(closeConsumerSpan, thr))
+                                    .onComplete(ar -> closeConsumerSpan.finish());
                         }
                     };
                 });
@@ -644,6 +666,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                 // send empty response
                 setTtdStatus(context, TtdStatus.EXPIRED);
                 waitForCommandSpan.log(String.format("time to wait for command expired (%ds)", delaySecs));
+                waitForCommandSpan.finish();
                 responseReady.handle(Future.succeededFuture());
             } else {
                 // a command has been sent to the device already
