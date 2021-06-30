@@ -265,7 +265,7 @@ public class AbstractProtocolAdapterBaseTest {
 
         // GIVEN an adapter connected to a registration service
         final RegistrationAssertion assertionResult = newRegistrationAssertionResult("device");
-        assertionResult.setAuthorizedGateways(List.of("gw"));
+        assertionResult.setAuthorizedGateways(List.of("gw", "gw2"));
         when(registrationClient.assertRegistration(eq("tenant"), eq("device"), any(), any())).thenReturn(Future.succeededFuture(assertionResult));
         when(commandRouterClient.setLastKnownGatewayForDevice(anyString(), anyString(), anyString(), any())).thenReturn(Future.succeededFuture());
 

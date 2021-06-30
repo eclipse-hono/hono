@@ -805,7 +805,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
 
-        if (!isGatewaySupportedForDevice(registrationAssertion)) {
+        if (!isDeviceWithMultipleViaGateways(registrationAssertion)) {
             return Future.succeededFuture(registrationAssertion);
         }
 
@@ -818,8 +818,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             .map(registrationAssertion);
     }
 
-    private boolean isGatewaySupportedForDevice(final RegistrationAssertion registrationAssertion) {
-        return !registrationAssertion.getAuthorizedGateways().isEmpty();
+    private boolean isDeviceWithMultipleViaGateways(final RegistrationAssertion registrationAssertion) {
+        return registrationAssertion.getAuthorizedGateways().size() > 1;
     }
 
     private Future<String> getGatewayId(
