@@ -327,8 +327,7 @@ public final class DeviceRegistryUtils {
      *         {@code false} otherwise.
      * @throws NullPointerException if credential is {@code null}.
      */
-    public static boolean matchesWithClientContext(final JsonObject credential,
-            final JsonObject clientContext) {
+    public static boolean matchesWithClientContext(final JsonObject credential, final JsonObject clientContext) {
 
         Objects.requireNonNull(credential);
 

@@ -859,6 +859,9 @@ public final class IntegrationTestSupport {
 
         // delete device registry entries
         // first delete devices
+        if (!devicesToDelete.isEmpty()) {
+            LOGGER.debug("deleting {} temporary devices ...", devicesToDelete.size());
+        }
         final var deleteDevices = CompositeFuture
                 .join(devicesToDelete.entrySet()
                         .stream().flatMap(entry ->

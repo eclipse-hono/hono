@@ -70,7 +70,7 @@ public abstract class MongoDbBasedDao {
      * Creates a new DAO.
      *
      * @param dbConfig The Mongo DB configuration properties.
-     * @param collectionName The name of the collection that contains the tenant data.
+     * @param collectionName The name of the collection that contains the data.
      * @param vertx The vert.x instance to run on.
      * @param tracer The tracer to use for tracking the processing of requests.
      * @throws NullPointerException if any of the parameters other than tracer are {@code null}.
@@ -253,8 +253,7 @@ public abstract class MongoDbBasedDao {
     }
 
     /**
-     * Maps an error to a future failed with a
-     * {@link ServiceInvocationException}.
+     * Maps an error to a future failed with a {@link ServiceInvocationException}.
      * <p>
      * If the given error is a {@code ServiceInvocationException} then
      * the returned future will be failed with the original error.
