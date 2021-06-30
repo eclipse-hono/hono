@@ -151,7 +151,8 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
         Objects.requireNonNull(command);
         Objects.requireNonNull(correlationId);
 
-        return sendCommand(tenantId, deviceId, command, contentType, data, correlationId, properties, true, context);
+        return sendCommand(tenantId, deviceId, command, contentType, data, correlationId, properties, true,
+                "send command", context);
     }
 
     @Override
@@ -167,7 +168,8 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(command);
 
-        return sendCommand(tenantId, deviceId, command, contentType, data, null, properties, false, context);
+        return sendCommand(tenantId, deviceId, command, contentType, data, null, properties, false,
+                "send one-way command", context);
     }
 
     /**
@@ -206,7 +208,7 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
 
         final String correlationId = correlationIdSupplier.get();
         final Span span = TracingHelper
-                .buildChildSpan(tracer, context, "send command and wait for response", getClass().getSimpleName())
+                .buildChildSpan(tracer, context, "send command and receive response", getClass().getSimpleName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
                 .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
                 .withTag(TracingHelper.TAG_DEVICE_ID, deviceId)
@@ -225,7 +227,7 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
                     pendingCommandResponses.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>())
                             .put(correlationId, expiringCommandPromise);
                     return sendCommand(tenantId, deviceId, command, contentType, data, correlationId, properties,
-                            true, span.context())
+                            true, "send command", span.context())
                                     .onSuccess(sent -> {
                                         LOGGER.debug("sent command [correlation-id: {}], waiting for response", correlationId);
                                         span.log("sent command, waiting for response");
@@ -263,13 +265,15 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
 
     private Future<Void> sendCommand(final String tenantId, final String deviceId, final String command,
             final String contentType, final Buffer data, final String correlationId,
-            final Map<String, Object> properties, final boolean responseRequired, final SpanContext context) {
+            final Map<String, Object> properties, final boolean responseRequired, final String spanOperationName,
+            final SpanContext context) {
 
         final HonoTopic topic = new HonoTopic(HonoTopic.Type.COMMAND, tenantId);
         final Map<String, Object> headerProperties = getHeaderProperties(deviceId, command, contentType, correlationId,
                 responseRequired, properties);
 
-        return sendAndWaitForOutcome(topic.toString(), tenantId, deviceId, data, headerProperties, context);
+        return sendAndWaitForOutcome(topic.toString(), tenantId, deviceId, data, headerProperties, spanOperationName,
+                context);
     }
 
     private Map<String, Object> getHeaderProperties(final String deviceId, final String subject,

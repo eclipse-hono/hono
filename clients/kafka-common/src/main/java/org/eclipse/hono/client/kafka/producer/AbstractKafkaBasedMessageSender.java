@@ -28,6 +28,7 @@ import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.MessagingClient;
 import org.eclipse.hono.util.MessagingType;
+import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,6 +50,8 @@ import io.vertx.kafka.client.producer.RecordMetadata;
  * A client for publishing messages to a Kafka cluster.
  */
 public abstract class AbstractKafkaBasedMessageSender implements MessagingClient, Lifecycle {
+
+    private static final String DEFAULT_SPAN_NAME = "send message";
     /**
      * A logger to be shared with subclasses.
      */
@@ -122,21 +125,23 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
      * @param deviceId The device identifier.
      * @param payload The data to send.
      * @param properties Additional meta data that should be included in the message.
+     * @param spanOperationName The operation name to set for the span created in this method.
+     *                          If {@code null}, "send message" will be used.
      * @param context The currently active OpenTracing span (may be {@code null}). An implementation should use this as
      *            the parent for any span it creates for tracing the execution of this operation.
      * @throws NullPointerException if topic, tenantId, deviceId or properties are {@code null}.
      */
     protected void send(final String topic, final String tenantId, final String deviceId, final Buffer payload,
-            final Map<String, Object> properties, final SpanContext context) {
+            final Map<String, Object> properties, final String spanOperationName, final SpanContext context) {
 
         Objects.requireNonNull(topic);
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(properties);
 
-        final Span span = startSpan(topic, tenantId, deviceId, References.FOLLOWS_FROM, context);
+        final Span span = startSpan(spanOperationName, topic, tenantId, deviceId, References.FOLLOWS_FROM, context);
         final List<KafkaHeader> headers = encodePropertiesAsKafkaHeaders(properties, span);
-        send(topic, tenantId, deviceId, payload, headers, span);
+        sendAndWaitForOutcome(topic, tenantId, deviceId, payload, headers, span);
     }
 
     /**
@@ -147,19 +152,21 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
      * @param deviceId The device identifier.
      * @param payload The data to send.
      * @param headers Additional meta data that should be included in the message.
+     * @param spanOperationName The operation name to set for the span created in this method.
+     *                          If {@code null}, "send message" will be used.
      * @param context The currently active OpenTracing span (may be {@code null}). An implementation should use this as
      *            the parent for any span it creates for tracing the execution of this operation.
      * @throws NullPointerException if topic, tenantId, deviceId or headers are {@code null}.
      */
     protected void send(final String topic, final String tenantId, final String deviceId, final Buffer payload,
-            final List<KafkaHeader> headers, final SpanContext context) {
+            final List<KafkaHeader> headers, final String spanOperationName, final SpanContext context) {
         Objects.requireNonNull(topic);
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(headers);
 
-        final Span span = startSpan(topic, tenantId, deviceId, References.FOLLOWS_FROM, context);
-        send(topic, tenantId, deviceId, payload, headers, span);
+        final Span span = startSpan(spanOperationName, topic, tenantId, deviceId, References.FOLLOWS_FROM, context);
+        sendAndWaitForOutcome(topic, tenantId, deviceId, payload, headers, span);
     }
 
     /**
@@ -170,6 +177,8 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
      * @param deviceId The device identifier.
      * @param payload The data to send.
      * @param properties Additional meta data that should be included in the message.
+     * @param spanOperationName The operation name to set for the span created in this method.
+     *                          If {@code null}, "send message" will be used.
      * @param context The currently active OpenTracing span (may be {@code null}). An implementation should use this as
      *            the parent for any span it creates for tracing the execution of this operation.
      * @return A future indicating the outcome of the operation.
@@ -181,15 +190,16 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
      * @throws NullPointerException if topic, tenantId, deviceId or properties are {@code null}.
      */
     protected Future<Void> sendAndWaitForOutcome(final String topic, final String tenantId, final String deviceId,
-            final Buffer payload, final Map<String, Object> properties, final SpanContext context) {
+            final Buffer payload, final Map<String, Object> properties, final String spanOperationName,
+            final SpanContext context) {
         Objects.requireNonNull(topic);
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(properties);
 
-        final Span span = startSpan(topic, tenantId, deviceId, References.CHILD_OF, context);
+        final Span span = startSpan(spanOperationName, topic, tenantId, deviceId, References.CHILD_OF, context);
         final List<KafkaHeader> headers = encodePropertiesAsKafkaHeaders(properties, span);
-        return send(topic, tenantId, deviceId, payload, headers, span);
+        return sendAndWaitForOutcome(topic, tenantId, deviceId, payload, headers, span);
     }
 
     /**
@@ -200,6 +210,8 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
      * @param deviceId The device identifier.
      * @param payload The data to send.
      * @param headers Additional meta data that should be included in the message.
+     * @param spanOperationName The operation name to set for the span created in this method.
+     *                          If {@code null}, "send message" will be used.
      * @param context The currently active OpenTracing span (may be {@code null}). An implementation should use this as
      *            the parent for any span it creates for tracing the execution of this operation.
      * @return A future indicating the outcome of the operation.
@@ -211,18 +223,43 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
      * @throws NullPointerException if topic, tenantId, deviceId or headers are {@code null}.
      */
     protected Future<Void> sendAndWaitForOutcome(final String topic, final String tenantId, final String deviceId,
-            final Buffer payload, final List<KafkaHeader> headers, final SpanContext context) {
+            final Buffer payload, final List<KafkaHeader> headers, final String spanOperationName,
+            final SpanContext context) {
         Objects.requireNonNull(topic);
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(headers);
 
-        final Span span = startSpan(topic, tenantId, deviceId, References.CHILD_OF, context);
-        return send(topic, tenantId, deviceId, payload, headers, span);
+        final Span span = startSpan(spanOperationName, topic, tenantId, deviceId, References.CHILD_OF, context);
+        return sendAndWaitForOutcome(topic, tenantId, deviceId, payload, headers, span);
     }
 
-    private Future<Void> send(final String topic, final String tenantId, final String deviceId, final Buffer payload,
-            final List<KafkaHeader> headers, final Span span) {
+    /**
+     * Sends a message to a kafka cluster and waits for the outcome.
+     *
+     * @param topic The topic to send the message to.
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The device identifier.
+     * @param payload The data to send.
+     * @param headers Additional meta data that should be included in the message.
+     * @param span The <em>OpenTracing</em> span used to trace the sending of the message.
+     *             The span will be finished by this method.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will be succeeded if the message has been sent.
+     *         <p>
+     *         The future will be failed with a {@link org.eclipse.hono.client.ServerErrorException} if the data could
+     *         not be sent. The error code contained in the exception indicates the cause of the failure.
+     * @throws NullPointerException if topic, tenantId, deviceId, headers or span are {@code null}.
+     */
+    protected Future<Void> sendAndWaitForOutcome(final String topic, final String tenantId, final String deviceId,
+            final Buffer payload, final List<KafkaHeader> headers, final Span span) {
+        Objects.requireNonNull(topic);
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(headers);
+        Objects.requireNonNull(span);
+
         if (stopped) {
             return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "sender already stopped"));
         }
@@ -267,9 +304,40 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
         return headers;
     }
 
-    private Span startSpan(final String topic, final String tenantId, final String deviceId, final String referenceType,
+    /**
+     * Creates a new <em>OpenTracing</em> child span to trace producing messages to Kafka.
+     *
+     * @param operationName The operation name to set for the span.
+     *                       If {@code null}, "send message" will be used.
+     * @param topic The topic to which the message is sent.
+     * @param tenantId The tenant identifier related to the operation.
+     * @param deviceId The device identifier related to the operation.
+     * @param context The span context to set as parent and to derive the sampling priority from (may be null).
+     * @return The new span.
+     * @throws NullPointerException if tracer or topic is {@code null}.
+     */
+    protected Span startChildSpan(final String operationName, final String topic, final String tenantId, final String deviceId,
             final SpanContext context) {
-        return KafkaTracingHelper.newProducerSpan(tracer, topic, referenceType, context)
+        return startSpan(operationName, topic, tenantId, deviceId, References.CHILD_OF, context);
+    }
+
+    /**
+     * Creates a new <em>OpenTracing</em> span to trace producing messages to Kafka.
+     *
+     * @param operationName The operation name to set for the span.
+     *                       If {@code null}, "send message" will be used.
+     * @param topic The topic to which the message is sent.
+     * @param tenantId The tenant identifier related to the operation.
+     * @param deviceId The device identifier related to the operation.
+     * @param referenceType The type of reference towards the given span context.
+     * @param context The span context to set as parent and to derive the sampling priority from (may be null).
+     * @return The new span.
+     * @throws NullPointerException if tracer or topic is {@code null}.
+     */
+    protected Span startSpan(final String operationName, final String topic, final String tenantId, final String deviceId,
+            final String referenceType, final SpanContext context) {
+        final String operationNameToUse = Strings.isNullOrEmpty(operationName) ? DEFAULT_SPAN_NAME : operationName;
+        return KafkaTracingHelper.newProducerSpan(tracer, operationNameToUse, topic, referenceType, context)
                 .setTag(TracingHelper.TAG_TENANT_ID.getKey(), tenantId)
                 .setTag(TracingHelper.TAG_DEVICE_ID.getKey(), deviceId);
     }

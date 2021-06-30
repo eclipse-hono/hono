@@ -67,19 +67,21 @@ public final class KafkaTracingHelper {
      * </ul>
      *
      * @param tracer The Tracer to use.
+     * @param operationName The operation name to set for the span.
      * @param topic The topic to which the message is sent.
      * @param referenceType The type of reference towards the span context.
      * @param parent The span context to set as parent and to derive the sampling priority from (may be null).
      * @return The new span.
-     * @throws NullPointerException if tracer or topic is {@code null}.
+     * @throws NullPointerException if tracer, operationName or topic is {@code null}.
      */
-    public static Span newProducerSpan(final Tracer tracer, final String topic, final String referenceType,
-            final SpanContext parent) {
+    public static Span newProducerSpan(final Tracer tracer, final String operationName, final String topic,
+            final String referenceType, final SpanContext parent) {
         Objects.requireNonNull(tracer);
+        Objects.requireNonNull(operationName);
         Objects.requireNonNull(topic);
         Objects.requireNonNull(referenceType);
 
-        return TracingHelper.buildSpan(tracer, parent, "send message", referenceType)
+        return TracingHelper.buildSpan(tracer, parent, operationName, referenceType)
                 .ignoreActiveSpan()
                 .withTag(Tags.COMPONENT.getKey(), "hono-client-kafka")
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_PRODUCER)

@@ -82,6 +82,8 @@ public abstract class AbstractKafkaBasedDownstreamSender extends AbstractKafkaBa
      *            </ol>
      * @param payload The data to send.
      * @param properties Additional meta data that should be included in the downstream message.
+     * @param spanOperationName The operation name to set for the span created in this method.
+     *                          If {@code null}, "send message" will be used.
      * @param context The currently active OpenTracing span (may be {@code null}). An implementation should use this as
      *            the parent for any span it creates for tracing the execution of this operation.
      * @return A future indicating the outcome of the operation.
@@ -94,7 +96,7 @@ public abstract class AbstractKafkaBasedDownstreamSender extends AbstractKafkaBa
      */
     protected Future<Void> send(final HonoTopic topic, final TenantObject tenant, final RegistrationAssertion device,
             final QoS qos, final String contentType, final Buffer payload, final Map<String, Object> properties,
-            final SpanContext context) {
+            final String spanOperationName, final SpanContext context) {
 
         Objects.requireNonNull(topic);
         Objects.requireNonNull(tenant);
@@ -108,9 +110,10 @@ public abstract class AbstractKafkaBasedDownstreamSender extends AbstractKafkaBa
         final Map<String, Object> propsWithDefaults = addDefaults(tenant, device, qos, contentType, properties);
 
         if (QoS.AT_LEAST_ONCE.equals(qos)) {
-            return sendAndWaitForOutcome(topic.toString(), tenantId, deviceId, payload, propsWithDefaults, context);
+            return sendAndWaitForOutcome(topic.toString(), tenantId, deviceId, payload, propsWithDefaults,
+                    spanOperationName, context);
         } else {
-            send(topic.toString(), tenantId, deviceId, payload, propsWithDefaults, context);
+            send(topic.toString(), tenantId, deviceId, payload, propsWithDefaults, spanOperationName, context);
             return Future.succeededFuture();
         }
     }
