@@ -72,6 +72,7 @@ public class KafkaBasedInternalCommandSender extends AbstractKafkaBasedMessageSe
                 command.getDeviceId(),
                 command.getPayload(),
                 getHeaders((KafkaBasedCommand) command),
+                "delegate Command request",
                 commandContext.getTracingContext())
                         .onSuccess(v -> commandContext.accept())
                         .onFailure(thr -> commandContext.release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,

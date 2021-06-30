@@ -53,9 +53,6 @@ public class KafkaBasedTelemetrySender extends AbstractKafkaBasedDownstreamSende
         super(producerFactory, TelemetryConstants.TELEMETRY_ENDPOINT, kafkaProducerConfig, includeDefaults, tracer);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<Void> sendTelemetry(final TenantObject tenant, final RegistrationAssertion device, final QoS qos,
             final String contentType, final Buffer payload, final Map<String, Object> properties,
@@ -69,12 +66,10 @@ public class KafkaBasedTelemetrySender extends AbstractKafkaBasedDownstreamSende
                 tenant.getTenantId(), device.getDeviceId(), qos, contentType, properties);
 
         final HonoTopic topic = new HonoTopic(HonoTopic.Type.TELEMETRY, tenant.getTenantId());
-        return send(topic, tenant, device, qos, contentType, payload, properties, context);
+
+        return send(topic, tenant, device, qos, contentType, payload, properties, "forward Telemetry data", context);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public String toString() {
         return KafkaBasedTelemetrySender.class.getName() + " via Kafka";

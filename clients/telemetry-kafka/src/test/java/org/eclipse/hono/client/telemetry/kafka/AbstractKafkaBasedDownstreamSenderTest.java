@@ -106,7 +106,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
         final AbstractKafkaBasedDownstreamSender sender = newSender(mockProducer);
 
         // WHEN sending a message
-        sender.send(topic, tenant, device, qos, CONTENT_TYPE, Buffer.buffer(payload), properties, null)
+        sender.send(topic, tenant, device, qos, CONTENT_TYPE, Buffer.buffer(payload), properties, null, null)
                 .onComplete(ctx.succeeding(v -> {
 
                     final ProducerRecord<String, Buffer> actual = mockProducer.history().get(0);
@@ -137,7 +137,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(false);
         final AbstractKafkaBasedDownstreamSender sender = newSender(mockProducer);
 
-        sender.send(topic, tenant, device, qos, CONTENT_TYPE, null, null, null)
+        sender.send(topic, tenant, device, qos, CONTENT_TYPE, null, null, null, null)
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN it fails with the expected error
@@ -166,7 +166,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
         // GIVEN a sender sending a message
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(false);
         final CachingKafkaProducerFactory<String, Buffer> factory = newProducerFactory(mockProducer);
-        newSender(factory).send(topic, tenant, device, qos, CONTENT_TYPE, null, null, null)
+        newSender(factory).send(topic, tenant, device, qos, CONTENT_TYPE, null, null, null, null)
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN the producer is removed and closed
@@ -194,7 +194,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
         // GIVEN a sender sending a message
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(false);
         final CachingKafkaProducerFactory<String, Buffer> factory = newProducerFactory(mockProducer);
-        newSender(factory).send(topic, tenant, device, qos, CONTENT_TYPE, null, null, null)
+        newSender(factory).send(topic, tenant, device, qos, CONTENT_TYPE, null, null, null, null)
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN the producer is present and still open
@@ -290,7 +290,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
 
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         newSender(mockProducer)
-                .send(topic, tenant, device, qos, contentTypeParameter, null, properties, null)
+                .send(topic, tenant, device, qos, contentTypeParameter, null, properties, null, null)
                 .onComplete(ctx.succeeding(v -> {
                     ctx.verify(() -> {
                         final Headers actual = mockProducer.history().get(0).headers();
@@ -318,7 +318,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
         properties.put("ttd", ttd);
 
         // WHEN sending the message
-        sender.send(topic, tenant, device, qos, CONTENT_TYPE, null, properties, null)
+        sender.send(topic, tenant, device, qos, CONTENT_TYPE, null, properties, null, null)
                 .onComplete(ctx.succeeding(t -> {
                     ctx.verify(() -> {
                         // THEN the producer record contains a creation time
@@ -349,7 +349,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
         properties.put("ttl", ttl);
 
         // WHEN sending the message
-        sender.send(topic, tenant, device, qos, CONTENT_TYPE, null, properties, null)
+        sender.send(topic, tenant, device, qos, CONTENT_TYPE, null, properties, null, null)
                 .onComplete(ctx.succeeding(t -> {
                     ctx.verify(() -> {
                         // THEN the producer record contains a creation time
@@ -381,7 +381,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
         properties.put("creation-time", creationTime);
 
         // WHEN sending the message
-        sender.send(topic, tenant, device, qos, CONTENT_TYPE, null, properties, null)
+        sender.send(topic, tenant, device, qos, CONTENT_TYPE, null, properties, null, null)
                 .onComplete(ctx.succeeding(t -> {
                     ctx.verify(() -> {
                         // THEN the creation time is preserved
@@ -422,7 +422,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
 
     /**
      * Verifies that
-     * {@link AbstractKafkaBasedDownstreamSender#send(HonoTopic, org.eclipse.hono.util.TenantObject, org.eclipse.hono.util.RegistrationAssertion, QoS, String, Buffer, Map, io.opentracing.SpanContext)}
+     * {@link AbstractKafkaBasedDownstreamSender#send(HonoTopic, org.eclipse.hono.util.TenantObject, org.eclipse.hono.util.RegistrationAssertion, QoS, String, Buffer, Map, String, io.opentracing.SpanContext)}
      * throws a nullpointer exception if a mandatory parameter is {@code null}.
      */
     @Test
@@ -431,16 +431,16 @@ public class AbstractKafkaBasedDownstreamSenderTest {
         final AbstractKafkaBasedDownstreamSender sender = newSender(mockProducer);
 
         assertThrows(NullPointerException.class,
-                () -> sender.send(null, tenant, device, qos, CONTENT_TYPE, null, null, null));
+                () -> sender.send(null, tenant, device, qos, CONTENT_TYPE, null, null, null, null));
 
         assertThrows(NullPointerException.class,
-                () -> sender.send(topic, null, device, qos, CONTENT_TYPE, null, null, null));
+                () -> sender.send(topic, null, device, qos, CONTENT_TYPE, null, null, null, null));
 
         assertThrows(NullPointerException.class,
-                () -> sender.send(topic, tenant, null, qos, CONTENT_TYPE, null, null, null));
+                () -> sender.send(topic, tenant, null, qos, CONTENT_TYPE, null, null, null, null));
 
         assertThrows(NullPointerException.class,
-                () -> sender.send(topic, tenant, device, null, CONTENT_TYPE, null, null, null));
+                () -> sender.send(topic, tenant, device, null, CONTENT_TYPE, null, null, null, null));
 
     }
 

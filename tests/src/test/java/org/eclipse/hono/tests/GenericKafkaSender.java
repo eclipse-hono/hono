@@ -20,6 +20,7 @@ import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
 
+import io.opentracing.SpanContext;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
@@ -54,7 +55,7 @@ public class GenericKafkaSender extends AbstractKafkaBasedMessageSender {
      */
     public void send(final String topic, final String tenantId, final String deviceId, final Buffer payload,
             final Map<String, Object> properties) {
-        super.send(topic, tenantId, deviceId, payload, properties, null);
+        super.send(topic, tenantId, deviceId, payload, properties, null, (SpanContext) null);
     }
 
     /**
@@ -69,7 +70,7 @@ public class GenericKafkaSender extends AbstractKafkaBasedMessageSender {
      */
     public void send(final String topic, final String tenantId, final String deviceId, final Buffer payload,
             final List<KafkaHeader> headers) {
-        super.send(topic, tenantId, deviceId, payload, headers, null);
+        super.send(topic, tenantId, deviceId, payload, headers, null, (SpanContext) null);
     }
 
     /**
@@ -90,7 +91,7 @@ public class GenericKafkaSender extends AbstractKafkaBasedMessageSender {
      */
     public Future<Void> sendAndWaitForOutcome(final String topic, final String tenantId, final String deviceId,
             final Buffer payload, final Map<String, Object> properties) {
-        return super.sendAndWaitForOutcome(topic, tenantId, deviceId, payload, properties, null);
+        return super.sendAndWaitForOutcome(topic, tenantId, deviceId, payload, properties, null, (SpanContext) null);
     }
 
     /**
@@ -111,7 +112,7 @@ public class GenericKafkaSender extends AbstractKafkaBasedMessageSender {
      */
     public Future<Void> sendAndWaitForOutcome(final String topic, final String tenantId, final String deviceId,
             final Buffer payload, final List<KafkaHeader> headers) {
-        return super.sendAndWaitForOutcome(topic, tenantId, deviceId, payload, headers, null);
+        return super.sendAndWaitForOutcome(topic, tenantId, deviceId, payload, headers, null, (SpanContext) null);
     }
 
 }

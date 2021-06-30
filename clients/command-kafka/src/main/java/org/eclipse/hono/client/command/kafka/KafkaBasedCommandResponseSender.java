@@ -25,6 +25,7 @@ import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
 
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
@@ -58,14 +59,16 @@ public class KafkaBasedCommandResponseSender extends AbstractKafkaBasedMessageSe
 
         Objects.requireNonNull(response);
 
-        final HonoTopic topic = new HonoTopic(HonoTopic.Type.COMMAND_RESPONSE, response.getTenantId());
+        final String topic = new HonoTopic(HonoTopic.Type.COMMAND_RESPONSE, response.getTenantId()).toString();
+        final Span span = startChildSpan("forward Command response", topic, response.getTenantId(),
+                response.getDeviceId(), context);
         log.trace("publish command response [{}]", response);
         if (response.getMessagingType() != getMessagingType()) {
-            // TODO log to span
+            span.log(String.format("using messaging type %s instead of type %s used for the original command",
+                    getMessagingType(), response.getMessagingType()));
         }
-
-        return sendAndWaitForOutcome(topic.toString(), response.getTenantId(), response.getDeviceId(),
-                response.getPayload(), getHeaders(response), context);
+        return sendAndWaitForOutcome(topic, response.getTenantId(), response.getDeviceId(), response.getPayload(),
+                getHeaders(response), span);
     }
 
     private List<KafkaHeader> getHeaders(final CommandResponse response) {

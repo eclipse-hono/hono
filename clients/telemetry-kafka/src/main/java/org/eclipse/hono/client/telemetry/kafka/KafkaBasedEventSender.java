@@ -53,9 +53,6 @@ public class KafkaBasedEventSender extends AbstractKafkaBasedDownstreamSender im
         super(producerFactory, EventConstants.EVENT_ENDPOINT, kafkaProducerConfig, includeDefaults, tracer);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<Void> sendEvent(final TenantObject tenant, final RegistrationAssertion device,
             final String contentType, final Buffer payload, final Map<String, Object> properties,
@@ -68,12 +65,9 @@ public class KafkaBasedEventSender extends AbstractKafkaBasedDownstreamSender im
                 device.getDeviceId(), contentType, properties);
 
         final HonoTopic topic = new HonoTopic(HonoTopic.Type.EVENT, tenant.getTenantId());
-        return send(topic, tenant, device, QoS.AT_LEAST_ONCE, contentType, payload, properties, context);
+        return send(topic, tenant, device, QoS.AT_LEAST_ONCE, contentType, payload, properties, "forward Event", context);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public String toString() {
         return KafkaBasedEventSender.class.getName() + " via Kafka";
