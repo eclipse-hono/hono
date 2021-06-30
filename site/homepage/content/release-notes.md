@@ -793,6 +793,9 @@ description = "Information about changes in recent Hono releases. Includes new f
 * A concept page explaining the different ways devices can be connected to Hono's protocol adapters has been
   added. There is also example code illustrating how a protocol gateway which connects to the AMQP adapter can
   be implemented.
+* If both AMQP and Kafka messaging systems are configured, then Command & Control messages will be received from
+  both systems. A command response message from a device will by default be forwarded using the messaging system
+  that the corresponding command message was received in.
 
 ### API Changes
 
