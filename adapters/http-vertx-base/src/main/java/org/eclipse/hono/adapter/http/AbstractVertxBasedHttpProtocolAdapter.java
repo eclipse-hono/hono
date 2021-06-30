@@ -53,6 +53,7 @@ import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantObject;
 
 import io.micrometer.core.instrument.Timer.Sample;
+import io.opentracing.References;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.noop.NoopSpan;
@@ -715,19 +716,15 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         })
         .map(proceed -> {
             // downstream message sent and (if ttd was set) command was received or ttd has timed out
-            final Future<Void> commandConsumerClosedTracker = commandConsumerTracker.result() != null
-                    ? commandConsumerTracker.result().close(currentSpan.context())
-                            .onFailure(thr -> TracingHelper.logError(currentSpan, thr))
-                    : Future.succeededFuture();
+            Optional.ofNullable(commandConsumerTracker.result())
+                    .ifPresent(consumer -> consumer.close(null));
 
             if (ctx.response().closed()) {
                 log.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]: response already closed",
                         endpoint, tenant, deviceId);
                 TracingHelper.logError(currentSpan, "failed to send HTTP response to device: response already closed");
-                commandConsumerClosedTracker.onComplete(res -> {
-                    currentSpan.finish();
-                    ctx.response().end(); // close the response here, ensuring that the TracingHandler bodyEndHandler gets called
-                });
+                currentSpan.finish();
+                ctx.response().end(); // close the response here, ensuring that the TracingHandler bodyEndHandler gets called
             } else {
                 final CommandContext commandContext = ctx.get(CommandContext.KEY_COMMAND_CONTEXT);
                 setResponsePayload(ctx.response(), commandContext, currentSpan);
@@ -754,7 +751,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             payloadSize,
                             ctx.getTtdStatus(),
                             getMicrometerSample(ctx.getRoutingContext()));
-                    commandConsumerClosedTracker.onComplete(res -> currentSpan.finish());
+                    currentSpan.finish();
                 });
                 ctx.response().exceptionHandler(t -> {
                     log.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]",
@@ -773,7 +770,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     }
                     currentSpan.log("failed to send HTTP response to device");
                     TracingHelper.logError(currentSpan, t);
-                    commandConsumerClosedTracker.onComplete(res -> currentSpan.finish());
+                    currentSpan.finish();
                 });
                 ctx.response().end();
             }
@@ -982,20 +979,17 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         Objects.requireNonNull(responseReady);
         Objects.requireNonNull(uploadMessageSpan);
 
-        final AtomicBoolean requestProcessed = new AtomicBoolean(false);
-
         if (ttdSecs == null || ttdSecs <= 0) {
             // no need to wait for a command
-            if (requestProcessed.compareAndSet(false, true)) {
-                responseReady.handle(Future.succeededFuture());
-            }
+            responseReady.handle(Future.succeededFuture());
             return Future.succeededFuture();
         }
+        final AtomicBoolean requestProcessed = new AtomicBoolean(false);
         uploadMessageSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_TTD, ttdSecs);
 
         final Span waitForCommandSpan = TracingHelper
                 .buildChildSpan(tracer, uploadMessageSpan.context(),
-                        "wait for command", getTypeName())
+                        "create consumer and wait for command", getTypeName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
                 .withTag(TracingHelper.TAG_TENANT_ID, tenantObject.getTenantId())
                 .withTag(TracingHelper.TAG_DEVICE_ID, deviceId)
@@ -1003,14 +997,25 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
         final Handler<CommandContext> commandHandler = commandContext -> {
 
+            waitForCommandSpan.finish();
+            final Span processCommandSpan = TracingHelper
+                    .buildFollowsFromSpan(tracer, waitForCommandSpan.context(), "process received command")
+                    .withTag(Tags.COMPONENT.getKey(), getTypeName())
+                    .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
+                    .withTag(TracingHelper.TAG_TENANT_ID, tenantObject.getTenantId())
+                    .withTag(TracingHelper.TAG_DEVICE_ID, deviceId)
+                    // add reference to the trace started in the command router when the command was first received
+                    .addReference(References.FOLLOWS_FROM, commandContext.getTracingContext())
+                    .start();
+
             Tags.COMPONENT.set(commandContext.getTracingSpan(), getTypeName());
-            commandContext.logCommandToSpan(waitForCommandSpan);
+            commandContext.logCommandToSpan(processCommandSpan);
             final Command command = commandContext.getCommand();
             final Sample commandSample = getMetrics().startTimer();
-            if (isCommandValid(command, waitForCommandSpan)) {
+            if (isCommandValid(command, processCommandSpan)) {
 
                 if (requestProcessed.compareAndSet(false, true)) {
-                    checkMessageLimit(tenantObject, command.getPayloadSize(), waitForCommandSpan.context())
+                    checkMessageLimit(tenantObject, command.getPayloadSize(), processCommandSpan.context())
                     .onComplete(result -> {
                         if (result.succeeded()) {
                             addMicrometerSample(commandContext, commandSample);
@@ -1018,7 +1023,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             ctx.put(CommandContext.KEY_COMMAND_CONTEXT, commandContext);
                         } else {
                             commandContext.reject(result.cause());
-                            TracingHelper.logError(waitForCommandSpan, "rejected command for device", result.cause());
+                            TracingHelper.logError(processCommandSpan, "rejected command for device", result.cause());
                             metrics.reportCommand(
                                     command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                                     tenantObject.getTenantId(),
@@ -1030,6 +1035,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         cancelCommandReceptionTimer(ctx);
                         setTtdStatus(ctx, TtdStatus.COMMAND);
                         responseReady.handle(Future.succeededFuture());
+                        processCommandSpan.finish();
                     });
                 } else {
                     final String errorMsg = "waiting time for command has elapsed or another command has already been processed";
@@ -1042,6 +1048,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             command.getPayloadSize(),
                             commandSample);
                     commandContext.release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, errorMsg));
+                    processCommandSpan.finish();
                 }
 
             } else {
@@ -1054,6 +1061,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         commandSample);
                 log.debug("command message is invalid: {}", command);
                 commandContext.reject("malformed command message");
+                processCommandSpan.finish();
             }
         };
 
@@ -1076,18 +1084,30 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                     waitForCommandSpan.context());
         }
         return commandConsumerFuture
+                .onFailure(thr -> {
+                    TracingHelper.logError(waitForCommandSpan, thr);
+                    waitForCommandSpan.finish();
+                })
                 .map(consumer -> {
                     if (!requestProcessed.get()) {
                         // if the request was not responded already, add a timer for triggering an empty response
                         addCommandReceptionTimer(ctx, requestProcessed, responseReady, ttdSecs, waitForCommandSpan);
                     }
-                    // wrap the consumer so that when it is closed, the waitForCommandSpan will be finished as well
+                    // wrap the consumer so that when it is closed, a separate FOLLOWS_FROM span is created
+                    // for unregistering the command consumer (which is something the parent request span doesn't wait for)
                     return new CommandConsumer() {
                         @Override
                         public Future<Void> close(final SpanContext ignored) {
-                            return consumer.close(waitForCommandSpan.context())
-                                    .onFailure(thr -> TracingHelper.logError(waitForCommandSpan, thr))
-                                    .onComplete(ar -> waitForCommandSpan.finish());
+                            final Span closeConsumerSpan = TracingHelper
+                                    .buildFollowsFromSpan(tracer, waitForCommandSpan.context(), "close consumer")
+                                    .withTag(Tags.COMPONENT.getKey(), getTypeName())
+                                    .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
+                                    .withTag(TracingHelper.TAG_TENANT_ID, tenantObject.getTenantId())
+                                    .withTag(TracingHelper.TAG_DEVICE_ID, deviceId)
+                                    .start();
+                            return consumer.close(closeConsumerSpan.context())
+                                    .onFailure(thr -> TracingHelper.logError(closeConsumerSpan, thr))
+                                    .onComplete(ar -> closeConsumerSpan.finish());
                         }
                     };
                 });
@@ -1135,6 +1155,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 // send empty response
                 setTtdStatus(ctx, TtdStatus.EXPIRED);
                 waitForCommandSpan.log(String.format("time to wait for command expired (%ds)", delaySecs));
+                waitForCommandSpan.finish();
                 responseReady.handle(Future.succeededFuture());
             } else {
                 // a command has been sent to the device already
