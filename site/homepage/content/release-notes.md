@@ -39,6 +39,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   after the device has been created, if the request contained a secret having an ID. In fact, the registry
   implementations would have accepted such a request even if the secrets did not contain a password/key/etc at all
   but only the identifier. This has been fixed.
+* A potential issue processing Command & Control messages from a Kafka cluster while Command Router instances are
+  getting stopped or started has been fixed.
 
 ### Deprecations
 
