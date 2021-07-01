@@ -12,6 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.commandrouter.impl.kafka;
 
+import java.util.List;
 import java.util.Objects;
 
 import org.eclipse.hono.adapter.client.command.CommandContext;
@@ -58,6 +59,12 @@ public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappin
         super(tenantClient, commandTargetMapper, internalCommandSender);
         this.commandQueue = Objects.requireNonNull(commandQueue);
         this.tracer = Objects.requireNonNull(tracer);
+    }
+
+    @Override
+    public Future<Void> stop() {
+        commandQueue.setCurrentlyHandledPartitions(List.of());
+        return super.stop();
     }
 
     /**

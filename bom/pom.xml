@@ -220,6 +220,11 @@
       </dependency>
       <dependency>
         <groupId>org.eclipse.hono</groupId>
+        <artifactId>hono-service-command-router-base</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.hono</groupId>
         <artifactId>client-device-connection-infinispan</artifactId>
         <version>${project.version}</version>
       </dependency>

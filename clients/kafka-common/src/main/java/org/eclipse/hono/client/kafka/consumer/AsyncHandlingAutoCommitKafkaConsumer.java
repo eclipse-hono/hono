@@ -19,6 +19,7 @@ import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -201,7 +202,9 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
         if (periodicCommitTimerId != null) {
             vertx.cancelTimer(periodicCommitTimerId);
         }
-        return super.stop();
+        return super.stop()
+                // go through offsetsMap in order to log missing commits
+                .onComplete(v -> clearObsoleteTopicPartitionOffsets(List.of()));
     }
 
     @Override
