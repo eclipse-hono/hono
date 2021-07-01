@@ -23,6 +23,7 @@ import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.ExecutionContext;
 import org.eclipse.hono.util.MessageHelper;
 
+import io.opentracing.References;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
@@ -117,23 +118,27 @@ public interface CommandContext extends ExecutionContext {
      *
      * @param tracer The tracer to use.
      * @param command The command for which the span should be started.
-     * @param spanContext Existing span context.
+     * @param parentSpanContext The context of the span to reference as parent span.
+     * @param followsFromSpanContext A span context for which to add a <em>follows-from</em> reference,
+     *                               e.g. the span context for the operation to create the command consumer.
      * @return The created span.
      * @throws NullPointerException if tracer or command is {@code null}.
      */
-    static Span createSpan(final Tracer tracer, final Command command, final SpanContext spanContext) {
+    static Span createSpan(final Tracer tracer, final Command command, final SpanContext parentSpanContext,
+            final SpanContext followsFromSpanContext) {
         Objects.requireNonNull(tracer);
         Objects.requireNonNull(command);
         // we set the component tag to the class name because we have no access to
         // the name of the enclosing component we are running in
         final Tracer.SpanBuilder spanBuilder = TracingHelper
-                .buildChildSpan(tracer, spanContext, "handle command", CommandConsumer.class.getSimpleName())
+                .buildChildSpan(tracer, parentSpanContext, "handle command", CommandConsumer.class.getSimpleName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CONSUMER)
                 .withTag(TracingHelper.TAG_TENANT_ID, command.getTenant())
                 .withTag(TracingHelper.TAG_DEVICE_ID, command.getDeviceId());
         if (command.getGatewayId() != null) {
             spanBuilder.withTag(MessageHelper.APP_PROPERTY_GATEWAY_ID, command.getGatewayId());
         }
+        spanBuilder.addReference(References.FOLLOWS_FROM, followsFromSpanContext);
         final Span currentSpan = spanBuilder.start();
         command.logToSpan(currentSpan);
         return currentSpan;

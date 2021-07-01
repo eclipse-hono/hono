@@ -28,6 +28,7 @@ import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.Strings;
+import org.eclipse.hono.util.TenantConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -193,8 +194,11 @@ public class CommandRouterCommandConsumerFactory implements CommandConsumerFacto
         log.trace("create command consumer [tenant-id: {}, device-id: {}, gateway-id: {}]", tenantId, deviceId, gatewayId);
 
         // register the command handler
+        // for short-lived command consumers, let the consumer creation span context be used as reference in the command span
+        final SpanContext consumerCreationContextToUse = !sanitizedLifespan.isNegative()
+                && sanitizedLifespan.toSeconds() <= TenantConstants.DEFAULT_MAX_TTD ? context : null;
         final CommandHandlerWrapper commandHandlerWrapper = new CommandHandlerWrapper(tenantId, deviceId, gatewayId,
-                commandHandler, Vertx.currentContext());
+                commandHandler, Vertx.currentContext(), consumerCreationContextToUse);
         commandHandlers.putCommandHandler(commandHandlerWrapper);
         final Instant lifespanStart = Instant.now();
 
