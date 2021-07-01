@@ -134,7 +134,10 @@ public class ProtonBasedInternalCommandConsumer extends AbstractServiceClient im
         }
 
         final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, msg);
-        final Span currentSpan = CommandContext.createSpan(tracer, command, spanContext);
+        final SpanContext followsFromSpanContext = commandHandler != null
+                ? commandHandler.getConsumerCreationSpanContext()
+                : null;
+        final Span currentSpan = CommandContext.createSpan(tracer, command, spanContext, followsFromSpanContext);
         currentSpan.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
 
         final CommandContext commandContext = new ProtonBasedCommandContext(command, delivery, currentSpan);

@@ -15,6 +15,7 @@ package org.eclipse.hono.client.command;
 
 import java.util.Objects;
 
+import io.opentracing.SpanContext;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -29,6 +30,7 @@ public final class CommandHandlerWrapper {
     private final String gatewayId;
     private final Handler<CommandContext> commandHandler;
     private final Context context;
+    private final SpanContext consumerCreationSpanContext;
 
     /**
      * Creates a new CommandHandlerWrapper.
@@ -42,15 +44,24 @@ public final class CommandHandlerWrapper {
      *                  parameter.)
      * @param commandHandler The command handler.
      * @param context The vert.x context to run the handler on or {@code null} to invoke the handler directly.
+     * @param consumerCreationSpanContext The context of the span for tracking the creation of the command consumer
+     *                                    that this command handler belongs to. If not {@code null}, the given context
+     *                                    is intended to be used by that command consumer for creating a
+     *                                    <em>follows-from</em> reference in the span created for the processing of a
+     *                                    command request message. Note that providing a span context here only makes
+     *                                    sense for short-lived command consumers as created by the HTTP and CoAP
+     *                                    adapters for example.
      * @throws NullPointerException If tenantId, deviceId or commandHandler is {@code null}.
      */
     public CommandHandlerWrapper(final String tenantId, final String deviceId, final String gatewayId,
-            final Handler<CommandContext> commandHandler, final Context context) {
+            final Handler<CommandContext> commandHandler, final Context context,
+            final SpanContext consumerCreationSpanContext) {
         this.tenantId = Objects.requireNonNull(tenantId);
         this.deviceId = Objects.requireNonNull(deviceId);
         this.gatewayId = gatewayId;
         this.commandHandler = Objects.requireNonNull(commandHandler);
         this.context = context;
+        this.consumerCreationSpanContext = consumerCreationSpanContext;
     }
 
     /**
@@ -79,6 +90,16 @@ public final class CommandHandlerWrapper {
      */
     public String getGatewayId() {
         return gatewayId;
+    }
+
+    /**
+     * The span context of the command consumer creation operation or {@code null} if
+     * that context isn't available or shouldn't be used.
+     *
+     * @return The span context or {@code null}.
+     */
+    public SpanContext getConsumerCreationSpanContext() {
+        return consumerCreationSpanContext;
     }
 
     /**

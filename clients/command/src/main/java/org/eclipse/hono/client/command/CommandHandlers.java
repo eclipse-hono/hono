@@ -56,7 +56,7 @@ public class CommandHandlers {
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(commandHandler);
 
-        return putCommandHandler(new CommandHandlerWrapper(tenantId, deviceId, gatewayId, commandHandler, context));
+        return putCommandHandler(new CommandHandlerWrapper(tenantId, deviceId, gatewayId, commandHandler, context, null));
     }
 
     /**

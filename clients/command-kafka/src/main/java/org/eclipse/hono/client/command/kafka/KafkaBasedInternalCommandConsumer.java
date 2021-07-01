@@ -284,7 +284,10 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
         }
 
         final SpanContext spanContext = KafkaTracingHelper.extractSpanContext(tracer, record);
-        final Span currentSpan = CommandContext.createSpan(tracer, command, spanContext);
+        final SpanContext followsFromSpanContext = commandHandler != null
+                ? commandHandler.getConsumerCreationSpanContext()
+                : null;
+        final Span currentSpan = CommandContext.createSpan(tracer, command, spanContext, followsFromSpanContext);
         currentSpan.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
 
         final CommandContext commandContext = new KafkaBasedCommandContext(command, currentSpan, commandResponseSender);
