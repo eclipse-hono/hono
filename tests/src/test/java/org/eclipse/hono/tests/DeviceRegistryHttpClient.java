@@ -921,7 +921,8 @@ public final class DeviceRegistryHttpClient {
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @param credentialsSpec The JSON array to be sent in the request body.
-     * @param version The version of credentials to be sent as request header.
+     * @param expectedResourceVersion The resource version that the credentials on record must match. The value of
+     *                                this parameter will be included in the request's <em>if-match</em> header.
      * @param expectedStatusCode The status code indicating a successful outcome.
      * @return A future indicating the outcome of the operation.
      *         The future will succeed if the response contains the expected status code.
@@ -932,14 +933,14 @@ public final class DeviceRegistryHttpClient {
             final String tenantId,
             final String deviceId,
             final Collection<CommonCredential> credentialsSpec,
-            final String version,
+            final String expectedResourceVersion,
             final int expectedStatusCode) {
 
         Objects.requireNonNull(tenantId);
         final String uri = credentialsByDeviceUri(tenantId, deviceId);
 
         final MultiMap headers = MultiMap.caseInsensitiveMultiMap()
-                .add(HttpHeaders.IF_MATCH, version)
+                .add(HttpHeaders.IF_MATCH, expectedResourceVersion)
                 .add(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON);
 
         // encode array not list, workaround for vert.x issue

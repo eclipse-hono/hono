@@ -140,7 +140,10 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
 
         registry.getCredentials(tenantId, deviceId)
             .compose(httpResponse -> {
-                context.verify(() -> assertThat(httpResponse.bodyAsJsonArray()).isEmpty());
+                context.verify(() -> {
+                    assertResourceVersionHasChanged(resourceVersion, httpResponse.headers());
+                    assertThat(httpResponse.bodyAsJsonArray()).isEmpty();
+                });
                 return registry.addCredentials(tenantId, deviceId, credentials);
             })
             .compose(httpResponse -> {
