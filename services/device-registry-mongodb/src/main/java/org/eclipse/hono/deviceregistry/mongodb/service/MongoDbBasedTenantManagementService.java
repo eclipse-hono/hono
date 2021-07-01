@@ -22,7 +22,6 @@ import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedTenantsConfigP
 import org.eclipse.hono.deviceregistry.mongodb.model.TenantDao;
 import org.eclipse.hono.deviceregistry.service.tenant.AbstractTenantManagementService;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
-import org.eclipse.hono.deviceregistry.util.Versioned;
 import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
@@ -77,7 +76,7 @@ public final class MongoDbBasedTenantManagementService extends AbstractTenantMan
         Objects.requireNonNull(tenantObj);
         Objects.requireNonNull(span);
 
-        final TenantDto tenantDto = TenantDto.forCreation(tenantId, tenantObj, new Versioned<>(tenantObj).getVersion());
+        final TenantDto tenantDto = TenantDto.forCreation(tenantId, tenantObj, DeviceRegistryUtils.getUniqueIdentifier());
 
         return dao.create(tenantDto, span.context())
             .map(resourceVersion -> {
@@ -119,7 +118,7 @@ public final class MongoDbBasedTenantManagementService extends AbstractTenantMan
         Objects.requireNonNull(resourceVersion);
         Objects.requireNonNull(span);
 
-        final TenantDto tenantDto = TenantDto.forUpdate(tenantId, tenantObj, new Versioned<>(tenantObj).getVersion());
+        final TenantDto tenantDto = TenantDto.forUpdate(tenantId, tenantObj, DeviceRegistryUtils.getUniqueIdentifier());
 
         return dao.update(tenantDto, resourceVersion, span.context())
                 .map(newVersion -> OperationResult.ok(

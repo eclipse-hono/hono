@@ -33,7 +33,6 @@ import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDocumentBuilder;
 import org.eclipse.hono.deviceregistry.service.device.AbstractRegistrationService;
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
-import org.eclipse.hono.deviceregistry.util.Versioned;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.Id;
@@ -189,7 +188,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                             tenantId,
                             deviceId.orElseGet(() -> DeviceRegistryUtils.getUniqueIdentifier()),
                             device,
-                            new Versioned<>(device).getVersion());
+                            DeviceRegistryUtils.getUniqueIdentifier());
                     return processCreateDevice(
                             deviceDto,
                             span);
@@ -455,7 +454,7 @@ public final class MongoDbBasedRegistrationService extends AbstractRegistrationS
                 tenantId,
                 deviceId,
                 device,
-                new Versioned<>(device).getVersion());
+                DeviceRegistryUtils.getUniqueIdentifier());
 
         mongoClient.findOneAndUpdateWithOptions(
                 config.getCollectionName(),
