@@ -29,6 +29,7 @@
 
   <logger name="org.eclipse.hono.deviceregistry.mongodb.model" level="INFO"/>
   <logger name="org.eclipse.hono.deviceregistry.mongodb.service" level="INFO"/>
+  <logger name="org.eclipse.hono.deviceregistry.mongodb.utils" level="INFO"/>
   <logger name="org.eclipse.hono.deviceregistry.util" level="INFO"/>
   <logger name="org.eclipse.hono.service" level="INFO"/>
   <logger name="org.eclipse.hono.service.management" level="INFO"/>

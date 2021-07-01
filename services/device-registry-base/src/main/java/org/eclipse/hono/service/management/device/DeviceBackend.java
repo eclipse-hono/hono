@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,13 +14,11 @@ package org.eclipse.hono.service.management.device;
 
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
-import org.eclipse.hono.service.registration.RegistrationService;
 
 /**
  * Unifying interface for implementing device backend.
  */
 public interface DeviceBackend extends
-        RegistrationService,
         DeviceManagementService,
         CredentialsService,
         CredentialsManagementService {

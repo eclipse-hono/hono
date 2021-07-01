@@ -206,8 +206,8 @@ public abstract class AbstractRegistrationService implements RegistrationService
      * {@inheritDoc}
      * <p>
      * Subclasses may override this method in order to implement a more sophisticated approach for asserting
-     * registration status, e.g. using cached information etc. This method requires a functional
-     * {@link #getRegistrationInformation(DeviceKey, Span) processAssertRegistration} method to work.
+     * registration status, e.g. using cached information etc. This method requires a functioning
+     * {@link #getRegistrationInformation(DeviceKey, Span)} method to work.
      */
     @Override
     public Future<RegistrationResult> assertRegistration(final String tenantId, final String deviceId, final Span span) {

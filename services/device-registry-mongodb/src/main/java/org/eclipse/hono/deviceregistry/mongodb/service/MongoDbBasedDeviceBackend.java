@@ -31,11 +31,11 @@ import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceAndGatewayAutoProvisioner;
 import org.eclipse.hono.service.management.device.DeviceBackend;
+import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.device.DeviceWithId;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.Lifecycle;
-import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,14 +50,14 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 /**
- * A device backend that leverages and unifies {@link MongoDbBasedRegistrationService} and
+ * A device backend that delegates to a {@link DeviceManagementService} and a
  * {@link MongoDbBasedCredentialsService}.
  */
 public class MongoDbBasedDeviceBackend implements DeviceBackend, Lifecycle {
 
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedDeviceBackend.class);
 
-    private final MongoDbBasedRegistrationService registrationService;
+    private final DeviceManagementService deviceManagementService;
     private final MongoDbBasedCredentialsService credentialsService;
     private final TenantInformationService tenantInformationService;
     private DeviceAndGatewayAutoProvisioner deviceAndGatewayAutoProvisioner;
@@ -65,20 +65,20 @@ public class MongoDbBasedDeviceBackend implements DeviceBackend, Lifecycle {
     /**
      * Creates a new instance.
      *
-     * @param registrationService an implementation of registration service.
+     * @param deviceManagementService an implementation of registration service.
      * @param credentialsService an implementation of credentials service.
      * @param tenantInformationService an implementation of tenant information service.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public MongoDbBasedDeviceBackend(
-            final MongoDbBasedRegistrationService registrationService,
+            final DeviceManagementService deviceManagementService,
             final MongoDbBasedCredentialsService credentialsService,
             final TenantInformationService tenantInformationService) {
-        Objects.requireNonNull(registrationService);
+        Objects.requireNonNull(deviceManagementService);
         Objects.requireNonNull(credentialsService);
         Objects.requireNonNull(tenantInformationService);
 
-        this.registrationService = registrationService;
+        this.deviceManagementService = deviceManagementService;
         this.credentialsService = credentialsService;
         this.tenantInformationService = tenantInformationService;
     }
@@ -103,7 +103,6 @@ public class MongoDbBasedDeviceBackend implements DeviceBackend, Lifecycle {
     public Future<Void> start() {
         LOG.debug("starting up services");
         return CompositeFuture.all(
-                registrationService.start(),
                 credentialsService.start(),
                 Optional.ofNullable(deviceAndGatewayAutoProvisioner)
                     .map(AbstractAutoProvisioningEventSender::start)
@@ -118,7 +117,6 @@ public class MongoDbBasedDeviceBackend implements DeviceBackend, Lifecycle {
     public Future<Void> stop() {
         LOG.debug("stopping services");
         return CompositeFuture.join(
-                registrationService.start(),
                 credentialsService.start(),
                 Optional.ofNullable(deviceAndGatewayAutoProvisioner)
                     .map(AbstractAutoProvisioningEventSender::start)
@@ -129,19 +127,8 @@ public class MongoDbBasedDeviceBackend implements DeviceBackend, Lifecycle {
     // DEVICES
 
     @Override
-    public Future<RegistrationResult> assertRegistration(final String tenantId, final String deviceId) {
-        return registrationService.assertRegistration(tenantId, deviceId);
-    }
-
-    @Override
-    public Future<RegistrationResult> assertRegistration(final String tenantId, final String deviceId,
-            final String gatewayId) {
-        return registrationService.assertRegistration(tenantId, deviceId, gatewayId);
-    }
-
-    @Override
     public Future<OperationResult<Device>> readDevice(final String tenantId, final String deviceId, final Span span) {
-        return registrationService.readDevice(tenantId, deviceId, span);
+        return deviceManagementService.readDevice(tenantId, deviceId, span);
     }
 
     @Override
@@ -151,7 +138,7 @@ public class MongoDbBasedDeviceBackend implements DeviceBackend, Lifecycle {
             final List<Filter> filters,
             final List<Sort> sortOptions,
             final Span span) {
-        return registrationService.searchDevices(tenantId, pageSize, pageOffset, filters, sortOptions, span);
+        return deviceManagementService.searchDevices(tenantId, pageSize, pageOffset, filters, sortOptions, span);
     }
 
     @Override
@@ -159,7 +146,7 @@ public class MongoDbBasedDeviceBackend implements DeviceBackend, Lifecycle {
             final Optional<String> resourceVersion,
             final Span span) {
 
-        return registrationService.deleteDevice(tenantId, deviceId, resourceVersion, span)
+        return deviceManagementService.deleteDevice(tenantId, deviceId, resourceVersion, span)
                 .compose(result -> {
                     if (result.getStatus() != HttpURLConnection.HTTP_NO_CONTENT) {
                         return Future.succeededFuture(result);
@@ -180,7 +167,7 @@ public class MongoDbBasedDeviceBackend implements DeviceBackend, Lifecycle {
             final Device device,
             final Span span) {
 
-        return registrationService.createDevice(tenantId, deviceId, device, span)
+        return deviceManagementService.createDevice(tenantId, deviceId, device, span)
                 .compose(result -> {
                     if (result.getStatus() != HttpURLConnection.HTTP_CREATED) {
                         return Future.succeededFuture(result);
@@ -199,7 +186,7 @@ public class MongoDbBasedDeviceBackend implements DeviceBackend, Lifecycle {
     @Override
     public Future<OperationResult<Id>> updateDevice(final String tenantId, final String deviceId, final Device device,
             final Optional<String> resourceVersion, final Span span) {
-        return registrationService.updateDevice(tenantId, deviceId, device, resourceVersion, span);
+        return deviceManagementService.updateDevice(tenantId, deviceId, device, resourceVersion, span);
     }
 
     // CREDENTIALS
@@ -264,7 +251,7 @@ public class MongoDbBasedDeviceBackend implements DeviceBackend, Lifecycle {
         return credentialsService.readCredentials(tenantId, deviceId, span)
                 .compose(result -> {
                     if (result.getStatus() == HttpURLConnection.HTTP_NOT_FOUND) {
-                        return registrationService.readDevice(tenantId, deviceId, span)
+                        return deviceManagementService.readDevice(tenantId, deviceId, span)
                                 .map(d -> {
                                     if (d.getStatus() == HttpURLConnection.HTTP_OK) {
                                         return OperationResult.ok(HttpURLConnection.HTTP_OK,
@@ -289,7 +276,7 @@ public class MongoDbBasedDeviceBackend implements DeviceBackend, Lifecycle {
     protected ToStringHelper toStringHelper() {
         return MoreObjects.toStringHelper(this)
                 .add("credentialsService", this.credentialsService)
-                .add("registrationService", this.registrationService);
+                .add("registrationService", this.deviceManagementService);
     }
 
     @Override

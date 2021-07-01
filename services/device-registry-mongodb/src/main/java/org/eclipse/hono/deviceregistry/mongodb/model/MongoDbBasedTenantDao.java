@@ -61,7 +61,7 @@ import io.vertx.ext.mongo.UpdateOptions;
  * A data access object for persisting tenants to a Mongo DB collection.
  *
  */
-public class MongoDbBasedTenantDao extends MongoDbBasedDao implements TenantDao, HealthCheckProvider {
+public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements TenantDao, HealthCheckProvider {
 
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedTenantDao.class);
 
