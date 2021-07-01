@@ -60,7 +60,7 @@ import io.vertx.ext.mongo.UpdateOptions;
  * A data access object for persisting device information to a Mongo DB collection.
  *
  */
-public class MongoDbBasedDeviceDao extends MongoDbBasedDao implements DeviceDao, HealthCheckProvider {
+public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements DeviceDao, HealthCheckProvider {
 
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedDeviceDao.class);
     /**
@@ -160,6 +160,8 @@ public class MongoDbBasedDeviceDao extends MongoDbBasedDao implements DeviceDao,
     public Future<String> create(
             final DeviceDto deviceConfig,
             final SpanContext tracingContext) {
+
+        Objects.requireNonNull(deviceConfig);
 
         final Span span = tracer.buildSpan("create Device")
                 .addReference(References.CHILD_OF, tracingContext)
@@ -302,6 +304,7 @@ public class MongoDbBasedDeviceDao extends MongoDbBasedDao implements DeviceDao,
             final List<Sort> sortOptions,
             final SpanContext tracingContext) {
 
+        Objects.requireNonNull(tenantId);
         Objects.requireNonNull(filters);
         Objects.requireNonNull(sortOptions);
 
@@ -339,9 +342,10 @@ public class MongoDbBasedDeviceDao extends MongoDbBasedDao implements DeviceDao,
                 .map(devices -> devices.stream()
                         .filter(JsonObject.class::isInstance)
                         .map(JsonObject.class::cast)
-                        .map(json -> {
-                            LOG.debug("document: {}{}", System.lineSeparator(), json.encodePrettily());
-                            return json;
+                        .peek(json -> {
+                            if (LOG.isDebugEnabled()) {
+                                LOG.debug("document from collection:{}{}", System.lineSeparator(), json.encodePrettily());
+                            }
                         })
                         .map(json -> json.mapTo(MongoDbBasedDeviceDto.class))
                         .map(deviceDto -> DeviceWithId.from(deviceDto.getDeviceId(), deviceDto.getData()))
@@ -410,6 +414,10 @@ public class MongoDbBasedDeviceDao extends MongoDbBasedDao implements DeviceDao,
             final Optional<String> resourceVersion,
             final SpanContext tracingContext) {
 
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(resourceVersion);
+
         final Span span = tracer.buildSpan("delete Device")
                 .addReference(References.CHILD_OF, tracingContext)
                 .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
@@ -448,6 +456,8 @@ public class MongoDbBasedDeviceDao extends MongoDbBasedDao implements DeviceDao,
      */
     @Override
     public Future<Long> count(final String tenantId, final SpanContext tracingContext) {
+
+        Objects.requireNonNull(tenantId);
 
         final Span span = tracer.buildSpan("count Devices")
                 .addReference(References.CHILD_OF, tracingContext)

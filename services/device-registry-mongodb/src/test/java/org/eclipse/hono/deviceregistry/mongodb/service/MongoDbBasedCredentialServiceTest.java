@@ -159,6 +159,7 @@ public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsSer
 
         final Checkpoint shutdown = testContext.checkpoint(2);
         credentialsService.stop().onComplete(s -> shutdown.flag());
+        deviceDao.close();
         vertx.close(s -> shutdown.flag());
     }
 
