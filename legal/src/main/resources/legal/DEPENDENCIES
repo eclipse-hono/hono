@@ -165,18 +165,18 @@ maven/mavencentral/org.postgresql/postgresql/42.2.18, BSD-2-Clause, approved, cl
 maven/mavencentral/org.reactivestreams/reactive-streams/1.0.3, CC0-1.0, approved, CQ16332
 maven/mavencentral/org.slf4j/jul-to-slf4j/1.7.28, MIT, approved, CQ12842
 maven/mavencentral/org.slf4j/slf4j-api/1.7.28, MIT, approved, CQ23467
-maven/mavencentral/org.springframework.boot/spring-boot/2.4.3, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.springframework.boot/spring-boot-actuator/2.4.3, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.springframework.boot/spring-boot-actuator-autoconfigure/2.4.3, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.springframework.boot/spring-boot-autoconfigure/2.4.3, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.springframework.boot/spring-boot-starter-logging/2.4.3, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.springframework.boot/spring-boot/2.4.8, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.springframework.boot/spring-boot-actuator/2.4.8, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.springframework.boot/spring-boot-actuator-autoconfigure/2.4.8, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.springframework.boot/spring-boot-autoconfigure/2.4.8, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.springframework.boot/spring-boot-starter-logging/2.4.8, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.springframework.security/spring-security-crypto/5.4.7, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.springframework/spring-aop/5.3.4, Apache-2.0, approved, CQ23152
-maven/mavencentral/org.springframework/spring-beans/5.3.4, Apache-2.0, approved, CQ23153
-maven/mavencentral/org.springframework/spring-context/5.3.4, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.springframework/spring-core/5.3.4, Apache-2.0 AND BSD-3-Clause, approved, CQ23154
-maven/mavencentral/org.springframework/spring-expression/5.3.4, Apache-2.0, approved, CQ23155
-maven/mavencentral/org.springframework/spring-jcl/5.3.4, Apache-2.0, approved, CQ23156
+maven/mavencentral/org.springframework/spring-aop/5.3.8, Apache-2.0, approved, CQ23152
+maven/mavencentral/org.springframework/spring-beans/5.3.8, Apache-2.0, approved, CQ23153
+maven/mavencentral/org.springframework/spring-context/5.3.8, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.springframework/spring-core/5.3.8, Apache-2.0 AND BSD-3-Clause, approved, CQ23154
+maven/mavencentral/org.springframework/spring-expression/5.3.8, Apache-2.0, approved, CQ23155
+maven/mavencentral/org.springframework/spring-jcl/5.3.8, Apache-2.0, approved, CQ23156
 maven/mavencentral/org.wildfly.common/wildfly-common/1.5.4.Final-format-001, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.wildfly.security/wildfly-elytron/1.14.1.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.wildfly.security/wildfly-elytron-asn1/1.14.1.Final, Apache-2.0, approved, clearlydefined

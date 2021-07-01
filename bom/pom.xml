@@ -87,8 +87,8 @@
     <rxjava.version>3.0.4</rxjava.version>
     <slf4j.version>1.7.28</slf4j.version>
     <snakeyaml.version>1.28</snakeyaml.version>
-    <spring.version>5.3.4</spring.version>
-    <spring-boot.version>2.4.3</spring-boot.version>
+    <spring.version>5.3.8</spring.version>
+    <spring-boot.version>2.4.8</spring-boot.version>
     <spring-security-crypto.version>5.4.7</spring-security-crypto.version>
     <testcontainers.version>1.15.2</testcontainers.version>
     <!-- when updating Vert.x, check if the Kafka clients need to be updated as well -->
