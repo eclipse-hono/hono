@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -173,17 +174,13 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
         final VertxTestContext setup = new VertxTestContext();
 
         final int numTestCommands = 10;
-        final AtomicInteger receivedRecords = new AtomicInteger();
-        final Promise<Void> allRecordsReceivedPromise = Promise.promise();
+        final CountDownLatch allRecordsReceivedLatch = new CountDownLatch(numTestCommands);
         final List<String> receivedCommandSubjects = new ArrayList<>();
         final Handler<KafkaConsumerRecord<String, Buffer>> recordHandler = record -> {
-            receivedRecords.incrementAndGet();
-            LOG.info("received {}", record);
+            LOG.trace("received {}", record);
             receivedCommandSubjects.add(KafkaRecordHelper
                     .getHeaderValue(record.headers(), MessageHelper.SYS_PROPERTY_SUBJECT, String.class).orElse(""));
-            if (receivedRecords.get() == numTestCommands) {
-                allRecordsReceivedPromise.complete();
-            }
+            allRecordsReceivedLatch.countDown();
         };
         final LinkedList<Promise<Void>> completionPromisesQueue = new LinkedList<>();
         // don't let getting the target adapter instance finish immediately
@@ -222,12 +219,15 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
             sendOneWayCommand(tenantId, "myDeviceId", subject);
         });
 
-        allRecordsReceivedPromise.future().onComplete(ctx.succeeding(v -> {
+        if (!allRecordsReceivedLatch.await(8, TimeUnit.SECONDS)) {
+            ctx.failNow(new AssertionError(String.format("did not receive %d out of %d expected messages after 8s",
+                    allRecordsReceivedLatch.getCount(), numTestCommands)));
+        } else {
             ctx.verify(() -> {
                 assertThat(receivedCommandSubjects).isEqualTo(sentCommandSubjects);
             });
             ctx.completeNow();
-        }));
+        }
     }
 
     /**
@@ -261,21 +261,17 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
         //   when closing the first consumer) and processes and forwards all commands starting with the second command
 
         final int numTestCommands = 10;
-        final AtomicInteger receivedRecords = new AtomicInteger();
         final Promise<Void> firstRecordReceivedPromise = Promise.promise();
-        final Promise<Void> allRecordsReceivedPromise = Promise.promise();
+        final CountDownLatch allRecordsReceivedLatch = new CountDownLatch(numTestCommands);
         final List<String> receivedCommandSubjects = new ArrayList<>();
         final Handler<KafkaConsumerRecord<String, Buffer>> recordHandler = record -> {
-            receivedRecords.incrementAndGet();
             LOG.trace("received {}", record);
             receivedCommandSubjects.add(KafkaRecordHelper
                     .getHeaderValue(record.headers(), MessageHelper.SYS_PROPERTY_SUBJECT, String.class).orElse(""));
-            if (receivedRecords.get() == 1) {
+            if (receivedCommandSubjects.size() == 1) {
                 firstRecordReceivedPromise.complete();
             }
-            if (receivedRecords.get() == numTestCommands) {
-                allRecordsReceivedPromise.complete();
-            }
+            allRecordsReceivedLatch.countDown();
         };
         final Promise<Void> firstConsumerAllGetAdapterInstanceInvocationsDone = Promise.promise();
         final LinkedList<Promise<Void>> firstConsumerGetAdapterInstancePromisesQueue = new LinkedList<>();
@@ -344,14 +340,17 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
                     }));
             });
 
-        allRecordsReceivedPromise.future().onComplete(ctx.succeeding(v -> {
+        if (!allRecordsReceivedLatch.await(8, TimeUnit.SECONDS)) {
+            ctx.failNow(new AssertionError(String.format("did not receive %d out of %d expected messages after 8s",
+                    allRecordsReceivedLatch.getCount(), numTestCommands)));
+        } else {
             ctx.verify(() -> {
                 assertThat(receivedCommandSubjects).isEqualTo(sentCommandSubjects);
                 // all but the first command should have been processed by the second consumer
                 assertThat(secondConsumerGetAdapterInstanceInvocations.get()).isEqualTo(numTestCommands - 1);
             });
             ctx.completeNow();
-        }));
+        }
     }
 
     private Future<Void> createCommandConsumer(final String tenantId,
