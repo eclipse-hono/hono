@@ -47,19 +47,17 @@ public interface CredentialsDao {
      *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
-     * @param resourceVersion The resource version that the credentials instance is required to have.
      * @param tracingContext The context to track the processing of the request in
      *                       or {@code null} if no such context exists.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will be succeeded if an instance matching the given criteria exists, otherwise
      *         it will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
-     * @throws NullPointerException if tenant ID, device ID or resource version are {@code null}.
+     * @throws NullPointerException if tenant or device ID are {@code null}.
      */
     Future<CredentialsDto> getByDeviceId(
             String tenantId,
             String deviceId,
-            Optional<String> resourceVersion,
             SpanContext tracingContext);
 
     /**

@@ -206,22 +206,31 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
     public Future<CredentialsDto> getByDeviceId(
             final String tenantId,
             final String deviceId,
-            final Optional<String> resourceVersion,
             final SpanContext tracingContext) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(resourceVersion);
 
         final Span span = tracer.buildSpan("get Credentials by device ID")
                 .addReference(References.CHILD_OF, tracingContext)
                 .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
                 .withTag(TracingHelper.TAG_DEVICE_ID, deviceId)
                 .start();
-        resourceVersion.ifPresent(v -> span.setTag("resource_version", v));
 
-        LOG.trace("retrieving credentials for device [tenant-id: {}, device-id: {}, resource-version: {}]",
-                tenantId, deviceId, resourceVersion.orElse(null));
+        return getByDeviceId(tenantId, deviceId)
+                .recover(this::mapError)
+                .onFailure(t -> {
+                    LOG.debug("error retrieving credentials by device ID", t);
+                    TracingHelper.logError(span, "error retrieving credentials by device ID", t);
+                })
+                .onComplete(r -> span.finish());
+    }
+
+    private Future<CredentialsDto> getByDeviceId(
+            final String tenantId,
+            final String deviceId) {
+
+        LOG.trace("retrieving credentials for device [tenant-id: {}, device-id: {}]", tenantId, deviceId);
 
         final JsonObject findCredentialsQuery = MongoDbDocumentBuilder.builder()
                 .withTenantId(tenantId)
@@ -243,23 +252,9 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                             LOG.trace("credentials data from collection:{}{}",
                                     System.lineSeparator(), result.encodePrettily());
                         }
-                        final var dto = result.mapTo(CredentialsDto.class);
-                        if (resourceVersion.isEmpty() || resourceVersion.get().equals(dto.getVersion())) {
-                            return dto;
-                        } else {
-                            throw new ClientErrorException(
-                                    tenantId,
-                                    HttpURLConnection.HTTP_PRECON_FAILED,
-                                    "resource version mismatch");
-                        }
+                        return result.mapTo(CredentialsDto.class);
                     }
-                })
-                .recover(this::mapError)
-                .onFailure(t -> {
-                    LOG.debug("error retrieving credentials by device ID", t);
-                    TracingHelper.logError(span, "error retrieving credentials by device ID", t);
-                })
-                .onComplete(r -> span.finish());
+                });
     }
 
     /**
@@ -376,16 +371,16 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                 .compose(result -> {
                     if (result == null) {
                         return MongoDbBasedDao.checkForVersionMismatchAndFail(
-                                deviceId,
+                                String.format("credentials [tenant-id: %s, device-id: %s]", tenantId, deviceId),
                                 resourceVersion,
-                                getByDeviceId(tenantId, deviceId, resourceVersion, tracingContext));
+                                getByDeviceId(tenantId, deviceId));
                     } else {
                         LOG.debug("successfully updated credentials for device [tenant: {}, device-id: {}]",
                                 tenantId, deviceId);
+                        span.log("successfully updated credentials");
                         if (LOG.isTraceEnabled()) {
                             LOG.trace("new document in DB:{}{}", System.lineSeparator(), result.encodePrettily());
                         }
-                        span.log("successfully updated credentials");
                         return Future.succeededFuture(result.getString(CredentialsDto.FIELD_VERSION));
                     }
                 })
@@ -429,6 +424,7 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
         resourceVersion.ifPresent(v -> span.setTag("resource_version", v));
 
         final JsonObject removeCredentialsQuery = MongoDbDocumentBuilder.builder()
+                .withVersion(resourceVersion)
                 .withTenantId(tenantId)
                 .withDeviceId(deviceId)
                 .document();
@@ -437,17 +433,17 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
         mongoClient.findOneAndDelete(collectionName, removeCredentialsQuery, removeCredentialsPromise);
 
         return removeCredentialsPromise.future()
-                .map(result -> {
+                .compose(result -> {
                     if (result == null) {
-                        throw new ClientErrorException(
-                                tenantId,
-                                HttpURLConnection.HTTP_NOT_FOUND,
-                                "no matching credentials on record");
+                        return MongoDbBasedDao.checkForVersionMismatchAndFail(
+                                String.format("credentials [tenant-id: %s, device-id: %s]", tenantId, deviceId),
+                                resourceVersion,
+                                getByDeviceId(tenantId, deviceId));
                     } else {
                         span.log("successfully deleted credentials");
                         LOG.debug("successfully deleted credentials for device [tenant: {}, device-id: {}]",
                                 tenantId, deviceId);
-                        return (Void) null;
+                        return Future.succeededFuture((Void) null);
                     }
                 })
                 .recover(this::mapError)

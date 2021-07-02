@@ -76,7 +76,7 @@ public final class MongoDbBasedCredentialsManagementService extends AbstractCred
         Objects.requireNonNull(deviceKey);
         Objects.requireNonNull(span);
 
-        return dao.getByDeviceId(deviceKey.getTenantId(), deviceKey.getDeviceId(), Optional.empty(), span.context())
+        return dao.getByDeviceId(deviceKey.getTenantId(), deviceKey.getDeviceId(), span.context())
                 .map(dto -> OperationResult.ok(
                         HttpURLConnection.HTTP_OK,
                         dto.getCredentials(),
@@ -110,7 +110,10 @@ public final class MongoDbBasedCredentialsManagementService extends AbstractCred
                             DeviceRegistryUtils.getUniqueIdentifier());
 
                     if (updatedCredentialsDto.requiresMerging()) {
-                        dao.getByDeviceId(deviceKey.getTenantId(), deviceKey.getDeviceId(), resourceVersion, span.context())
+                        // it is no problem to ignore the resource version here because
+                        // further down, when we try to update the credentials document we
+                        // check for the resource version to match
+                        dao.getByDeviceId(deviceKey.getTenantId(), deviceKey.getDeviceId(), span.context())
                                 .map(updatedCredentialsDto::merge)
                                 .onComplete(result);
                     } else {

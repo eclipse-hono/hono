@@ -15,7 +15,6 @@
 package org.eclipse.hono.deviceregistry.mongodb.model;
 
 import java.net.HttpURLConnection;
-import java.util.ConcurrentModificationException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -110,6 +109,9 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
      * @return A succeeded future if the indices have been created. Otherwise, a failed future.
      */
     public Future<Void> createIndices() {
+
+        final Promise<Void> result = Promise.promise();
+
         if (creatingIndices.compareAndSet(false, true)) {
             // create unique index on device ID
             return createIndex(
@@ -117,10 +119,14 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                             .put(MongoDbBasedDeviceDto.FIELD_DEVICE_ID, 1),
                     new IndexOptions().unique(true))
             .onSuccess(ok -> indicesCreated.set(true))
-            .onComplete(r -> creatingIndices.set(false));
+            .onComplete(r -> {
+                creatingIndices.set(false);
+                result.handle(r);
+            });
         } else {
-            return Future.failedFuture(new ConcurrentModificationException("already trying to create indices"));
+            LOG.debug("already trying to create indices");
         }
+        return result.future();
     }
 
     /**
