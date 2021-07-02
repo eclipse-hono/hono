@@ -24,6 +24,7 @@ import org.eclipse.hono.client.command.CommandAlreadyProcessedException;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandResponse;
 import org.eclipse.hono.client.command.CommandResponseSender;
+import org.eclipse.hono.client.command.CommandToBeReprocessedException;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
@@ -98,7 +99,8 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
         final ServiceInvocationException mappedError = StatusCodeMapper.toServerError(error);
         final int status = mappedError.getErrorCode();
         Tags.HTTP_STATUS.set(span, status);
-        if (isRequestResponseCommand() && !(error instanceof CommandAlreadyProcessedException)) {
+        if (isRequestResponseCommand() && !(error instanceof CommandAlreadyProcessedException)
+                && !(error instanceof CommandToBeReprocessedException)) {
             final String errorMessage = Optional.ofNullable(ServiceInvocationException.getErrorMessageForExternalClient(mappedError))
                     .orElse("Temporarily unavailable");
             sendDeliveryFailureCommandResponseMessage(status, errorMessage, span)

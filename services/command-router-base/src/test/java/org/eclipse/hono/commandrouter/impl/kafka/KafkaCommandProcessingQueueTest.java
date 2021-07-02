@@ -16,7 +16,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -26,8 +25,8 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.apache.kafka.common.TopicPartition;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.command.CommandResponseSender;
+import org.eclipse.hono.client.command.CommandToBeReprocessedException;
 import org.eclipse.hono.client.command.kafka.KafkaBasedCommand;
 import org.eclipse.hono.client.command.kafka.KafkaBasedCommandContext;
 import org.eclipse.hono.client.kafka.HonoTopic;
@@ -123,17 +122,18 @@ public class KafkaCommandProcessingQueueTest {
         // ... and then marking only one other partition as currently being handled
         kafkaCommandProcessingQueue.setCurrentlyHandledPartitions(Set.of(new TopicPartition(topic, 1)));
 
-        // THEN the processing of the commands with the sendAction already applied (but previously waiting for command 1) is failed
+        // THEN the processing of the commands where applySendCommandAction() was already invoked (but where processing
+        // was blocked waiting for command 1) is failed
         assertThat(result1.failed()).isTrue();
-        assertThat(ServiceInvocationException.extractStatusCode(result1.cause())).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+        assertThat(result1.cause()).isInstanceOf(CommandToBeReprocessedException.class);
         assertThat(result2.failed()).isTrue();
-        assertThat(ServiceInvocationException.extractStatusCode(result2.cause())).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+        assertThat(result2.cause()).isInstanceOf(CommandToBeReprocessedException.class);
 
-        // and applying the sendAction for the first command results in an error
+        // and applying the sendAction for the first command also results in the same kind of error
         final Future<Void> result0 = kafkaCommandProcessingQueue
                 .applySendCommandAction(commandContexts.get(0), Future::succeededFuture);
         assertThat(result0.failed()).isTrue();
-        assertThat(ServiceInvocationException.extractStatusCode(result0.cause())).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+        assertThat(result0.cause()).isInstanceOf(CommandToBeReprocessedException.class);
     }
 
     @SuppressWarnings("unchecked")
