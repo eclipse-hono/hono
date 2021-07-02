@@ -39,6 +39,7 @@ import org.apache.kafka.common.header.internals.RecordHeader;
 import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.apache.kafka.common.record.TimestampType;
 import org.eclipse.hono.kafka.test.KafkaMockConsumer;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -76,6 +77,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
     private KafkaConsumerConfigProperties consumerConfigProperties;
     private Vertx vertx;
     private KafkaMockConsumer mockConsumer;
+    private AsyncHandlingAutoCommitKafkaConsumer consumer;
 
     /**
      * Sets up fixture.
@@ -91,6 +93,16 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         final Map<String, String> commonProperties = Map.of(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "servers");
         consumerConfigProperties = new KafkaConsumerConfigProperties();
         consumerConfigProperties.setCommonClientConfig(commonProperties);
+    }
+
+    /**
+     * Stops the created consumer.
+     */
+    @AfterEach
+    public void stopConsumer() {
+        if (consumer != null) {
+            consumer.stop();
+        }
     }
 
     /**
@@ -120,7 +132,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig("test");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
 
-        final var consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
+        consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
         mockConsumer.updateEndOffsets(Map.of(topicPartition, ((long) 0)));
         mockConsumer.updatePartitions(topicPartition, KafkaMockConsumer.DEFAULT_NODE);
@@ -139,7 +151,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig("test");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
 
-        final var consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, TOPIC_PATTERN, handler, consumerConfig);
+        consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, TOPIC_PATTERN, handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
         mockConsumer.updateEndOffsets(Map.of(topicPartition, ((long) 0)));
         mockConsumer.updatePartitions(topicPartition, KafkaMockConsumer.DEFAULT_NODE);
@@ -171,7 +183,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
         consumerConfig.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "300000"); // periodic commit shall not play a role here
 
-        final var consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
+        consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
         mockConsumer.updateEndOffsets(Map.of(topicPartition, ((long) 0)));
         mockConsumer.updatePartitions(topicPartition, KafkaMockConsumer.DEFAULT_NODE);
@@ -272,7 +284,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
         consumerConfig.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "300000"); // periodic commit shall not play a role here
 
-        final var consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
+        consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
         mockConsumer.updateEndOffsets(Map.of(topicPartition, ((long) 0)));
         mockConsumer.updatePartitions(topicPartition, KafkaMockConsumer.DEFAULT_NODE);
@@ -329,7 +341,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         // otherwise the frequent commit task on the event loop thread will prevent the test main thread from getting things done
         consumerConfig.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "100");
 
-        final var consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
+        consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
         mockConsumer.updateEndOffsets(Map.of(topicPartition, ((long) 0)));
         mockConsumer.updatePartitions(topicPartition, KafkaMockConsumer.DEFAULT_NODE);
@@ -392,7 +404,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         consumerConfig.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG,
                 "300000"); // periodic commit shall not play a role here
 
-        final var consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
+        consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
         mockConsumer.updateEndOffsets(Map.of(topicPartition, ((long) 0)));
         mockConsumer.updatePartitions(topicPartition, KafkaMockConsumer.DEFAULT_NODE);
@@ -454,7 +466,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
         consumerConfig.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "300000"); // periodic commit shall not play a role here
 
-        final var consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig) {
+        consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig) {
             @Override
             protected void onRecordHandlerSkippedForExpiredRecord(final KafkaConsumerRecord<String, Buffer> record) {
                 super.onRecordHandlerSkippedForExpiredRecord(record);

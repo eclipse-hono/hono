@@ -33,6 +33,7 @@ import org.apache.kafka.common.header.internals.RecordHeader;
 import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.apache.kafka.common.record.TimestampType;
 import org.eclipse.hono.kafka.test.KafkaMockConsumer;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -86,6 +87,16 @@ public class HonoKafkaConsumerTest {
         final Map<String, String> commonProperties = Map.of(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "servers");
         consumerConfigProperties = new KafkaConsumerConfigProperties();
         consumerConfigProperties.setCommonClientConfig(commonProperties);
+    }
+
+    /**
+     * Stops the created consumer.
+     */
+    @AfterEach
+    public void stopConsumer() {
+        if (consumer != null) {
+            consumer.stop();
+        }
     }
 
     /**
