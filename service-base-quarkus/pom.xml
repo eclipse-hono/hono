@@ -38,11 +38,6 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
-      <dependency>
-        <groupId>org.jboss.logmanager</groupId>
-        <artifactId>jboss-logmanager-embedded</artifactId>
-        <version>1.0.6</version>
-      </dependency>
     </dependencies>
   </dependencyManagement>
 

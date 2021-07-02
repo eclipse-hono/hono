@@ -148,7 +148,7 @@
                         <JAVA_APP_NAME>${project.artifactId}</JAVA_APP_NAME>
                         <JAVA_LIB_DIR>/opt/hono/lib/*:/opt/hono/extensions/*</JAVA_LIB_DIR>
                         <JAVA_OPTIONS>-Dvertx.cacheDirBase=/tmp -Djava.util.logging.manager=org.jboss.logmanager.LogManager</JAVA_OPTIONS>
-                        <JAVA_APP_JAR>${project.artifactId}-${project.version}-runner.jar</JAVA_APP_JAR>
+                        <JAVA_APP_JAR>quarkus-run.jar</JAVA_APP_JAR>
                       </env>
                       <entryPoint>
                         <arg>/opt/hono/run-java.sh</arg>
@@ -167,17 +167,10 @@
                               <fileMode>755</fileMode>
                             </fileSet>
                             <fileSet>
-                              <directory>${project.build.directory}/lib</directory>
-                              <outputDirectory>opt/hono/lib</outputDirectory>
-                              <includes>
-                                <include>*.jar</include>
-                              </includes>
-                            </fileSet>
-                            <fileSet>
-                              <directory>${project.build.directory}</directory>
+                              <directory>${project.build.directory}/quarkus-app</directory>
                               <outputDirectory>opt/hono</outputDirectory>
                               <includes>
-                                <include>${project.artifactId}-${project.version}-runner.jar</include>
+                                <include>**/*</include>
                               </includes>
                             </fileSet>
                           </fileSets>
@@ -232,7 +225,7 @@
                         <tag>${docker.image.additional.tag}</tag>
                       </tags>
                       <imagePullPolicy>Always</imagePullPolicy>
-                      <from>registry.access.redhat.com/ubi8/ubi-minimal:8.1</from>
+                      <from>${native.image.name}</from>
                       <workdir>/opt/hono</workdir>
                       <entryPoint>
                         <arg>/opt/hono/${project.artifactId}-${project.version}-runner</arg>
