@@ -82,7 +82,7 @@ public class HonoKafkaConsumer implements Lifecycle {
     protected final AtomicBoolean stopCalled = new AtomicBoolean();
 
     private final Map<String, String> consumerConfig;
-    private final AtomicReference<Promise<Set<TopicPartition>>> subscribeDonePromiseRef = new AtomicReference<>();
+    private final AtomicReference<Promise<Void>> subscribeDonePromiseRef = new AtomicReference<>();
     private final Handler<KafkaConsumerRecord<String, Buffer>> recordHandler;
     private final Set<String> topics;
     private final Pattern topicPattern;
@@ -292,16 +292,6 @@ public class HonoKafkaConsumer implements Lifecycle {
             // the consumer is actually ready to receive records already
             kafkaConsumer.asStream().pollTimeout(Duration.ofMillis(10)); // let polls finish quickly until start() is completed
             subscribeAndWaitForRebalance()
-                    .compose(assignedPartitions -> {
-                        if (!assignedPartitions.isEmpty()
-                                && "latest".equals(consumerConfig.get(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG))) {
-                            // Wait for offset positions to be reset
-                            // (otherwise records published between start() completion and the offset-reset might get skipped)
-                            // This is done by having KafkaConsumer.updateFetchPositions() be called.
-                            return updateFetchPositions(assignedPartitions);
-                        }
-                        return Future.succeededFuture((Void) null);
-                    })
                     .onSuccess(v2 -> {
                         kafkaConsumer.asStream().pollTimeout(POLL_TIMEOUT);
                         logSubscribedTopicsOnStartComplete();
@@ -311,7 +301,21 @@ public class HonoKafkaConsumer implements Lifecycle {
         return startPromise.future();
     }
 
-    private Future<Void> updateFetchPositions(final Set<TopicPartition> assignedPartitions) {
+    /**
+     * To be invoked after partition assignment, making sure that with the completion of the returned future,
+     * partition offset positions have been set according to either the last committed state or the auto offset
+     * reset config ("latest" being relevant here) if no offset is committed yet.
+     * <p>
+     * This makes sure records published after the returned future is completed are actually received by the consumer.
+     * <p>
+     * Note that the returned future is never failed here.
+     */
+    private Future<Void> ensurePositionsHaveBeenSetIfNeeded(final Set<TopicPartition> assignedPartitions) {
+        // skip if offset reset config set to "earliest", no need to wait for the result here since consumer will receive all records anyway
+        if (assignedPartitions.isEmpty()
+                || "earliest".equals(consumerConfig.get(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG))) {
+            return Future.succeededFuture();
+        }
         final Promise<Void> resultPromise = Promise.promise();
         runOnKafkaWorkerThread(v -> {
             final Consumer<String, Buffer> wrappedConsumer = kafkaConsumer.asStream().unwrap();
@@ -399,11 +403,11 @@ public class HonoKafkaConsumer implements Lifecycle {
         });
     }
 
-    private Future<Set<TopicPartition>> subscribeAndWaitForRebalance() {
+    private Future<Void> subscribeAndWaitForRebalance() {
         if (stopCalled.get()) {
             return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "already stopped"));
         }
-        final Promise<Set<TopicPartition>> subscribeDonePromise = subscribeDonePromiseRef
+        final Promise<Void> subscribeDonePromise = subscribeDonePromiseRef
                 .updateAndGet(promise -> promise == null ? Promise.promise() : promise);
         final Promise<Void> subscriptionPromise = Promise.promise();
         if (topicPattern != null) {
@@ -437,8 +441,7 @@ public class HonoKafkaConsumer implements Lifecycle {
                 subscribeDonePromise.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, errorMsg));
             }
         });
-        return CompositeFuture.all(subscriptionPromise.future(), subscribeDonePromise.future())
-                .map(r -> subscribeDonePromise.future().result());
+        return CompositeFuture.all(subscriptionPromise.future(), subscribeDonePromise.future()).mapEmpty();
     }
 
     /**
@@ -459,23 +462,23 @@ public class HonoKafkaConsumer implements Lifecycle {
     }
 
     private void onPartitionsAssigned(final Set<TopicPartition> partitionsSet) {
-        // if a topic pattern is used, kafkaConsumer.subscription() will be used to fetch the actual subscribed topics;
-        // if a fixed topic list is used instead, calling kafkaConsumer.subscription() would be of no use since it
-        // always returns the topics used in the kafkaConsumer.subscribe(Collection) call, regardless of whether they exist
-        // (kafkaConsumer.subscribe(Collection) would have auto-created the topics anyway, if "auto.create.topics.enable" is true)
         if (topicPattern != null) {
-            // update subscribedTopicPatternTopics (subscription() will return the actual topics, i.e. not the topic pattern if one is used
+            // update subscribedTopicPatternTopics (subscription() will return the actual topics, i.e. not the topic pattern if one is used)
             final Promise<Set<String>> subscriptionResultPromise = Promise.promise();
             kafkaConsumer.subscription(subscriptionResultPromise);
-            subscriptionResultPromise.future()
-                    .onSuccess(result -> subscribedTopicPatternTopics = new HashSet<>(result))
+            // update 'subscribedTopicPatternTopics' only after partition positions have been retrieved (ensureTopicIsAmongSubscribedTopicPatternTopics() relies on that)
+            CompositeFuture.all(subscriptionResultPromise.future(), ensurePositionsHaveBeenSetIfNeeded(partitionsSet))
+                    .onSuccess(result -> subscribedTopicPatternTopics = new HashSet<>(subscriptionResultPromise.future().result()))
                     .onFailure(thr -> log.info("failed to get subscription", thr))
-                    .map(partitionsSet)
+                    .map((Void) null)
                     .onComplete(ar -> Optional.ofNullable(subscribeDonePromiseRef.getAndSet(null))
                             .ifPresent(promise -> tryCompletePromise(promise, ar)));
         } else {
-            Optional.ofNullable(subscribeDonePromiseRef.getAndSet(null))
-                    .ifPresent(promise -> promise.tryComplete(partitionsSet));
+            // fixed topic list used: calling kafkaConsumer.subscription() here would be of no use since it always
+            // returns the topics used in the kafkaConsumer.subscribe(Collection) call, regardless of whether they exist
+            ensurePositionsHaveBeenSetIfNeeded(partitionsSet)
+                    .onComplete(ar -> Optional.ofNullable(subscribeDonePromiseRef.getAndSet(null))
+                            .ifPresent(Promise::tryComplete));
         }
         if (onPartitionsAssignedHandler != null) {
             onPartitionsAssignedHandler.handle(partitionsSet);
@@ -598,6 +601,10 @@ public class HonoKafkaConsumer implements Lifecycle {
     /**
      * Tries to ensure that the given topic is part of the list of topics this consumer is subscribed to.
      * <p>
+     * The successful completion of the returned Future means that the topic exists and is among the subscribed topics.
+     * It also means that if partitions of this topic have been assigned to this consumer, the positions for these
+     * partitions have already been fetched and the consumer will receive records published thereafter.
+     * <p>
      * Note that this method is only applicable if a topic pattern subscription is used, otherwise an
      * {@link IllegalStateException} is thrown.
      * <p>
@@ -656,13 +663,12 @@ public class HonoKafkaConsumer implements Lifecycle {
                     // therefore enforce a refresh here by again subscribing to the topic pattern
                     log.debug("ensureTopicIsAmongSubscribedTopics: verified topic existence, wait for subscription update and rebalance [{}]", topic);
                     return subscribeAndWaitForRebalance()
-                            .map((Void) null)
                             .compose(v -> {
                                 if (!subscribedTopicPatternTopics.contains(topic)) {
                                     // first metadata refresh could have failed with a LEADER_NOT_AVAILABLE error for the new topic;
                                     // seems to happen when some other topics have just been deleted for example
                                     log.debug("ensureTopicIsAmongSubscribedTopics: subscription not updated with topic after rebalance; try again [topic: {}]", topic);
-                                    return subscribeAndWaitForRebalance().mapEmpty();
+                                    return subscribeAndWaitForRebalance();
                                 }
                                 return Future.succeededFuture(v);
                             })

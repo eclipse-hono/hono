@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -162,7 +163,7 @@ public class HonoKafkaConsumerIT {
             ctx.failNow(setup.causeOfFailure());
             return;
         }
-        LOG.debug("topics created and test records published");
+        LOG.debug("topics created and (to be ignored) test records published");
 
         // prepare consumer
         final Map<String, String> consumerConfig = IntegrationTestSupport.getKafkaConsumerConfig().getConsumerConfig("test");
@@ -187,6 +188,81 @@ public class HonoKafkaConsumerIT {
             LOG.debug("consumer started, publish record to be received by the consumer");
             final String recordKey = "addedAfterStartKey";
             publish(topics.iterator().next(), recordKey, Buffer.buffer("testPayload"));
+
+            nextRecordReceivedPromise.future().onComplete(ar -> {
+                ctx.verify(() -> {
+                    assertThat(receivedRecords.size()).isEqualTo(1);
+                    assertThat(receivedRecords.get(0).key()).isEqualTo(recordKey);
+                });
+                ctx.completeNow();
+            });
+        }));
+    }
+
+    /**
+     * Verifies that a HonoKafkaConsumer configured with "latest" as offset reset strategy and a topic pattern
+     * subscription only receives records published after the consumer <em>start()</em> method has completed.
+     * <p>
+     * Also verifies that all records published after the consumer <em>ensureTopicIsAmongSubscribedTopicPatternTopics()</em>
+     * method has completed are received by the consumer, also if the topic was only created after the consumer
+     * <em>start</em> method has completed.
+     *
+     * @param ctx The vert.x test context.
+     * @throws InterruptedException if test execution gets interrupted.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testConsumerReadsLatestRecordsPublishedAfterTopicSubscriptionConfirmed(final VertxTestContext ctx) throws InterruptedException {
+        final String patternPrefix = "test_" + UUID.randomUUID() + "_";
+        final int numTopics = 2;
+        final Pattern topicPattern = Pattern.compile(Pattern.quote(patternPrefix) + ".*");
+        final int numPartitions = 5;
+        final int numTestRecordsPerTopic = 20;
+
+        final Set<String> topics = IntStream.range(0, numTopics)
+                .mapToObj(i -> patternPrefix + i)
+                .collect(Collectors.toSet());
+
+        final VertxTestContext setup = new VertxTestContext();
+        createTopics(topics, numPartitions)
+                .compose(v -> publishRecords(numTestRecordsPerTopic, "key_", topics))
+                .onComplete(setup.completing());
+
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+            return;
+        }
+        LOG.debug("topics created and (to be ignored) test records published");
+
+        // prepare consumer
+        final Map<String, String> consumerConfig = IntegrationTestSupport.getKafkaConsumerConfig().getConsumerConfig("test");
+        consumerConfig.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
+
+        final AtomicReference<Promise<Void>> nextRecordReceivedPromiseRef = new AtomicReference<>();
+        final List<KafkaConsumerRecord<String, Buffer>> receivedRecords = new ArrayList<>();
+        final Handler<KafkaConsumerRecord<String, Buffer>> recordHandler = record -> {
+            receivedRecords.add(record);
+            Optional.ofNullable(nextRecordReceivedPromiseRef.get())
+                    .ifPresent(Promise::complete);
+        };
+        kafkaConsumer = new HonoKafkaConsumer(vertx, topicPattern, recordHandler, consumerConfig);
+        // start consumer
+        kafkaConsumer.start().onComplete(ctx.succeeding(v -> {
+            ctx.verify(() -> {
+                assertThat(receivedRecords.size()).isEqualTo(0);
+            });
+            final Promise<Void> nextRecordReceivedPromise = Promise.promise();
+            nextRecordReceivedPromiseRef.set(nextRecordReceivedPromise);
+
+            LOG.debug("consumer started, create new topic implicitly by invoking ensureTopicIsAmongSubscribedTopicPatternTopics()");
+            final String newTopic = patternPrefix + "new";
+            final String recordKey = "addedAfterStartKey";
+            kafkaConsumer.ensureTopicIsAmongSubscribedTopicPatternTopics(newTopic)
+                    .onComplete(ctx.succeeding(v2 -> {
+                        LOG.debug("publish record to be received by the consumer");
+                        publish(newTopic, recordKey, Buffer.buffer("testPayload"));
+                    }));
 
             nextRecordReceivedPromise.future().onComplete(ar -> {
                 ctx.verify(() -> {

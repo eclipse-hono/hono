@@ -21,11 +21,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import javax.security.auth.x500.X500Principal;
@@ -174,13 +174,17 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
         final VertxTestContext setup = new VertxTestContext();
 
         final int numTestCommands = 10;
-        final CountDownLatch allRecordsReceivedLatch = new CountDownLatch(numTestCommands);
+        final List<KafkaConsumerRecord<String, Buffer>> receivedRecords = new ArrayList<>();
+        final Promise<Void> allRecordsReceivedPromise = Promise.promise();
         final List<String> receivedCommandSubjects = new ArrayList<>();
         final Handler<KafkaConsumerRecord<String, Buffer>> recordHandler = record -> {
+            receivedRecords.add(record);
             LOG.trace("received {}", record);
             receivedCommandSubjects.add(KafkaRecordHelper
                     .getHeaderValue(record.headers(), MessageHelper.SYS_PROPERTY_SUBJECT, String.class).orElse(""));
-            allRecordsReceivedLatch.countDown();
+            if (receivedRecords.size() == numTestCommands) {
+                allRecordsReceivedPromise.tryComplete();
+            }
         };
         final LinkedList<Promise<Void>> completionPromisesQueue = new LinkedList<>();
         // don't let getting the target adapter instance finish immediately
@@ -219,15 +223,19 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
             sendOneWayCommand(tenantId, "myDeviceId", subject);
         });
 
-        if (!allRecordsReceivedLatch.await(8, TimeUnit.SECONDS)) {
-            ctx.failNow(new AssertionError(String.format("did not receive %d out of %d expected messages after 8s",
-                    allRecordsReceivedLatch.getCount(), numTestCommands)));
-        } else {
+        final long timerId = vertx.setTimer(8000, tid -> {
+            LOG.info("received records:\n{}",
+                    receivedRecords.stream().map(Object::toString).collect(Collectors.joining(",\n")));
+            allRecordsReceivedPromise.tryFail(String.format("only received %d out of %d expected messages after 8s",
+                    receivedRecords.size(), numTestCommands));
+        });
+        allRecordsReceivedPromise.future().onComplete(ctx.succeeding(v -> {
+            vertx.cancelTimer(timerId);
             ctx.verify(() -> {
                 assertThat(receivedCommandSubjects).isEqualTo(sentCommandSubjects);
             });
             ctx.completeNow();
-        }
+        }));
     }
 
     /**
@@ -261,17 +269,21 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
         //   when closing the first consumer) and processes and forwards all commands starting with the second command
 
         final int numTestCommands = 10;
+        final List<KafkaConsumerRecord<String, Buffer>> receivedRecords = new ArrayList<>();
         final Promise<Void> firstRecordReceivedPromise = Promise.promise();
-        final CountDownLatch allRecordsReceivedLatch = new CountDownLatch(numTestCommands);
+        final Promise<Void> allRecordsReceivedPromise = Promise.promise();
         final List<String> receivedCommandSubjects = new ArrayList<>();
         final Handler<KafkaConsumerRecord<String, Buffer>> recordHandler = record -> {
+            receivedRecords.add(record);
             LOG.trace("received {}", record);
             receivedCommandSubjects.add(KafkaRecordHelper
                     .getHeaderValue(record.headers(), MessageHelper.SYS_PROPERTY_SUBJECT, String.class).orElse(""));
-            if (receivedCommandSubjects.size() == 1) {
+            if (receivedRecords.size() == 1) {
                 firstRecordReceivedPromise.complete();
             }
-            allRecordsReceivedLatch.countDown();
+            if (receivedRecords.size() == numTestCommands) {
+                allRecordsReceivedPromise.tryComplete();
+            }
         };
         final Promise<Void> firstConsumerAllGetAdapterInstanceInvocationsDone = Promise.promise();
         final LinkedList<Promise<Void>> firstConsumerGetAdapterInstancePromisesQueue = new LinkedList<>();
@@ -340,17 +352,21 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
                     }));
             });
 
-        if (!allRecordsReceivedLatch.await(8, TimeUnit.SECONDS)) {
-            ctx.failNow(new AssertionError(String.format("did not receive %d out of %d expected messages after 8s",
-                    allRecordsReceivedLatch.getCount(), numTestCommands)));
-        } else {
+        final long timerId = vertx.setTimer(8000, tid -> {
+            LOG.info("received records:\n{}",
+                    receivedRecords.stream().map(Object::toString).collect(Collectors.joining(",\n")));
+            allRecordsReceivedPromise.tryFail(String.format("only received %d out of %d expected messages after 8s",
+                    receivedRecords.size(), numTestCommands));
+        });
+        allRecordsReceivedPromise.future().onComplete(ctx.succeeding(v -> {
+            vertx.cancelTimer(timerId);
             ctx.verify(() -> {
                 assertThat(receivedCommandSubjects).isEqualTo(sentCommandSubjects);
                 // all but the first command should have been processed by the second consumer
                 assertThat(secondConsumerGetAdapterInstanceInvocations.get()).isEqualTo(numTestCommands - 1);
             });
             ctx.completeNow();
-        }
+        }));
     }
 
     private Future<Void> createCommandConsumer(final String tenantId,
@@ -405,6 +421,9 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
     }
 
     private static void sendOneWayCommand(final String tenantId, final String deviceId, final String subject) {
+        // only sending one-way commands here since commands are possibly also received by the Command Router instance
+        // running as part of the integration test environment. For a request/response command, an error command response
+        // message would always be published there ("tenant/device not found"), interfering with any command response retrieval here
         kafkaProducer.send(getOneWayCommandRecord(tenantId, deviceId, subject), ar -> {
             if (ar.succeeded()) {
                 LOG.debug("sent command {}; metadata {}", subject, ar.result().toJson());
