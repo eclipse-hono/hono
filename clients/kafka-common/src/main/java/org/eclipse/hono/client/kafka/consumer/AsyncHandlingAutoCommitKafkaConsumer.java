@@ -25,6 +25,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -38,7 +39,6 @@ import org.eclipse.hono.util.Pair;
 import org.eclipse.hono.util.Strings;
 
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
@@ -46,6 +46,8 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 /**
  * A Kafka consumer that automatically commits partition offsets corresponding to the latest record per
  * partition whose (asynchronous) handling has been marked as completed.
+ * <p>
+ * <b>Commit handling</b>
  * <p>
  * A scenario that this consumer addresses is one of a received record taking quite long to be handled asynchronously
  * while the consumer is closed and the application exits. With the standard <em>enable.auto.commit</em> behaviour,
@@ -66,6 +68,14 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
  * It is only after a period defined by <em>hono.offsets.skip.recommit.period.seconds</em> has elapsed, that such offsets
  * are committed again. This is to make sure that such offsets don't reach their retention time, provided the recommit
  * period is lower than the <em>offsets.retention.minutes</em> broker config value.
+ * <p>
+ * <b>Rate limiting of record handling</b>
+ * <p>
+ * This consumer limits the number of records being currently in processing to prevent memory issues and reduce the
+ * load on dependent services. That means there is a maximum number of incomplete result futures of the provided
+ * record handler return value. When the limit is reached, the consumer will be paused until enough of the result futures
+ * are completed. The limit value is adopted from the configured <em>max.poll.records</em> config value, adding 1 so that
+ * there is already a new batch of records available for processing when resuming the polling operation.
  */
 public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
 
@@ -83,12 +93,39 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
      * until it may be recommitted if it is still the latest offset.
      */
     public static final Duration DEFAULT_OFFSETS_SKIP_RECOMMIT_PERIOD = Duration.ofMinutes(30);
+    /**
+     * The default maximum number of records to be currently in processing at a given point in time.
+     * If that number is exceeded by records being polled faster than records being processed, the polling
+     * operation will be paused until the number is below the maximum again.
+     * <p>
+     * The value here corresponds to the default <em>max.poll.records</em> config value plus 1.
+     */
+    public static final Integer DEFAULT_MAX_RECORDS_IN_PROCESSING = 501;
+    /**
+     * Percentage of the {@link #maxRecordsInProcessing} value used as the threshold under which the number of records
+     * currently being processed must drop for the polling operation to be resumed.
+     */
+    public static final Integer MAX_RECORDS_IN_PROCESSING_RESUME_THRESHOLD_PERCENT = 5;
 
+    /**
+     * The maximum number of records to be currently in processing at a given point in time.
+     */
+    private final int maxRecordsInProcessing;
+    /**
+     * If polling is currently paused because <em>maxRecordsInProcessing</em> has been exceeded, the number of records
+     * currently being processed must drop below <em>maxRecordsInProcessing</em> minus this value for the polling
+     * operation to be resumed. This is to prevent frequent switching between pause and resume invocations.
+     * By default this value is {@value #MAX_RECORDS_IN_PROCESSING_RESUME_THRESHOLD_PERCENT} % of
+     * <em>maxRecordsInProcessing</em>.
+     */
+    private final int maxRecordsInProcessingResumeThreshold;
     private final long commitIntervalMillis;
     private final long skipOffsetRecommitPeriodSeconds;
     private final Map<TopicPartition, TopicPartitionOffsets> offsetsMap = new HashMap<>();
     private final AtomicBoolean periodicCommitInvocationInProgress = new AtomicBoolean();
+    private final AtomicInteger recordsInProcessingCounter = new AtomicInteger();
 
+    private Instant pauseStartTime = Instant.MAX;
     private Long periodicCommitTimerId;
 
     /**
@@ -144,27 +181,44 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
             final Pattern topicPattern,
             final Function<KafkaConsumerRecord<String, Buffer>, Future<Void>> recordHandler,
             final Map<String, String> consumerConfig) {
-        super(vertx, topics, topicPattern, mapRecordHandler(selfRef, recordHandler), validateAndAdaptConsumerConfig(consumerConfig));
+        super(vertx, topics, topicPattern, record -> selfRef.getPlain().handleRecord(record, recordHandler),
+                validateAndAdaptConsumerConfig(consumerConfig));
         selfRef.setPlain(this);
 
+        this.maxRecordsInProcessing = getMaxRecordsInProcessing(consumerConfig);
+        this.maxRecordsInProcessingResumeThreshold = maxRecordsInProcessing
+                * MAX_RECORDS_IN_PROCESSING_RESUME_THRESHOLD_PERCENT / 100;
         this.commitIntervalMillis = getCommitInterval(consumerConfig);
         this.skipOffsetRecommitPeriodSeconds = getSkipOffsetRecommitPeriodSeconds(consumerConfig);
     }
 
-    private static Handler<KafkaConsumerRecord<String, Buffer>> mapRecordHandler(
-            final AtomicReference<AsyncHandlingAutoCommitKafkaConsumer> selfRef,
+    private void handleRecord(final KafkaConsumerRecord<String, Buffer> record,
             final Function<KafkaConsumerRecord<String, Buffer>, Future<Void>> recordHandler) {
-        return record -> {
-            final OffsetsQueueEntry offsetsQueueEntry = selfRef.getPlain().setRecordReceived(record);
-            try {
-                recordHandler.apply(record)
-                        .onComplete(ar -> offsetsQueueEntry.setHandlingComplete());
-            } catch (final Exception e) {
-                selfRef.getPlain().log.warn("error handling record [topic: {}, partition: {}, offset: {}, headers: {}]",
-                        record.topic(), record.partition(), record.offset(), record.headers(), e);
-                offsetsQueueEntry.setHandlingComplete();
-            }
-        };
+        // check whether consumer needs to be paused
+        if (recordsInProcessingCounter.incrementAndGet() >= maxRecordsInProcessing && pause()) {
+            log.info("paused consumer record polling; max no. of records in processing exceeded (current: {}, max: {})",
+                    recordsInProcessingCounter.get(), maxRecordsInProcessing);
+            pauseStartTime = Instant.now();
+        }
+        final OffsetsQueueEntry offsetsQueueEntry = setRecordReceived(record);
+        try {
+            recordHandler.apply(record)
+                    .onComplete(ar -> setRecordHandlingComplete(offsetsQueueEntry));
+        } catch (final Exception e) {
+            log.warn("error handling record [topic: {}, partition: {}, offset: {}, headers: {}]",
+                    record.topic(), record.partition(), record.offset(), record.headers(), e);
+            setRecordHandlingComplete(offsetsQueueEntry);
+        }
+    }
+
+    private void setRecordHandlingComplete(final OffsetsQueueEntry offsetsQueueEntry) {
+        offsetsQueueEntry.setHandlingComplete();
+        if (recordsInProcessingCounter
+                .decrementAndGet() < (maxRecordsInProcessing - maxRecordsInProcessingResumeThreshold) && resume()) {
+            log.info("resumed consumer record polling after {}ms; current no. of records in processing ({}) dropped below threshold ({})",
+                    Duration.between(pauseStartTime, Instant.now()).toMillis(), recordsInProcessingCounter.get(),
+                    maxRecordsInProcessing - maxRecordsInProcessingResumeThreshold);
+        }
     }
 
     private static Map<String, String> validateAndAdaptConsumerConfig(final Map<String, String> consumerConfig) {
@@ -173,6 +227,13 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
         }
         consumerConfig.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
         return consumerConfig;
+    }
+
+    private int getMaxRecordsInProcessing(final Map<String, String> consumerConfig) {
+        // adopt from "max.poll.records" config value
+        return Optional.ofNullable(consumerConfig.get(ConsumerConfig.MAX_POLL_RECORDS_CONFIG))
+                .map(s -> Integer.parseInt(s) + 1)
+                .orElse(DEFAULT_MAX_RECORDS_IN_PROCESSING);
     }
 
     private static long getCommitInterval(final Map<String, String> consumerConfig) {
