@@ -15,6 +15,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   register a new device using the existing device's identifier. This has been fixed.
 * The Mongo DB based registry implementation now uses a proper DB index to find credentials by type and authentication
   ID. This will speed up query execution significantly when there are a lot of devices registered for a tenant.
+* The JDBC based device registry's *get Credentials* operation used by the protocol adapters now also supports
+  matching credentials against a given *client context*.
 
 ## 1.9.0
 
