@@ -19,6 +19,7 @@ import java.util.Optional;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
+import org.eclipse.hono.deviceregistry.mongodb.model.CredentialsDao;
 import org.eclipse.hono.deviceregistry.mongodb.model.DeviceDao;
 import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedDeviceDto;
 import org.eclipse.hono.deviceregistry.service.device.AbstractDeviceManagementService;
@@ -31,40 +32,52 @@ import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.SearchResult;
 import org.eclipse.hono.service.management.Sort;
+import org.eclipse.hono.service.management.credentials.CredentialsDto;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceDto;
 import org.eclipse.hono.service.management.device.DeviceWithId;
 import org.eclipse.hono.service.management.tenant.RegistrationLimits;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.tracing.TracingHelper;
 
 import io.opentracing.Span;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 
 /**
- * A device management service.
+ * A device management service that uses a Mongo DB for persisting data.
+ * <p>
+ * This implementation also creates an empty set of credentials for a device created by
+ * {@link #createDevice(String, Optional, Device, Span)} and deletes all credentials on record
+ * for a device deleted by {@link MongoDbBasedDeviceManagementService#deleteDevice(String, String, Optional, Span)}.
  *
  * @see <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>
  */
 public final class MongoDbBasedDeviceManagementService extends AbstractDeviceManagementService {
 
     private final MongoDbBasedRegistrationConfigProperties config;
-    private final DeviceDao dao;
+    private final DeviceDao deviceDao;
+    private final CredentialsDao credentialsDao;
 
     /**
      * Creates a new service for configuration properties.
      *
-     * @param deviceDao The data access object to use for accessing data in the MongoDB.
+     * @param deviceDao The data access object to use for accessing device data in the MongoDB.
+     * @param credentialsDao The data access object to use for accessing credentials data in the MongoDB.
      * @param config The properties for configuring this service.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public MongoDbBasedDeviceManagementService(
             final DeviceDao deviceDao,
+            final CredentialsDao credentialsDao,
             final MongoDbBasedRegistrationConfigProperties config) {
 
         Objects.requireNonNull(deviceDao);
+        Objects.requireNonNull(credentialsDao);
         Objects.requireNonNull(config);
 
-        this.dao = deviceDao;
+        this.deviceDao = deviceDao;
+        this.credentialsDao = credentialsDao;
         this.config = config;
     }
 
@@ -85,14 +98,30 @@ public final class MongoDbBasedDeviceManagementService extends AbstractDeviceMan
                             key.getTenantId(),
                             key.getDeviceId(),
                             device,
-                            new Versioned<>(device).getVersion());
-                    return dao.create(deviceDto, span.context());
+                            DeviceRegistryUtils.getUniqueIdentifier());
+                    final var emptySetOfCredentials = CredentialsDto.forCreation(
+                            key.getTenantId(),
+                            key.getDeviceId(),
+                            List.of(),
+                            DeviceRegistryUtils.getUniqueIdentifier());
+                    final Future<String> createDeviceResult = deviceDao.create(deviceDto, span.context());
+                    final Future<String> createCredentialsResult = credentialsDao.create(emptySetOfCredentials, span.context());
+                    return CompositeFuture.join(createDeviceResult, createCredentialsResult)
+                            .map(entitiesCreated -> createDeviceResult.result())
+                            .recover(t -> {
+                                TracingHelper.logError(span, "failed to create device with empty set of credentials, rolling back ...", t);
+                                return CompositeFuture.join(
+                                        deviceDao.delete(key.getTenantId(), key.getDeviceId(), Optional.empty(), span.context()),
+                                        credentialsDao.delete(key.getTenantId(), key.getDeviceId(), Optional.empty(), span.context()))
+                                    .compose(done -> Future.<String>failedFuture(t))
+                                    .recover(error -> Future.<String>failedFuture(t));
+                            });
                 })
-                .map(resourceVersion -> OperationResult.ok(
+                .map(deviceResourceVersion -> OperationResult.ok(
                             HttpURLConnection.HTTP_CREATED,
                             Id.of(key.getDeviceId()),
                             Optional.empty(),
-                            Optional.of(resourceVersion)))
+                            Optional.of(deviceResourceVersion)))
                 .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
     }
 
@@ -102,7 +131,7 @@ public final class MongoDbBasedDeviceManagementService extends AbstractDeviceMan
     @Override
     protected Future<OperationResult<Device>> processReadDevice(final DeviceKey key, final Span span) {
 
-        return dao.getById(key.getTenantId(), key.getDeviceId(), span.context())
+        return deviceDao.getById(key.getTenantId(), key.getDeviceId(), span.context())
                 .map(deviceDto -> OperationResult.ok(
                                 HttpURLConnection.HTTP_OK,
                                 deviceDto.getDeviceWithStatus(),
@@ -126,7 +155,7 @@ public final class MongoDbBasedDeviceManagementService extends AbstractDeviceMan
         Objects.requireNonNull(span);
 
         return tenantInformationService.getTenant(tenantId, span)
-                .compose(ok -> dao.find(tenantId, pageSize, pageOffset, filters, sortOptions, span.context()))
+                .compose(ok -> deviceDao.find(tenantId, pageSize, pageOffset, filters, sortOptions, span.context()))
                 .map(result -> OperationResult.ok(
                         HttpURLConnection.HTTP_OK,
                         result,
@@ -152,7 +181,7 @@ public final class MongoDbBasedDeviceManagementService extends AbstractDeviceMan
                 device,
                 new Versioned<>(device).getVersion());
 
-        return dao.update(deviceDto, resourceVersion, span.context())
+        return deviceDao.update(deviceDto, resourceVersion, span.context())
                 .map(newResourceVersion -> OperationResult.ok(
                         HttpURLConnection.HTTP_NO_CONTENT,
                         Id.of(key.getDeviceId()),
@@ -170,7 +199,15 @@ public final class MongoDbBasedDeviceManagementService extends AbstractDeviceMan
             final Optional<String> resourceVersion,
             final Span span) {
 
-        return dao.delete(key.getTenantId(), key.getDeviceId(), resourceVersion, span.context())
+        return deviceDao.delete(key.getTenantId(), key.getDeviceId(), resourceVersion, span.context())
+                .compose(ok -> credentialsDao.delete(
+                        key.getTenantId(),
+                        key.getDeviceId(),
+                        Optional.empty(),
+                        span.context())
+                    // ignore errors occurring while deleting credentials
+                    // TODO use transaction spanning both collections?
+                    .recover(t -> Future.succeededFuture()))
                 .map(ok -> Result.<Void> from(HttpURLConnection.HTTP_NO_CONTENT))
                 .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
     }
@@ -192,7 +229,7 @@ public final class MongoDbBasedDeviceManagementService extends AbstractDeviceMan
             maxNumberOfDevices = config.getMaxDevicesPerTenant();
         }
 
-        return dao.count(tenantId, span.context())
+        return deviceDao.count(tenantId, span.context())
                 .compose(existingNoOfDevices -> {
                     if (existingNoOfDevices >= maxNumberOfDevices) {
                         return Future.failedFuture(

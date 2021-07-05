@@ -15,7 +15,6 @@
 package org.eclipse.hono.deviceregistry.mongodb.model;
 
 import java.net.HttpURLConnection;
-import java.util.ConcurrentModificationException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -26,7 +25,6 @@ import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbConfigProperties;
-import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDocumentBuilder;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.management.Filter;
@@ -111,6 +109,9 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
      * @return A succeeded future if the indices have been created. Otherwise, a failed future.
      */
     public Future<Void> createIndices() {
+
+        final Promise<Void> result = Promise.promise();
+
         if (creatingIndices.compareAndSet(false, true)) {
             // create unique index on device ID
             return createIndex(
@@ -118,10 +119,14 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                             .put(MongoDbBasedDeviceDto.FIELD_DEVICE_ID, 1),
                     new IndexOptions().unique(true))
             .onSuccess(ok -> indicesCreated.set(true))
-            .onComplete(r -> creatingIndices.set(false));
+            .onComplete(r -> {
+                creatingIndices.set(false);
+                result.handle(r);
+            });
         } else {
-            return Future.failedFuture(new ConcurrentModificationException("already trying to create indices"));
+            LOG.debug("already trying to create indices");
         }
+        return result.future();
     }
 
     /**
@@ -181,7 +186,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                     return deviceConfig.getVersion();
                 })
                 .recover(error -> {
-                    if (MongoDbDeviceRegistryUtils.isDuplicateKeyError(error)) {
+                    if (MongoDbBasedDao.isDuplicateKeyError(error)) {
                         LOG.debug("device [{}] already exists for tenant [{}]",
                                 deviceConfig.getDeviceId(), deviceConfig.getTenantId(), error);
                         TracingHelper.logError(span, "device already exists");
@@ -390,7 +395,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
         return updateDevicePromise.future()
                 .compose(result -> {
                     if (result == null) {
-                        return MongoDbDeviceRegistryUtils.checkForVersionMismatchAndFail(
+                        return MongoDbBasedDao.checkForVersionMismatchAndFail(
                                 deviceConfig.getDeviceId(),
                                 resourceVersion,
                                 getById(deviceConfig.getTenantId(), deviceConfig.getDeviceId()));
@@ -437,7 +442,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
         return deleteDevicePromise.future()
                 .compose(result -> {
                     if (result == null) {
-                        return MongoDbDeviceRegistryUtils.checkForVersionMismatchAndFail(
+                        return MongoDbBasedDao.checkForVersionMismatchAndFail(
                                 deviceId,
                                 resourceVersion,
                                 getById(tenantId, deviceId));

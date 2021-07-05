@@ -15,6 +15,7 @@ package org.eclipse.hono.deviceregistry.mongodb.service;
 import java.util.Objects;
 
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbConfigProperties;
+import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedCredentialsDao;
 import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedDeviceDao;
 import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedTenantDao;
 import org.testcontainers.containers.MongoDBContainer;
@@ -88,4 +89,18 @@ public final class MongoDbTestUtils {
         return new MongoDbBasedDeviceDao(mongoDbConfig, "devices", vertx);
     }
 
+    /**
+     * Creates a new Credentials DAO.
+     *
+     * @param vertx The vert.x instance to run on.
+     * @param dbName The name of the database to connect to.
+     * @return The DAO.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    public static MongoDbBasedCredentialsDao getCredentialsDao(final Vertx vertx, final String dbName) {
+
+        final MongoDbConfigProperties mongoDbConfig = new MongoDbConfigProperties()
+                .setConnectionString(MONGO_DB_CONTAINER.getReplicaSetUrl(dbName));
+        return new MongoDbBasedCredentialsDao(mongoDbConfig, "credentials", vertx);
+    }
 }

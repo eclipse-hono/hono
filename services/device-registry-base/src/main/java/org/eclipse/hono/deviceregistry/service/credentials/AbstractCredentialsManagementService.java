@@ -89,13 +89,14 @@ public abstract class AbstractCredentialsManagementService implements Credential
     }
 
     /**
-     * Update credentials with a specified device key and value objects.
+     * Updates credentials with a specified device key and value objects.
      *
      * @param key The device key object.
      * @param resourceVersion The identifier of the resource version to update.
      * @param credentials The credentials value object.
      * @param span The active OpenTracing span for this operation.
      * @return A future indicating the outcome of the operation.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     protected abstract Future<OperationResult<Void>> processUpdateCredentials(
             DeviceKey key,
@@ -104,11 +105,12 @@ public abstract class AbstractCredentialsManagementService implements Credential
             Span span);
 
     /**
-     * Read credentials with a specified device key.
+     * Reads credentials with a specified device key.
      *
      * @param key The device key object.
      * @param span The active OpenTracing span for this operation.
      * @return A future indicating the outcome of the operation.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     protected abstract Future<OperationResult<List<CommonCredential>>> processReadCredentials(DeviceKey key, Span span);
 
@@ -122,7 +124,9 @@ public abstract class AbstractCredentialsManagementService implements Credential
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(credentials);
         Objects.requireNonNull(resourceVersion);
+        Objects.requireNonNull(span);
 
         return this.tenantInformationService
                 .tenantExists(tenantId, span)
@@ -150,6 +154,7 @@ public abstract class AbstractCredentialsManagementService implements Credential
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(span);
 
         return this.tenantInformationService
 

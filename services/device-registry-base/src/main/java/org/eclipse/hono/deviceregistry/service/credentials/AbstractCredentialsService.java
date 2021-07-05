@@ -16,8 +16,6 @@ package org.eclipse.hono.deviceregistry.service.credentials;
 import java.util.Objects;
 import java.util.Optional;
 
-import javax.annotation.PostConstruct;
-
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
@@ -46,7 +44,7 @@ import io.vertx.core.json.JsonObject;
  */
 public abstract class AbstractCredentialsService implements CredentialsService, Lifecycle {
 
-    private static final Logger log = LoggerFactory.getLogger(AbstractCredentialsService.class);
+    private static final Logger LOG = LoggerFactory.getLogger(AbstractCredentialsService.class);
 
     protected TenantInformationService tenantInformationService = new NoopTenantInformationService();
 
@@ -80,6 +78,11 @@ public abstract class AbstractCredentialsService implements CredentialsService, 
 
     @Override
     public final Future<Void> start() {
+        if (isAutoProvisioningConfigured()) {
+            LOG.info("Auto-provisioning of devices/gateways is available");
+        } else {
+            LOG.info("Auto-provisioning of devices/gateways is not available");
+        }
         return Optional.ofNullable(this.deviceAndGatewayAutoProvisioner)
                 .map(DeviceAndGatewayAutoProvisioner::start)
                 .orElse(Future.succeededFuture());
@@ -93,18 +96,6 @@ public abstract class AbstractCredentialsService implements CredentialsService, 
     }
 
     /**
-     * Log the status of auto-provisioning on startup.
-     */
-    @PostConstruct
-    protected void log() {
-        if (isAutoProvisioningConfigured()) {
-            log.info("Auto-provisioning of devices/gateways is available");
-        } else {
-            log.info("Auto-provisioning of devices/gateways is not available");
-        }
-    }
-
-    /**
      * Get credentials for a device.
      *
      * @param tenant The tenant key object.
@@ -112,8 +103,13 @@ public abstract class AbstractCredentialsService implements CredentialsService, 
      * @param clientContext Optional bag of properties that can be used to identify the device.
      * @param span The active OpenTracing span for this operation.
      * @return A future indicating the outcome of the operation.
+     * @throws NullPointerException if any of the parameters other than client context are {@code null}.
      */
-    protected abstract Future<CredentialsResult<JsonObject>> processGet(TenantKey tenant, CredentialKey key, JsonObject clientContext, Span span);
+    protected abstract Future<CredentialsResult<JsonObject>> processGet(
+            TenantKey tenant,
+            CredentialKey key,
+            JsonObject clientContext,
+            Span span);
 
     /**
      * Gets a cache directive for a type of credentials.
@@ -136,7 +132,12 @@ public abstract class AbstractCredentialsService implements CredentialsService, 
     }
 
     @Override
-    public final Future<CredentialsResult<JsonObject>> get(final String tenantId, final String type, final String authId, final Span span) {
+    public final Future<CredentialsResult<JsonObject>> get(
+            final String tenantId,
+            final String type,
+            final String authId,
+            final Span span) {
+
         return get(tenantId, type, authId, null, span);
     }
 
@@ -150,27 +151,31 @@ public abstract class AbstractCredentialsService implements CredentialsService, 
 
         return this.tenantInformationService.getTenant(tenantId, span)
                 .compose(tenant -> {
-                    return processGet(TenantKey.from(tenantId), CredentialKey.from(tenantId, authId, type),
-                            clientContext, span)
-                                    .compose(credentialsResult -> {
-                                        if (isAutoProvisioningConfigured()) {
-                                            if (credentialsResult.isNotFound()) {
-                                                return deviceAndGatewayAutoProvisioner.provisionIfEnabled(
-                                                        tenantId,
-                                                        tenant,
-                                                        authId,
-                                                        clientContext,
-                                                        span);
-                                            } else {
-                                                final String deviceId = credentialsResult.getPayload()
-                                                        .getString(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID);
-                                                return deviceAndGatewayAutoProvisioner
-                                                        .sendAutoProvisioningEventIfNeeded(tenantId, tenant, deviceId, span)
-                                                        .map(ok -> credentialsResult);
-                                            }
-                                        }
-                                        return Future.succeededFuture(credentialsResult);
-                                    });
+                    LOG.trace("retrieving credentials by auth-id");
+                    return processGet(
+                            TenantKey.from(tenantId),
+                            CredentialKey.from(tenantId, authId, type),
+                            clientContext,
+                            span)
+                        .compose(credentialsResult -> {
+                            if (isAutoProvisioningConfigured()) {
+                                if (credentialsResult.isNotFound()) {
+                                    return deviceAndGatewayAutoProvisioner.provisionIfEnabled(
+                                            tenantId,
+                                            tenant,
+                                            authId,
+                                            clientContext,
+                                            span);
+                                } else {
+                                    final String deviceId = credentialsResult.getPayload()
+                                            .getString(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID);
+                                    return deviceAndGatewayAutoProvisioner
+                                            .sendAutoProvisioningEventIfNeeded(tenantId, tenant, deviceId, span)
+                                            .map(ok -> credentialsResult);
+                                }
+                            }
+                            return Future.succeededFuture(credentialsResult);
+                        });
                 })
                 .recover(this::convertToCredentialsResult);
     }
@@ -180,6 +185,7 @@ public abstract class AbstractCredentialsService implements CredentialsService, 
     }
 
     private Future<CredentialsResult<JsonObject>> convertToCredentialsResult(final Throwable error) {
+        LOG.debug("converting error to response", error);
         return Future.succeededFuture(CredentialsResult.from(ServiceInvocationException.extractStatusCode(error),
                 new JsonObject().put(Constants.JSON_FIELD_DESCRIPTION, error.getMessage())));
     }
