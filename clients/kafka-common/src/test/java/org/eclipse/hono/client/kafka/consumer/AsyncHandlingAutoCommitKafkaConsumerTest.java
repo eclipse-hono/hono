@@ -16,6 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -157,6 +158,76 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         mockConsumer.updatePartitions(topicPartition, KafkaMockConsumer.DEFAULT_NODE);
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(topicPartition));
         consumer.start().onComplete(ctx.completing());
+    }
+
+    /**
+     * Verifies that the maximum number of records in processing by the consumer does not exceed
+     * the configured limit.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testConsumerRespectsMaxRecordsInProcessingLimit(final VertxTestContext ctx) {
+        final AtomicInteger offsetCounter = new AtomicInteger();
+        final int numTestBatches = 5;
+        final int maxPollRecords = 10;
+        final int maxRecordsInProcessing = maxPollRecords + 1;
+        final int numRecords = numTestBatches * maxPollRecords;
+        final Promise<Void> allRecordsReceivedPromise = Promise.promise();
+        final List<Promise<Void>> uncompletedRecordHandlingPromises = new ArrayList<>();
+        final List<KafkaConsumerRecord<String, Buffer>> receivedRecords = new ArrayList<>();
+        final AtomicInteger observedMaxRecordsInProcessing = new AtomicInteger();
+        final Function<KafkaConsumerRecord<String, Buffer>, Future<Void>> recordHandler = record -> {
+            receivedRecords.add(record);
+
+            final Promise<Void> recordHandlingCompleted = Promise.promise();
+            uncompletedRecordHandlingPromises.add(recordHandlingCompleted);
+            if (consumer.isPaused() || receivedRecords.size() == numRecords) {
+                if (uncompletedRecordHandlingPromises.size() > observedMaxRecordsInProcessing.get()) {
+                    observedMaxRecordsInProcessing.set(uncompletedRecordHandlingPromises.size());
+                }
+                uncompletedRecordHandlingPromises.forEach(Promise::tryComplete);
+                uncompletedRecordHandlingPromises.clear();
+            }
+            if (receivedRecords.size() == numRecords) {
+                vertx.runOnContext(v -> allRecordsReceivedPromise.tryComplete());
+            }
+            return recordHandlingCompleted.future();
+        };
+        final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig("test");
+        consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
+        consumerConfig.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, Integer.toString(maxPollRecords));
+
+        consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), recordHandler, consumerConfig);
+        consumer.setKafkaConsumerSupplier(() -> mockConsumer);
+        mockConsumer.updateEndOffsets(Map.of(topicPartition, ((long) 0)));
+        mockConsumer.updatePartitions(topicPartition, KafkaMockConsumer.DEFAULT_NODE);
+        mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(topicPartition));
+        consumer.start().onComplete(ctx.succeeding(v2 -> {
+            // schedule the poll tasks
+            for (int i = 0; i < numTestBatches; i++) {
+                mockConsumer.schedulePollTask(() -> {
+                    for (int j = 0; j < maxPollRecords; j++) {
+                        final int offset = offsetCounter.getAndIncrement();
+                        mockConsumer.addRecord(new ConsumerRecord<>(TOPIC, PARTITION, offset, "key_" + offset, Buffer.buffer()));
+                    }
+                });
+            }
+            final long timerId = vertx.setTimer(8000, tid -> {
+                LOG.info("received records:\n{}",
+                        receivedRecords.stream().map(Object::toString).collect(Collectors.joining(",\n")));
+                allRecordsReceivedPromise.tryFail(String.format("only received %d out of %d expected messages after 8s",
+                        uncompletedRecordHandlingPromises.size(), numRecords));
+            });
+            allRecordsReceivedPromise.future().onComplete(ctx.succeeding(v -> {
+                vertx.cancelTimer(timerId);
+                ctx.verify(() -> {
+                    assertThat(observedMaxRecordsInProcessing.get())
+                            .as("observed max no. of records in processing").isEqualTo(maxRecordsInProcessing);
+                });
+                ctx.completeNow();
+            }));
+        }));
     }
 
     /**

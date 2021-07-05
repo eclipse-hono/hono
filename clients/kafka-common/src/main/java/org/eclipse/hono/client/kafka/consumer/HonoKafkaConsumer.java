@@ -86,6 +86,7 @@ public class HonoKafkaConsumer implements Lifecycle {
     private final Handler<KafkaConsumerRecord<String, Buffer>> recordHandler;
     private final Set<String> topics;
     private final Pattern topicPattern;
+    private final AtomicBoolean paused = new AtomicBoolean();
 
     private KafkaConsumer<String, Buffer> kafkaConsumer;
     /**
@@ -244,6 +245,41 @@ public class HonoKafkaConsumer implements Lifecycle {
      */
     public void setKafkaConsumerSupplier(final Supplier<Consumer<String, Buffer>> supplier) {
         kafkaConsumerSupplier = supplier;
+    }
+
+    /**
+     * Pauses the consumer polling operation (if not already paused).
+     *
+     * @return {@code true} if the consumer polling operation was active before and is now paused.
+     */
+    public final boolean pause() {
+        if (!paused.compareAndSet(false, true)) {
+            return false;
+        }
+        getKafkaConsumer().pause();
+        return true;
+    }
+
+    /**
+     * Resumes the consumer polling operation (if paused).
+     *
+     * @return {@code true} if the consumer polling operation was paused and is now resumed.
+     */
+    public final boolean resume() {
+        if (!paused.compareAndSet(true, false)) {
+            return false;
+        }
+        getKafkaConsumer().resume();
+        return true;
+    }
+
+    /**
+     * Checks if the consumer polling operation currently is paused.
+     *
+     * @return {@code true} if the consumer polling operation is paused.
+     */
+    public final boolean isPaused() {
+        return paused.get();
     }
 
     /**
