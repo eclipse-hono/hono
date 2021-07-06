@@ -510,6 +510,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
                 final JsonObject json = httpResponse.bodyAsJsonObject();
                 LOG.debug("retrieved tenant using Tenant API: {}", json.encodePrettily());
                 context.verify(() -> {
+                    assertThat(json.containsKey(RegistryManagementConstants.FIELD_STATUS)).isFalse();
                     assertTrue(IntegrationTestSupport.testJsonObjectToBeContained(json, JsonObject.mapFrom(requestBody)));
                 });
                 context.completeNow();

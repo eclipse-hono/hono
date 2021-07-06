@@ -17,7 +17,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.net.HttpURLConnection;
 import java.time.Instant;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -28,6 +27,7 @@ import java.util.regex.Pattern;
 
 import org.eclipse.hono.service.management.SearchResult;
 import org.eclipse.hono.service.management.device.Device;
+import org.eclipse.hono.service.management.device.DeviceStatus;
 import org.eclipse.hono.service.management.device.DeviceWithId;
 import org.eclipse.hono.tests.CrudHttpClient;
 import org.eclipse.hono.tests.DeviceRegistryHttpClient;
@@ -285,7 +285,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
         registry.registerDevice(tenantId, deviceId, device)
             .compose(ok -> registry.getRegistrationInfo(tenantId, deviceId))
             .onComplete(ctx.succeeding(httpResponse -> {
-                ctx.verify(() -> assertRegistrationInformation(httpResponse, device));
+                ctx.verify(() -> assertRegistrationInformation(httpResponse, device, null, false));
                 ctx.completeNow();
             }));
     }
@@ -347,21 +347,45 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
                         .put("newKey1", "newValue1"))
                 .put(RegistrationConstants.FIELD_ENABLED, Boolean.FALSE);
         final AtomicReference<String> latestVersion = new AtomicReference<>();
+        final AtomicReference<Instant> creationTime = new AtomicReference<>();
 
         registry.registerDevice(tenantId, deviceId, originalData.mapTo(Device.class))
                 .compose(httpResponse -> {
                     latestVersion.set(httpResponse.getHeader(HttpHeaders.ETAG.toString()));
-                    assertThat(latestVersion.get()).isNotNull();
+                    ctx.verify(() -> assertThat(latestVersion.get()).isNotNull());
+                    return registry.getRegistrationInfo(tenantId, deviceId);
+                })
+                .compose(httpResponse -> {
+                    final String resourceVersion = httpResponse.getHeader(HttpHeaders.ETAG.toString());
+                    ctx.verify(() -> {
+                        assertThat(latestVersion.get()).isEqualTo(resourceVersion);
+                        final var deviceStatus = getDeviceStatus(httpResponse.bodyAsJsonObject());
+                        assertThat(deviceStatus).isNotNull();
+                        assertThat(deviceStatus.getCreationTime()).isNotNull();
+                        assertThat(deviceStatus.getLastUpdate()).isNull();
+                        creationTime.set(deviceStatus.getCreationTime());
+                    });
                     return registry.updateDevice(tenantId, deviceId, updatedData);
                 })
                 .compose(httpResponse -> {
                     final String updatedVersion = httpResponse.getHeader(HttpHeaders.ETAG.toString());
-                    assertThat(updatedVersion).isNotNull();
-                    assertThat(updatedVersion).isNotEqualTo(latestVersion.get());
+                    ctx.verify(() -> {
+                        assertThat(updatedVersion).isNotNull();
+                        assertThat(updatedVersion).isNotEqualTo(latestVersion.get());
+                        latestVersion.set(updatedVersion);
+                    });
                     return registry.getRegistrationInfo(tenantId, deviceId);
                 })
                 .onComplete(ctx.succeeding(httpResponse -> {
-                    ctx.verify(() -> assertRegistrationInformation(httpResponse, updatedData.mapTo(Device.class)));
+                    final String resourceVersion = httpResponse.getHeader(HttpHeaders.ETAG.toString());
+                    ctx.verify(() -> {
+                        assertThat(latestVersion.get()).isEqualTo(resourceVersion);
+                        assertRegistrationInformation(
+                                httpResponse,
+                                updatedData.mapTo(Device.class),
+                                creationTime.get(),
+                                true);
+                        });
                     ctx.completeNow();
                 }));
     }
@@ -856,25 +880,56 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
         return generatedId;
     }
 
-    private static void assertRegistrationInformation(final HttpResponse<Buffer> response, final Device expectedData) {
+    private static DeviceStatus getDeviceStatus(final JsonObject deviceData) {
+        final var deviceStatus = deviceData.getJsonObject(RegistryManagementConstants.FIELD_STATUS);
+        return Optional.ofNullable(deviceStatus)
+                .map(statusJson -> statusJson.mapTo(DeviceStatus.class))
+                .orElse(null);
+    }
+
+    private static void assertRegistrationInformation(
+            final HttpResponse<Buffer> response,
+            final Device expectedData,
+            final Instant expectedCreationTime,
+            final boolean updatedOnExpectedToBeNonNull) {
 
         final JsonObject actualDeviceJson = response.bodyAsJsonObject();
-
-        // internal status is not decoded from JSON as users should not be allowed to change internal status
-        final JsonObject actualDeviceStatus = actualDeviceJson.getJsonObject(RegistryManagementConstants.FIELD_STATUS);
-        assertThat(actualDeviceStatus.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED))
-            .as("auto-provisioned property is either not included in response or has value false")
-            .matches(b -> b == null || !b.booleanValue());
-        assertThat(actualDeviceStatus.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT))
-            .as("auto-provisioning-notification-sent property is either not included in response or has value false")
-            .matches(b -> b == null || !b.booleanValue());
-
         final Device actualDevice = actualDeviceJson.mapTo(Device.class);
-        final Comparator<Instant> close = (Instant d1, Instant d2) -> d1.compareTo(d2) < 1000 ? 0 : 1;
 
         assertThat(actualDevice)
                 .usingRecursiveComparison()
-                .withComparatorForFields(close, "status.creationTime", "status.lastUpdate")
                 .isEqualTo(expectedData);
+
+        // internal status is not decoded from JSON as users should not be allowed to change internal status
+        final JsonObject actualDeviceStatus = actualDeviceJson.getJsonObject(RegistryManagementConstants.FIELD_STATUS);
+        assertThat(actualDeviceStatus.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED, Boolean.FALSE))
+            .as("%s property is either not included in response or has value false",
+                    RegistryManagementConstants.FIELD_AUTO_PROVISIONED)
+            .isFalse();
+        assertThat(actualDeviceStatus.getBoolean(
+                RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT,
+                Boolean.FALSE))
+            .as("%s property is either not included in response or has value false",
+                    RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT)
+            .isFalse();
+        if (expectedCreationTime == null) {
+            assertThat(actualDeviceStatus.getInstant(RegistryManagementConstants.FIELD_STATUS_CREATION_DATE))
+                .as("device has non-null creation time")
+                .isNotNull();
+        } else {
+            assertThat(actualDeviceStatus.getInstant(RegistryManagementConstants.FIELD_STATUS_CREATION_DATE))
+                .as("device has expected creation time")
+                .isEqualTo(expectedCreationTime);
+        }
+
+        if (updatedOnExpectedToBeNonNull) {
+            assertThat(actualDeviceStatus.getInstant(RegistryManagementConstants.FIELD_STATUS_LAST_UPDATE))
+                .as("device has non-null updated time")
+                .isNotNull();
+        } else {
+            assertThat(actualDeviceStatus.getInstant(RegistryManagementConstants.FIELD_STATUS_LAST_UPDATE))
+                .as("device has no updated time")
+                .isNull();
+        }
     }
 }
