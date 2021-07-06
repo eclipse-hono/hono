@@ -154,9 +154,7 @@ public class CommandResponseTest {
         final String requestId = Commands
                 .encodeRequestIdParameters(CORRELATION_ID, REPLY_TO_ID_WITH_DEVICE, DEVICE_ID, MessagingType.amqp);
         assertThat(requestId).isNotNull();
-        assertThat(requestId.indexOf(DEVICE_ID)).isNotNull();
-        assertThat(requestId.indexOf(DEVICE_ID) == requestId.lastIndexOf(DEVICE_ID))
-                .as("device id only contained once in request id").isTrue();
+        assertThat(requestId.indexOf(DEVICE_ID)).isEqualTo(-1);
         final CommandResponse resp = CommandResponse.fromRequestId(
                 requestId,
                 TENANT_ID,
