@@ -103,11 +103,9 @@ public class FileBasedDeviceBackend implements DeviceBackend, RegistrationServic
         this.deviceAndGatewayAutoProvisioner = Objects.requireNonNull(deviceAndGatewayAutoProvisioner);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<Void> start() {
+        @SuppressWarnings("rawtypes")
         final List<Future> services = new ArrayList<>();
 
         LOG.debug("starting up services");
@@ -115,17 +113,15 @@ public class FileBasedDeviceBackend implements DeviceBackend, RegistrationServic
         services.add(credentialsService.start());
         Optional.ofNullable(deviceAndGatewayAutoProvisioner)
                 .map(DeviceAndGatewayAutoProvisioner::start)
-                .map(services::add);
+                .ifPresent(services::add);
 
         return CompositeFuture.all(services)
                 .mapEmpty();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<Void> stop() {
+        @SuppressWarnings("rawtypes")
         final List<Future> services = new ArrayList<>();
 
         LOG.debug("stopping services");
@@ -133,7 +129,7 @@ public class FileBasedDeviceBackend implements DeviceBackend, RegistrationServic
         services.add(credentialsService.start());
         Optional.ofNullable(deviceAndGatewayAutoProvisioner)
                 .map(DeviceAndGatewayAutoProvisioner::start)
-                .map(services::add);
+                .ifPresent(services::add);
 
         return CompositeFuture.join(services).mapEmpty();
     }

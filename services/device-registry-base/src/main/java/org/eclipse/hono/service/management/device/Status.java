@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -55,6 +55,7 @@ public class Status<T extends Status<T>> {
      *
      * @return A reference to this, enabling fluent use.
      */
+    @SuppressWarnings("unchecked")
     public final T setCreationTime(final Instant creationTime) {
         this.creationTime = creationTime;
         return (T) this;
@@ -71,6 +72,7 @@ public class Status<T extends Status<T>> {
      *
      * @return A reference to this, enabling fluent use.
      */
+    @SuppressWarnings("unchecked")
     public final T setLastUpdate(final Instant lastUpdate) {
         this.lastUpdate = lastUpdate;
         return (T) this;
@@ -87,10 +89,10 @@ public class Status<T extends Status<T>> {
      * @param lastUser : the user Id to update with.
      * @return A reference to this for fluent use.
      */
+    @SuppressWarnings("unchecked")
     public final T update(final String lastUser) {
         this.lastUpdate = Instant.now();
         this.lastUser = lastUser;
-
         return (T) this;
     }
 
