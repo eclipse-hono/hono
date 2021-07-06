@@ -30,7 +30,6 @@ import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.eclipse.hono.application.client.CommandSender;
 import org.eclipse.hono.application.client.DownstreamMessage;
-import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
 import org.eclipse.hono.client.SendMessageTimeoutException;
 import org.eclipse.hono.client.StatusCodeMapper;
@@ -73,9 +72,9 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
     private final Vertx vertx;
     private final KafkaConsumerConfigProperties consumerConfig;
     /**
-     * Key is the tenant identifier, value the corresponding message consumer for receiving the command responses.
+     * Key is the tenant identifier, value the corresponding consumer for receiving the command responses.
      */
-    private final ConcurrentHashMap<String, MessageConsumer> commandResponseSubscriptions = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, HonoKafkaConsumer> commandResponseConsumers = new ConcurrentHashMap<>();
     /**
      * Key is the tenant identifier, value is a map with correlation ids as keys and expiring command promises as values.
      * These correlation ids are used to correlate the response messages with the sent commands.
@@ -111,18 +110,15 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
     @Override
     public Future<Void> stop() {
         // assemble futures for closing the command response consumers
-        final List<Future> closeKafkaClientsTracker = commandResponseSubscriptions
-                .keySet()
-                .stream()
-                .map(commandResponseSubscriptions::remove)
-                .filter(Objects::nonNull)
-                .map(MessageConsumer::close)
+        final List<Future> stopKafkaClientsTracker = commandResponseConsumers.values().stream()
+                .map(HonoKafkaConsumer::stop)
                 .collect(Collectors.toList());
+        commandResponseConsumers.clear();
 
         // add future for closing command producer
-        closeKafkaClientsTracker.add(super.stop());
+        stopKafkaClientsTracker.add(super.stop());
 
-        return CompositeFuture.join(closeKafkaClientsTracker)
+        return CompositeFuture.join(stopKafkaClientsTracker)
                 .mapEmpty();
     }
 
@@ -342,7 +338,7 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
     }
 
     private Future<Void> subscribeForCommandResponse(final String tenantId, final Span span) {
-        if (commandResponseSubscriptions.get(tenantId) != null) {
+        if (commandResponseConsumers.get(tenantId) != null) {
             LOGGER.debug("command response consumer already exists for tenant [{}]", tenantId);
             span.log("command response consumer already exists");
             return Future.succeededFuture();
@@ -376,12 +372,7 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
                 .onSuccess(v -> {
                     LOGGER.debug("created command response consumer for tenant [{}]", tenantId);
                     span.log("created command response consumer");
-                    commandResponseSubscriptions.put(tenantId, new MessageConsumer() {
-                        @Override
-                        public Future<Void> close() {
-                            return consumer.stop();
-                        }
-                    });
+                    commandResponseConsumers.put(tenantId, consumer);
                 });
     }
 
