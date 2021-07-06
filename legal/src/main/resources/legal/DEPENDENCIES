@@ -1,5 +1,6 @@
 maven/mavencentral/ch.qos.logback/logback-classic/1.2.3, EPL-1.0, approved, CQ13636
 maven/mavencentral/ch.qos.logback/logback-core/1.2.3, EPL-1.0, approved, CQ13635
+maven/mavencentral/com.bol/cryptvault/1.0.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.fasterxml.jackson.core/jackson-annotations/2.12.3, Apache-2.0, approved, CQ23207
 maven/mavencentral/com.fasterxml.jackson.core/jackson-core/2.12.3, Apache-2.0, approved, CQ23202
 maven/mavencentral/com.fasterxml.jackson.core/jackson-databind/2.12.3, Apache-2.0, approved, CQ23206

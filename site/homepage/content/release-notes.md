@@ -15,6 +15,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 * Northbound applications sending request/response Command & Control messages via Kafka will now receive
   a notification about a failed command delivery via a command response message. See the
   [Command &amp; Control API for Kafka]({{% doclink "/api/command-and-control-kafka/" %}}) for details.
+* The Mongo DB based device registry implementation now supports transparent (symmetric) encryption of Pre-Shared Key
+  secrets. Please refer to the user guide for details regarding configuration.
 
 ### Fixes & Enhancements
 

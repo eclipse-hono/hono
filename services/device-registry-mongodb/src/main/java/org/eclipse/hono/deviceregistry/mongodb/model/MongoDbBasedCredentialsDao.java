@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDocumentBuilder;
+import org.eclipse.hono.deviceregistry.util.FieldLevelEncryption;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.management.credentials.CredentialsDto;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -67,27 +68,18 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
      *
      * @param mongoClient The client to use for accessing the Mongo DB.
      * @param collectionName The name of the collection that contains the data.
-     * @throws NullPointerException if any of the parameters are {@code null}.
-     */
-    public MongoDbBasedCredentialsDao(
-            final MongoClient mongoClient,
-            final String collectionName) {
-        super(mongoClient, collectionName, null);
-    }
-
-    /**
-     * Creates a new DAO.
-     *
-     * @param mongoClient The client to use for accessing the Mongo DB.
-     * @param collectionName The name of the collection that contains the data.
      * @param tracer The tracer to use for tracking the processing of requests.
-     * @throws NullPointerException if any of the parameters other than tracer are {@code null}.
+     * @param fieldLevelEncryption The helper to use for encrypting/decrypting property values.
+     * @throws NullPointerException if any of the parameters other than tracer or field level encryption are {@code null}.
      */
     public MongoDbBasedCredentialsDao(
             final MongoClient mongoClient,
             final String collectionName,
-            final Tracer tracer) {
-        super(mongoClient, collectionName, tracer);
+            final Tracer tracer,
+            final FieldLevelEncryption fieldLevelEncryption) {
+        super(mongoClient, collectionName, tracer, fieldLevelEncryption);
+        Optional.ofNullable(fieldLevelEncryption)
+            .ifPresent(helper -> LOG.info("using [{}] for encrypting credentials", helper.getClass().getName()));
     }
 
     /**
@@ -172,7 +164,7 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                 .start();
 
         final Promise<String> addCredentialsPromise = Promise.promise();
-
+        credentials.getCredentials().parallelStream().forEach(cred -> cred.encryptFields(fieldLevelEncryption));
         mongoClient.insert(
                 collectionName,
                 JsonObject.mapFrom(credentials),
@@ -247,7 +239,9 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                             LOG.trace("credentials data from collection:{}{}",
                                     System.lineSeparator(), result.encodePrettily());
                         }
-                        return result.mapTo(CredentialsDto.class);
+                        final var dto = result.mapTo(CredentialsDto.class);
+                        dto.getCredentials().parallelStream().forEach(cred -> cred.decryptFields(fieldLevelEncryption));
+                        return dto;
                     }
                 });
     }
@@ -306,7 +300,9 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                             LOG.trace("credentials data from collection:{}{}",
                                     System.lineSeparator(), result.encodePrettily());
                         }
-                        return result.mapTo(CredentialsDto.class);
+                        final var dto = result.mapTo(CredentialsDto.class);
+                        dto.getCredentials().parallelStream().forEach(cred -> cred.decryptFields(fieldLevelEncryption));
+                        return dto;
                     }
                 })
                 .recover(this::mapError)
@@ -335,6 +331,7 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                 .withTag(TracingHelper.TAG_DEVICE_ID, credentials.getDeviceId())
                 .start();
         resourceVersion.ifPresent(v -> TracingHelper.TAG_RESOURCE_VERSION.set(span, v));
+        credentials.getCredentials().parallelStream().forEach(cred -> cred.encryptFields(fieldLevelEncryption));
 
         final JsonObject replaceCredentialsQuery = MongoDbDocumentBuilder.builder()
                 .withVersion(resourceVersion)

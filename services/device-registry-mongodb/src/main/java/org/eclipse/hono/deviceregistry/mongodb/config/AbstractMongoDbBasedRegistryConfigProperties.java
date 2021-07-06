@@ -33,6 +33,7 @@ public abstract class AbstractMongoDbBasedRegistryConfigProperties {
      * Mongodb collection name for individual device registry service entity type.
      */
     private String collectionName = getDefaultCollectionName();
+    private String encryptionKeyFile;
 
     /**
      * Gets the default name of the Mongo DB collection that the registry's data should be persisted to.
@@ -86,5 +87,24 @@ public abstract class AbstractMongoDbBasedRegistryConfigProperties {
             throw new IllegalArgumentException("max age must be >= 0");
         }
         this.cacheMaxAge = maxAge;
+    }
+
+    /**
+     * Sets the path to the YAML file that encryption keys should be read from.
+     *
+     * @param path The path to the file.
+     * @throws NullPointerException if path is {@code null}.
+     */
+    public final void setEncryptionKeyFile(final String path) {
+        this.encryptionKeyFile = Objects.requireNonNull(path);
+    }
+
+    /**
+     * Gets the path to the YAML file that encryption keys are read from.
+     *
+     * @return The path to the file or {@code null} if not set.
+     */
+    public final String getEncryptionKeyFile() {
+        return this.encryptionKeyFile;
     }
 }

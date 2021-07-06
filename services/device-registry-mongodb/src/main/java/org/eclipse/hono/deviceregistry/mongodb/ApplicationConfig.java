@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.deviceregistry.mongodb;
 
+import java.io.FileInputStream;
+import java.util.Base64;
 import java.util.Optional;
 
 import org.eclipse.hono.auth.HonoPasswordEncoder;
@@ -52,6 +54,8 @@ import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 import org.eclipse.hono.deviceregistry.service.device.EdgeDeviceAutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
+import org.eclipse.hono.deviceregistry.util.CryptVaultBasedFieldLevelEncryption;
+import org.eclipse.hono.deviceregistry.util.FieldLevelEncryption;
 import org.eclipse.hono.deviceregistry.util.ServiceClientAdapter;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
@@ -82,6 +86,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Scope;
+import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.Constructor;
+
+import com.bol.config.CryptVaultAutoConfiguration.CryptVaultConfigurationProperties;
+import com.bol.config.CryptVaultAutoConfiguration.Key;
+import com.bol.crypt.CryptVault;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.opentracing.Tracer;
@@ -270,6 +280,25 @@ public class ApplicationConfig {
         return new MongoDbBasedCredentialsConfigProperties();
     }
 
+    private FieldLevelEncryption fieldLevelEncryption(final String path) {
+        try (FileInputStream in = new FileInputStream(path)) {
+            final Yaml yaml = new Yaml(new Constructor(CryptVaultConfigurationProperties.class));
+            final CryptVaultConfigurationProperties config = yaml.load(in);
+            final CryptVault cryptVault = new CryptVault();
+            for (Key key : config.getKeys()) {
+                final byte[] secretKeyBytes = Base64.getDecoder().decode(key.getKey());
+                cryptVault.with256BitAesCbcPkcs5PaddingAnd128BitSaltKey(key.getVersion(), secretKeyBytes);
+            }
+
+            Optional.ofNullable(config.getDefaultKey()).ifPresent(cryptVault::withDefaultKeyVersion);
+            return new CryptVaultBasedFieldLevelEncryption(cryptVault);
+        } catch (final Exception e) {
+            throw new IllegalArgumentException(
+                    String.format("error reading CryptVault configuration from file [%s]", path),
+                    e);
+        }
+    }
+
     //
     //
     // AMQP endpoints
@@ -437,10 +466,17 @@ public class ApplicationConfig {
      */
     @Bean
     public CredentialsDao credentialsDao() {
+
+        final var properties = credentialsServiceProperties();
+        final var encryptionHelper = Optional.ofNullable(properties.getEncryptionKeyFile())
+                .map(this::fieldLevelEncryption)
+                .orElse( FieldLevelEncryption.NOOP_ENCRYPTION);
+
         final var dao =  new MongoDbBasedCredentialsDao(
                 mongoClient(),
                 credentialsServiceProperties().getCollectionName(),
-                tracer());
+                tracer(),
+                encryptionHelper);
         healthCheckServer().registerHealthCheckResources(dao);
         return dao;
     }

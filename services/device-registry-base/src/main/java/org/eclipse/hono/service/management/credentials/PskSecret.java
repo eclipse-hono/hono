@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,18 +13,24 @@
 package org.eclipse.hono.service.management.credentials;
 
 import java.util.Objects;
+import java.util.Optional;
 
+import org.eclipse.hono.deviceregistry.util.FieldLevelEncryption;
 import org.eclipse.hono.util.RegistryManagementConstants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
 /**
- * This class encapsulates secrets information for a PSK credentials type.
+ * A wrapper around a pre-shared (secret) key.
  */
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 public class PskSecret extends CommonSecret {
+
+    private static final Logger LOG = LoggerFactory.getLogger(PskSecret.class);
 
     @JsonProperty(RegistryManagementConstants.FIELD_SECRETS_KEY)
     private byte[] key;
@@ -76,5 +82,37 @@ public class PskSecret extends CommonSecret {
 
     void stripPrivateInfo() {
         this.key = null;
+    }
+
+    /**
+     * Encrypts the shared key.
+     *
+     * @param cryptHelper The helper to use for encrypting the key's bytes.
+     *                    If {@code null}, the key will not be encrypted.
+     */
+    void encryptFields(final FieldLevelEncryption cryptHelper) {
+        Optional.ofNullable(cryptHelper)
+            .ifPresent(helper -> {
+                if (key != null) {
+                    LOG.trace("encrypting pre-shared key");
+                    key = helper.encrypt(key);
+                }
+            });
+    }
+
+    /**
+     * Decrypts the shared key.
+     *
+     * @param cryptHelper The helper to use for decrypting the key's bytes.
+     *                    If {@code null}, the key will not be decrypted.
+     */
+    void decryptFields(final FieldLevelEncryption cryptHelper) {
+        Optional.ofNullable(cryptHelper)
+            .ifPresent(helper -> {
+                if (key != null) {
+                    LOG.trace("decrypting pre-shared key");
+                    key = helper.decrypt(key);
+                }
+            });
     }
 }

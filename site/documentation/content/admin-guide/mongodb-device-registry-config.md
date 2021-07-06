@@ -16,6 +16,7 @@ The following table provides an overview of the configuration variables and corr
 | :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
 | `HONO_CREDENTIALS_SVC_CACHE_MAX_AGE`<br>`--hono.credentials.svc.cacheMaxAge` | no | `180` | The maximum period of time (seconds) that information returned by the service's operations may be cached for. |
 | `HONO_CREDENTIALS_SVC_COLLECTION_NAME`<br>`--hono.credentials.svc.collectionName` | no | `credentials` | The name of the MongoDB collection where the server stores credentials of devices.|
+| `HONO_CREDENTIALS_SVC_ENCRYPTIONKEYFILE`<br>`--hono.credentials.svc.encryptionKeyFile` | no | - | The path to the YAML file that [encryption keys]({{< relref "#encrypting-secrets" >}}) should be read from. |
 | `HONO_CREDENTIALS_SVC_HASH_ALGORITHMS_WHITELIST`<br>`--hono.credentials.svc.hashAlgorithmsWhitelist` | no | `empty` | An array of supported hashing algorithms to be used with the `hashed-password` type of credentials. When not set, all values will be accepted. |
 | `HONO_CREDENTIALS_SVC_MAXBCRYPTCOSTFACTOR`<br>`--hono.credentials.svc.maxBcryptCostFactor` | no | `10` | The maximum cost factor that is supported in password hashes using the BCrypt hash function. This limit is enforced by the device registry when adding or updating corresponding credentials. Increasing this number allows for potentially more secure password hashes to be used. However, the time required to compute the hash increases exponentially with the cost factor. |
 | `HONO_CREDENTIALS_SVC_MAX_BCRYPT_ITERATIONS`<br>`--hono.credentials.svc.maxBcryptIterations` | no | `10` | DEPRECATED Please use `HONO_CREDENTIALS_SVC_MAXBCRYPTCOSTFACTOR` instead.<br>The maximum cost factor that is supported in password hashes using the BCrypt hash function. This limit is enforced by the device registry when adding or updating corresponding credentials. Increasing this number allows for potentially more secure password hashes to be used. However, the time required to compute the hash increases exponentially with the cost factor. |
@@ -86,3 +87,32 @@ See [Authentication Service Connection Configuration]({{< relref "file-based-dev
 ## Metrics Configuration
 
 See [Monitoring & Tracing Admin Guide]({{< relref "monitoring-tracing-config.md" >}}) for details on how to configure the reporting of metrics.
+
+## Encrypting Secrets
+
+Hono's CoAP protocol adapter supports authentication of devices during the DTLS handshake based on a *pre-shared key*.
+A pre-shared key is an arbitrary sequence of bytes which both the device as well as the protocol adapter need to present
+during the handshake in order to prove their identity.
+The Mongo DB based registry implementation supports managing these keys by means of PSK credentials which can be set for
+devices. By default, the bytes representing the key are stored as a base64 encoded string property of the credentials
+document. In order to better protect these keys from unintended disclosure, the registry can be configured to encrypt
+these keys before they are written to the database collection. During read operations the keys are then decrypted
+again before they are returned to an authorized client.
+
+In order to activate this transparent encryption/decryption, the `HONO_CREDENTIALS_SVC_ENCRYPTIONKEYFILE` configuration
+variable needs to be set to the path to a YAML file containing the definition of the symmetric keys that should be used
+for encryption. The file is expected to have the following format:
+
+```yaml
+defaultkey: 2
+keys:
+- version: 1
+  key: hqHKBLV83LpCqzKpf8OvutbCs+O5wX5BPu3btWpEvXA=
+- version: 2
+  key: ge2L+MA9jLA8UiUJ4z5fUoK+Lgj2yddlL6EzYIBqb1Q=
+```
+
+The file needs to contain at least all versions of the key that values in the database collection have been encrypted with.
+Otherwise the registry will not be able to decrypt these values during reading. The `defaultKey` property indicates the
+version of the key that should be used when encrypting values. Please refer to the
+[CryptVault project](https://github.com/bolcom/cryptvault) for additional information regarding key rotation.

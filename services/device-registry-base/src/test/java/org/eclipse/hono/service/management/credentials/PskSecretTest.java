@@ -15,7 +15,11 @@ package org.eclipse.hono.service.management.credentials;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.mockito.Mockito.*;
 
+import java.util.List;
+
+import org.eclipse.hono.deviceregistry.util.FieldLevelEncryption;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.junit.jupiter.api.Test;
 
@@ -79,4 +83,49 @@ public class PskSecretTest {
 
         assertThat(updatedSecret.getKey()).isEqualTo(new byte[] { 0x01, 0x02 });
     }
+
+    /**
+     * Verifies that the shared key is being encrypted/decrpyted using the given field level encryption helper.
+     */
+    @Test
+    public void testEncryptFieldsEncryptsKey() {
+
+        final byte[] sharedKey = new byte[] {0x01, 0x02};
+        final byte[] encryptedKey = new byte[] {(byte) 0xFF, (byte) 0xFF, (byte) 0xFF};
+        final var cryptHelper = mock(FieldLevelEncryption.class);
+        when(cryptHelper.encrypt(eq(sharedKey))).thenReturn(encryptedKey);
+        when(cryptHelper.decrypt(eq(encryptedKey))).thenReturn(sharedKey);
+
+        final var secret = new PskSecret();
+        secret.setKey(sharedKey);
+        final CommonCredential cred = new PskCredential("device1", List.of(secret));
+        assertThat(secret.getKey()).isEqualTo(sharedKey);
+
+        cred.encryptFields(cryptHelper);
+        assertThat(secret.getKey()).isEqualTo(encryptedKey);
+
+        cred.decryptFields(cryptHelper);
+        assertThat(secret.getKey()).isEqualTo(sharedKey);
+    }
+
+    /**
+     * Verifies that the shared key is not being encrypted if the given field level encryption helper is {@code null}.
+     */
+    @Test
+    public void testEncryptFieldsDoesNothingIfHelperIsNull() {
+
+        final byte[] sharedKey = new byte[] {0x01, 0x02};
+
+        final var secret = new PskSecret();
+        secret.setKey(sharedKey);
+        final CommonCredential cred = new PskCredential("device1", List.of(secret));
+        assertThat(secret.getKey()).isEqualTo(sharedKey);
+
+        cred.encryptFields(null);
+        assertThat(secret.getKey()).isEqualTo(sharedKey);
+
+        cred.decryptFields(null);
+        assertThat(secret.getKey()).isEqualTo(sharedKey);
+    }
+
 }

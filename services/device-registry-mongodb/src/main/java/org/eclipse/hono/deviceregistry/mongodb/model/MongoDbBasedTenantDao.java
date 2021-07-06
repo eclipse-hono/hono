@@ -70,19 +70,6 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
      *
      * @param mongoClient The client to use for accessing the Mongo DB.
      * @param collectionName The name of the collection that contains the tenant data.
-     * @throws NullPointerException if any of the parameters are {@code null}.
-     */
-    public MongoDbBasedTenantDao(
-            final MongoClient mongoClient,
-            final String collectionName) {
-        super(mongoClient, collectionName, null);
-    }
-
-    /**
-     * Creates a new DAO for a Mongo DB configuration.
-     *
-     * @param mongoClient The client to use for accessing the Mongo DB.
-     * @param collectionName The name of the collection that contains the tenant data.
      * @param tracer The tracer to use for tracking the processing of requests.
      * @throws NullPointerException if any of the parameters other than tracer are {@code null}.
      */
@@ -90,7 +77,7 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
             final MongoClient mongoClient,
             final String collectionName,
             final Tracer tracer) {
-        super(mongoClient, collectionName, tracer);
+        super(mongoClient, collectionName, tracer, null);
     }
 
     /**

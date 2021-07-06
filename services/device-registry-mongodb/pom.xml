@@ -49,6 +49,15 @@
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client-telemetry-kafka</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.bol</groupId>
+      <artifactId>cryptvault</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.yaml</groupId>
+      <artifactId>snakeyaml</artifactId>
+      <scope>compile</scope>
+    </dependency>
 
     <!-- testing -->
     <dependency>
@@ -62,6 +71,15 @@
     <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>mongodb</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!--
+      use BC for creating self-signed certs instead of sun.security.x509
+      which has been removed in OpenJDK 15
+    -->
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk15on</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
