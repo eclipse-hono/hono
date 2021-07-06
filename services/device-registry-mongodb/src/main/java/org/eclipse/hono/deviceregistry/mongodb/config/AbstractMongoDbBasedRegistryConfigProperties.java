@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.deviceregistry.mongodb.config;
 
+import java.util.Objects;
+
 /**
  * Common configuration properties for Mongodb based implementations of the APIs of Hono's device registry as own server.
  * <p>
@@ -25,6 +27,7 @@ public abstract class AbstractMongoDbBasedRegistryConfigProperties {
      * operations may be cached for.
      */
     private static final int DEFAULT_MAX_AGE_SECONDS = 180;
+
     private int cacheMaxAge = DEFAULT_MAX_AGE_SECONDS;
     /**
      * Mongodb collection name for individual device registry service entity type.
@@ -32,33 +35,29 @@ public abstract class AbstractMongoDbBasedRegistryConfigProperties {
     private String collectionName = getDefaultCollectionName();
 
     /**
-     * Gets the Mongodb collection name that the registry should be persisted to periodically.
-     * <p>
+     * Gets the default name of the Mongo DB collection that the registry's data should be persisted to.
      *
-     * @return The Mongodb collection name .
+     * @return The name.
      */
     protected abstract String getDefaultCollectionName();
 
     /**
-     * Gets the Mongodb collection name that the registry should be persisted to
-     * periodically.
-     * <p>
+     * Gets the name of the Mongo DB collection that the registry's data should be persisted to.
      *
-     * @return The Mongodb collection name.
+     * @return The name.
      */
     public final String getCollectionName() {
         return collectionName;
     }
 
     /**
-     * Sets the Mongodb collection name that the registry should be persisted to
-     * periodically.
-     * <p>
+     * Gets the name of the Mongo DB collection that the registry's data gets persisted to.
      *
-     * @param collectionName The Mongodb collection name to persist to.
+     * @param collectionName The name.
+     * @throws NullPointerException if name is {@code null}.
      */
     public final void setCollectionName(final String collectionName) {
-        this.collectionName = collectionName;
+        this.collectionName = Objects.requireNonNull(collectionName);
     }
 
     /**
@@ -88,5 +87,4 @@ public abstract class AbstractMongoDbBasedRegistryConfigProperties {
         }
         this.cacheMaxAge = maxAge;
     }
-
 }
