@@ -46,6 +46,7 @@ import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
 import org.eclipse.hono.kafka.test.KafkaMockConsumer;
 import org.eclipse.hono.util.MessageHelper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -108,6 +109,16 @@ public class KafkaBasedCommandSenderTest {
                 NoopTracerFactory.create());
         tenantId = UUID.randomUUID().toString();
         deviceId = UUID.randomUUID().toString();
+    }
+
+    /**
+     * Stops the created command sender.
+     *
+     * @param context The vert.x test context.
+     */
+    @AfterEach
+    void shutDown(final VertxTestContext context) {
+        commandSender.stop().onComplete(r -> context.completeNow());
     }
 
     /**
@@ -218,17 +229,20 @@ public class KafkaBasedCommandSenderTest {
      */
     @Test
     public void testSendCommandAndReceiveResponseTimesOut(final VertxTestContext ctx) {
+        final Context context = vertx.getOrCreateContext();
         commandSender.setKafkaConsumerSupplier(() -> mockConsumer);
-        commandSender
-                .sendCommand(tenantId, deviceId, "testCommand", null, Buffer.buffer("data"), null, null,
-                        Duration.ofMillis(5), NoopSpan.INSTANCE.context())
-                .onComplete(ctx.failing(error -> {
-                    ctx.verify(() -> {
-                        // VERIFY that the error is caused due to time out.
-                        assertThat(error).isInstanceOf(SendMessageTimeoutException.class);
-                    });
-                    ctx.completeNow();
-                }));
+        context.runOnContext(v -> {
+            commandSender
+                    .sendCommand(tenantId, deviceId, "testCommand", null, Buffer.buffer("data"), null, null,
+                            Duration.ofMillis(5), NoopSpan.INSTANCE.context())
+                    .onComplete(ctx.failing(error -> {
+                        ctx.verify(() -> {
+                            // VERIFY that the error is caused due to time out.
+                            assertThat(error).isInstanceOf(SendMessageTimeoutException.class);
+                        });
+                        ctx.completeNow();
+                    }));
+        });
     }
 
     private void sendCommandAndReceiveResponse(final VertxTestContext ctx, final String correlationId,
@@ -266,11 +280,12 @@ public class KafkaBasedCommandSenderTest {
         final String responseTopic = new HonoTopic(HonoTopic.Type.COMMAND_RESPONSE, tenantId).toString();
         final TopicPartition responseTopicPartition = new TopicPartition(responseTopic, 0);
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(responseTopicPartition));
+        mockConsumer.updatePartitions(responseTopicPartition, KafkaMockConsumer.DEFAULT_NODE);
+        mockConsumer.updateBeginningOffsets(Map.of(responseTopicPartition, 0L));
+        mockConsumer.updateEndOffsets(Map.of(responseTopicPartition, 0L));
         onProducerRecordSentPromise.future().onComplete(ar -> {
             LOG.debug("producer record sent, add command response record to mockConsumer");
             // Send a command response with the same correlation id as that of the command
-            mockConsumer.updateBeginningOffsets(Map.of(responseTopicPartition, 0L));
-            mockConsumer.updateEndOffsets(Map.of(responseTopicPartition, 0L));
             mockConsumer.addRecord(commandResponseRecord);
         });
 
