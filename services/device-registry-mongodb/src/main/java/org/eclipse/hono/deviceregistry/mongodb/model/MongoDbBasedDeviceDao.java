@@ -200,11 +200,12 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                 .start();
 
         return getById(tenantId, deviceId)
+                .map(DeviceDto.class::cast)
                 .onFailure(t -> TracingHelper.logError(span, "error retrieving device", t))
                 .onComplete(r -> span.finish());
     }
 
-    private Future<DeviceDto> getById(final String tenantId, final String deviceId) {
+    private Future<MongoDbBasedDeviceDto> getById(final String tenantId, final String deviceId) {
 
         final JsonObject findDeviceQuery = MongoDbDocumentBuilder.builder().withTenantId(tenantId)
                 .withDeviceId(deviceId)
@@ -219,7 +220,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                         if (LOG.isTraceEnabled()) {
                             LOG.trace("device data from collection;{}{}", System.lineSeparator(), result.encodePrettily());
                         }
-                        return (DeviceDto) MongoDbBasedDeviceDto.forRead(tenantId, deviceId, result);
+                        return MongoDbBasedDeviceDto.forRead(tenantId, deviceId, result);
                     }
                 })
                 .recover(this::mapError);
@@ -359,23 +360,39 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                 .start();
         resourceVersion.ifPresent(v -> TracingHelper.TAG_RESOURCE_VERSION.set(span, v));
 
-        final JsonObject updateDeviceQuery = MongoDbDocumentBuilder.builder()
-                .withVersion(resourceVersion)
-                .withTenantId(deviceConfig.getTenantId())
-                .withDeviceId(deviceConfig.getDeviceId())
-                .document();
+        return getById(deviceConfig.getTenantId(), deviceConfig.getDeviceId())
+                .compose(currentDeviceConfig -> {
+                    final MongoDbBasedDeviceDto dto = MongoDbBasedDeviceDto.forUpdate(
+                            // use creation date from DB as this will never change
+                            () -> currentDeviceConfig,
+                            // but copy all other (updated) data from DTO that has been passed in
+                            deviceConfig.getData(),
+                            deviceConfig.getVersion());
+                    // we need to manually copy the device status because the passed in DeviceDto's data
+                    // property does not contain any status information (it had been removed by the
+                    // DeviceDto.fromUpdate method used to create it)
+                    dto.setDeviceStatus(deviceConfig.getDeviceStatus());
+                    final JsonObject updateDeviceQuery = MongoDbDocumentBuilder.builder()
+                            .withVersion(resourceVersion)
+                            .withTenantId(deviceConfig.getTenantId())
+                            .withDeviceId(deviceConfig.getDeviceId())
+                            .document();
 
-        final Promise<JsonObject> updateDevicePromise = Promise.promise();
+                    final Promise<JsonObject> updateDevicePromise = Promise.promise();
+                    final var document = JsonObject.mapFrom(dto);
+                    if (LOG.isTraceEnabled()) {
+                        LOG.trace("replacing existing device document with:{}{}", System.lineSeparator(), document.encodePrettily());
+                    }
 
-        mongoClient.findOneAndUpdateWithOptions(
-                collectionName,
-                updateDeviceQuery,
-                MongoDbDocumentBuilder.builder().forUpdateOf(deviceConfig).document(),
-                new FindOptions(),
-                new UpdateOptions().setReturningNewDocument(true),
-                updateDevicePromise);
-
-        return updateDevicePromise.future()
+                    mongoClient.findOneAndReplaceWithOptions(
+                            collectionName,
+                            updateDeviceQuery,
+                            document,
+                            new FindOptions(),
+                            new UpdateOptions().setReturningNewDocument(true),
+                            updateDevicePromise);
+                    return updateDevicePromise.future();
+                })
                 .compose(result -> {
                     if (result == null) {
                         return MongoDbBasedDao.checkForVersionMismatchAndFail(

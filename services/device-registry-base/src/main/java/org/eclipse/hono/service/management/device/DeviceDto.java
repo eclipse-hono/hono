@@ -163,10 +163,14 @@ public class DeviceDto extends BaseDto<Device> {
         final T deviceDto = BaseDto.forUpdate(supplier, device.withoutStatus(), version);
         deviceDto.setTenantId(tenantId);
         deviceDto.setDeviceId(deviceId);
+        final Boolean autoProvisioned = Optional.ofNullable(device.getStatus())
+                .map(DeviceStatus::isAutoProvisioned)
+                .orElse(false);
         final Boolean notificationSent = Optional.ofNullable(device.getStatus())
                 .map(DeviceStatus::isAutoProvisioningNotificationSent)
                 .orElse(false);
         deviceDto.setDeviceStatus(new DeviceStatus()
+                .setAutoProvisioned(autoProvisioned)
                 .setAutoProvisioningNotificationSent(notificationSent));
 
         return deviceDto;
