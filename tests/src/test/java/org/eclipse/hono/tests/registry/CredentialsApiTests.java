@@ -269,11 +269,16 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
         testAutoProvisioningSucceeds(ctx, tenant, cert, true, expectedDeviceId);
     }
 
-    private void testAutoProvisioningSucceeds(final VertxTestContext ctx, final Tenant tenant,
-            final X509Certificate cert, final boolean isGateway, final String expectedDeviceId)
-            throws CertificateEncodingException {
+    private void testAutoProvisioningSucceeds(
+            final VertxTestContext ctx,
+            final Tenant tenant,
+            final X509Certificate cert,
+            final boolean isGateway,
+            final String expectedDeviceId) throws CertificateEncodingException {
+
         final Checkpoint autoProvisioningEventReceived = ctx.checkpoint(1);
         final Checkpoint autoProvisioningCompleted = ctx.checkpoint(1);
+
         // GIVEN a client context that contains a client certificate
         final JsonObject clientCtx = new JsonObject().put(CredentialsConstants.FIELD_CLIENT_CERT, cert.getEncoded());
         final String authId = cert.getSubjectX500Principal().getName(X500Principal.RFC2253);
@@ -282,61 +287,64 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
         getHelper().applicationClient.createEventConsumer(
                 tenantId,
                 msg -> ctx.verify(() -> {
-                    // VERIFY that the auto-provisioning event has been received and it's properties
+                    // VERIFY that the auto-provisioning event for the device has been received
                     verifyAutoProvisioningEventNotification(tenantId, expectedDeviceId, msg);
                     autoProvisioningEventReceived.flag();
-                }), close -> {})
-                .compose(ok -> getHelper().registry.addTenant(tenantId, tenant))
-                .compose(ok -> getClient()
-                        // WHEN getting credentials
-                        .get(tenantId, CredentialsConstants.SECRETS_TYPE_X509_CERT, authId, clientCtx, spanContext))
-                .compose(result -> {
-                    // VERIFY the newly created credentials
-                    ctx.verify(() -> {
-                        assertThat(result).isNotNull();
-                        assertThat(result.isEnabled()).isTrue();
-                        assertThat(result.getDeviceId()).isNotNull();
-                        assertThat(result.getAuthId()).isEqualTo(authId);
-                        assertThat(result.getType()).isEqualTo(CredentialsConstants.SECRETS_TYPE_X509_CERT);
-                        assertThat(result.getSecrets()).isNotNull();
-                        assertThat(result.getSecrets()).hasSize(1);
+                }),
+                close -> {})
+            .compose(ok -> getHelper().registry.addTenant(tenantId, tenant))
+            .compose(ok -> getClient()
+                    // WHEN getting credentials
+                    .get(tenantId, CredentialsConstants.SECRETS_TYPE_X509_CERT, authId, clientCtx, spanContext))
+            .compose(result -> {
+                // VERIFY the newly created credentials
+                ctx.verify(() -> {
+                    assertThat(result).isNotNull();
+                    assertThat(result.isEnabled()).isTrue();
+                    assertThat(result.getDeviceId()).isNotNull();
+                    assertThat(result.getAuthId()).isEqualTo(authId);
+                    assertThat(result.getType()).isEqualTo(CredentialsConstants.SECRETS_TYPE_X509_CERT);
+                    assertThat(result.getSecrets()).isNotNull();
+                    assertThat(result.getSecrets()).hasSize(1);
 
-                        if (expectedDeviceId != null) {
-                            // VERIFY the generated device-id
-                            assertThat(result.getDeviceId()).isEqualTo(expectedDeviceId);
-                        }
-                    });
-                    // WHEN getting device registration information
-                    return getHelper().registry.getRegistrationInfo(tenantId, result.getDeviceId());
-                })
-                .onComplete(ctx.succeeding(result -> {
+                    if (expectedDeviceId != null) {
+                        // VERIFY the generated device-id
+                        assertThat(result.getDeviceId()).isEqualTo(expectedDeviceId);
+                    }
+                });
+                // WHEN getting device registration information
+                return getHelper().registry.getRegistrationInfo(tenantId, result.getDeviceId());
+            })
+            .onComplete(ctx.succeeding(result -> {
+                ctx.verify(() -> {
                     // VERIFY that the device/gateway has been registered as well
                     final Device device = result.bodyAsJson(Device.class);
-                    ctx.verify(() -> {
-                        assertThat(device.isEnabled()).isTrue();
-                        if (isGateway) {
-                            // VERIFY that the gateway related attributes are set
-                            assertThat(device.getAuthorities()
-                                    .contains(RegistryManagementConstants.AUTHORITY_AUTO_PROVISIONING_ENABLED))
-                                            .isTrue();
-                        }
-                        // VERIFY that the property "auto-provisioning-notification-sent" is updated to true.
-                        final DeviceStatus deviceStatus = result.bodyAsJsonObject()
-                                .getJsonObject(RegistryManagementConstants.FIELD_STATUS)
-                                .mapTo(DeviceStatus.class);
-                        assertThat(deviceStatus.isAutoProvisioned())
-                                .withFailMessage(RegistryManagementConstants.FIELD_AUTO_PROVISIONED + " must be true")
-                                .isTrue();
-                        assertThat(deviceStatus.isAutoProvisioningNotificationSent())
-                                .withFailMessage(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT + " must be true")
-                                .isTrue();
-                    });
-                    autoProvisioningCompleted.flag();
-                }));
+                    assertThat(device.isEnabled()).isTrue();
+                    if (isGateway) {
+                        // VERIFY that the gateway related attributes are set
+                        assertThat(device.getAuthorities())
+                                .contains(RegistryManagementConstants.AUTHORITY_AUTO_PROVISIONING_ENABLED);
+                    }
+                    // VERIFY that the property "auto-provisioning-notification-sent" is updated to true.
+                    final DeviceStatus deviceStatus = result.bodyAsJsonObject()
+                            .getJsonObject(RegistryManagementConstants.FIELD_STATUS)
+                            .mapTo(DeviceStatus.class);
+                    assertThat(deviceStatus.isAutoProvisioned())
+                        .as("device is marked as auto-provisioned")
+                        .isTrue();
+                    assertThat(deviceStatus.isAutoProvisioningNotificationSent())
+                        .as("auto-provisioning notification for device has been sent")
+                        .isTrue();
+                });
+                autoProvisioningCompleted.flag();
+            }));
     }
 
-    private void verifyAutoProvisioningEventNotification(final String expectedTenantId, final String expectedDeviceId,
-            final DownstreamMessage msg) {
+    private void verifyAutoProvisioningEventNotification(
+            final String expectedTenantId,
+            final String expectedDeviceId,
+            final DownstreamMessage<?> msg) {
+
         assertThat(msg.getContentType())
                 .isEqualTo(EventConstants.CONTENT_TYPE_DEVICE_PROVISIONING_NOTIFICATION);
         assertThat(msg.getProperties().getProperty(MessageHelper.APP_PROPERTY_REGISTRATION_STATUS, String.class))

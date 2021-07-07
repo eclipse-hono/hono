@@ -40,6 +40,34 @@
     <appender-ref ref="STDOUT" />
   </root>
 
+  <springProfile name="trace">
+    <logger name="org.eclipse.hono" level="DEBUG"/>
+    <logger name="org.eclipse.hono.client" level="DEBUG"/>
+    <logger name="org.eclipse.hono.client.amqp" level="DEBUG"/>
+    <logger name="org.eclipse.hono.connection" level="DEBUG"/>
+    <logger name="org.eclipse.hono.deviceregistry.mongodb" level="TRACE"/>
+    <logger name="org.eclipse.hono.deviceregistry.mongodb.config" level="TRACE"/>
+    <logger name="org.eclipse.hono.deviceregistry.mongodb.model" level="TRACE"/>
+    <logger name="org.eclipse.hono.deviceregistry.mongodb.service" level="TRACE"/>
+    <logger name="org.eclipse.hono.deviceregistry.mongodb.utils" level="TRACE"/>
+    <logger name="org.eclipse.hono.deviceregistry.service.credentials" level="TRACE"/>
+    <logger name="org.eclipse.hono.deviceregistry.service.device" level="TRACE"/>
+    <logger name="org.eclipse.hono.deviceregistry.service.deviceconnection" level="TRACE"/>
+    <logger name="org.eclipse.hono.deviceregistry.service.tenant" level="TRACE"/>
+    <logger name="org.eclipse.hono.service.credentials" level="TRACE"/>
+    <logger name="org.eclipse.hono.service.management" level="TRACE"/>
+    <logger name="org.eclipse.hono.service.management.credentials" level="TRACE"/>
+    <logger name="org.eclipse.hono.service.management.device" level="TRACE"/>
+    <logger name="org.eclipse.hono.service.management.tenant" level="TRACE"/>
+    <logger name="org.eclipse.hono.service.registration" level="TRACE"/>
+    <logger name="org.eclipse.hono.service.tenant" level="TRACE"/>
+
+    <logger name="io.netty.handler.logging.LoggingHandler" level="DEBUG"/>
+
+    <logger name="io.vertx.proton.impl" level="INFO"/>
+    <logger name="io.vertx.core.net.impl" level="INFO"/>
+  </springProfile>
+
   <springProfile name="dev">
     <logger name="org.eclipse.hono" level="DEBUG"/>
     <logger name="org.eclipse.hono.client" level="DEBUG"/>

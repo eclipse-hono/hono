@@ -912,24 +912,19 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             .as("%s property is either not included in response or has value false",
                     RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT)
             .isFalse();
+
+        final Instant creationTime = actualDeviceStatus.getInstant(RegistryManagementConstants.FIELD_STATUS_CREATION_DATE);
         if (expectedCreationTime == null) {
-            assertThat(actualDeviceStatus.getInstant(RegistryManagementConstants.FIELD_STATUS_CREATION_DATE))
-                .as("device has non-null creation time")
-                .isNotNull();
+            assertThat(creationTime).as("device has non-null creation time").isNotNull();
         } else {
-            assertThat(actualDeviceStatus.getInstant(RegistryManagementConstants.FIELD_STATUS_CREATION_DATE))
-                .as("device has expected creation time")
-                .isEqualTo(expectedCreationTime);
+            assertThat(creationTime).as("device has expected creation time").isEqualTo(expectedCreationTime);
         }
 
+        final Instant lastUpdatedAt = actualDeviceStatus.getInstant(RegistryManagementConstants.FIELD_STATUS_LAST_UPDATE);
         if (updatedOnExpectedToBeNonNull) {
-            assertThat(actualDeviceStatus.getInstant(RegistryManagementConstants.FIELD_STATUS_LAST_UPDATE))
-                .as("device has non-null updated time")
-                .isNotNull();
+            assertThat(lastUpdatedAt).as("device has non-null updated time").isAfterOrEqualTo(creationTime);
         } else {
-            assertThat(actualDeviceStatus.getInstant(RegistryManagementConstants.FIELD_STATUS_LAST_UPDATE))
-                .as("device has no updated time")
-                .isNull();
+            assertThat(lastUpdatedAt).as("device has no updated time").isNull();
         }
     }
 }
