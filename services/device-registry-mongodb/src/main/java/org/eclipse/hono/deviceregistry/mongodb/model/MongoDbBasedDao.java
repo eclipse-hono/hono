@@ -24,7 +24,6 @@ import javax.annotation.PreDestroy;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbConfigProperties;
 import org.eclipse.hono.service.management.BaseDto;
 import org.eclipse.hono.service.management.SearchResult;
 import org.eclipse.hono.util.RegistryManagementConstants;
@@ -38,7 +37,6 @@ import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.IndexOptions;
@@ -73,24 +71,21 @@ public abstract class MongoDbBasedDao {
     /**
      * Creates a new DAO.
      *
-     * @param dbConfig The Mongo DB configuration properties.
+     * @param mongoClient The client to use for accessing the Mongo DB.
      * @param collectionName The name of the collection that contains the data.
-     * @param vertx The vert.x instance to run on.
      * @param tracer The tracer to use for tracking the processing of requests.
      * @throws NullPointerException if any of the parameters other than tracer are {@code null}.
      */
     protected MongoDbBasedDao(
-            final MongoDbConfigProperties dbConfig,
+            final MongoClient mongoClient,
             final String collectionName,
-            final Vertx vertx,
             final Tracer tracer) {
 
-        Objects.requireNonNull(dbConfig);
+        Objects.requireNonNull(mongoClient);
         Objects.requireNonNull(collectionName);
-        Objects.requireNonNull(vertx);
 
-        this.collectionName = Objects.requireNonNull(collectionName);
-        this.mongoClient = MongoClient.createShared(vertx, dbConfig.getMongoClientConfig());
+        this.mongoClient = mongoClient;
+        this.collectionName = collectionName;
         this.tracer = Optional.ofNullable(tracer).orElse(NoopTracerFactory.create());
     }
 

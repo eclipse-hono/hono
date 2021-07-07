@@ -24,7 +24,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDocumentBuilder;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.management.Filter;
@@ -44,13 +43,13 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
 import io.vertx.ext.mongo.FindOptions;
 import io.vertx.ext.mongo.IndexOptions;
+import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.mongo.UpdateOptions;
 
 
@@ -74,33 +73,29 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
     /**
      * Creates a new DAO.
      *
-     * @param dbConfig The Mongo DB configuration properties.
+     * @param mongoClient The client to use for accessing the Mongo DB.
      * @param collectionName The name of the collection that contains the tenant data.
-     * @param vertx The vert.x instance to run on.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public MongoDbBasedDeviceDao(
-            final MongoDbConfigProperties dbConfig,
-            final String collectionName,
-            final Vertx vertx) {
-        super(dbConfig, collectionName, vertx, null);
+            final MongoClient mongoClient,
+            final String collectionName) {
+        super(mongoClient, collectionName, null);
     }
 
     /**
      * Creates a new DAO.
      *
-     * @param dbConfig The Mongo DB configuration properties.
+     * @param mongoClient The client to use for accessing the Mongo DB.
      * @param collectionName The name of the collection that contains the tenant data.
-     * @param vertx The vert.x instance to run on.
      * @param tracer The tracer to use for tracking the processing of requests.
      * @throws NullPointerException if any of the parameters other than tracer are {@code null}.
      */
     public MongoDbBasedDeviceDao(
-            final MongoDbConfigProperties dbConfig,
+            final MongoClient mongoClient,
             final String collectionName,
-            final Vertx vertx,
             final Tracer tracer) {
-        super(dbConfig, collectionName, vertx, tracer);
+        super(mongoClient, collectionName, tracer);
     }
 
     /**

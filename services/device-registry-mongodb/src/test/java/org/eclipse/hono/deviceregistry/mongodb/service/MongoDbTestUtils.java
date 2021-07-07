@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -69,9 +69,9 @@ public final class MongoDbTestUtils {
      */
     public static MongoDbBasedTenantDao getTenantDao(final Vertx vertx, final String dbName) {
 
-        final MongoDbConfigProperties mongoDbConfig = new MongoDbConfigProperties()
-                .setConnectionString(MONGO_DB_CONTAINER.getReplicaSetUrl(dbName));
-        return new MongoDbBasedTenantDao(mongoDbConfig, "tenants", vertx);
+        return new MongoDbBasedTenantDao(
+                getMongoClient(vertx, dbName),
+                "tenants");
     }
 
     /**
@@ -84,9 +84,9 @@ public final class MongoDbTestUtils {
      */
     public static MongoDbBasedDeviceDao getDeviceDao(final Vertx vertx, final String dbName) {
 
-        final MongoDbConfigProperties mongoDbConfig = new MongoDbConfigProperties()
-                .setConnectionString(MONGO_DB_CONTAINER.getReplicaSetUrl(dbName));
-        return new MongoDbBasedDeviceDao(mongoDbConfig, "devices", vertx);
+        return new MongoDbBasedDeviceDao(
+                getMongoClient(vertx, dbName),
+                "devices");
     }
 
     /**
@@ -99,8 +99,8 @@ public final class MongoDbTestUtils {
      */
     public static MongoDbBasedCredentialsDao getCredentialsDao(final Vertx vertx, final String dbName) {
 
-        final MongoDbConfigProperties mongoDbConfig = new MongoDbConfigProperties()
-                .setConnectionString(MONGO_DB_CONTAINER.getReplicaSetUrl(dbName));
-        return new MongoDbBasedCredentialsDao(mongoDbConfig, "credentials", vertx);
+        return new MongoDbBasedCredentialsDao(
+                getMongoClient(vertx, dbName),
+                "credentials");
     }
 }

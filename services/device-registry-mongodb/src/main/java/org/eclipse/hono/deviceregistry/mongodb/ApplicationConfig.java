@@ -386,9 +386,8 @@ public class ApplicationConfig {
     @Bean
     public DeviceDao deviceDao() {
         final var dao =  new MongoDbBasedDeviceDao(
-                mongoDbConfigProperties(),
+                mongoClient(),
                 registrationServiceProperties().getCollectionName(),
-                vertx(),
                 tracer());
         healthCheckServer().registerHealthCheckResources(dao);
         return dao;
@@ -439,9 +438,8 @@ public class ApplicationConfig {
     @Bean
     public CredentialsDao credentialsDao() {
         final var dao =  new MongoDbBasedCredentialsDao(
-                mongoDbConfigProperties(),
+                mongoClient(),
                 credentialsServiceProperties().getCollectionName(),
-                vertx(),
                 tracer());
         healthCheckServer().registerHealthCheckResources(dao);
         return dao;
@@ -497,9 +495,8 @@ public class ApplicationConfig {
     @Bean
     public TenantDao tenantDao() {
         final var dao =  new MongoDbBasedTenantDao(
-                mongoDbConfigProperties(),
+                mongoClient(),
                 tenantServiceProperties().getCollectionName(),
-                vertx(),
                 tracer());
         healthCheckServer().registerHealthCheckResources(dao);
         return dao;
