@@ -126,8 +126,6 @@ public final class MongoDbBasedCredentialsManagementService extends AbstractCred
                 .compose(credentialsDto -> {
                     credentialsDto.createMissingSecretIds();
                     return dao.update(
-                            deviceKey.getTenantId(),
-                            deviceKey.getDeviceId(),
                             credentialsDto,
                             resourceVersion,
                             span.context());

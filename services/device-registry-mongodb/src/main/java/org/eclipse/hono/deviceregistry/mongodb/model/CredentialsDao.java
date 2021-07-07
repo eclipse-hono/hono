@@ -79,8 +79,6 @@ public interface CredentialsDao {
     /**
      * Updates existing credentials of a device.
      *
-     * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The identifier of the device.
      * @param credentials The credentials to set.
      * @param resourceVersion The resource version that the credentials instance is required to have.
      * @param tracingContext The context to track the processing of the request in
@@ -90,11 +88,9 @@ public interface CredentialsDao {
      *         The future will be succeeded with the new resource version if credentials with matching
      *         identifiers and resource version exist and have been updated.
      *         Otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
-     * @throws NullPointerException if tenant ID, device ID, credentials or resource version are {@code null}.
+     * @throws NullPointerException if credentials or resource version are {@code null}.
      */
     Future<String> update(
-            String tenantId,
-            String deviceId,
             CredentialsDto credentials,
             Optional<String> resourceVersion,
             SpanContext tracingContext);

@@ -327,28 +327,24 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
      */
     @Override
     public Future<String> update(
-            final String tenantId,
-            final String deviceId,
             final CredentialsDto credentials,
             final Optional<String> resourceVersion,
             final SpanContext tracingContext) {
 
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
         Objects.requireNonNull(credentials);
         Objects.requireNonNull(resourceVersion);
 
         final Span span = tracer.buildSpan("update Credentials")
                 .addReference(References.CHILD_OF, tracingContext)
-                .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
-                .withTag(TracingHelper.TAG_DEVICE_ID, deviceId)
+                .withTag(TracingHelper.TAG_TENANT_ID, credentials.getTenantId())
+                .withTag(TracingHelper.TAG_DEVICE_ID, credentials.getDeviceId())
                 .start();
         resourceVersion.ifPresent(v -> TracingHelper.TAG_RESOURCE_VERSION.set(span, v));
 
         final JsonObject replaceCredentialsQuery = MongoDbDocumentBuilder.builder()
                 .withVersion(resourceVersion)
-                .withTenantId(tenantId)
-                .withDeviceId(deviceId)
+                .withTenantId(credentials.getTenantId())
+                .withDeviceId(credentials.getDeviceId())
                 .document();
 
         final var credentialsDtoJson = JsonObject.mapFrom(credentials);
@@ -356,7 +352,8 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
 
         if (LOG.isTraceEnabled()) {
             LOG.trace("updating credentials of device [tenant: {}, device-id: {}, resource-version; {}]:{}{}",
-                    tenantId, deviceId, resourceVersion.orElse(null), System.lineSeparator(), credentialsDtoJson.encodePrettily());
+                    credentials.getTenantId(), credentials.getDeviceId(), resourceVersion.orElse(null),
+                    System.lineSeparator(), credentialsDtoJson.encodePrettily());
         }
 
         mongoClient.findOneAndReplaceWithOptions(
@@ -371,12 +368,13 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                 .compose(result -> {
                     if (result == null) {
                         return MongoDbBasedDao.checkForVersionMismatchAndFail(
-                                String.format("credentials [tenant-id: %s, device-id: %s]", tenantId, deviceId),
+                                String.format("credentials [tenant-id: %s, device-id: %s]",
+                                        credentials.getTenantId(), credentials.getDeviceId()),
                                 resourceVersion,
-                                getByDeviceId(tenantId, deviceId));
+                                getByDeviceId(credentials.getTenantId(), credentials.getDeviceId()));
                     } else {
                         LOG.debug("successfully updated credentials for device [tenant: {}, device-id: {}]",
-                                tenantId, deviceId);
+                                credentials.getTenantId(), credentials.getDeviceId());
                         span.log("successfully updated credentials");
                         if (LOG.isTraceEnabled()) {
                             LOG.trace("new document in DB:{}{}", System.lineSeparator(), result.encodePrettily());
@@ -387,7 +385,7 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                 .recover(error -> {
                     if (MongoDbBasedDao.isDuplicateKeyError(error)) {
                         return Future.failedFuture(new ClientErrorException(
-                                tenantId,
+                                credentials.getTenantId(),
                                 HttpURLConnection.HTTP_CONFLICT,
                                 "credentials (type, auth-id) must be unique for device"));
                     } else {
