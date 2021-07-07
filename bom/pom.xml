@@ -55,7 +55,6 @@
     site/documentation/content/admin-guide/hono-kafka-client-configuration.md as well -->
     <kafka-clients.version>2.6.0</kafka-clients.version>
     <kafka.image.name>confluentinc/cp-kafka:6.1.1</kafka.image.name>
-    <log4j.version>2.12.1</log4j.version>
     <logback.version>1.2.3</logback.version>
     <mchange-commons.version>0.2.15</mchange-commons.version>
     <micrometer.version>1.6.7</micrometer.version>
