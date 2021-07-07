@@ -51,6 +51,8 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.opentracing.SpanContext;
 import io.opentracing.noop.NoopSpan;
@@ -68,6 +70,8 @@ import io.vertx.junit5.VertxTestContext;
 abstract class CredentialsApiTests extends DeviceRegistryTestBase {
 
     protected static final Vertx VERTX = Vertx.vertx();
+
+    private static final Logger LOG = LoggerFactory.getLogger(CredentialsApiTests.class);
 
     /**
      * The (random) tenant ID to use for the tests.
@@ -297,6 +301,10 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
                     // WHEN getting credentials
                     .get(tenantId, CredentialsConstants.SECRETS_TYPE_X509_CERT, authId, clientCtx, spanContext))
             .compose(result -> {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("received get Credentials result from Credentials service:{}{}",
+                            System.lineSeparator(), JsonObject.mapFrom(result).encodePrettily());
+                }
                 // VERIFY the newly created credentials
                 ctx.verify(() -> {
                     assertThat(result).isNotNull();
@@ -317,8 +325,13 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
             })
             .onComplete(ctx.succeeding(result -> {
                 ctx.verify(() -> {
+                    final JsonObject resultBody = result.bodyAsJsonObject();
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("received get Device result from Registry Management API:{}{}",
+                                System.lineSeparator(), resultBody.encodePrettily());
+                    }
                     // VERIFY that the device/gateway has been registered as well
-                    final Device device = result.bodyAsJson(Device.class);
+                    final Device device = resultBody.mapTo(Device.class);
                     assertThat(device.isEnabled()).isTrue();
                     if (isGateway) {
                         // VERIFY that the gateway related attributes are set
@@ -326,7 +339,7 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
                                 .contains(RegistryManagementConstants.AUTHORITY_AUTO_PROVISIONING_ENABLED);
                     }
                     // VERIFY that the property "auto-provisioning-notification-sent" is updated to true.
-                    final DeviceStatus deviceStatus = result.bodyAsJsonObject()
+                    final DeviceStatus deviceStatus = resultBody
                             .getJsonObject(RegistryManagementConstants.FIELD_STATUS)
                             .mapTo(DeviceStatus.class);
                     assertThat(deviceStatus.isAutoProvisioned())

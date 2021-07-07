@@ -428,6 +428,9 @@ public interface AbstractRegistrationServiceTest {
                     assertThat(s.getPayload().getVia()).contains("a", "b", "c");
                     assertThat(s.getPayload().getViaGroups()).contains("group1", "group2");
                     assertThat(s.getPayload().getDownstreamMessageMapper()).isEqualTo("mapper");
+                    assertThat(s.getPayload().getStatus()).isNotNull();
+                    assertThat(s.getPayload().getStatus().getCreationTime()).isNotNull();
+                    assertThat(s.getPayload().getStatus().getLastUpdate()).isNull();
                 });
                 ctx.completeNow();
             }));
@@ -713,7 +716,7 @@ public interface AbstractRegistrationServiceTest {
                     return createResponse;
                 })
                 .compose( r -> getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE))
-                .map(readResponse -> {
+                .compose(readResponse -> {
                     final Device device = readResponse.getPayload();
                     creationTime.set(device.getStatus().getCreationTime());
                     ctx.verify(() -> {
@@ -721,22 +724,21 @@ public interface AbstractRegistrationServiceTest {
                         assertThat(device.getStatus().isAutoProvisioningNotificationSent()).isFalse();
                         register.flag();
                     });
-                    return readResponse;
+                    return getDeviceManagementService().updateDevice(
+                            TENANT,
+                            deviceId,
+                            new Device(),
+                            Optional.of(resourceVersion.get()),
+                            NoopSpan.INSTANCE);
                 })
-                .compose(rr -> getDeviceManagementService().updateDevice(
-                    TENANT,
-                    deviceId,
-                    new Device(),
-                    Optional.empty(),
-                    NoopSpan.INSTANCE)
-                )
-                .compose( r -> getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE))
+                .compose(r -> getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE))
                 .onComplete(ctx.succeeding(readResponse -> {
                     ctx.verify(() -> {
+                        assertThat(readResponse.getResourceVersion()).isNotEqualTo(resourceVersion.get());
                         final Device actualDevice = readResponse.getPayload();
                         assertThat(actualDevice.getStatus().getCreationTime()).isEqualTo(creationTime.get());
                         assertThat(actualDevice.getStatus().getLastUpdate()).isNotNull();
-                        assertThat(actualDevice.getStatus().getCreationTime()).isNotEqualTo(actualDevice.getStatus().getLastUpdate());
+                        assertThat(actualDevice.getStatus().getLastUpdate()).isAfterOrEqualTo(actualDevice.getStatus().getCreationTime());
                         assertThat(actualDevice.getStatus().isAutoProvisioned()).isFalse();
                         assertThat(actualDevice.getStatus().isAutoProvisioningNotificationSent()).isFalse();
                         register.flag();

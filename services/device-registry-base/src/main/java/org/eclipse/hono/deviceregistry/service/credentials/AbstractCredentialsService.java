@@ -28,7 +28,6 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.Lifecycle;
-import org.eclipse.hono.util.RegistryManagementConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -168,13 +167,14 @@ public abstract class AbstractCredentialsService implements CredentialsService, 
                                             span);
                                 } else {
                                     final String deviceId = credentialsResult.getPayload()
-                                            .getString(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID);
+                                            .getString(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID);
                                     return deviceAndGatewayAutoProvisioner
                                             .sendAutoProvisioningEventIfNeeded(tenantId, tenant, deviceId, span)
                                             .map(ok -> credentialsResult);
                                 }
+                            } else {
+                                return Future.succeededFuture(credentialsResult);
                             }
-                            return Future.succeededFuture(credentialsResult);
                         });
                 })
                 .recover(this::convertToCredentialsResult);

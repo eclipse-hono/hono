@@ -139,7 +139,7 @@ public final class DeviceAndGatewayAutoProvisioner extends AbstractAutoProvision
                                     authId,
                                     isProvisionAsGatewayEnabledForTenant(tenantId, tenant, cert, span),
                                     span)
-                                    .recover(DeviceAndGatewayAutoProvisioner::getCredentialsResult);
+                                .recover(DeviceAndGatewayAutoProvisioner::getCredentialsResult);
                         })
                         // if the auto-provisioning is not enabled or
                         // no client certificate is set in the client context
@@ -148,13 +148,12 @@ public final class DeviceAndGatewayAutoProvisioner extends AbstractAutoProvision
     }
 
     /**
-     * Sends an auto-provisioning event, if it is not sent already.
+     * Sends an auto-provisioning notification for a device if it has not been sent already.
      * <p>
-     * The device registration's property {@value RegistryManagementConstants#FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT}
-     * indicates if an event is already sent or not. If it is {@code false}, an auto-provisioning event will be sent. 
-     * <p>
-     * After successfully sending an event, the device registration's property
-     * {@value RegistryManagementConstants#FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT} is updated to {@code true}.
+     * The device registration's {@value RegistryManagementConstants#FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT}
+     * property indicates if an event has already been sent or not. If this is not the case, an attempt is made
+     * to send a corresponding auto-provisioning notification for the device. If successful the device registration's
+     * {@value RegistryManagementConstants#FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT} property is set to {@code true}.
      *
      * @param tenantId The tenant identifier.
      * @param tenant The tenant information.
@@ -168,31 +167,45 @@ public final class DeviceAndGatewayAutoProvisioner extends AbstractAutoProvision
      *         {@value RegistryManagementConstants#FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT} has been updated or not.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public Future<Void> sendAutoProvisioningEventIfNeeded(final String tenantId, final Tenant tenant,
-            final String deviceId, final Span span) {
+    public Future<Void> sendAutoProvisioningEventIfNeeded(
+            final String tenantId,
+            final Tenant tenant,
+            final String deviceId,
+            final Span span) {
+
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(tenant);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(span);
 
         return deviceManagementService.readDevice(tenantId, deviceId, span)
-                .compose(deviceResult -> {
+                .map(deviceResult -> {
                     if (deviceResult.isOk()) {
-                        final Device device = deviceResult.getPayload();
-                        return Optional.ofNullable(device.getStatus())
-                                .filter(DeviceStatus::isAutoProvisioned)
-                                .filter(status -> !status.isAutoProvisioningNotificationSent())
-                                .map(ok -> sendAutoProvisioningEvent(tenantId, tenant, deviceId, null, span)
-                                        .compose(sent -> updateAutoProvisioningNotificationSent(tenantId, deviceId,
-                                                device, deviceResult.getResourceVersion(), span)
-                                                // auto-provisioning still succeeds even if the device
-                                                // registration cannot be updated with the notification flag
-                                                .recover(error -> Future.succeededFuture())))
-                                .orElseGet(Future::succeededFuture);
+                        return deviceResult;
                     } else {
-                        return Future.failedFuture(ServiceInvocationException.create(deviceResult.getStatus(),
-                                "error retrieving device registration information"));
+                        throw ServiceInvocationException.create(
+                                tenantId,
+                                deviceResult.getStatus(),
+                                "error retrieving device registration information",
+                                null);
                     }
+                })
+                .compose(deviceResult -> {
+                    final Device device = deviceResult.getPayload();
+                    return Optional.ofNullable(device.getStatus())
+                            .filter(DeviceStatus::isAutoProvisioned)
+                            .filter(status -> !status.isAutoProvisioningNotificationSent())
+                            .map(ok -> sendAutoProvisioningEvent(tenantId, tenant, deviceId, null, span)
+                                    .compose(sent -> updateAutoProvisioningNotificationSent(
+                                            tenantId,
+                                            deviceId,
+                                            device,
+                                            deviceResult.getResourceVersion(),
+                                            span)
+                                        // auto-provisioning still succeeds even if the device
+                                        // registration cannot be updated with the notification flag
+                                        .recover(error -> Future.succeededFuture())))
+                            .orElseGet(Future::succeededFuture);
                 });
     }
 
@@ -248,8 +261,8 @@ public final class DeviceAndGatewayAutoProvisioner extends AbstractAutoProvision
                                                     ServiceInvocationException.extractStatusCode(error),
                                                     "auto-provisioning failed: credentials could not be set and also the device could not be deleted")));
                                 } else {
-                                    span.log("auto-provisioning successful and sending auto-provisioning event");
-                                    LOG.trace("auto-provisioning successful and sending auto-provisioning event [tenant-id: {}, device-id: {}, auth-id: {}]",
+                                    span.log("auto-provisioning of device has succeeded");
+                                    LOG.trace("auto-provisioning of device [tenant-id: {}, device-id: {}, auth-id: {}] has succeeded",
                                             tenantId, deviceId, authId);
                                     return sendAutoProvisioningEventIfNeeded(tenantId, tenant, deviceId, span)
                                             .map(ok -> getCredentialsResult(deviceId, certCredential));

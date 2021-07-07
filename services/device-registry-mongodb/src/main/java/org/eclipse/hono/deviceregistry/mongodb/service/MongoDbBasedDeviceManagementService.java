@@ -25,7 +25,6 @@ import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedDeviceDto;
 import org.eclipse.hono.deviceregistry.service.device.AbstractDeviceManagementService;
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
-import org.eclipse.hono.deviceregistry.util.Versioned;
 import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
@@ -179,7 +178,7 @@ public final class MongoDbBasedDeviceManagementService extends AbstractDeviceMan
                 key.getTenantId(),
                 key.getDeviceId(),
                 device,
-                new Versioned<>(device).getVersion());
+                DeviceRegistryUtils.getUniqueIdentifier());
 
         return deviceDao.update(deviceDto, resourceVersion, span.context())
                 .map(newResourceVersion -> OperationResult.ok(

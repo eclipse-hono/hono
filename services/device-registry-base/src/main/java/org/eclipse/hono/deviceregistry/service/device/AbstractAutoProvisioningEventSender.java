@@ -19,6 +19,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
@@ -40,6 +41,7 @@ import io.opentracing.Span;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 
 /**
  * Abstract helper class for sending auto-provisioning event.
@@ -134,9 +136,6 @@ public abstract class AbstractAutoProvisioningEventSender implements Lifecycle {
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(span);
 
-        LOG.debug("sending auto-provisioning event [tenant-id: {}, device-id: {}, gateway-id: {}]", tenant, deviceId,
-                gatewayId);
-
         // TODO to remove once able to send events without providing an argument of type TenantObject
         final TenantObject tenantConfig = DeviceRegistryUtils.convertTenant(tenantId, tenant)
                 .mapTo(TenantObject.class);
@@ -147,14 +146,17 @@ public abstract class AbstractAutoProvisioningEventSender implements Lifecycle {
                         EventConstants.CONTENT_TYPE_DEVICE_PROVISIONING_NOTIFICATION, null,
                         assembleAutoProvisioningEventProperties(tenantId, gatewayId), span.context())
                 .onSuccess(ok -> {
-                    span.log("sent auto-provisioning event successfully");
+                    span.log("sent auto-provisioning notification");
                     LOG.debug(
-                            "sent auto-provisioning event successfully [tenant-id: {}, device-id: {}, gateway-id: {}]",
+                            "sent auto-provisioning notification [tenant-id: {}, device-id: {}, gateway-id: {}]",
                             tenantId, deviceId, gatewayId);
                 })
-                .onFailure(t -> LOG.warn(
-                        "error sending auto-provisioning event [tenant-id: {}, device-id: {}, gateway-id: {}]",
-                        tenantId, deviceId, gatewayId));
+                .onFailure(t -> {
+                    TracingHelper.logError(span, "error sending auto-provisioning notification", t);
+                    LOG.warn(
+                            "error sending auto-provisioning notification [tenant-id: {}, device-id: {}, gateway-id: {}]",
+                            tenantId, deviceId, gatewayId);
+                });
     }
 
     /**
@@ -169,8 +171,12 @@ public abstract class AbstractAutoProvisioningEventSender implements Lifecycle {
      * @return A future indicating the outcome of the operation.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    protected Future<Void> updateAutoProvisioningNotificationSent(final String tenantId,
-            final String deviceId, final Device device, final Optional<String> deviceVersion, final Span span) {
+    protected Future<Void> updateAutoProvisioningNotificationSent(
+            final String tenantId,
+            final String deviceId,
+            final Device device,
+            final Optional<String> deviceVersion,
+            final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
@@ -180,23 +186,44 @@ public abstract class AbstractAutoProvisioningEventSender implements Lifecycle {
 
         Optional.ofNullable(device.getStatus())
                 .ifPresentOrElse(
-                        status -> status.setAutoProvisioningNotificationSent(true),
-                        () -> device.setStatus(new DeviceStatus().setAutoProvisioningNotificationSent(true)));
+                        status -> {
+                            if (LOG.isTraceEnabled()) {
+                                LOG.trace("updating existing device status:{}{}",
+                                        System.lineSeparator(), JsonObject.mapFrom(status).encodePrettily());
+                            }
+                            status.setAutoProvisioningNotificationSent(true);
+                        },
+                        () -> {
+                            final var newStatus = new DeviceStatus().setAutoProvisioningNotificationSent(true);
+                            if (LOG.isTraceEnabled()) {
+                                LOG.trace("setting new device status:{}{}",
+                                        System.lineSeparator(), JsonObject.mapFrom(newStatus).encodePrettily());
+                            }
+                            device.setStatus(newStatus);
+                        });
 
         return deviceManagementService.updateDevice(tenantId, deviceId, device, deviceVersion, span)
                 .compose(result -> {
                     if (HttpURLConnection.HTTP_NO_CONTENT == result.getStatus()) {
+                        span.log("successfully marked device's auto-provisioning notification as having been sent");
+                        LOG.debug("successfully marked device's auto-provisioning notification as having been sent "
+                                + "[tenant-id: {}, device-id: {}, device-version: {}]",
+                                tenantId, deviceId, deviceVersion.orElse(null));
                         return Future.succeededFuture();
                     } else {
-                        final String errorMessage = String.format(
-                                "error updating device with 'AutoProvisioningNotificationSent=true' [status: %s, tenant-id: %s, device-id: %s, device-version: %s]",
-                                result.getStatus(), tenantId, deviceId, deviceVersion.orElse(""));
-                        LOG.warn(errorMessage);
+                        LOG.warn("failed to mark device's auto-provisioning notification as having been sent "
+                                + "[tenant-id: {}, device-id: {}, device-version: {}, status: {}]",
+                                tenantId, deviceId, deviceVersion.orElse(null), result.getStatus());
                         Tags.HTTP_STATUS.set(span, result.getStatus());
                         deviceVersion.ifPresent(version -> span.setTag("device-registration-version", version));
-                        TracingHelper.logError(span,
-                                "error updating device with 'AutoProvisioningNotificationSent=true'");
-                        return Future.failedFuture(errorMessage);
+                        TracingHelper.logError(
+                                span,
+                                "failed to mark device's auto-provisioning notification as having been sent");
+                        return Future.failedFuture(ServiceInvocationException.create(
+                                tenantId,
+                                result.getStatus(),
+                                "failed to mark device's auto-provisioning notification as having been sent",
+                                null));
                     }
                 });
     }
