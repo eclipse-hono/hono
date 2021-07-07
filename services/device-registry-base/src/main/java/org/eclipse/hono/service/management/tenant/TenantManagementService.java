@@ -113,7 +113,8 @@ public interface TenantManagementService {
      *
      * @param tenantId The identifier of the tenant.
      * @param tenantObj The updated configuration information for the tenant (may be {@code null}).
-     * @param resourceVersion The identifier of the resource version to update.
+     * @param resourceVersion The resource version that the tenant instance is required to have.
+     *                        If empty, the resource version of the tenant instance on record will be ignored.
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
      *             An implementation should log (error) events on this span and it may set tags and use this span as the
      *             parent for any spans created in this method.
@@ -132,7 +133,8 @@ public interface TenantManagementService {
      * Removes a tenant.
      *
      * @param tenantId The identifier of the tenant.
-     * @param resourceVersion The identifier of the resource version to delete.
+     * @param resourceVersion The resource version that the tenant instance is required to have.
+     *                        If empty, the resource version of the tenant instance on record will be ignored.
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
      *              An implementation should log (error) events on this span and it may set tags and use this span as the
      *              parent for any spans created in this method.

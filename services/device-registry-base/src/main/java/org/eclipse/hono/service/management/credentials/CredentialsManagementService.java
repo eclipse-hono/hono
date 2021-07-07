@@ -29,13 +29,14 @@ import io.vertx.core.Future;
 public interface CredentialsManagementService {
 
     /**
-     * Updates or create the set of credentials.
+     * Updates or creates a set of credentials.
      *
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The device to get credentials for.
      * @param credentials A list of credentials.
      *                  See <a href="https://www.eclipse.org/hono/docs/api/credentials/#credentials-format">Credentials Format</a> for details.
-     * @param resourceVersion The identifier of the resource version to update.
+     * @param resourceVersion The resource version that the credentials are required to have.
+     *                        If empty, the resource version of the credentials on record will be ignored.
      * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
      *          An implementation should log (error) events on this span and it may set tags and use this span as the
      *          parent for any spans created in this method.

@@ -75,7 +75,8 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
      *
      * @param key The device key object.
      * @param device The device value object.
-     * @param resourceVersion The identifier of the resource version to update.
+     * @param resourceVersion The resource version that the device instance is required to have.
+     *                        If empty, the resource version of the device instance on record will be ignored.
      * @param span The active OpenTracing span for this operation.
      * @return A future indicating the outcome of the operation.
      */
@@ -89,7 +90,8 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
      * Delete a device with a specified key.
      *
      * @param key The device key object.
-     * @param resourceVersion The identifier of the resource version to update.
+     * @param resourceVersion The resource version that the device instance is required to have.
+     *                        If empty, the resource version of the device instance on record will be ignored.
      * @param span The active OpenTracing span for this operation.
      * @return A future indicating the outcome of the operation.
      */

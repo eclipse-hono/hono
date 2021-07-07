@@ -343,7 +343,7 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                 .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
                 .withTag(TracingHelper.TAG_DEVICE_ID, deviceId)
                 .start();
-        resourceVersion.ifPresent(v -> span.setTag("resource_version", v));
+        resourceVersion.ifPresent(v -> TracingHelper.TAG_RESOURCE_VERSION.set(span, v));
 
         final JsonObject replaceCredentialsQuery = MongoDbDocumentBuilder.builder()
                 .withVersion(resourceVersion)
@@ -421,7 +421,7 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                 .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
                 .withTag(TracingHelper.TAG_DEVICE_ID, deviceId)
                 .start();
-        resourceVersion.ifPresent(v -> span.setTag("resource_version", v));
+        resourceVersion.ifPresent(v -> TracingHelper.TAG_RESOURCE_VERSION.set(span, v));
 
         final JsonObject removeCredentialsQuery = MongoDbDocumentBuilder.builder()
                 .withVersion(resourceVersion)

@@ -66,7 +66,7 @@ public class DeviceDto extends BaseDto<Device> {
      * @param <T> The concrete type of DTO being created.
      *
      * @return The DTO.
-     * @throws NullPointerException if any of the parameters other than auto provisioned are {@code null}.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public static <T extends DeviceDto> T forCreation(
             final Supplier<T> supplier,
@@ -140,13 +140,12 @@ public class DeviceDto extends BaseDto<Device> {
      * @param tenantId The identifier of the tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @param device The device configuration to write to the store.
-     * @param version The resource version of the object in the store to be updated or {@code null} if the
-     *                device's data should be updated regardless of the resource version.
+     * @param version The new resource version to use for the object in the store.
      *
      * @param <T> The type of the DTO subclass.
      *
      * @return A DTO instance for updating an entry.
-     * @throws NullPointerException if supplier, tenant ID, device ID or device are {@code null}.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public static <T extends DeviceDto> T forUpdate(
             final Supplier<T> supplier,
@@ -159,6 +158,7 @@ public class DeviceDto extends BaseDto<Device> {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(device);
+        Objects.requireNonNull(version);
 
         final T deviceDto = BaseDto.forUpdate(supplier, device.withoutStatus(), version);
         deviceDto.setTenantId(tenantId);
@@ -166,7 +166,8 @@ public class DeviceDto extends BaseDto<Device> {
         final Boolean notificationSent = Optional.ofNullable(device.getStatus())
                 .map(DeviceStatus::isAutoProvisioningNotificationSent)
                 .orElse(false);
-        deviceDto.setDeviceStatus(new DeviceStatus().setAutoProvisioningNotificationSent(notificationSent));
+        deviceDto.setDeviceStatus(new DeviceStatus()
+                .setAutoProvisioningNotificationSent(notificationSent));
 
         return deviceDto;
     }

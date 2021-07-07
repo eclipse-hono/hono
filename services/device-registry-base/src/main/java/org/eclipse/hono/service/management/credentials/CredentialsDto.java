@@ -63,8 +63,7 @@ public final class CredentialsDto extends BaseDto<List<CommonCredential>> {
      * @param tenantId The identifier of the tenant that the device belongs to.
      * @param deviceId The identifier of the device that the credentials belong to.
      * @param credentials The list of credentials to store.
-     * @param version The credentials' resource version or {@code null} if the resource version should be created
-     *                automatically.
+     * @param version The credentials' (initial) resource version.
      *
      * @return The DTO.
      *
@@ -79,6 +78,8 @@ public final class CredentialsDto extends BaseDto<List<CommonCredential>> {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(credentials);
+        Objects.requireNonNull(version);
 
         final CredentialsDto credentialsDto = BaseDto.forCreation(CredentialsDto::new, credentials, version);
         credentialsDto.setTenantId(tenantId);
@@ -132,10 +133,10 @@ public final class CredentialsDto extends BaseDto<List<CommonCredential>> {
      * @param tenantId The identifier of the tenant that the device belongs to.
      * @param deviceId The identifier of the device that the credentials belong to.
      * @param credentials The list of credentials to store.
-     * @param version The resource version of the object in the store to be updated.
+     * @param version The new resource version to use for the object in the store.
      *
      * @return The DTO.
-     * @throws NullPointerException if tenant ID, device ID or credentials are {@code null}.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      * @throws ClientErrorException if any of the credentials checks fail.
      */
     public static CredentialsDto forUpdate(
@@ -146,6 +147,8 @@ public final class CredentialsDto extends BaseDto<List<CommonCredential>> {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(credentials);
+        Objects.requireNonNull(version);
 
         final CredentialsDto credentialsDto = BaseDto.forUpdate(CredentialsDto::new, credentials, version);
         credentialsDto.setTenantId(tenantId);

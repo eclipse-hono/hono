@@ -375,6 +375,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                 .withTag(TracingHelper.TAG_TENANT_ID, deviceConfig.getTenantId())
                 .withTag(TracingHelper.TAG_DEVICE_ID, deviceConfig.getDeviceId())
                 .start();
+        resourceVersion.ifPresent(v -> TracingHelper.TAG_RESOURCE_VERSION.set(span, v));
 
         final JsonObject updateDeviceQuery = MongoDbDocumentBuilder.builder()
                 .withVersion(resourceVersion)
@@ -428,6 +429,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                 .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
                 .withTag(TracingHelper.TAG_DEVICE_ID, deviceId)
                 .start();
+        resourceVersion.ifPresent(v -> TracingHelper.TAG_RESOURCE_VERSION.set(span, v));
 
         final JsonObject deleteDeviceQuery = MongoDbDocumentBuilder.builder()
                 .withVersion(resourceVersion)

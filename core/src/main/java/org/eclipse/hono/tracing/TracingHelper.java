@@ -108,6 +108,10 @@ public final class TracingHelper {
      */
     public static final StringTag TAG_REMOTE_STATE = new StringTag("message_bus.remote_state");
     /**
+     * An OpenTracing tag that contains the version of a resource, for example a record in a database.
+     */
+    public static final StringTag TAG_RESOURCE_VERSION = new StringTag("resource_version");
+    /**
      * An OpenTracing tag that contains an X.500 Subject DN.
      */
     public static final StringTag TAG_SUBJECT_DN = new StringTag("subject_dn");

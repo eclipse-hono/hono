@@ -585,7 +585,7 @@ public class TableManagementStore extends AbstractDeviceStore {
                                             key.getTenantId(),
                                             key.getDeviceId(),
                                             credentials,
-                                            null);
+                                            nextVersion);
 
                                     if (updatedCredentialsDto.requiresMerging()) {
                                         getCredentialsDto(key, connection, span)

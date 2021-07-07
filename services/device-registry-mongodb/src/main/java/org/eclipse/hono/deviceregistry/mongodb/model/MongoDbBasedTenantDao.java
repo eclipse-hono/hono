@@ -304,7 +304,7 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                 .addReference(References.CHILD_OF, tracingContext)
                 .withTag(TracingHelper.TAG_TENANT_ID, tenantConfig.getTenantId())
                 .start();
-        resourceVersion.ifPresent(v -> span.setTag("resource_version", v));
+        resourceVersion.ifPresent(v -> TracingHelper.TAG_RESOURCE_VERSION.set(span, v));
 
         final JsonObject updateTenantQuery = MongoDbDocumentBuilder.builder()
                 .withVersion(resourceVersion)
@@ -365,7 +365,7 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                 .addReference(References.CHILD_OF, tracingContext)
                 .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
                 .start();
-        resourceVersion.ifPresent(v -> span.setTag("resource_version", v));
+        resourceVersion.ifPresent(v -> TracingHelper.TAG_RESOURCE_VERSION.set(span, v));
 
         final JsonObject deleteTenantQuery = MongoDbDocumentBuilder.builder()
                 .withVersion(resourceVersion)

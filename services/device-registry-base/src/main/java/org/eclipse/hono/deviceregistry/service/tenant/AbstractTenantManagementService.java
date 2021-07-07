@@ -51,9 +51,10 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
      *
      * @param tenantId The ID of the tenant to create.
      * @param tenantObj The tenant information.
-     * @param resourceVersion The identifier of the resource version to update.
+     * @param resourceVersion The resource version that the tenant instance is required to have.
+     *                        If empty, the resource version of the tenant instance on record will be ignored.
      * @param span The span to contribute to.
-     * @return A future, tracking the outcome of the operation.
+     * @return A future indicating the outcome of the operation.
      */
     protected abstract Future<OperationResult<Void>> processUpdateTenant(
             String tenantId,

@@ -108,19 +108,19 @@ public abstract class BaseDto<T> {
      *
      * @param supplier The supplier to use for creating the concrete DTO instance.
      * @param data The object instance to update.
-     * @param version The resource version of the object in the store to be updated or {@code null} if the
-     *                data should be updated regardless of the resource version.
+     * @param version The new resource version to use for the object in the store.
      *
      * @param <P> The type of object to update.
      * @param <T> The concrete type of DTO being created.
      *
      * @return The DTO.
-     * @throws NullPointerException if supplier or data are {@code null}.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public static <P, T extends BaseDto<P>> T forUpdate(final Supplier<T> supplier, final P data, final String version) {
 
         Objects.requireNonNull(supplier);
         Objects.requireNonNull(data);
+        Objects.requireNonNull(version);
 
         final T dto = supplier.get();
         dto.setUpdatedOn(Instant.now());

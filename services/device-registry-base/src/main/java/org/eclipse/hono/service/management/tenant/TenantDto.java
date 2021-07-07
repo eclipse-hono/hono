@@ -95,16 +95,17 @@ public final class TenantDto extends BaseDto<Tenant> {
      *
      * @param tenantId The identifier of the tenant.
      * @param tenant The tenant configuration to write to the store.
-     * @param version The resource version of the object in the store to be updated or {@code null} if the
-     *                tenant's data should be updated regardless of the resource version.
+     * @param version The new resource version to use for the object in the store or {@code null} if
+     *                the new resource version should be created automatically.
      *
      * @return The DTO.
-     * @throws NullPointerException if tenant ID or tenant are {@code null}.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public static TenantDto forUpdate(final String tenantId, final Tenant tenant, final String version) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(tenant);
+        Objects.requireNonNull(version);
 
         final TenantDto tenantDto = BaseDto.forUpdate(TenantDto::new, tenant, version);
         tenantDto.setTenantId(tenantId);

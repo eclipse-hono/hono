@@ -92,7 +92,8 @@ public abstract class AbstractCredentialsManagementService implements Credential
      * Updates credentials with a specified device key and value objects.
      *
      * @param key The device key object.
-     * @param resourceVersion The identifier of the resource version to update.
+     * @param resourceVersion The resource version that the credentials are required to have.
+     *                        If empty, the resource version of the credentials on record will be ignored.
      * @param credentials The credentials value object.
      * @param span The active OpenTracing span for this operation.
      * @return A future indicating the outcome of the operation.
