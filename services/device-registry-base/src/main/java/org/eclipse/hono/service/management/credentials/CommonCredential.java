@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,6 +20,7 @@ import java.util.Optional;
 import java.util.function.Predicate;
 
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
+import org.eclipse.hono.deviceregistry.util.FieldLevelEncryption;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -199,6 +200,32 @@ public abstract class CommonCredential {
      * @return This credentials object with all non-public information removed.
      */
     public CommonCredential stripPrivateInfo() {
+        return this;
+    }
+
+    /**
+     * Encrypts fields of these credentials if applicable.
+     * <p>
+     * This default implementation does nothing.
+     *
+     * @param cryptHelper The helper to use for encrypting field values or {@code null} if encryption is
+     *                    not supported.
+     * @return This credentials object.
+     */
+    public CommonCredential encryptFields(final FieldLevelEncryption cryptHelper) {
+        return this;
+    }
+
+    /**
+     * Decrypts fields of these credentials if applicable.
+     * <p>
+     * This default implementation does nothing.
+     *
+     * @param cryptHelper The helper to use for decrypting field values or {@code null} if encryption is
+     *                    not supported.
+     * @return This credentials object.
+     */
+    public CommonCredential decryptFields(final FieldLevelEncryption cryptHelper) {
         return this;
     }
 

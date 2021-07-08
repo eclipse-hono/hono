@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,7 +16,9 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
+import org.eclipse.hono.deviceregistry.util.FieldLevelEncryption;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -99,6 +101,32 @@ public class PskCredential extends CommonCredential {
     @Override
     public final PskCredential stripPrivateInfo() {
         getSecrets().forEach(PskSecret::stripPrivateInfo);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Encrypts the shared key of all secrets.
+     */
+    @Override
+    public CommonCredential encryptFields(final FieldLevelEncryption cryptHelper) {
+        Optional.ofNullable(cryptHelper).ifPresent(helper -> {
+            getSecrets().forEach(secret -> secret.encryptFields(helper));
+        });
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Decrypts the shared key of all secrets.
+     */
+    @Override
+    public CommonCredential decryptFields(final FieldLevelEncryption cryptHelper) {
+        Optional.ofNullable(cryptHelper).ifPresent(helper -> {
+            getSecrets().forEach(secret -> secret.decryptFields(helper));
+        });
         return this;
     }
 }

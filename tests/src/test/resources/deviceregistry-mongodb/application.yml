@@ -35,6 +35,7 @@ hono:
     svc:
   credentials:
     svc:
+      encryptionKeyFile: /etc/hono/encryptionKeys.yml
       maxBcryptCostFactor: ${max.bcrypt.costFactor}
   tenant:
     svc:

@@ -71,7 +71,8 @@ public final class MongoDbTestUtils {
 
         return new MongoDbBasedTenantDao(
                 getMongoClient(vertx, dbName),
-                "tenants");
+                "tenants",
+                null);
     }
 
     /**
@@ -86,7 +87,8 @@ public final class MongoDbTestUtils {
 
         return new MongoDbBasedDeviceDao(
                 getMongoClient(vertx, dbName),
-                "devices");
+                "devices",
+                null);
     }
 
     /**
@@ -101,6 +103,8 @@ public final class MongoDbTestUtils {
 
         return new MongoDbBasedCredentialsDao(
                 getMongoClient(vertx, dbName),
-                "credentials");
+                "credentials",
+                null,
+                null);
     }
 }

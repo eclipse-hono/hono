@@ -24,6 +24,7 @@ import javax.annotation.PreDestroy;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.deviceregistry.util.FieldLevelEncryption;
 import org.eclipse.hono.service.management.BaseDto;
 import org.eclipse.hono.service.management.SearchResult;
 import org.eclipse.hono.util.RegistryManagementConstants;
@@ -67,6 +68,10 @@ public abstract class MongoDbBasedDao {
      * The name of the Mongo DB collection that the entity is mapped to.
      */
     protected final String collectionName;
+    /**
+     * The helper to use for encrypting/decrypting property values.
+     */
+    protected final FieldLevelEncryption fieldLevelEncryption;
 
     /**
      * Creates a new DAO.
@@ -74,12 +79,15 @@ public abstract class MongoDbBasedDao {
      * @param mongoClient The client to use for accessing the Mongo DB.
      * @param collectionName The name of the collection that contains the data.
      * @param tracer The tracer to use for tracking the processing of requests.
-     * @throws NullPointerException if any of the parameters other than tracer are {@code null}.
+     * @param fieldLevelEncryption The helper to use for encrypting/decrypting property values or {@code null} if
+     *                             encryption of fields is not supported.
+     * @throws NullPointerException if any of the parameters other than tracer or field level encryption are {@code null}.
      */
     protected MongoDbBasedDao(
             final MongoClient mongoClient,
             final String collectionName,
-            final Tracer tracer) {
+            final Tracer tracer,
+            final FieldLevelEncryption fieldLevelEncryption) {
 
         Objects.requireNonNull(mongoClient);
         Objects.requireNonNull(collectionName);
@@ -87,6 +95,7 @@ public abstract class MongoDbBasedDao {
         this.mongoClient = mongoClient;
         this.collectionName = collectionName;
         this.tracer = Optional.ofNullable(tracer).orElse(NoopTracerFactory.create());
+        this.fieldLevelEncryption = fieldLevelEncryption;
     }
 
     /**

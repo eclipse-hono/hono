@@ -64,6 +64,11 @@
       <artifactId>spring-beans</artifactId>
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>com.bol</groupId>
+      <artifactId>cryptvault</artifactId>
+      <optional>true</optional>
+    </dependency>
 
     <!-- testing -->
     <dependency>
