@@ -30,5 +30,7 @@
   <logger name="org.eclipse.hono" level="INFO"/>
   <logger name="org.eclipse.hono.deviceregistry.jdbc" level="INFO"/>
   <logger name="org.eclipse.hono.service.base.jdbc" level="INFO"/>
+  <logger name="org.eclipse.hono.service.base.jdbc.store.device" level="INFO"/>
+  <logger name="org.eclipse.hono.service.base.jdbc.store.model" level="INFO"/>
 
 </configuration>

@@ -250,14 +250,33 @@ public final class CredentialsDto extends BaseDto<List<CommonCredential>> {
      * @param otherCredentialsDto The DTO to be merged into this one.
      * @return A reference to this for fluent use.
      * @throws NullPointerException if the given credentials DTO is {@code null}.
-     * @throws IllegalArgumentException if the given credentials DTO does not contain any credentials
+     * @throws IllegalArgumentException if the given credentials DTO does not contain any credentials.
      */
     @JsonIgnore
     public CredentialsDto merge(final CredentialsDto otherCredentialsDto) {
+
         Objects.requireNonNull(otherCredentialsDto);
 
         final var credentialsToMerge = otherCredentialsDto.getCredentials();
-        if (credentialsToMerge == null || credentialsToMerge.isEmpty()) {
+        if (credentialsToMerge == null) {
+            throw new IllegalArgumentException("no credentials on record for device");
+        }
+        return merge(credentialsToMerge);
+    }
+
+    /**
+     * Merges the secrets of the given credentials with those of this DTO.
+     *
+     * @param credentialsToMerge The credentials to be merged into this DTO.
+     * @return A reference to this for fluent use.
+     * @throws NullPointerException if credentials are {@code null}.
+     * @throws IllegalArgumentException if credentials is empty.
+     */
+    @JsonIgnore
+    public CredentialsDto merge(final List<CommonCredential> credentialsToMerge) {
+        Objects.requireNonNull(credentialsToMerge);
+
+        if (credentialsToMerge.isEmpty()) {
             throw new IllegalArgumentException("no credentials on record for device");
         } else {
             this.getData().forEach(credential -> findCredentialByIdAndType(
@@ -266,9 +285,8 @@ public final class CredentialsDto extends BaseDto<List<CommonCredential>> {
                     credentialsToMerge).ifPresent(credential::merge));
 
             setUpdatedOn(Instant.now());
-            return this;
         }
-
+        return this;
     }
 
     @JsonIgnore

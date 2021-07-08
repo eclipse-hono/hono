@@ -338,37 +338,30 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
         resourceVersion.ifPresent(v -> TracingHelper.TAG_RESOURCE_VERSION.set(span, v));
         credentials.getCredentials().stream().forEach(cred -> cred.encryptFields(fieldLevelEncryption));
 
-        return getByDeviceId(credentials.getTenantId(), credentials.getDeviceId())
-                .compose(currentCredentials -> {
-                    final var dto = CredentialsDto.forUpdate(
-                            () -> currentCredentials,
-                            credentials.getData(),
-                            credentials.getVersion());
+        final JsonObject replaceCredentialsQuery = MongoDbDocumentBuilder.builder()
+                .withVersion(resourceVersion)
+                .withTenantId(credentials.getTenantId())
+                .withDeviceId(credentials.getDeviceId())
+                .document();
 
-                    final JsonObject replaceCredentialsQuery = MongoDbDocumentBuilder.builder()
-                            .withVersion(resourceVersion)
-                            .withTenantId(credentials.getTenantId())
-                            .withDeviceId(credentials.getDeviceId())
-                            .document();
+        final var document = JsonObject.mapFrom(credentials);
+        final Promise<JsonObject> replaceCredentialsPromise = Promise.promise();
 
-                    final var document = JsonObject.mapFrom(dto);
-                    final Promise<JsonObject> replaceCredentialsPromise = Promise.promise();
+        if (LOG.isTraceEnabled()) {
+            LOG.trace("updating credentials of device [tenant: {}, device-id: {}, resource-version; {}]:{}{}",
+                    credentials.getTenantId(), credentials.getDeviceId(), resourceVersion.orElse(null),
+                    System.lineSeparator(), document.encodePrettily());
+        }
 
-                    if (LOG.isTraceEnabled()) {
-                        LOG.trace("updating credentials of device [tenant: {}, device-id: {}, resource-version; {}]:{}{}",
-                                credentials.getTenantId(), credentials.getDeviceId(), resourceVersion.orElse(null),
-                                System.lineSeparator(), document.encodePrettily());
-                    }
+        mongoClient.findOneAndReplaceWithOptions(
+                collectionName,
+                replaceCredentialsQuery,
+                document,
+                new FindOptions(),
+                new UpdateOptions().setReturningNewDocument(true),
+                replaceCredentialsPromise);
 
-                    mongoClient.findOneAndReplaceWithOptions(
-                            collectionName,
-                            replaceCredentialsQuery,
-                            document,
-                            new FindOptions(),
-                            new UpdateOptions().setReturningNewDocument(true),
-                            replaceCredentialsPromise);
-                    return replaceCredentialsPromise.future();
-                })
+        return replaceCredentialsPromise.future()
                 .compose(result -> {
                     if (result == null) {
                         return MongoDbBasedDao.checkForVersionMismatchAndFail(

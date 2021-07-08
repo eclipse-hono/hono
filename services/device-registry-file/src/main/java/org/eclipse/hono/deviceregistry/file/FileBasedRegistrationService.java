@@ -41,7 +41,6 @@ import org.eclipse.hono.service.management.Sort;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceDto;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
-import org.eclipse.hono.service.management.device.DeviceStatus;
 import org.eclipse.hono.service.management.device.DeviceWithId;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -270,9 +269,9 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
                             .put(RegistryManagementConstants.FIELD_STATUS_LAST_UPDATE, deviceEntry.getValue().getUpdatedOn())
                             .put(RegistryManagementConstants.FIELD_STATUS_LAST_USER, deviceEntry.getValue().getLastUser())
                             .put(RegistryManagementConstants.FIELD_AUTO_PROVISIONED,
-                                    deviceEntry.getValue().getDeviceStatus().isAutoProvisioned())
+                                    deviceEntry.getValue().isAutoProvisioned())
                             .put(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT,
-                                    deviceEntry.getValue().getDeviceStatus().isAutoProvisioningNotificationSent())
+                                    deviceEntry.getValue().isAutoProvisioningNotificationSent())
                             .put(RegistrationConstants.FIELD_DATA, mapToStoredJson(deviceEntry.getValue().getData())));
                     idCount.incrementAndGet();
                 }
@@ -739,10 +738,8 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
                     tenantId,
                     deviceId,
                     device,
-                    new DeviceStatus()
-                        .setAutoProvisioned(entry.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED))
-                        .setAutoProvisioningNotificationSent(
-                                entry.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT)),
+                    entry.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED, Boolean.FALSE),
+                    entry.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT, Boolean.FALSE),
                     entry.getInstant(RegistryManagementConstants.FIELD_STATUS_CREATION_DATE),
                     entry.getInstant(RegistryManagementConstants.FIELD_STATUS_LAST_UPDATE),
                     new Versioned<>(device).getVersion());
@@ -771,9 +768,8 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
         public FileBasedDeviceDto merge(final DeviceDto other) {
             if (other != null) {
                 setCreationTime(other.getCreationTime());
-                getDeviceStatus().setAutoProvisioned(other.getDeviceStatus().isAutoProvisioned());
-                getDeviceStatus().setAutoProvisioningNotificationSent(
-                        other.getDeviceStatus().isAutoProvisioningNotificationSent());
+                setAutoProvisioned(other.isAutoProvisioned());
+                setAutoProvisioningNotificationSent(other.isAutoProvisioningNotificationSent());
             }
             return this;
         }

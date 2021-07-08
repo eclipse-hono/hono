@@ -29,7 +29,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceDto;
-import org.eclipse.hono.service.management.device.DeviceStatus;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -109,22 +108,16 @@ public class MongoDbBasedDeviceDaoTest {
     @Test
     public void testUpdateSetsLastUpdate(final VertxTestContext ctx) {
 
-        final var existingRecord = MongoDbBasedDeviceDto.forRead(
-                MongoDbBasedDeviceDto::new,
+        final var existingRecord = DeviceDto.forRead(
+                DeviceDto::new,
                 "tenantId",
                 "deviceId",
                 new Device(),
-                new DeviceStatus(),
+                false,
+                false,
                 Instant.now().minusSeconds(60).truncatedTo(ChronoUnit.SECONDS),
                 null,
                 "initial-version");
-
-        when(mongoClient.findOne(anyString(), any(), any(), VertxMockSupport.anyHandler()))
-            .thenAnswer(invocation -> {
-                final Handler<AsyncResult<JsonObject>> resultHandler = invocation.getArgument(3);
-                resultHandler.handle(Future.succeededFuture(JsonObject.mapFrom(existingRecord)));
-                return mongoClient;
-            });
 
         when(mongoClient.findOneAndReplaceWithOptions(
                 anyString(),
@@ -139,7 +132,7 @@ public class MongoDbBasedDeviceDaoTest {
                 return mongoClient;
             });
 
-        final var dto = DeviceDto.forUpdate(DeviceDto::new, "tenantId", "deviceId", new Device(), "new-version");
+        final var dto = DeviceDto.forUpdate(() -> existingRecord, "tenantId", "deviceId", new Device(), "new-version");
 
         dao.update(dto, Optional.of(existingRecord.getVersion()), NoopSpan.INSTANCE.context())
             .onComplete(ctx.succeeding(newVersion -> {

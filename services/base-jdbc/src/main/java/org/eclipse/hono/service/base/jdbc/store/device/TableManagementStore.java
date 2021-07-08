@@ -25,6 +25,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
+import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.util.Versioned;
 import org.eclipse.hono.service.base.jdbc.store.EntityNotFoundException;
 import org.eclipse.hono.service.base.jdbc.store.OptimisticLockingException;
@@ -193,7 +194,7 @@ public class TableManagementStore extends AbstractDeviceStore {
     }
 
     /**
-     * Create a new device.
+     * Creates a new device.
      * <p>
      * This method executes the {@code create} statement, providing the named parameters
      * {@code tenant_id}, {@code device_id}, {@code version}, and {@code data}.
@@ -215,7 +216,11 @@ public class TableManagementStore extends AbstractDeviceStore {
                 .withTag(TracingHelper.TAG_DEVICE_ID, key.getDeviceId())
                 .start();
 
-        final JdbcBasedDeviceDto deviceDto = JdbcBasedDeviceDto.forCreation(key, device);
+        final JdbcBasedDeviceDto deviceDto = JdbcBasedDeviceDto.forCreation(
+                key,
+                device,
+                DeviceRegistryUtils.getUniqueIdentifier());
+
         return SQL
 
                 .runTransactionally(this.client, this.tracer, span.context(), (connection, context) -> {
@@ -226,7 +231,7 @@ public class TableManagementStore extends AbstractDeviceStore {
                         params.put("version", deviceDto.getVersion());
                         params.put("data", deviceDto.getDeviceJson());
                         params.put("created", Timestamp.from(deviceDto.getCreationTime()));
-                        params.put("auto_provisioned", deviceDto.getDeviceStatus().isAutoProvisioned());
+                        params.put("auto_provisioned", deviceDto.isAutoProvisioned());
                     });
 
                     log.debug("createDevice - statement: {}", expanded);
@@ -375,7 +380,11 @@ public class TableManagementStore extends AbstractDeviceStore {
                 .<Set<String>>map(HashSet::new)
                 .orElse(Collections.emptySet());
 
-        final JdbcBasedDeviceDto deviceDto = JdbcBasedDeviceDto.forUpdate(key, device);
+        final JdbcBasedDeviceDto deviceDto = JdbcBasedDeviceDto.forUpdate(
+                key,
+                device,
+                DeviceRegistryUtils.getUniqueIdentifier());
+
         return SQL
                 .runTransactionally(this.client, this.tracer, span.context(), (connection, context) ->
 
@@ -401,7 +410,7 @@ public class TableManagementStore extends AbstractDeviceStore {
                                             map.put("next_version", deviceDto.getVersion());
                                             map.put("updated_on", Timestamp.from(deviceDto.getUpdatedOn()));
                                             map.put("auto_provisioning_notification_sent",
-                                                    deviceDto.getDeviceStatus().isAutoProvisioningNotificationSent());
+                                                    deviceDto.isAutoProvisioningNotificationSent());
                                         })
                                         .trace(this.tracer, span.context()).update(connection)
 

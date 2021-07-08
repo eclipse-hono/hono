@@ -118,9 +118,14 @@ public final class MongoDbBasedTenantManagementService extends AbstractTenantMan
         Objects.requireNonNull(resourceVersion);
         Objects.requireNonNull(span);
 
-        final TenantDto tenantDto = TenantDto.forUpdate(tenantId, tenantObj, DeviceRegistryUtils.getUniqueIdentifier());
-
-        return dao.update(tenantDto, resourceVersion, span.context())
+        return dao.getById(tenantId, span.context())
+                .map(currentTenantConfig -> TenantDto.forUpdate(
+                            // use creation date from DB as this will never change
+                            () -> currentTenantConfig,
+                            // but use updated tenant configuration that has been passed in
+                            tenantObj,
+                            DeviceRegistryUtils.getUniqueIdentifier()))
+                .compose(updatedTenantConfig -> dao.update(updatedTenantConfig, resourceVersion, span.context()))
                 .map(newVersion -> OperationResult.ok(
                         HttpURLConnection.HTTP_NO_CONTENT,
                         (Void) null,

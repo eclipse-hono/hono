@@ -21,7 +21,6 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.model.CredentialsDao;
 import org.eclipse.hono.deviceregistry.mongodb.model.DeviceDao;
-import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedDeviceDto;
 import org.eclipse.hono.deviceregistry.service.device.AbstractDeviceManagementService;
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
@@ -93,7 +92,7 @@ public final class MongoDbBasedDeviceManagementService extends AbstractDeviceMan
                 .compose(tenant -> checkDeviceLimitReached(tenant, key.getTenantId(), span))
                 .compose(ok -> {
                     final DeviceDto deviceDto = DeviceDto.forCreation(
-                            MongoDbBasedDeviceDto::new,
+                            DeviceDto::new,
                             key.getTenantId(),
                             key.getDeviceId(),
                             device,
@@ -173,20 +172,22 @@ public final class MongoDbBasedDeviceManagementService extends AbstractDeviceMan
             final Optional<String> resourceVersion,
             final Span span) {
 
-        final DeviceDto deviceDto = DeviceDto.forUpdate(
-                MongoDbBasedDeviceDto::new,
-                key.getTenantId(),
-                key.getDeviceId(),
-                device,
-                DeviceRegistryUtils.getUniqueIdentifier());
-
-        return deviceDao.update(deviceDto, resourceVersion, span.context())
-                .map(newResourceVersion -> OperationResult.ok(
-                        HttpURLConnection.HTTP_NO_CONTENT,
-                        Id.of(key.getDeviceId()),
-                        Optional.empty(),
-                        Optional.of(newResourceVersion)))
-                .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
+        return deviceDao.getById(key.getTenantId(), key.getDeviceId(), span.context())
+            .map(currentDeviceConfig -> DeviceDto.forUpdate(
+                        // use creation date from DB as this will never change
+                        () -> currentDeviceConfig,
+                        // but copy all other (updated) data from parameters that have been passed in
+                        key.getTenantId(),
+                        key.getDeviceId(),
+                        device,
+                        DeviceRegistryUtils.getUniqueIdentifier()))
+            .compose(updatedDeviceConfig -> deviceDao.update(updatedDeviceConfig, resourceVersion, span.context()))
+            .map(newResourceVersion -> OperationResult.ok(
+                    HttpURLConnection.HTTP_NO_CONTENT,
+                    Id.of(key.getDeviceId()),
+                    Optional.empty(),
+                    Optional.of(newResourceVersion)))
+            .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
     }
 
     /**
