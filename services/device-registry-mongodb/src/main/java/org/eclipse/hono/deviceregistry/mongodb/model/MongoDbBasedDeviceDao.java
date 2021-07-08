@@ -65,7 +65,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
      */
     private static final String PROPERTY_DEVICE_MEMBER_OF = String.format(
             "%s.%s",
-            MongoDbBasedDeviceDto.FIELD_DEVICE, RegistryManagementConstants.FIELD_MEMBER_OF);
+            DeviceDto.FIELD_DEVICE, RegistryManagementConstants.FIELD_MEMBER_OF);
 
     private final AtomicBoolean creatingIndices = new AtomicBoolean(false);
     private final AtomicBoolean indicesCreated = new AtomicBoolean(false);
@@ -97,8 +97,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
         if (creatingIndices.compareAndSet(false, true)) {
             // create unique index on device ID
             return createIndex(
-                    new JsonObject().put(MongoDbBasedDeviceDto.FIELD_TENANT_ID, 1)
-                            .put(MongoDbBasedDeviceDto.FIELD_DEVICE_ID, 1),
+                    new JsonObject().put(DeviceDto.FIELD_TENANT_ID, 1).put(DeviceDto.FIELD_DEVICE_ID, 1),
                     new IndexOptions().unique(true))
             .onSuccess(ok -> indicesCreated.set(true))
             .onComplete(r -> {
@@ -205,7 +204,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                 .onComplete(r -> span.finish());
     }
 
-    private Future<MongoDbBasedDeviceDto> getById(final String tenantId, final String deviceId) {
+    private Future<DeviceDto> getById(final String tenantId, final String deviceId) {
 
         final JsonObject findDeviceQuery = MongoDbDocumentBuilder.builder().withTenantId(tenantId)
                 .withDeviceId(deviceId)
@@ -220,7 +219,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                         if (LOG.isTraceEnabled()) {
                             LOG.trace("device data from collection;{}{}", System.lineSeparator(), result.encodePrettily());
                         }
-                        return MongoDbBasedDeviceDto.forRead(tenantId, deviceId, result);
+                        return result.mapTo(DeviceDto.class);
                     }
                 })
                 .recover(this::mapError);
@@ -335,7 +334,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                                 LOG.debug("document from collection:{}{}", System.lineSeparator(), json.encodePrettily());
                             }
                         })
-                        .map(json -> json.mapTo(MongoDbBasedDeviceDto.class))
+                        .map(json -> json.mapTo(DeviceDto.class))
                         .map(deviceDto -> DeviceWithId.from(deviceDto.getDeviceId(), deviceDto.getData()))
                         .collect(Collectors.toList()))
                 .orElseGet(List::of);
@@ -360,39 +359,27 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                 .start();
         resourceVersion.ifPresent(v -> TracingHelper.TAG_RESOURCE_VERSION.set(span, v));
 
-        return getById(deviceConfig.getTenantId(), deviceConfig.getDeviceId())
-                .compose(currentDeviceConfig -> {
-                    final MongoDbBasedDeviceDto dto = MongoDbBasedDeviceDto.forUpdate(
-                            // use creation date from DB as this will never change
-                            () -> currentDeviceConfig,
-                            // but copy all other (updated) data from DTO that has been passed in
-                            deviceConfig.getData(),
-                            deviceConfig.getVersion());
-                    // we need to manually copy the device status because the passed in DeviceDto's data
-                    // property does not contain any status information (it had been removed by the
-                    // DeviceDto.forUpdate method used to create it)
-                    dto.setDeviceStatus(deviceConfig.getDeviceStatus());
-                    final JsonObject updateDeviceQuery = MongoDbDocumentBuilder.builder()
-                            .withVersion(resourceVersion)
-                            .withTenantId(deviceConfig.getTenantId())
-                            .withDeviceId(deviceConfig.getDeviceId())
-                            .document();
+        final JsonObject updateDeviceQuery = MongoDbDocumentBuilder.builder()
+                .withVersion(resourceVersion)
+                .withTenantId(deviceConfig.getTenantId())
+                .withDeviceId(deviceConfig.getDeviceId())
+                .document();
 
-                    final Promise<JsonObject> updateDevicePromise = Promise.promise();
-                    final var document = JsonObject.mapFrom(dto);
-                    if (LOG.isTraceEnabled()) {
-                        LOG.trace("replacing existing device document with:{}{}", System.lineSeparator(), document.encodePrettily());
-                    }
+        final Promise<JsonObject> updateDevicePromise = Promise.promise();
+        final var document = JsonObject.mapFrom(deviceConfig);
+        if (LOG.isTraceEnabled()) {
+            LOG.trace("replacing existing device document with:{}{}", System.lineSeparator(), document.encodePrettily());
+        }
 
-                    mongoClient.findOneAndReplaceWithOptions(
+        mongoClient.findOneAndReplaceWithOptions(
                             collectionName,
                             updateDeviceQuery,
                             document,
                             new FindOptions(),
                             new UpdateOptions().setReturningNewDocument(true),
                             updateDevicePromise);
-                    return updateDevicePromise.future();
-                })
+
+        return updateDevicePromise.future()
                 .compose(result -> {
                     if (result == null) {
                         return MongoDbBasedDao.checkForVersionMismatchAndFail(
@@ -401,7 +388,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                                 getById(deviceConfig.getTenantId(), deviceConfig.getDeviceId()));
                     } else {
                         span.log("successfully updated device");
-                        return Future.succeededFuture(result.getString(MongoDbBasedDeviceDto.FIELD_VERSION));
+                        return Future.succeededFuture(result.getString(DeviceDto.FIELD_VERSION));
                     }
                 })
                 .recover(this::mapError)

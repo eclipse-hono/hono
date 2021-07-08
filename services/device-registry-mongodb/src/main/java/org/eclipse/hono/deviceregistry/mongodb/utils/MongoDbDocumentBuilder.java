@@ -18,7 +18,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 
-import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedDeviceDto;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.BaseDto;
 import org.eclipse.hono.service.management.Filter;
@@ -29,12 +28,6 @@ import org.eclipse.hono.service.management.tenant.TenantDto;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.BeanDescription;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.introspect.AnnotatedMethod;
-
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.json.pointer.JsonPointer;
 
@@ -43,14 +36,12 @@ import io.vertx.core.json.pointer.JsonPointer;
  */
 public final class MongoDbDocumentBuilder {
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final JsonPointer FIELD_ID = JsonPointer.from("/id");
     private static final String TENANT_TRUSTED_CA_SUBJECT_PATH = String.format("%s.%s.%s",
             TenantDto.FIELD_TENANT,
             RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA,
             AuthenticationConstants.FIELD_SUBJECT_DN);
     private static final String MONGODB_OPERATOR_ELEM_MATCH = "$elemMatch";
-    private static final String MONGODB_OPERATOR_SET = "$set";
 
     private final JsonObject document;
 
@@ -65,57 +56,6 @@ public final class MongoDbDocumentBuilder {
      */
     public static MongoDbDocumentBuilder builder() {
         return new MongoDbDocumentBuilder();
-    }
-
-    /**
-     * Creates a MongoDb update document for the update of the device DTO.
-     *
-     * @param deviceDto The device DTO for which an update should be generated.
-     *
-     * @return a reference to this for fluent use.
-     */
-    public MongoDbDocumentBuilder forUpdateOf(final DeviceDto deviceDto) {
-        forUpdateOf((BaseDto<?>) deviceDto);
-
-        final JsonObject updateDocument = document.getJsonObject(MONGODB_OPERATOR_SET);
-        updateDocument.put(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT,
-                deviceDto.getDeviceStatus().isAutoProvisioningNotificationSent());
-
-        return this;
-    }
-
-    /**
-     * Creates a MongoDb update document for the update of the given DTO.
-     *
-     * @param baseDto The DTO for which an update should be generated.
-     *
-     * @return a reference to this for fluent use.
-     */
-    public MongoDbDocumentBuilder forUpdateOf(final BaseDto<?> baseDto) {
-        final JsonObject updates = new JsonObject();
-
-        if (baseDto.getData() != null) {
-            final JavaType baseDtoJavaType = OBJECT_MAPPER.getTypeFactory().constructType(baseDto.getClass());
-            final BeanDescription beanDescription = OBJECT_MAPPER.getSerializationConfig().introspect(baseDtoJavaType);
-            final AnnotatedMethod getDataMethod = beanDescription.findMethod("getData", null);
-            final JsonProperty jsonProperty = getDataMethod.getAnnotation(JsonProperty.class);
-            updates.put(jsonProperty.value(), JsonObject.mapFrom(baseDto.getData()));
-        }
-
-        if (baseDto.getCreationTime() != null) {
-            updates.put(BaseDto.FIELD_CREATED, baseDto.getCreationTime());
-        }
-
-        if (baseDto.getUpdatedOn() != null) {
-            updates.put(BaseDto.FIELD_UPDATED_ON, baseDto.getUpdatedOn());
-        }
-
-        if (baseDto.getVersion() != null) {
-            updates.put(BaseDto.FIELD_VERSION, baseDto.getVersion());
-        }
-
-        document.put(MONGODB_OPERATOR_SET, updates);
-        return this;
     }
 
     /**
@@ -275,7 +215,7 @@ public final class MongoDbDocumentBuilder {
         if (FIELD_ID.equals(field)) {
             return RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID;
         } else {
-            return MongoDbBasedDeviceDto.FIELD_DEVICE + field.toString().replace("/", ".");
+            return DeviceDto.FIELD_DEVICE + field.toString().replace("/", ".");
         }
     }
 

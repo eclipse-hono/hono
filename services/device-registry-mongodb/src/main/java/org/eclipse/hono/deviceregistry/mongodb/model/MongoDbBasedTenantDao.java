@@ -288,29 +288,21 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                 .start();
         resourceVersion.ifPresent(v -> TracingHelper.TAG_RESOURCE_VERSION.set(span, v));
 
-        return getById(newTenantConfig.getTenantId())
-                .compose(currentTenantConfig -> {
-                    final var dto = TenantDto.forUpdate(
-                            // use creation date from DB as this will never change
-                            () -> currentTenantConfig,
-                            // but use tenant configuration and new version from DTO that has been passed in
-                            newTenantConfig.getData(),
-                            newTenantConfig.getVersion());
-                    final JsonObject updateTenantQuery = MongoDbDocumentBuilder.builder()
-                            .withVersion(resourceVersion)
-                            .withTenantId(newTenantConfig.getTenantId())
-                            .document();
+        final JsonObject updateTenantQuery = MongoDbDocumentBuilder.builder()
+                .withVersion(resourceVersion)
+                .withTenantId(newTenantConfig.getTenantId())
+                .document();
 
-                    final Promise<JsonObject> updateTenantPromise = Promise.promise();
-                    mongoClient.findOneAndReplaceWithOptions(
-                            collectionName,
-                            updateTenantQuery,
-                            JsonObject.mapFrom(dto),
-                            new FindOptions(),
-                            new UpdateOptions().setReturningNewDocument(true),
-                            updateTenantPromise);
-                    return updateTenantPromise.future();
-                })
+        final Promise<JsonObject> updateTenantPromise = Promise.promise();
+        mongoClient.findOneAndReplaceWithOptions(
+                collectionName,
+                updateTenantQuery,
+                JsonObject.mapFrom(newTenantConfig),
+                new FindOptions(),
+                new UpdateOptions().setReturningNewDocument(true),
+                updateTenantPromise);
+
+        return updateTenantPromise.future()
                 .compose(updateResult -> {
                     if (updateResult == null) {
                         return MongoDbBasedDao.checkForVersionMismatchAndFail(

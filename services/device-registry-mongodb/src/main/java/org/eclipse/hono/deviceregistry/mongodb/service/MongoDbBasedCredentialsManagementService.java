@@ -101,21 +101,20 @@ public final class MongoDbBasedCredentialsManagementService extends AbstractCred
 
         return tenantInformationService.getTenant(deviceKey.getTenantId(), span)
                 .compose(tenant -> tenant.checkCredentialsLimitExceeded(deviceKey.getTenantId(), updatedCredentials))
-                .compose(ok -> {
+                .compose(ok -> dao.getByDeviceId(deviceKey.getTenantId(), deviceKey.getDeviceId(), span.context()))
+                .compose(existingCredentialsDto -> {
+                    // keep original credentials for merging, if necessary
+                    final var existingCredentials = existingCredentialsDto.getData();
                     final Promise<CredentialsDto> result = Promise.promise();
                     final var updatedCredentialsDto = CredentialsDto.forUpdate(
-                            deviceKey.getTenantId(),
-                            deviceKey.getDeviceId(),
+                            // use creation date from DB as this will never change
+                            () -> existingCredentialsDto,
+                            // but use updated credentials that have been passed in
                             updatedCredentials,
                             DeviceRegistryUtils.getUniqueIdentifier());
 
                     if (updatedCredentialsDto.requiresMerging()) {
-                        // it is no problem to ignore the resource version here because
-                        // further down, when we try to update the credentials document we
-                        // check for the resource version to match
-                        dao.getByDeviceId(deviceKey.getTenantId(), deviceKey.getDeviceId(), span.context())
-                                .map(updatedCredentialsDto::merge)
-                                .onComplete(result);
+                        result.complete(updatedCredentialsDto.merge(existingCredentials));
                     } else {
                         // simply replace the existing credentials with the
                         // updated ones provided by the client

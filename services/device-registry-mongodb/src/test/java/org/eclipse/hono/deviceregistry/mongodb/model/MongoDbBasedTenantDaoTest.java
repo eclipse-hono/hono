@@ -162,13 +162,6 @@ public class MongoDbBasedTenantDaoTest {
                 null,
                 "initial-version");
 
-        when(mongoClient.findOne(anyString(), any(), any(), VertxMockSupport.anyHandler()))
-            .thenAnswer(invocation -> {
-                final Handler<AsyncResult<JsonObject>> resultHandler = invocation.getArgument(3);
-                resultHandler.handle(Future.succeededFuture(JsonObject.mapFrom(existingRecord)));
-                return mongoClient;
-            });
-
         when(mongoClient.findOneAndReplaceWithOptions(
                 anyString(),
                 any(JsonObject.class),
@@ -182,7 +175,7 @@ public class MongoDbBasedTenantDaoTest {
                 return mongoClient;
             });
 
-        final var dto = TenantDto.forUpdate("tenantId", new Tenant(), "new-version");
+        final var dto = TenantDto.forUpdate(() -> existingRecord, new Tenant(), "new-version");
 
         dao.update(dto, Optional.of(existingRecord.getVersion()), NoopSpan.INSTANCE.context())
             .onComplete(ctx.succeeding(newVersion -> {

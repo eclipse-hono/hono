@@ -18,8 +18,6 @@ import java.util.Optional;
 import java.util.function.Supplier;
 
 import org.eclipse.hono.service.management.BaseDto;
-import org.eclipse.hono.service.management.device.Device;
-import org.eclipse.hono.service.management.device.DeviceStatus;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -40,9 +38,24 @@ public class DeviceDto extends BaseDto<Device> {
      * The name of the JSON property containing the device's identifier.
      */
     public static final String FIELD_DEVICE_ID = "device-id";
+    /**
+     * The name of the JSON property marking the device as auto-provisioned.
+     */
+    public static final String FIELD_AUTO_PROVISIONED = "auto-provisioned";
+    /**
+     * The name of the JSON property indicating whether an auto-provisioning notification has been sent
+     * for the device.
+     */
+    public static final String FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT = "auto-provisioning-notification-sent";
 
     @JsonProperty(value = FIELD_DEVICE_ID)
     private String deviceId;
+
+    @JsonProperty(FIELD_AUTO_PROVISIONED)
+    private boolean autoProvisioned = false;
+
+    @JsonProperty(FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT)
+    private boolean autoProvisioningNotificationSent = false;
 
     @JsonIgnore
     private DeviceStatus deviceStatus = new DeviceStatus();
@@ -87,7 +100,7 @@ public class DeviceDto extends BaseDto<Device> {
         final Boolean autoProvisioned = Optional.ofNullable(device.getStatus())
                 .map(DeviceStatus::isAutoProvisioned)
                 .orElse(false);
-        deviceDto.setDeviceStatus(new DeviceStatus().setAutoProvisioned(autoProvisioned));
+        deviceDto.setAutoProvisioned(autoProvisioned);
 
         return deviceDto;
     }
@@ -99,7 +112,8 @@ public class DeviceDto extends BaseDto<Device> {
      * @param tenantId The identifier of the tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @param device The device configuration from the store.
-     * @param deviceStatus The registry internal status of the device.
+     * @param autoProvisioned {@code true} if this device has been provisioned automatically (may be {@code null}).
+     * @param notificationSent {@code true} if an auto-provisioning notification has been sent already (may be {@code null}).
      * @param created The point in time when the object was created initially in the store (may be {@code null}).
      * @param updated The point in time when the object was updated most recently in the store (may be {@code null}).
      * @param version The object's resource version in the store (may be {@code null}).
@@ -107,14 +121,15 @@ public class DeviceDto extends BaseDto<Device> {
      * @param <T> The type of the DTO subclass.
      *
      * @return The DTO.
-     * @throws NullPointerException if any of supplier, tenantId, deviceId, device and device status are {@code null}.
+     * @throws NullPointerException if any of supplier, tenantId, deviceId and device are {@code null}.
      */
     public static <T extends DeviceDto> T forRead(
             final Supplier<T> supplier,
             final String tenantId,
             final String deviceId,
             final Device device,
-            final DeviceStatus deviceStatus,
+            final Boolean autoProvisioned,
+            final Boolean notificationSent,
             final Instant created,
             final Instant updated,
             final String version) {
@@ -123,12 +138,12 @@ public class DeviceDto extends BaseDto<Device> {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(device);
-        Objects.requireNonNull(deviceStatus);
 
         final T deviceDto = BaseDto.forRead(supplier, device, created, updated, version);
         deviceDto.setTenantId(tenantId);
         deviceDto.setDeviceId(deviceId);
-        deviceDto.setDeviceStatus(deviceStatus);
+        deviceDto.setAutoProvisioned(autoProvisioned);
+        deviceDto.setAutoProvisioningNotificationSent(notificationSent);
 
         return deviceDto;
     }
@@ -169,9 +184,8 @@ public class DeviceDto extends BaseDto<Device> {
         final Boolean notificationSent = Optional.ofNullable(device.getStatus())
                 .map(DeviceStatus::isAutoProvisioningNotificationSent)
                 .orElse(false);
-        deviceDto.setDeviceStatus(new DeviceStatus()
-                .setAutoProvisioned(autoProvisioned)
-                .setAutoProvisioningNotificationSent(notificationSent));
+        deviceDto.setAutoProvisioned(autoProvisioned);
+        deviceDto.setAutoProvisioningNotificationSent(notificationSent);
 
         return deviceDto;
     }
@@ -209,23 +223,47 @@ public class DeviceDto extends BaseDto<Device> {
     }
 
     /**
-     * Gets the registry internal status information of this device.
+     * Checks if this device was created by Hono's auto-provisioning capability.
+     * <p>
+     * The default value of this property is {@code false}.
      *
-     * @return The registry internal status information.
+     * @return {@code true} if this device was auto-provisioned.
      */
-    public final DeviceStatus getDeviceStatus() {
-        return deviceStatus;
+    public final boolean isAutoProvisioned() {
+        return autoProvisioned;
     }
 
     /**
-     * Sets the registry internal status information of this device.
+     * Sets whether this device has been provisioned automatically.
+     * <p>
+     * The default value of this property is {@code false}.
      *
-     * @param deviceStatus The status information to be set.
+     * @param autoProvisioned {@code true} if this device has been provisioned automatically.
      */
-    public final void setDeviceStatus(final DeviceStatus deviceStatus) {
-        Objects.requireNonNull(deviceStatus);
+    protected void setAutoProvisioned(final Boolean autoProvisioned) {
+        this.autoProvisioned = Optional.ofNullable(autoProvisioned).orElse(false);
+    }
 
-        this.deviceStatus = deviceStatus;
+    /**
+     * Checks if a notification has been published, indicating that this device has been provisioned automatically.
+     * <p>
+     * The default value of this property is {@code false}.
+     *
+     * @return {@code true} if the notification has already been sent.
+     */
+    public final boolean isAutoProvisioningNotificationSent() {
+        return autoProvisioningNotificationSent;
+    }
+
+    /**
+     * Sets whether a notification has been published, indicating that this device has been provisioned automatically.
+     * <p>
+     * The default value of this property is {@code false}.
+     *
+     * @param notificationSent {@code true} if the notification has already been sent.
+     */
+    protected void setAutoProvisioningNotificationSent(final Boolean notificationSent) {
+        this.autoProvisioningNotificationSent = Optional.ofNullable(notificationSent).orElse(false);
     }
 
     /**
@@ -237,8 +275,8 @@ public class DeviceDto extends BaseDto<Device> {
     public final Device getDeviceWithStatus() {
         final Device deviceWithStatus = new Device(getData());
         deviceWithStatus.setStatus(new DeviceStatus()
-                .setAutoProvisioned(getDeviceStatus().isAutoProvisioned())
-                .setAutoProvisioningNotificationSent(getDeviceStatus().isAutoProvisioningNotificationSent())
+                .setAutoProvisioned(isAutoProvisioned())
+                .setAutoProvisioningNotificationSent(isAutoProvisioningNotificationSent())
                 .setCreationTime(getCreationTime())
                 .setLastUpdate(getUpdatedOn())
         );

@@ -12,12 +12,11 @@
  *******************************************************************************/
 package org.eclipse.hono.service.base.jdbc.store.model;
 
-import java.util.UUID;
+import java.util.Objects;
 
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceDto;
-import org.eclipse.hono.service.management.device.DeviceStatus;
 
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
@@ -32,15 +31,26 @@ public class JdbcBasedDeviceDto extends DeviceDto {
      *
      * @param deviceKey The key of the device.
      * @param device The data of the DTO.
+     * @param version The object's (initial) resource version.
      *
      * @return A DTO instance for creating a new entry.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public static JdbcBasedDeviceDto forCreation(final DeviceKey deviceKey, final Device device) {
+    public static JdbcBasedDeviceDto forCreation(
+            final DeviceKey deviceKey,
+            final Device device,
+            final String version) {
 
-        return DeviceDto.forCreation(JdbcBasedDeviceDto::new, deviceKey.getTenantId(),
+        Objects.requireNonNull(deviceKey);
+        Objects.requireNonNull(device);
+        Objects.requireNonNull(version);
+
+        return DeviceDto.forCreation(
+                JdbcBasedDeviceDto::new,
+                deviceKey.getTenantId(),
                 deviceKey.getDeviceId(),
                 device,
-                UUID.randomUUID().toString());
+                version);
     }
 
     /**
@@ -51,17 +61,22 @@ public class JdbcBasedDeviceDto extends DeviceDto {
      * @param recordJson The JSON of the device's data record.
      *
      * @return A DTO instance for reading an entry.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public static JdbcBasedDeviceDto forRead(final String tenantId, final String deviceId, final JsonObject recordJson) {
 
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(recordJson);
+
+        final var device = Json.decodeValue(recordJson.getString("data"), Device.class);
         return DeviceDto.forRead(
                 JdbcBasedDeviceDto::new,
                 tenantId,
                 deviceId,
-                Json.decodeValue(recordJson.getString("data"), Device.class),
-                new DeviceStatus()
-                    .setAutoProvisioned(recordJson.getBoolean("auto_provisioned"))
-                    .setAutoProvisioningNotificationSent(recordJson.getBoolean("auto_provisioning_notification_sent")),
+                device,
+                recordJson.getBoolean("auto_provisioned"),
+                recordJson.getBoolean("auto_provisioning_notification_sent"),
                 recordJson.getInstant("created"),
                 recordJson.getInstant("updated_on"),
                 recordJson.getString("version"));
@@ -72,16 +87,26 @@ public class JdbcBasedDeviceDto extends DeviceDto {
      *
      * @param deviceKey The key of the device.
      * @param device The data of the DTO.
+     * @param version The new resource version to use for the object in the store.
      *
      * @return A DTO instance for updating an entry.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public static JdbcBasedDeviceDto forUpdate(final DeviceKey deviceKey, final Device device) {
+    public static JdbcBasedDeviceDto forUpdate(
+            final DeviceKey deviceKey,
+            final Device device,
+            final String version) {
 
-        return DeviceDto.forUpdate(JdbcBasedDeviceDto::new,
+        Objects.requireNonNull(deviceKey);
+        Objects.requireNonNull(device);
+        Objects.requireNonNull(version);
+
+        return DeviceDto.forUpdate(
+                JdbcBasedDeviceDto::new,
                 deviceKey.getTenantId(),
                 deviceKey.getDeviceId(),
                 device,
-                UUID.randomUUID().toString());
+                version);
     }
 
     public String getDeviceJson() {

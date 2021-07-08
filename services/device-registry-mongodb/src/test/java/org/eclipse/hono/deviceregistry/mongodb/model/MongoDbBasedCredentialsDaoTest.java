@@ -117,13 +117,6 @@ public class MongoDbBasedCredentialsDaoTest {
                 null,
                 "initial-version");
 
-        when(mongoClient.findOne(anyString(), any(), any(), VertxMockSupport.anyHandler()))
-            .thenAnswer(invocation -> {
-                final Handler<AsyncResult<JsonObject>> resultHandler = invocation.getArgument(3);
-                resultHandler.handle(Future.succeededFuture(JsonObject.mapFrom(existingRecord)));
-                return mongoClient;
-            });
-
         when(mongoClient.findOneAndReplaceWithOptions(
                 anyString(),
                 any(JsonObject.class),
@@ -137,7 +130,7 @@ public class MongoDbBasedCredentialsDaoTest {
                 return mongoClient;
             });
 
-        final var dto = CredentialsDto.forUpdate("tenantId", "deviceId", List.of(), "new-version");
+        final var dto = CredentialsDto.forUpdate(() -> existingRecord, List.of(), "new-version");
 
         dao.update(dto, Optional.of(existingRecord.getVersion()), NoopSpan.INSTANCE.context())
             .onComplete(ctx.succeeding(newVersion -> {
