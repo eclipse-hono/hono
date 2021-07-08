@@ -208,7 +208,7 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
         mongoClient.findOne(
                 collectionName,
                 MongoDbDocumentBuilder.builder().withTenantId(tenantId).document(),
-                new JsonObject(),
+                null,
                 findTenantPromise);
 
         return findTenantPromise.future()
@@ -275,40 +275,48 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
      */
     @Override
     public Future<String> update(
-            final TenantDto tenantConfig,
+            final TenantDto newTenantConfig,
             final Optional<String> resourceVersion,
             final SpanContext tracingContext) {
 
-        Objects.requireNonNull(tenantConfig);
+        Objects.requireNonNull(newTenantConfig);
         Objects.requireNonNull(resourceVersion);
 
         final Span span = tracer.buildSpan("update Tenant")
                 .addReference(References.CHILD_OF, tracingContext)
-                .withTag(TracingHelper.TAG_TENANT_ID, tenantConfig.getTenantId())
+                .withTag(TracingHelper.TAG_TENANT_ID, newTenantConfig.getTenantId())
                 .start();
         resourceVersion.ifPresent(v -> TracingHelper.TAG_RESOURCE_VERSION.set(span, v));
 
-        final JsonObject updateTenantQuery = MongoDbDocumentBuilder.builder()
-                .withVersion(resourceVersion)
-                .withTenantId(tenantConfig.getTenantId())
-                .document();
+        return getById(newTenantConfig.getTenantId())
+                .compose(currentTenantConfig -> {
+                    final var dto = TenantDto.forUpdate(
+                            // use creation date from DB as this will never change
+                            () -> currentTenantConfig,
+                            // but use tenant configuration and new version from DTO that has been passed in
+                            newTenantConfig.getData(),
+                            newTenantConfig.getVersion());
+                    final JsonObject updateTenantQuery = MongoDbDocumentBuilder.builder()
+                            .withVersion(resourceVersion)
+                            .withTenantId(newTenantConfig.getTenantId())
+                            .document();
 
-        final Promise<JsonObject> updateTenantPromise = Promise.promise();
-        mongoClient.findOneAndReplaceWithOptions(
-                collectionName,
-                updateTenantQuery,
-                JsonObject.mapFrom(tenantConfig),
-                new FindOptions(),
-                new UpdateOptions().setReturningNewDocument(true),
-                updateTenantPromise);
-
-        return updateTenantPromise.future()
+                    final Promise<JsonObject> updateTenantPromise = Promise.promise();
+                    mongoClient.findOneAndReplaceWithOptions(
+                            collectionName,
+                            updateTenantQuery,
+                            JsonObject.mapFrom(dto),
+                            new FindOptions(),
+                            new UpdateOptions().setReturningNewDocument(true),
+                            updateTenantPromise);
+                    return updateTenantPromise.future();
+                })
                 .compose(updateResult -> {
                     if (updateResult == null) {
                         return MongoDbBasedDao.checkForVersionMismatchAndFail(
-                                tenantConfig.getTenantId(), resourceVersion, getById(tenantConfig.getTenantId()));
+                                newTenantConfig.getTenantId(), resourceVersion, getById(newTenantConfig.getTenantId()));
                     } else {
-                        LOG.debug("successfully updated tenant [tenant-id: {}]", tenantConfig.getTenantId());
+                        LOG.debug("successfully updated tenant [tenant-id: {}]", newTenantConfig.getTenantId());
                         span.log("successfully updated tenant");
                         return Future.succeededFuture(updateResult.getString(TenantDto.FIELD_VERSION));
                     }
@@ -317,10 +325,10 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                     if (MongoDbBasedDao.isDuplicateKeyError(error)) {
                         LOG.debug(
                                 "conflict updating tenant [{}]. An existing tenant uses a certificate authority with the same Subject DN",
-                                tenantConfig.getTenantId(),
+                                newTenantConfig.getTenantId(),
                                 error);
                         return Future.failedFuture(new ClientErrorException(
-                                tenantConfig.getTenantId(),
+                                newTenantConfig.getTenantId(),
                                 HttpURLConnection.HTTP_CONFLICT,
                                 "an existing tenant uses a certificate authority with the same Subject DN"));
                     } else {

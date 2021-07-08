@@ -165,10 +165,15 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
 
         final Promise<String> addCredentialsPromise = Promise.promise();
         credentials.getCredentials().stream().forEach(cred -> cred.encryptFields(fieldLevelEncryption));
-        mongoClient.insert(
-                collectionName,
-                JsonObject.mapFrom(credentials),
-                addCredentialsPromise);
+        final var document = JsonObject.mapFrom(credentials);
+
+        if (LOG.isTraceEnabled()) {
+            LOG.trace("creating credentials for device [tenant: {}, device-id: {}, resource-version; {}]:{}{}",
+                    credentials.getTenantId(), credentials.getDeviceId(), credentials.getVersion(),
+                    System.lineSeparator(), document.encodePrettily());
+        }
+
+        mongoClient.insert(collectionName, document, addCredentialsPromise);
 
         return addCredentialsPromise.future()
                 .map(added -> {
@@ -333,30 +338,37 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
         resourceVersion.ifPresent(v -> TracingHelper.TAG_RESOURCE_VERSION.set(span, v));
         credentials.getCredentials().stream().forEach(cred -> cred.encryptFields(fieldLevelEncryption));
 
-        final JsonObject replaceCredentialsQuery = MongoDbDocumentBuilder.builder()
-                .withVersion(resourceVersion)
-                .withTenantId(credentials.getTenantId())
-                .withDeviceId(credentials.getDeviceId())
-                .document();
+        return getByDeviceId(credentials.getTenantId(), credentials.getDeviceId())
+                .compose(currentCredentials -> {
+                    final var dto = CredentialsDto.forUpdate(
+                            () -> currentCredentials,
+                            credentials.getData(),
+                            credentials.getVersion());
 
-        final var credentialsDtoJson = JsonObject.mapFrom(credentials);
-        final Promise<JsonObject> replaceCredentialsPromise = Promise.promise();
+                    final JsonObject replaceCredentialsQuery = MongoDbDocumentBuilder.builder()
+                            .withVersion(resourceVersion)
+                            .withTenantId(credentials.getTenantId())
+                            .withDeviceId(credentials.getDeviceId())
+                            .document();
 
-        if (LOG.isTraceEnabled()) {
-            LOG.trace("updating credentials of device [tenant: {}, device-id: {}, resource-version; {}]:{}{}",
-                    credentials.getTenantId(), credentials.getDeviceId(), resourceVersion.orElse(null),
-                    System.lineSeparator(), credentialsDtoJson.encodePrettily());
-        }
+                    final var document = JsonObject.mapFrom(dto);
+                    final Promise<JsonObject> replaceCredentialsPromise = Promise.promise();
 
-        mongoClient.findOneAndReplaceWithOptions(
-                collectionName,
-                replaceCredentialsQuery,
-                credentialsDtoJson,
-                new FindOptions(),
-                new UpdateOptions().setReturningNewDocument(true),
-                replaceCredentialsPromise);
+                    if (LOG.isTraceEnabled()) {
+                        LOG.trace("updating credentials of device [tenant: {}, device-id: {}, resource-version; {}]:{}{}",
+                                credentials.getTenantId(), credentials.getDeviceId(), resourceVersion.orElse(null),
+                                System.lineSeparator(), document.encodePrettily());
+                    }
 
-        return replaceCredentialsPromise.future()
+                    mongoClient.findOneAndReplaceWithOptions(
+                            collectionName,
+                            replaceCredentialsQuery,
+                            document,
+                            new FindOptions(),
+                            new UpdateOptions().setReturningNewDocument(true),
+                            replaceCredentialsPromise);
+                    return replaceCredentialsPromise.future();
+                })
                 .compose(result -> {
                     if (result == null) {
                         return MongoDbBasedDao.checkForVersionMismatchAndFail(
