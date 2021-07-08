@@ -31,6 +31,7 @@ public interface FieldLevelEncryption {
      *
      * @param data The data to encrypt.
      * @return The encrypted data.
+     * @throws RuntimeException if encryption fails.
      */
     byte[] encrypt(byte[] data);
 
@@ -39,6 +40,7 @@ public interface FieldLevelEncryption {
      *
      * @param data The (encrypted) data to decrypt.
      * @return The decrypted data.
+     * @throws RuntimeException if decryption fails.
      */
     byte[] decrypt(byte[] data);
 

@@ -85,7 +85,7 @@ public class PskSecretTest {
     }
 
     /**
-     * Verifies that the shared key is being encrypted/decrpyted using the given field level encryption helper.
+     * Verifies that the shared key is being encrypted/decrypted using the given field level encryption helper.
      */
     @Test
     public void testEncryptFieldsEncryptsKey() {

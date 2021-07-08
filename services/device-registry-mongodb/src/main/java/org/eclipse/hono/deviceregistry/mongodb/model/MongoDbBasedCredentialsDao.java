@@ -164,7 +164,7 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                 .start();
 
         final Promise<String> addCredentialsPromise = Promise.promise();
-        credentials.getCredentials().parallelStream().forEach(cred -> cred.encryptFields(fieldLevelEncryption));
+        credentials.getCredentials().stream().forEach(cred -> cred.encryptFields(fieldLevelEncryption));
         mongoClient.insert(
                 collectionName,
                 JsonObject.mapFrom(credentials),
@@ -240,7 +240,7 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                                     System.lineSeparator(), result.encodePrettily());
                         }
                         final var dto = result.mapTo(CredentialsDto.class);
-                        dto.getCredentials().parallelStream().forEach(cred -> cred.decryptFields(fieldLevelEncryption));
+                        dto.getCredentials().stream().forEach(cred -> cred.decryptFields(fieldLevelEncryption));
                         return dto;
                     }
                 });
@@ -301,7 +301,7 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                                     System.lineSeparator(), result.encodePrettily());
                         }
                         final var dto = result.mapTo(CredentialsDto.class);
-                        dto.getCredentials().parallelStream().forEach(cred -> cred.decryptFields(fieldLevelEncryption));
+                        dto.getCredentials().stream().forEach(cred -> cred.decryptFields(fieldLevelEncryption));
                         return dto;
                     }
                 })
@@ -331,7 +331,7 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                 .withTag(TracingHelper.TAG_DEVICE_ID, credentials.getDeviceId())
                 .start();
         resourceVersion.ifPresent(v -> TracingHelper.TAG_RESOURCE_VERSION.set(span, v));
-        credentials.getCredentials().parallelStream().forEach(cred -> cred.encryptFields(fieldLevelEncryption));
+        credentials.getCredentials().stream().forEach(cred -> cred.encryptFields(fieldLevelEncryption));
 
         final JsonObject replaceCredentialsQuery = MongoDbDocumentBuilder.builder()
                 .withVersion(resourceVersion)
