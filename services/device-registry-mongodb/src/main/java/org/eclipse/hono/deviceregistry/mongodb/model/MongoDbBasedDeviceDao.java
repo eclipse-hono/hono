@@ -370,7 +370,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                             deviceConfig.getVersion());
                     // we need to manually copy the device status because the passed in DeviceDto's data
                     // property does not contain any status information (it had been removed by the
-                    // DeviceDto.fromUpdate method used to create it)
+                    // DeviceDto.forUpdate method used to create it)
                     dto.setDeviceStatus(deviceConfig.getDeviceStatus());
                     final JsonObject updateDeviceQuery = MongoDbDocumentBuilder.builder()
                             .withVersion(resourceVersion)
