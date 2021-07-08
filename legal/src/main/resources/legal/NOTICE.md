@@ -62,7 +62,7 @@ Your use of *Apache SSHD* is subject to the terms and conditions of the Apache S
 A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Apache Git Box](https://gitbox.apache.org/repos/asf?p=mina-sshd.git;a=summary).
+The source code is available from [GitHub](https://github.com/apache/mina-sshd).
 
 ### Apache Thrift
 
