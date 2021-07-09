@@ -27,6 +27,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.hono.service.management.BaseDto;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TenantDto;
 import org.eclipse.hono.test.VertxMockSupport;
@@ -69,6 +70,52 @@ public class MongoDbBasedTenantDaoTest {
     }
 
     /**
+     * Verifies that a given document contains status properties for a newly created instance.
+     *
+     * @param document The document to check.
+     * @param expectedVersion The expected (initial) resource version.
+     * @throws AssertionError if a check fails.
+     */
+    static void assertCreationDocumentContainsStatusProperties(
+            final JsonObject document,
+            final String expectedVersion) {
+
+        assertThat(document.getString(BaseDto.FIELD_VERSION))
+            .as("document contains initial resource version")
+            .isEqualTo(expectedVersion);
+        assertThat(document.getInstant(BaseDto.FIELD_CREATED))
+            .as("document contains creation time")
+            .isNotNull();
+        assertThat(document.getInstant(BaseDto.FIELD_UPDATED_ON))
+            .as("document contains no last update time")
+            .isNull();
+    }
+
+    /**
+     * Verifies that a given document contains status properties for an updated instance.
+     *
+     * @param document The document to check.
+     * @param newResourceVersion The expected new resource version.
+     * @param originalCreationTime The expected original creation time.
+     * @throws AssertionError if a check fails.
+     */
+    static void assertUpdateDocumentContainsStatusProperties(
+            final JsonObject document,
+            final String newResourceVersion,
+            final Instant originalCreationTime) {
+
+        assertThat(document.getString(BaseDto.FIELD_VERSION))
+            .as("document contains new resource version")
+            .isEqualTo(newResourceVersion);
+        assertThat(document.getInstant(BaseDto.FIELD_CREATED))
+            .as("document contains original creation time")
+            .isEqualTo(originalCreationTime);
+        assertThat(document.getInstant(BaseDto.FIELD_UPDATED_ON))
+            .as("document contains reasonable last update time")
+            .isAfterOrEqualTo(originalCreationTime);
+    }
+
+    /**
      * Verifies that the DAO sets the initial version and creation date when creating a tenant.
      *
      * @param ctx The vert.x test context.
@@ -91,12 +138,9 @@ public class MongoDbBasedTenantDaoTest {
                     assertThat(version).isEqualTo("initial-version");
                     final var document = ArgumentCaptor.forClass(JsonObject.class);
                     verify(mongoClient).insert(eq("tenants"), document.capture(), VertxMockSupport.anyHandler());
-                    assertThat(document.getValue().getString(TenantDto.FIELD_VERSION))
-                        .isEqualTo("initial-version");
-                    assertThat(document.getValue().getInstant(TenantDto.FIELD_CREATED))
-                        .isNotNull();
-                    assertThat(document.getValue().getInstant(TenantDto.FIELD_UPDATED_ON))
-                        .isNull();
+                    MongoDbBasedTenantDaoTest.assertCreationDocumentContainsStatusProperties(
+                            document.getValue(),
+                            "initial-version");
                 });
                 ctx.completeNow();
             }));
@@ -152,12 +196,10 @@ public class MongoDbBasedTenantDaoTest {
                             any(FindOptions.class),
                             any(UpdateOptions.class),
                             VertxMockSupport.anyHandler());
-                    assertThat(document.getValue().getString(TenantDto.FIELD_VERSION))
-                        .isEqualTo("new-version");
-                    assertThat(document.getValue().getInstant(TenantDto.FIELD_CREATED))
-                        .isEqualTo(existingRecord.getCreationTime());
-                    assertThat(document.getValue().getInstant(TenantDto.FIELD_UPDATED_ON))
-                        .isAfterOrEqualTo(existingRecord.getCreationTime());
+                    MongoDbBasedTenantDaoTest.assertUpdateDocumentContainsStatusProperties(
+                            document.getValue(),
+                            "new-version",
+                            existingRecord.getCreationTime());
                 });
                 ctx.completeNow();
             }));

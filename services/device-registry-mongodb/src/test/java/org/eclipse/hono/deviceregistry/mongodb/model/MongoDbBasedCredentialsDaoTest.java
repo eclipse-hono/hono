@@ -30,7 +30,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.service.management.credentials.CredentialsDto;
 import org.eclipse.hono.service.management.device.DeviceDto;
-import org.eclipse.hono.service.management.tenant.TenantDto;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -93,12 +92,9 @@ public class MongoDbBasedCredentialsDaoTest {
                     assertThat(version).isEqualTo("initial-version");
                     final var document = ArgumentCaptor.forClass(JsonObject.class);
                     verify(mongoClient).insert(eq("credentials"), document.capture(), VertxMockSupport.anyHandler());
-                    assertThat(document.getValue().getString(TenantDto.FIELD_VERSION))
-                        .isEqualTo("initial-version");
-                    assertThat(document.getValue().getInstant(TenantDto.FIELD_CREATED))
-                        .isNotNull();
-                    assertThat(document.getValue().getInstant(TenantDto.FIELD_UPDATED_ON))
-                        .isNull();
+                    MongoDbBasedTenantDaoTest.assertCreationDocumentContainsStatusProperties(
+                            document.getValue(),
+                            "initial-version");
                 });
                 ctx.completeNow();
             }));
@@ -154,12 +150,10 @@ public class MongoDbBasedCredentialsDaoTest {
                             any(FindOptions.class),
                             any(UpdateOptions.class),
                             VertxMockSupport.anyHandler());
-                    assertThat(document.getValue().getString(TenantDto.FIELD_VERSION))
-                        .isEqualTo("new-version");
-                    assertThat(document.getValue().getInstant(TenantDto.FIELD_CREATED))
-                        .isEqualTo(existingRecord.getCreationTime());
-                    assertThat(document.getValue().getInstant(TenantDto.FIELD_UPDATED_ON))
-                        .isAfterOrEqualTo(existingRecord.getCreationTime());
+                    MongoDbBasedTenantDaoTest.assertUpdateDocumentContainsStatusProperties(
+                            document.getValue(),
+                            "new-version",
+                            existingRecord.getCreationTime());
                 });
                 ctx.completeNow();
             }));
