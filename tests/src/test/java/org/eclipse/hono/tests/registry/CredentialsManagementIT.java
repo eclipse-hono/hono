@@ -12,7 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.tests.registry;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
 import java.time.Instant;
@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
+import org.assertj.core.api.Assertions;
 import org.assertj.core.api.recursive.comparison.RecursiveComparisonConfiguration;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
@@ -153,7 +154,7 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
             .onComplete(context.succeeding(httpResponse -> {
                 context.verify(() -> {
                     final CommonCredential[] credsOnRecord = httpResponse.bodyAsJson(CommonCredential[].class);
-                    assertThat(credsOnRecord).hasSize(3);
+                    assertThat(credsOnRecord).hasLength(3);
                     Arrays.stream(credsOnRecord)
                         .forEach(creds -> {
                             assertThat(creds.getExtensions().get("device-id")).isNull();
@@ -662,7 +663,7 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
                 .withIgnoredFields("secrets.id", "secrets.key", "secrets.passwordHash", "secrets.passwordPlain", "secrets.hashFunction", "secrets.salt")
                 .build();
 
-        assertThat(returnedCreds)
+        Assertions.assertThat(returnedCreds)
             .usingRecursiveFieldByFieldElementComparator(config)
             .containsExactlyInAnyOrderElementsOf(expected);
     }

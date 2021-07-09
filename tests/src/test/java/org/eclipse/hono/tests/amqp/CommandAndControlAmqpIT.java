@@ -13,7 +13,8 @@
 
 package org.eclipse.hono.tests.amqp;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 
 import java.net.HttpURLConnection;
 import java.util.Map;
@@ -168,8 +169,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             }))
         .onComplete(setup.succeeding(v -> setupDone.flag()));
 
-        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
-                .as("connect and subscribe finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+        assertWithMessage("connect and subscribe finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+                .that(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
                 .isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
@@ -335,8 +336,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
         asyncResponseConsumer.onComplete(setup.completing());
 
-        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
-                .as("setup of command response consumer finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+        assertWithMessage("setup of command response consumer finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+                .that(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
                 .isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
@@ -523,7 +524,6 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         connectToAdapter(tenantId, deviceId, password, () -> createEventConsumer(tenantId, msg -> {
             // expect empty notification with TTD -1
             setup.verify(() -> assertThat(msg.getContentType())
-                    .as("receive TTD notification")
                     .isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
             final TimeUntilDisconnectNotification notification = msg.getTimeUntilDisconnectNotification().orElse(null);
             log.debug("received notification [{}]", notification);
@@ -547,9 +547,9 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             })
             .onComplete(setup.succeeding(v -> setupDone.flag()));
 
-        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
-            .as("setup of adapter finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
-            .isTrue();
+        assertWithMessage("setup of adapter finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+                .that(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
+                .isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;
@@ -616,7 +616,6 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         connectToAdapter(tenantId, deviceId, password, () -> createEventConsumer(tenantId, msg -> {
             // expect empty notification with TTD -1
             setup.verify(() -> assertThat(msg.getContentType())
-                    .as("receive TTD notification")
                     .isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
             final TimeUntilDisconnectNotification notification = msg.getTimeUntilDisconnectNotification().orElse(null);
             log.debug("received notification [{}]", notification);
@@ -635,8 +634,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 .compose(v -> kafkaAsyncErrorResponseConsumer)
                 .onComplete(setup.succeeding(v -> setupDone.flag()));
 
-        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
-                .as("setup of adapter finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+        assertWithMessage("setup of adapter finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+                .that(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
                 .isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
@@ -709,7 +708,6 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         connectToAdapter(tenantId, deviceId, password, () -> createEventConsumer(tenantId, msg -> {
             // expect empty notification with TTD -1
             setup.verify(() -> assertThat(msg.getContentType())
-                    .as("receive TTD notification")
                     .isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
             final TimeUntilDisconnectNotification notification = msg.getTimeUntilDisconnectNotification().orElse(null);
             log.debug("received notification [{}]", notification);
@@ -735,9 +733,9 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             }))
         .onComplete(setup.succeeding(v -> setupDone.flag()));
 
-        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
-            .as("setup of adapter finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
-            .isTrue();
+        assertWithMessage("setup of adapter finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+                .that(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
+                .isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;
@@ -764,7 +762,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // relevant for Kafka case: assert first command was actually received
-                        assertThat(firstCommandReceived.getPlain()).as("first command was received").isTrue();
+                        assertWithMessage("first command received").that(firstCommandReceived.getPlain()).isTrue();
                         assertThat(t).isInstanceOf(ServerErrorException.class);
                         assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
                         // with no explicit credit check, the AMQP adapter would just run into the "waiting for delivery update" timeout (after 1s)
@@ -814,8 +812,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                         }))
                 .onComplete(setup.succeeding(v -> setupDone.flag()));
 
-        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
-                .as("setup of adapter finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+        assertWithMessage("setup of adapter finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+                .that(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
                 .isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
@@ -888,8 +886,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                         REJECTED_COMMAND_ERROR_MESSAGE::equals)
                 : Future.succeededFuture(null);
         kafkaAsyncErrorResponseConsumer.onComplete(setup.completing());
-        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
-                .as("setup of command response consumer finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+        assertWithMessage("setup of command response consumer finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+                .that(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
                 .isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
@@ -996,8 +994,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                         null)
                 : Future.succeededFuture(null);
         kafkaAsyncErrorResponseConsumer.onComplete(setup.completing());
-        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
-                .as("setup of command response consumer finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+        assertWithMessage("setup of command response consumer finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+                .that(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
                 .isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());

@@ -72,7 +72,9 @@
     <module name="AvoidStaticImport">
       <property
         name="excludes"
-        value="org.assertj.core.api.Assertions.assertThat,
+        value="com.google.common.truth.Truth.assertThat,
+               com.google.common.truth.Truth.assertWithMessage,
+               org.assertj.core.api.Assertions.assertThat,
                org.assertj.core.api.Assertions.assertThatThrownBy,
                org.hamcrest.CoreMatchers.*,
                org.hamcrest.Matchers.*,

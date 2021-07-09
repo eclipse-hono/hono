@@ -14,7 +14,8 @@
 
 package org.eclipse.hono.tests.mqtt;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 
 import org.eclipse.hono.tests.CommandEndpointConfiguration;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -98,13 +99,13 @@ public class MqttCommandEndpointConfiguration extends CommandEndpointConfigurati
 
         assertThat(topic).isNotNull();
 
-        assertThat(topic.getEndpoint())
-        .as("command topic contains correct endpoint")
-        .isEqualTo(getSouthboundEndpoint());
+        assertWithMessage("command topic endpoint")
+                .that(topic.getEndpoint())
+                .isEqualTo(getSouthboundEndpoint());
 
-        assertThat(topic.getTenantId())
-        .as("command topic does not contain tenant ID")
-        .isNull();
+        assertWithMessage("command topic tenant ID")
+                .that(topic.getTenantId())
+                .isNull();
 
 
         switch (getSubscriberRole()) {
@@ -112,32 +113,31 @@ public class MqttCommandEndpointConfiguration extends CommandEndpointConfigurati
             // TODO: anything to assert in this case?
             break;
         case DEVICE:
-            assertThat(topic.getResourceId())
-            .as("command topic does not contain device ID")
-            .isNull();
+            assertWithMessage("command topic device ID")
+                    .that(topic.getResourceId())
+                    .isNull();
             break;
         case GATEWAY_FOR_ALL_DEVICES:
             // fall through
         case GATEWAY_FOR_SINGLE_DEVICE:
-            assertThat(topic.getResourceId())
-            .as("command topic contains device ID")
-            .isEqualTo(expectedCommandTarget);
+            assertWithMessage("command topic device ID")
+                    .that(topic.getResourceId())
+                    .isEqualTo(expectedCommandTarget);
             break;
         }
 
         if (isOneWayCommand) {
-            assertThat(topic.elementAt(4))
-            .as("one-way command topic does not contain request ID")
-            .isNull();
+            assertWithMessage("request ID part of one-way command topic")
+                    .that(topic.elementAt(4))
+                    .isNull();
         } else {
-            assertThat(topic.elementAt(4))
-            .as("command topic contains request ID")
-            .isNotNull();
+            assertWithMessage("request ID part of command topic")
+                    .that(topic.elementAt(4))
+                    .isNotNull();
         }
 
-        assertThat(topic.elementAt(5))
-        .as("command topic contains command name")
-        .isEqualTo(expectedCommandName);
-
+        assertWithMessage("command name in command topic")
+                .that(topic.elementAt(5))
+                .isEqualTo(expectedCommandName);
     }
 }

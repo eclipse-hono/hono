@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.tests.http;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
 import java.util.UUID;

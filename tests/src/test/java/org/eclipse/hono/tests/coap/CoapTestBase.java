@@ -13,7 +13,8 @@
 
 package org.eclipse.hono.tests.coap;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 
 import java.net.HttpURLConnection;
 import java.net.Inet4Address;
@@ -39,7 +40,6 @@ import java.util.stream.Stream;
 
 import javax.security.auth.x500.X500Principal;
 
-import org.assertj.core.data.Index;
 import org.eclipse.californium.core.CoapClient;
 import org.eclipse.californium.core.CoapHandler;
 import org.eclipse.californium.core.CoapResponse;
@@ -979,20 +979,24 @@ public abstract class CoapTestBase {
             final String tenantId,
             final String commandTargetDeviceId) {
 
-        assertThat(responseOptions.getLocationQuery())
-            .as("location query must contain parameter [%s]", expectedCommand)
-            .contains(expectedCommand);
+        assertWithMessage("location query")
+                .that(responseOptions.getLocationQuery()).contains(expectedCommand);
         assertThat(responseOptions.getContentFormat()).isEqualTo(MediaTypeRegistry.APPLICATION_JSON);
-        int idx = 0;
-        assertThat(responseOptions.getLocationPath()).contains(CommandConstants.COMMAND_RESPONSE_ENDPOINT, Index.atIndex(idx++));
         if (endpointConfiguration.isSubscribeAsGateway()) {
-            assertThat(responseOptions.getLocationPath()).contains(tenantId, Index.atIndex(idx++));
-            assertThat(responseOptions.getLocationPath()).contains(commandTargetDeviceId, Index.atIndex(idx++));
+            assertWithMessage("location path size")
+                    .that(responseOptions.getLocationPath().size()).isAtLeast(4);
+            assertThat(responseOptions.getLocationPath().subList(0, 3))
+                    .containsExactly(CommandConstants.COMMAND_RESPONSE_ENDPOINT, tenantId, commandTargetDeviceId).inOrder();
+        } else {
+            assertWithMessage("location path size")
+                    .that(responseOptions.getLocationPath().size()).isAtLeast(2);
+            assertThat(responseOptions.getLocationPath().get(0)).isEqualTo(CommandConstants.COMMAND_RESPONSE_ENDPOINT);
         }
         // request ID
-        assertThat(responseOptions.getLocationPath().get(idx))
-            .as("location path must contain command request ID")
-            .isNotNull();
+        final int requestIdIndex = endpointConfiguration.isSubscribeAsGateway() ? 3 : 1;
+        assertWithMessage("request ID in location path")
+                .that(responseOptions.getLocationPath().get(requestIdIndex))
+                .isNotNull();
     }
 
     /**
@@ -1081,14 +1085,14 @@ public abstract class CoapTestBase {
             final String tenantId,
             final String commandTargetDeviceId) {
 
-        assertThat(responseOptions.getLocationQuery())
-            .as("response doesn't contain command")
-            .contains(expectedCommand);
+        assertWithMessage("response location query")
+                .that(responseOptions.getLocationQuery()).contains(expectedCommand);
         assertThat(responseOptions.getContentFormat()).isEqualTo(MediaTypeRegistry.APPLICATION_JSON);
-        assertThat(responseOptions.getLocationPath()).contains(CommandConstants.COMMAND_ENDPOINT, Index.atIndex(0));
         if (endpointConfiguration.isSubscribeAsGateway()) {
-            assertThat(responseOptions.getLocationPath()).contains(tenantId, Index.atIndex(1));
-            assertThat(responseOptions.getLocationPath()).contains(commandTargetDeviceId, Index.atIndex(2));
+            assertThat(responseOptions.getLocationPath())
+                    .containsExactly(CommandConstants.COMMAND_ENDPOINT, tenantId, commandTargetDeviceId).inOrder();
+        } else {
+            assertThat(responseOptions.getLocationPath()).containsExactly(CommandConstants.COMMAND_ENDPOINT);
         }
     }
 

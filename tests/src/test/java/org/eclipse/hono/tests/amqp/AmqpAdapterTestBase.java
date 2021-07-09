@@ -12,7 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.tests.amqp;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Optional;
 import java.util.Set;
@@ -276,7 +276,8 @@ public abstract class AmqpAdapterTestBase {
 
         return result.future()
                 .map(con -> {
-                    assertThat(unopenedConnection.getRemoteOfferedCapabilities()).contains(Constants.CAP_ANONYMOUS_RELAY);
+                    assertThat(unopenedConnection.getRemoteOfferedCapabilities()).asList()
+                            .contains(Constants.CAP_ANONYMOUS_RELAY);
                     this.context = Vertx.currentContext();
                     this.connection = unopenedConnection;
                     log.info("AMQPS connection to adapter [{}:{}] established",

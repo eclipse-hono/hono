@@ -12,7 +12,8 @@
  *******************************************************************************/
 package org.eclipse.hono.tests.amqp;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 
 import java.net.HttpURLConnection;
 import java.util.Collections;
@@ -136,8 +137,9 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
             .map(s -> {
                 setup.verify(() -> {
                     final UnsignedLong maxMessageSize = s.getRemoteMaxMessageSize();
-                    assertThat(maxMessageSize).as("check adapter's attach frame includes max-message-size").isNotNull();
-                    assertThat(maxMessageSize.longValue()).as("check message size is limited").isGreaterThan(0);
+                    assertWithMessage("max-message-size included in adapter's attach frame")
+                            .that(maxMessageSize).isNotNull();
+                    assertWithMessage("max-message-size").that(maxMessageSize.longValue()).isGreaterThan(0);
                 });
                 sender = s;
                 return s;
@@ -201,8 +203,9 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
             log.info("AMQP adapter uses max-message-size {}", maxMessageSize);
 
             ctx.verify(() -> {
-                assertThat(maxMessageSize).as("check adapter's attach frame includes max-message-size").isNotNull();
-                assertThat(maxMessageSize.longValue()).as("check message size is limited").isGreaterThan(0);
+                assertWithMessage("max-message-size included in adapter's attach frame")
+                        .that(maxMessageSize).isNotNull();
+                assertWithMessage("max-message-size").that(maxMessageSize.longValue()).isGreaterThan(0);
             });
 
             final Message msg = ProtonHelper.message();
@@ -316,17 +319,18 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
             .onComplete(setup.succeeding(s -> {
                 setup.verify(() -> {
                     final UnsignedLong maxMessageSize = s.getRemoteMaxMessageSize();
-                    assertThat(maxMessageSize).as("check adapter's attach frame includes max-message-size").isNotNull();
-                    assertThat(maxMessageSize.longValue()).as("check message size is limited").isGreaterThan(0);
+                    assertWithMessage("max-message-size included in adapter's attach frame")
+                            .that(maxMessageSize).isNotNull();
+                    assertWithMessage("max-message-size").that(maxMessageSize.longValue()).isGreaterThan(0);
                 });
                 sender = s;
                 setup.completeNow();
             }));
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
-        assertThat(setup.failed())
-            .as("successfully connect to adapter")
-            .isFalse();
+        assertWithMessage("adapter connection failure occurred")
+                .that(setup.failed())
+                .isFalse();
 
         testUploadMessages(tenantId, senderQos);
     }
@@ -359,17 +363,18 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
             .onComplete(setup.succeeding(s -> {
                 setup.verify(() -> {
                     final UnsignedLong maxMessageSize = s.getRemoteMaxMessageSize();
-                    assertThat(maxMessageSize).as("check adapter's attach frame includes max-message-size").isNotNull();
-                    assertThat(maxMessageSize.longValue()).as("check message size is limited").isGreaterThan(0);
+                    assertWithMessage("max-message-size included in adapter's attach frame")
+                            .that(maxMessageSize).isNotNull();
+                    assertWithMessage("max-message-size").that(maxMessageSize.longValue()).isGreaterThan(0);
                 });
                 sender = s;
                 setup.completeNow();
             }));
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
-        assertThat(setup.failed())
-            .as("successfully connect to adapter")
-            .isFalse();
+        assertWithMessage("adapter connection failure occurred")
+                .that(setup.failed())
+                .isFalse();
 
         testUploadMessages(tenantId, senderQos);
     }
@@ -507,9 +512,9 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         if (messageSending.failed()) {
             Assertions.fail("failed to upload messages", messageSending.causeOfFailure());
         }
-        assertThat(messagesReceived.get())
-            .as(String.format("assert all %d expected messages are received", IntegrationTestSupport.MSG_COUNT))
-            .isGreaterThanOrEqualTo(IntegrationTestSupport.MSG_COUNT);
+        assertWithMessage("number of received messages")
+                .that(messagesReceived.get())
+                .isAtLeast(IntegrationTestSupport.MSG_COUNT);
     }
 
     /**

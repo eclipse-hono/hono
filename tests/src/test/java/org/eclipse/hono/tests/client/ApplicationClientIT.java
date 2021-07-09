@@ -12,7 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.tests.client;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
 import java.util.List;
@@ -71,8 +71,8 @@ public class ApplicationClientIT {
         client.connect().onComplete(ctx.failing(t -> {
             // THEN the connection attempt fails due to lack of authorization
             ctx.verify(() -> {
-                assertThat(t).isInstanceOfSatisfying(ClientErrorException.class,
-                        error -> assertThat(error.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED));
+                assertThat(t).isInstanceOf(ClientErrorException.class);
+                assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED);
             });
             ctx.completeNow();
         }));
@@ -101,8 +101,8 @@ public class ApplicationClientIT {
         client.connect().onComplete(ctx.failing(t -> {
             // THEN the connection attempt fails due to lack of authorization
             ctx.verify(() -> {
-                assertThat(t).isInstanceOfSatisfying(ClientErrorException.class,
-                        error -> assertThat(error.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST));
+                assertThat(t).isInstanceOf(ClientErrorException.class);
+                assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
             });
             ctx.completeNow();
         }));
