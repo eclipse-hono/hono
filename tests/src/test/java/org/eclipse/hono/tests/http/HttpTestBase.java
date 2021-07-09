@@ -13,7 +13,8 @@
 
 package org.eclipse.hono.tests.http;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
@@ -1200,8 +1201,9 @@ import io.vertx.junit5.VertxTestContext;
 
                                 ctx.verify(() -> {
                                     // assert that the response contains a command
-                                    assertThat(httpResponse.getHeader(Constants.HEADER_COMMAND))
-                                            .as("response #" + count + " doesn't contain command").isNotNull();
+                                    assertWithMessage("response no. %s '%s' header", count, Constants.HEADER_COMMAND)
+                                            .that(httpResponse.getHeader(Constants.HEADER_COMMAND))
+                                            .isNotNull();
                                     assertThat(httpResponse.getHeader(Constants.HEADER_COMMAND)).isEqualTo(COMMAND_TO_SEND);
                                     assertThat(httpResponse.getHeader(HttpHeaders.CONTENT_TYPE.toString())).isEqualTo("application/json");
                                     assertThat(requestId).isNotNull();
@@ -1303,8 +1305,9 @@ import io.vertx.junit5.VertxTestContext;
                         .map(httpResponse -> {
                             ctx.verify(() -> {
                                 // assert that the response contains a one-way command
-                                assertThat(httpResponse.getHeader(Constants.HEADER_COMMAND))
-                                        .as("response #" + count + " doesn't contain command").isNotNull();
+                                assertWithMessage("response no. %s '%s' header", count, Constants.HEADER_COMMAND)
+                                        .that(httpResponse.getHeader(Constants.HEADER_COMMAND))
+                                        .isNotNull();
                                 assertThat(httpResponse.getHeader(Constants.HEADER_COMMAND)).isEqualTo(COMMAND_TO_SEND);
                                 assertThat(httpResponse.getHeader(HttpHeaders.CONTENT_TYPE.toString())).isEqualTo("application/json");
                                 assertThat(httpResponse.getHeader(Constants.HEADER_COMMAND_REQUEST_ID)).isNull();

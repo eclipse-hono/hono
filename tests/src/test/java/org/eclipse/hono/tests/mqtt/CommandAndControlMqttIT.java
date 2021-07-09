@@ -13,7 +13,8 @@
 
 package org.eclipse.hono.tests.mqtt;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
@@ -297,8 +298,8 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         .compose(conAck -> subscribeToCommands(commandTargetDeviceId, commandConsumer, endpointConfig, subscribeQos))
         .onComplete(setup.succeeding(ok -> ready.flag()));
 
-        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
-                .as("setup of adapter finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+        assertWithMessage("setup of adapter finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+                .that(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
                 .isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
@@ -404,8 +405,8 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             ready.flag();
         }));
 
-        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
-                .as("setup of adapter finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+        assertWithMessage("setup of adapter finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+                .that(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
                 .isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
@@ -488,8 +489,8 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                 .compose(ok -> kafkaAsyncErrorResponseConsumer)
                 .onComplete(setup.succeeding(v -> ready.flag()));
 
-        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
-                .as("setup of adapter finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+        assertWithMessage("setup of adapter finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+                .that(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
                 .isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
@@ -594,8 +595,8 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                 .compose(conAck -> subscribeToCommands(commandTargetDeviceId, commandConsumer, endpointConfig, subscribeQos))
                 .onComplete(setup.succeeding(ok -> ready.flag()));
 
-        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
-                .as("setup of adapter finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+        assertWithMessage("setup of adapter finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
+                .that(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
                 .isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());

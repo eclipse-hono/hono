@@ -13,7 +13,8 @@
 
 package org.eclipse.hono.tests;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
@@ -920,12 +921,10 @@ public final class IntegrationTestSupport {
                 // complete, and check if we successfully deleted the devices
                 .onComplete(ctx.succeeding(tenantsInRegistry -> {
                     ctx.verify(() -> {
-                        assertThat(devicesDeleted.get())
-                            .as("successfully deleted devices")
-                            .isTrue();
-                        assertThat(tenantsInRegistry)
-                            .as("registry contains no other tenants after successful deletion of temporary tenants")
-                            .isEqualTo(0);
+                        assertWithMessage("devices successfully deleted").that(devicesDeleted.get()).isTrue();
+                        assertWithMessage("no. of tenants in registry after successful deletion of temporary tenants")
+                                .that(tenantsInRegistry)
+                                .isEqualTo(0);
                     });
                     ctx.completeNow();
                 }));
@@ -1456,12 +1455,12 @@ public final class IntegrationTestSupport {
             final DownstreamMessage<? extends MessageContext> msg,
             final String expectedTenantId) {
 
-        assertThat(msg.getTenantId()).as("message includes matching tenant ID").isEqualTo(expectedTenantId);
-        assertThat(msg.getDeviceId()).as("message includes non-null device ID").isNotNull();
+        assertWithMessage("message tenant ID").that(msg.getTenantId()).isEqualTo(expectedTenantId);
+        assertWithMessage("message tenant ID").that(msg.getDeviceId()).isNotNull();
         final var ttdValue = msg.getTimeTillDisconnect();
         if (ttdValue != null) {
-            assertThat(ttdValue).as("ttd property contains an integer >= -1").isGreaterThanOrEqualTo(-1);
-            assertThat(msg.getCreationTime()).as("message contains a non-null creation time").isNotNull();
+            assertWithMessage("ttd property value").that(ttdValue).isAtLeast(-1);
+            assertWithMessage("message creation time").that(msg.getCreationTime()).isNotNull();
         }
     }
 
@@ -1476,15 +1475,16 @@ public final class IntegrationTestSupport {
             final JsonObject deviceStatus,
             final boolean expectedAutoProvisionedStatus) {
 
-        assertThat(deviceStatus).as("device registration info contains status").isNotNull();
+        assertWithMessage("status in device registration info").that(deviceStatus).isNotNull();
         if (expectedAutoProvisionedStatus) {
-            assertThat(deviceStatus.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED))
-                .as("auto-provisioned property has value true")
-                .isTrue();
+            assertWithMessage("auto-provisioned property")
+                    .that(deviceStatus.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED))
+                    .isTrue();
         } else {
-            assertThat(deviceStatus.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED))
-            .as("auto-provisioned property is either missing or has value false")
-            .matches(b -> b == null || !b.booleanValue());
+            final Boolean autoProvisioned = deviceStatus.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED);
+            assertWithMessage("auto-provisioned property is missing or has value 'false'")
+                    .that(autoProvisioned == null || !autoProvisioned)
+                    .isTrue();
         }
     }
 

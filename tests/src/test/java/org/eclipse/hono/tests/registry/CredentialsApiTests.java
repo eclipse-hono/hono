@@ -14,7 +14,8 @@
 
 package org.eclipse.hono.tests.registry;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -342,12 +343,12 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
                     final DeviceStatus deviceStatus = resultBody
                             .getJsonObject(RegistryManagementConstants.FIELD_STATUS)
                             .mapTo(DeviceStatus.class);
-                    assertThat(deviceStatus.isAutoProvisioned())
-                        .as("device is marked as auto-provisioned")
-                        .isTrue();
-                    assertThat(deviceStatus.isAutoProvisioningNotificationSent())
-                        .as("auto-provisioning notification for device has been sent")
-                        .isTrue();
+                    assertWithMessage("device auto-provisioned")
+                            .that(deviceStatus.isAutoProvisioned())
+                            .isTrue();
+                    assertWithMessage("auto-provisioning notification for device sent")
+                            .that(deviceStatus.isAutoProvisioningNotificationSent())
+                            .isTrue();
                 });
                 autoProvisioningCompleted.flag();
             }));

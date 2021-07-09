@@ -12,7 +12,8 @@
  *******************************************************************************/
 package org.eclipse.hono.tests.registry;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 
 import java.net.HttpURLConnection;
 import java.time.Instant;
@@ -25,6 +26,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.assertj.core.api.Assertions;
 import org.eclipse.hono.service.management.SearchResult;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceStatus;
@@ -896,35 +898,34 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
         final JsonObject actualDeviceJson = response.bodyAsJsonObject();
         final Device actualDevice = actualDeviceJson.mapTo(Device.class);
 
-        assertThat(actualDevice)
+        Assertions.assertThat(actualDevice)
                 .usingRecursiveComparison()
                 .isEqualTo(expectedData);
 
         // internal status is not decoded from JSON as users should not be allowed to change internal status
         final JsonObject actualDeviceStatus = actualDeviceJson.getJsonObject(RegistryManagementConstants.FIELD_STATUS);
-        assertThat(actualDeviceStatus.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED, Boolean.FALSE))
-            .as("%s property is either not included in response or has value false",
-                    RegistryManagementConstants.FIELD_AUTO_PROVISIONED)
-            .isFalse();
-        assertThat(actualDeviceStatus.getBoolean(
-                RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT,
-                Boolean.FALSE))
-            .as("%s property is either not included in response or has value false",
-                    RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT)
-            .isFalse();
+        assertWithMessage("response containing %s property or the property value",
+                RegistryManagementConstants.FIELD_AUTO_PROVISIONED)
+                .that(actualDeviceStatus.getBoolean(RegistryManagementConstants.FIELD_AUTO_PROVISIONED, Boolean.FALSE))
+                .isFalse();
+        assertWithMessage("response containing %s property or the property value",
+                RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT)
+                .that(actualDeviceStatus.getBoolean(
+                        RegistryManagementConstants.FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT, Boolean.FALSE))
+                .isFalse();
 
         final Instant creationTime = actualDeviceStatus.getInstant(RegistryManagementConstants.FIELD_STATUS_CREATION_DATE);
         if (expectedCreationTime == null) {
-            assertThat(creationTime).as("device has non-null creation time").isNotNull();
+            assertWithMessage("device creation time").that(creationTime).isNotNull();
         } else {
-            assertThat(creationTime).as("device has expected creation time").isEqualTo(expectedCreationTime);
+            assertWithMessage("device creation time").that(creationTime).isEqualTo(expectedCreationTime);
         }
 
         final Instant lastUpdatedAt = actualDeviceStatus.getInstant(RegistryManagementConstants.FIELD_STATUS_LAST_UPDATE);
         if (updatedOnExpectedToBeNonNull) {
-            assertThat(lastUpdatedAt).as("device has non-null updated time").isAfterOrEqualTo(creationTime);
+            assertWithMessage("device updated time").that(lastUpdatedAt).isAtLeast(creationTime);
         } else {
-            assertThat(lastUpdatedAt).as("device has no updated time").isNull();
+            assertWithMessage("device updated time").that(lastUpdatedAt).isNull();
         }
     }
 }

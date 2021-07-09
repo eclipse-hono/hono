@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.tests.registry;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
 import java.security.KeyPair;
@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.assertj.core.api.Assertions;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
@@ -121,7 +122,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
         .onComplete(ctx.succeeding(tenantObject -> {
             ctx.verify(() -> {
                 assertThat(tenantObject.getDefaults()).isEqualTo(expectedTenantObject.getDefaults());
-                assertThat(tenantObject.getAdapters())
+                Assertions.assertThat(tenantObject.getAdapters())
                     .usingRecursiveFieldByFieldElementComparator()
                     .containsAll(expectedTenantObject.getAdapters());
                 assertThat(tenantObject.getResourceLimits().getMaxConnections())
@@ -208,7 +209,7 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
         .onComplete(ctx.succeeding(tenantObject -> {
             ctx.verify(() -> {
                 assertThat(tenantObject.getTenantId()).isEqualTo(tenantId);
-                assertThat(tenantObject.getTrustAnchors()).size().isEqualTo(1);
+                assertThat(tenantObject.getTrustAnchors()).hasSize(1);
                 final TrustAnchor trustAnchor = tenantObject.getTrustAnchors().iterator().next();
                 assertThat(trustAnchor.getCA()).isEqualTo(subjectDn);
                 assertThat(trustAnchor.getCAPublicKey()).isEqualTo(publicKey);
