@@ -208,13 +208,23 @@ public final class MongoDbBasedTenantService extends AbstractTenantManagementSer
                 .withTenantId(tenantId)
                 .document();
 
-        final Promise<JsonObject> updateTenantPromise = Promise.promise();
-        final TenantDto newTenantDto = TenantDto.forUpdate(tenantId, newTenant, new Versioned<>(newTenant).getVersion());
-        mongoClient.findOneAndReplaceWithOptions(config.getCollectionName(), updateTenantQuery,
-                JsonObject.mapFrom(newTenantDto), new FindOptions(), new UpdateOptions().setReturningNewDocument(true),
-                updateTenantPromise);
+        return findTenant(tenantId)
+                .map(existingDto -> TenantDto.forUpdate(
+                        () -> existingDto,
+                        newTenant,
+                        new Versioned<>(newTenant).getVersion()))
+                .compose(newTenantDto -> {
+                    final Promise<JsonObject> updateTenantPromise = Promise.promise();
+                    mongoClient.findOneAndReplaceWithOptions(
+                            config.getCollectionName(),
+                            updateTenantQuery,
+                            JsonObject.mapFrom(newTenantDto),
+                            new FindOptions(),
+                            new UpdateOptions().setReturningNewDocument(true),
+                            updateTenantPromise);
 
-        return updateTenantPromise.future()
+                    return updateTenantPromise.future();
+                })
                 .compose(updateResult -> Optional.ofNullable(updateResult)
                         .map(updated -> {
                             span.log("successfully updated tenant");
