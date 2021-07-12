@@ -13,8 +13,8 @@
 
 package org.eclipse.hono.kafka.test;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static com.google.common.truth.Truth.assertThat;
 
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -77,11 +77,14 @@ public class KafkaClientUnitTestHelper {
     public static void assertStandardHeaders(final ProducerRecord<String, Buffer> actual, final String deviceId,
             final String contentType, final int qos) {
 
-        assertThat(actual.headers()).containsOnlyOnce(new RecordHeader("content-type", contentType.getBytes()));
+        assertThat(actual.headers().headers("content-type")).hasSize(1);
+        assertThat(actual.headers()).contains(new RecordHeader("content-type", contentType.getBytes()));
 
-        assertThat(actual.headers()).containsOnlyOnce(new RecordHeader("device_id", deviceId.getBytes()));
+        assertThat(actual.headers().headers("device_id")).hasSize(1);
+        assertThat(actual.headers()).contains(new RecordHeader("device_id", deviceId.getBytes()));
 
-        assertThat(actual.headers()).containsOnlyOnce(new RecordHeader("qos", Json.encode(qos).getBytes()));
+        assertThat(actual.headers().headers("qos")).hasSize(1);
+        assertThat(actual.headers()).contains(new RecordHeader("qos", Json.encode(qos).getBytes()));
     }
 
 }

@@ -41,5 +41,10 @@
       <artifactId>assertj-core</artifactId>
       <scope>compile</scope>
     </dependency>
+    <dependency>
+      <groupId>com.google.truth</groupId>
+      <artifactId>truth</artifactId>
+      <scope>compile</scope>
+    </dependency>
   </dependencies>
 </project>

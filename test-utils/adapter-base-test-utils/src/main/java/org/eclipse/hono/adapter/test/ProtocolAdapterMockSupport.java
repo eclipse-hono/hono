@@ -14,7 +14,6 @@
 
 package org.eclipse.hono.adapter.test;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -23,6 +22,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Map;
 import java.util.Objects;
@@ -406,7 +406,7 @@ public abstract class ProtocolAdapterMockSupport {
             });
         Optional.ofNullable(contentType)
             .ifPresent(v -> {
-                assertThat(contentTypeCaptor.getValue()).isEqualToIgnoringCase(v);
+                assertThat(contentTypeCaptor.getValue()).ignoringCase().isEqualTo(v);
             });
     }
 
@@ -525,11 +525,11 @@ public abstract class ProtocolAdapterMockSupport {
             });
         Optional.ofNullable(contentType)
             .ifPresent(v -> {
-                assertThat(contentTypeCaptor.getValue()).isEqualToIgnoringCase(v);
+                assertThat(contentTypeCaptor.getValue()).ignoringCase().isEqualTo(v);
             });
         Optional.ofNullable(ttl)
             .ifPresent(v -> {
-                assertThat(propsCaptor.getValue()).contains(Map.entry(MessageHelper.SYS_HEADER_PROPERTY_TTL, v));
+                assertThat(propsCaptor.getValue()).containsAtLeastEntriesIn(Map.of(MessageHelper.SYS_HEADER_PROPERTY_TTL, v));
             });
     }
 
