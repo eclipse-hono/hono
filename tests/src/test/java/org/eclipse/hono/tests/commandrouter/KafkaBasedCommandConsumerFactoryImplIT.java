@@ -328,13 +328,19 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
         });
 
         final AtomicInteger secondConsumerGetAdapterInstanceInvocations = new AtomicInteger();
-        // wait for first record on internal topic to have been received (making sure its offset got committed)
+        // wait for first record on internal topic to have been received ...
         CompositeFuture.join(firstConsumerAllGetAdapterInstanceInvocationsDone.future(), firstRecordReceivedPromise.future())
+            .compose(v -> {
+                // ... and wait some more, making sure that the offset of the first record has been committed
+                final Promise<Void> delayPromise = Promise.promise();
+                vertx.setTimer(500, tid -> delayPromise.complete());
+                return delayPromise.future();
+            })
             .onComplete(v -> {
-                LOG.debug("stopping consumer factory");
+                LOG.info("stopping first consumer factory");
                 consumerFactory1Ref.get().stop()
                     .onComplete(ctx.succeeding(ar -> {
-                        LOG.debug("starting new consumer factory");
+                        LOG.info("factory stopped");
                         // no delay on getting the target adapter instance added here
                         final KafkaBasedCommandConsumerFactoryImpl consumerFactory2 = getKafkaBasedCommandConsumerFactory(() -> {
                             secondConsumerGetAdapterInstanceInvocations.incrementAndGet();
@@ -342,10 +348,10 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
                         });
                         consumerFactory2.start()
                             .onComplete(ctx.succeeding(ar2 -> {
-                                LOG.debug("creating command consumer in new consumer factory");
+                                LOG.info("creating command consumer in new consumer factory");
                                 createCommandConsumer(tenantId, consumerFactory2)
                                         .onComplete(ctx.succeeding(ar3 -> {
-                                            LOG.debug("consumer created, now complete the promises to get the target adapter instances");
+                                            LOG.debug("consumer created");
                                             firstConsumerGetAdapterInstancePromisesQueue.forEach(Promise::tryComplete);
                                         }));
                             }));
