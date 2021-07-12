@@ -30,8 +30,6 @@ abstract class AbstractApplicationClient extends AbstractCliClient {
 
     @Value(value = "${tenant.id}")
     protected String tenantId;
-    @Value(value = "${device.id}")
-    protected String deviceId;
     @Value(value = "${connection.retryInterval}")
     protected int connectionRetryInterval;
     protected ApplicationClient<? extends MessageContext> client;

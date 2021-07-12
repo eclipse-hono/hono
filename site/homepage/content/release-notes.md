@@ -43,6 +43,11 @@ description = "Information about changes in recent Hono releases. Includes new f
   but only the identifier. This has been fixed.
 * A potential issue processing Command & Control messages from a Kafka cluster while Command Router instances are
   getting stopped or started has been fixed.
+* The default properties of the Hono CLI tool have been updated to match typical Hono installations. It provides now 
+  3 types of profiles that need to be combined: 1. select the "mode": `receiver` or `command`; 2. select the "target":
+  `sandbox` or `local` (aims for deployment in Minikube but works for every deployment of the Helm chart); 3. select the 
+  "messaging-type": `kafka` (if not set, it defaults to AMQP-based messaging). For details refer to the file 
+  `application.yml` of the CLI module.
 
 ### Deprecations
 
