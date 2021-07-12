@@ -118,6 +118,7 @@ maven/mavencentral/javax.annotation/javax.annotation-api/1.3.2, CDDL-1.1 OR GPL-
 maven/mavencentral/javax.xml.bind/jaxb-api/2.2.12, CDDL-1.0, approved, CQ8374
 maven/mavencentral/net.bytebuddy/byte-buddy/1.10.19, , approved, CQ22491
 maven/mavencentral/net.bytebuddy/byte-buddy-agent/1.10.19, Apache-2.0, approved, clearlydefined
+maven/mavencentral/net.i2p.crypto/eddsa/0.3.0, CC0, approved, CQ17804
 maven/mavencentral/org.apache.kafka/kafka-clients/2.6.0, Apache-2.0 AND BSD-2-Clause AND BSD-3-Clause AND EPL-2.0, approved, clearlydefined
 maven/mavencentral/org.apache.logging.log4j/log4j-api/2.13.3, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.apache.logging.log4j/log4j-to-slf4j/2.13.3, Apache-2.0, approved, clearlydefined
