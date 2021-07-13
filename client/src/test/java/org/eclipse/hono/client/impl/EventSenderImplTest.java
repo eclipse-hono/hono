@@ -12,7 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.client.impl;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -22,6 +21,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
 import java.util.concurrent.atomic.AtomicReference;
@@ -33,11 +33,11 @@ import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ResourceLimitExceededException;
 import org.eclipse.hono.client.SendMessageSampler;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.junit.jupiter.api.BeforeEach;
@@ -114,8 +114,10 @@ public class EventSenderImplTest {
     public void testSendMessageFailsForResourceLimitExceeded() {
         testSendMessageFailsForRejectedOutcome(
                 AmqpError.RESOURCE_LIMIT_EXCEEDED,
-                t -> assertThat(t).isInstanceOf(ResourceLimitExceededException.class)
-                    .extracting("clientFacingMessage").isNotNull());
+                t -> {
+                    assertThat(t).isInstanceOf(ResourceLimitExceededException.class);
+                    assertThat(((ResourceLimitExceededException) t).getClientFacingMessage()).isNotEmpty();
+                });
     }
 
     /**
@@ -126,8 +128,11 @@ public class EventSenderImplTest {
     public void testSendMessageFailsForArbitraryError() {
         testSendMessageFailsForRejectedOutcome(
                 Symbol.getSymbol("arbitrary-error"),
-                t -> assertThat(t).isInstanceOf(ServiceInvocationException.class)
-                    .extracting("errorCode").isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST));
+                t -> {
+                    assertThat(t).isInstanceOf(ClientErrorException.class);
+                    assertThat(((ClientErrorException) t).getErrorCode())
+                            .isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
+                });
     }
 
     private void testSendMessageFailsForRejectedOutcome(

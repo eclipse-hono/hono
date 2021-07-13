@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.tracing;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.HashMap;
 import java.util.Map;

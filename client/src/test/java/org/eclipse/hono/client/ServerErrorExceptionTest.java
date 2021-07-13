@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.client;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 
 import org.junit.jupiter.api.Test;
 
@@ -30,7 +30,7 @@ public class ServerErrorExceptionTest {
     public void testCodeAndMessage() {
         final ServerErrorException t = new ServerErrorException(500, "Foo Bar");
 
-        assertThat(t).hasMessage("Foo Bar");
+        assertThat(t).hasMessageThat().isEqualTo("Foo Bar");
         assertThat(t.getErrorCode()).isEqualTo(500);
     }
 
@@ -42,7 +42,7 @@ public class ServerErrorExceptionTest {
     public void testCodeAndNoMessage() {
         final ServerErrorException t = new ServerErrorException(500);
 
-        assertThat(t).hasMessage("Error Code: 500");
+        assertThat(t).hasMessageThat().isEqualTo("Error Code: 500");
         assertThat(t.getErrorCode()).isEqualTo(500);
     }
 
@@ -54,8 +54,8 @@ public class ServerErrorExceptionTest {
     public void testCodeCauseAndNoMessage() {
         final ServerErrorException t = new ServerErrorException(500, new RuntimeException("Bar Foo"));
 
-        assertThat(t).hasMessage("Error Code: 500");
-        assertThat(t).hasCauseInstanceOf(RuntimeException.class);
+        assertThat(t).hasMessageThat().isEqualTo("Error Code: 500");
+        assertThat(t).hasCauseThat().isInstanceOf(RuntimeException.class);
 
         assertThat(t.getErrorCode()).isEqualTo(500);
     }
@@ -68,8 +68,8 @@ public class ServerErrorExceptionTest {
     public void testCodeCauseAndMessage() {
         final ServerErrorException t = new ServerErrorException(500, "Foo Bar", new RuntimeException("Bar Foo"));
 
-        assertThat(t).hasMessage("Foo Bar");
-        assertThat(t).hasCauseInstanceOf(RuntimeException.class);
+        assertThat(t).hasMessageThat().isEqualTo("Foo Bar");
+        assertThat(t).hasCauseThat().isInstanceOf(RuntimeException.class);
 
         assertThat(t.getErrorCode()).isEqualTo(500);
     }

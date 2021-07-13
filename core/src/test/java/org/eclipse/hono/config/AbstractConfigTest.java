@@ -12,8 +12,8 @@
  *******************************************************************************/
 package org.eclipse.hono.config;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Collections;
 import java.util.List;
@@ -185,8 +185,8 @@ public class AbstractConfigTest {
         assertThat(newConfig.getKeyStorePassword()).isEqualTo("pwd");
         assertThat(newConfig.getKeyStorePath()).isEqualTo("keystore/path");
         assertThat(newConfig.getPathSeparator()).isEqualTo("::");
-        assertThat(newConfig.getSecureProtocols()).hasSameElementsAs(protocols);
-        assertThat(newConfig.getSupportedCipherSuites()).hasSameElementsAs(ciphers);
+        assertThat(newConfig.getSecureProtocols()).containsExactlyElementsIn(protocols);
+        assertThat(newConfig.getSupportedCipherSuites()).containsExactlyElementsIn(ciphers);
         assertThat(newConfig.getTrustStoreFormat()).isEqualTo(FileFormat.PKCS12);
         assertThat(newConfig.getTrustStorePassword()).isEqualTo("tpwd");
         assertThat(newConfig.getTrustStorePath()).isEqualTo("truststore/path");
