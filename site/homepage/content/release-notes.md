@@ -43,6 +43,9 @@ description = "Information about changes in recent Hono releases. Includes new f
   but only the identifier. This has been fixed.
 * A potential issue processing Command & Control messages from a Kafka cluster while Command Router instances are
   getting stopped or started has been fixed.
+* The rate at which the Command Router component handles Command & Control messages from a Kafka cluster is now
+  limited to prevent potential memory issues and reduce the load on dependent services. The limit value is adopted from
+  the configured `max.poll.records` Kafka consumer configuration value.
 * The default properties of the Hono CLI tool have been updated to match typical Hono installations. It provides now 
   3 types of profiles that need to be combined: 1. select the "mode": `receiver` or `command`; 2. select the "target":
   `sandbox` or `local` (aims for deployment in Minikube but works for every deployment of the Helm chart); 3. select the 
