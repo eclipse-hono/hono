@@ -19,7 +19,7 @@
     <groupId>org.eclipse.hono</groupId>
     <artifactId>hono-adapters-quarkus</artifactId>
     <relativePath>../base-quarkus</relativePath>
-    <version>1.9.0</version>
+    <version>1.9.1-SNAPSHOT</version>
   </parent>
   <artifactId>hono-adapter-mqtt-vertx-quarkus</artifactId>
   <name>Hono MQTT Adapter (Quarkus)</name>
