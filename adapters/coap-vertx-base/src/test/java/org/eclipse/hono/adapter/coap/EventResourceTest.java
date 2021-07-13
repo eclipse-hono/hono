@@ -14,7 +14,6 @@
 
 package org.eclipse.hono.adapter.coap;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -22,6 +21,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
@@ -130,8 +130,9 @@ public class EventResourceTest extends ResourceTestBase {
         // THEN the device gets a 4.00
         result.onComplete(ctx.failing(t -> {
             ctx.verify(() -> {
-                assertThat(result.cause()).isInstanceOfSatisfying(ClientErrorException.class,
-                        e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST));
+                assertThat(result.cause()).isInstanceOf(ClientErrorException.class);
+                assertThat(((ClientErrorException) result.cause()).getErrorCode())
+                        .isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
                 verify(metrics).reportTelemetry(
                         eq(MetricsTags.EndpointType.EVENT),
                         eq("tenant"),
@@ -175,8 +176,8 @@ public class EventResourceTest extends ResourceTestBase {
                     // THEN the message is not being forwarded downstream
                     assertNoEventHasBeenSentDownstream();
                     // and the device gets a 4.29
-                    assertThat(t).isInstanceOfSatisfying(ClientErrorException.class,
-                            e -> assertThat(e.getErrorCode()).isEqualTo(429));
+                    assertThat(t).isInstanceOf(ClientErrorException.class);
+                    assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(429);
                     verify(metrics).reportTelemetry(
                             eq(MetricsTags.EndpointType.EVENT),
                             eq("tenant"),

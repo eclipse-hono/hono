@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.adapter.mqtt.impl;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -24,12 +23,14 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
+import org.assertj.core.api.Assertions;
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 import org.eclipse.hono.auth.Device;
@@ -201,8 +202,10 @@ public class HttpBasedMessageMappingTest {
         final ArgumentCaptor<MultiMap> headersCaptor = ArgumentCaptor.forClass(MultiMap.class);
         verify(httpRequest).putHeaders(headersCaptor.capture());
         final MultiMap addedHeaders = headersCaptor.getValue();
-        assertThat(addedHeaders).anyMatch(header -> header.getKey().equals(MessageHelper.APP_PROPERTY_ORIG_ADDRESS) && header.getValue().equals(topic));
-        assertThat(addedHeaders).anyMatch(header -> header.getKey().equals(HttpHeaders.CONTENT_TYPE.toString()) && header.getValue().equals("text/plain"));
+        Assertions.assertThat(addedHeaders)
+                .anyMatch(header -> header.getKey().equals(MessageHelper.APP_PROPERTY_ORIG_ADDRESS) && header.getValue().equals(topic));
+        Assertions.assertThat(addedHeaders)
+                .anyMatch(header -> header.getKey().equals(HttpHeaders.CONTENT_TYPE.toString()) && header.getValue().equals("text/plain"));
     }
 
     /**

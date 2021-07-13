@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.adapter.lora.providers;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 
 import org.eclipse.hono.adapter.lora.LoraMetaData;
 import org.eclipse.hono.adapter.lora.UplinkLoraMessage;

@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.adapter.coap;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -24,6 +23,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
@@ -100,8 +100,9 @@ public class TelemetryResourceTest extends ResourceTestBase {
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     // THEN the device gets a response with code 4.03
-                    assertThat(t).isInstanceOfSatisfying(ClientErrorException.class,
-                            e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN));
+                    assertThat(t).isInstanceOf(ClientErrorException.class);
+                    assertThat(((ClientErrorException) t).getErrorCode())
+                            .isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
 
                     // and the message has not been forwarded downstream
                     assertNoTelemetryMessageHasBeenSentDownstream();
@@ -144,8 +145,9 @@ public class TelemetryResourceTest extends ResourceTestBase {
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     // THEN the device gets a response with code 4.00
-                    assertThat(t).isInstanceOfSatisfying(ClientErrorException.class,
-                            e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST));
+                    assertThat(t).isInstanceOf(ClientErrorException.class);
+                    assertThat(((ClientErrorException) t).getErrorCode())
+                            .isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
 
                     // and the message has not been forwarded downstream
                     assertNoTelemetryMessageHasBeenSentDownstream();
@@ -188,8 +190,9 @@ public class TelemetryResourceTest extends ResourceTestBase {
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     // THEN the device gets a response with code 4.00
-                    assertThat(t).isInstanceOfSatisfying(ClientErrorException.class,
-                            e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST));
+                    assertThat(t).isInstanceOf(ClientErrorException.class);
+                    assertThat(((ClientErrorException) t).getErrorCode())
+                            .isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
 
                     // and the message has not been forwarded downstream
                     assertNoTelemetryMessageHasBeenSentDownstream();
@@ -358,8 +361,8 @@ public class TelemetryResourceTest extends ResourceTestBase {
                     // THEN the message is not being forwarded downstream
                     assertNoTelemetryMessageHasBeenSentDownstream();
                     // and the device gets a 4.29
-                    assertThat(t).isInstanceOfSatisfying(ClientErrorException.class,
-                            e -> assertThat(e.getErrorCode()).isEqualTo(429));
+                    assertThat(t).isInstanceOf(ClientErrorException.class);
+                    assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(429);
                     verify(metrics).reportTelemetry(
                             eq(MetricsTags.EndpointType.TELEMETRY),
                             eq("tenant"),
@@ -493,8 +496,9 @@ public class TelemetryResourceTest extends ResourceTestBase {
         result.onComplete(ctx.failing(t -> {
             ctx.verify(() -> {
                 // THEN the device gets a response with code SERVICE_UNAVAILABLE
-                assertThat(t).isInstanceOfSatisfying(ServerErrorException.class,
-                        e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE));
+                assertThat(t).isInstanceOf(ServerErrorException.class);
+                assertThat(((ServerErrorException) t).getErrorCode())
+                        .isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
                 verify(metrics).reportTelemetry(
                         eq(MetricsTags.EndpointType.TELEMETRY),
                         eq("tenant"),

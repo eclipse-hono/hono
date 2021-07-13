@@ -14,7 +14,6 @@
 
 package org.eclipse.hono.adapter.coap;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -22,6 +21,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
@@ -105,8 +105,9 @@ public class CommandResponseResourceTest extends ResourceTestBase {
                     // THEN the command response has not been forwarded downstream
                     verify(sender, never()).sendCommandResponse(any(CommandResponse.class), any(SpanContext.class));
                     // and the device gets a 4.03 response
-                    assertThat(t).isInstanceOfSatisfying(ClientErrorException.class,
-                            e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN));
+                    assertThat(t).isInstanceOf(ClientErrorException.class);
+                    assertThat(((ClientErrorException) t).getErrorCode())
+                            .isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
                     // and the response has not been reported as forwarded
                     verify(metrics, never()).reportCommand(
                             eq(Direction.RESPONSE),
@@ -156,8 +157,9 @@ public class CommandResponseResourceTest extends ResourceTestBase {
                 // THEN the command response is being forwarded downstream
                 verify(sender).sendCommandResponse(any(CommandResponse.class), any(SpanContext.class));
                 // and the device gets a 4.00 response
-                assertThat(t).isInstanceOfSatisfying(ClientErrorException.class,
-                        e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST));
+                assertThat(t).isInstanceOf(ClientErrorException.class);
+                assertThat(((ClientErrorException) t).getErrorCode())
+                        .isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
                 // and the response has not been reported as forwarded
                 verify(metrics, never()).reportCommand(
                         eq(Direction.RESPONSE),

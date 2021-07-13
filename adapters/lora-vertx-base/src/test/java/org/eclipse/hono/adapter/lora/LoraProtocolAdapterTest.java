@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.adapter.lora;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -27,6 +26,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -165,7 +165,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
                 eq(Buffer.buffer(TEST_PAYLOAD)),
                 props.capture(),
                 any());
-        assertThat(props.getValue()).contains(Map.entry(LoraConstants.APP_PROPERTY_FUNCTION_PORT, TEST_FUNCTION_PORT));
+        assertThat(props.getValue()).containsEntry(LoraConstants.APP_PROPERTY_FUNCTION_PORT, TEST_FUNCTION_PORT);
         final String metaData = (String) props.getValue().get(LoraConstants.APP_PROPERTY_META_DATA);
         assertThat(metaData).isNotNull();
         final JsonObject metaDataJson = new JsonObject(metaData);
@@ -403,7 +403,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
 
         adapter.customizeDownstreamMessageProperties(props, httpContext);
 
-        assertThat(props).contains(Map.entry(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, TEST_PROVIDER));
+        assertThat(props).containsEntry(LoraConstants.APP_PROPERTY_ORIG_LORA_PROVIDER, TEST_PROVIDER);
     }
 
     private LoraProvider getLoraProviderMock() {
