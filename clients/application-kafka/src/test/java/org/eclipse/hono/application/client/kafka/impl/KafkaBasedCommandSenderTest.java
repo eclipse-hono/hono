@@ -12,7 +12,7 @@
  */
 package org.eclipse.hono.application.client.kafka.impl;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
 import java.time.Duration;
@@ -140,12 +140,17 @@ public class KafkaBasedCommandSenderTest {
                     ctx.verify(() -> {
                         final ProducerRecord<String, Buffer> commandRecord = mockProducer.history().get(0);
                         assertThat(commandRecord.key()).isEqualTo(deviceId);
-                        assertThat(commandRecord.headers()).containsOnlyOnce(
+
+                        assertThat(commandRecord.headers().headers(MessageHelper.SYS_PROPERTY_SUBJECT)).hasSize(1);
+                        assertThat(commandRecord.headers()).contains(
                                 new RecordHeader(MessageHelper.SYS_PROPERTY_SUBJECT, subject.getBytes()));
-                        assertThat(commandRecord.headers()).containsOnlyOnce(
+
+                        assertThat(commandRecord.headers().headers(MessageHelper.SYS_PROPERTY_CORRELATION_ID)).hasSize(1);
+                        assertThat(commandRecord.headers()).contains(
                                 new RecordHeader(MessageHelper.SYS_PROPERTY_CORRELATION_ID, correlationId.getBytes()));
-                        assertThat(commandRecord.headers()).containsOnlyOnce(
-                                new RecordHeader("appKey", "appValue".getBytes()));
+
+                        assertThat(commandRecord.headers().headers("appKey")).hasSize(1);
+                        assertThat(commandRecord.headers()).contains(new RecordHeader("appKey", "appValue".getBytes()));
                     });
                     ctx.completeNow();
                 }));
@@ -169,10 +174,13 @@ public class KafkaBasedCommandSenderTest {
                     ctx.verify(() -> {
                         final ProducerRecord<String, Buffer> commandRecord = mockProducer.history().get(0);
                         assertThat(commandRecord.key()).isEqualTo(deviceId);
-                        assertThat(commandRecord.headers()).containsOnlyOnce(
+
+                        assertThat(commandRecord.headers().headers(MessageHelper.SYS_PROPERTY_SUBJECT)).hasSize(1);
+                        assertThat(commandRecord.headers()).contains(
                                 new RecordHeader(MessageHelper.SYS_PROPERTY_SUBJECT, subject.getBytes()));
-                        assertThat(commandRecord.headers()).containsOnlyOnce(
-                                new RecordHeader("appKey", "appValue".getBytes()));
+
+                        assertThat(commandRecord.headers().headers("appKey")).hasSize(1);
+                        assertThat(commandRecord.headers()).contains(new RecordHeader("appKey", "appValue".getBytes()));
                     });
                     ctx.completeNow();
                 }));

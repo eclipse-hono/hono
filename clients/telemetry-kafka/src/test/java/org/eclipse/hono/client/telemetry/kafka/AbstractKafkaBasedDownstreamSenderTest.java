@@ -13,8 +13,8 @@
 
 package org.eclipse.hono.client.telemetry.kafka;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -84,11 +84,11 @@ public class AbstractKafkaBasedDownstreamSenderTest {
         final CachingKafkaProducerFactory<String, Buffer> factory = newProducerFactory(mockProducer);
         final AbstractKafkaBasedDownstreamSender sender = newSender(factory);
 
-        assertThat(factory.getProducer(PRODUCER_NAME)).isEmpty();
+        assertThat(factory.getProducer(PRODUCER_NAME).isEmpty()).isTrue();
         sender.start();
-        assertThat(factory.getProducer(PRODUCER_NAME)).isNotEmpty();
+        assertThat(factory.getProducer(PRODUCER_NAME).isPresent()).isTrue();
         sender.stop();
-        assertThat(factory.getProducer(PRODUCER_NAME)).isEmpty();
+        assertThat(factory.getProducer(PRODUCER_NAME).isEmpty()).isTrue();
     }
 
     /**
@@ -115,7 +115,8 @@ public class AbstractKafkaBasedDownstreamSenderTest {
                         assertThat(actual.key()).isEqualTo(DEVICE_ID);
                         assertThat(actual.topic()).isEqualTo(topic.toString());
                         assertThat(actual.value().toString()).isEqualTo(payload);
-                        assertThat(actual.headers()).containsOnlyOnce(new RecordHeader("foo", "bar".getBytes()));
+                        assertThat(actual.headers().headers("foo")).hasSize(1);
+                        assertThat(actual.headers()).contains(new RecordHeader("foo", "bar".getBytes()));
 
                         // ...AND contains the standard headers
                         KafkaClientUnitTestHelper.assertStandardHeaders(actual, DEVICE_ID, CONTENT_TYPE, qos.ordinal());
@@ -170,7 +171,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN the producer is removed and closed
-                        assertThat(factory.getProducer(PRODUCER_NAME)).isEmpty();
+                        assertThat(factory.getProducer(PRODUCER_NAME).isEmpty()).isTrue();
                         assertThat(mockProducer.closed()).isTrue();
                     });
                     ctx.completeNow();
@@ -198,7 +199,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN the producer is present and still open
-                        assertThat(factory.getProducer(PRODUCER_NAME)).isNotEmpty();
+                        assertThat(factory.getProducer(PRODUCER_NAME).isPresent()).isTrue();
                         assertThat(mockProducer.closed()).isFalse();
                     });
                     ctx.completeNow();
@@ -294,8 +295,8 @@ public class AbstractKafkaBasedDownstreamSenderTest {
                 .onComplete(ctx.succeeding(v -> {
                     ctx.verify(() -> {
                         final Headers actual = mockProducer.history().get(0).headers();
-                        assertThat(actual)
-                                .containsOnlyOnce(new RecordHeader(CONTENT_TYPE_KEY, expectedContentType.getBytes()));
+                        assertThat(actual.headers(CONTENT_TYPE_KEY)).hasSize(1);
+                        assertThat(actual).contains(new RecordHeader(CONTENT_TYPE_KEY, expectedContentType.getBytes()));
                     });
                     ctx.completeNow();
                 }));
@@ -323,8 +324,8 @@ public class AbstractKafkaBasedDownstreamSenderTest {
                     ctx.verify(() -> {
                         // THEN the producer record contains a creation time
                         final ProducerRecord<String, Buffer> record = mockProducer.history().get(0);
-                        assertThat(record.headers())
-                                .containsOnlyOnce(new RecordHeader("ttd", Json.encode(ttd).getBytes()));
+                        assertThat(record.headers().headers("ttd")).hasSize(1);
+                        assertThat(record.headers()).contains(new RecordHeader("ttd", Json.encode(ttd).getBytes()));
                         assertThat(record.headers().headers("creation-time")).isNotNull();
                     });
                     ctx.completeNow();
@@ -354,8 +355,8 @@ public class AbstractKafkaBasedDownstreamSenderTest {
                     ctx.verify(() -> {
                         // THEN the producer record contains a creation time
                         final ProducerRecord<String, Buffer> record = mockProducer.history().get(0);
-                        assertThat(record.headers())
-                                .containsOnlyOnce(new RecordHeader("ttl", Json.encode(ttl).getBytes()));
+                        assertThat(record.headers().headers("ttl")).hasSize(1);
+                        assertThat(record.headers()).contains(new RecordHeader("ttl", Json.encode(ttl).getBytes()));
                         assertThat(record.headers().headers("creation-time")).isNotNull();
                     });
                     ctx.completeNow();
@@ -386,9 +387,9 @@ public class AbstractKafkaBasedDownstreamSenderTest {
                     ctx.verify(() -> {
                         // THEN the creation time is preserved
                         final ProducerRecord<String, Buffer> record = mockProducer.history().get(0);
-                        final RecordHeader expectedHeader = new RecordHeader("creation-time",
-                                Json.encode(creationTime).getBytes());
-                        assertThat(record.headers()).containsOnlyOnce(expectedHeader);
+                        assertThat(record.headers().headers("creation-time")).hasSize(1);
+                        assertThat(record.headers()).contains(new RecordHeader("creation-time",
+                                Json.encode(creationTime).getBytes()));
                     });
                     ctx.completeNow();
                 }));

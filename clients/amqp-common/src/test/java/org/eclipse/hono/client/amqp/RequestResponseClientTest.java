@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.client.amqp;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -24,6 +23,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
 import java.util.Map;
@@ -37,6 +37,7 @@ import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.ResourceLimitExceededException;
@@ -276,8 +277,10 @@ public class RequestResponseClientTest  {
         testCreateAndSendRequestFailsOnRejectedMessage(
                 ctx,
                 AmqpError.RESOURCE_LIMIT_EXCEEDED,
-                t -> assertThat(t).isInstanceOf(ResourceLimitExceededException.class)
-                    .extracting("clientFacingMessage").isNotNull());
+                t -> {
+                    assertThat(t).isInstanceOf(ResourceLimitExceededException.class);
+                    assertThat(((ResourceLimitExceededException) t).getClientFacingMessage()).isNotEmpty();
+                });
     }
 
     /**
@@ -291,8 +294,11 @@ public class RequestResponseClientTest  {
         testCreateAndSendRequestFailsOnRejectedMessage(
                 ctx,
                 Symbol.getSymbol("arbitrary-error"),
-                t -> assertThat(t).isInstanceOf(ServiceInvocationException.class)
-                    .extracting("errorCode").isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST));
+                t -> {
+                    assertThat(t).isInstanceOf(ClientErrorException.class);
+                    assertThat(((ClientErrorException) t).getErrorCode())
+                            .isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
+                });
     }
 
     private void testCreateAndSendRequestFailsOnRejectedMessage(

@@ -14,8 +14,8 @@
 
 package org.eclipse.hono.application.client.amqp;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.time.Instant;
 import java.util.Map;

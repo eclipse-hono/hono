@@ -14,7 +14,6 @@
 
 package org.eclipse.hono.client.registry.amqp;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -23,18 +22,18 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
-import org.eclipse.hono.client.registry.amqp.ProtonBasedCredentialsClient;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.CacheDirective;
@@ -305,8 +304,9 @@ class ProtonBasedCredentialsClientTest {
         client.get("tenant", CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, "test-auth", span.context())
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
-                        assertThat(t).isInstanceOf(ServiceInvocationException.class)
-                            .extracting("errorCode").isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
+                        assertThat(t).isInstanceOf(ClientErrorException.class);
+                        assertThat(((ClientErrorException) t).getErrorCode())
+                                .isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
                         // THEN the invocation fails and the span is marked as erroneous
                         verify(span).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
                         // and the span is finished

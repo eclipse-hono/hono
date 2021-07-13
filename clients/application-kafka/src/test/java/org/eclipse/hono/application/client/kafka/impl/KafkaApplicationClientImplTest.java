@@ -12,7 +12,7 @@
  */
 package org.eclipse.hono.application.client.kafka.impl;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.List;
 import java.util.Map;

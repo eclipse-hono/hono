@@ -14,7 +14,6 @@
 
 package org.eclipse.hono.client.command;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyList;
 import static org.mockito.Mockito.anyString;
@@ -23,6 +22,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -31,8 +31,6 @@ import java.util.List;
 import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ReconnectListener;
-import org.eclipse.hono.client.command.CommandRouterClient;
-import org.eclipse.hono.client.command.CommandRouterCommandConsumerFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -89,6 +87,6 @@ class CommandRouterCommandConsumerFactoryTest {
         verify(commandRouterClient).enableCommandRouting(argThat(list -> {
             return list.size() == 1;
         }), any());
-        assertThat(enabledTenants).containsExactlyInAnyOrder("tenant1", "tenant2", "tenant3");
+        assertThat(enabledTenants).containsExactly("tenant1", "tenant2", "tenant3");
     }
 }

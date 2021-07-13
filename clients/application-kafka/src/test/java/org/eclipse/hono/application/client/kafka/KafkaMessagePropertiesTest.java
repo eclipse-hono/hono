@@ -13,9 +13,9 @@
 
 package org.eclipse.hono.application.client.kafka;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.ArrayList;
 import java.util.List;

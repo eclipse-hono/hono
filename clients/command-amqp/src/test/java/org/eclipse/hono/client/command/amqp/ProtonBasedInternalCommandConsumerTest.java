@@ -13,11 +13,11 @@
 
 package org.eclipse.hono.client.command.amqp;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Collections;
 
@@ -30,7 +30,6 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandHandlers;
-import org.eclipse.hono.client.command.amqp.ProtonBasedInternalCommandConsumer;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;

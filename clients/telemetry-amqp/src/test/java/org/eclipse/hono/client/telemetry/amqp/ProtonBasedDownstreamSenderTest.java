@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.client.telemetry.amqp;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -21,6 +20,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
 import java.util.function.Supplier;
@@ -29,9 +29,8 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
-import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
-import org.eclipse.hono.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Constants;
@@ -134,9 +133,9 @@ public class ProtonBasedDownstreamSenderTest {
                 .onComplete(ctx.failing(thr -> {
                     ctx.verify(() -> {
                         // THEN the invocation is failed with a server error
-                        assertThat(thr).isInstanceOfSatisfying(
-                                ServiceInvocationException.class,
-                                error -> assertThat(error.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE));
+                        assertThat(thr).isInstanceOf(ServerErrorException.class);
+                        assertThat(((ServerErrorException) thr).getErrorCode())
+                                .isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
                     });
                     ctx.completeNow();
                 }));

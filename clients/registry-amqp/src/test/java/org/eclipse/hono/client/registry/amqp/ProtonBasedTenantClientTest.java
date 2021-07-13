@@ -14,7 +14,6 @@
 
 package org.eclipse.hono.client.registry.amqp;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -26,6 +25,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
@@ -39,7 +39,6 @@ import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
-import org.eclipse.hono.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.CacheDirective;
@@ -297,8 +296,9 @@ class ProtonBasedTenantClientTest {
                 verify(span).setTag(eq(Tags.ERROR.getKey()), eq(Boolean.TRUE));
                 // and the span is finished
                 verify(span).finish();
-                assertThat(t).isInstanceOf(ServerErrorException.class)
-                        .extracting("errorCode").isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+                assertThat(t).isInstanceOf(ServerErrorException.class);
+                assertThat(((ServerErrorException) t).getErrorCode())
+                        .isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
             });
             ctx.completeNow();
         }));
@@ -329,8 +329,9 @@ class ProtonBasedTenantClientTest {
         final Checkpoint checkpoint = ctx.checkpoint(3);
         final Handler<AsyncResult<TenantObject>> failureCheckHandler = ctx.failing(t -> {
             ctx.verify(() -> {
-                assertThat(t).isInstanceOf(ServerErrorException.class)
-                        .extracting("errorCode").isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+                assertThat(t).isInstanceOf(ServerErrorException.class);
+                assertThat(((ServerErrorException) t).getErrorCode())
+                        .isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
             });
             checkpoint.flag();
         });
@@ -365,8 +366,9 @@ class ProtonBasedTenantClientTest {
         client.get("tenant", span.context()).onComplete(ctx.failing(t -> {
             ctx.verify(() -> {
                 // THEN the invocation fails
-                assertThat(t).isInstanceOf(ServerErrorException.class)
-                        .extracting("errorCode").isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+                assertThat(t).isInstanceOf(ServerErrorException.class);
+                assertThat(((ServerErrorException) t).getErrorCode())
+                        .isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
             });
             checkpoint.flag();
         }));

@@ -13,8 +13,8 @@
 
 package org.eclipse.hono.client.kafka.consumer;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.HashMap;
 import java.util.Map;

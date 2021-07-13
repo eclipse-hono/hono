@@ -12,8 +12,9 @@
  *******************************************************************************/
 package org.eclipse.hono.client.kafka.consumer;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -222,8 +223,8 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
             allRecordsReceivedPromise.future().onComplete(ctx.succeeding(v -> {
                 vertx.cancelTimer(timerId);
                 ctx.verify(() -> {
-                    assertThat(observedMaxRecordsInProcessing.get())
-                            .as("observed max no. of records in processing").isEqualTo(maxRecordsInProcessing);
+                    assertWithMessage("observed max no. of records in processing")
+                            .that(observedMaxRecordsInProcessing.get()).isEqualTo(maxRecordsInProcessing);
                 });
                 ctx.completeNow();
             }));
@@ -266,8 +267,9 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
                 });
             });
         }));
-        assertThat(receivedRecordsCtx.awaitCompletion(5, TimeUnit.SECONDS))
-                .as("records received in 5s").isTrue();
+        assertWithMessage("records received in 5s")
+                .that(receivedRecordsCtx.awaitCompletion(5, TimeUnit.SECONDS))
+                .isTrue();
         if (receivedRecordsCtx.failed()) {
             ctx.failNow(receivedRecordsCtx.causeOfFailure());
             return;
@@ -287,8 +289,9 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         final List<Checkpoint> commitCheckpoints = commitCheckContexts.stream()
                 .map(c -> c.checkpoint(1)).collect(Collectors.toList());
         final InterruptableSupplier<Boolean> waitForCurrentCommitCheckResult = () -> {
-            assertThat(commitCheckContexts.get(checkIndex.get()).awaitCompletion(5, TimeUnit.SECONDS))
-                    .as("partition assigned in 5s for checking of commits").isTrue();
+            assertWithMessage("partition assigned in 5s for checking of commits")
+                    .that(commitCheckContexts.get(checkIndex.get()).awaitCompletion(5, TimeUnit.SECONDS))
+                    .isTrue();
             if (commitCheckContexts.get(checkIndex.get()).failed()) {
                 ctx.failNow(commitCheckContexts.get(checkIndex.get()).causeOfFailure());
                 return false;
@@ -367,8 +370,9 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
                 });
             });
         }));
-        assertThat(receivedRecordsCtx.awaitCompletion(5, TimeUnit.SECONDS))
-                .as("records received in 5s").isTrue();
+        assertWithMessage("records received in 5s")
+                .that(receivedRecordsCtx.awaitCompletion(5, TimeUnit.SECONDS))
+                .isTrue();
         if (receivedRecordsCtx.failed()) {
             ctx.failNow(receivedRecordsCtx.causeOfFailure());
             return;
@@ -488,8 +492,9 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
                 });
             });
         }));
-        assertThat(receivedRecordsCtx.awaitCompletion(5, TimeUnit.SECONDS))
-                .as("records received in 5s").isTrue();
+        assertWithMessage("records received in 5s")
+                .that(receivedRecordsCtx.awaitCompletion(5, TimeUnit.SECONDS))
+                .isTrue();
         if (receivedRecordsCtx.failed()) {
             ctx.failNow(receivedRecordsCtx.causeOfFailure());
             return;
@@ -560,8 +565,9 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
                 });
             }));
         });
-        assertThat(receivedRecordsCtx.awaitCompletion(5, TimeUnit.SECONDS))
-                .as("records received in 5s").isTrue();
+        assertWithMessage("records received in 5s")
+                .that(receivedRecordsCtx.awaitCompletion(5, TimeUnit.SECONDS))
+                .isTrue();
         if (receivedRecordsCtx.failed()) {
             ctx.failNow(receivedRecordsCtx.causeOfFailure());
             return;
@@ -588,8 +594,9 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         consumerVertxContext.runOnContext(v -> latch.countDown());
         latch.await();
         mockConsumer.rebalance(List.of(topicPartition));
-        assertThat(commitCheckContext.awaitCompletion(5, TimeUnit.SECONDS))
-                .as("partition assigned in 5s for checking of commits").isTrue();
+        assertWithMessage("partition assigned in 5s for checking of commits")
+                .that(commitCheckContext.awaitCompletion(5, TimeUnit.SECONDS))
+                .isTrue();
         if (commitCheckContext.failed()) {
             ctx.failNow(commitCheckContext.causeOfFailure());
             return;

@@ -13,11 +13,11 @@
 
 package org.eclipse.hono.client.kafka;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Map;
 import java.util.Optional;
@@ -87,13 +87,13 @@ public class CachingKafkaProducerFactoryTest {
     @Test
     public void testThatProducerIsAddedToCache() {
 
-        assertThat(factory.getProducer(PRODUCER_NAME)).isEmpty();
+        assertThat(factory.getProducer(PRODUCER_NAME).isEmpty()).isTrue();
 
         final KafkaProducer<String, Buffer> createProducer = factory.getOrCreateProducer(PRODUCER_NAME,
                 configProperties);
 
         final Optional<KafkaProducer<String, Buffer>> actual = factory.getProducer(PRODUCER_NAME);
-        assertThat(actual).isNotEmpty();
+        assertThat(actual.isPresent()).isTrue();
         assertThat(actual.get()).isEqualTo(createProducer);
 
     }
@@ -117,9 +117,9 @@ public class CachingKafkaProducerFactoryTest {
         // THEN the producer is closed...
         assertThat(((MockProducer<String, Buffer>) producer1.unwrap()).closed()).isTrue();
         // ...AND removed from the cache
-        assertThat(factory.getProducer(producerName1)).isEmpty();
+        assertThat(factory.getProducer(producerName1).isEmpty()).isTrue();
         // ...AND the second producers is still present and open
-        assertThat(factory.getProducer(producerName2)).isNotEmpty();
+        assertThat(factory.getProducer(producerName2).isPresent()).isTrue();
         assertThat(((MockProducer<String, Buffer>) producer2.unwrap()).closed()).isFalse();
 
     }

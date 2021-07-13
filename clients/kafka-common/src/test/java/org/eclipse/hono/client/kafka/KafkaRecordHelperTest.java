@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.client.kafka;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -114,8 +114,8 @@ public class KafkaRecordHelperTest {
      */
     @Test
     public void testThatNonExistingHeaderReturnsEmptyOptional() {
-        assertThat(KafkaRecordHelper.getHeaderValue(null, "foo", String.class)).isEmpty();
-        assertThat(KafkaRecordHelper.getHeaderValue(headers, "foo", String.class)).isEmpty();
+        assertThat(KafkaRecordHelper.getHeaderValue(null, "foo", String.class).isEmpty()).isTrue();
+        assertThat(KafkaRecordHelper.getHeaderValue(headers, "foo", String.class).isEmpty()).isTrue();
     }
 
     /**
@@ -125,7 +125,7 @@ public class KafkaRecordHelperTest {
     @Test
     public void testThatWrongSerialisationReturnsEmptyOptional() {
         headers.add(KafkaHeader.header(KEY, "{invalid: json}"));
-        assertThat(KafkaRecordHelper.getHeaderValue(headers, KEY, Object.class)).isEmpty();
+        assertThat(KafkaRecordHelper.getHeaderValue(headers, KEY, Object.class).isEmpty()).isTrue();
     }
 
     /**
@@ -135,7 +135,7 @@ public class KafkaRecordHelperTest {
     @Test
     public void testThatWrongTypeReturnsEmptyOptional() {
         headers.add(KafkaRecordHelper.createKafkaHeader(KEY, "notANumber"));
-        assertThat(KafkaRecordHelper.getHeaderValue(headers, KEY, Integer.class)).isEmpty();
+        assertThat(KafkaRecordHelper.getHeaderValue(headers, KEY, Integer.class).isEmpty()).isTrue();
     }
 
     /**

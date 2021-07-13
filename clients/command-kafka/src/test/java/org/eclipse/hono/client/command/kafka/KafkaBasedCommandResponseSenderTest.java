@@ -12,7 +12,7 @@
  */
 package org.eclipse.hono.client.command.kafka;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.HashMap;
 import java.util.UUID;
@@ -95,15 +95,20 @@ public class KafkaBasedCommandResponseSenderTest {
 
                         //Verify if the record contains the necessary headers.
                         final Headers headers = record.headers();
-                        assertThat(headers).containsOnlyOnce(
+                        assertThat(headers.headers(MessageHelper.APP_PROPERTY_DEVICE_ID)).hasSize(1);
+                        assertThat(headers).contains(
                                 new RecordHeader(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId.getBytes()));
-                        assertThat(headers).containsOnlyOnce(
+
+                        assertThat(headers.headers(MessageHelper.SYS_PROPERTY_CORRELATION_ID)).hasSize(1);
+                        assertThat(headers).contains(
                                 new RecordHeader(MessageHelper.SYS_PROPERTY_CORRELATION_ID, correlationId.getBytes()));
-                        assertThat(headers).containsOnlyOnce(
-                                new RecordHeader(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId.getBytes()));
-                        assertThat(headers).containsOnlyOnce(
+
+                        assertThat(headers.headers(MessageHelper.APP_PROPERTY_STATUS)).hasSize(1);
+                        assertThat(headers).contains(
                                 new RecordHeader(MessageHelper.APP_PROPERTY_STATUS, Json.encode(status).getBytes()));
-                        assertThat(headers).containsOnlyOnce(
+
+                        assertThat(headers.headers(MessageHelper.SYS_PROPERTY_CONTENT_TYPE)).hasSize(1);
+                        assertThat(headers).contains(
                                 new RecordHeader(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, contentType.getBytes()));
                     });
                     ctx.completeNow();

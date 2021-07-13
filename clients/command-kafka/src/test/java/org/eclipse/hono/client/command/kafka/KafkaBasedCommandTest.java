@@ -13,17 +13,16 @@
 
 package org.eclipse.hono.client.command.kafka;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import org.eclipse.hono.client.command.kafka.KafkaBasedCommand;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.util.Constants;

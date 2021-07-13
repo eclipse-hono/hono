@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.client.command;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.Pair;

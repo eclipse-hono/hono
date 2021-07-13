@@ -13,8 +13,8 @@
 
 package org.eclipse.hono.client.telemetry.kafka;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -24,7 +24,6 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.eclipse.hono.client.kafka.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
-import org.eclipse.hono.client.telemetry.kafka.KafkaBasedTelemetrySender;
 import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
