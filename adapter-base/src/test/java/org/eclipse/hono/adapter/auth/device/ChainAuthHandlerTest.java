@@ -13,19 +13,14 @@
 
 package org.eclipse.hono.adapter.auth.device;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static com.google.common.truth.Truth.assertThat;
 
-import org.eclipse.hono.adapter.auth.device.AbstractDeviceCredentials;
-import org.eclipse.hono.adapter.auth.device.AuthHandler;
-import org.eclipse.hono.adapter.auth.device.ChainAuthHandler;
-import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
-import org.eclipse.hono.adapter.auth.device.PreCredentialsValidationHandler;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.util.MapBasedExecutionContext;
 import org.junit.jupiter.api.Test;

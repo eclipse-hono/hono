@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.service.auth;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.time.Instant;
 
@@ -59,6 +59,7 @@ public class AuthTokenHelperImplTest {
 
         final Jws<Claims> parsedToken = helper.expand(token);
         assertThat(parsedToken.getBody()).isNotNull();
-        assertThat(parsedToken.getBody().getExpiration().toInstant()).isBetween(expirationMin, expirationMax);
+        assertThat(parsedToken.getBody().getExpiration().toInstant()).isAtLeast(expirationMin);
+        assertThat(parsedToken.getBody().getExpiration().toInstant()).isAtMost(expirationMax);
     }
 }

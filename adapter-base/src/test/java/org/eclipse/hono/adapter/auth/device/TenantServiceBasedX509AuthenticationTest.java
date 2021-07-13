@@ -13,11 +13,11 @@
 
 package org.eclipse.hono.adapter.auth.device;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -30,7 +30,6 @@ import java.util.Set;
 
 import javax.security.auth.x500.X500Principal;
 
-import org.eclipse.hono.adapter.auth.device.TenantServiceBasedX509Authentication;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.service.auth.X509CertificateChainValidator;
 import org.eclipse.hono.util.TenantObject;

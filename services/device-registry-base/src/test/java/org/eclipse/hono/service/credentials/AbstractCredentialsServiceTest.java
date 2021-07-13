@@ -13,12 +13,13 @@
 
 package org.eclipse.hono.service.credentials;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 
 import java.net.HttpURLConnection;
 import java.time.Instant;
@@ -165,8 +166,7 @@ public interface AbstractCredentialsServiceTest {
                 if (secret instanceof PasswordSecret) {
                     assertPasswordSecretDoesNotContainPasswordDetails((PasswordSecret) secret);
                 } else if (secret instanceof PskSecret) {
-                    assertThat(((PskSecret) secret).getKey())
-                        .as("PSK secret does not contain shared key").isNull();
+                    assertWithMessage("PSK secret shared key").that(((PskSecret) secret).getKey()).isNull();
                 }
             });
         });
@@ -178,9 +178,9 @@ public interface AbstractCredentialsServiceTest {
      * @param secret The secret to check.
      */
     default void assertPasswordSecretDoesNotContainPasswordDetails(final PasswordSecret secret) {
-        assertThat(secret.getPasswordHash()).as("password secret has no password hash").isNull();
-        assertThat(secret.getHashFunction()).as("password secret has no hash function").isNull();
-        assertThat(secret.getSalt()).as("password secret has no salt").isNull();
+        assertWithMessage("password secret password hash").that(secret.getPasswordHash()).isNull();
+        assertWithMessage("password secret hash function").that(secret.getHashFunction()).isNull();
+        assertWithMessage("password secret salt").that(secret.getSalt()).isNull();
     }
 
     /**
@@ -198,13 +198,13 @@ public interface AbstractCredentialsServiceTest {
             final String expectedType,
             final String expectedAuthId) {
 
-        assertThat(response).as("response is not empty").isNotNull();
-        assertThat(response.getString(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID))
-            .as("credentials contain expected device-id").isEqualTo(expectedDeviceId);
-        assertThat(response.getString(CredentialsConstants.FIELD_TYPE))
-            .as("credentials are of expected type").isEqualTo(expectedType);
-        assertThat(response.getString(CredentialsConstants.FIELD_AUTH_ID))
-            .as("credentials contain expected auth-id").isEqualTo(expectedAuthId);
+        assertWithMessage("response").that(response).isNotNull();
+        assertWithMessage("credentials device-id").that(response.getString(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID))
+            .isEqualTo(expectedDeviceId);
+        assertWithMessage("credentials type").that(response.getString(CredentialsConstants.FIELD_TYPE))
+            .isEqualTo(expectedType);
+        assertWithMessage("credentials auth-id").that(response.getString(CredentialsConstants.FIELD_AUTH_ID))
+            .isEqualTo(expectedAuthId);
     }
 
     /**
@@ -216,14 +216,15 @@ public interface AbstractCredentialsServiceTest {
      */
     default void assertPwdSecretContainsHash(final JsonObject secret, final boolean expectSalt) {
         assertThat(secret).isNotNull();
-        assertThat(secret.containsKey(RegistryManagementConstants.FIELD_SECRETS_PWD_PLAIN))
-            .as("password secret does not contain plain text password").isFalse();
-        assertThat(secret.containsKey(RegistryManagementConstants.FIELD_SECRETS_PWD_HASH))
-            .as("password secret contains password hash").isTrue();
-        assertThat(secret.containsKey(RegistryManagementConstants.FIELD_SECRETS_HASH_FUNCTION))
-            .as("password secret contains hash function").isTrue();
-        assertThat(secret.containsKey(RegistryManagementConstants.FIELD_SECRETS_SALT))
-            .as("password secret does%s contain salt", expectSalt ? "" : " not").isEqualTo(expectSalt);
+        assertWithMessage("password secret containing plain text password")
+                .that(secret.containsKey(RegistryManagementConstants.FIELD_SECRETS_PWD_PLAIN)).isFalse();
+        assertWithMessage("password secret containing password hash")
+                .that(secret.containsKey(RegistryManagementConstants.FIELD_SECRETS_PWD_HASH)).isTrue();
+        assertWithMessage("password secret containing password function")
+                .that(secret.containsKey(RegistryManagementConstants.FIELD_SECRETS_HASH_FUNCTION)).isTrue();
+        assertWithMessage("password secret containing salt")
+                .that(secret.containsKey(RegistryManagementConstants.FIELD_SECRETS_SALT))
+                .isEqualTo(expectSalt);
     }
 
     /**
@@ -1008,7 +1009,7 @@ public interface AbstractCredentialsServiceTest {
                             .filter(PskCredential.class::isInstance)
                             .map(PskCredential.class::cast)
                             .collect(Collectors.toList());
-                    assertThat(pskCredentials).as("PSK credentials have been registered").hasSize(2);
+                    assertWithMessage("PSK credentials list").that(pskCredentials).hasSize(2);
 
                     s.getPayload().stream()
                         .filter(PasswordCredential.class::isInstance)
@@ -1064,27 +1065,26 @@ public interface AbstractCredentialsServiceTest {
 
                     final boolean pskCredentialHasBeenDeleted = result.getPayload().stream()
                         .noneMatch(PskCredential.class::isInstance);
-                    assertThat(pskCredentialHasBeenDeleted).as("PSK credentials have been deleted").isTrue();
+                    assertWithMessage("PSK credentials having been deleted").that(pskCredentialHasBeenDeleted).isTrue();
 
                     assertThat(result.getPayload().get(0)).isInstanceOf(PasswordCredential.class);
                     final PasswordCredential creds = (PasswordCredential) result.getPayload().get(0);
                     assertThat(creds.getAuthId()).isEqualTo(authId);
-                    assertThat(creds.getSecrets())
-                        .as("second password has been deleted")
+                    assertWithMessage("PSK credentials list after deletion of 2nd password").that(creds.getSecrets())
                         .hasSize(1);
                     assertThat(creds.getSecrets().get(0).getId()).isEqualTo(secretIDs.get(0));
                 });
                 return getCredentialsService().get(tenantId, RegistryManagementConstants.SECRETS_TYPE_PRESHARED_KEY, authId);
             })
             .compose(result -> {
-                ctx.verify(() -> assertThat(result.getStatus())
-                        .as("Credentials service does not return PSK credential")
+                ctx.verify(() -> assertWithMessage("credentials service result status when getting PSK credential")
+                        .that(result.getStatus())
                         .isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
                 return getCredentialsService().get(tenantId, RegistryManagementConstants.SECRETS_TYPE_PRESHARED_KEY, otherAuthId);
             })
             .onComplete(ctx.succeeding(result -> {
-                ctx.verify(() -> assertThat(result.getStatus())
-                        .as("Credentials service does not return PSK credential")
+                ctx.verify(() -> assertWithMessage("credentials service result status when getting PSK credential")
+                        .that(result.getStatus())
                         .isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
                 ctx.completeNow();
             }));
@@ -1136,10 +1136,10 @@ public interface AbstractCredentialsServiceTest {
 
                         assertThat(creds.getAuthId()).isEqualTo(authId);
                         assertThat(creds).isInstanceOf(PasswordCredential.class);
-                        assertThat(creds.getSecrets()).as("password credentials contain a single secret").hasSize(1);
+                        assertWithMessage("password credentials secrets list").that(creds.getSecrets()).hasSize(1);
 
                         final String id = creds.getSecrets().get(0).getId();
-                        assertThat(id).as("password secret has ID").isNotNull();
+                        assertWithMessage("password secret ID").that(id).isNotNull();
                         pwdSecretId.set(id);
 
                         // change the password of the existing secret (using its secret ID)
@@ -1200,7 +1200,7 @@ public interface AbstractCredentialsServiceTest {
                         // according to the Credentials API spec, the service implementation
                         // may choose to NOT include secrets that are disabled or which are not valid at the
                         // current point in time, according to its notBefore and notAfter properties
-                        assertThat(credentialsObj.getSecrets()).hasSizeBetween(1, 2);
+                        assertThat(credentialsObj.getSecrets().size()).isIn(List.of(1, 2));
                         // verify that none of the secrets contains the original password hash anymore
                         credentialsObj.getSecrets()
                             .stream()

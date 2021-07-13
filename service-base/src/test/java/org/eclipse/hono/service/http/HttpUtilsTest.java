@@ -13,10 +13,10 @@
 
 package org.eclipse.hono.service.http;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.net.URI;
 import java.net.URISyntaxException;

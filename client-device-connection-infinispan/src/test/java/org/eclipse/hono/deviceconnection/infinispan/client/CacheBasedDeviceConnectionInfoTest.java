@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.deviceconnection.infinispan.client;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -26,6 +25,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -170,9 +170,9 @@ class CacheBasedDeviceConnectionInfoTest {
                             eq("gw-id"),
                             anyLong(),
                             any(TimeUnit.class));
-                    assertThat(t).isInstanceOfSatisfying(
-                            ServerErrorException.class,
-                            e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_INTERNAL_ERROR));
+                    assertThat(t).isInstanceOf(ServerErrorException.class);
+                    assertThat(((ServerErrorException) t).getErrorCode())
+                            .isEqualTo(HttpURLConnection.HTTP_INTERNAL_ERROR);
                 });
                 ctx.completeNow();
             }));
@@ -213,9 +213,9 @@ class CacheBasedDeviceConnectionInfoTest {
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     verify(cache).get(eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, "device-id")));
-                    assertThat(t).isInstanceOfSatisfying(
-                            ServerErrorException.class,
-                            e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_INTERNAL_ERROR));
+                    assertThat(t).isInstanceOf(ServerErrorException.class);
+                    assertThat(((ServerErrorException) t).getErrorCode())
+                            .isEqualTo(HttpURLConnection.HTTP_INTERNAL_ERROR);
                 });
                 ctx.completeNow();
             }));
@@ -236,9 +236,9 @@ class CacheBasedDeviceConnectionInfoTest {
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     verify(cache).get(eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, "device-id")));
-                    assertThat(t).isInstanceOfSatisfying(
-                            ClientErrorException.class,
-                            e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
+                    assertThat(t).isInstanceOf(ClientErrorException.class);
+                    assertThat(((ClientErrorException) t).getErrorCode())
+                            .isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
                 });
                 ctx.completeNow();
             }));
@@ -327,9 +327,9 @@ class CacheBasedDeviceConnectionInfoTest {
                     verify(cache).remove(
                             eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, "testDevice")),
                             eq("otherAdapter"));
-                    assertThat(t).isInstanceOfSatisfying(
-                            ClientErrorException.class,
-                            e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_PRECON_FAILED));
+                    assertThat(t).isInstanceOf(ClientErrorException.class);
+                    assertThat(((ClientErrorException) t).getErrorCode())
+                            .isEqualTo(HttpURLConnection.HTTP_PRECON_FAILED);
                 });
                 ctx.completeNow();
              }));
@@ -377,9 +377,9 @@ class CacheBasedDeviceConnectionInfoTest {
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     verify(cache).get(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, "testDevice")));
-                    assertThat(t).isInstanceOfSatisfying(
-                            ClientErrorException.class,
-                            e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
+                    assertThat(t).isInstanceOf(ClientErrorException.class);
+                    assertThat(((ClientErrorException) t).getErrorCode())
+                            .isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
                 });
                 ctx.completeNow();
             }));
@@ -569,9 +569,9 @@ class CacheBasedDeviceConnectionInfoTest {
         info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span)
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
-                    assertThat(t).isInstanceOfSatisfying(
-                            ClientErrorException.class,
-                            e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
+                    assertThat(t).isInstanceOf(ClientErrorException.class);
+                    assertThat(((ClientErrorException) t).getErrorCode())
+                            .isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
                 });
                 ctx.completeNow();
             }));
@@ -772,9 +772,9 @@ class CacheBasedDeviceConnectionInfoTest {
         info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span)
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
-                    assertThat(t).isInstanceOfSatisfying(
-                            ClientErrorException.class,
-                            e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
+                    assertThat(t).isInstanceOf(ClientErrorException.class);
+                    assertThat(((ClientErrorException) t).getErrorCode())
+                            .isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
                 });
                 ctx.completeNow();
             }));
@@ -807,9 +807,9 @@ class CacheBasedDeviceConnectionInfoTest {
         info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span)
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
-                    assertThat(t).isInstanceOfSatisfying(
-                            ClientErrorException.class,
-                            e -> assertThat(e.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
+                    assertThat(t).isInstanceOf(ClientErrorException.class);
+                    assertThat(((ClientErrorException) t).getErrorCode())
+                            .isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
                 });
                 ctx.completeNow();
             }));

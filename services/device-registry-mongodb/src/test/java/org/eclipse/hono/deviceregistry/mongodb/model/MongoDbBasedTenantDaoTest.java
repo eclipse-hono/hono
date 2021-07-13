@@ -14,13 +14,14 @@
 
 package org.eclipse.hono.deviceregistry.mongodb.model;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -80,15 +81,15 @@ public class MongoDbBasedTenantDaoTest {
             final JsonObject document,
             final String expectedVersion) {
 
-        assertThat(document.getString(BaseDto.FIELD_VERSION))
-            .as("document contains initial resource version")
-            .isEqualTo(expectedVersion);
-        assertThat(document.getInstant(BaseDto.FIELD_CREATED))
-            .as("document contains creation time")
-            .isNotNull();
-        assertThat(document.getInstant(BaseDto.FIELD_UPDATED_ON))
-            .as("document contains no last update time")
-            .isNull();
+        assertWithMessage("newly created document resource version")
+                .that(document.getString(BaseDto.FIELD_VERSION))
+                .isEqualTo(expectedVersion);
+        assertWithMessage("newly created document creation time")
+                .that(document.getInstant(BaseDto.FIELD_CREATED))
+                .isNotNull();
+        assertWithMessage("newly created document last update time")
+                .that(document.getInstant(BaseDto.FIELD_UPDATED_ON))
+                .isNull();
     }
 
     /**
@@ -104,15 +105,15 @@ public class MongoDbBasedTenantDaoTest {
             final String newResourceVersion,
             final Instant originalCreationTime) {
 
-        assertThat(document.getString(BaseDto.FIELD_VERSION))
-            .as("document contains new resource version")
-            .isEqualTo(newResourceVersion);
-        assertThat(document.getInstant(BaseDto.FIELD_CREATED))
-            .as("document contains original creation time")
-            .isEqualTo(originalCreationTime);
-        assertThat(document.getInstant(BaseDto.FIELD_UPDATED_ON))
-            .as("document contains reasonable last update time")
-            .isAfterOrEqualTo(originalCreationTime);
+        assertWithMessage("updated document resource version")
+                .that(document.getString(BaseDto.FIELD_VERSION))
+                .isEqualTo(newResourceVersion);
+        assertWithMessage("updated document creation time (must be original creation time)")
+                .that(document.getInstant(BaseDto.FIELD_CREATED))
+                .isEqualTo(originalCreationTime);
+        assertWithMessage("updated document last update time (must be at least creation time)")
+                .that(document.getInstant(BaseDto.FIELD_UPDATED_ON))
+                .isAtLeast(originalCreationTime);
     }
 
     /**
