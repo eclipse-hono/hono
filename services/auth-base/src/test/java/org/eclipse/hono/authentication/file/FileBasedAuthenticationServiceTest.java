@@ -13,11 +13,11 @@
 
 package org.eclipse.hono.authentication.file;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.io.FileNotFoundException;
 import java.time.Duration;
@@ -25,8 +25,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.auth.Authorities;
 import org.eclipse.hono.auth.HonoUser;
-import org.eclipse.hono.authentication.file.FileBasedAuthenticationService;
-import org.eclipse.hono.authentication.file.FileBasedAuthenticationServiceConfigProperties;
 import org.eclipse.hono.config.SignatureSupportingConfigProperties;
 import org.eclipse.hono.service.auth.AuthTokenHelper;
 import org.eclipse.hono.util.ResourceIdentifier;

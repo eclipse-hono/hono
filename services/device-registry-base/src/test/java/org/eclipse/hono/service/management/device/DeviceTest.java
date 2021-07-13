@@ -13,8 +13,8 @@
 
 package org.eclipse.hono.service.management.device;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.time.Instant;
 import java.util.ArrayList;

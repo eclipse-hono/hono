@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.deviceregistry.jdbc.impl;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
 import java.util.Optional;
@@ -203,10 +203,9 @@ class TenantServiceTest extends AbstractJdbcRegistryTest {
                                 assertThat(read.isAdapterEnabled("http"))
                                         .isFalse();
 
-                                assertThat(read.getAdapter("http"))
-                                        .isNotNull()
-                                        .extracting("enabled").isEqualTo(false);
-
+                                final Adapter httpAdapterConfig = read.getAdapter("http");
+                                assertThat(httpAdapterConfig).isNotNull();
+                                assertThat(httpAdapterConfig.isEnabled()).isFalse();
 
                             });
                         })))
@@ -248,9 +247,9 @@ class TenantServiceTest extends AbstractJdbcRegistryTest {
                                             assertThat(read.isAdapterEnabled("http"))
                                                     .isTrue();
 
-                                            assertThat(read.getAdapter("http"))
-                                                    .isNotNull()
-                                                    .extracting("enabled").isEqualTo(true);
+                                            final Adapter httpAdapterConfig = read.getAdapter("http");
+                                            assertThat(httpAdapterConfig).isNotNull();
+                                            assertThat(httpAdapterConfig.isEnabled()).isTrue();
 
                                         });
                                     })));

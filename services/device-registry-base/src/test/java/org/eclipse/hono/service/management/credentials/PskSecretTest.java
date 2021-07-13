@@ -13,9 +13,9 @@
 package org.eclipse.hono.service.management.credentials;
 
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.mockito.Mockito.*;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.List;
 

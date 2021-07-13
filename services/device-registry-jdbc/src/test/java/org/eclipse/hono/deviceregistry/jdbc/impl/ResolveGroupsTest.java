@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.deviceregistry.jdbc.impl;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
 import java.util.Arrays;
@@ -206,7 +206,7 @@ class ResolveGroupsTest extends AbstractJdbcRegistryTest {
                                                 assertThat(result.getPayload())
                                                         .isNotNull();
                                                 assertThat(result.getPayload().getJsonArray(RegistrationConstants.FIELD_VIA))
-                                                        .containsExactlyInAnyOrder(test.expectedVia.toArray());
+                                                        .containsExactly(test.expectedVia.toArray());
 
                                             } else {
 
@@ -252,7 +252,7 @@ class ResolveGroupsTest extends AbstractJdbcRegistryTest {
                                 assertThat(result.getPayload())
                                         .isNotNull();
                                 assertThat(result.getPayload().getJsonArray(RegistrationConstants.FIELD_VIA))
-                                        .containsExactlyInAnyOrder("gw1", "gw2");
+                                        .containsExactly("gw1", "gw2");
 
                             });
 
@@ -271,7 +271,7 @@ class ResolveGroupsTest extends AbstractJdbcRegistryTest {
                                 assertThat(result.getPayload())
                                         .isNotNull();
                                 assertThat(result.getPayload().getJsonArray(RegistrationConstants.FIELD_VIA))
-                                        .containsExactlyInAnyOrder("gw2");
+                                        .containsExactly("gw2");
 
                             });
 

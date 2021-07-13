@@ -12,7 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.service.management.device;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -22,6 +21,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -328,12 +328,12 @@ public class DeviceAndGatewayAutoProvisionerTest {
             if (deviceIdTemplate != null) {
                 // Verify that the device id generated based on the configured template is used
                 // while registering device/gateway.
-                assertThat(optionalDeviceId).isPresent();
+                assertThat(optionalDeviceId.isPresent()).isTrue();
                 assertThat(optionalDeviceId.get()).isEqualTo(expectedDeviceId);
             } else {
                 // Verify that no device id is provided during device/gateway registration
                 // when no device id template is configured
-                assertThat(optionalDeviceId).isEmpty();
+                assertThat(optionalDeviceId.isEmpty()).isTrue();
             }
 
             // WHEN read device is called return the corresponding device registration

@@ -13,10 +13,10 @@
 
 package org.eclipse.hono.authentication;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.time.Instant;
 import java.util.Arrays;
@@ -28,7 +28,6 @@ import org.apache.qpid.proton.engine.impl.RecordImpl;
 import org.eclipse.hono.auth.Activity;
 import org.eclipse.hono.auth.AuthoritiesImpl;
 import org.eclipse.hono.auth.HonoUser;
-import org.eclipse.hono.authentication.SimpleAuthenticationServer;
 import org.eclipse.hono.service.auth.AddressAuthzHelper;
 import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.Test;

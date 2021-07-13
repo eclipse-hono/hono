@@ -14,11 +14,11 @@
 
 package org.eclipse.hono.deviceregistry.service.tenant;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
 import java.util.Optional;
@@ -95,8 +95,8 @@ public class DefaultTenantInformationServiceTest {
             .thenReturn(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE)));
         final var result = service.tenantExists(Constants.DEFAULT_TENANT, NoopSpan.INSTANCE);
         assertThat(result.failed()).isTrue();
-        assertThat(result.cause()).isInstanceOfSatisfying(ServerErrorException.class,
-                t -> assertThat(t.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE));
+        assertThat(result.cause()).isInstanceOf(ServerErrorException.class);
+        assertThat(((ServerErrorException) result.cause()).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
     }
 
     /**
@@ -124,8 +124,8 @@ public class DefaultTenantInformationServiceTest {
             .thenReturn(Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_NOT_FOUND)));
         final var result = service.getTenant(Constants.DEFAULT_TENANT, NoopSpan.INSTANCE);
         assertThat(result.failed()).isTrue();
-        assertThat(result.cause()).isInstanceOfSatisfying(ClientErrorException.class,
-                t -> assertThat(t.getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
+        assertThat(result.cause()).isInstanceOf(ClientErrorException.class);
+        assertThat(((ClientErrorException) result.cause()).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
     }
 
 

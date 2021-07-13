@@ -14,7 +14,6 @@
 
 package org.eclipse.hono.deviceregistry.service.device;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -24,6 +23,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
 import java.util.Collections;
@@ -110,7 +110,7 @@ public class AbstractRegistrationServiceTest {
     @Test
     public void testAssertRegistrationContainsDeviceInfo(final VertxTestContext ctx) {
 
-        final JsonObject registreredDevice = new JsonObject()
+        final JsonObject registeredDevice = new JsonObject()
                 .put(RegistrationConstants.FIELD_DOWNSTREAM_MESSAGE_MAPPER, "mapping-service")
                 .put(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS, new JsonObject().put("foo", "bar"))
                 .put(RegistrationConstants.FIELD_VIA, new JsonArray().add("gw1").add("gw2"))
@@ -119,15 +119,15 @@ public class AbstractRegistrationServiceTest {
         when(service.getRegistrationInformation(any(DeviceKey.class), any(Span.class)))
             .thenReturn(Future.succeededFuture(RegistrationResult.from(HttpURLConnection.HTTP_OK,
                     new JsonObject().put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, "device")
-                        .put(RegistrationConstants.FIELD_DATA, registreredDevice))));
+                        .put(RegistrationConstants.FIELD_DATA, registeredDevice))));
 
         service.assertRegistration(Constants.DEFAULT_TENANT, "device", span)
             .onComplete(ctx.succeeding(result -> {
                 ctx.verify(() -> {
                     assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
                     assertThat(result.getPayload().getString(RegistrationConstants.FIELD_DOWNSTREAM_MESSAGE_MAPPER)).isEqualTo("mapping-service");
-                    assertThat(result.getPayload().getJsonArray(RegistrationConstants.FIELD_VIA)).containsOnly("gw1", "gw2");
-                    assertThat(result.getPayload().getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS)).containsOnly(Map.entry("foo", "bar"));
+                    assertThat(result.getPayload().getJsonArray(RegistrationConstants.FIELD_VIA)).containsExactly("gw1", "gw2");
+                    assertThat(result.getPayload().getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS)).containsExactly(Map.entry("foo", "bar"));
                     assertThat(result.getPayload().containsKey("ext")).isFalse();
                 });
                 ctx.completeNow();
@@ -158,8 +158,8 @@ public class AbstractRegistrationServiceTest {
 
                         final Device registeredDevice = registeredDeviceArgumentCaptor.getValue();
                         assertThat(registeredDevice.getStatus().isAutoProvisioned()).isTrue();
-                        assertThat(registeredDevice.getVia()).containsOnly(GATEWAY_ID);
-                        assertThat(registeredDevice.getViaGroups()).containsOnly(GATEWAY_GROUP_ID);
+                        assertThat(registeredDevice.getVia()).containsExactly(GATEWAY_ID);
+                        assertThat(registeredDevice.getViaGroups()).containsExactly(GATEWAY_GROUP_ID);
                     });
                     ctx.completeNow();
                 }));

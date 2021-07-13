@@ -12,7 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.service.management.credentials;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -21,6 +20,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;

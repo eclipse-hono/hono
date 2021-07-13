@@ -12,7 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.util;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;

@@ -12,7 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.service.registration;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
 import java.time.Instant;
@@ -109,7 +109,8 @@ public interface AbstractRegistrationServiceTest {
                     assertThat(registrationResult.isOk()).isTrue();
                     assertThat(registrationResult.getCacheDirective()).isNotNull();
                     assertThat(registrationResult.getCacheDirective().isCachingAllowed()).isTrue();
-                    assertThat(registrationResult.getPayload().getJsonArray(RegistrationConstants.FIELD_VIA)).containsAll(authorizedGateways);
+                    assertThat(registrationResult.getPayload().getJsonArray(RegistrationConstants.FIELD_VIA))
+                            .containsExactlyElementsIn(authorizedGateways);
                 });
                 ctx.completeNow();
             }));
@@ -142,7 +143,8 @@ public interface AbstractRegistrationServiceTest {
                     assertThat(registrationResult.isOk()).isTrue();
                     assertThat(registrationResult.getCacheDirective()).isNotNull();
                     assertThat(registrationResult.getCacheDirective().isCachingAllowed()).isTrue();
-                    assertThat(registrationResult.getPayload().getJsonArray(RegistrationConstants.FIELD_VIA)).containsAll(authorizedGateways);
+                    assertThat(registrationResult.getPayload().getJsonArray(RegistrationConstants.FIELD_VIA))
+                            .containsExactlyElementsIn(authorizedGateways);
                 });
                 ctx.completeNow();
             }));
@@ -185,7 +187,7 @@ public interface AbstractRegistrationServiceTest {
                     assertThat(registrationResult.getCacheDirective()).isNotNull();
                     assertThat(registrationResult.getCacheDirective().isCachingAllowed()).isTrue();
                     assertThat(registrationResult.getPayload().getJsonArray(RegistrationConstants.FIELD_VIA))
-                        .contains(gatewayIdA, gatewayIdB, gatewayIdC);
+                        .containsExactly(gatewayIdA, gatewayIdB, gatewayIdC);
                 });
                 ctx.completeNow();
             }));
@@ -425,8 +427,8 @@ public interface AbstractRegistrationServiceTest {
                 ctx.verify(() -> {
                     assertThat(s.isOk()).isTrue();
                     assertThat(s.getPayload()).isNotNull();
-                    assertThat(s.getPayload().getVia()).contains("a", "b", "c");
-                    assertThat(s.getPayload().getViaGroups()).contains("group1", "group2");
+                    assertThat(s.getPayload().getVia()).containsExactly("a", "b", "c");
+                    assertThat(s.getPayload().getViaGroups()).containsExactly("group1", "group2");
                     assertThat(s.getPayload().getDownstreamMessageMapper()).isEqualTo("mapper");
                     assertThat(s.getPayload().getStatus()).isNotNull();
                     assertThat(s.getPayload().getStatus().getCreationTime()).isNotNull();
@@ -738,7 +740,7 @@ public interface AbstractRegistrationServiceTest {
                         final Device actualDevice = readResponse.getPayload();
                         assertThat(actualDevice.getStatus().getCreationTime()).isEqualTo(creationTime.get());
                         assertThat(actualDevice.getStatus().getLastUpdate()).isNotNull();
-                        assertThat(actualDevice.getStatus().getLastUpdate()).isAfterOrEqualTo(actualDevice.getStatus().getCreationTime());
+                        assertThat(actualDevice.getStatus().getLastUpdate()).isAtLeast(actualDevice.getStatus().getCreationTime());
                         assertThat(actualDevice.getStatus().isAutoProvisioned()).isFalse();
                         assertThat(actualDevice.getStatus().isAutoProvisioningNotificationSent()).isFalse();
                         register.flag();
@@ -855,7 +857,7 @@ public interface AbstractRegistrationServiceTest {
                             assertThat(r.isOk()).isTrue();
                             assertThat(r.getPayload()).isNotNull();
                             final JsonArray actualVias = r.getPayload().getJsonArray(RegistryManagementConstants.FIELD_VIA, new JsonArray());
-                            assertThat(actualVias).hasSameElementsAs(device.getVia());
+                            assertThat(actualVias).containsExactlyElementsIn(device.getVia());
                         } else {
                             assertThat(r.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
                             assertThat(r.getPayload()).isNull();
