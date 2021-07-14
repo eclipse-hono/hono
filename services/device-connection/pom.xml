@@ -17,7 +17,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
   <parent>
     <groupId>org.eclipse.hono</groupId>
     <artifactId>hono-services-spring</artifactId>
-    <version>1.8.2-SNAPSHOT</version>
+    <version>1.8.2</version>
     <relativePath>../base-spring</relativePath>
   </parent>
   <artifactId>hono-service-device-connection</artifactId>
