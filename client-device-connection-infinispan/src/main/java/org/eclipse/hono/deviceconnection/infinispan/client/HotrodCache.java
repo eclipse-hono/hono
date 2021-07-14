@@ -16,7 +16,6 @@ package org.eclipse.hono.deviceconnection.infinispan.client;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.infinispan.client.hotrod.RemoteCache;
@@ -162,26 +161,6 @@ public final class HotrodCache<K, V> extends BasicCache<K, V> {
     @Override
     protected boolean isStarted() {
         return cacheManager.isStarted() && getCache() != null;
-    }
-
-    // Method overridden because RemoteCache#removeAsync(key, value) throws an UnsupportedOperationException.
-    @Override
-    public Future<Boolean> remove(final K key, final V value) {
-        Objects.requireNonNull(key);
-        Objects.requireNonNull(value);
-
-        return withCache(cache -> {
-            final RemoteCache<K, V> remoteCache = (RemoteCache<K, V>) cache;
-            return remoteCache.getWithMetadataAsync(key).thenCompose(metadataValue -> {
-                if (metadataValue != null && value.equals(metadataValue.getValue())) {
-                    // If removeWithVersionAsync() returns false here (meaning that the value was updated in between),
-                    // the updated value shall prevail and no new removal attempt with a new getWithMetadataAsync() invocation will be done.
-                    return remoteCache.removeWithVersionAsync(key, metadataValue.getVersion());
-                } else {
-                    return CompletableFuture.completedFuture(Boolean.FALSE);
-                }
-            });
-        });
     }
 
     @Override

@@ -65,25 +65,6 @@ abstract class AbstractBasicCacheTest {
      */
     protected abstract org.infinispan.commons.api.BasicCache<Object, Object> givenAConnectedInfinispanCache();
 
-    protected void mockRemoveWithValue(
-            final org.infinispan.commons.api.BasicCache<Object, Object> infinispanCache,
-            final String key,
-            final Object value,
-            final boolean removeOperationResult) {
-
-        when(infinispanCache.removeAsync(eq(key), eq(value)))
-                .thenReturn(CompletableFuture.completedFuture(removeOperationResult));
-    }
-
-    protected void verifyRemoveWithValue(
-            final org.infinispan.commons.api.BasicCache<Object, Object> infinispanCache,
-            final String key,
-            final Object value,
-            final boolean expectedRemoveOperationResult) {
-
-        verify(infinispanCache).removeAsync(key, value);
-    }
-
     /**
      * Sets up the fixture.
      */
@@ -208,12 +189,13 @@ abstract class AbstractBasicCacheTest {
     @Test
     void testRemoveWithValueSucceeds(final VertxTestContext ctx) {
         final org.infinispan.commons.api.BasicCache<Object, Object> grid = givenAConnectedInfinispanCache();
-        mockRemoveWithValue(grid, "key", "value", true);
+        when(grid.removeAsync(eq("key"), eq((Object) "value")))
+                .thenReturn(CompletableFuture.completedFuture(true));
         getCache().start()
                 .compose(ok -> getCache().remove("key", "value"))
                 .onComplete(ctx.succeeding(v -> {
                     ctx.verify(() -> {
-                        verifyRemoveWithValue(grid, "key", "value", true);
+                        verify(grid).removeAsync("key", "value");
                         assertThat(v).isTrue();
                     });
                     ctx.completeNow();
@@ -229,12 +211,13 @@ abstract class AbstractBasicCacheTest {
     @Test
     void testRemoveWithValueFails(final VertxTestContext ctx) {
         final org.infinispan.commons.api.BasicCache<Object, Object> grid = givenAConnectedInfinispanCache();
-        mockRemoveWithValue(grid, "key", "value", false);
+        when(grid.removeAsync(eq("key"), eq((Object) "value")))
+                .thenReturn(CompletableFuture.completedFuture(false));
         getCache().start()
                 .compose(ok -> getCache().remove("key", "value"))
                 .onComplete(ctx.succeeding(v -> {
                     ctx.verify(() -> {
-                        verifyRemoveWithValue(grid, "key", "value", false);
+                        verify(grid).removeAsync("key", "value");
                         assertThat(v).isFalse();
                     });
                     ctx.completeNow();

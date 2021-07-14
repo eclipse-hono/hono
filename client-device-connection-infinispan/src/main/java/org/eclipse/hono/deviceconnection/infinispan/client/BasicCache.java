@@ -192,7 +192,6 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
         Objects.requireNonNull(key);
 
         return withCache(cache -> cache.getAsync(key));
-
     }
 
     @Override
