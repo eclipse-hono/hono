@@ -687,7 +687,7 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/wildfly/wildfly-common/tree/${wildfly-common.version})
 
-### WildFly Elytron ${wildfly-elytron.version}
+### WildFly Elytron
 
 This product includes software developed by the [WildFly project](https://www.wildfly.org/).
 
@@ -696,7 +696,7 @@ of the Apache Software License 2.0.
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [GitHub](https://github.com/wildfly-security/wildfly-elytron/tree/${wildfly-elytron.version}).
+The source code is available from [GitHub](https://github.com/wildfly-security/wildfly-elytron/).
 
 ### Zstd-jni
 
