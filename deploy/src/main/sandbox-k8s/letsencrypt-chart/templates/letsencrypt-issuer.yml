@@ -1,0 +1,19 @@
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: {{ .Values.metadata.name }}
+spec:
+  acme:
+    # You must replace this email address with your own.
+    # Let's Encrypt will use this to contact you about expiring
+    # certificates, and issues related to your account.
+    email: {{ required ".Values.spec.acme.email MUST be set" .Values.spec.acme.email }}
+    server: {{ .Values.spec.acme.server }}
+    privateKeySecretRef:
+      # Secret resource that will be used to store the account's private key.
+      name: {{ .Values.spec.acme.privateKeySecretRef.name }}
+    # Add a single challenge solver, HTTP01 using traefik
+    solvers:
+      - http01:
+          ingress:
+            class: traefik

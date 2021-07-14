@@ -1,0 +1,22 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: hono-eclipseprojects-io
+  namespace: hono
+spec:
+  # Secret names are always required.
+  secretName: sandbox-tls
+  duration: 2160h # 90d
+  renewBefore: 528h # 22d
+  subject:
+    organizations:
+    - "Eclipse Foundation"
+  commonName: hono.eclipseprojects.io
+  usages:
+    - server auth
+    - client auth
+  dnsNames:
+    - hono.eclipseprojects.io
+  issuerRef:
+    name: {{ .Values.spec.acme.privateKeySecretRef.name }}
+    kind: ClusterIssuer

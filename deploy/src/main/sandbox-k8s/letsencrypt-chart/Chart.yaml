@@ -1,0 +1,12 @@
+# This Helm chart is only used for templating not to deploy something.
+# It renders the issuer and certificate files for cert-manager depending
+# on the Let's Encrypt API to be used and it expects the email to be provided
+# on invocation like the following example:
+#  helm template . -f ./values-staging.yaml --set spec.acme.email=foo@bar.baz
+
+apiVersion: v2
+name: lets-encrypt-chart
+description: A Helm chart used to render issuer and certificate files for cert-manager.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
