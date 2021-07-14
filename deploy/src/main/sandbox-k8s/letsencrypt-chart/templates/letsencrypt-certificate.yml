@@ -18,5 +18,5 @@ spec:
   dnsNames:
     - hono.eclipseprojects.io
   issuerRef:
-    name: letsencrypt-staging
+    name: {{ .Values.spec.acme.privateKeySecretRef.name }}
     kind: ClusterIssuer

@@ -11,15 +11,13 @@ This folder contains scripts and configuration files for setting up a Hono *sand
 
 The scripts need to be executed in the order of the numbers in the file names:
 
-1. Install Kubernetes: `./00-install-k3s.sh`.
-2. Deploy the [cert-manager](https://cert-manager.io/): `sudo ./10-deploy-cert-manager.sh`.
-3. Request a public certificate from Let's Encrypt: `sudo ./20-create-certificate.sh` (creates the namespace "hono").
-4. Deploy Hono: `sudo ./30-deploy-hono.sh`.
+1. Install Kubernetes: `sudo ./00-install-k3s.sh`.
+2. Deploy the [cert-manager](https://cert-manager.io/) & request a public certificate from Let's Encrypt: `sudo ./10-deploy-cert-manager.sh $LE_EMAIL` (creates the namespace "hono").
+3. Deploy Hono: `sudo ./20-deploy-hono.sh`.
 
-**NB:** Let's Encrypt has quite strict rate limits. Therefore the scripts `10-deploy-cert-manager.sh` and `20-create-certificate.sh`
-do not use the productive Let's Encrypt API by default. When the scripts are executed without parameters, the Let's Encrypt 
-_staging_ API is used. After the retrieval of a certificate has been successfully tested, execute the scripts again with 
-`--use-prod` as an argument to request a valid certificate from the productive API.
+**NB:** Let's Encrypt has quite strict rate limits. Therefore the script `10-deploy-cert-manager.sh` does not use
+the productive Let's Encrypt API by default. After the retrieval of a certificate has been successfully tested, 
+execute the script again with `production` as the second argument to request a valid certificate from the productive API.
 
 The scripts need to be executed with `sudo` because the Kube config is only readable by root.
 
