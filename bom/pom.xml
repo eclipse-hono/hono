@@ -96,7 +96,6 @@
     <!-- when updating Vert.x, check if the Kafka clients need to be updated as well -->
     <vertx.version>3.9.7</vertx.version>
     <wildfly-common.version>1.5.4.Final-format-001</wildfly-common.version>
-    <wildfly-elytron.version>1.14.1.Final</wildfly-elytron.version>
     <zookeeper.image.name>confluentinc/cp-zookeeper:6.1.1</zookeeper.image.name>
 
     <!-- The port at which the Prometheus scraping endpoint is exposed -->
