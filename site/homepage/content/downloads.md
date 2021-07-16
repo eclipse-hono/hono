@@ -39,5 +39,6 @@ For a list of the changes in this release, take a look at the [release notes]({{
 
 ## Previous versions
 
+* [Eclipse Hono 1.8.2 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.8.2-exec.jar)
 * [Eclipse Hono 1.8.1 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.8.1-exec.jar)
 * [Eclipse Hono 1.8.0 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.8.0-exec.jar)
