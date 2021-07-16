@@ -85,6 +85,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     private static final Logger LOG = LoggerFactory.getLogger(VertxBasedHttpProtocolAdapterTest.class);
     private static final String HOST = "127.0.0.1";
     private static final String CMD_REQ_ID = "12fcmd-client-c925910f-ea2a-455c-a3f9-a339171f335474f48a55-c60d-4b99-8950-a2fbb9e8f1b6";
+    private static final String ORIGIN_HEADER_VALUE = "http://hono.eclipse.org";
 
     private DeviceCredentialsAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
     private Vertx vertx;
@@ -254,7 +255,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         httpClient.post("/telemetry")
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
-                .putHeader(HttpHeaders.ORIGIN.toString(), "hono.eclipse.org")
+                .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
                 .expect(ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
                 .expect(this::assertCorsHeaders)
                 .sendJsonObject(new JsonObject(), ctx.completing());
@@ -276,7 +277,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         httpClient.put("/telemetry/DEFAULT_TENANT/device_1")
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
-                .putHeader(HttpHeaders.ORIGIN.toString(), "hono.eclipse.org")
+                .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
                 .expect(ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
                 .expect(this::assertCorsHeaders)
                 .sendJsonObject(new JsonObject(), ctx.succeeding(b -> {
@@ -326,7 +327,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         httpClient.post("/telemetry")
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
-                .putHeader(HttpHeaders.ORIGIN.toString(), "hono.eclipse.org")
+                .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
                 .putHeader(Constants.HEADER_QOS_LEVEL, String.valueOf(1))
                 .expect(ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
                 .expect(this::assertCorsHeaders)
@@ -353,7 +354,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         httpClient.put("/event/DEFAULT_TENANT/device_1")
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
-                .putHeader(HttpHeaders.ORIGIN.toString(), "hono.eclipse.org")
+                .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
                 .expect(ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
                 .expect(this::assertCorsHeaders)
                 .sendJsonObject(new JsonObject(), ctx.succeeding(b -> {
@@ -378,7 +379,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         httpClient.post("/telemetry")
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
-                .putHeader(HttpHeaders.ORIGIN.toString(), "hono.eclipse.org")
+                .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
                 .expect(ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
                 .expect(this::assertCorsHeaders)
                 .sendJsonObject(new JsonObject(), ctx.succeeding(r -> {
@@ -402,7 +403,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         httpClient.post("/event")
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
-                .putHeader(HttpHeaders.ORIGIN.toString(), "hono.eclipse.org")
+                .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
                 .expect(ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
                 .expect(this::assertCorsHeaders)
                 .sendJsonObject(new JsonObject(), ctx.succeeding(r -> {
@@ -440,7 +441,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .addQueryParam("hono-ttd", "3")
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
-                .putHeader(HttpHeaders.ORIGIN.toString(), "hono.eclipse.org")
+                .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
                 // THEN the response contains the pending command
                 .expect(ResponsePredicate.SC_OK)
                 .expect(this::assertCorsHeaders)
@@ -480,7 +481,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .addQueryParam(Constants.HEADER_COMMAND_RESPONSE_STATUS, "200")
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
-                .putHeader(HttpHeaders.ORIGIN.toString(), "hono.eclipse.org")
+                .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
                 .expect(ResponsePredicate.SC_BAD_REQUEST)
                 .sendJsonObject(new JsonObject(), ctx.completing());
     }
@@ -500,7 +501,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .addQueryParam(Constants.HEADER_COMMAND_RESPONSE_STATUS, "600")
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
-                .putHeader(HttpHeaders.ORIGIN.toString(), "hono.eclipse.org")
+                .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
                 .expect(ResponsePredicate.SC_BAD_REQUEST)
                 .sendJsonObject(new JsonObject(), ctx.completing());
     }
@@ -519,7 +520,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         httpClient.post(getCommandResponsePath(CMD_REQ_ID))
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
-                .putHeader(HttpHeaders.ORIGIN.toString(), "hono.eclipse.org")
+                .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
                 .expect(ResponsePredicate.SC_BAD_REQUEST)
                 .sendJsonObject(new JsonObject(), ctx.completing());
     }
@@ -542,7 +543,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .addQueryParam(Constants.HEADER_COMMAND_RESPONSE_STATUS, "200")
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
-                .putHeader(HttpHeaders.ORIGIN.toString(), "hono.eclipse.org")
+                .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
                 .expect(ResponsePredicate.SC_SERVICE_UNAVAILABLE)
                 .sendJsonObject(new JsonObject(), ctx.completing());
     }
@@ -566,7 +567,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .addQueryParam(Constants.HEADER_COMMAND_RESPONSE_STATUS, "200")
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
-                .putHeader(HttpHeaders.ORIGIN.toString(), "hono.eclipse.org")
+                .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
                 .expect(ResponsePredicate.SC_ACCEPTED)
                 .sendJsonObject(new JsonObject(), ctx.completing());
     }
