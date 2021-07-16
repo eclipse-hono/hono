@@ -75,6 +75,20 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
         this.mqttProtocolAdapterProperties = Objects.requireNonNull(protocolAdapterConfig);
     }
 
+    private static MappedMessage unmodifiedMappedMessage(
+            final MqttContext ctx,
+            final ResourceIdentifier targetAddress) {
+        return new MappedMessage(
+                targetAddress,
+                // create a copy of the original Buffer in order to
+                // de-couple the new Buffer from the original buffer's underlying
+                // Netty ByteBuf which might be altered during the course of processing
+                // the returned MappedMessage
+                Optional.ofNullable(ctx.message().payload())
+                    .map(Buffer::copy)
+                    .orElseGet(Buffer::buffer));
+    }
+
     /**
      * {@inheritDoc}
      * <p>
@@ -110,12 +124,12 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
 
         if (Strings.isNullOrEmpty(mapper)) {
             LOG.debug("no payload mapping configured for {}", ctx.authenticatedDevice());
-            result.complete(new MappedMessage(targetAddress, ctx.message().payload()));
+            result.complete(unmodifiedMappedMessage(ctx, targetAddress));
         } else {
             final MapperEndpoint mapperEndpoint = mqttProtocolAdapterProperties.getMapperEndpoint(mapper);
             if (mapperEndpoint == null) {
                 LOG.debug("no mapping endpoint [name: {}] found for {}", mapper, ctx.authenticatedDevice());
-                result.complete(new MappedMessage(targetAddress, ctx.message().payload()));
+                result.complete(unmodifiedMappedMessage(ctx, targetAddress));
             } else {
                 mapDownstreamMessageRequest(ctx, targetAddress, registrationInfo, mapperEndpoint, result);
             }
