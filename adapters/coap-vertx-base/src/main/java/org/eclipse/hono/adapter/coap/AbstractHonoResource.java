@@ -337,10 +337,21 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                                 currentSpan.context());
                     }
                     return CompositeFuture.all(sendResult, responseReady.future()).mapEmpty();
-                }).map(proceed -> {
+                }).compose(proceed -> {
+
                     // downstream message sent and (if ttd was set) command was received or ttd has timed out
-                    Optional.ofNullable(commandConsumerTracker.result())
-                            .ifPresent(consumer -> consumer.close(null));
+                    // we wait for the CommandConsumer having been closed before delivering the response to the
+                    // device in order to prevent a race condition when the device immediately sends a new
+                    // request and the CommandConsumer from the current request has not been closed yet
+                    return Optional.ofNullable(commandConsumerTracker.result())
+                            .map(consumer -> consumer.close(currentSpan.context())
+                                    .otherwise(thr -> {
+                                        TracingHelper.logError(currentSpan, thr);
+                                        return (Void) null;
+                                    }))
+                            .orElseGet(Future::succeededFuture);
+
+                }).map(proceed -> {
 
                     final CommandContext commandContext = context.get(CommandContext.KEY_COMMAND_CONTEXT);
                     final Response response = new Response(ResponseCode.CHANGED);
@@ -376,10 +387,10 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
 
                     LOG.debug("cannot process message from device [tenantId: {}, deviceId: {}, endpoint: {}]",
                             tenantId, deviceId, endpoint.getCanonicalName(), t);
-                    final Future<Void> commandConsumerClosedTracker = commandConsumerTracker.result() != null
-                            ? commandConsumerTracker.result().close(currentSpan.context())
-                                    .onFailure(thr -> TracingHelper.logError(currentSpan, thr))
-                            : Future.succeededFuture();
+                    final Future<Void> commandConsumerClosedTracker = Optional.ofNullable(commandConsumerTracker.result())
+                            .map(consumer -> consumer.close(currentSpan.context())
+                                    .onFailure(thr -> TracingHelper.logError(currentSpan, thr)))
+                            .orElseGet(Future::succeededFuture);
                     final CommandContext commandContext = context.get(CommandContext.KEY_COMMAND_CONTEXT);
                     if (commandContext != null) {
                         TracingHelper.logError(commandContext.getTracingSpan(),

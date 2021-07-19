@@ -41,6 +41,7 @@
     <h2.version>1.4.200</h2.version>
     <hamcrest-core.version>2.2</hamcrest-core.version>
     <infinispan.version>11.0.9.Final</infinispan.version>
+    <infinispan-image.name>infinispan/server-native:11.0.7.Final-2</infinispan-image.name>
     <jackson.version>2.12.3</jackson.version>
     <jaeger.image.name>jaegertracing/all-in-one:1.22</jaeger.image.name>
     <jaeger.version>1.6.0</jaeger.version>

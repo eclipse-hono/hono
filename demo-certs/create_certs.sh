@@ -24,6 +24,8 @@ DEVCON_SERVER_KEY_STORE=deviceConnectionKeyStore.p12
 DEVCON_SERVER_KEY_STORE_PWD=deviceconnectionkeys
 CMD_ROUTER_KEY_STORE=commandRouterKeyStore.p12
 CMD_ROUTER_KEY_STORE_PWD=commandrouterkeys
+INFINISPAN_KEY_STORE=infinispanKeyStore.p12
+INFINISPAN_KEY_STORE_PWD=infinispanKeys
 DEVREG_SERVER_KEY_STORE=deviceRegistryKeyStore.p12
 DEVREG_SERVER_KEY_STORE_PWD=deviceregistrykeys
 MQTT_ADAPTER_KEY_STORE=mqttKeyStore.p12
@@ -44,6 +46,7 @@ EXAMPLE_GATEWAY_KEY_STORE=exampleGatewayKeyStore.p12
 EXAMPLE_GATEWAY_KEY_STORE_PWD=examplegatewaykeys
 # set to either EC or RSA
 KEY_ALG=EC
+JAVA_KEY_TOOL=${JAVA_HOME}/bin/keytool
 
 function create_key { 
 
@@ -67,7 +70,7 @@ function create_cert {
   if [ $2 ]
   then
     echo "adding key/cert for $1 to key store $DIR/$2"
-    openssl pkcs12 -export -inkey $DIR/$1-key.pem -in $DIR/$1-cert.pem -out $DIR/$2 -password pass:$3
+    openssl pkcs12 -export -inkey $DIR/$1-key.pem -in $DIR/$1-cert.pem -out $DIR/$2 -name $1 -password pass:$3
   fi
 }
 
@@ -108,8 +111,8 @@ cat $DIR/ca-cert.pem $DIR/root-cert.pem > $DIR/trusted-certs.pem
 
 echo ""
 echo "creating JKS trust store ($DIR/$HONO_TRUST_STORE) containing CA certificate"
-keytool -import -trustcacerts -noprompt -alias root -file $DIR/root-cert.pem -keystore $DIR/$HONO_TRUST_STORE -storepass $HONO_TRUST_STORE_PWD
-keytool -import -trustcacerts -noprompt -alias ca -file $DIR/ca-cert.pem -keystore $DIR/$HONO_TRUST_STORE -storepass $HONO_TRUST_STORE_PWD
+${JAVA_KEY_TOOL} -import -trustcacerts -noprompt -alias root -file $DIR/root-cert.pem -keystore $DIR/$HONO_TRUST_STORE -storepass $HONO_TRUST_STORE_PWD
+${JAVA_KEY_TOOL} -import -trustcacerts -noprompt -alias ca -file $DIR/ca-cert.pem -keystore $DIR/$HONO_TRUST_STORE -storepass $HONO_TRUST_STORE_PWD
 echo $HONO_TRUST_STORE_PWD > $DIR/$HONO_TRUST_STORE_PWD_FILE
 
 echo ""
@@ -134,6 +137,7 @@ create_cert auth-server $AUTH_SERVER_KEY_STORE $AUTH_SERVER_KEY_STORE_PWD
 create_cert device-registry $DEVREG_SERVER_KEY_STORE $DEVREG_SERVER_KEY_STORE_PWD
 create_cert device-connection $DEVCON_SERVER_KEY_STORE $DEVCON_SERVER_KEY_STORE_PWD
 create_cert command-router $CMD_ROUTER_KEY_STORE $CMD_ROUTER_KEY_STORE_PWD
+create_cert infinispan $INFINISPAN_KEY_STORE $INFINISPAN_KEY_STORE_PWD
 create_cert http-adapter $HTTP_ADAPTER_KEY_STORE $HTTP_ADAPTER_KEY_STORE_PWD
 create_cert lora-adapter $LORA_ADAPTER_KEY_STORE $LORA_ADAPTER_KEY_STORE_PWD
 create_cert mqtt-adapter $MQTT_ADAPTER_KEY_STORE $MQTT_ADAPTER_KEY_STORE_PWD

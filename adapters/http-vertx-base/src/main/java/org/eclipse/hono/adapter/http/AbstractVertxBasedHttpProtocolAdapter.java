@@ -714,10 +714,20 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         .map(s -> (Void) null);
             }
         })
-        .map(proceed -> {
+        .compose(proceed -> {
             // downstream message sent and (if ttd was set) command was received or ttd has timed out
-            Optional.ofNullable(commandConsumerTracker.result())
-                    .ifPresent(consumer -> consumer.close(null));
+            // we wait for the CommandConsumer having been closed before delivering the response to the
+            // device in order to prevent a race condition when the device immediately sends a new
+            // request and the CommandConsumer from the current request has not been closed yet
+            return Optional.ofNullable(commandConsumerTracker.result())
+                    .map(consumer -> consumer.close(currentSpan.context())
+                            .otherwise(thr -> {
+                                TracingHelper.logError(currentSpan, thr);
+                                return (Void) null;
+                            }))
+                    .orElseGet(Future::succeededFuture);
+        })
+        .map(proceed -> {
 
             if (ctx.response().closed()) {
                 log.debug("failed to send http response for [{}] message from device [tenantId: {}, deviceId: {}]: response already closed",
@@ -783,10 +793,10 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             log.debug("cannot process [{}] message from device [tenantId: {}, deviceId: {}]",
                     endpoint, tenant, deviceId, t);
             final boolean responseClosedPrematurely = ctx.response().closed();
-            final Future<Void> commandConsumerClosedTracker = commandConsumerTracker.result() != null
-                    ? commandConsumerTracker.result().close(currentSpan.context())
-                            .onFailure(thr -> TracingHelper.logError(currentSpan, thr))
-                    : Future.succeededFuture();
+            final Future<Void> commandConsumerClosedTracker = Optional.ofNullable(commandConsumerTracker.result())
+                    .map(consumer -> consumer.close(currentSpan.context())
+                            .onFailure(thr -> TracingHelper.logError(currentSpan, thr)))
+                    .orElseGet(Future::succeededFuture);
             final CommandContext commandContext = ctx.get(CommandContext.KEY_COMMAND_CONTEXT);
             if (commandContext != null) {
                 TracingHelper.logError(commandContext.getTracingSpan(),

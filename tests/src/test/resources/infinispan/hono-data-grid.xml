@@ -1,0 +1,99 @@
+<infinispan
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="urn:infinispan:config:11.0 https://infinispan.org/schemas/infinispan-config-11.0.xsd
+                            urn:infinispan:server:11.0 https://infinispan.org/schemas/infinispan-server-11.0.xsd"
+        xmlns="urn:infinispan:config:11.0"
+        xmlns:server="urn:infinispan:server:11.0">
+
+  <cache-container name="routing-info">
+    <security>
+      <authorization>
+        <identity-role-mapper /> 
+        <role name="admin" permissions="ALL" /> 
+        <role name="adapter" permissions="READ WRITE BULK_READ" />
+      </authorization>
+    </security>
+    <local-cache name="command-router">
+      <encoding>
+        <key media-type="text/plain" />
+        <value media-type="text/plain" />
+      </encoding>
+      <persistence passivation="false">
+        <file-store
+            shared="false"
+            preload="true"
+            fetch-state="false"
+            read-only="false"
+            purge="false"
+            path="command-router">
+        </file-store>
+      </persistence>
+      <security>
+        <authorization enabled="true" />
+      </security>
+    </local-cache>
+  </cache-container>
+
+  <server xmlns="urn:infinispan:server:11.0">
+    <interfaces>
+      <interface name="public">
+        <non-loopback />
+      </interface>
+      <interface name="admin">
+        <loopback />
+      </interface>
+    </interfaces>
+
+    <socket-bindings default-interface="public" port-offset="${infinispan.socket.binding.port-offset:0}">
+      <socket-binding name="default" port="${infinispan.bind.port:11222}"/>
+      <socket-binding name="admin" port="9990" interface="admin"/>
+    </socket-bindings>
+
+    <security>
+      <security-realms>
+        <security-realm name="ManagementRealm">
+          <properties-realm groups-attribute="Roles">
+            <user-properties path="users.properties"
+                             relative-to="infinispan.server.config.path"
+                             plain-text="true" />
+            <group-properties path="mgmt-groups.properties"
+                             relative-to="infinispan.server.config.path"/>
+          </properties-realm>
+        </security-realm>
+        <security-realm name="ApplicationRealm">
+          <server-identities>
+            <ssl>
+              <keystore path="infinispanKeyStore.p12"
+                        relative-to="infinispan.server.config.path"
+                        alias="infinispan"
+                        keystore-password="infinispanKeys" />
+              <engine enabled-protocols="TLSv1.2"/>
+            </ssl>
+          </server-identities>
+          <properties-realm groups-attribute="Roles">
+            <user-properties path="users.properties"
+                             relative-to="infinispan.server.config.path"
+                             plain-text="true" />
+            <group-properties path="public-groups.properties"
+                             relative-to="infinispan.server.config.path" />
+          </properties-realm>
+        </security-realm>
+      </security-realms>
+    </security>
+
+    <endpoints socket-binding="default">
+      <hotrod-connector name="hotrod">
+        <authentication security-realm="ApplicationRealm">
+          <sasl mechanisms="SCRAM-SHA-512 SCRAM-SHA-384 DIGEST-SHA-512 DIGEST-SHA-384 DIGEST-MD5"
+                server-name="${hono.infinispan.host}"
+                qop="auth" />
+        </authentication>
+      </hotrod-connector>
+      <rest-connector name="rest">
+        <authentication security-realm="ApplicationRealm" mechanisms="DIGEST BASIC" />
+      </rest-connector>
+    </endpoints>
+
+  </server>
+
+</infinispan>
