@@ -1,0 +1,95 @@
+hono:
+  app:
+    maxInstances: 1
+    startupTimeout: 90
+  healthCheck:
+    insecurePortBindAddress: 0.0.0.0
+    insecurePort: ${vertx.health.port}
+  auth:
+    host: ${hono.auth.host}
+    port: 5671
+    name: command-router
+    trustStorePath: "/etc/hono/certs/trusted-certs.pem"
+    validation:
+      certPath: "/etc/hono/certs/auth-server-cert.pem"
+  commandRouter:
+    amqp:
+      insecurePortEnabled: true
+      insecurePortBindAddress: 0.0.0.0
+    cache:
+      remote:
+        serverList: "${hono.infinispan.host}"
+        authServerName: "${hono.infinispan.host}"
+        authRealm: "ApplicationRealm"
+        authUsername: "${hono.infinispan.username}"
+        authPassword: "${hono.infinispan.password}"
+        saslMechanism: "SCRAM-SHA-512"
+        socketTimeout: 5000
+        connectTimeout: 5000
+  registration:
+    name: 'Hono Command Router'
+    host: ${hono.registration.host}
+    port: 5672
+    username: command-router@HONO
+    password: cmd-router-secret
+    linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
+  tenant:
+    name: 'Hono Command Router'
+    host: ${hono.registration.host}
+    port: 5672
+    username: command-router@HONO
+    password: cmd-router-secret
+    linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
+  command:
+    name: 'Hono Command Router'
+    host: ${hono.amqp-network.host}
+    port: 5673
+    amqpHostname: hono-internal
+    keyPath: /etc/hono/certs/command-router-key.pem
+    certPath: /etc/hono/certs/command-router-cert.pem
+    trustStorePath: /etc/hono/certs/trusted-certs.pem
+    linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
+  kafka:
+    commonClientConfig:
+      bootstrap.servers: ${hono.kafka.bootstrap.servers}
+  vertx:
+    maxEventLoopExecuteTime: ${max.event-loop.execute-time}
+    preferNative: true
+
+quarkus:
+  log:
+    console:
+      color: true
+    level: INFO
+    min-level: TRACE
+    category:
+      "org.eclipse.hono":
+        level: INFO
+      "org.eclipse.hono.authentication.impl":
+        level: INFO
+      "org.eclipse.hono.commandrouter":
+        level: INFO
+      "org.eclipse.hono.commandrouter.impl.amqp":
+        level: DEBUG
+      "org.eclipse.hono.deviceconnection.infinispan.client":
+        level: INFO
+      "org.infinispan":
+        level: INFO
+      "org.apache.kafka":
+        level: WARN
+  vertx:
+    max-event-loop-execute-time: ${max.event-loop.execute-time}
+    prefer-native-transport: true
+    resolver:
+      cache-max-time-to-live: 0
+
+spring:
+  jmx:
+    enabled: false
+

@@ -140,11 +140,21 @@ Note: the profile can also be activated by setting the Maven property *hono.comp
 mvn verify -Prun-tests -Dhono.components.type=quarkus-jvm
 ```
 
+### Running the Tests with the Command Router using an embedded Cache
+
+The Command Router component by default stores routing information in a dedicated Infinispan server.
+The router can also be configured to instead store the data in an embedded cache by means of activating the `embedded_cache`
+profile:
+
+```sh
+mvn verify -Prun-tests -Dhono.commandrouting.cache=embedded
+```
+
 ### Running the Tests with the Device Connection service component
 
 By default, the integration tests are run using the Command Router service component. In order to use the Device
-Connection service component instead, the `device-connection-service` maven profile can be set:
+Connection service component instead, the `device-connection-service` maven profile can be activated:
 
 ```sh
-mvn verify -Prun-tests,device-connection-service
+mvn verify -Prun-tests -Dhono.commandrouting.mode=dev-con-service
 ```

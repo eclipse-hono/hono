@@ -81,11 +81,18 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <hono.command-related-service.host>${hono.commandrouter.host}</hono.command-related-service.host>
 
     <hono.command-router.config-dir>etc/hono</hono.command-router.config-dir>
+    <hono.command-router.config-src>clustered-cache</hono.command-router.config-src>
     <hono.command-router.disabled>false</hono.command-router.disabled>
     <hono.command-router.image>hono-service-command-router</hono.command-router.image>
-    <hono.command-router.max-mem>314572800</hono.command-router.max-mem>
+    <hono.command-router.max-mem>256000000</hono.command-router.max-mem>
 
     <hono.device-connection.disabled>true</hono.device-connection.disabled>
+
+    <hono.infinispan.disabled>false</hono.infinispan.disabled>
+    <hono.infinispan.host>hono-infinispan.hono</hono.infinispan.host>
+    <hono.infinispan.port>11222</hono.infinispan.port>
+    <hono.infinispan.username>device-registry@HONO</hono.infinispan.username>
+    <hono.infinispan.password>device-registry-secret</hono.infinispan.password>
 
     <!--
       Messaging related properties - AMQP is used as the default one.
@@ -345,6 +352,21 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
         <hono.command-related-service.host>${hono.device-connection.host}</hono.command-related-service.host>
         <hono.command-router.disabled>true</hono.command-router.disabled>
         <hono.device-connection.disabled>false</hono.device-connection.disabled>
+        <hono.infinispan.disabled>true</hono.infinispan.disabled>
+      </properties>
+    </profile>
+    <profile>
+      <id>embedded_cache</id>
+      <activation>
+        <property>
+          <name>hono.commandrouting.cache</name>
+          <value>embedded</value>
+        </property>
+      </activation>
+      <properties>
+        <hono.infinispan.disabled>true</hono.infinispan.disabled>
+        <hono.command-router.config-src>embedded-cache</hono.command-router.config-src>
+        <hono.command-router.max-mem>314572800</hono.command-router.max-mem>
       </properties>
     </profile>
     <profile>
@@ -589,6 +611,76 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
               <autoCreateCustomNetworks>true</autoCreateCustomNetworks>
               <startParallel>false</startParallel>
               <images>
+                <!-- ##### Infinispan server for Command Router ##### -->
+                <image>
+                  <name>${docker.repository}/hono-infinispan-test:${project.version}</name>
+                  <build>
+                    <skip>${hono.infinispan.disabled}</skip>
+                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
+                    <from>${infinispan-image.name}</from>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/</basedir>
+                      <inline>
+                        <id>config</id>
+                        <fileSet>
+                          <directory>${project.build.directory}/resources/infinispan</directory>
+                          <outputDirectory>opt/infinispan/server/conf</outputDirectory>
+                          <includes>
+                            <include>*</include>
+                          </includes>
+                        </fileSet>
+                        <fileSet>
+                          <directory>${project.build.directory}/certs</directory>
+                          <outputDirectory>opt/infinispan/server/conf</outputDirectory>
+                          <includes>
+                            <include>infinispanKeyStore.p12</include>
+                          </includes>
+                        </fileSet>
+                      </inline>
+                    </assembly>
+                  </build>
+                  <run>
+                    <skip>${hono.infinispan.disabled}</skip>
+                    <entrypoint>
+                      <arg>/opt/infinispan/bin/server.sh</arg>
+                    </entrypoint>
+                    <cmd>
+                      <arg>-b</arg>
+                      <arg>SITE_LOCAL</arg>
+                      <arg>-c</arg>
+                      <arg>hono-data-grid.xml</arg>
+                      <arg>-Dquarkus.log.category."org.infinispan.CONFIG".level=INFO</arg>
+                      <arg>-Dquarkus.log.category."org.infinispan.CONTAINER".level=INFO</arg>
+                      <arg>-Dquarkus.log.category."org.infinispan.SERVER".level=INFO</arg>
+                    </cmd>
+                    <ports>
+                      <port>+infinispan.ip:infinispan.port:${hono.infinispan.port}</port>
+                    </ports>
+                    <portPropertyFile>${project.build.directory}/docker/infinispan.port.properties</portPropertyFile>
+                    <env>
+                    </env>
+                    <network>
+                      <mode>custom</mode>
+                      <name>hono</name>
+                      <alias>${hono.infinispan.host}</alias>
+                    </network>
+                    <memorySwap>96000000</memorySwap>
+                    <memory>96000000</memory>
+                    <log>
+                      <prefix>INFINISPAN</prefix>
+                      <color>${log.color.hono-services}</color>
+                    </log>
+                    <wait>
+                      <time>${service.startup.timeout}</time>
+                      <http>
+                        <method>GET</method>
+                        <url>http://${infinispan.ip}:${infinispan.port}/rest/v2/cache-managers/routing-info/health/status</url>
+                        <status>200..299</status>
+                      </http>
+                    </wait>
+                  </run>
+                </image>
                 <!-- ##### Mongo DB instance for the device registry ##### -->
                 <image>
                   <name>${docker.repository}/hono-mongodb-test:${project.version}</name>
@@ -1151,6 +1243,13 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                             </includes>
                           </fileSet>
                           <fileSet>
+                            <directory>${project.build.directory}/resources/commandrouter/${hono.command-router.config-src}</directory>
+                            <outputDirectory>${hono.command-router.config-dir}</outputDirectory>
+                            <includes>
+                              <include>*</include>
+                            </includes>
+                          </fileSet>
+                          <fileSet>
                             <directory>${project.build.directory}/certs</directory>
                             <outputDirectory>etc/hono/certs</outputDirectory>
                             <includes>
@@ -1630,6 +1729,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <file>${project.build.directory}/docker/deviceregistry.port.properties</file>
                     <file>${project.build.directory}/docker/deviceconnection.port.properties</file>
                     <file>${project.build.directory}/docker/commandrouter.port.properties</file>
+                    <file>${project.build.directory}/docker/infinispan.port.properties</file>
                     <file>${project.build.directory}/docker/broker.port.properties</file>
                     <file>${project.build.directory}/docker/qpid.port.properties</file>
                     <file>${project.build.directory}/docker/kafka.port.properties</file>
