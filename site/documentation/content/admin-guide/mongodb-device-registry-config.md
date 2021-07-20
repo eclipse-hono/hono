@@ -104,7 +104,7 @@ variable needs to be set to the path to a YAML file containing the definition of
 for encryption. The file is expected to have the following format:
 
 ```yaml
-defaultkey: 2
+defaultKey: 2
 keys:
 - version: 1
   key: hqHKBLV83LpCqzKpf8OvutbCs+O5wX5BPu3btWpEvXA=
