@@ -35,18 +35,24 @@ public class PskSecret extends CommonSecret {
     @JsonProperty(RegistryManagementConstants.FIELD_SECRETS_KEY)
     private byte[] key;
 
+    /**
+     * Gets the shared (secret) key.
+     *
+     * @return The key.
+     */
     public byte[] getKey() {
         return this.key;
     }
 
     /**
-     * Sets the Base64 encoded bytes representing the shared (secret) key.
+     * Sets the shared (secret) key.
      *
-     * @param key  The Base64 encoding of the secret key.
-     * @return     a reference to this for fluent use.
+     * @param key The key.
+     * @return A reference to this for fluent use.
+     * @throws NullPointerException if key is {@code null}.
      */
     public PskSecret setKey(final byte[] key) {
-        this.key = key;
+        this.key = Objects.requireNonNull(key);
         return this;
     }
 
@@ -76,7 +82,7 @@ public class PskSecret extends CommonSecret {
 
         if (this.key == null) {
             final PskSecret otherPskSecret = (PskSecret) otherSecret;
-            this.key = otherPskSecret.key;
+            this.setKey(otherPskSecret.key);
         }
     }
 

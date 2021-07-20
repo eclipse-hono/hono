@@ -534,11 +534,14 @@ public class CredentialsTest {
 
         final PskSecret existingSecret = spy(PskSecret.class);
         existingSecret.setId("one");
+        existingSecret.setKey("secret".getBytes(StandardCharsets.UTF_8));
         final PskCredential existingCredentials = new PskCredential("foo", List.of(existingSecret));
 
         final PskSecret updatedSecret = spy(PskSecret.class);
         updatedSecret.setId("one");
+        updatedSecret.setKey("updated-secret".getBytes(StandardCharsets.UTF_8));
         final PskSecret newSecret = spy(PskSecret.class);
+        newSecret.setKey("new-secret".getBytes(StandardCharsets.UTF_8));
         final PskCredential updatedCredentials = new PskCredential("foo", List.of(updatedSecret, newSecret));
 
         updatedCredentials.merge(existingCredentials);
