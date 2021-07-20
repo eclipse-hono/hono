@@ -8,6 +8,9 @@
         "pattern": ".*\\.proto$"
       },
       {
+        "pattern": "META-INF\\/services\\/java\\.security\\.Provider"
+      },
+      {
         "pattern": "META-INF\\/services\\/javax\\.security\\.sasl\\.SaslClientFactory"
       },
       {
