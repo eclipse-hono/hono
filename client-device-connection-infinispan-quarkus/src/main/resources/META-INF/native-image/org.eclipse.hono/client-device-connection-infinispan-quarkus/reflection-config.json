@@ -129,19 +129,13 @@
     "allPublicFields" : true
   },
   {
-    "name" : "org.wildfly.security.sasl.anonymous.AnonymousClientFactory",
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] }
-    ]
-  },
-  {
     "name" : "org.wildfly.security.sasl.digest.DigestClientFactory",
     "methods": [
       { "name": "<init>", "parameterTypes": [] }
     ]
   },
   {
-    "name" : "org.wildfly.security.sasl.entity.EntitySaslClientFactory",
+    "name" : "org.wildfly.security.sasl.digest.WildFlyElytronSaslDigestProvider",
     "methods": [
       { "name": "<init>", "parameterTypes": [] }
     ]
@@ -153,7 +147,19 @@
     ]
   },
   {
+    "name" : "org.wildfly.security.sasl.external.WildFlyElytronSaslExternalProvider",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
     "name" : "org.wildfly.security.sasl.gs2.Gs2SaslClientFactory",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name" : "org.wildfly.security.sasl.gs2.WildFlyElytronSaslGs2Provider",
     "methods": [
       { "name": "<init>", "parameterTypes": [] }
     ]
@@ -165,7 +171,7 @@
     ]
   },
   {
-    "name" : "org.wildfly.security.sasl.localuser.LocalUserClientFactory",
+    "name" : "org.wildfly.security.sasl.gssapi.WildFlyElytronSaslGssapiProvider",
     "methods": [
       { "name": "<init>", "parameterTypes": [] }
     ]
@@ -177,7 +183,7 @@
     ]
   },
   {
-    "name" : "org.wildfly.security.sasl.otp.OTPSaslClientFactory",
+    "name" : "org.wildfly.security.sasl.oauth2.WildFlyElytronSaslOAuth2Provider",
     "methods": [
       { "name": "<init>", "parameterTypes": [] }
     ]
@@ -189,7 +195,19 @@
     ]
   },
   {
+    "name" : "org.wildfly.security.sasl.plain.WildFlyElytronSaslPlainProvider",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
     "name" : "org.wildfly.security.sasl.scram.ScramSaslClientFactory",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name" : "org.wildfly.security.sasl.scram.WildFlyElytronSaslScramProvider",
     "methods": [
       { "name": "<init>", "parameterTypes": [] }
     ]

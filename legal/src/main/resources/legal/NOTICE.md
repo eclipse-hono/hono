@@ -404,14 +404,14 @@ Your use of the *PostgreSQL JDBC Driver* is subject to the terms and conditions 
 
 The source code is available from [GitHub](https://github.com/pgjdbc/pgjdbc/tree/REL${postgresql-jdbc.version}).
 
-### Protobuf ${protobuf.version}
+### Protobuf
 
 This product includes software developed by Google Inc's [Protocol Buffers project](https://developers.google.com/protocol-buffers/).
 
 Your use of *protobuf* is subject to the terms and conditions defined in the file
 [LICENSE.protobuf.txt](LICENSE.protobuf.txt).
 
-The source code is available from [GitHub](https://github.com/protocolbuffers/protobuf/tree/v${protobuf.version}).
+The source code is available from [GitHub](https://github.com/protocolbuffers/protobuf/).
 
 ### Proton-j ${proton.version}
 
@@ -676,7 +676,7 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/vertx/vertx-web-client/${vertx.version}/vertx-web-client-${vertx.version}-sources.jar).
 
-### WildFly Common ${wildfly-common.version}
+### WildFly Common
 
 This product includes software developed by the [WildFly project](https://www.wildfly.org/).
 
@@ -685,7 +685,7 @@ of the Apache Software License 2.0.
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [GitHub](https://github.com/wildfly/wildfly-common/tree/${wildfly-common.version})
+The source code is available from [GitHub](https://github.com/wildfly/wildfly-common/)
 
 ### WildFly Elytron
 

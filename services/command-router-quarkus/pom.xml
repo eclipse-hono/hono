@@ -89,20 +89,12 @@
       <id>build-native-image</id>
       <dependencies>
         <dependency>
-           <groupId>org.osgi</groupId>
-           <artifactId>org.osgi.core</artifactId>
-           <scope>runtime</scope>
-           <version>4.3.1</version>
-        </dependency>
-        <dependency>
-           <groupId>org.osgi</groupId>
-           <artifactId>org.osgi.compendium</artifactId>
-           <scope>runtime</scope>
-           <version>4.3.1</version>
-        </dependency>
-        <dependency>
            <groupId>io.smallrye</groupId>
            <artifactId>smallrye-metrics</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>org.eclipse.microprofile.metrics</groupId>
+          <artifactId>microprofile-metrics-api</artifactId>
         </dependency>
       </dependencies>
       <build>
