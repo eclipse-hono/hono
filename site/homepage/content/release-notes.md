@@ -4,6 +4,14 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
+## 1.8.3
+
+### Fixes & Enhancements
+
+* The Quarkus based variants of Hono's components now support configuring the Hot Rod client with a key and/or
+  trust store in order to enable TLS secured connections to Infinispan servers and to authenticate using a
+  client certificate.
+
 ## 1.8.2
 
 ### Fixes & Enhancements

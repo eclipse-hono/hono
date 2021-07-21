@@ -18,6 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import javax.inject.Inject;
 
+import org.infinispan.client.hotrod.impl.ConfigurationProperties;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.arc.config.ConfigPrefix;
@@ -54,5 +55,15 @@ public class ConfigurationPropertiesTest {
         assertThat(remoteCacheConfig.getSaslMechanism()).contains("DIGEST-MD5");
         assertThat(remoteCacheConfig.getSoTimeout()).isEqualTo(5000);
         assertThat(remoteCacheConfig.getConnectTimeout()).isEqualTo(5000);
+        assertThat(remoteCacheConfig.getKeyStoreFileName()).isEqualTo("/etc/hono/key-store.p12");
+        assertThat(remoteCacheConfig.getKeyStoreType()).isEqualTo("PKCS12");
+        assertThat(remoteCacheConfig.getKeyStorePassword()).isEqualTo("key-store-secret");
+        assertThat(remoteCacheConfig.getKeyAlias()).isEqualTo("infinispan");
+        assertThat(remoteCacheConfig.getProperties().getProperty(ConfigurationProperties.KEY_STORE_CERTIFICATE_PASSWORD))
+            .isEqualTo("cert-secret");
+        assertThat(remoteCacheConfig.getTrustStoreFileName()).isEqualTo("/etc/hono/trust-store-file.p12");
+        assertThat(remoteCacheConfig.getTrustStorePath()).isEqualTo("/etc/hono/trust-store.p12");
+        assertThat(remoteCacheConfig.getTrustStoreType()).isEqualTo("PKCS12");
+        assertThat(remoteCacheConfig.getTrustStorePassword()).isEqualTo("trust-store-secret");
     }
 }
