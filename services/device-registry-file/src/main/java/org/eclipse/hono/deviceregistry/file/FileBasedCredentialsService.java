@@ -443,8 +443,8 @@ public final class FileBasedCredentialsService extends AbstractCredentialsManage
     @Override
     protected Future<OperationResult<Void>> processUpdateCredentials(
             final DeviceKey key,
-            final Optional<String> resourceVersion,
             final List<CommonCredential> credentials,
+            final Optional<String> resourceVersion,
             final Span span) {
 
         return Future.succeededFuture(set(key.getTenantId(), key.getDeviceId(), resourceVersion, span, credentials));

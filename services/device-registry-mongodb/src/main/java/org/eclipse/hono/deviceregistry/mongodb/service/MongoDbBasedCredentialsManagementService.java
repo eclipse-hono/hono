@@ -81,20 +81,19 @@ public final class MongoDbBasedCredentialsManagementService extends AbstractCred
                         HttpURLConnection.HTTP_OK,
                         dto.getCredentials(),
                         Optional.empty(),
-                        Optional.of(dto.getVersion())))
-                .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
+                        Optional.of(dto.getVersion())));
     }
 
     @Override
     protected Future<OperationResult<Void>> processUpdateCredentials(
             final DeviceKey deviceKey,
-            final Optional<String> resourceVersion,
             final List<CommonCredential> updatedCredentials,
+            final Optional<String> resourceVersion,
             final Span span) {
 
         Objects.requireNonNull(deviceKey);
-        Objects.requireNonNull(resourceVersion);
         Objects.requireNonNull(updatedCredentials);
+        Objects.requireNonNull(resourceVersion);
         Objects.requireNonNull(span);
 
         TracingHelper.TAG_DEVICE_ID.set(span, deviceKey.getDeviceId());
@@ -133,7 +132,6 @@ public final class MongoDbBasedCredentialsManagementService extends AbstractCred
                         HttpURLConnection.HTTP_NO_CONTENT,
                         (Void) null,
                         Optional.empty(),
-                        Optional.of(newVersion)))
-                .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
+                        Optional.of(newVersion)));
     }
 }

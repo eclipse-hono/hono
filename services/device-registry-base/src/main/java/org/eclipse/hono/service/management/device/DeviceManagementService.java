@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,9 +15,9 @@ package org.eclipse.hono.service.management.device;
 
 import java.net.HttpURLConnection;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
@@ -37,19 +37,23 @@ import io.vertx.core.Future;
 public interface DeviceManagementService {
 
     /**
-     * Registers a device.
+     * Creates a device.
      *
      * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The ID the device should be registered under.
-     * @param device Device information, must not be {@code null}.
-     * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
-     *          An implementation should log (error) events on this span and it may set tags and use this span as the
-     *          parent for any spans created in this method.
+     * @param deviceId The identifier that the device should be registered under. If empty, the service implementation
+     *                 will create an identifier for the device.
+     * @param device The registration information to add for the device.
+     * @param span The active OpenTracing span to use for tracking this operation.
+     *             <p>
+     *             Implementations <em>must not</em> invoke the {@link Span#finish()} nor the {@link Span#finish(long)}
+     *             methods. However,implementations may log (error) events on this span, set tags and use this span
+     *             as the parent for additional spans created as part of this method's execution.
      * @return A future indicating the outcome of the operation.
-     *         The <em>status code</em> is set as specified in the 
-     *         <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/createDeviceRegistration"> 
-     *         Device Registry Management API - Create Device Registration </a>
-     * @throws NullPointerException if any of tenant, device ID or result handler is {@code null}.
+     *         <p>
+     *         The future will be succeeded with a result containing the created device's identifier if the device
+     *         has been created successfully. The result's <em>status</em> property will have a value as specified
+     *         in the Device Registry Management API.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/createDeviceRegistration">
      *      Device Registry Management API - Create Device Registration</a>
      */
@@ -58,28 +62,32 @@ public interface DeviceManagementService {
     /**
      * Gets device registration data by device ID.
      *
-     * @param tenantId The tenant the device belongs to.
-     * @param deviceId The ID of the device to get registration data for.
-     * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
-     *          An implementation should log (error) events on this span and it may set tags and use this span as the
-     *          parent for any spans created in this method.
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The identifier of the device to get registration data for.
+     * @param span The active OpenTracing span to use for tracking this operation.
+     *             <p>
+     *             Implementations <em>must not</em> invoke the {@link Span#finish()} nor the {@link Span#finish(long)}
+     *             methods. However,implementations may log (error) events on this span, set tags and use this span
+     *             as the parent for additional spans created as part of this method's execution.
      * @return A future indicating the outcome of the operation.
-     *         The <em>status code</em> is set as specified in the 
-     *         <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/getRegistration"> 
-     *         Device Registry Management API - Get Device Registration </a>
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     *         <p>
+     *         The future will be succeeded with a result containing the retrieved device information if a device
+     *         with the given identifier exists. The result's <em>status</em> property will have a value as specified
+     *         in the Device Registry Management API.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/getRegistration">
      *      Device Registry Management API - Get Device Registration</a>
      */
     Future<OperationResult<Device>> readDevice(String tenantId, String deviceId, Span span);
 
     /**
-     * Finds devices belonging to the given tenant with optional filters, paging and sorting options.
+     * Finds devices for search criteria.
      * <p>
      * This search operation is considered as optional since it is not required for the normal functioning of Hono and
-     * is more of a convenient operation. Hence here it is declared as a default method which returns
-     * {@link HttpURLConnection#HTTP_NOT_IMPLEMENTED}. It is upto the implementors of this interface to offer an
-     * implementation of this service or not.
+     * is more of a convenient operation.
+     * <p>
+     * This default implementation returns a future failed with a {@link org.eclipse.hono.client.ServerErrorException}
+     * having a {@link HttpURLConnection#HTTP_NOT_IMPLEMENTED} status code.
      *
      * @param tenantId The tenant that the devices belong to.
      * @param pageSize The maximum number of results to include in a response.
@@ -87,13 +95,17 @@ public interface DeviceManagementService {
      *                   retrieve the whole result set page by page.
      * @param filters A list of filters. The filters are predicates that objects in the result set must match.
      * @param sortOptions A list of sort options. The sortOptions specify properties to sort the result set by.
-     * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
-     *            implementation should log (error) events on this span and it may set tags and use this span as the
-     *            parent for any spans created in this method.
-     * @return A future indicating the outcome of the operation. The <em>status code</em> is set as specified in the
-     *         <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/searchDevicesForTenant"> Device
-     *         Registry Management API - Search Devices</a>
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @param span The active OpenTracing span to use for tracking this operation.
+     *             <p>
+     *             Implementations <em>must not</em> invoke the {@link Span#finish()} nor the {@link Span#finish(long)}
+     *             methods. However,implementations may log (error) events on this span, set tags and use this span
+     *             as the parent for additional spans created as part of this method's execution.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will be succeeded with a result containing the matching devices. The result's <em>status</em>
+     *         property will have a value as specified in the Device Registry Management API.
+     * @throws NullPointerException if any of filters, sort options or tracing span are {@code null}.
+     * @throws IllegalArgumentException if page size is &lt;= 0 or page offset is &lt; 0.
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/searchDevicesForTenant"> Device Registry
      *      Management API - Search Devices</a>
      */
@@ -105,51 +117,58 @@ public interface DeviceManagementService {
             final List<Sort> sortOptions,
             final Span span) {
 
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(filters);
-        Objects.requireNonNull(sortOptions);
-        Objects.requireNonNull(span);
-
-        return Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_NOT_IMPLEMENTED));
+        return Future.failedFuture(new ServerErrorException(
+                tenantId,
+                HttpURLConnection.HTTP_NOT_IMPLEMENTED,
+                "this implementation does not support the search devices operation"));
     }
 
     /**
      * Updates device registration data.
      *
      * @param tenantId The tenant the device belongs to.
-     * @param deviceId The ID of the device to update the registration for.
+     * @param deviceId The identifier of the device to update the registration for.
      * @param device Device information, must not be {@code null}.
      * @param resourceVersion The resource version that the device instance is required to have.
      *                        If empty, the resource version of the device instance on record will be ignored.
-     * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
-     *          An implementation should log (error) events on this span and it may set tags and use this span as the
-     *          parent for any spans created in this method.
+     * @param span The active OpenTracing span to use for tracking this operation.
+     *             <p>
+     *             Implementations <em>must not</em> invoke the {@link Span#finish()} nor the {@link Span#finish(long)}
+     *             methods. However,implementations may log (error) events on this span, set tags and use this span
+     *             as the parent for additional spans created as part of this method's execution.
      * @return A future indicating the outcome of the operation.
-     *         The <em>status code</em> is set as specified in the 
-     *         <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/updateRegistration"> 
-     *         Device Registry Management API - Update Device Registration </a>
-     * @throws NullPointerException if any of tenant, device ID or result handler is {@code null}.
+     *         <p>
+     *         The future will be succeeded with a result containing the updated device's identifier if the device
+     *         has been updated successfully. The result's <em>status</em> property will have a value as specified
+     *         in the Device Registry Management API.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/updateRegistration">
      *      Device Registry Management API - Update Device Registration</a>
      */
-    Future<OperationResult<Id>> updateDevice(String tenantId, String deviceId, Device device,
-            Optional<String> resourceVersion, Span span);
+    Future<OperationResult<Id>> updateDevice(
+            String tenantId,
+            String deviceId,
+            Device device,
+            Optional<String> resourceVersion,
+            Span span);
 
     /**
-     * Removes a device.
+     * Deletes a device.
      *
      * @param tenantId The tenant the device belongs to.
-     * @param deviceId The ID of the device to remove.
+     * @param deviceId The identifier of the device to remove.
      * @param resourceVersion The resource version that the device instance is required to have.
      *                        If empty, the resource version of the device instance on record will be ignored.
-     * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
-     *          An implementation should log (error) events on this span and it may set tags and use this span as the
-     *          parent for any spans created in this method.
-     * @return  A future indicating the outcome of the operation.
-     *         The <em>status code</em> is set as specified in the 
-     *         <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/deleteRegistration"> 
-     *         Device Registry Management API - Delete Device Registration </a>
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @param span The active OpenTracing span to use for tracking this operation.
+     *             <p>
+     *             Implementations <em>must not</em> invoke the {@link Span#finish()} nor the {@link Span#finish(long)}
+     *             methods. However,implementations may log (error) events on this span, set tags and use this span
+     *             as the parent for additional spans created as part of this method's execution.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The result's <em>status</em> property will have a value as specified
+     *         in the Device Registry Management API.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/deleteRegistration">
      *      Device Registry Management API - Delete Device Registration</a>
      */

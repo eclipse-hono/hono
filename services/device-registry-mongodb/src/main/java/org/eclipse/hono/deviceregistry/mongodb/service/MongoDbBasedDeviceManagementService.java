@@ -119,8 +119,7 @@ public final class MongoDbBasedDeviceManagementService extends AbstractDeviceMan
                             HttpURLConnection.HTTP_CREATED,
                             Id.of(key.getDeviceId()),
                             Optional.empty(),
-                            Optional.of(deviceResourceVersion)))
-                .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
+                            Optional.of(deviceResourceVersion)));
     }
 
     /**
@@ -134,12 +133,11 @@ public final class MongoDbBasedDeviceManagementService extends AbstractDeviceMan
                                 HttpURLConnection.HTTP_OK,
                                 deviceDto.getDeviceWithStatus(),
                                 Optional.ofNullable(DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge())),
-                                Optional.ofNullable(deviceDto.getVersion())))
-                .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
+                                Optional.ofNullable(deviceDto.getVersion())));
     }
 
     @Override
-    public Future<OperationResult<SearchResult<DeviceWithId>>> searchDevices(
+    protected Future<OperationResult<SearchResult<DeviceWithId>>> processSearchDevices(
             final String tenantId,
             final int pageSize,
             final int pageOffset,
@@ -158,8 +156,7 @@ public final class MongoDbBasedDeviceManagementService extends AbstractDeviceMan
                         HttpURLConnection.HTTP_OK,
                         result,
                         Optional.empty(),
-                        Optional.empty()))
-                .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
+                        Optional.empty()));
     }
 
     /**
@@ -186,8 +183,7 @@ public final class MongoDbBasedDeviceManagementService extends AbstractDeviceMan
                     HttpURLConnection.HTTP_NO_CONTENT,
                     Id.of(key.getDeviceId()),
                     Optional.empty(),
-                    Optional.of(newResourceVersion)))
-            .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
+                    Optional.of(newResourceVersion)));
     }
 
     /**
@@ -208,8 +204,7 @@ public final class MongoDbBasedDeviceManagementService extends AbstractDeviceMan
                     // ignore errors occurring while deleting credentials
                     // TODO use transaction spanning both collections?
                     .recover(t -> Future.succeededFuture()))
-                .map(ok -> Result.<Void> from(HttpURLConnection.HTTP_NO_CONTENT))
-                .otherwise(error -> DeviceRegistryUtils.mapErrorToResult(error, span));
+                .map(ok -> Result.<Void> from(HttpURLConnection.HTTP_NO_CONTENT));
     }
 
     private Future<Void> checkDeviceLimitReached(final Tenant tenant, final String tenantId, final Span span) {
