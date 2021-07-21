@@ -33,6 +33,7 @@ import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.QoS;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -178,8 +179,10 @@ public class TelemetryHttpIT extends HttpTestBase {
                 })
                 .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
-                        assertThat(response.bodyAsString()).isEqualTo(ServiceInvocationException
-                                .getLocalizedMessage(NoConsumerException.CLIENT_FACING_MESSAGE_KEY));
+                        final var body = response.bodyAsJsonObject();
+                        assertThat(body.getString(RequestResponseApiConstants.FIELD_ERROR))
+                            .isEqualTo(ServiceInvocationException.getLocalizedMessage(
+                                    NoConsumerException.CLIENT_FACING_MESSAGE_KEY));
                     });
                     ctx.completeNow();
                 }));
@@ -254,8 +257,10 @@ public class TelemetryHttpIT extends HttpTestBase {
         httpResponseFuture
                 .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
-                        assertThat(response.bodyAsString()).isEqualTo(ServiceInvocationException
-                                .getLocalizedMessage(SendMessageTimeoutException.CLIENT_FACING_MESSAGE_KEY));
+                        final var body = response.bodyAsJsonObject();
+                        assertThat(body.getString(RequestResponseApiConstants.FIELD_ERROR))
+                            .isEqualTo(ServiceInvocationException.getLocalizedMessage(
+                                    SendMessageTimeoutException.CLIENT_FACING_MESSAGE_KEY));
                     });
                     httpResponseReceived.flag();
                     // verify that the telemetry message delivery is remotely settled via the timeout handling in the adapter

@@ -22,6 +22,7 @@ import java.util.Set;
 
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
@@ -89,34 +90,52 @@ public abstract class AbstractCredentialsManagementService implements Credential
     }
 
     /**
-     * Updates credentials with a specified device key and value objects.
+     * Updates or creates a set of credentials.
+     * <p>
+     * This method is invoked by {@link #updateCredentials(String, String, List, Optional, Span)} after all parameter checks
+     * have succeeded.
      *
-     * @param key The device key object.
+     * @param key The device's key.
+     * @param credentials The credentials to set. See
+     *                    <a href="https://www.eclipse.org/hono/docs/api/credentials/#credentials-format">
+     *                    Credentials Format</a> for details.
      * @param resourceVersion The resource version that the credentials are required to have.
      *                        If empty, the resource version of the credentials on record will be ignored.
-     * @param credentials The credentials value object.
-     * @param span The active OpenTracing span for this operation.
+     * @param span The active OpenTracing span to use for tracking this operation.
+     *             <p>
+     *             Implementations <em>must not</em> invoke the {@link Span#finish()} nor the {@link Span#finish(long)}
+     *             methods. However,implementations may log (error) events on this span, set tags and use this span
+     *             as the parent for additional spans created as part of this method's execution.
      * @return A future indicating the outcome of the operation.
-     * @throws NullPointerException if any of the parameters are {@code null}.
+     *         <p>
+     *         The result's <em>status</em> property will have a value as specified
+     *         in the Device Registry Management API.
      */
     protected abstract Future<OperationResult<Void>> processUpdateCredentials(
             DeviceKey key,
-            Optional<String> resourceVersion,
             List<CommonCredential> credentials,
+            Optional<String> resourceVersion,
             Span span);
 
     /**
-     * Reads credentials with a specified device key.
+     * Gets all credentials registered for a device.
      *
-     * @param key The device key object.
-     * @param span The active OpenTracing span for this operation.
+     * @param key The device's key.
+     * @param span The active OpenTracing span to use for tracking this operation.
+     *             <p>
+     *             Implementations <em>must not</em> invoke the {@link Span#finish()} nor the {@link Span#finish(long)}
+     *             methods. However,implementations may log (error) events on this span, set tags and use this span
+     *             as the parent for additional spans created as part of this method's execution.
      * @return A future indicating the outcome of the operation.
-     * @throws NullPointerException if any of the parameters are {@code null}.
+     *         <p>
+     *         The future will be succeeded with a result containing the retrieved credentials if a device
+     *         with the given identifier exists. The result's <em>status</em> property will have a value as specified
+     *         in the Device Registry Management API.
      */
     protected abstract Future<OperationResult<List<CommonCredential>>> processReadCredentials(DeviceKey key, Span span);
 
     @Override
-    public Future<OperationResult<Void>> updateCredentials(
+    public final Future<OperationResult<Void>> updateCredentials(
             final String tenantId,
             final String deviceId,
             final List<CommonCredential> credentials,
@@ -134,21 +153,25 @@ public abstract class AbstractCredentialsManagementService implements Credential
                 .compose(result -> {
 
                     if (result.isError()) {
-                        return Future.succeededFuture(OperationResult.empty(result.getStatus()));
+                        return Future.failedFuture(ServiceInvocationException.create(
+                                tenantId,
+                                result.getStatus(),
+                                "tenant does not exist",
+                                null));
                     }
 
                     return verifyAndEncodePasswords(credentials)
                             .compose(encodedCredentials -> processUpdateCredentials(
                                     DeviceKey.from(result.getPayload(), deviceId),
-                                    resourceVersion,
                                     encodedCredentials,
+                                    resourceVersion,
                                     span));
                 })
                 .otherwise(t -> DeviceRegistryUtils.mapErrorToResult(t, span));
     }
 
     @Override
-    public Future<OperationResult<List<CommonCredential>>> readCredentials(
+    public final Future<OperationResult<List<CommonCredential>>> readCredentials(
             final String tenantId,
             final String deviceId,
             final Span span) {
@@ -161,7 +184,11 @@ public abstract class AbstractCredentialsManagementService implements Credential
 
                 .tenantExists(tenantId, span)
                 .compose(result -> result.isError()
-                        ? Future.succeededFuture(OperationResult.empty(result.getStatus()))
+                        ? Future.failedFuture(ServiceInvocationException.create(
+                                tenantId,
+                                result.getStatus(),
+                                "tenant does not exist",
+                                null))
                         : processReadCredentials(DeviceKey.from(result.getPayload(), deviceId), span))
 
                 // strip private information

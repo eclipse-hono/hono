@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -300,7 +300,7 @@ public final class FileBasedTenantService extends AbstractTenantManagementServic
     }
 
     @Override
-    public Future<OperationResult<Tenant>> readTenant(final String tenantId, final Span span) {
+    protected Future<OperationResult<Tenant>> processReadTenant(final String tenantId, final Span span) {
 
         Objects.requireNonNull(tenantId);
 
@@ -352,7 +352,9 @@ public final class FileBasedTenantService extends AbstractTenantManagementServic
     }
 
     @Override
-    public Future<Result<Void>> deleteTenant(final String tenantId, final Optional<String> resourceVersion,
+    protected Future<Result<Void>> processDeleteTenant(
+            final String tenantId,
+            final Optional<String> resourceVersion,
             final Span span) {
 
         Objects.requireNonNull(tenantId);

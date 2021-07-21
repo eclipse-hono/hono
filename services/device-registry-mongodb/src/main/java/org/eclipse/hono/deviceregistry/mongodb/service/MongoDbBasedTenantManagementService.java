@@ -67,7 +67,7 @@ public final class MongoDbBasedTenantManagementService extends AbstractTenantMan
      * {@inheritDoc}
      */
     @Override
-    public Future<OperationResult<Id>> processCreateTenant(
+    protected Future<OperationResult<Id>> processCreateTenant(
             final String tenantId,
             final Tenant tenantObj,
             final Span span) {
@@ -85,12 +85,11 @@ public final class MongoDbBasedTenantManagementService extends AbstractTenantMan
                         Id.of(tenantId),
                         Optional.empty(),
                         Optional.of(resourceVersion));
-            })
-            .otherwise(t -> DeviceRegistryUtils.mapErrorToResult(t, span));
+            });
     }
 
     @Override
-    public Future<OperationResult<Tenant>> readTenant(final String tenantId, final Span span) {
+    protected Future<OperationResult<Tenant>> processReadTenant(final String tenantId, final Span span) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(span);
 
@@ -99,8 +98,7 @@ public final class MongoDbBasedTenantManagementService extends AbstractTenantMan
                         HttpURLConnection.HTTP_OK,
                         dto.getData(),
                         Optional.ofNullable(DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge())),
-                        Optional.ofNullable(dto.getVersion())))
-                .otherwise(t -> DeviceRegistryUtils.mapErrorToResult(t, span));
+                        Optional.ofNullable(dto.getVersion())));
     }
 
     /**
@@ -130,24 +128,25 @@ public final class MongoDbBasedTenantManagementService extends AbstractTenantMan
                         HttpURLConnection.HTTP_NO_CONTENT,
                         (Void) null,
                         Optional.empty(),
-                        Optional.of(newVersion)))
-                .otherwise(t -> DeviceRegistryUtils.mapErrorToResult(t, span));
+                        Optional.of(newVersion)));
     }
 
     @Override
-    public Future<Result<Void>> deleteTenant(final String tenantId, final Optional<String> resourceVersion,
+    protected Future<Result<Void>> processDeleteTenant(
+            final String tenantId,
+            final Optional<String> resourceVersion,
             final Span span) {
+
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(resourceVersion);
         Objects.requireNonNull(span);
 
         return dao.delete(tenantId, resourceVersion, span.context())
-                .map(ok -> Result.<Void> from(HttpURLConnection.HTTP_NO_CONTENT))
-                .otherwise(t -> DeviceRegistryUtils.mapErrorToResult(t, span));
+                .map(ok -> Result.<Void> from(HttpURLConnection.HTTP_NO_CONTENT));
     }
 
     @Override
-    public Future<OperationResult<SearchResult<TenantWithId>>> searchTenants(
+    protected Future<OperationResult<SearchResult<TenantWithId>>> processSearchTenants(
             final int pageSize,
             final int pageOffset,
             final List<Filter> filters,
@@ -163,7 +162,6 @@ public final class MongoDbBasedTenantManagementService extends AbstractTenantMan
                                 HttpURLConnection.HTTP_OK,
                                 result,
                                 Optional.empty(),
-                                Optional.empty()))
-                .otherwise(t -> DeviceRegistryUtils.mapErrorToResult(t, span));
+                                Optional.empty()));
     }
 }

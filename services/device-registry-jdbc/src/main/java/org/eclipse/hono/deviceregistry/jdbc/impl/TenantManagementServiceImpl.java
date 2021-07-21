@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -63,7 +63,7 @@ public class TenantManagementServiceImpl extends AbstractTenantManagementService
     }
 
     @Override
-    public Future<OperationResult<Tenant>> readTenant(final String tenantId, final Span span) {
+    protected Future<OperationResult<Tenant>> processReadTenant(final String tenantId, final Span span) {
 
         return this.store
 
@@ -102,7 +102,7 @@ public class TenantManagementServiceImpl extends AbstractTenantManagementService
     }
 
     @Override
-    public Future<Result<Void>> deleteTenant(final String tenantId, final Optional<String> resourceVersion, final Span span) {
+    protected Future<Result<Void>> processDeleteTenant(final String tenantId, final Optional<String> resourceVersion, final Span span) {
 
         return this.store
 
