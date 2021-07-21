@@ -32,6 +32,8 @@ import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.service.management.credentials.PasswordSecret;
@@ -60,6 +62,35 @@ public final class DeviceRegistryUtils {
 
     private DeviceRegistryUtils() {
         // prevent instantiation
+    }
+
+    /**
+     * Maps an error to an empty operation result containing an HTTP status code
+     * that matches the given error.
+     *
+     * @param error The error.
+     * @param span The active OpenTracing span for this operation. It is not to be closed in this method! An
+     *             implementation should log (error) events on this span and it may set tags and use this span as the
+     *             parent for any spans created in this method.
+     *
+     * @param <T> The type of payload expected in the result.
+     *
+     * @return The (empty) result.
+     * @throws NullPointerException if error is {@code null}.
+     */
+    public static <T> OperationResult<T> mapErrorToResult(final Throwable error, final Span span) {
+
+        Objects.requireNonNull(error);
+
+        LOG.debug(error.getMessage(), error);
+        TracingHelper.logError(span, error.getMessage(), error);
+
+        if (error instanceof IllegalArgumentException
+                || error instanceof IllegalStateException) {
+            return OperationResult.empty(HttpURLConnection.HTTP_BAD_REQUEST);
+        }
+
+        return OperationResult.empty(ServiceInvocationException.extractStatusCode(error));
     }
 
     /**
@@ -297,8 +328,7 @@ public final class DeviceRegistryUtils {
      *         {@code false} otherwise.
      * @throws NullPointerException if credential is {@code null}.
      */
-    public static boolean matchesWithClientContext(final JsonObject credential,
-            final JsonObject clientContext) {
+    public static boolean matchesWithClientContext(final JsonObject credential, final JsonObject clientContext) {
 
         Objects.requireNonNull(credential);
 

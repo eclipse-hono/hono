@@ -24,6 +24,7 @@ import static org.mockito.Mockito.when;
 import java.net.HttpURLConnection;
 
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
@@ -31,6 +32,7 @@ import org.mockito.Mockito;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 
 
@@ -39,6 +41,20 @@ import io.vertx.ext.web.RoutingContext;
  *
  */
 public class DefaultFailureHandlerTest {
+
+    private void assertErrorResponse(final Buffer responseBody) {
+        assertErrorResponse(responseBody, null);
+    }
+
+    private void assertErrorResponse(final Buffer responseBody, final String expectedDetailMsg) {
+        final JsonObject json = responseBody.toJsonObject();
+        final String detailMsg = json.getString(RequestResponseApiConstants.FIELD_ERROR);
+        if (expectedDetailMsg == null) {
+            assertThat(detailMsg).isNotNull();
+        } else {
+            assertThat(detailMsg).isEqualTo(expectedDetailMsg);
+        }
+    }
 
     /**
      * Verifies that the handler does not try to process a failed
@@ -61,7 +77,7 @@ public class DefaultFailureHandlerTest {
     }
 
     /**
-     * Verifies that the handler sets an empty response body for
+     * Verifies that the handler sets a <em>N/A</em> error in the response body for
      * a context that has failed with an exception that does not contain
      * a detail message.
      */
@@ -81,7 +97,9 @@ public class DefaultFailureHandlerTest {
         handler.handle(ctx);
 
         verify(response).setStatusCode(HttpURLConnection.HTTP_INTERNAL_ERROR);
-        verify(response, never()).write(any(Buffer.class));
+        final ArgumentCaptor<Buffer> responseBody = ArgumentCaptor.forClass(Buffer.class);
+        verify(response).write(responseBody.capture());
+        assertErrorResponse(responseBody.getValue());
         verify(response).end();
     }
 
@@ -109,7 +127,7 @@ public class DefaultFailureHandlerTest {
         final ArgumentCaptor<Buffer> bufferCaptor = ArgumentCaptor.forClass(Buffer.class);
         verify(response).setStatusCode(HttpURLConnection.HTTP_INTERNAL_ERROR);
         verify(response).write(bufferCaptor.capture());
-        assertThat(bufferCaptor.getValue().toString()).isEqualTo(detailMessage);
+        assertErrorResponse(bufferCaptor.getValue(), detailMessage);
         verify(response).end();
     }
 
@@ -137,7 +155,7 @@ public class DefaultFailureHandlerTest {
         final ArgumentCaptor<Buffer> bufferCaptor = ArgumentCaptor.forClass(Buffer.class);
         verify(response).setStatusCode(HttpURLConnection.HTTP_BAD_REQUEST);
         verify(response).write(bufferCaptor.capture());
-        assertThat(bufferCaptor.getValue().toString()).isEqualTo(detailMessage);
+        assertErrorResponse(bufferCaptor.getValue(), detailMessage);
         verify(response).end();
     }
 
@@ -162,7 +180,9 @@ public class DefaultFailureHandlerTest {
         handler.handle(ctx);
 
         verify(response).setStatusCode(HttpURLConnection.HTTP_UNAUTHORIZED);
-        verify(response, never()).write(any(Buffer.class));
+        final ArgumentCaptor<Buffer> responseBody = ArgumentCaptor.forClass(Buffer.class);
+        verify(response).write(responseBody.capture());
+        assertErrorResponse(responseBody.getValue());
         verify(response).end();
     }
 }

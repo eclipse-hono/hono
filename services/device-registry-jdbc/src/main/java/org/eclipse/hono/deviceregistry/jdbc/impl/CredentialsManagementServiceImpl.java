@@ -55,8 +55,11 @@ public class CredentialsManagementServiceImpl extends AbstractCredentialsManagem
     }
 
     @Override
-    protected Future<OperationResult<Void>> processUpdateCredentials(final DeviceKey key, final Optional<String> resourceVersion,
-            final List<CommonCredential> credentials, final Span span) {
+    protected Future<OperationResult<Void>> processUpdateCredentials(
+            final DeviceKey key,
+            final List<CommonCredential> credentials,
+            final Optional<String> resourceVersion,
+            final Span span) {
 
         return this.store
 

@@ -31,45 +31,49 @@ public interface CredentialsManagementService {
     /**
      * Updates or create the set of credentials.
      *
-     * @param tenantId The tenant the device belongs to.
-     * @param deviceId The device to get credentials for.
-     * @param credentials A list of credentials.
-     *                  See <a href="https://www.eclipse.org/hono/docs/api/credentials/#credentials-format">Credentials Format</a> for details.
-     * @param resourceVersion The identifier of the resource version to update.
-     * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
-     *          An implementation should log (error) events on this span and it may set tags and use this span as the
-     *          parent for any spans created in this method.
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The identifier of the device that the credentials belong to.
+     * @param credentials The credentials to set. See
+     *                    <a href="https://www.eclipse.org/hono/docs/api/credentials/#credentials-format">
+     *                    Credentials Format</a> for details.
+     * @param resourceVersion The resource version that the credentials are required to have.
+     *                        If empty, the resource version of the credentials on record will be ignored.
+     * @param span The active OpenTracing span to use for tracking this operation.
+     *             <p>
+     *             Implementations <em>must not</em> invoke the {@link Span#finish()} nor the {@link Span#finish(long)}
+     *             methods. However,implementations may log (error) events on this span, set tags and use this span
+     *             as the parent for additional spans created as part of this method's execution.
      * @return A future indicating the outcome of the operation.
-     *         The <em>status</em> will be
-     *         <ul>
-     *         <li><em>204 No Content</em> if the credentials have been updated successfully.</li>
-     *         <li><em>400 Bad Request</em> if the given credentials do not conform to the
-     *         format defined by the Credentials API.</li>
-     *         <li><em>404 Not Found</em> if no credentials of the given type and auth-id exist.</li>
-     *         </ul>
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     *         <p>
+     *         The result's <em>status</em> property will have a value as specified
+     *         in the Device Registry Management API.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/credentials/setAllCredentials">
      *      Device Registry Management API - Update Credentials</a>
      */
-    Future<OperationResult<Void>> updateCredentials(String tenantId, String deviceId,
-            List<CommonCredential> credentials, Optional<String> resourceVersion, Span span);
+    Future<OperationResult<Void>> updateCredentials(
+            String tenantId,
+            String deviceId,
+            List<CommonCredential> credentials,
+            Optional<String> resourceVersion,
+            Span span);
 
     /**
      * Gets all credentials registered for a device.
      *
      * @param tenantId The tenant the device belongs to.
      * @param deviceId The device to get credentials for.
-     * @param span The active OpenTracing span for this operation. It is not to be closed in this method!
-     *          An implementation should log (error) events on this span and it may set tags and use this span as the
-     *          parent for any spans created in this method.
+     * @param span The active OpenTracing span to use for tracking this operation.
+     *             <p>
+     *             Implementations <em>must not</em> invoke the {@link Span#finish()} nor the {@link Span#finish(long)}
+     *             methods. However,implementations may log (error) events on this span, set tags and use this span
+     *             as the parent for additional spans created as part of this method's execution.
      * @return A future indicating the outcome of the operation.
-     *         The <em>status</em> will be
-     *         <ul>
-     *         <li><em>200 OK</em> if credentials of the given type and authentication identifier have been found. The
-     *         <em>payload</em> will contain the credentials.</li>
-     *         <li><em>404 Not Found</em> if no credentials matching the criteria exist.</li>
-     *         </ul>
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     *         <p>
+     *         The future will be succeeded with a result containing the retrieved credentials if a device
+     *         with the given identifier exists. The result's <em>status</em> property will have a value as specified
+     *         in the Device Registry Management API.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/credentials/getAllCredentials">
      *      Device Registry Management API - Get Credentials</a>
      */

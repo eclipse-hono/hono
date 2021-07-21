@@ -14,14 +14,17 @@
 package org.eclipse.hono.service.http;
 
 import java.net.HttpURLConnection;
+import java.util.Optional;
 
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.impl.HttpStatusException;
 
@@ -40,6 +43,7 @@ import io.vertx.ext.web.handler.impl.HttpStatusException;
 public class DefaultFailureHandler implements Handler<RoutingContext> {
 
     private static final Logger LOG = LoggerFactory.getLogger(DefaultFailureHandler.class);
+    private static final String ERROR_DETAIL_NOT_AVAILABLE = "N/A";
 
     /**
      * Handles routing failures.
@@ -83,12 +87,25 @@ public class DefaultFailureHandler implements Handler<RoutingContext> {
         }
     }
 
+    /**
+     * Creates payload for an error message.
+     * <p>
+     * This default implementation creates a JSON object with a single <em>error</em> property.
+     *
+     * @param errorMessage The error message. If {@code null}, the payload with contain <em>N/A</em> as the error
+     *                     property's value.
+     * @return The payload.
+     */
+    protected Buffer createResponsePayload(final String errorMessage) {
+        return new JsonObject()
+                .put(RequestResponseApiConstants.FIELD_ERROR, Optional.ofNullable(errorMessage).orElse(ERROR_DETAIL_NOT_AVAILABLE))
+                .toBuffer();
+    }
+
     private void sendError(final HttpServerResponse response, final int errorCode, final String errorMessage) {
 
         response.setStatusCode(errorCode);
-        if (errorMessage != null) {
-            HttpUtils.setResponseBody(response, Buffer.buffer(errorMessage), HttpUtils.CONTENT_TYPE_TEXT_UTF8);
-        }
+        HttpUtils.setResponseBody(response, createResponsePayload(errorMessage), HttpUtils.CONTENT_TYPE_JSON_UTF8);
         response.end();
     }
 }

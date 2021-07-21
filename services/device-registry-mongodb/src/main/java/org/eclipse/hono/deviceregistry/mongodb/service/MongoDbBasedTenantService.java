@@ -181,7 +181,7 @@ public final class MongoDbBasedTenantService extends AbstractTenantManagementSer
      * {@inheritDoc}
      */
     @Override
-    public Future<OperationResult<Void>> processUpdateTenant(
+    protected Future<OperationResult<Void>> processUpdateTenant(
             final String tenantId,
             final Tenant tenantObj,
             final Optional<String> resourceVersion,
@@ -193,8 +193,7 @@ public final class MongoDbBasedTenantService extends AbstractTenantManagementSer
         Objects.requireNonNull(span);
 
         return MongoDbDeviceRegistryUtils.isModificationEnabled(config)
-                .compose(ok -> modifyTenant(tenantId, tenantObj, resourceVersion, span))
-                .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
+                .compose(ok -> modifyTenant(tenantId, tenantObj, resourceVersion, span));
     }
 
     private Future<OperationResult<Void>> modifyTenant(
@@ -252,39 +251,37 @@ public final class MongoDbBasedTenantService extends AbstractTenantManagementSer
     }
 
     @Override
-    public Future<Result<Void>> deleteTenant(final String tenantId, final Optional<String> resourceVersion,
+    protected Future<Result<Void>> processDeleteTenant(
+            final String tenantId,
+            final Optional<String> resourceVersion,
             final Span span) {
+
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(resourceVersion);
         Objects.requireNonNull(span);
 
         return MongoDbDeviceRegistryUtils.isModificationEnabled(config)
-                .compose(ok -> processDeleteTenant(tenantId, resourceVersion, span))
-                .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
-    }
+                .compose(ok -> {
+                    final JsonObject deleteTenantQuery = MongoDbDocumentBuilder.builder()
+                            .withVersion(resourceVersion)
+                            .withTenantId(tenantId)
+                            .document();
 
-    private Future<Result<Void>> processDeleteTenant(final String tenantId, final Optional<String> resourceVersion,
-            final Span span) {
-
-        final JsonObject deleteTenantQuery = MongoDbDocumentBuilder.builder()
-                .withVersion(resourceVersion)
-                .withTenantId(tenantId)
-                .document();
-
-        final Promise<JsonObject> deleteTenantPromise = Promise.promise();
-        mongoClient.findOneAndDelete(config.getCollectionName(), deleteTenantQuery, deleteTenantPromise);
-        return deleteTenantPromise.future()
-                .compose(tenantDtoResult -> Optional.ofNullable(tenantDtoResult)
-                        .map(deleted -> {
-                            span.log("successfully deleted tenant");
-                            return Future.succeededFuture(Result.<Void> from(HttpURLConnection.HTTP_NO_CONTENT));
-                        })
-                        .orElseGet(() -> MongoDbDeviceRegistryUtils.checkForVersionMismatchAndFail(tenantId,
-                                resourceVersion, findTenant(tenantId))));
+                    final Promise<JsonObject> deleteTenantPromise = Promise.promise();
+                    mongoClient.findOneAndDelete(config.getCollectionName(), deleteTenantQuery, deleteTenantPromise);
+                    return deleteTenantPromise.future()
+                            .compose(tenantDtoResult -> Optional.ofNullable(tenantDtoResult)
+                                    .map(deleted -> {
+                                        span.log("successfully deleted tenant");
+                                        return Future.succeededFuture(Result.<Void> from(HttpURLConnection.HTTP_NO_CONTENT));
+                                    })
+                                    .orElseGet(() -> MongoDbDeviceRegistryUtils.checkForVersionMismatchAndFail(tenantId,
+                                            resourceVersion, findTenant(tenantId))));
+                });
     }
 
     @Override
-    public Future<OperationResult<SearchResult<TenantWithId>>> searchTenants(
+    protected Future<OperationResult<SearchResult<TenantWithId>>> processSearchTenants(
             final int pageSize,
             final int pageOffset,
             final List<Filter> filters,
@@ -309,8 +306,7 @@ public final class MongoDbBasedTenantService extends AbstractTenantManagementSer
                 pageOffset,
                 filterDocument,
                 sortDocument,
-                MongoDbBasedTenantService::getTenantsWithId)
-                .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
+                MongoDbBasedTenantService::getTenantsWithId);
     }
 
     @Override
@@ -360,15 +356,10 @@ public final class MongoDbBasedTenantService extends AbstractTenantManagementSer
     }
 
     @Override
-    public Future<OperationResult<Tenant>> readTenant(final String tenantId, final Span span) {
+    protected Future<OperationResult<Tenant>> processReadTenant(final String tenantId, final Span span) {
+
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(span);
-
-        return processReadTenant(tenantId)
-                .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
-    }
-
-    private Future<OperationResult<Tenant>> processReadTenant(final String tenantId) {
 
         return findTenant(tenantId)
                 .compose(tenantDtoResult -> Future.succeededFuture(OperationResult.ok(
@@ -376,7 +367,6 @@ public final class MongoDbBasedTenantService extends AbstractTenantManagementSer
                         tenantDtoResult.getData(),
                         Optional.ofNullable(DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge())),
                         Optional.ofNullable(tenantDtoResult.getVersion()))));
-
     }
 
     /**
@@ -449,7 +439,7 @@ public final class MongoDbBasedTenantService extends AbstractTenantManagementSer
      * {@inheritDoc}
      */
     @Override
-    public Future<OperationResult<Id>> processCreateTenant(
+    protected Future<OperationResult<Id>> processCreateTenant(
             final String tenantId,
             final Tenant tenantObj,
             final Span span) {
@@ -459,8 +449,7 @@ public final class MongoDbBasedTenantService extends AbstractTenantManagementSer
         Objects.requireNonNull(span);
 
         return MongoDbDeviceRegistryUtils.isModificationEnabled(config)
-                .compose(ok -> addTenant(tenantId, tenantObj, span))
-                .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
+                .compose(ok -> addTenant(tenantId, tenantObj, span));
     }
 
     private Future<OperationResult<Id>> addTenant(final String tenantId, final Tenant tenantObj,

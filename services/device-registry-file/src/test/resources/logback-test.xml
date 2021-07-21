@@ -28,7 +28,9 @@
   </root>
 
   <logger name="org.eclipse.hono.deviceregistry" level="INFO"/>
+  <logger name="org.eclipse.hono.deviceregistry.file" level="INFO"/>
   <logger name="org.eclipse.hono.service" level="INFO"/>
   <logger name="org.eclipse.hono.service.management" level="INFO"/>
+  <logger name="org.eclipse.hono.service.management.credentials" level="INFO"/>
 
 </configuration>

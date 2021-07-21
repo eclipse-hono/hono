@@ -29,7 +29,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-service-command-router-base</artifactId>
-      <version>${project.version}</version>
     </dependency>
   </dependencies>
 

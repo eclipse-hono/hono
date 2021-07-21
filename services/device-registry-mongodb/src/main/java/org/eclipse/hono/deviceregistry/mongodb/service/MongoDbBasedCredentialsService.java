@@ -231,8 +231,8 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
     @Override
     protected Future<OperationResult<Void>> processUpdateCredentials(
             final DeviceKey deviceKey,
-            final Optional<String> resourceVersion,
             final List<CommonCredential> updatedCredentials,
+            final Optional<String> resourceVersion,
             final Span span) {
 
         Objects.requireNonNull(deviceKey);
@@ -265,7 +265,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                             resourceVersion,
                             JsonObject.mapFrom(credentialsDto),
                             span);
-                }).recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
+                });
     }
 
     /**
@@ -284,8 +284,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                         HttpURLConnection.HTTP_OK,
                         credentialsDto.getCredentials(),
                         Optional.empty(),
-                        Optional.of(credentialsDto.getVersion())))
-                .recover(error -> Future.succeededFuture(MongoDbDeviceRegistryUtils.mapErrorToResult(error, span)));
+                        Optional.of(credentialsDto.getVersion())));
     }
 
     /**

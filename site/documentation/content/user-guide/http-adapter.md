@@ -48,7 +48,9 @@ if the [message limit]({{< relref "/concepts/resource-limits.md" >}}) that has b
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Response Headers:
-  * (optional) `content-type`: A media type describing the semantics and format of payload contained in the response body. This header will only be present if the response contains a command to be executed by the device which requires input data.
+  * (optional) `content-type`: A media type describing the semantics and format of payload contained in the response body.
+    This header will only be present if the response contains a command to be executed by the device which requires input
+    data or if the request failed and the response body contains error details.
   * (optional) `hono-command`: The name of the command to execute. This header will only be present if the response contains a command to be executed by the device.
   * (optional) `hono-cmd-req-id`: An identifier that the device must include in its response to a command. This header will only be present if the response contains a command to be executed by the device.
   * (optional) `hono-cmd-target-device`: The id of the device that shall execute the command. This header will only be present if the response contains a command to be executed by the device and if the response goes to a gateway that acts on behalf of the target device.
@@ -137,7 +139,9 @@ content-length: 0
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Response Headers:
-  * (optional) `content-type`: A media type describing the semantics and format of payload contained in the response body. This header will only be present if the response contains a command to be executed by the device which requires input data.
+  * (optional) `content-type`: A media type describing the semantics and format of payload contained in the response body.
+    This header will only be present if the response contains a command to be executed by the device which requires input
+    data or if the request failed and the response body contains error details.
   * (optional) `hono-command`: The name of the command to execute. This header will only be present if the response contains a command to be executed by the device.
   * (optional) `hono-cmd-req-id`: An identifier that the device must include in its response to a command. This header will only be present if the response contains a command to be executed by the device.
 * Response Body:
@@ -214,7 +218,9 @@ content-length: 23
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Response Headers:
-  * (optional) `content-type`: A media type describing the semantics and format of payload contained in the response body. This header will only be present if the response contains a command to be executed by the device which requires input data.
+  * (optional) `content-type`: A media type describing the semantics and format of payload contained in the response body.
+    This header will only be present if the response contains a command to be executed by the device which requires input
+    data or if the request failed and the response body contains error details.
   * (optional) `hono-command`: The name of the command to execute. This header will only be present if the response contains a command to be executed by the device.
   * (optional) `hono-cmd-req-id`: An identifier that the device must include in its response to a command. This header will only be present if the response contains a command to be executed by the device.
   * (optional) `hono-cmd-target-device`: The id of the device that shall execute the command. This header will only be present if the response contains a command to be executed by the device.
@@ -299,7 +305,9 @@ content-length: 23
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Response Headers:
-  * (optional) `content-type`: A media type describing the semantics and format of payload contained in the response body. This header will only be present if the response contains a command to be executed by the device which requires input data.
+  * (optional) `content-type`: A media type describing the semantics and format of payload contained in the response body.
+    This header will only be present if the response contains a command to be executed by the device which requires input
+    data or if the request failed and the response body contains error details.
   * (optional) `hono-command`: The name of the command to execute. This header will only be present if the response contains a command to be executed by the device.
   * (optional) `hono-cmd-req-id`: An identifier that the device must include in its response to a command. This header will only be present if the response contains a command to be executed by the device.
   * (optional) `hono-cmd-target-device`: The id of the device that shall execute the command. This header will only be present if the response contains a command to be executed by the device and if the response goes to a gateway that acts on behalf of the target device.
@@ -344,7 +352,9 @@ content-length: 0
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Response Headers:
-  * (optional) `content-type`: A media type describing the semantics and format of payload contained in the response body. This header will only be present if the response contains a command to be executed by the device which requires input data.
+  * (optional) `content-type`: A media type describing the semantics and format of payload contained in the response body.
+    This header will only be present if the response contains a command to be executed by the device which requires input
+    data or if the request failed and the response body contains error details.
   * (optional) `hono-command`: The name of the command to execute. This header will only be present if the response contains a command to be executed by the device.
   * (optional) `hono-cmd-req-id`: An identifier that the device must include in its response to a command. This header will only be present if the response contains a command to be executed by the device.
 * Response Body:
@@ -389,7 +399,9 @@ content-length: 0
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Response Headers:
-  * (optional) `content-type`: A media type describing the semantics and format of payload contained in the response body. This header will only be present if the response contains a command to be executed by the device which requires input data.
+  * (optional) `content-type`: A media type describing the semantics and format of payload contained in the response body.
+    This header will only be present if the response contains a command to be executed by the device which requires input
+    data or if the request failed and the response body contains error details.
   * (optional) `hono-command`: The name of the command to execute. This header will only be present if the response contains a command to be executed by the device.
   * (optional) `hono-cmd-req-id`: An identifier that the device must include in its response to a command. This header will only be present if the response contains a command to be executed by the device.
   * (optional) `hono-cmd-target-device`: The id of the device that shall execute the command. This header will only be present if the response contains a command to be executed by the device.
@@ -487,6 +499,11 @@ If there are multiple concurrent requests with a `hono-ttd` header or query para
     as request parameter at the end.
 * Request Body:
   * (optional) Arbitrary data representing the result of processing the command on the device.
+* Response Headers:
+  * (optional) `content-type`: A media type describing the semantics and format of payload contained in the response body.
+    This header will only be present if the request failed and the response body contains error details.
+* Response Body:
+  * (optional) Error details, if status code is >= 400.
 * Status Codes:
   * 202 (Accepted): The response has been successfully delivered to the application that has sent the command.
   * 400 (Bad Request): The request cannot be processed because the command status is missing.
@@ -523,6 +540,11 @@ content-length: 0
     as request parameter at the end.
 * Request Body:
   * (optional) Arbitrary data representing the result of processing the command on the device.
+* Response Headers:
+  * (optional) `content-type`: A media type describing the semantics and format of payload contained in the response body.
+    This header will only be present if the request failed and the response body contains error details.
+* Response Body:
+  * (optional) Error details, if status code is >= 400.
 * Status Codes:
   * 202 (Accepted): The response has been successfully delivered to the application that has sent the command.
   * 400 (Bad Request): The request cannot be processed because the command status is missing.
@@ -560,6 +582,11 @@ content-length: 0
     as request parameter at the end.
 * Request Body:
   * (optional) Arbitrary data representing the result of processing the command on the device.
+* Response Headers:
+  * (optional) `content-type`: A media type describing the semantics and format of payload contained in the response body.
+    This header will only be present if the request failed and the response body contains error details.
+* Response Body:
+  * (optional) Error details, if status code is >= 400.
 * Status Codes:
   * 202 (Accepted): The response has been successfully delivered to the application that has sent the command.
   * 400 (Bad Request): The request cannot be processed because the command status is missing.

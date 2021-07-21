@@ -34,7 +34,6 @@ import java.util.concurrent.TimeUnit;
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.deviceregistry.DeviceRegistryTestUtils;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.service.credentials.AbstractCredentialsServiceTest;
@@ -123,8 +122,6 @@ public class FileBasedCredentialsServiceTest implements AbstractCredentialsServi
         this.credentialsConfig = new FileBasedCredentialsConfigProperties();
         this.credentialsConfig.setCacheMaxAge(30);
 
-        final DownstreamSenderFactory downstreamSenderFactoryMock = mock(DownstreamSenderFactory.class);
-        when(downstreamSenderFactoryMock.connect()).thenReturn(Future.succeededFuture());
         this.registrationService = new FileBasedRegistrationService(vertx);
         this.registrationService.setConfig(registrationConfig);
 
