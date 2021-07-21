@@ -49,6 +49,15 @@ public class InfinispanRemoteConfigurationProperties extends org.eclipse.hono.de
     private Optional<String> saslMechanism;
     private Optional<Integer> socketTimeout;
     private Optional<Integer> connectTimeout;
+    private Optional<String> trustStorePath;
+    private Optional<String> trustStoreFileName;
+    private Optional<String> trustStoreType;
+    private Optional<String> trustStorePassword;
+    private Optional<String> keyStoreFileName;
+    private Optional<String> keyStoreType;
+    private Optional<String> keyStorePassword;
+    private Optional<String> keyAlias;
+    private Optional<String> keyStoreCertificatePassword;
 
     /**
      * @param serverList The server list.
@@ -127,6 +136,86 @@ public class InfinispanRemoteConfigurationProperties extends org.eclipse.hono.de
         value.ifPresent(s -> {
             LOG.trace("setting connectTimeout: {}", s);
             super.setConnectTimeout(s);
+        });
+    }
+
+    /**
+     * @param value The value to set.
+     */
+    public void setTrustStorePath(final Optional<String> value) {
+        value.ifPresent(s -> {
+            LOG.trace("setting trustStorePath: {}", s);
+            super.setTrustStorePath(s);
+        });
+    }
+
+    /**
+     * @param value The value to set.
+     */
+    public void setTrustStoreFileName(final Optional<String> value) {
+        value.ifPresent(s -> {
+            LOG.trace("setting trustStoreFileName: {}", s);
+            super.setTrustStoreFileName(s);
+        });
+    }
+
+    /**
+     * @param value The value to set.
+     */
+    public void setTrustStoreType(final Optional<String> value) {
+        value.ifPresent(s -> {
+            LOG.trace("setting trustStoreType: {}", s);
+            super.setTrustStoreType(s);
+        });
+    }
+
+    /**
+     * @param value The value to set.
+     */
+    public void setKeyStoreFileName(final Optional<String> value) {
+        value.ifPresent(s -> {
+            LOG.trace("setting keyStoreFileName: {}", s);
+            super.setKeyStoreFileName(s);
+        });
+    }
+
+    /**
+     * @param value The value to set.
+     */
+    public void setKeyStoreType(final Optional<String> value) {
+        value.ifPresent(s -> {
+            LOG.trace("setting keyStoreType: {}", s);
+            super.setKeyStoreType(s);
+        });
+    }
+
+    /**
+     * @param value The value to set.
+     */
+    public void setKeyStorePassword(final Optional<String> value) {
+        value.ifPresent(s -> {
+            LOG.trace("setting keyStorePassword: *****");
+            super.setKeyStorePassword(s);
+        });
+    }
+
+    /**
+     * @param value The value to set.
+     */
+    public void setKeyAlias(final Optional<String> value) {
+        value.ifPresent(s -> {
+            LOG.trace("setting keyAlias: {}", s);
+            super.setKeyAlias(s);
+        });
+    }
+
+    /**
+     * @param value The value to set.
+     */
+    public void setKeyStoreCertificatePassword(final Optional<String> value) {
+        value.ifPresent(s -> {
+            LOG.trace("setting keyStoreCertificatePassword: *****");
+            super.setKeyStoreCertificatePassword(s);
         });
     }
 }

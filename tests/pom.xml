@@ -84,15 +84,15 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <hono.command-router.config-src>clustered-cache</hono.command-router.config-src>
     <hono.command-router.disabled>false</hono.command-router.disabled>
     <hono.command-router.image>hono-service-command-router</hono.command-router.image>
-    <hono.command-router.max-mem>256000000</hono.command-router.max-mem>
+    <hono.command-router.max-mem>300000000</hono.command-router.max-mem>
 
     <hono.device-connection.disabled>true</hono.device-connection.disabled>
 
     <hono.infinispan.disabled>false</hono.infinispan.disabled>
     <hono.infinispan.host>hono-infinispan.hono</hono.infinispan.host>
     <hono.infinispan.port>11222</hono.infinispan.port>
-    <hono.infinispan.username>device-registry@HONO</hono.infinispan.username>
-    <hono.infinispan.password>device-registry-secret</hono.infinispan.password>
+    <hono.infinispan.username>hono</hono.infinispan.username>
+    <hono.infinispan.password>hono-secret</hono.infinispan.password>
 
     <!--
       Messaging related properties - AMQP is used as the default one.
@@ -366,7 +366,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       <properties>
         <hono.infinispan.disabled>true</hono.infinispan.disabled>
         <hono.command-router.config-src>embedded-cache</hono.command-router.config-src>
-        <hono.command-router.max-mem>314572800</hono.command-router.max-mem>
+        <hono.command-router.max-mem>350000000</hono.command-router.max-mem>
       </properties>
     </profile>
     <profile>
@@ -646,12 +646,11 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <arg>/opt/infinispan/bin/server.sh</arg>
                     </entrypoint>
                     <cmd>
-                      <arg>-b</arg>
-                      <arg>SITE_LOCAL</arg>
                       <arg>-c</arg>
                       <arg>hono-data-grid.xml</arg>
                       <arg>-Dquarkus.log.category."org.infinispan.CONFIG".level=INFO</arg>
                       <arg>-Dquarkus.log.category."org.infinispan.CONTAINER".level=INFO</arg>
+                      <arg>-Dquarkus.log.category."org.infinispan.SECURITY".level=INFO</arg>
                       <arg>-Dquarkus.log.category."org.infinispan.SERVER".level=INFO</arg>
                     </cmd>
                     <ports>
@@ -673,11 +672,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </log>
                     <wait>
                       <time>${service.startup.timeout}</time>
-                      <http>
-                        <method>GET</method>
-                        <url>http://${infinispan.ip}:${infinispan.port}/rest/v2/cache-managers/routing-info/health/status</url>
-                        <status>200..299</status>
-                      </http>
+                      <log>.*(Infinispan Server .* started).*</log>
                     </wait>
                   </run>
                 </image>

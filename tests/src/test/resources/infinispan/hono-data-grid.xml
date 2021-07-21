@@ -39,14 +39,14 @@
       <interface name="public">
         <non-loopback />
       </interface>
-      <interface name="admin">
+      <interface name="local">
         <loopback />
       </interface>
     </interfaces>
 
-    <socket-bindings default-interface="public" port-offset="${infinispan.socket.binding.port-offset:0}">
-      <socket-binding name="default" port="${infinispan.bind.port:11222}"/>
-      <socket-binding name="admin" port="9990" interface="admin"/>
+    <socket-bindings default-interface="local" port-offset="${infinispan.socket.binding.port-offset:0}">
+      <socket-binding name="external" port="${hono.infinispan.port}" interface="public"/>
+      <socket-binding name="admin" port="9990"/>
     </socket-bindings>
 
     <security>
@@ -81,16 +81,16 @@
       </security-realms>
     </security>
 
-    <endpoints socket-binding="default">
+    <endpoints socket-binding="external" security-realm="ApplicationRealm">
       <hotrod-connector name="hotrod">
-        <authentication security-realm="ApplicationRealm">
-          <sasl mechanisms="SCRAM-SHA-512 SCRAM-SHA-384 DIGEST-SHA-512 DIGEST-SHA-384 DIGEST-MD5"
+        <authentication>
+          <sasl mechanisms="SCRAM-SHA-512 SCRAM-SHA-384 DIGEST-SHA-512 DIGEST-SHA-384"
                 server-name="${hono.infinispan.host}"
-                qop="auth" />
+                qop="auth-conf" />
         </authentication>
       </hotrod-connector>
       <rest-connector name="rest">
-        <authentication security-realm="ApplicationRealm" mechanisms="DIGEST BASIC" />
+        <authentication mechanisms="DIGEST BASIC" />
       </rest-connector>
     </endpoints>
 

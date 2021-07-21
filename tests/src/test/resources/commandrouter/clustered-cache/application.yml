@@ -26,6 +26,8 @@ hono:
         saslMechanism: "SCRAM-SHA-512"
         socketTimeout: 5000
         connectTimeout: 5000
+        trustStorePath: "/etc/hono/certs/trusted-certs.pem"
+        useSsl: true
   registration:
     name: 'Hono Command Router'
     host: ${hono.registration.host}
