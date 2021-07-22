@@ -330,16 +330,17 @@ public abstract class MongoDbBasedDao {
                     .compose(foundResource -> {
                         if (!foundResource.getVersion().equals(versionFromRequest.get())) {
                             return Future.failedFuture(
-                                    new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED,
-                                            "Resource version mismatch"));
+                                    new ClientErrorException(
+                                            HttpURLConnection.HTTP_PRECON_FAILED,
+                                            "resource version mismatch"));
                         }
                         return Future.failedFuture(
-                                new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR,
-                                        String.format("Error modifying resource [%s].", resourceId)));
+                                new ServerErrorException(
+                                        HttpURLConnection.HTTP_INTERNAL_ERROR,
+                                        "error modifying resource"));
                     });
         } else {
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
-                    String.format("Resource [%s] not found.", resourceId)));
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "no such object"));
         }
     }
 

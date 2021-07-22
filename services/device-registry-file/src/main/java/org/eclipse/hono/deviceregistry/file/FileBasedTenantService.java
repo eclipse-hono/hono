@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -26,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.service.tenant.AbstractTenantManagementService;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.util.Versioned;
@@ -304,22 +304,20 @@ public final class FileBasedTenantService extends AbstractTenantManagementServic
 
         Objects.requireNonNull(tenantId);
 
-        return Future.succeededFuture(getTenantResult(tenantId, span));
-    }
-
-    OperationResult<Tenant> getTenantResult(final String tenantId, final Span span) {
-
         final Versioned<Tenant> tenant = tenants.get(tenantId);
 
         if (tenant == null) {
             TracingHelper.logError(span, "Tenant not found");
-            return OperationResult.empty(HttpURLConnection.HTTP_NOT_FOUND);
+            return Future.failedFuture(new ClientErrorException(
+                    tenantId,
+                    HttpURLConnection.HTTP_NOT_FOUND,
+                    "no such tenant"));
         } else {
-            return OperationResult.ok(
+            return Future.succeededFuture(OperationResult.ok(
                     HttpURLConnection.HTTP_OK,
                     tenant.getValue(),
                     Optional.ofNullable(DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge())),
-                    Optional.ofNullable(tenant.getVersion()));
+                    Optional.ofNullable(tenant.getVersion())));
         }
     }
 
@@ -360,31 +358,33 @@ public final class FileBasedTenantService extends AbstractTenantManagementServic
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(resourceVersion);
 
-        return Future.succeededFuture(removeTenant(tenantId, resourceVersion, span));
-    }
-
-    Result<Void> removeTenant(final String tenantId, final Optional<String> resourceVersion, final Span span) {
-
-        Objects.requireNonNull(tenantId);
-
         if (getConfig().isModificationEnabled()) {
             if (tenants.containsKey(tenantId)) {
                 final String actualVersion = tenants.get(tenantId).getVersion();
                 if (checkResourceVersion(resourceVersion, actualVersion)) {
                     tenants.remove(tenantId);
                     dirty.set(true);
-                    return Result.from(HttpURLConnection.HTTP_NO_CONTENT);
+                    return Future.succeededFuture(Result.from(HttpURLConnection.HTTP_NO_CONTENT));
                 } else {
                     TracingHelper.logError(span, "Resource Version mismatch.");
-                    return Result.from(HttpURLConnection.HTTP_PRECON_FAILED);
+                    return Future.failedFuture(new ClientErrorException(
+                            tenantId,
+                            HttpURLConnection.HTTP_PRECON_FAILED,
+                            "resource Version mismatch"));
                 }
             } else {
                 TracingHelper.logError(span, "Tenant not found.");
-                return Result.from(HttpURLConnection.HTTP_NOT_FOUND);
+                return Future.failedFuture(new ClientErrorException(
+                        tenantId,
+                        HttpURLConnection.HTTP_NOT_FOUND,
+                        "no such tenant"));
             }
         } else {
             TracingHelper.logError(span, "Modification is disabled for Tenant Service");
-            return Result.from(HttpURLConnection.HTTP_FORBIDDEN);
+            return Future.failedFuture(new ClientErrorException(
+                    tenantId,
+                    HttpURLConnection.HTTP_FORBIDDEN,
+                    "modification of registry data is not supported"));
         }
     }
 
@@ -392,32 +392,23 @@ public final class FileBasedTenantService extends AbstractTenantManagementServic
      * {@inheritDoc}
      */
     @Override
-    protected Future<OperationResult<Id>> processCreateTenant(final String tenantId, final Tenant tenantSpec,
+    protected Future<OperationResult<Id>> processCreateTenant(
+            final String tenantId,
+            final Tenant tenantSpec,
             final Span span) {
+
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(tenantSpec);
         Objects.requireNonNull(span);
 
-        return Future.succeededFuture(add(tenantId, tenantSpec, span));
-    }
-
-    /**
-     * Adds a tenant.
-     *
-     * @param tenantId The identifier of the tenant. If null, an random ID will be generated.
-     * @param tenantSpec The information to register for the tenant.
-     * @return The outcome of the operation indicating success or failure.
-     * @throws NullPointerException if any of the parameters are {@code null}.
-     */
-    private OperationResult<Id> add(final String tenantId, final Tenant tenantSpec, final Span span) {
-
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(tenantSpec);
-
         if (tenants.containsKey(tenantId)) {
             TracingHelper.logError(span, "Conflict: tenantId already exists");
-            return OperationResult.empty(HttpURLConnection.HTTP_CONFLICT);
+            return Future.failedFuture(new ClientErrorException(
+                    tenantId,
+                    HttpURLConnection.HTTP_CONFLICT,
+                    "tenantId already exists"));
         }
+
         try {
             if (LOG.isTraceEnabled()) {
                 LOG.trace("adding tenant [id: {}]: {}", tenantId, JsonObject.mapFrom(tenantSpec).encodePrettily());
@@ -428,18 +419,24 @@ public final class FileBasedTenantService extends AbstractTenantManagementServic
             if (existsConflictingTenant) {
                 // we are trying to use the same CA as an already existing tenant
                 TracingHelper.logError(span, "Conflict: CA already used by an existing tenant");
-                return OperationResult.empty(HttpURLConnection.HTTP_CONFLICT);
+                return Future.failedFuture(new ClientErrorException(
+                        tenantId,
+                        HttpURLConnection.HTTP_CONFLICT,
+                        "CA already used by an existing tenant"));
             } else {
                 final Versioned<Tenant> tenant = new Versioned<>(tenantSpec);
                 tenants.put(tenantId, tenant);
                 dirty.set(true);
-                return OperationResult.ok(HttpURLConnection.HTTP_CREATED,
-                        Id.of(tenantId), Optional.empty(), Optional.of(tenant.getVersion()));
+                return Future.succeededFuture(OperationResult.ok(HttpURLConnection.HTTP_CREATED,
+                        Id.of(tenantId), Optional.empty(), Optional.of(tenant.getVersion())));
             }
         } catch (final IllegalArgumentException e) {
             LOG.debug("error parsing payload of add tenant request", e);
             TracingHelper.logError(span, e);
-            return OperationResult.empty(HttpURLConnection.HTTP_BAD_REQUEST);
+            return Future.failedFuture(new ClientErrorException(
+                    tenantId,
+                    HttpURLConnection.HTTP_BAD_REQUEST,
+                    "invalid tenant payload"));
         }
     }
 
@@ -447,34 +444,16 @@ public final class FileBasedTenantService extends AbstractTenantManagementServic
      * {@inheritDoc}
      */
     @Override
-    protected Future<OperationResult<Void>> processUpdateTenant(final String tenantId, final Tenant tenantSpec,
-            final Optional<String> resourceVersion, final Span span) {
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(tenantSpec);
-        Objects.requireNonNull(resourceVersion);
-        Objects.requireNonNull(span);
-
-        return Future.succeededFuture(update(tenantId, tenantSpec, resourceVersion, span));
-    }
-
-    /**
-     * Updates a tenant.
-     *
-     * @param tenantId The identifier of the tenant.
-     * @param tenantSpec The information to update the tenant with.
-     * @param expectedResourceVersion The version identifier of the tenant information to update.
-     * @param span The tracing span to use.
-     * @return The outcome of the operation indicating success or failure.
-     * @throws NullPointerException if any of the parameters are {@code null}.
-     */
-    public OperationResult<Void> update(
+    protected Future<OperationResult<Void>> processUpdateTenant(
             final String tenantId,
             final Tenant tenantSpec,
-            final Optional<String> expectedResourceVersion,
+            final Optional<String> resourceVersion,
             final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(tenantSpec);
+        Objects.requireNonNull(resourceVersion);
+        Objects.requireNonNull(span);
 
         if (getConfig().isModificationEnabled()) {
             if (tenants.containsKey(tenantId)) {
@@ -490,32 +469,48 @@ public final class FileBasedTenantService extends AbstractTenantManagementServic
                     if (conflictingTenant != null && !tenantId.equals(conflictingTenant.getKey())) {
                         // we are trying to use the same CA as another tenant
                         TracingHelper.logError(span, "Conflict: CA already used by an existing tenant");
-                        return OperationResult.empty(HttpURLConnection.HTTP_CONFLICT);
+                        return Future.failedFuture(new ClientErrorException(
+                                tenantId,
+                                HttpURLConnection.HTTP_CONFLICT,
+                                "CA already used by an existing tenant"));
                     } else {
-                        final Versioned<Tenant> updatedTenant = tenants.get(tenantId).update(expectedResourceVersion, () -> tenantSpec);
+                        final Versioned<Tenant> updatedTenant = tenants.get(tenantId).update(resourceVersion, () -> tenantSpec);
                         if ( updatedTenant != null ) {
 
                             tenants.put(tenantId, updatedTenant);
                             dirty.set(true);
-                            return OperationResult.ok(HttpURLConnection.HTTP_NO_CONTENT,
-                                    null, Optional.empty(),
-                                    Optional.of(updatedTenant.getVersion()));
+                            return Future.succeededFuture(OperationResult.ok(
+                                    HttpURLConnection.HTTP_NO_CONTENT,
+                                    null,
+                                    Optional.empty(),
+                                    Optional.of(updatedTenant.getVersion())));
                         } else {
                             TracingHelper.logError(span, "Resource Version mismatch.");
-                            return OperationResult.empty(HttpURLConnection.HTTP_PRECON_FAILED);
+                            return Future.failedFuture(new ClientErrorException(
+                                    tenantId,
+                                    HttpURLConnection.HTTP_PRECON_FAILED,
+                                    "resource version mismatch"));
                         }
                     }
                 } catch (final IllegalArgumentException e) {
                     TracingHelper.logError(span, e);
-                    return OperationResult.empty(HttpURLConnection.HTTP_BAD_REQUEST);
+                    return Future.failedFuture(new ClientErrorException(
+                            tenantId,
+                            HttpURLConnection.HTTP_BAD_REQUEST));
                 }
             } else {
                 TracingHelper.logError(span, "Tenant not found.");
-                return OperationResult.empty(HttpURLConnection.HTTP_NOT_FOUND);
+                return Future.failedFuture(new ClientErrorException(
+                        tenantId,
+                        HttpURLConnection.HTTP_NOT_FOUND,
+                        "no such tenant"));
             }
         } else {
             TracingHelper.logError(span, "Modification disabled for Tenant Service.");
-            return OperationResult.empty(HttpURLConnection.HTTP_FORBIDDEN);
+            return Future.failedFuture(new ClientErrorException(
+                    tenantId,
+                    HttpURLConnection.HTTP_FORBIDDEN,
+                    "modification of registry data is not supported"));
         }
     }
 
@@ -543,18 +538,6 @@ public final class FileBasedTenantService extends AbstractTenantManagementServic
     public String toString() {
         return String.format("%s[filename=%s]", FileBasedTenantService.class.getSimpleName(),
                 getConfig().getFilename());
-    }
-
-    /**
-     * Generate a random tenant ID.
-     */
-    private String generateTenantId() {
-        String id;
-        do {
-            id = UUID.randomUUID().toString();
-        } while (tenants.containsKey(id));
-        LOG.debug("Generated tenantID: {}", id);
-        return id;
     }
 
     private boolean checkResourceVersion(final Optional<String> expectedVersion, final String actualValue) {

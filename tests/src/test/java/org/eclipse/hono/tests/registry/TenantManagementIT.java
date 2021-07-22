@@ -142,7 +142,10 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
         payload.setExtensions(Map.of("data", new String(data)));
 
         getHelper().registry.addTenant(tenantId, payload, HttpURLConnection.HTTP_ENTITY_TOO_LARGE)
-            .onComplete(context.completing());
+            .onComplete(context.succeeding(response -> {
+                context.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                context.completeNow();
+            }));
     }
 
     /**
@@ -160,7 +163,11 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
             .compose(ar -> {
                 // now try to add the tenant again
                 return getHelper().registry.addTenant(tenantId, payload, HttpURLConnection.HTTP_CONFLICT);
-            }).onComplete(context.completing());
+            })
+            .onComplete(context.succeeding(response -> {
+                context.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                context.completeNow();
+            }));
     }
 
     /**
@@ -177,7 +184,10 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
                 buildTenantPayload(),
                 "application/x-www-form-urlencoded",
                 HttpURLConnection.HTTP_BAD_REQUEST)
-            .onComplete(context.completing());
+            .onComplete(context.succeeding(response -> {
+                context.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                context.completeNow();
+            }));
     }
 
     /**
@@ -239,7 +249,10 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
     public void testAddTenantFailsForInvalidTenantId(final VertxTestContext context) {
 
         getHelper().registry.addTenant("invalid tenantid$", null, HttpURLConnection.HTTP_BAD_REQUEST)
-            .onComplete(context.completing());
+            .onComplete(context.succeeding(response -> {
+                context.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                context.completeNow();
+            }));
     }
 
     /**
@@ -258,7 +271,10 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
                 requestBody,
                 "application/json",
                 HttpURLConnection.HTTP_BAD_REQUEST)
-            .onComplete(context.completing());
+            .onComplete(context.succeeding(response -> {
+                context.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                context.completeNow();
+            }));
     }
 
     /**
@@ -284,7 +300,10 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
                 tenant,
                 "application/json",
                 HttpURLConnection.HTTP_BAD_REQUEST)
-                .onComplete(context.completing());
+                .onComplete(context.succeeding(response -> {
+                    context.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                    context.completeNow();
+                }));
     }
 
     /**
@@ -306,7 +325,10 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
                 requestBody,
                 "application/json",
                 HttpURLConnection.HTTP_BAD_REQUEST)
-            .onComplete(context.completing());
+            .onComplete(context.succeeding(response -> {
+                context.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                context.completeNow();
+            }));
     }
 
     /**
@@ -326,7 +348,10 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
                 requestBody,
                 "application/json",
                 HttpURLConnection.HTTP_BAD_REQUEST)
-            .onComplete(context.completing());
+            .onComplete(context.succeeding(response -> {
+                context.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                context.completeNow();
+            }));
     }
 
     /**
@@ -411,7 +436,10 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
         final Tenant altered = buildTenantPayload();
 
         getHelper().registry.updateTenant("non-existing-tenant", altered, HttpURLConnection.HTTP_NOT_FOUND)
-            .onComplete(context.completing());
+            .onComplete(context.succeeding(response -> {
+                context.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                context.completeNow();
+            }));
     }
 
     /**
@@ -435,7 +463,10 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
         getHelper().registry.addTenant(tenantId, new Tenant())
                 .compose(ok -> getHelper().registry.updateTenant(tenantId, tenantForUpdate,
                         HttpURLConnection.HTTP_BAD_REQUEST))
-                .onComplete(context.completing());
+                .onComplete(context.succeeding(response -> {
+                    context.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                    context.completeNow();
+                }));
     }
 
     /**
@@ -456,7 +487,10 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
 
                 return getHelper().registry.updateTenant(tenantId, payload, HttpURLConnection.HTTP_ENTITY_TOO_LARGE);
             })
-            .onComplete(context.completing());
+            .onComplete(context.succeeding(response -> {
+                context.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                context.completeNow();
+            }));
     }
 
     /**
@@ -482,7 +516,10 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
     public void testRemoveTenantFailsForNonExistingTenant(final VertxTestContext context) {
 
         getHelper().registry.removeTenant("non-existing-tenant", HttpURLConnection.HTTP_NOT_FOUND)
-            .onComplete(context.completing());
+            .onComplete(context.succeeding(response -> {
+                context.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                context.completeNow();
+            }));
     }
 
     /**
@@ -526,7 +563,10 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
     public void testGetTenantFailsForNonExistingTenant(final VertxTestContext context) {
 
         getHelper().registry.getTenant("non-existing-tenant", HttpURLConnection.HTTP_NOT_FOUND)
-            .onComplete(context.completing());
+            .onComplete(context.succeeding(response -> {
+                context.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                context.completeNow();
+            }));
     }
 
     /**

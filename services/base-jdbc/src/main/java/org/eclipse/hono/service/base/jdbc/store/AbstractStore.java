@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableMap;
 
 import io.opentracing.Span;
 import io.opentracing.Tracer;
+import io.opentracing.log.Fields;
 import io.vertx.core.Future;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
@@ -131,7 +132,7 @@ public abstract class AbstractStore implements HealthCheckProvider, AutoCloseabl
 
                     // if we updated something ...
                     if (r.getUpdated() != 0) {
-                        // ... then we optimistic lock held
+                        // ... then the optimistic lock held
                         return Future.succeededFuture(r);
                     }
 
@@ -144,7 +145,7 @@ public abstract class AbstractStore implements HealthCheckProvider, AutoCloseabl
                             .flatMap(readResult -> {
 
                                 span.log(Map.of(
-                                        "event", "check read result",
+                                        Fields.EVENT, "check read result",
                                         "read_count", readResult.getNumRows()));
 
                                 // ... having read the current state, without the version ...

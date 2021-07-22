@@ -26,6 +26,7 @@ import java.util.Optional;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.Id;
@@ -78,10 +79,42 @@ public interface AbstractTenantServiceTest {
     default void testAddTenantFailsForDuplicateTenantId(final VertxTestContext ctx) {
 
         addTenant("tenant")
-                .compose(ok -> getTenantManagementService()
-                        .createTenant(Optional.of("tenant"), buildTenantPayload(), NoopSpan.INSTANCE))
-                .map(r -> ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_CONFLICT, r.getStatus())))
-                .onComplete(ctx.completing());
+                .compose(ok -> getTenantManagementService().createTenant(
+                        Optional.of("tenant"),
+                        buildTenantPayload(),
+                        NoopSpan.INSTANCE))
+                .onComplete(ctx.failing(t -> {
+                    ctx.verify(() -> assertServiceInvocationException(t, HttpURLConnection.HTTP_CONFLICT));
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
+     * Verifies that a tenant cannot be added if it uses a trusted certificate authority
+     * with the same subject DN as an already existing tenant.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    default void testAddTenantFailsForDuplicateCa(final VertxTestContext ctx) {
+
+        final TrustedCertificateAuthority trustedCa = new TrustedCertificateAuthority()
+                .setSubjectDn("CN=taken")
+                .setPublicKey("NOTAKEY".getBytes(StandardCharsets.UTF_8));
+
+        final Tenant tenant = new Tenant()
+                .setEnabled(true)
+                .setTrustedCertificateAuthorities(Collections.singletonList(trustedCa));
+
+        addTenant("tenant", tenant)
+            .compose(ok -> getTenantManagementService().createTenant(
+                    Optional.of("newTenant"),
+                    tenant,
+                    NoopSpan.INSTANCE))
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> assertServiceInvocationException(t, HttpURLConnection.HTTP_CONFLICT));
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -185,20 +218,18 @@ public interface AbstractTenantServiceTest {
     default void testDeleteTenantWithNonMatchingResourceVersionFails(final VertxTestContext ctx) {
 
         addTenant("tenant")
-        .map(cr -> {
-            final String version = cr.getResourceVersion().orElse(null);
-            ctx.verify(() -> assertNotNull(version));
-            getTenantManagementService().deleteTenant(
-                    "tenant",
-                    Optional.of(version + "abc"),
-                    NoopSpan.INSTANCE)
-                    .onComplete(ctx.succeeding(s -> {
-                        ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_PRECON_FAILED, s.getStatus()));
-                        ctx.completeNow();
-                    })
-            );
-            return null;
-        });
+            .compose(cr -> {
+                final String version = cr.getResourceVersion().orElse(null);
+                ctx.verify(() -> assertNotNull(version));
+                return getTenantManagementService().deleteTenant(
+                        "tenant",
+                        Optional.of(version + "abc"),
+                        NoopSpan.INSTANCE);
+            })
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> assertServiceInvocationException(t, HttpURLConnection.HTTP_PRECON_FAILED));
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -209,21 +240,19 @@ public interface AbstractTenantServiceTest {
     default void testUpdateTenantWithNonMatchingResourceVersionFails(final VertxTestContext ctx) {
 
         addTenant("tenant")
-        .map(cr -> {
-            final String version = cr.getResourceVersion().orElse(null);
-            ctx.verify(() -> assertNotNull(version));
-            getTenantManagementService().updateTenant(
-                    "tenant",
-                    buildTenantPayload(),
-                    Optional.of(version + "abc"),
-                    NoopSpan.INSTANCE)
-                    .onComplete(ctx.succeeding(s -> {
-                        ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_PRECON_FAILED, s.getStatus()));
-                        ctx.completeNow();
-                    })
-            );
-            return null;
-        });
+            .compose(cr -> {
+                final String version = cr.getResourceVersion().orElse(null);
+                ctx.verify(() -> assertNotNull(version));
+                return getTenantManagementService().updateTenant(
+                        "tenant",
+                        buildTenantPayload(),
+                        Optional.of(version + "abc"),
+                        NoopSpan.INSTANCE);
+            })
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> assertServiceInvocationException(t, HttpURLConnection.HTTP_PRECON_FAILED));
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -273,36 +302,6 @@ public interface AbstractTenantServiceTest {
             );
             return null;
         });
-    }
-    /**
-     * Verifies that a tenant cannot be added if it uses a trusted certificate authority
-     * with the same subject DN as an already existing tenant.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    default void testAddTenantFailsForDuplicateCa(final VertxTestContext ctx) {
-
-        final TrustedCertificateAuthority trustedCa = new TrustedCertificateAuthority()
-                .setSubjectDn("CN=taken")
-                .setPublicKey("NOTAKEY".getBytes(StandardCharsets.UTF_8));
-
-        final Tenant tenant = new Tenant()
-                .setEnabled(true)
-                .setTrustedCertificateAuthorities(Collections.singletonList(trustedCa));
-
-        addTenant("tenant", tenant)
-            .map(ok -> {
-                getTenantManagementService().createTenant(
-                        Optional.of("newTenant"),
-                        tenant,
-                        NoopSpan.INSTANCE)
-                        .onComplete(ctx.succeeding(s -> {
-                            ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_CONFLICT, s.getStatus()));
-                            ctx.completeNow();
-                        }));
-                return null;
-            });
     }
 
     /**
@@ -481,17 +480,17 @@ public interface AbstractTenantServiceTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    default void testRemoveTenantSucceeds(final VertxTestContext ctx) {
+    default void testDeleteTenantSucceeds(final VertxTestContext ctx) {
 
         addTenant("tenant")
-        .compose(ok -> assertTenantExists(getTenantManagementService(), "tenant"))
-        .compose(ok -> getTenantManagementService().deleteTenant("tenant", Optional.empty(), NoopSpan.INSTANCE))
-        .compose(s -> {
-            ctx.verify(() -> assertEquals(HttpURLConnection.HTTP_NO_CONTENT, s.getStatus()));
-            return assertTenantDoesNotExist(getTenantManagementService(), "tenant");
-        })
-        .onComplete(ctx.completing());
-
+            .compose(ok -> assertTenantExists(getTenantManagementService(), "tenant"))
+            .compose(ok -> getTenantManagementService().deleteTenant("tenant", Optional.empty(), NoopSpan.INSTANCE))
+            .onComplete(ctx.succeeding())
+            .compose(ok -> getTenantManagementService().readTenant("tenant", NoopSpan.INSTANCE))
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> assertServiceInvocationException(t, HttpURLConnection.HTTP_NOT_FOUND));
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -543,24 +542,24 @@ public interface AbstractTenantServiceTest {
 
         // GIVEN two tenants, one with a CA configured, the other with no CA
         addTenant("tenantOne", new Tenant().setEnabled(true).setTrustedCertificateAuthorities(List.of(trustedCa)))
-        .compose(ok -> addTenant("tenantTwo", new Tenant().setEnabled(true)))
-        .compose(ok -> {
-            // WHEN updating the second tenant to use the same CA as the first tenant
-            final Tenant updatedTenantTwo = new Tenant().setEnabled(true)
-                    .setTrustedCertificateAuthorities(List.of(trustedCa));
-            return getTenantManagementService().updateTenant(
-                    "tenantTwo",
-                    updatedTenantTwo,
-                    Optional.empty(),
-                    NoopSpan.INSTANCE);
-        })
-        .onComplete(ctx.succeeding(s -> {
-            ctx.verify(() -> {
-                // THEN the update fails with a 409
-                assertEquals(HttpURLConnection.HTTP_CONFLICT, s.getStatus());
-            });
-            ctx.completeNow();
-        }));
+            .compose(ok -> addTenant("tenantTwo", new Tenant().setEnabled(true)))
+            .compose(ok -> {
+                // WHEN updating the second tenant to use the same CA as the first tenant
+                final Tenant updatedTenantTwo = new Tenant().setEnabled(true)
+                        .setTrustedCertificateAuthorities(List.of(trustedCa));
+                return getTenantManagementService().updateTenant(
+                        "tenantTwo",
+                        updatedTenantTwo,
+                        Optional.empty(),
+                        NoopSpan.INSTANCE);
+            })
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    // THEN the update fails with a 409
+                    assertServiceInvocationException(t, HttpURLConnection.HTTP_CONFLICT);
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -584,11 +583,33 @@ public interface AbstractTenantServiceTest {
      * @param tenant The tenant.
      * @return A succeeded future if the tenant does not exist.
      */
-    default Future<OperationResult<Tenant>> assertTenantDoesNotExist(
+    default Future<Void> assertTenantDoesNotExist(
             final TenantManagementService svc,
             final String tenant) {
 
-        return assertGet(svc, tenant, HttpURLConnection.HTTP_NOT_FOUND);
+        return svc.readTenant(tenant, NoopSpan.INSTANCE)
+                .compose(result -> Future.<Void> failedFuture(new AssertionError("should not have found tenant")))
+                .recover(t -> {
+                    if (ServiceInvocationException.extractStatusCode(t) == HttpURLConnection.HTTP_NOT_FOUND) {
+                        return Future.succeededFuture();
+                    } else {
+                        return Future.failedFuture(t);
+                    }
+                });
+    }
+
+    /**
+     * Asserts that an error is a {@link ServiceInvocationException} with a status code.
+     *
+     * @param error The error to assert.
+     * @param expectedStatusCode The expected status code.
+     * @throws AssertionError if any of the assertions fail.
+     */
+    default void assertServiceInvocationException(
+            final Throwable error,
+            final int expectedStatusCode) {
+        assertThat(error).isInstanceOf(ServiceInvocationException.class);
+        assertThat(((ServiceInvocationException) error).getErrorCode()).isEqualTo(expectedStatusCode);
     }
 
     /**

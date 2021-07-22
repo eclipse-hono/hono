@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,6 +16,7 @@ package org.eclipse.hono.deviceregistry.jdbc.impl;
 import java.net.HttpURLConnection;
 import java.util.function.IntFunction;
 
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.base.jdbc.store.DuplicateKeyException;
 import org.eclipse.hono.service.base.jdbc.store.EntityNotFoundException;
 import org.eclipse.hono.service.base.jdbc.store.OptimisticLockingException;
@@ -51,16 +52,18 @@ public final class Services {
      */
     public static <T, R extends Result<T>> Future<R> recover(final Throwable e, final IntFunction<R> supplier) {
         if (SQL.hasCauseOf(e, EntityNotFoundException.class)) {
-            return Future.succeededFuture(supplier.apply(HttpURLConnection.HTTP_NOT_FOUND));
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "no such object"));
         } else if (SQL.hasCauseOf(e, DuplicateKeyException.class)) {
-            return Future.succeededFuture(supplier.apply(HttpURLConnection.HTTP_CONFLICT));
+            return Future.failedFuture(new ClientErrorException(
+                    HttpURLConnection.HTTP_CONFLICT,
+                    "an object with the same identifier already exists"));
         } else if (SQL.hasCauseOf(e, IllegalArgumentException.class)) {
-            return Future.succeededFuture(supplier.apply(HttpURLConnection.HTTP_BAD_REQUEST));
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else if (SQL.hasCauseOf(e, OptimisticLockingException.class)) {
-            return Future.succeededFuture(supplier.apply(HttpURLConnection.HTTP_PRECON_FAILED));
+            return Future.failedFuture(new ClientErrorException(
+                    HttpURLConnection.HTTP_PRECON_FAILED,
+                    "resource version mismatch"));
         }
         return Future.failedFuture(e);
     }
-
-
 }
