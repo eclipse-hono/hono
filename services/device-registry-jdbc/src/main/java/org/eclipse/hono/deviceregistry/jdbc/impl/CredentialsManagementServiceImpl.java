@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.eclipse.hono.auth.HonoPasswordEncoder;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.jdbc.config.DeviceServiceProperties;
 import org.eclipse.hono.deviceregistry.service.credentials.AbstractCredentialsManagementService;
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
@@ -75,14 +76,14 @@ public class CredentialsManagementServiceImpl extends AbstractCredentialsManagem
                                         Optional.of(r.getVersion())
                                 );
                     } else {
-                        return OperationResult.empty(HttpURLConnection.HTTP_NOT_FOUND);
+                        throw new ClientErrorException(key.getTenantId(), HttpURLConnection.HTTP_NOT_FOUND);
                     }
                 })
 
                 .recover( e -> {
 
                     if (SQL.hasCauseOf(e, OptimisticLockingException.class) ) {
-                        return Future.succeededFuture(OperationResult.empty(HttpURLConnection.HTTP_PRECON_FAILED));
+                        return Future.failedFuture(new ClientErrorException(key.getTenantId(), HttpURLConnection.HTTP_PRECON_FAILED));
                     }
 
                     return Future.failedFuture(e);
@@ -100,9 +101,7 @@ public class CredentialsManagementServiceImpl extends AbstractCredentialsManagem
                         result.getCredentials(),
                         this.ttl,
                         result.getResourceVersion()))
-                        .orElseGet(() -> OperationResult.empty(HttpURLConnection.HTTP_NOT_FOUND)))
-
-                .otherwise(err -> OperationResult.empty(HttpURLConnection.HTTP_INTERNAL_ERROR));
+                        .orElseThrow(() -> new ClientErrorException(key.getTenantId(), HttpURLConnection.HTTP_NOT_FOUND)));
 
     }
 

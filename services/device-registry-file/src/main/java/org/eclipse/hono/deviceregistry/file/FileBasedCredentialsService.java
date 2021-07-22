@@ -22,7 +22,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -30,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.auth.HonoPasswordEncoder;
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.service.credentials.AbstractCredentialsManagementService;
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
@@ -447,21 +447,16 @@ public final class FileBasedCredentialsService extends AbstractCredentialsManage
             final Optional<String> resourceVersion,
             final Span span) {
 
-        return Future.succeededFuture(set(key.getTenantId(), key.getDeviceId(), resourceVersion, span, credentials));
-
-    }
-
-    private OperationResult<Void> set(
-            final String tenantId,
-            final String deviceId,
-            final Optional<String> resourceVersion,
-            final Span span,
-            final List<CommonCredential> updatedCredentials) {
+        final var tenantId = key.getTenantId();
+        final var deviceId = key.getDeviceId();
 
         final String currentVersion = getResourceVersion(tenantId, deviceId);
         if (!checkResourceVersion(currentVersion, resourceVersion)) {
             TracingHelper.logError(span, "resource version mismatch");
-            return OperationResult.empty(HttpURLConnection.HTTP_PRECON_FAILED);
+            return Future.failedFuture(new ClientErrorException(
+                    tenantId,
+                    HttpURLConnection.HTTP_PRECON_FAILED,
+                    "resource version mismatch"));
         }
 
         // authId->credentials[]
@@ -473,7 +468,7 @@ public final class FileBasedCredentialsService extends AbstractCredentialsManage
         // now follow the algorithm described by the Device Registry Management API
         // https://www.eclipse.org/hono/docs/api/management/#/credentials/setAllCredentials
 
-        for (final CommonCredential credential : updatedCredentials) {
+        for (final CommonCredential credential : credentials) {
 
             final boolean credentialRequiresMerging = credential.getSecrets().stream().anyMatch(s -> s.getId() != null);
             final JsonObject credentialObject = JsonObject.mapFrom(credential);
@@ -495,10 +490,16 @@ public final class FileBasedCredentialsService extends AbstractCredentialsManage
                 if (!deviceId.equals(existingCredentials.getString(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID))) {
                     // found an entry for another device, with the same auth-id
                     TracingHelper.logError(span, "auth-id already in use with another device of the tenant");
-                    return OperationResult.empty(HttpURLConnection.HTTP_CONFLICT);
+                    return Future.failedFuture(new ClientErrorException(
+                            tenantId,
+                            HttpURLConnection.HTTP_CONFLICT,
+                            "auth-id already in use with another device of the tenant"));
                 } else if (!config.isModificationEnabled()) {
                     TracingHelper.logError(span, "modification is disabled for the Credentials service");
-                    return OperationResult.empty(HttpURLConnection.HTTP_FORBIDDEN);
+                    return Future.failedFuture(new ClientErrorException(
+                            tenantId,
+                            HttpURLConnection.HTTP_FORBIDDEN,
+                            "modification is disabled for the Credentials service"));
                 }
 
                 // we have found an existing credential for the device that should be updated
@@ -521,7 +522,10 @@ public final class FileBasedCredentialsService extends AbstractCredentialsManage
 
                         if (existingSecretWithId == null) {
                             TracingHelper.logError(span, "no secret with given ID found for credentials");
-                            return OperationResult.empty(HttpURLConnection.HTTP_BAD_REQUEST);
+                            return Future.failedFuture(new ClientErrorException(
+                                    tenantId,
+                                    HttpURLConnection.HTTP_BAD_REQUEST,
+                                    "no secret with given ID found for credentials"));
                         }
 
                         mergeSecretProperties(type, existingSecretWithId, updatedSecret);
@@ -531,17 +535,25 @@ public final class FileBasedCredentialsService extends AbstractCredentialsManage
             } else if (credentialRequiresMerging) {
                 LOG.debug("credentials [type: {}] require merging but no credentials of matching type are on record",
                         type);
-                return OperationResult.empty(HttpURLConnection.HTTP_BAD_REQUEST);
+                return Future.failedFuture(new ClientErrorException(
+                        tenantId,
+                        HttpURLConnection.HTTP_BAD_REQUEST,
+                        String.format(
+                                "credentials [type: %s] require merging but no credentials of matching type are on record",
+                                type)));
             }
 
             // make sure every secret has or gets a unique ID
             if (hasUniqueSecretIds(credentialObject)) {
-                newCredentials.computeIfAbsent(authId, key -> new JsonArray()).add(credentialObject);
+                newCredentials.computeIfAbsent(authId, id -> new JsonArray()).add(credentialObject);
                 dirty.set(true);
             } else {
                 TracingHelper.logError(span, "secret IDs must be unique within each credentials object");
                 LOG.debug("secret IDs must be unique within each credentials object");
-                return OperationResult.empty(HttpURLConnection.HTTP_BAD_REQUEST);
+                return Future.failedFuture(new ClientErrorException(
+                        tenantId,
+                        HttpURLConnection.HTTP_BAD_REQUEST,
+                        "secret IDs must be unique within each credentials object"));
             }
 
         }
@@ -555,12 +567,11 @@ public final class FileBasedCredentialsService extends AbstractCredentialsManage
         // and change the resource version
         final String newVersion = DeviceRegistryUtils.getUniqueIdentifier();
         setResourceVersion(tenantId, deviceId, newVersion);
-        return OperationResult.ok(HttpURLConnection.HTTP_NO_CONTENT, null, Optional.empty(), Optional.of(newVersion));
-    }
-
-    private boolean requiresMerging(final CommonCredential credential) {
-        return credential.getSecrets().stream()
-                .anyMatch(s -> s.getId() != null);
+        return Future.succeededFuture(OperationResult.ok(
+                HttpURLConnection.HTTP_NO_CONTENT,
+                null,
+                Optional.empty(),
+                Optional.of(newVersion)));
     }
 
     private boolean hasUniqueSecretIds(final JsonObject credentialObject) {
@@ -695,15 +706,6 @@ public final class FileBasedCredentialsService extends AbstractCredentialsManage
         }
     }
 
-    private boolean checkResourceVersion(final String tenantId, final String deviceId, final Optional<String> requestedVersion) {
-
-        if (requestedVersion.isEmpty()) {
-            return true;
-        }
-
-        return checkResourceVersion(getResourceVersion(tenantId, deviceId), requestedVersion);
-    }
-
     private boolean checkResourceVersion(final String currentVersion, final Optional<String> requestedVersion) {
 
         if (requestedVersion.isEmpty()) {
@@ -744,11 +746,6 @@ public final class FileBasedCredentialsService extends AbstractCredentialsManage
 
         return version;
 
-    }
-
-    private String getOrCreateResourceVersion(final String tenantId, final String deviceId) {
-        return versions.computeIfAbsent(tenantId, key -> new ConcurrentHashMap<>())
-                .computeIfAbsent(deviceId, key -> UUID.randomUUID().toString());
     }
 
     @Override
