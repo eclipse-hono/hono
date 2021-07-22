@@ -81,6 +81,7 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.Pair;
 import org.eclipse.hono.util.RegistryManagementConstants;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
@@ -97,6 +98,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.kafka.admin.KafkaAdminClient;
@@ -1486,6 +1488,18 @@ public final class IntegrationTestSupport {
                     .that(autoProvisioned == null || !autoProvisioned)
                     .isTrue();
         }
+    }
+
+    /**
+     * Verifies that a response body contains a JSON object with a non-null <em>error</em> property.
+     *
+     * @param response The response to check.
+     * @throws AssertionError if any of the checks fails.
+     */
+    public static void assertErrorPayload(final HttpResponse<Buffer> response) {
+        assertThat(response).isNotNull();
+        final JsonObject payload = response.bodyAsJsonObject();
+        assertThat(payload.getString(RequestResponseApiConstants.FIELD_ERROR)).isNotNull();
     }
 
     /**

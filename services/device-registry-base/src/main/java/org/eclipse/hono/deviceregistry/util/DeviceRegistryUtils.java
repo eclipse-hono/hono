@@ -93,6 +93,21 @@ public final class DeviceRegistryUtils {
     }
 
     /**
+     * Maps an error.
+     *
+     * @param <T> The type of result.
+     * @param error The error to map.
+     * @param tenantId The tenant that the error occurred for.
+     * @return A future failed with the mapped error.
+     */
+    public static <T> Future<T> mapError(final Throwable error, final String tenantId) {
+        if (error instanceof IllegalArgumentException) {
+            return Future.failedFuture(new ClientErrorException(tenantId, HttpURLConnection.HTTP_BAD_REQUEST, error.getMessage()));
+        }
+        return Future.failedFuture(error);
+    }
+
+    /**
      * Converts tenant object of type {@link Tenant} to an object of type {@link TenantObject}.
      *
      * @param tenantId The identifier of the tenant.

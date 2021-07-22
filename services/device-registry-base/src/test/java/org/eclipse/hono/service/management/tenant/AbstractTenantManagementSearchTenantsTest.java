@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.SearchResult;
@@ -62,12 +63,15 @@ public interface AbstractTenantManagementSearchTenantsTest {
         final Filter filter = new Filter("/enabled", false);
 
         createTenants(Map.of(tenantId, new Tenant().setEnabled(true)))
-                .compose(ok -> getTenantManagementService()
-                        .searchTenants(pageSize, pageOffset, List.of(filter), List.of(), NoopSpan.INSTANCE))
-                .onComplete(ctx.succeeding(s -> {
+                .compose(ok -> getTenantManagementService().searchTenants(
+                        pageSize,
+                        pageOffset,
+                        List.of(filter),
+                        List.of(),
+                        NoopSpan.INSTANCE))
+                .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
-                        assertThat(s.isError()).isTrue();
-                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
+                        assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
                     });
                     ctx.completeNow();
                 }));

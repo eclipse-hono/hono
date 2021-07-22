@@ -16,6 +16,7 @@ package org.eclipse.hono.deviceregistry.jdbc.impl;
 import java.net.HttpURLConnection;
 import java.util.Optional;
 
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.service.tenant.AbstractTenantManagementService;
 import org.eclipse.hono.service.base.jdbc.store.tenant.ManagementStore;
 import org.eclipse.hono.service.management.Id;
@@ -46,7 +47,9 @@ public class TenantManagementServiceImpl extends AbstractTenantManagementService
      * {@inheritDoc}
      */
     @Override
-    public Future<OperationResult<Id>> processCreateTenant(final String tenantId, final Tenant tenantObj,
+    protected Future<OperationResult<Id>> processCreateTenant(
+            final String tenantId,
+            final Tenant tenantObj,
             final Span span) {
 
         return this.store
@@ -77,7 +80,10 @@ public class TenantManagementServiceImpl extends AbstractTenantManagementService
                                 tenant.getResourceVersion()
                         ))
 
-                        .orElseGet(() -> OperationResult.empty(HttpURLConnection.HTTP_NOT_FOUND)));
+                        .orElseThrow(() -> new ClientErrorException(
+                                tenantId,
+                                HttpURLConnection.HTTP_NOT_FOUND,
+                                "no such tenant")));
 
     }
 
@@ -109,7 +115,10 @@ public class TenantManagementServiceImpl extends AbstractTenantManagementService
                 .delete(tenantId, resourceVersion, span.context())
                 .map(r -> {
                     if (r.getUpdated() <= 0) {
-                        return Result.<Void>from(HttpURLConnection.HTTP_NOT_FOUND);
+                        throw new ClientErrorException(
+                                tenantId,
+                                HttpURLConnection.HTTP_NOT_FOUND,
+                                "no such tenant");
                     } else {
                         return Result.<Void>from(HttpURLConnection.HTTP_NO_CONTENT);
                     }
