@@ -611,41 +611,7 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
     @Test
     public void testGetCredentialsFailsForNonExistingTenant(final VertxTestContext context)  {
 
-        registry.getCredentials(
-                "non-existing-tenant",
-                authId,
-                CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
-                HttpURLConnection.HTTP_NOT_FOUND)
-            .onComplete(context.completing());
-    }
-
-    /**
-     * Verifies that a correctly added credentials record is not found when looking it up again with a wrong type.
-     *
-     * @param context The vert.x test context.
-     */
-    @Test
-    public void testGetAddedCredentialsButWithWrongType(final VertxTestContext context)  {
-
-        registry.updateCredentials(tenantId, deviceId, hashedPasswordCredential)
-            .compose(ar -> registry.getCredentials(tenantId, authId, "wrong-type", HttpURLConnection.HTTP_NOT_FOUND))
-            .onComplete(context.completing());
-    }
-
-    /**
-     * Verify that a correctly added credentials record is not found when looking it up again with a wrong authId.
-     *
-     * @param context The vert.x test context.
-     */
-    @Test
-    public void testGetAddedCredentialsButWithWrongAuthId(final VertxTestContext context)  {
-
-        registry.updateCredentials(tenantId, deviceId, hashedPasswordCredential)
-            .compose(ar -> registry.getCredentials(
-                    tenantId,
-                    "wrong-auth-id",
-                    CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
-                    HttpURLConnection.HTTP_NOT_FOUND))
+        registry.getCredentials("non-existing-tenant", "deviceId", HttpURLConnection.HTTP_NOT_FOUND)
             .onComplete(context.completing());
     }
 
