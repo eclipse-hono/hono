@@ -61,7 +61,8 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will be succeeded with a result containing the created tenant's identifier if the tenant
-     *         has been created successfully. The result's <em>status</em> property will have a value as specified
+     *         has been created successfully. Otherwise, the future will be failed with a
+     *         {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code as specified
      *         in the Device Registry Management API.
      */
     protected abstract Future<OperationResult<Id>> processCreateTenant(String tenantId, Tenant tenantObj, Span span);
@@ -81,7 +82,8 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will be succeeded with a result containing the retrieved tenant information if a tenant
-     *         with the given identifier exists. The result's <em>status</em> property will have a value as specified
+     *         with the given identifier exists. Otherwise, the future will be failed with a
+     *         {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code as specified
      *         in the Device Registry Management API.
      */
     protected abstract Future<OperationResult<Tenant>> processReadTenant(String tenantId, Span span);
@@ -103,7 +105,9 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
      *             as the parent for additional spans created as part of this method's execution.
      * @return A future indicating the outcome of the operation.
      *         <p>
-     *         The result's <em>status</em> property will have a value as specified
+     *         The future will be succeeded if a tenant matching the criteria exists and has been updated successfully.
+     *         Otherwise, the future will be failed with a
+     *         {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code as specified
      *         in the Device Registry Management API.
      */
     protected abstract Future<OperationResult<Void>> processUpdateTenant(
@@ -133,8 +137,9 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
      *             as the parent for additional spans created as part of this method's execution.
      * @return A future indicating the outcome of the operation.
      *         <p>
-     *         The future will be succeeded with a result containing the matching tenants. The result's <em>status</em>
-     *         property will have a value as specified in the Device Registry Management API.
+     *         The future will be succeeded with a result containing the matching tenants. Otherwise, the future will
+     *         be failed with a {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code
+     *         as specified in the Device Registry Management API.
      */
     protected Future<OperationResult<SearchResult<TenantWithId>>> processSearchTenants(
             final int pageSize,
@@ -164,7 +169,9 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
      *             as the parent for additional spans created as part of this method's execution.
      * @return A future indicating the outcome of the operation.
      *         <p>
-     *         The result's <em>status</em> property will have a value as specified
+     *         The future will be succeeded if a tenant matching the criteria exists and has been deleted successfully.
+     *         Otherwise, the future will be failed with a
+     *         {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code as specified
      *         in the Device Registry Management API.
      */
     protected abstract Future<Result<Void>> processDeleteTenant(String tenantId, Optional<String> resourceVersion, Span span);
@@ -194,7 +201,7 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
 
         return tenantCheck.future()
                 .compose(ok -> processCreateTenant(tenantId.orElseGet(this::createId), tenantObj, span))
-                .otherwise(t -> DeviceRegistryUtils.mapErrorToResult(t, span));
+                .recover(t -> DeviceRegistryUtils.mapError(t, tenantId.get()));
     }
 
     /**
@@ -207,7 +214,7 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
         Objects.requireNonNull(span);
 
         return processReadTenant(tenantId, span)
-                .otherwise(t -> DeviceRegistryUtils.mapErrorToResult(t, span));
+                .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 
     @Override
@@ -236,7 +243,7 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
         }
         return tenantCheck.future()
                 .compose(ok -> processUpdateTenant(tenantId, tenantObj, resourceVersion, span))
-                .otherwise(t -> DeviceRegistryUtils.mapErrorToResult(t, span));
+                .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 
     /**
@@ -253,7 +260,7 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
         Objects.requireNonNull(span);
 
         return processDeleteTenant(tenantId, resourceVersion, span)
-                .otherwise(t -> DeviceRegistryUtils.mapErrorToResult(t, span));
+                .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 
     /**
@@ -279,7 +286,7 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
         }
 
         return processSearchTenants(pageSize, pageOffset, filters, sortOptions, span)
-                .otherwise(t -> DeviceRegistryUtils.mapErrorToResult(t, span));
+                .recover(t -> DeviceRegistryUtils.mapError(t, null));
     }
 
     /**

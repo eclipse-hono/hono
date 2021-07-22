@@ -281,7 +281,7 @@ public class FileBasedTenantServiceTest implements AbstractTenantServiceTest {
                 return svc.saveToFile();
             })
             .compose(ok -> {
-                verify(fileSystem).writeFile(eq(FILE_NAME), buffer.capture(), any(Handler.class));
+                ctx.verify(() -> verify(fileSystem).writeFile(eq(FILE_NAME), buffer.capture(), any(Handler.class)));
                 // and clearing the tenant registry
                 svc.clear();
                 return assertTenantDoesNotExist(svc, Constants.DEFAULT_TENANT);
@@ -345,13 +345,13 @@ public class FileBasedTenantServiceTest implements AbstractTenantServiceTest {
                 "tenant",
                 Optional.empty(),
                 NoopSpan.INSTANCE)
-                .onComplete(ctx.succeeding(s -> {
-                    ctx.verify(() -> {
-                        // THEN the update fails
-                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
-                    });
-                    ctx.completeNow();
-                }));
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    // THEN the update fails
+                    assertServiceInvocationException(t, HttpURLConnection.HTTP_FORBIDDEN);
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -372,12 +372,12 @@ public class FileBasedTenantServiceTest implements AbstractTenantServiceTest {
                 new Tenant(),
                 Optional.empty(),
                 NoopSpan.INSTANCE)
-                .onComplete(ctx.succeeding(s -> {
-                    ctx.verify(() -> {
-                        // THEN the update fails
-                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
-                    });
-                    ctx.completeNow();
-                }));
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    // THEN the update fails
+                    assertServiceInvocationException(t, HttpURLConnection.HTTP_FORBIDDEN);
+                });
+                ctx.completeNow();
+            }));
     }
 }

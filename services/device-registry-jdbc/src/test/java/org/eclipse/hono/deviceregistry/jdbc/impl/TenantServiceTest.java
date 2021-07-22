@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,9 +17,11 @@ import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.tenant.Tenant;
@@ -35,10 +37,12 @@ import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
 @ExtendWith(VertxExtension.class)
+@Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 class TenantServiceTest extends AbstractJdbcRegistryTest {
 
     private Handler<AsyncResult<TenantResult<JsonObject>>> assertNotFound(final VertxTestContext context) {
@@ -52,6 +56,20 @@ class TenantServiceTest extends AbstractJdbcRegistryTest {
             });
         });
 
+    }
+
+    /**
+     * Asserts that an error is a {@link ServiceInvocationException} with a status code.
+     *
+     * @param error The error to assert.
+     * @param expectedStatusCode The expected status code.
+     * @throws AssertionError if any of the assertions fail.
+     */
+    void assertServiceInvocationException(
+            final Throwable error,
+            final int expectedStatusCode) {
+        assertThat(error).isInstanceOf(ServiceInvocationException.class);
+        assertThat(((ServiceInvocationException) error).getErrorCode()).isEqualTo(expectedStatusCode);
     }
 
     @Test
@@ -78,14 +96,13 @@ class TenantServiceTest extends AbstractJdbcRegistryTest {
     void testManagementReadNotFound(final Vertx vertx, final VertxTestContext context) {
         this.tenantManagement
                 .readTenant("foo", SPAN)
-                .onComplete(context.succeeding(result -> {
+                .onComplete(context.failing(t -> {
                     context.verify(() -> {
 
-                        assertThat(result.getStatus())
-                                .isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
+                        assertServiceInvocationException(t, HttpURLConnection.HTTP_NOT_FOUND);
 
-                        context.completeNow();
                     });
+                    context.completeNow();
                 }));
     }
 
@@ -268,13 +285,12 @@ class TenantServiceTest extends AbstractJdbcRegistryTest {
 
         this.tenantManagement
                 .updateTenant("t1", tenant, Optional.empty(), SPAN)
-                .onComplete(context.succeeding(result -> {
+                .onComplete(context.failing(t -> {
                     context.verify(() -> {
-                        assertThat(result.getStatus())
-                                .isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
+                        assertServiceInvocationException(t, HttpURLConnection.HTTP_NOT_FOUND);
 
-                        context.completeNow();
                     });
+                    context.completeNow();
                 }));
     }
 

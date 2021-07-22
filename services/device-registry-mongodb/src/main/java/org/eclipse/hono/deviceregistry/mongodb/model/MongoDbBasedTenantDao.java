@@ -166,7 +166,8 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
 
         return createTenantPromise.future()
                 .map(tenantObjectIdResult -> {
-                    LOG.debug("successfully created tenant [tenant-id: {}]", tenantConfig.getTenantId());
+                    LOG.debug("successfully created tenant [tenant-id: {}, version: {}]",
+                            tenantConfig.getTenantId(), tenantConfig.getVersion());
                     span.log("successfully created tenant");
                     return tenantConfig.getVersion();
                 })
@@ -214,7 +215,7 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
         return findTenantPromise.future()
                 .map(tenantJsonResult -> {
                     if (tenantJsonResult == null) {
-                        throw new ClientErrorException(tenantId, HttpURLConnection.HTTP_NOT_FOUND, "tenant not found");
+                        throw new ClientErrorException(tenantId, HttpURLConnection.HTTP_NOT_FOUND, "no such tenant");
                     } else {
                         if (LOG.isTraceEnabled()) {
                             LOG.trace("tenant from collection:{}{}", System.lineSeparator(), tenantJsonResult.encodePrettily());
@@ -256,7 +257,9 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                 .map(tenantJsonResult -> {
                     if (tenantJsonResult == null) {
                         LOG.debug("could not find tenant [subject DN: {}]", dn);
-                        throw new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND);
+                        throw new ClientErrorException(
+                                HttpURLConnection.HTTP_NOT_FOUND,
+                                "no such tenant");
                     } else {
                         return TenantDto.forRead(tenantJsonResult.getString(Constants.JSON_FIELD_TENANT_ID),
                                 tenantJsonResult.getJsonObject(TenantDto.FIELD_TENANT).mapTo(Tenant.class),
@@ -357,16 +360,18 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
         final Promise<JsonObject> deleteTenantPromise = Promise.promise();
         mongoClient.findOneAndDelete(collectionName, deleteTenantQuery, deleteTenantPromise);
         return deleteTenantPromise.future()
-                .compose(tenantDtoResult -> Optional.ofNullable(tenantDtoResult)
-                        .map(deleted -> {
-                            LOG.debug("successfully deleted tenant [tenant-id: {}]", tenantId);
-                            span.log("successfully deleted tenant");
-                            return Future.succeededFuture((Void) null);
-                        })
-                        .orElseGet(() -> MongoDbBasedDao.checkForVersionMismatchAndFail(tenantId,
-                                resourceVersion, getById(tenantId))))
-                .recover(this::mapError)
+                .compose(deleteResult -> {
+                    if (deleteResult == null) {
+                        return MongoDbBasedDao.checkForVersionMismatchAndFail(tenantId,
+                                resourceVersion, getById(tenantId));
+                    } else {
+                        LOG.debug("successfully deleted tenant [tenant-id: {}]", tenantId);
+                        span.log("successfully deleted tenant");
+                        return Future.succeededFuture((Void) null);
+                    }
+                })
                 .onFailure(t -> TracingHelper.logError(span, "error deleting tenant", t))
+                .recover(this::mapError)
                 .onComplete(r -> span.finish());
     }
 
