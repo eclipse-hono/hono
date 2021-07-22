@@ -17,6 +17,7 @@ import java.net.HttpURLConnection;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.jdbc.config.DeviceServiceProperties;
 import org.eclipse.hono.deviceregistry.service.device.AbstractDeviceManagementService;
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
@@ -77,7 +78,10 @@ public class DeviceManagementServiceImpl extends AbstractDeviceManagementService
                                 result.getDevice(),
                                 this.ttl,
                                 result.getResourceVersion()))
-                        .orElseGet(() -> OperationResult.empty(HttpURLConnection.HTTP_NOT_FOUND)));
+                        .orElseThrow(() -> new ClientErrorException(
+                                key.getTenantId(),
+                                HttpURLConnection.HTTP_NOT_FOUND,
+                                "no such device")));
 
     }
 
@@ -103,7 +107,10 @@ public class DeviceManagementServiceImpl extends AbstractDeviceManagementService
                 .deleteDevice(key, resourceVersion, span.context())
                 .map(r -> {
                     if (r.getUpdated() <= 0) {
-                        return Result.<Void>from(HttpURLConnection.HTTP_NOT_FOUND);
+                        throw new ClientErrorException(
+                                key.getTenantId(),
+                                HttpURLConnection.HTTP_NOT_FOUND,
+                                "no such device");
                     } else {
                         return Result.<Void>from(HttpURLConnection.HTTP_NO_CONTENT);
                     }

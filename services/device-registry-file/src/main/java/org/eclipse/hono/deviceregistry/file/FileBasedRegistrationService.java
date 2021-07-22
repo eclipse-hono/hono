@@ -28,6 +28,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.deviceregistry.service.device.AbstractRegistrationService;
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
@@ -305,8 +307,9 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
         Objects.requireNonNull(key);
         Objects.requireNonNull(span);
 
-        return Future.succeededFuture(
-                convertResult(key.getDeviceId(), processReadDevice(key.getTenantId(), key.getDeviceId(), span)));
+        return readDevice(key.getTenantId(), key.getDeviceId(), span)
+                .map(result -> convertResult(key.getDeviceId(), result))
+                .otherwise(t -> RegistrationResult.from(ServiceInvocationException.extractStatusCode(t)));
     }
 
     @Override
@@ -352,24 +355,23 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
 
-        return Future.succeededFuture(processReadDevice(tenantId, deviceId, span));
-    }
-
-    OperationResult<Device> processReadDevice(final String tenantId, final String deviceId, final Span span) {
-
         LOG.debug("reading registration data [device-id: {}, tenant-id: {}]", deviceId, tenantId);
 
         final Versioned<Device> device = getRegistrationData(tenantId, deviceId);
 
         if (device == null) {
             TracingHelper.logError(span, "Device not found");
-            return OperationResult.empty(HttpURLConnection.HTTP_NOT_FOUND);
+            return Future.failedFuture(new ClientErrorException(
+                    tenantId,
+                    HttpURLConnection.HTTP_NOT_FOUND,
+                    "no such device"));
         }
 
-        return OperationResult.ok(HttpURLConnection.HTTP_OK,
+        return Future.succeededFuture(OperationResult.ok(
+                HttpURLConnection.HTTP_OK,
                 new Device(device.getValue()),
                 Optional.ofNullable(DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge())),
-                Optional.ofNullable(device.getVersion()));
+                Optional.ofNullable(device.getVersion())));
     }
 
     private Versioned<Device> getRegistrationData(final String tenantId, final String deviceId) {
@@ -393,40 +395,43 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(resourceVersion);
 
-        return Future.succeededFuture(processDeleteDevice(tenantId, deviceId, resourceVersion, span));
-    }
-
-    Result<Void> processDeleteDevice(final String tenantId, final String deviceId,
-            final Optional<String> resourceVersion, final Span span) {
-
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
-
         if (!getConfig().isModificationEnabled()) {
             TracingHelper.logError(span, "Modification is disabled for Registration Service");
-            return Result.from(HttpURLConnection.HTTP_FORBIDDEN);
+            return Future.failedFuture(new ClientErrorException(
+                    tenantId,
+                    HttpURLConnection.HTTP_FORBIDDEN,
+                    "Modification is disabled for Registration Service"));
         }
 
         final ConcurrentMap<String, FileBasedDeviceDto> devices = identities.get(tenantId);
         if (devices == null) {
             TracingHelper.logError(span, "No devices found for tenant");
-            return Result.from(HttpURLConnection.HTTP_NOT_FOUND);
+            return Future.failedFuture(new ClientErrorException(
+                    tenantId,
+                    HttpURLConnection.HTTP_NOT_FOUND,
+                    "no such device"));
         }
 
        final DeviceDto deviceDto = devices.get(deviceId);
         if (deviceDto == null) {
             TracingHelper.logError(span, "Device not found");
-            return Result.from(HttpURLConnection.HTTP_NOT_FOUND);
+            return Future.failedFuture(new ClientErrorException(
+                    tenantId,
+                    HttpURLConnection.HTTP_NOT_FOUND,
+                    "no such device"));
         }
 
         if (resourceVersion.isPresent() && !resourceVersion.get().equals(deviceDto.getVersion())) {
             TracingHelper.logError(span, "Resource Version mismatch");
-            return Result.from(HttpURLConnection.HTTP_PRECON_FAILED);
+            return Future.failedFuture(new ClientErrorException(
+                    tenantId,
+                    HttpURLConnection.HTTP_PRECON_FAILED,
+                    "resource version mismatch"));
         }
 
         devices.remove(deviceId);
         dirty.set(true);
-        return Result.from(HttpURLConnection.HTTP_NO_CONTENT);
+        return Future.succeededFuture(Result.from(HttpURLConnection.HTTP_NO_CONTENT));
 
     }
 
@@ -439,35 +444,21 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(device);
+
         // If enabled is not set (null) .isEnabled() method defaults to true.
         // But that does not when filtering using json pointer.
         // To workaround it we actually sets the property.
         device.setEnabled(device.isEnabled());
-
-        return Future.succeededFuture(processCreateDevice(tenantId, deviceId,
-                device.getStatus() != null ? device.getStatus().isAutoProvisioned() : false, device, span));
-    }
-
-    /**
-     * Adds a device to this registry.
-     *
-     * @param tenantId The tenant the device belongs to.
-     * @param deviceId The ID of the device to add.
-     * @param autoProvisioned Marks this device as having been created via auto-provisioning.
-     * @param device Additional data to register with the device (may be {@code null}).
-     * @param span The tracing span to use.
-     * @return The outcome of the operation indicating success or failure.
-     */
-    public OperationResult<Id> processCreateDevice(final String tenantId, final Optional<String> deviceId, final boolean autoProvisioned,
-            final Device device, final Span span) {
-
-        Objects.requireNonNull(tenantId);
         final String deviceIdValue = deviceId.orElseGet(() -> generateDeviceId(tenantId));
 
         final ConcurrentMap<String, FileBasedDeviceDto> devices = getDevicesForTenant(tenantId);
         if (devices.size() >= getConfig().getMaxDevicesPerTenant()) {
             TracingHelper.logError(span, "Maximum devices number limit reached for tenant");
-            return Result.from(HttpURLConnection.HTTP_FORBIDDEN, OperationResult::empty);
+            return Future.failedFuture(new ClientErrorException(
+                    tenantId,
+                    HttpURLConnection.HTTP_FORBIDDEN,
+                    "maximum devices number limit reached for tenant"));
         }
 
         final FileBasedDeviceDto deviceDto = FileBasedDeviceDto.forCreation(
@@ -476,62 +467,69 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
                 deviceIdValue,
                 device,
                 new Versioned<>(device).getVersion());
+
         if (devices.putIfAbsent(deviceIdValue, deviceDto) == null) {
             dirty.set(true);
-            return OperationResult.ok(HttpURLConnection.HTTP_CREATED,
-                    Id.of(deviceIdValue), Optional.empty(), Optional.of(deviceDto.getVersion()));
+            return Future.succeededFuture(OperationResult.ok(
+                    HttpURLConnection.HTTP_CREATED,
+                    Id.of(deviceIdValue),
+                    Optional.empty(),
+                    Optional.of(deviceDto.getVersion())));
         } else {
             TracingHelper.logError(span, "Device already exists for tenant");
-            return Result.from(HttpURLConnection.HTTP_CONFLICT, OperationResult::empty);
+            return Future.failedFuture(new ClientErrorException(
+                    tenantId,
+                    HttpURLConnection.HTTP_CONFLICT,
+                    "device already exists for tenant"));
         }
-
     }
 
     @Override
-    public Future<OperationResult<Id>> updateDevice(final String tenantId, final String deviceId, final Device device,
-            final Optional<String> resourceVersion, final Span span) {
+    public Future<OperationResult<Id>> updateDevice(
+            final String tenantId,
+            final String deviceId,
+            final Device device,
+            final Optional<String> resourceVersion,
+            final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(resourceVersion);
 
-        return Future.succeededFuture(processUpdateDevice(tenantId, deviceId, device, resourceVersion, span));
-    }
-
-    OperationResult<Id> processUpdateDevice(final String tenantId, final String deviceId, final Device device,
-            final Optional<String> resourceVersion, final Span span) {
-
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
-
-        if (getConfig().isModificationEnabled()) {
-            return doUpdateDevice(tenantId, deviceId, device, resourceVersion, span);
-        } else {
+        if (!getConfig().isModificationEnabled()) {
             TracingHelper.logError(span, "Modification is disabled for Registration Service");
-            return Result.from(HttpURLConnection.HTTP_FORBIDDEN, OperationResult::empty);
+            return Future.failedFuture(new ClientErrorException(
+                    tenantId,
+                    HttpURLConnection.HTTP_FORBIDDEN,
+                    "Modification is disabled for Registration Service"));
         }
-    }
-
-    private OperationResult<Id> doUpdateDevice(final String tenantId, final String deviceId, final Device device,
-            final Optional<String> resourceVersion, final Span span) {
 
         final ConcurrentMap<String, FileBasedDeviceDto> devices = identities.get(tenantId);
         if (devices == null) {
             TracingHelper.logError(span, "No devices found for tenant");
-            return Result.from(HttpURLConnection.HTTP_NOT_FOUND, OperationResult::empty);
+            return Future.failedFuture(new ClientErrorException(
+                    tenantId,
+                    HttpURLConnection.HTTP_NOT_FOUND,
+                    "no such device"));
         }
 
         final DeviceDto currentDevice = devices.get(deviceId);
         if (currentDevice == null) {
             TracingHelper.logError(span, "Device not found");
-            return Result.from(HttpURLConnection.HTTP_NOT_FOUND, OperationResult::empty);
+            return Future.failedFuture(new ClientErrorException(
+                    tenantId,
+                    HttpURLConnection.HTTP_NOT_FOUND,
+                    "no such device"));
         }
 
         final Versioned<Device> newDevice = new Versioned<>(currentDevice.getVersion(), currentDevice.getData())
                 .update(resourceVersion, () -> device);
         if (newDevice == null) {
             TracingHelper.logError(span, "Resource Version mismatch");
-            return Result.from(HttpURLConnection.HTTP_PRECON_FAILED, OperationResult::empty);
+            return Future.failedFuture(new ClientErrorException(
+                    tenantId,
+                    HttpURLConnection.HTTP_PRECON_FAILED,
+                    "resource Version mismatch"));
         }
 
         final FileBasedDeviceDto deviceDto = FileBasedDeviceDto.forUpdate(
@@ -542,8 +540,11 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
         devices.put(deviceId, deviceDto);
         dirty.set(true);
 
-        return OperationResult.ok(HttpURLConnection.HTTP_NO_CONTENT, Id.of(deviceId), Optional.empty(),
-                Optional.ofNullable(newDevice.getVersion()));
+        return Future.succeededFuture(OperationResult.ok(
+                HttpURLConnection.HTTP_NO_CONTENT,
+                Id.of(deviceId),
+                Optional.empty(),
+                Optional.ofNullable(newDevice.getVersion())));
     }
 
     private ConcurrentMap<String, FileBasedDeviceDto> getDevicesForTenant(final String tenantId) {
@@ -599,8 +600,10 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
                 .collect(Collectors.toList());
 
         if (returnDevicesList.isEmpty()) {
-            return Future.succeededFuture(
-                    OperationResult.empty(HttpURLConnection.HTTP_NOT_FOUND));
+            return Future.failedFuture(new ClientErrorException(
+                    tenantId,
+                    HttpURLConnection.HTTP_NOT_FOUND,
+                    "no devices found matching search criteria"));
         } else {
             return Future.succeededFuture(
                     OperationResult.ok(

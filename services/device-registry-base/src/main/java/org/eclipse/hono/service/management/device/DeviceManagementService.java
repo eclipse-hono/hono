@@ -51,7 +51,8 @@ public interface DeviceManagementService {
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will be succeeded with a result containing the created device's identifier if the device
-     *         has been created successfully. The result's <em>status</em> property will have a value as specified
+     *         has been created successfully. Otherwise, the future will be failed with a
+     *         {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code as specified
      *         in the Device Registry Management API.
      * @throws NullPointerException if any of the parameters are {@code null}.
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/createDeviceRegistration">
@@ -60,7 +61,7 @@ public interface DeviceManagementService {
     Future<OperationResult<Id>> createDevice(String tenantId, Optional<String> deviceId, Device device, Span span);
 
     /**
-     * Gets device registration data by device ID.
+     * Gets device registration data for a device identifier.
      *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device to get registration data for.
@@ -72,7 +73,8 @@ public interface DeviceManagementService {
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will be succeeded with a result containing the retrieved device information if a device
-     *         with the given identifier exists. The result's <em>status</em> property will have a value as specified
+     *         with the given identifier exists. Otherwise, the future will be failed with a
+     *         {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code as specified
      *         in the Device Registry Management API.
      * @throws NullPointerException if any of the parameters are {@code null}.
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/getRegistration">
@@ -102,8 +104,9 @@ public interface DeviceManagementService {
      *             as the parent for additional spans created as part of this method's execution.
      * @return A future indicating the outcome of the operation.
      *         <p>
-     *         The future will be succeeded with a result containing the matching devices. The result's <em>status</em>
-     *         property will have a value as specified in the Device Registry Management API.
+     *         The future will be succeeded with a result containing the matching devices. Otherwise, the future will
+     *         be failed with a {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code
+     *         as specified in the Device Registry Management API.
      * @throws NullPointerException if any of filters, sort options or tracing span are {@code null}.
      * @throws IllegalArgumentException if page size is &lt;= 0 or page offset is &lt; 0.
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/searchDevicesForTenant"> Device Registry
@@ -139,7 +142,8 @@ public interface DeviceManagementService {
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will be succeeded with a result containing the updated device's identifier if the device
-     *         has been updated successfully. The result's <em>status</em> property will have a value as specified
+     *         has been updated successfully. Otherwise, the future will be failed with a
+     *         {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code as specified
      *         in the Device Registry Management API.
      * @throws NullPointerException if any of the parameters are {@code null}.
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/updateRegistration">
@@ -166,7 +170,9 @@ public interface DeviceManagementService {
      *             as the parent for additional spans created as part of this method's execution.
      * @return A future indicating the outcome of the operation.
      *         <p>
-     *         The result's <em>status</em> property will have a value as specified
+     *         The future will be succeeded if a device matching the criteria exists and has been deleted successfully.
+     *         Otherwise, the future will be failed with a
+     *         {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code as specified
      *         in the Device Registry Management API.
      * @throws NullPointerException if any of the parameters are {@code null}.
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/deleteRegistration">

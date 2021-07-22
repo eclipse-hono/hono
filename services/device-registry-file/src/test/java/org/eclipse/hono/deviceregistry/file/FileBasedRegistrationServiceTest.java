@@ -40,16 +40,13 @@ import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.deviceregistry.DeviceRegistryTestUtils;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 import org.eclipse.hono.deviceregistry.service.device.EdgeDeviceAutoProvisioner;
-import org.eclipse.hono.service.management.Id;
-import org.eclipse.hono.service.management.OperationResult;
-import org.eclipse.hono.service.management.Result;
+import org.eclipse.hono.deviceregistry.util.Assertions;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.device.DeviceStatus;
 import org.eclipse.hono.service.registration.AbstractRegistrationServiceTest;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.util.MessagingType;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -363,7 +360,7 @@ public class FileBasedRegistrationServiceTest implements AbstractRegistrationSer
                     registrationService.clear();
                     return write.future();
                 })
-                .compose(ok -> assertDevicesNotFound(devices))
+                .compose(ok -> assertDevicesNotFound(devices.keySet()))
 
                 .map(w -> {
                     final ArgumentCaptor<Buffer> buffer = ArgumentCaptor.forClass(Buffer.class);
@@ -424,69 +421,98 @@ public class FileBasedRegistrationServiceTest implements AbstractRegistrationSer
 
     /**
      * Verifies that the registry enforces the maximum devices per tenant limit.
+     *
+     * @param ctx The test context.
      */
     @Test
-    public void testCreateDeviceFailsIfDeviceLimitIsReached() {
+    public void testCreateDeviceFailsIfDeviceLimitIsReached(final VertxTestContext ctx) {
 
         // GIVEN a registry whose devices-per-tenant limit has been reached
         registrationConfig.setMaxDevicesPerTenant(1);
-        registrationService.createDevice(TENANT, Optional.of(DEVICE), new Device(), NoopSpan.INSTANCE);
-
-        // WHEN registering an additional device for the tenant
-        final OperationResult<Id> result = registrationService.processCreateDevice(TENANT, Optional.of("newDevice"),
-                false, new Device(), NoopSpan.INSTANCE);
-
-        // THEN the result contains a FORBIDDEN status code and the device has not been added to the registry
-        assertEquals(HttpURLConnection.HTTP_FORBIDDEN, result.getStatus());
-        assertEquals(HttpURLConnection.HTTP_NOT_FOUND,
-                registrationService.processReadDevice(TENANT, "newDevice", NoopSpan.INSTANCE).getStatus());
+        registrationService.createDevice(TENANT, Optional.of(DEVICE), new Device(), NoopSpan.INSTANCE)
+            .onComplete(ctx.succeeding())
+            // WHEN registering an additional device for the tenant
+            .compose(ok -> registrationService.createDevice(
+                    TENANT,
+                    Optional.of("newDevice"),
+                    new Device(),
+                    NoopSpan.INSTANCE))
+            .onComplete(ctx.failing(t -> {
+                // THEN the result contains a FORBIDDEN status code
+                ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_FORBIDDEN));
+                registrationService.readDevice(TENANT, "newDevice", NoopSpan.INSTANCE)
+                    .onComplete(ctx.failing(error -> {
+                        // and the device has not been added to the registry
+                        ctx.verify(() -> org.eclipse.hono.deviceregistry.util.Assertions.assertServiceInvocationException(
+                                error, HttpURLConnection.HTTP_NOT_FOUND));
+                        ctx.completeNow();
+                    }));
+            }));
     }
 
     /**
      * Verifies that the <em>modificationEnabled</em> property prevents updating an existing entry.
+     *
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testUpdateDeviceFailsIfModificationIsDisabled() {
+    public void testUpdateDeviceFailsIfModificationIsDisabled(final VertxTestContext ctx) {
 
         // GIVEN a registry that has been configured to not allow modification of entries
         // which contains a device
         registrationConfig.setModificationEnabled(false);
-        registrationService.createDevice(TENANT, Optional.of(DEVICE), new Device().putExtension("value", "1"),
-                NoopSpan.INSTANCE);
-
-        // WHEN trying to update the device
-        final OperationResult<Id> result = registrationService
-                .processUpdateDevice(TENANT, DEVICE, new Device().putExtension("value", "2"), Optional.empty(),
-                        NoopSpan.INSTANCE);
-
-        // THEN the result contains a FORBIDDEN status code and the device has not been updated
-        assertEquals(HttpURLConnection.HTTP_FORBIDDEN, result.getStatus());
-        final var device = registrationService.processReadDevice(TENANT, DEVICE, NoopSpan.INSTANCE);
-        assertNotNull(device);
-        assertNotNull(device.getPayload());
-        assertNotNull(device.getPayload().getExtensions());
-        Assertions.assertEquals("1", device.getPayload().getExtensions().get("value"));
+        registrationService.createDevice(
+                TENANT,
+                Optional.of(DEVICE),
+                new Device().putExtension("value", "1"),
+                NoopSpan.INSTANCE)
+            .onComplete(ctx.succeeding())
+            // WHEN trying to update the device
+            .compose(ok -> registrationService.updateDevice(
+                    TENANT,
+                    DEVICE,
+                    new Device().putExtension("value", "2"),
+                    Optional.empty(),
+                    NoopSpan.INSTANCE))
+            .onComplete(ctx.failing(t -> {
+                // THEN the result contains a FORBIDDEN status code
+                ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_FORBIDDEN));
+                registrationService.readDevice(TENANT, DEVICE, NoopSpan.INSTANCE)
+                    .onComplete(ctx.succeeding(device -> {
+                        //  and the device has not been updated
+                        ctx.verify(() -> {
+                            assertNotNull(device);
+                            assertNotNull(device.getPayload());
+                            assertNotNull(device.getPayload().getExtensions());
+                            assertEquals("1", device.getPayload().getExtensions().get("value"));
+                        });
+                        ctx.completeNow();
+                    }));
+            }));
     }
 
     /**
      * Verifies that the <em>modificationEnabled</em> property prevents deleting an existing entry.
+     *
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testDeleteDeviceFailsIfModificationIsDisabled() {
+    public void testDeleteDeviceFailsIfModificationIsDisabled(final VertxTestContext ctx) {
 
         // GIVEN a registry that has been configured to not allow modification of entries
         // which contains a device
         registrationConfig.setModificationEnabled(false);
-        registrationService.createDevice(TENANT, Optional.of(DEVICE), new Device(), NoopSpan.INSTANCE);
-
-        // WHEN trying to remove the device
-        final Result<Void> result = registrationService.processDeleteDevice(TENANT, DEVICE, Optional.empty(),
-                NoopSpan.INSTANCE);
-
-        // THEN the result contains a FORBIDDEN status code and the device has not been removed
-        assertEquals(HttpURLConnection.HTTP_FORBIDDEN, result.getStatus());
-        assertEquals(HttpURLConnection.HTTP_OK,
-                registrationService.processReadDevice(TENANT, DEVICE, NoopSpan.INSTANCE).getStatus());
+        registrationService.createDevice(TENANT, Optional.of(DEVICE), new Device(), NoopSpan.INSTANCE)
+            .onComplete(ctx.succeeding())
+            // WHEN trying to remove the device
+            .compose(ok -> registrationService.deleteDevice(TENANT, DEVICE, Optional.empty(), NoopSpan.INSTANCE))
+            .onComplete(ctx.failing(t -> {
+                // THEN the result contains a FORBIDDEN status code
+                ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_FORBIDDEN));
+                // and the device has not been removed
+                registrationService.readDevice(TENANT, DEVICE, NoopSpan.INSTANCE)
+                    .onComplete(ctx.completing());
+            }));
     }
 
     /**

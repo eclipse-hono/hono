@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,6 +20,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 
+import org.eclipse.hono.deviceregistry.util.Assertions;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.PskCredential;
 import org.eclipse.hono.service.management.credentials.PskSecret;
@@ -91,36 +92,36 @@ class RegistryServiceTest extends AbstractJdbcRegistryTest {
                 .flatMap(x -> {
                     final var device = new Device();
                     return this.registrationManagement
-                            .createDevice(DEFAULT_TENANT, Optional.of("d1"), device, SPAN)
-                            .onComplete(context.succeeding(result -> {
-
-                                context.verify(() -> {
-
-                                    assertThat(result.getStatus())
-                                            .isEqualTo(HttpURLConnection.HTTP_CREATED);
-
-                                });
-
-                            }));
+                            .createDevice(DEFAULT_TENANT, Optional.of("d1"), device, SPAN);
                 })
+
+                .onComplete(context.succeeding(result -> {
+
+                    context.verify(() -> {
+
+                        assertThat(result.getStatus())
+                                .isEqualTo(HttpURLConnection.HTTP_CREATED);
+
+                    });
+
+                }))
 
                 .flatMap(x -> {
                     final var device = new Device();
                     return this.registrationManagement
-                            .createDevice(DEFAULT_TENANT, Optional.of("d1"), device, SPAN)
-                            .onComplete(context.succeeding(result -> {
-
-                                context.verify(() -> {
-
-                                    assertThat(result.getStatus())
-                                            .isEqualTo(HttpURLConnection.HTTP_CONFLICT);
-
-                                });
-
-                            }));
+                            .createDevice(DEFAULT_TENANT, Optional.of("d1"), device, SPAN);
                 })
 
-                .onComplete(context.succeeding(x -> context.completeNow()));
+                .onComplete(context.failing(t -> {
+
+                    context.verify(() -> {
+
+                        Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_CONFLICT);
+
+                    });
+
+                    context.completeNow();
+                }));
 
     }
 
