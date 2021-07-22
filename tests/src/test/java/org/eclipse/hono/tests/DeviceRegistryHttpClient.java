@@ -125,20 +125,6 @@ public final class DeviceRegistryHttpClient {
                     .orElse(""));
     }
 
-    private static String credentialsInstanceUri(final String tenant, final String authId, final String type) {
-        return String.format(
-                TEMPLATE_URI_CREDENTIALS_INSTANCE,
-                Optional.ofNullable(tenant)
-                    .map(t -> UrlEscapers.urlPathSegmentEscaper().escape(t))
-                    .orElse(""),
-                Optional.ofNullable(authId)
-                    .map(a -> UrlEscapers.urlPathSegmentEscaper().escape(a))
-                    .orElse(""),
-                Optional.ofNullable(type)
-                    .map(t -> UrlEscapers.urlPathSegmentEscaper().escape(t))
-                    .orElse(""));
-    }
-
     private static String tenantInstanceUri(final String tenant) {
         return String.format(
                 TEMPLATE_URI_TENANT_INSTANCE,
@@ -872,27 +858,24 @@ public final class DeviceRegistryHttpClient {
      */
     public Future<HttpResponse<Buffer>> getCredentials(final String tenantId, final String deviceId) {
 
-        Objects.requireNonNull(tenantId);
-        final String uri = credentialsByDeviceUri(tenantId, deviceId);
-        return httpClient.get(uri, ResponsePredicate.status(HttpURLConnection.HTTP_OK));
+        return getCredentials(tenantId, deviceId, HttpURLConnection.HTTP_OK);
     }
 
     /**
-     * Gets credentials of a specific type for a device.
+     * Gets all credentials registered for a device.
      *
      * @param tenantId The tenant that the device belongs to.
-     * @param authId The authentication identifier of the device.
-     * @param type The type of credentials to retrieve.
+     * @param deviceId The identifier of the device.
      * @param expectedStatusCode The status code indicating a successful outcome.
      * @return A future indicating the outcome of the operation. The future will contain the response if the
      *         response contains the expected status code. Otherwise the future will fail.
-     * @throws NullPointerException if the tenant is {@code null}.
+     * @throws NullPointerException if tenant ID is {@code null}.
      */
-    public Future<HttpResponse<Buffer>> getCredentials(final String tenantId, final String authId, final String type,
+    public Future<HttpResponse<Buffer>> getCredentials(final String tenantId, final String deviceId,
             final int expectedStatusCode) {
 
         Objects.requireNonNull(tenantId);
-        final String uri = credentialsInstanceUri(tenantId, authId, type);
+        final String uri = credentialsByDeviceUri(tenantId, deviceId);
         return httpClient.get(uri, ResponsePredicate.status(expectedStatusCode));
     }
 
