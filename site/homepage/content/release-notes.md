@@ -11,6 +11,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The Quarkus based variants of Hono's components now support configuring the Hot Rod client with a key and/or
   trust store in order to enable TLS secured connections to Infinispan servers and to authenticate using a
   client certificate.
+* The Mongo DB based registry implementation now uses a proper DB index to find credentials by type and authentication
+  ID. This will speed up query execution significantly when there are a lot of devices registered for a tenant.
 
 ## 1.8.2
 

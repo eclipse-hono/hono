@@ -66,10 +66,16 @@ import io.vertx.ext.mongo.UpdateOptions;
 public final class MongoDbBasedCredentialsService extends AbstractCredentialsManagementService
         implements CredentialsService, Lifecycle, HealthCheckProvider {
 
+    public static final String IDX_CREDENTIALS_TYPE_AND_AUTH_ID = "credentials_type_and_auth_id";
+    public static final String CREDENTIALS_FILTERED_POSITIONAL_OPERATOR = String.format("%s.$",
+            MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS);
+    public static final JsonObject PROJECTION_CREDS_BY_TYPE_AND_AUTH_ID = new JsonObject()
+            .put(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID, 1)
+            .put(CREDENTIALS_FILTERED_POSITIONAL_OPERATOR, 1)
+            .put("_id", 0);
+
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedCredentialsService.class);
 
-    private static final String CREDENTIALS_FILTERED_POSITIONAL_OPERATOR = String.format("%s.$",
-            MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS);
     private static final String KEY_AUTH_ID = String.format("%s.%s", MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS,
             RegistryManagementConstants.FIELD_AUTH_ID);
     private static final String KEY_CREDENTIALS_TYPE = String.format("%s.%s", MongoDbDeviceRegistryUtils.FIELD_CREDENTIALS,
@@ -132,6 +138,13 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
                             .partialFilterExpression(new JsonObject()
                                     .put(KEY_AUTH_ID, new JsonObject().put("$exists", true))
                                     .put(KEY_CREDENTIALS_TYPE, new JsonObject().put("$exists", true)))))
+            // create compound index on credentials.auth-id and credentials.type
+            .compose(ok -> mongoDbCallExecutor.createIndex(
+                    config.getCollectionName(),
+                    new JsonObject()
+                            .put(KEY_AUTH_ID, 1)
+                            .put(KEY_CREDENTIALS_TYPE, 1),
+                    new IndexOptions().name(IDX_CREDENTIALS_TYPE_AND_AUTH_ID)))
             .onSuccess(ok -> indicesCreated.set(true))
             .onComplete(r -> creatingIndices.set(false));
         } else {
@@ -392,10 +405,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsMan
         mongoClient.findOne(
                 config.getCollectionName(),
                 findCredentialsQuery,
-                new JsonObject()
-                    .put(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID, 1)
-                    .put(CREDENTIALS_FILTERED_POSITIONAL_OPERATOR, 1)
-                    .put("_id", 0),
+                PROJECTION_CREDS_BY_TYPE_AND_AUTH_ID,
                 findCredentialsPromise);
 
         return findCredentialsPromise.future()
