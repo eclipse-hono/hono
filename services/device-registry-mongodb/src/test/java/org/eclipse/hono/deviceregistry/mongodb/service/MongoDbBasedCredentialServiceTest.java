@@ -31,16 +31,19 @@ import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedCredentialsCon
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedCredentialsDao;
 import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedDeviceDao;
+import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDocumentBuilder;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
 import org.eclipse.hono.service.credentials.AbstractCredentialsServiceTest;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.credentials.Credentials;
+import org.eclipse.hono.service.management.credentials.CredentialsDto;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.tenant.RegistrationLimits;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -56,7 +59,11 @@ import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.json.pointer.JsonPointer;
+import io.vertx.ext.mongo.MongoClient;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
@@ -70,6 +77,7 @@ import io.vertx.junit5.VertxTestContext;
 @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
 public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsServiceTest {
 
+    private static final String DB_NAME_CREDENTIALS_TEST = "hono-credentials-test";
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedCredentialServiceTest.class);
 
     private final MongoDbBasedCredentialsConfigProperties credentialsServiceConfig = new MongoDbBasedCredentialsConfigProperties();
@@ -93,7 +101,7 @@ public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsSer
 
         vertx = Vertx.vertx();
 
-        credentialsDao = MongoDbTestUtils.getCredentialsDao(vertx, "hono-credentials-test");
+        credentialsDao = MongoDbTestUtils.getCredentialsDao(vertx, DB_NAME_CREDENTIALS_TEST);
         credentialsService = new MongoDbBasedCredentialsService(credentialsDao, credentialsServiceConfig);
         credentialsManagementService = new MongoDbBasedCredentialsManagementService(
                 vertx,
@@ -101,7 +109,7 @@ public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsSer
                 credentialsServiceConfig,
                 new SpringBasedHonoPasswordEncoder());
 
-        deviceDao = MongoDbTestUtils.getDeviceDao(vertx, "hono-credentials-test");
+        deviceDao = MongoDbTestUtils.getDeviceDao(vertx, DB_NAME_CREDENTIALS_TEST);
         deviceManagementService = new MongoDbBasedDeviceManagementService(
                 deviceDao,
                 credentialsDao,
@@ -207,5 +215,88 @@ public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsSer
                 });
                 ctx.completeNow();
             }));
+    }
+
+    /**
+     * Verifies that the credentials DAO uses a proper index to retrieve credentials by auth-id and type.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCredentialsDaoUsesIndex(final VertxTestContext ctx) {
+
+        final var tenantId = UUID.randomUUID().toString();
+
+        final MongoClient mongoClient = MongoDbTestUtils.getMongoClient(vertx, DB_NAME_CREDENTIALS_TEST);
+
+        final var dto1 = CredentialsDto.forCreation(
+                tenantId,
+                UUID.randomUUID().toString(),
+                List.of(
+                        Credentials.createPasswordCredential("device1a", "secret"),
+                        Credentials.createPSKCredential("device1b", "shared-secret")),
+                UUID.randomUUID().toString());
+        final var dto2 = CredentialsDto.forCreation(
+                tenantId,
+                UUID.randomUUID().toString(),
+                List.of(
+                        Credentials.createPasswordCredential("device2a", "secret"),
+                        Credentials.createPSKCredential("device2b", "shared-secret")),
+                UUID.randomUUID().toString());
+        final var dto3 = CredentialsDto.forCreation(
+                tenantId,
+                UUID.randomUUID().toString(),
+                List.of(
+                        Credentials.createPasswordCredential("device3a", "secret"),
+                        Credentials.createPSKCredential("device3b", "shared-secret")),
+                UUID.randomUUID().toString());
+        final var dto4 = CredentialsDto.forCreation(
+                UUID.randomUUID().toString(),
+                UUID.randomUUID().toString(),
+                List.of(
+                        Credentials.createPasswordCredential("device1a", "secret"),
+                        Credentials.createPSKCredential("device1b", "shared-secret")),
+                UUID.randomUUID().toString());
+
+        credentialsDao.create(dto1, NoopSpan.INSTANCE.context())
+            .compose(ok -> credentialsDao.create(dto2, NoopSpan.INSTANCE.context()))
+            .compose(ok -> credentialsDao.create(dto3, NoopSpan.INSTANCE.context()))
+            .compose(ok -> credentialsDao.create(dto4, NoopSpan.INSTANCE.context()))
+            .compose(ok -> {
+                final Promise<JsonObject> resultHandler = Promise.promise();
+                final var filter = MongoDbDocumentBuilder.builder()
+                        .withTenantId(tenantId)
+                        .withAuthId("device1a")
+                        .withType(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD)
+                        .document();
+                final var commandRight = new JsonObject()
+                        .put("find", "credentials")
+                        .put("batchSize", 1)
+                        .put("singleBatch", true)
+                        .put("filter", filter)
+                        .put("projection", MongoDbBasedCredentialsDao.PROJECTION_CREDS_BY_TYPE_AND_AUTH_ID);
+                final var explain = new JsonObject()
+                        .put("explain", commandRight)
+                        .put("verbosity", "executionStats");
+                mongoClient.runCommand("explain", explain, resultHandler);
+                return resultHandler.future();
+            })
+            .onComplete(ctx.succeeding(result -> {
+                if (LOG.isTraceEnabled()) {
+                    LOG.trace("result:{}{}", System.lineSeparator(), result.encodePrettily());
+                }
+                ctx.verify(() -> {
+                    final var indexScan = (JsonObject) JsonPointer.from("/queryPlanner/winningPlan/inputStage/inputStage")
+                            .queryJson(result);
+                    assertThat(indexScan.getString("indexName"))
+                        .isEqualTo(MongoDbBasedCredentialsDao.IDX_CREDENTIALS_TYPE_AND_AUTH_ID);
+                    final var executionStats = result.getJsonObject("executionStats", new JsonObject());
+                    // there are two credentials with auth-id "device1a" and type "hashed-password"
+                    assertThat(executionStats.getInteger("totalKeysExamined")).isEqualTo(2);
+                    assertThat(executionStats.getInteger("totalDocsExamined")).isEqualTo(2);
+                });
+                ctx.completeNow();
+            }));
+
     }
 }

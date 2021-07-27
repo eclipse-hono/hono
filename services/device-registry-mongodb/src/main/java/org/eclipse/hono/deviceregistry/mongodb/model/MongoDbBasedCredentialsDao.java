@@ -50,15 +50,19 @@ import io.vertx.ext.mongo.UpdateOptions;
  */
 public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements CredentialsDao, HealthCheckProvider {
 
-    private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedCredentialsDao.class);
-
-    private static final String KEY_AUTH_ID = String.format("%s.%s", CredentialsDto.FIELD_CREDENTIALS,
+    public static final String KEY_AUTH_ID = String.format("%s.%s", CredentialsDto.FIELD_CREDENTIALS,
             RegistryManagementConstants.FIELD_AUTH_ID);
-    private static final String KEY_CREDENTIALS_TYPE = String.format("%s.%s", CredentialsDto.FIELD_CREDENTIALS,
+    public static final String KEY_CREDENTIALS_TYPE = String.format("%s.%s", CredentialsDto.FIELD_CREDENTIALS,
             RegistryManagementConstants.FIELD_TYPE);
-    private static final String CREDENTIALS_FILTERED_POSITIONAL_OPERATOR = String.format("%s.$",
+    public static final String CREDENTIALS_FILTERED_POSITIONAL_OPERATOR = String.format("%s.$",
             CredentialsDto.FIELD_CREDENTIALS);
+    public static final JsonObject PROJECTION_CREDS_BY_TYPE_AND_AUTH_ID = new JsonObject()
+            .put(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID, 1)
+            .put(CREDENTIALS_FILTERED_POSITIONAL_OPERATOR, 1)
+            .put("_id", 0);
+    public static final String IDX_CREDENTIALS_TYPE_AND_AUTH_ID = "credentials_type_and_auth_id";
 
+    private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedCredentialsDao.class);
 
     private final AtomicBoolean creatingIndices = new AtomicBoolean(false);
     private final AtomicBoolean indicesCreated = new AtomicBoolean(false);
@@ -105,10 +109,16 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                                 .put(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, 1)
                                 .put(KEY_AUTH_ID, 1)
                                 .put(KEY_CREDENTIALS_TYPE, 1),
-                        new IndexOptions().unique(true)
-                                .partialFilterExpression(new JsonObject()
-                                        .put(KEY_AUTH_ID, new JsonObject().put("$exists", true))
-                                        .put(KEY_CREDENTIALS_TYPE, new JsonObject().put("$exists", true)))))
+                        new IndexOptions()
+                            .unique(true)
+                            .partialFilterExpression(new JsonObject()
+                                    .put(KEY_AUTH_ID, new JsonObject().put("$exists", true))
+                                    .put(KEY_CREDENTIALS_TYPE, new JsonObject().put("$exists", true)))))
+                .compose(ok -> createIndex(
+                        new JsonObject()
+                                .put(KEY_AUTH_ID, 1)
+                                .put(KEY_CREDENTIALS_TYPE, 1),
+                        new IndexOptions().name(IDX_CREDENTIALS_TYPE_AND_AUTH_ID)))
                 .onSuccess(ok -> indicesCreated.set(true))
                 .onComplete(r -> {
                     creatingIndices.set(false);
@@ -272,26 +282,18 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                 .withTag(TracingHelper.TAG_CREDENTIALS_TYPE, type)
                 .start();
 
-        final JsonObject findCredentialsQuery = MongoDbDocumentBuilder.builder()
+        final JsonObject filter = MongoDbDocumentBuilder.builder()
                 .withTenantId(tenantId)
                 .withAuthId(authId)
                 .withType(type)
                 .document();
 
         if (LOG.isTraceEnabled()) {
-            LOG.trace("retrieving credentials using search criteria: {}", findCredentialsQuery.encodePrettily());
+            LOG.trace("retrieving credentials using filter:{}{}", System.lineSeparator(), filter.encodePrettily());
         }
 
         final Promise<JsonObject> findCredentialsPromise = Promise.promise();
-
-        mongoClient.findOne(
-                collectionName,
-                findCredentialsQuery,
-                new JsonObject()
-                    .put(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID, 1)
-                    .put(CREDENTIALS_FILTERED_POSITIONAL_OPERATOR, 1)
-                    .put("_id", 0),
-                findCredentialsPromise);
+        mongoClient.findOne(collectionName, filter, PROJECTION_CREDS_BY_TYPE_AND_AUTH_ID, findCredentialsPromise);
 
         return findCredentialsPromise.future()
                 .map(result -> {
