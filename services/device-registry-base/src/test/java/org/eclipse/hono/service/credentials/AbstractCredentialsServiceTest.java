@@ -374,6 +374,39 @@ public interface AbstractCredentialsServiceTest {
     }
 
     /**
+     * Verifies that the Registry Management API returns a 404 when querying credentials of type
+     * psk for auth-id <em>device1</em> for a device for which two sets of credentials
+     * have been registered:
+     * <ol>
+     * <li>hashed-password with auth-id <em>device1</em> and</li>
+     * <li>psk with auth-id <em>device2</em>.</li>
+     * </ol>
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    default void testGetCredentialsFailsForNonMatchingTypeAndAuthId(final VertxTestContext ctx) {
+
+        final var tenantId = UUID.randomUUID().toString();
+        final var deviceId = UUID.randomUUID().toString();
+        final var pwd = Credentials.createPasswordCredential("device1", "secret");
+        final var psk = Credentials.createPSKCredential("device2", "shared-key");
+
+        getCredentialsManagementService().updateCredentials(
+                tenantId,
+                deviceId,
+                List.of(pwd, psk),
+                Optional.empty(),
+                NoopSpan.INSTANCE)
+            .onFailure(ctx::failNow)
+            .compose(ok -> getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, "device1"))
+            .onComplete(ctx.succeeding(response -> {
+                ctx.verify(() -> assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
+                ctx.completeNow();
+            }));
+    }
+
+    /**
      * Verifies that the Registry Management API returns an empty set of credentials for a newly created device.
      *
      * @param ctx The vert.x test context.

@@ -13,6 +13,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   client certificate.
 * The MongoDB based DeviceManagementService erroneously removed the original device registration when trying to
   register a new device using the existing device's identifier. This has been fixed.
+* The Mongo DB based registry implementation now uses a proper DB index to find credentials by type and authentication
+  ID. This will speed up query execution significantly when there are a lot of devices registered for a tenant.
 
 ## 1.9.0
 
