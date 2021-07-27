@@ -340,11 +340,23 @@ public interface AbstractRegistrationServiceTest {
         final String deviceId = randomDeviceId();
 
         createDevice(deviceId, new Device())
-            .compose(ok -> getDeviceManagementService()
-                    .createDevice(TENANT, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE))
+            .onComplete(ctx.succeeding(ok -> {}))
+            .compose(ok -> getDeviceManagementService().createDevice(
+                    TENANT,
+                    Optional.of(deviceId),
+                    new Device(),
+                    NoopSpan.INSTANCE))
             .onComplete(ctx.succeeding(response -> {
                 ctx.verify(() -> {
+                    // THEN the request fails with a conflict
                     assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_CONFLICT);
+                });
+            }))
+            // but the original device still exists
+            .compose(ok -> getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE))
+            .onComplete(ctx.succeeding(response -> {
+                ctx.verify(() -> {
+                    assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
                 });
                 ctx.completeNow();
             }));

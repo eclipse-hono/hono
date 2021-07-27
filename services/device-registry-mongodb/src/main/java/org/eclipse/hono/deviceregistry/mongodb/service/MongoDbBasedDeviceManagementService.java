@@ -39,7 +39,6 @@ import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tracing.TracingHelper;
 
 import io.opentracing.Span;
-import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 
 /**
@@ -97,22 +96,24 @@ public final class MongoDbBasedDeviceManagementService extends AbstractDeviceMan
                             key.getDeviceId(),
                             device,
                             DeviceRegistryUtils.getUniqueIdentifier());
+                    return deviceDao.create(deviceDto, span.context());
+                })
+                .compose(deviceResourceVersion -> {
                     final var emptySetOfCredentials = CredentialsDto.forCreation(
                             key.getTenantId(),
                             key.getDeviceId(),
                             List.of(),
                             DeviceRegistryUtils.getUniqueIdentifier());
-                    final Future<String> createDeviceResult = deviceDao.create(deviceDto, span.context());
-                    final Future<String> createCredentialsResult = credentialsDao.create(emptySetOfCredentials, span.context());
-                    return CompositeFuture.join(createDeviceResult, createCredentialsResult)
-                            .map(entitiesCreated -> createDeviceResult.result())
+                    return credentialsDao.create(emptySetOfCredentials, span.context())
+                            .map(deviceResourceVersion)
                             .recover(t -> {
-                                TracingHelper.logError(span, "failed to create device with empty set of credentials, rolling back ...", t);
-                                return CompositeFuture.join(
-                                        deviceDao.delete(key.getTenantId(), key.getDeviceId(), Optional.empty(), span.context()),
-                                        credentialsDao.delete(key.getTenantId(), key.getDeviceId(), Optional.empty(), span.context()))
-                                    .compose(done -> Future.<String>failedFuture(t))
-                                    .recover(error -> Future.<String>failedFuture(t));
+                                TracingHelper.logError(
+                                        span,
+                                        "failed to create device with empty set of credentials, rolling back ...",
+                                        t);
+                                return deviceDao.delete(key.getTenantId(), key.getDeviceId(), Optional.empty(), span.context())
+                                        .compose(done -> Future.<String>failedFuture(t))
+                                        .recover(error -> Future.<String>failedFuture(t));
                             });
                 })
                 .map(deviceResourceVersion -> OperationResult.ok(
