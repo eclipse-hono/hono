@@ -176,10 +176,10 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                                 HttpURLConnection.HTTP_CONFLICT,
                                 "device already exists");
                     } else {
+                        TracingHelper.logError(span, "error creating device", error);
                         return mapError(error);
                     }
                 })
-                .onFailure(t -> TracingHelper.logError(span, "error creating device", t))
                 .onComplete(r -> span.finish());
     }
 
@@ -198,13 +198,12 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                 .withTag(TracingHelper.TAG_DEVICE_ID, deviceId)
                 .start();
 
-        return getById(tenantId, deviceId)
+        return getById(tenantId, deviceId, span)
                 .map(DeviceDto.class::cast)
-                .onFailure(t -> TracingHelper.logError(span, "error retrieving device", t))
                 .onComplete(r -> span.finish());
     }
 
-    private Future<DeviceDto> getById(final String tenantId, final String deviceId) {
+    private Future<DeviceDto> getById(final String tenantId, final String deviceId, final Span span) {
 
         final JsonObject findDeviceQuery = MongoDbDocumentBuilder.builder().withTenantId(tenantId)
                 .withDeviceId(deviceId)
@@ -222,6 +221,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                         return result.mapTo(DeviceDto.class);
                     }
                 })
+                .onFailure(t -> TracingHelper.logError(span, "error retrieving device", t))
                 .recover(this::mapError);
     }
 
@@ -385,14 +385,14 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                         return MongoDbBasedDao.checkForVersionMismatchAndFail(
                                 deviceConfig.getDeviceId(),
                                 resourceVersion,
-                                getById(deviceConfig.getTenantId(), deviceConfig.getDeviceId()));
+                                getById(deviceConfig.getTenantId(), deviceConfig.getDeviceId(), span));
                     } else {
                         span.log("successfully updated device");
                         return Future.succeededFuture(result.getString(DeviceDto.FIELD_VERSION));
                     }
                 })
-                .recover(this::mapError)
                 .onFailure(t -> TracingHelper.logError(span, "error updating device", t))
+                .recover(this::mapError)
                 .onComplete(r -> span.finish());
     }
 
@@ -433,14 +433,14 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                         return MongoDbBasedDao.checkForVersionMismatchAndFail(
                                 deviceId,
                                 resourceVersion,
-                                getById(tenantId, deviceId));
+                                getById(tenantId, deviceId, span));
                     } else {
                         span.log("successfully deleted device");
                         return Future.succeededFuture((Void) null);
                     }
                 })
-                .recover(this::mapError)
                 .onFailure(t -> TracingHelper.logError(span, "error deleting device", t))
+                .recover(this::mapError)
                 .onComplete(r -> span.finish());
     }
 
@@ -463,8 +463,8 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                 MongoDbDocumentBuilder.builder().withTenantId(tenantId).document(),
                 countResult);
         return countResult.future()
-                .recover(this::mapError)
                 .onFailure(t -> TracingHelper.logError(span, "error counting devices", t))
+                .recover(this::mapError)
                 .onComplete(r -> span.finish());
     }
 }
