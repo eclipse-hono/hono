@@ -192,12 +192,12 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                             credentials.getTenantId(), credentials.getDeviceId(), credentials.getVersion());
                     return credentials.getVersion();
                 })
-                .recover(this::mapError)
                 .onFailure(t -> {
                     LOG.debug("error adding credentials for device [tenant: {}, device-id: {}]",
                             credentials.getTenantId(), credentials.getDeviceId(), t);
                     TracingHelper.logError(span, "error adding credentials", t);
                 })
+                .recover(this::mapError)
                 .onComplete(r -> span.finish());
     }
 
@@ -220,11 +220,11 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                 .start();
 
         return getByDeviceId(tenantId, deviceId)
-                .recover(this::mapError)
                 .onFailure(t -> {
                     LOG.debug("error retrieving credentials by device ID", t);
                     TracingHelper.logError(span, "error retrieving credentials by device ID", t);
                 })
+                .recover(this::mapError)
                 .onComplete(r -> span.finish());
     }
 
@@ -312,11 +312,11 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                         return dto;
                     }
                 })
-                .recover(this::mapError)
                 .onFailure(t -> {
                     LOG.debug("error retrieving credentials by auth-id and type", t);
                     TracingHelper.logError(span, "error retrieving credentials by auth-id and type", t);
                 })
+                .recover(this::mapError)
                 .onComplete(r -> span.finish());
     }
 
@@ -391,11 +391,11 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                         return Future.failedFuture(error);
                     }
                 })
-                .recover(this::mapError)
                 .onFailure(error -> {
                     LOG.debug("error updating credentials", error);
                     TracingHelper.logError(span, "error updating credentials", error);
                 })
+                .recover(this::mapError)
                 .onComplete(r -> span.finish());
     }
 
@@ -443,11 +443,11 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                         return Future.succeededFuture((Void) null);
                     }
                 })
-                .recover(this::mapError)
                 .onFailure(error -> {
                     LOG.debug("error deleting credentials", error);
                     TracingHelper.logError(span, "error deleting credentials", error);
                 })
+                .recover(this::mapError)
                 .onComplete(r -> span.finish());
     }
 }
