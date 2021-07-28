@@ -25,7 +25,7 @@ import org.eclipse.hono.client.ServiceInvocationException;
 public final class Assertions {
 
     private Assertions() {
-        // TODO prevent instantiation
+        // prevent instantiation
     }
 
     /**

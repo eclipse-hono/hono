@@ -343,6 +343,7 @@ public interface AbstractRegistrationServiceTest {
         final String deviceId = randomDeviceId();
 
         createDevice(deviceId, new Device())
+            .onFailure(ctx::failNow)
             .compose(ok -> getDeviceManagementService().createDevice(
                     TENANT,
                     Optional.of(deviceId),

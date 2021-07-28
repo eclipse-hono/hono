@@ -443,7 +443,7 @@ public class FileBasedRegistrationServiceTest implements AbstractRegistrationSer
                 registrationService.readDevice(TENANT, "newDevice", NoopSpan.INSTANCE)
                     .onComplete(ctx.failing(error -> {
                         // and the device has not been added to the registry
-                        ctx.verify(() -> org.eclipse.hono.deviceregistry.util.Assertions.assertServiceInvocationException(
+                        ctx.verify(() -> Assertions.assertServiceInvocationException(
                                 error, HttpURLConnection.HTTP_NOT_FOUND));
                         ctx.completeNow();
                     }));
