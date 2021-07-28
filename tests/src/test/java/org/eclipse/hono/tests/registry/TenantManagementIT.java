@@ -32,6 +32,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.eclipse.hono.service.management.SearchResult;
+import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.RegistrationLimits;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TenantWithId;
@@ -494,7 +495,8 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
     }
 
     /**
-     * Verify that a correctly added tenant record can be successfully deleted again.
+     * Verifies that an existing tenant  can be successfully deleted and that objects belonging to the
+     * tenant can no longer be retrieved after the tenant has been deleted.
      *
      * @param context The vert.x test context.
      */
@@ -502,8 +504,15 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
     public void testRemoveTenantSucceeds(final VertxTestContext context) {
 
         final Tenant tenantPayload = buildTenantPayload();
-        getHelper().registry.addTenant(tenantId, tenantPayload)
+        final String deviceId = getHelper().getRandomDeviceId(tenantId);
+
+        getHelper().registry.addDeviceForTenant(tenantId, tenantPayload, deviceId, new Device(), "secret")
+            .compose(ok -> getHelper().registry.getRegistrationInfo(tenantId, deviceId))
+            .compose(ok -> getHelper().registry.getCredentials(tenantId, deviceId))
             .compose(ar -> getHelper().registry.removeTenant(tenantId, HttpURLConnection.HTTP_NO_CONTENT))
+            .compose(ok -> getHelper().registry.getCredentials(tenantId, deviceId, HttpURLConnection.HTTP_NOT_FOUND))
+            .compose(ok -> getHelper().registry.getRegistrationInfo(tenantId, deviceId, HttpURLConnection.HTTP_NOT_FOUND))
+            .compose(ok -> getHelper().registry.getTenant(tenantId, HttpURLConnection.HTTP_NOT_FOUND))
             .onComplete(context.completing());
     }
 

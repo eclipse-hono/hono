@@ -485,16 +485,17 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
 
 
     /**
-     * Verifies that no registration info can be retrieved anymore
-     * once a device has been deregistered.
+     * Verifies that a device's registration information and credentials can no longer be retrieved
+     * once the device has been deregistered.
      *
      * @param ctx The vert.x test context.
      */
     @Test
     public void testDeregisterDeviceSucceeds(final VertxTestContext ctx) {
 
-        registry.registerDevice(tenantId, deviceId, new Device())
+        registry.addDeviceToTenant(tenantId, deviceId, "secret")
             .compose(ok -> registry.deregisterDevice(tenantId, deviceId))
+            .compose(ok -> registry.getCredentials(tenantId, deviceId, HttpURLConnection.HTTP_NOT_FOUND))
             .compose(ok -> registry.getRegistrationInfo(tenantId, deviceId, HttpURLConnection.HTTP_NOT_FOUND))
             .onComplete(ctx.completing());
     }
