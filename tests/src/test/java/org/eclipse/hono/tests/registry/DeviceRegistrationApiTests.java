@@ -182,6 +182,29 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
     }
 
     /**
+     * Verifies that the registry fails to assert a device's registration status that belongs to a tenant
+     * that has been deleted.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
+    @Test
+    public void testAssertRegistrationFailsForDeletedTenant(final VertxTestContext ctx) {
+
+        final var deviceId = getHelper().getRandomDeviceId(tenantId);
+
+        getHelper().registry.addDeviceToTenant(tenantId, deviceId, "secret")
+            .onFailure(ctx::failNow)
+            .compose(ok -> getHelper().registry.removeTenant(tenantId))
+            .onFailure(ctx::failNow)
+            .compose(ok -> getClient().assertRegistration(tenantId, deviceId, null, NoopSpan.INSTANCE.context()))
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
+                ctx.completeNow();
+            }));
+    }
+
+    /**
      * Verifies that the registry fails a non-existing gateway's request to assert a
      * device's registration status with a 403 error code.
      *

@@ -117,6 +117,53 @@ abstract class CredentialsApiTests extends DeviceRegistryTestBase {
     }
 
     /**
+     * Verifies that a request to retrieve credentials for a device that belongs to a tenant that has been deleted
+     * fails with a 404.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
+    @Test
+    public void testGetCredentialsFailsForDeletedTenant(final VertxTestContext ctx) {
+
+        final String deviceId = getHelper().getRandomDeviceId(tenantId);
+
+        getHelper().registry.addDeviceToTenant(tenantId, deviceId, "secret")
+            .compose(ok -> getHelper().registry.getCredentials(tenantId, deviceId))
+            .onFailure(ctx::failNow)
+            .compose(ok -> getHelper().registry.removeTenant(tenantId))
+            .onFailure(ctx::failNow)
+            .compose(ok -> getClient().get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, deviceId, spanContext))
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
+                ctx.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that a request to retrieve credentials for a device that has been deleted fails with a 404.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
+    @Test
+    public void testGetCredentialsFailsForDeletedDevice(final VertxTestContext ctx) {
+
+        final String deviceId = getHelper().getRandomDeviceId(tenantId);
+
+        getHelper().registry.addDeviceToTenant(tenantId, deviceId, "secret")
+            .compose(ok -> getHelper().registry.getCredentials(tenantId, deviceId))
+            .onFailure(ctx::failNow)
+            .compose(ok -> getHelper().registry.deregisterDevice(tenantId, deviceId))
+            .onFailure(ctx::failNow)
+            .compose(ok -> getClient().get(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD, deviceId, spanContext))
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND));
+                ctx.completeNow();
+            }));
+    }
+
+    /**
      * Verifies that the service returns credentials for a given type and authentication ID including the default value
      * for the enabled property.
      *

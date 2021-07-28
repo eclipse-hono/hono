@@ -189,6 +189,10 @@ public final class MongoDbBasedDeviceManagementService extends AbstractDeviceMan
 
     /**
      * {@inheritDoc}
+     * <p>
+     * This implementation also deletes the device's credentials. However, it does not use a transaction
+     * for doing so. This may lead to a situation where the device is deleted but the credentials still
+     * exist if an error occurs when trying to delete the credentials.
      */
     @Override
     protected Future<Result<Void>> processDeleteDevice(
@@ -202,7 +206,8 @@ public final class MongoDbBasedDeviceManagementService extends AbstractDeviceMan
                         key.getDeviceId(),
                         Optional.empty(),
                         span.context())
-                    // ignore errors occurring while deleting credentials
+                    // errors occurring while deleting credentials will already
+                    // have been logged by the credentials DAO
                     // TODO use transaction spanning both collections?
                     .recover(t -> Future.succeededFuture()))
                 .map(ok -> Result.<Void> from(HttpURLConnection.HTTP_NO_CONTENT));
