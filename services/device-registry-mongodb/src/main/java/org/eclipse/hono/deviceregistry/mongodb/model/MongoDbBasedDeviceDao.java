@@ -417,6 +417,9 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                 .start();
         resourceVersion.ifPresent(v -> TracingHelper.TAG_RESOURCE_VERSION.set(span, v));
 
+        LOG.trace("deleting device [tenant-id: {}, device-id: {}, version: {}]",
+                tenantId, deviceId, resourceVersion.orElse(null));
+
         final JsonObject deleteDeviceQuery = MongoDbDocumentBuilder.builder()
                 .withVersion(resourceVersion)
                 .withTenantId(tenantId)

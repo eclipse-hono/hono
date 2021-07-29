@@ -74,7 +74,8 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will be succeeded with a result containing the created device's identifier if the device
-     *         has been created successfully. The result's <em>status</em> property will have a value as specified
+     *         has been created successfully. Otherwise, the future will be failed with a
+     *         {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code as specified
      *         in the Device Registry Management API.
      */
     protected abstract Future<OperationResult<Id>> processCreateDevice(DeviceKey key, Device device, Span span);
@@ -94,7 +95,8 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will be succeeded with a result containing the retrieved device information if a device
-     *         with the given identifier exists. The result's <em>status</em> property will have a value as specified
+     *         with the given identifier exists. Otherwise, the future will be failed with a
+     *         {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code as specified
      *         in the Device Registry Management API.
      */
     protected abstract Future<OperationResult<Device>> processReadDevice(DeviceKey key, Span span);
@@ -117,7 +119,8 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will be succeeded with a result containing the updated device's identifier if the device
-     *         has been updated successfully. The result's <em>status</em> property will have a value as specified
+     *         has been updated successfully. Otherwise, the future will be failed with a
+     *         {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code as specified
      *         in the Device Registry Management API.
      */
     protected abstract Future<OperationResult<Id>> processUpdateDevice(
@@ -142,7 +145,9 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
      *             as the parent for additional spans created as part of this method's execution.
      * @return A future indicating the outcome of the operation.
      *         <p>
-     *         The result's <em>status</em> property will have a value as specified
+     *         The future will be succeeded if a device matching the criteria exists and has been deleted successfully.
+     *         Otherwise, the future will be failed with a
+     *         {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code as specified
      *         in the Device Registry Management API.
      */
     protected abstract Future<Result<Void>> processDeleteDevice(DeviceKey key, Optional<String> resourceVersion, Span span);
@@ -169,8 +174,9 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
      *             as the parent for additional spans created as part of this method's execution.
      * @return A future indicating the outcome of the operation.
      *         <p>
-     *         The future will be succeeded with a result containing the matching devices. The result's <em>status</em>
-     *         property will have a value as specified in the Device Registry Management API.
+     *         The future will be succeeded with a result containing the matching devices. Otherwise, the future will
+     *         be failed with a {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code
+     *         as specified in the Device Registry Management API.
      */
     protected Future<OperationResult<SearchResult<DeviceWithId>>> processSearchDevices(
             final String tenantId,
@@ -219,7 +225,7 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
                                 "tenant does not exist",
                                 null))
                         : processCreateDevice(DeviceKey.from(result.getPayload(), deviceIdValue), device, span))
-                .otherwise(t -> DeviceRegistryUtils.mapErrorToResult(t, span));
+                .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 
     @Override
@@ -238,7 +244,7 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
                                 "tenant does not exist",
                                 null))
                         : processReadDevice(DeviceKey.from(result.getPayload(), deviceId), span))
-                .otherwise(t -> DeviceRegistryUtils.mapErrorToResult(t, span));
+                .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 
     @Override
@@ -264,7 +270,7 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
                                 "tenant does not exist",
                                 null))
                         : processUpdateDevice(DeviceKey.from(result.getPayload(), deviceId), device, resourceVersion, span))
-                .otherwise(t -> DeviceRegistryUtils.mapErrorToResult(t, span));
+                .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 
     @Override
@@ -288,7 +294,7 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
                                 "tenant does not exist",
                                 null))
                         : processDeleteDevice(DeviceKey.from(result.getPayload(), deviceId), resourceVersion, span))
-                .otherwise(t -> DeviceRegistryUtils.mapErrorToResult(t, span));
+                .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 
     /**
@@ -324,6 +330,6 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
                                 "tenant does not exist",
                                 null))
                         : processSearchDevices(tenantId, pageSize, pageOffset, filters, sortOptions, span))
-                .otherwise(t -> DeviceRegistryUtils.mapErrorToResult(t, span));
+                .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 }

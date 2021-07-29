@@ -19,10 +19,13 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.deviceregistry.util.Assertions;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
@@ -340,26 +343,24 @@ public interface AbstractRegistrationServiceTest {
         final String deviceId = randomDeviceId();
 
         createDevice(deviceId, new Device())
-            .onComplete(ctx.succeeding(ok -> {}))
+            .onFailure(ctx::failNow)
             .compose(ok -> getDeviceManagementService().createDevice(
                     TENANT,
                     Optional.of(deviceId),
                     new Device(),
                     NoopSpan.INSTANCE))
-            .onComplete(ctx.succeeding(response -> {
+            .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     // THEN the request fails with a conflict
-                    assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_CONFLICT);
+                    ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_CONFLICT));
                 });
             }))
             // but the original device still exists
-            .compose(ok -> getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE))
-            .onComplete(ctx.succeeding(response -> {
-                ctx.verify(() -> {
-                    assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
-                });
-                ctx.completeNow();
-            }));
+            .onFailure(t -> getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE)
+                    .onComplete(ctx.succeeding(response -> {
+                        ctx.verify(() -> assertThat(response.getPayload()).isNotNull());
+                        ctx.completeNow();
+                    })));
     }
 
     /**
@@ -413,10 +414,10 @@ public interface AbstractRegistrationServiceTest {
     default void testReadDeviceFailsForNonExistingDevice(final VertxTestContext ctx) {
 
         getDeviceManagementService().readDevice(TENANT, "non-existing-device-id", NoopSpan.INSTANCE)
-            .onComplete(ctx.succeeding(response -> ctx.verify(() -> {
-                assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_NOT_FOUND));
                 ctx.completeNow();
-            })));
+            }));
     }
 
     /**
@@ -494,18 +495,22 @@ public interface AbstractRegistrationServiceTest {
     default void testReadDeviceFailsForDeletedDevice(final VertxTestContext ctx) {
 
         final String deviceId = randomDeviceId();
-        final Checkpoint get = ctx.checkpoint(2);
 
         createDevice(deviceId, new Device())
-            .compose(response -> getDeviceManagementService()
-                        .deleteDevice(TENANT, deviceId, Optional.empty(), NoopSpan.INSTANCE))
+            .onComplete(ctx.succeeding())
+            .compose(response -> getDeviceManagementService().deleteDevice(
+                    TENANT,
+                    deviceId,
+                    Optional.empty(),
+                    NoopSpan.INSTANCE))
+            .onComplete(ctx.succeeding())
             .compose(response -> {
                 ctx.verify(() -> assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT));
-                get.flag();
                 return getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE);
-            }).onComplete(ctx.succeeding(response -> {
-                ctx.verify(() -> assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
-                get.flag();
+            })
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_NOT_FOUND));
+                ctx.completeNow();
             }));
     }
 
@@ -521,8 +526,8 @@ public interface AbstractRegistrationServiceTest {
 
         getDeviceManagementService()
                 .deleteDevice(TENANT, "non-existing-device", Optional.empty(), NoopSpan.INSTANCE)
-                .onComplete(ctx.succeeding(response -> {
-                    ctx.verify(() -> assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
+                .onComplete(ctx.failing(t -> {
+                    ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_NOT_FOUND));
                     ctx.completeNow();
                 }));
     }
@@ -537,23 +542,22 @@ public interface AbstractRegistrationServiceTest {
     default void testDeleteDeviceFailsForNonMatchingResourceVersion(final VertxTestContext ctx) {
 
         final String deviceId = randomDeviceId();
-        final Checkpoint register = ctx.checkpoint(2);
 
         getDeviceManagementService().createDevice(TENANT, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
-                .map(response -> {
-                    ctx.verify(() -> assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_CREATED));
-                    register.flag();
-                    return response;
-                }).compose(rr -> {
-                    final String resourceVersion = rr.getResourceVersion().orElse(null);
-                    return getDeviceManagementService().deleteDevice(
-                            TENANT, deviceId, Optional.of("not-" + resourceVersion), NoopSpan.INSTANCE);
-                }).onComplete(ctx.succeeding(response -> {
-                    ctx.verify(() -> {
-                        assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_PRECON_FAILED);
-                    });
-                    register.flag();
-                }));
+            .onComplete(ctx.succeeding())
+            .compose(response -> {
+                ctx.verify(() -> assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_CREATED));
+                final String resourceVersion = response.getResourceVersion().orElse(null);
+                return getDeviceManagementService().deleteDevice(
+                        TENANT,
+                        deviceId,
+                        Optional.of("not-" + resourceVersion),
+                        NoopSpan.INSTANCE);
+            })
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_PRECON_FAILED));
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -634,10 +638,9 @@ public interface AbstractRegistrationServiceTest {
                             new Device().putExtension("customKey", "customValue"),
                             Optional.of("not- " + resourceVersion),
                             NoopSpan.INSTANCE);
-                }).onComplete(ctx.succeeding(response -> {
-                    ctx.verify(() -> {
-                        assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_PRECON_FAILED);
-                    });
+                })
+                .onComplete(ctx.failing(t -> {
+                    ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_PRECON_FAILED));
                     ctx.completeNow();
                 }));
     }
@@ -792,7 +795,10 @@ public interface AbstractRegistrationServiceTest {
      * @return A new future that will succeed when the read/get operations succeed and the assertions are valid.
      *         Otherwise the future must fail.
      */
-    default Future<?> assertDevice(final String tenant, final String deviceId, final Optional<String> gatewayId,
+    default Future<?> assertDevice(
+            final String tenant,
+            final String deviceId,
+            final Optional<String> gatewayId,
             final Handler<OperationResult<Device>> managementAssertions,
             final Handler<RegistrationResult> adapterAssertions) {
 
@@ -807,10 +813,11 @@ public interface AbstractRegistrationServiceTest {
                 .map(id -> getRegistrationService().assertRegistration(tenant, deviceId, id))
                 .orElseGet(() -> getRegistrationService().assertRegistration(tenant, deviceId));
         return CompositeFuture.all(
-                f1.map(r -> {
-                    managementAssertions.handle(r);
-                    return null;
-                }),
+                f1.otherwise(t -> OperationResult.empty(ServiceInvocationException.extractStatusCode(t)))
+                    .map(r -> {
+                        managementAssertions.handle(r);
+                        return null;
+                    }),
                 f2.map(r -> {
                     adapterAssertions.handle(r);
                     return null;
@@ -818,17 +825,17 @@ public interface AbstractRegistrationServiceTest {
     }
 
     /**
-     * Assert devices, expecting them to be "not found".
+     * Verifies that none of a set of devices exist in tenant {@value #TENANT}.
      *
-     * @param devices The map of devices to assert.
-     * @return A future, reporting the assertion status.
+     * @param devices The device identifiers to check.
+     * @return A succeeded future if none of the devices exist.
      */
-    default Future<?> assertDevicesNotFound(final Map<String, Device> devices) {
+    default Future<?> assertDevicesNotFound(final Set<String> devices) {
 
         Future<?> current = Future.succeededFuture();
 
-        for (final Map.Entry<String, Device> entry : devices.entrySet()) {
-            current = current.compose(ok -> assertDevice(TENANT, entry.getKey(), Optional.empty(),
+        for (final String deviceId : devices) {
+            current = current.compose(ok -> assertDevice(TENANT, deviceId, Optional.empty(),
                     r -> {
                         assertThat(r.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
                     },

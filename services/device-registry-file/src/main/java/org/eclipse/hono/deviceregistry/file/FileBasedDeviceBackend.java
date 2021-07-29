@@ -287,7 +287,8 @@ public class FileBasedDeviceBackend implements DeviceBackend, RegistrationServic
                                     } else {
                                         return r;
                                     }
-                                });
+                                })
+                                .otherwise(t -> OperationResult.empty(ServiceInvocationException.extractStatusCode(t)));
                     } else {
                         return Future.succeededFuture(r);
                     }

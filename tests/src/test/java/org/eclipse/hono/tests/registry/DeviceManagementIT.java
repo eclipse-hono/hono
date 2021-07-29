@@ -33,6 +33,7 @@ import org.eclipse.hono.service.management.device.DeviceStatus;
 import org.eclipse.hono.service.management.device.DeviceWithId;
 import org.eclipse.hono.tests.CrudHttpClient;
 import org.eclipse.hono.tests.DeviceRegistryHttpClient;
+import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.BeforeEach;
@@ -141,7 +142,10 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
                     device,
                     CrudHttpClient.CONTENT_TYPE_JSON,
                     HttpURLConnection.HTTP_NOT_FOUND))
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeeding(response -> {
+                ctx.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -159,7 +163,10 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             // now try to add the device again
             return registry.registerDevice(tenantId, deviceId, device, HttpURLConnection.HTTP_CONFLICT);
         })
-        .onComplete(ctx.completing());
+        .onComplete(ctx.succeeding(response -> {
+            ctx.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+            ctx.completeNow();
+        }));
     }
 
     /**
@@ -177,7 +184,10 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
                 .registerDevice(
                         tenantId, deviceId, device, null,
                         HttpURLConnection.HTTP_BAD_REQUEST)
-                .onComplete(ctx.completing());
+                .onComplete(ctx.succeeding(response -> {
+                    ctx.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                    ctx.completeNow();
+                }));
     }
 
     /**
@@ -198,7 +208,10 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
                 requestBody,
                 "application/json",
                 HttpURLConnection.HTTP_BAD_REQUEST)
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeeding(response -> {
+                ctx.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -210,7 +223,10 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
     public void testAddDeviceFailsForInvalidDeviceId(final VertxTestContext ctx) {
 
         registry.registerDevice(tenantId, "device ID With spaces and $pecial chars!", null, HttpURLConnection.HTTP_BAD_REQUEST)
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeeding(response -> {
+                ctx.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -222,17 +238,20 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
     public void testAddDeviceFailsForInvalidTenantId(final VertxTestContext ctx) {
 
         registry.registerDevice("tenant ID With spaces and $pecial chars!", deviceId, null, HttpURLConnection.HTTP_BAD_REQUEST)
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeeding(response -> {
+                ctx.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                ctx.completeNow();
+            }));
     }
 
     /**
      * Verifies that a request to register a device with a body that exceeds the registry's max payload limit
      * fails with a {@link HttpURLConnection#HTTP_ENTITY_TOO_LARGE} status code.
      *
-     * @param context The vert.x test context.
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testAddDeviceFailsForRequestPayloadExceedingLimit(final VertxTestContext context)  {
+    public void testAddDeviceFailsForRequestPayloadExceedingLimit(final VertxTestContext ctx)  {
 
         final Device device = new Device();
         final var data = new char[3000];
@@ -240,7 +259,10 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
         device.setExtensions(Map.of("data", new String(data)));
 
         registry.registerDevice(tenantId, deviceId, device, HttpURLConnection.HTTP_ENTITY_TOO_LARGE)
-            .onComplete(context.completing());
+            .onComplete(ctx.succeeding(response -> {
+                ctx.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -301,7 +323,10 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
     public void testGetDeviceFailsForNonExistingTenant(final VertxTestContext ctx) {
 
         registry.getRegistrationInfo("non-existing-tenant", deviceId, HttpURLConnection.HTTP_NOT_FOUND)
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeeding(response -> {
+                ctx.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -314,7 +339,10 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
     public void testGetDeviceFailsForNonExistingDevice(final VertxTestContext ctx) {
 
         registry.getRegistrationInfo(tenantId, "non-existing-device", HttpURLConnection.HTTP_NOT_FOUND)
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeeding(response -> {
+                ctx.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -406,7 +434,10 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
                 new JsonObject().put("ext", new JsonObject().put("test", "test")),
                 CrudHttpClient.CONTENT_TYPE_JSON,
                 HttpURLConnection.HTTP_NOT_FOUND)
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeeding(response -> {
+                ctx.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -423,7 +454,10 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
                 new JsonObject().put("ext", new JsonObject().put("test", "test")),
                 CrudHttpClient.CONTENT_TYPE_JSON,
                 HttpURLConnection.HTTP_NOT_FOUND)
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeeding(response -> {
+                ctx.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -441,10 +475,10 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
     /**
      * Verifies that an update request fails if it contains no content type.
      *
-     * @param context The vert.x test context.
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testUpdateDeviceFailsForMissingContentType(final VertxTestContext context) {
+    public void testUpdateDeviceFailsForMissingContentType(final VertxTestContext ctx) {
 
         registry.registerDevice(tenantId, deviceId, new Device())
             .compose(ok -> {
@@ -454,17 +488,21 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
                                 .put("test", "testUpdateDeviceFailsForMissingContentType")
                                 .put("newKey1", "newValue1"));
                 return registry.updateDevice(tenantId, deviceId, requestBody, null, HttpURLConnection.HTTP_BAD_REQUEST);
-            }).onComplete(context.completing());
+            })
+            .onComplete(ctx.succeeding(response -> {
+                ctx.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                ctx.completeNow();
+            }));
     }
 
     /**
      * Verifies that a request to update a device with a body that exceeds the registry's max payload limit
      * fails with a {@link HttpURLConnection#HTTP_ENTITY_TOO_LARGE} status code.
      *
-     * @param context The vert.x test context.
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testUpdateDeviceFailsForRequestPayloadExceedingLimit(final VertxTestContext context)  {
+    public void testUpdateDeviceFailsForRequestPayloadExceedingLimit(final VertxTestContext ctx)  {
 
         registry.registerDevice(tenantId, deviceId, new Device())
             .compose(ok -> {
@@ -480,7 +518,10 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
                         "application/json",
                         HttpURLConnection.HTTP_ENTITY_TOO_LARGE);
             })
-            .onComplete(context.completing());
+            .onComplete(ctx.succeeding(response -> {
+                ctx.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                ctx.completeNow();
+            }));
     }
 
 
@@ -521,7 +562,10 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
     public void testDeregisterDeviceFailsForNonExistingTenant(final VertxTestContext ctx) {
 
         registry.deregisterDevice("non-existing-tenant", deviceId, HttpURLConnection.HTTP_NOT_FOUND)
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeeding(response -> {
+                ctx.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -533,7 +577,10 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
     public void testDeregisterDeviceFailsForNonExistingDevice(final VertxTestContext ctx) {
 
         registry.deregisterDevice(tenantId, "non-existing-device", HttpURLConnection.HTTP_NOT_FOUND)
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeeding(response -> {
+                ctx.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                ctx.completeNow();
+            }));
     }
 
     /**
