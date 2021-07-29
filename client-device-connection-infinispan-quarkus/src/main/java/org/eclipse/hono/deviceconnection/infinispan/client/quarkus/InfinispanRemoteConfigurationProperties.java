@@ -174,7 +174,7 @@ public class InfinispanRemoteConfigurationProperties extends org.eclipse.hono.de
      */
     public void setTrustStorePassword(final Optional<String> value) {
         value.ifPresent(s -> {
-            LOG.trace("setting trustStorePassword: *****", s);
+            LOG.trace("setting trustStorePassword: *****");
             super.setTrustStorePassword(s);
         });
     }
