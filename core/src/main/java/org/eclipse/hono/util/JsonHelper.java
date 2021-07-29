@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -39,13 +39,30 @@ public final class JsonHelper {
      * @param clazz The target type.
      * @param <T> The type of the value.
      * @return The value or the given default value if the value is not set or is of an unexpected type.
-     * @throws NullPointerException if any of the parameters except defaultValue is {@code null}.
+     * @throws NullPointerException if any of the parameters except defaultValue are {@code null}.
      */
-    public static <T> T getValue(final JsonObject jsonObject, final String name, final Class<T> clazz,
+    public static <T> T getValue(
+            final JsonObject jsonObject,
+            final String name,
+            final Class<T> clazz,
             final T defaultValue) {
+
         Objects.requireNonNull(jsonObject);
         Objects.requireNonNull(name);
         Objects.requireNonNull(clazz);
+
+        if (clazz == byte[].class) {
+            try {
+                final byte[] binaryValue = jsonObject.getBinary(name);
+                if (binaryValue == null) {
+                    return defaultValue;
+                }
+                return clazz.cast(binaryValue);
+            } catch (final IllegalArgumentException | ClassCastException e) {
+                LOG.debug("field [{}] does not contain a proper base64 string", name);
+                return defaultValue;
+            }
+        }
 
         final Object value = jsonObject.getValue(name, defaultValue);
         if (value == null) {

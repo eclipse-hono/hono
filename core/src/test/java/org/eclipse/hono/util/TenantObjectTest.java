@@ -28,7 +28,6 @@ import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.List;
 
 import javax.security.auth.x500.X500Principal;
@@ -134,7 +133,7 @@ public class TenantObjectTest {
                 .put(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, new JsonArray().add(
                         new JsonObject()
                         .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, trustedCaCert.getSubjectX500Principal().getName(X500Principal.RFC2253))
-                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, Base64.getEncoder().encodeToString(trustedCaCert.getPublicKey().getEncoded()))
+                        .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, trustedCaCert.getPublicKey().getEncoded())
                         .put(TenantConstants.FIELD_AUTO_PROVISIONING_ENABLED, true)
                         .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, trustedCaCert.getPublicKey().getAlgorithm())));
 

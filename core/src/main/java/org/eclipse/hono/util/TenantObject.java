@@ -18,7 +18,6 @@ import java.security.KeyFactory;
 import java.security.PublicKey;
 import java.security.cert.TrustAnchor;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.Base64;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
@@ -201,11 +200,12 @@ public final class TenantObject extends JsonBackedValueObject {
 
         if (trustAnchors == null) {
             trustAnchors = getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonArray.class, new JsonArray())
-            .stream()
-            .filter(obj -> obj instanceof JsonObject)
-            .map(ca -> getTrustAnchorForPublicKey((JsonObject) ca))
-            .filter(anchor -> anchor != null)
-            .collect(Collectors.toSet());
+                .stream()
+                .filter(obj -> obj instanceof JsonObject)
+                .map(JsonObject.class::cast)
+                .map(this::getTrustAnchorForPublicKey)
+                .filter(anchor -> anchor != null)
+                .collect(Collectors.toSet());
         }
         return trustAnchors;
     }
@@ -217,19 +217,21 @@ public final class TenantObject extends JsonBackedValueObject {
             return null;
         } else {
             final String subjectDn = getProperty(keyProps, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class);
-            final String encodedKey = getProperty(keyProps, TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, String.class);
+            final byte[] encodedKey = getProperty(keyProps, TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, byte[].class);
             if (subjectDn == null || encodedKey == null) {
                 return null;
             } else {
                 try {
-                    final String type = getProperty(keyProps, TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, String.class,
+                    final String type = getProperty(
+                            keyProps,
+                            TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM,
+                            String.class,
                             "RSA");
-                    final X509EncodedKeySpec keySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(encodedKey));
+                    final X509EncodedKeySpec keySpec = new X509EncodedKeySpec(encodedKey);
                     final KeyFactory factory = KeyFactory.getInstance(type);
                     final PublicKey publicKey = factory.generatePublic(keySpec);
                     return new TrustAnchor(subjectDn, publicKey, null);
-                } catch (final IllegalArgumentException | GeneralSecurityException e) {
-                    // Base64 decoding failed
+                } catch (final GeneralSecurityException e) {
                     return null;
                 }
             }
