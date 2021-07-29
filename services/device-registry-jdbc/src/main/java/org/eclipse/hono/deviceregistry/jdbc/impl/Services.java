@@ -14,7 +14,6 @@
 package org.eclipse.hono.deviceregistry.jdbc.impl;
 
 import java.net.HttpURLConnection;
-import java.util.function.IntFunction;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.base.jdbc.store.DuplicateKeyException;
@@ -34,7 +33,7 @@ public final class Services {
     }
 
     /**
-     * Recover from an SQL operation.
+     * Recovers from an SQL operation error.
      * <p>
      * Tries to map known exceptions to error codes.
      * <ul>
@@ -45,12 +44,11 @@ public final class Services {
      * </ul>
      *
      * @param e The error to process.
-     * @param supplier A supplier for empty results.
      * @param <T> The type of the result.
      * @param <R> The result wrapper type.
      * @return a future that got mapped to the appropriate status code, or the original failure.
      */
-    public static <T, R extends Result<T>> Future<R> recover(final Throwable e, final IntFunction<R> supplier) {
+    public static <T, R extends Result<T>> Future<R> recover(final Throwable e) {
         if (SQL.hasCauseOf(e, EntityNotFoundException.class)) {
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "no such object"));
         } else if (SQL.hasCauseOf(e, DuplicateKeyException.class)) {
