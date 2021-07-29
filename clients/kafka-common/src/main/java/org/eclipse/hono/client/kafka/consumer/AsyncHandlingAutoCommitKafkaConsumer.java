@@ -24,6 +24,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -41,6 +43,7 @@ import org.eclipse.hono.util.Strings;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.kafka.client.common.impl.Helper;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 
 /**
@@ -64,6 +67,10 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
  * In order to not fall behind with the position of the committed offset vs. the last received offset, users of this
  * class have to make sure that the record handling function, which provides the completion Future, is completed in time.
  * <p>
+ * When a partition gets revoked from this consumer, the consumer will delay committing the corresponding offset
+ * for up to the period defined by <em>hono.offsets.commit.record.completion.timeout.millis</em> until record handling
+ * Futures concerning that partition have been completed.
+ * <p>
  * In contrast to the <em>enable.auto.commit</em> behaviour, identical offsets are skipped during successive commits.
  * It is only after a period defined by <em>hono.offsets.skip.recommit.period.seconds</em> has elapsed, that such offsets
  * are committed again. This is to make sure that such offsets don't reach their retention time, provided the recommit
@@ -85,6 +92,17 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
      */
     public static final String CONFIG_HONO_OFFSETS_SKIP_RECOMMIT_PERIOD_SECONDS = "hono.offsets.skip.recommit.period.seconds";
     /**
+     * The name of the configuration property to define for how many milliseconds to wait for the completion of yet
+     * incomplete record result futures before doing a synchronous offset commit as part of handling the revocation
+     * of a partition assignment, e.g. when the consumer is being closed.
+     * <p>
+     * The value of that property should be chosen with regard to not adding too much delay when a rebalance happens
+     * (e.g. this could potentially delay the result of {@link #ensureTopicIsAmongSubscribedTopicPatternTopics(String)})
+     * and not choosing a too small period which would increase the chance of records getting handled twice by this and
+     * another consumer.
+     */
+    public static final String CONFIG_HONO_OFFSETS_COMMIT_RECORD_COMPLETION_TIMEOUT_MILLIS = "hono.offsets.commit.record.completion.timeout.millis";
+    /**
      * The default periodic commit interval.
      */
     public static final Duration DEFAULT_COMMIT_INTERVAL = Duration.ofSeconds(5);
@@ -93,6 +111,12 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
      * until it may be recommitted if it is still the latest offset.
      */
     public static final Duration DEFAULT_OFFSETS_SKIP_RECOMMIT_PERIOD = Duration.ofMinutes(30);
+    /**
+     * The default amount of time to wait for the completion of yet incomplete record result futures before doing
+     * a synchronous offset commit as part of handling the revocation of a partition assignment, e.g. when the
+     * consumer is being closed.
+     */
+    public static final Duration DEFAULT_OFFSETS_COMMIT_RECORD_COMPLETION_TIMEOUT = Duration.ofMillis(300);
     /**
      * The default maximum number of records to be currently in processing at a given point in time.
      * If that number is exceeded by records being polled faster than records being processed, the polling
@@ -121,9 +145,11 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
     private final int maxRecordsInProcessingResumeThreshold;
     private final long commitIntervalMillis;
     private final long skipOffsetRecommitPeriodSeconds;
+    private final long offsetsCommitRecordCompletionTimeoutMillis;
     private final Map<TopicPartition, TopicPartitionOffsets> offsetsMap = new HashMap<>();
     private final AtomicBoolean periodicCommitInvocationInProgress = new AtomicBoolean();
     private final AtomicInteger recordsInProcessingCounter = new AtomicInteger();
+    private final AtomicReference<UncompletedRecordsCompletionLatch> uncompletedRecordsCompletionLatchRef = new AtomicReference<>();
 
     private Instant pauseStartTime = Instant.MAX;
     private Long periodicCommitTimerId;
@@ -190,6 +216,7 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
                 * MAX_RECORDS_IN_PROCESSING_RESUME_THRESHOLD_PERCENT / 100;
         this.commitIntervalMillis = getCommitInterval(consumerConfig);
         this.skipOffsetRecommitPeriodSeconds = getSkipOffsetRecommitPeriodSeconds(consumerConfig);
+        this.offsetsCommitRecordCompletionTimeoutMillis = getOffsetsCommitRecordCompletionTimeoutMillis(consumerConfig);
     }
 
     private void handleRecord(final KafkaConsumerRecord<String, Buffer> record,
@@ -200,19 +227,24 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
                     recordsInProcessingCounter.get(), maxRecordsInProcessing);
             pauseStartTime = Instant.now();
         }
-        final OffsetsQueueEntry offsetsQueueEntry = setRecordReceived(record);
+        final TopicPartition topicPartition = new TopicPartition(record.topic(), record.partition());
+        final OffsetsQueueEntry offsetsQueueEntry = setRecordReceived(record.offset(), topicPartition);
         try {
             recordHandler.apply(record)
-                    .onComplete(ar -> setRecordHandlingComplete(offsetsQueueEntry));
+                    .onComplete(ar -> setRecordHandlingComplete(offsetsQueueEntry, topicPartition));
         } catch (final Exception e) {
             log.warn("error handling record [topic: {}, partition: {}, offset: {}, headers: {}]",
                     record.topic(), record.partition(), record.offset(), record.headers(), e);
-            setRecordHandlingComplete(offsetsQueueEntry);
+            setRecordHandlingComplete(offsetsQueueEntry, topicPartition);
         }
     }
 
-    private void setRecordHandlingComplete(final OffsetsQueueEntry offsetsQueueEntry) {
+    private void setRecordHandlingComplete(final OffsetsQueueEntry offsetsQueueEntry, final TopicPartition topicPartition) {
         offsetsQueueEntry.setHandlingComplete();
+        synchronized (uncompletedRecordsCompletionLatchRef) {
+            Optional.ofNullable(uncompletedRecordsCompletionLatchRef.get())
+                    .ifPresent(latch -> latch.onRecordHandlingCompleted(topicPartition));
+        }
         if (recordsInProcessingCounter
                 .decrementAndGet() < (maxRecordsInProcessing - maxRecordsInProcessingResumeThreshold) && resume()) {
             log.info("resumed consumer record polling after {}ms; current no. of records in processing ({}) dropped below threshold ({})",
@@ -248,9 +280,17 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
                 .orElse(DEFAULT_OFFSETS_SKIP_RECOMMIT_PERIOD.toSeconds());
     }
 
+    private static long getOffsetsCommitRecordCompletionTimeoutMillis(final Map<String, String> consumerConfig) {
+        return Optional.ofNullable(consumerConfig.get(CONFIG_HONO_OFFSETS_COMMIT_RECORD_COMPLETION_TIMEOUT_MILLIS))
+                .map(Long::parseUnsignedLong)
+                .orElse(DEFAULT_OFFSETS_COMMIT_RECORD_COMPLETION_TIMEOUT.toMillis());
+    }
+
     @Override
     protected void onRecordHandlerSkippedForExpiredRecord(final KafkaConsumerRecord<String, Buffer> record) {
-        setRecordReceived(record).setHandlingComplete();
+        final OffsetsQueueEntry queueEntry = setRecordReceived(record.offset(),
+                new TopicPartition(record.topic(), record.partition()));
+        queueEntry.setHandlingComplete();
     }
 
     @Override
@@ -276,6 +316,33 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
 
     @Override
     protected void onPartitionsRevokedBlocking(final Set<io.vertx.kafka.client.common.TopicPartition> partitionsSet) {
+        if (!partitionsSet.isEmpty() && offsetsCommitRecordCompletionTimeoutMillis > 0) {
+            UncompletedRecordsCompletionLatch latch = null;
+            synchronized (uncompletedRecordsCompletionLatchRef) {
+                final var uncompletedRecordsPartitions = getUncompletedRecordsPartitions(Helper.to(partitionsSet));
+                if (!uncompletedRecordsPartitions.isEmpty()) {
+                    log.info("init latch to wait up to {}ms for the completion of record handling concerning {}",
+                            offsetsCommitRecordCompletionTimeoutMillis,
+                            uncompletedRecordsPartitions.size() <= 10 ? uncompletedRecordsPartitions.keySet()
+                                    : (uncompletedRecordsPartitions.size() + " partitions"));
+                    latch = new UncompletedRecordsCompletionLatch(uncompletedRecordsPartitions);
+                    uncompletedRecordsCompletionLatchRef.set(latch);
+                }
+            }
+            if (latch != null) {
+                try {
+                    if (latch.await(offsetsCommitRecordCompletionTimeoutMillis, TimeUnit.MILLISECONDS)) {
+                        log.trace("latch to wait for the completion of record handling was released in time");
+                    } else {
+                        log.info("timed out waiting for record handling to finish after {}ms", offsetsCommitRecordCompletionTimeoutMillis);
+                    }
+                } catch (final InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } finally {
+                    uncompletedRecordsCompletionLatchRef.set(null);
+                }
+            }
+        }
         commitOffsetsSync();
     }
 
@@ -340,11 +407,16 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
     }
 
     // synchronized because offsetsMap is accessed from vert.x event loop and kafka polling thread
-    private synchronized OffsetsQueueEntry setRecordReceived(final KafkaConsumerRecord<String, Buffer> record) {
-        final TopicPartition topicPartition = new TopicPartition(record.topic(), record.partition());
-        return offsetsMap
-                .computeIfAbsent(topicPartition, k -> new TopicPartitionOffsets(topicPartition))
-                .addOffset(record.offset());
+    private synchronized Map<TopicPartition, TopicPartitionOffsets> getUncompletedRecordsPartitions(final Set<TopicPartition> partitions) {
+        return offsetsMap.entrySet().stream()
+                .filter(entry -> partitions.contains(entry.getKey()) && !entry.getValue().allCompleted())
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    // synchronized because offsetsMap is accessed from vert.x event loop and kafka polling thread
+    private synchronized OffsetsQueueEntry setRecordReceived(final long recordOffset, final TopicPartition topicPartition) {
+        return offsetsMap.computeIfAbsent(topicPartition, k -> new TopicPartitionOffsets(topicPartition))
+                .addOffset(recordOffset);
     }
 
     // synchronized because offsetsMap is accessed from vert.x event loop and kafka polling thread
@@ -547,6 +619,49 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
         @Override
         public String toString() {
             return offset  + (handlingComplete.get() ? " (completed)" : "");
+        }
+    }
+
+    /**
+     * A latch to wait for record result futures to be completed concerning a given set of partitions.
+     */
+    static class UncompletedRecordsCompletionLatch {
+        private final CountDownLatch latch = new CountDownLatch(1);
+        private final Map<TopicPartition, TopicPartitionOffsets> uncompletedRecordsPartitions;
+
+        UncompletedRecordsCompletionLatch(final Map<TopicPartition, TopicPartitionOffsets> uncompletedRecordsPartitions) {
+            this.uncompletedRecordsPartitions = uncompletedRecordsPartitions;
+        }
+
+        /**
+         * To be invoked when handling of a record with the given partition is completed.
+         * <p>
+         * Checks if this means that handling of records in all relevant partitions is completed
+         * and releases the latch in that case.
+         *
+         * @param partition The partition the completed record is associated with.
+         */
+        public void onRecordHandlingCompleted(final TopicPartition partition) {
+            final TopicPartitionOffsets offsets = uncompletedRecordsPartitions.get(partition);
+            if (offsets != null && offsets.allCompleted()) {
+                uncompletedRecordsPartitions.remove(partition);
+                if (uncompletedRecordsPartitions.isEmpty()) {
+                    latch.countDown();
+                }
+            }
+        }
+
+        /**
+         * Waits for handling of all records to be completed and the latch to be released.
+         *
+         * @param timeout The maximum time to wait.
+         * @param unit The time unit of the {@code timeout} argument.
+         * @return {@code true} if the count reached zero and {@code false}
+         *         if the waiting time elapsed before the count reached zero
+         * @throws InterruptedException if the current thread is interrupted while waiting.
+         */
+        public boolean await(final long timeout, final TimeUnit unit) throws InterruptedException {
+            return latch.await(timeout, unit);
         }
     }
 }

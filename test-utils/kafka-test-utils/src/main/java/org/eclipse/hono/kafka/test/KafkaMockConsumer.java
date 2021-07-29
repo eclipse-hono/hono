@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -37,6 +38,7 @@ public class KafkaMockConsumer extends MockConsumer<String, Buffer> {
 
     public static final Node DEFAULT_NODE = new Node(1, "broker1", 9092);
 
+    private boolean revokeAllOnRebalance = true;
     private Collection<TopicPartition> nextPollRebalancePartitionAssignment;
     private Collection<TopicPartition> onSubscribeRebalancePartitionAssignment;
     private ConsumerRebalanceListener rebalanceListener;
@@ -68,6 +70,18 @@ public class KafkaMockConsumer extends MockConsumer<String, Buffer> {
     }
 
     /**
+     * Sets whether the <em>onPartitionsRevoked</em> method shall be invoked with all currently assigned partitions when
+     * a rebalance is triggered.
+     * If set to {@code false}, only the partitions will be revoked that are not in the list of newly assigned
+     * partitions.
+     *
+     * @param revokeAllOnRebalance {@code true} if all assigned partitions shall be revoked on a rebalance.
+     */
+    public void setRevokeAllOnRebalance(final boolean revokeAllOnRebalance) {
+        this.revokeAllOnRebalance = revokeAllOnRebalance;
+    }
+
+    /**
      * Marks the following subscribe() invocations to be followed by a rebalance with the given partition
      * assignment, if the given assignment collection isn't {@code null}. The rebalance will be invoked
      * on the first poll() invocation after the subscribe() call.
@@ -77,6 +91,18 @@ public class KafkaMockConsumer extends MockConsumer<String, Buffer> {
      */
     public void setRebalancePartitionAssignmentAfterSubscribe(final Collection<TopicPartition> assignment) {
         onSubscribeRebalancePartitionAssignment = assignment;
+    }
+
+    /**
+     * Sets the partition assignment for a rebalance to be invoked on the next poll() invocation.
+     * <p>
+     * Note that the given partitions won't be used if subscribe() is invoked before the next poll().
+     *
+     * @param nextPollRebalancePartitionAssignment The partition assignment to set.
+     */
+    public void setNextPollRebalancePartitionAssignment(
+            final Collection<TopicPartition> nextPollRebalancePartitionAssignment) {
+        this.nextPollRebalancePartitionAssignment = nextPollRebalancePartitionAssignment;
     }
 
     @Override
@@ -110,7 +136,11 @@ public class KafkaMockConsumer extends MockConsumer<String, Buffer> {
     @Override
     public synchronized void rebalance(final Collection<TopicPartition> newAssignment) {
         Optional.ofNullable(rebalanceListener)
-                .ifPresent(listener -> listener.onPartitionsRevoked(assignment()));
+                .ifPresent(listener -> {
+                    listener.onPartitionsRevoked(assignment().stream()
+                            .filter(tp -> revokeAllOnRebalance || !newAssignment.contains(tp))
+                            .collect(Collectors.toList()));
+                });
         super.rebalance(newAssignment);
         Optional.ofNullable(rebalanceListener)
                 .ifPresent(listener -> listener.onPartitionsAssigned(newAssignment));
