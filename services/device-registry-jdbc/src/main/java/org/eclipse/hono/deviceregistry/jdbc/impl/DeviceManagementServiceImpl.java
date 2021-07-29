@@ -63,7 +63,7 @@ public class DeviceManagementServiceImpl extends AbstractDeviceManagementService
                                 Optional.of(r.getVersion()))
                 )
 
-                .recover(e -> Services.recover(e, OperationResult::empty));
+                .recover(e -> Services.recover(e));
 
     }
 
@@ -96,7 +96,7 @@ public class DeviceManagementServiceImpl extends AbstractDeviceManagementService
                         Optional.empty(),
                         Optional.of(r.getVersion())))
 
-                .recover(e -> Services.recover(e, OperationResult::empty));
+                .recover(e -> Services.recover(e));
 
     }
 
@@ -115,7 +115,7 @@ public class DeviceManagementServiceImpl extends AbstractDeviceManagementService
                         return Result.<Void>from(HttpURLConnection.HTTP_NO_CONTENT);
                     }
                 })
-                .recover(e -> Services.recover(e, Result::from));
+                .recover(e -> Services.recover(e));
 
     }
 
