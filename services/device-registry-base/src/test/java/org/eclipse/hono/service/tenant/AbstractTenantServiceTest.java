@@ -28,6 +28,7 @@ import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
+import org.eclipse.hono.deviceregistry.util.Assertions;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
@@ -84,7 +85,7 @@ public interface AbstractTenantServiceTest {
                         buildTenantPayload(),
                         NoopSpan.INSTANCE))
                 .onComplete(ctx.failing(t -> {
-                    ctx.verify(() -> assertServiceInvocationException(t, HttpURLConnection.HTTP_CONFLICT));
+                    ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_CONFLICT));
                     ctx.completeNow();
                 }));
     }
@@ -112,7 +113,7 @@ public interface AbstractTenantServiceTest {
                     tenant,
                     NoopSpan.INSTANCE))
             .onComplete(ctx.failing(t -> {
-                ctx.verify(() -> assertServiceInvocationException(t, HttpURLConnection.HTTP_CONFLICT));
+                ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_CONFLICT));
                 ctx.completeNow();
             }));
     }
@@ -227,7 +228,7 @@ public interface AbstractTenantServiceTest {
                         NoopSpan.INSTANCE);
             })
             .onComplete(ctx.failing(t -> {
-                ctx.verify(() -> assertServiceInvocationException(t, HttpURLConnection.HTTP_PRECON_FAILED));
+                ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_PRECON_FAILED));
                 ctx.completeNow();
             }));
     }
@@ -250,7 +251,7 @@ public interface AbstractTenantServiceTest {
                         NoopSpan.INSTANCE);
             })
             .onComplete(ctx.failing(t -> {
-                ctx.verify(() -> assertServiceInvocationException(t, HttpURLConnection.HTTP_PRECON_FAILED));
+                ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_PRECON_FAILED));
                 ctx.completeNow();
             }));
     }
@@ -488,7 +489,7 @@ public interface AbstractTenantServiceTest {
             .onComplete(ctx.succeeding())
             .compose(ok -> getTenantManagementService().readTenant("tenant", NoopSpan.INSTANCE))
             .onComplete(ctx.failing(t -> {
-                ctx.verify(() -> assertServiceInvocationException(t, HttpURLConnection.HTTP_NOT_FOUND));
+                ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_NOT_FOUND));
                 ctx.completeNow();
             }));
     }
@@ -556,7 +557,7 @@ public interface AbstractTenantServiceTest {
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     // THEN the update fails with a 409
-                    assertServiceInvocationException(t, HttpURLConnection.HTTP_CONFLICT);
+                    Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_CONFLICT);
                 });
                 ctx.completeNow();
             }));
@@ -596,20 +597,6 @@ public interface AbstractTenantServiceTest {
                         return Future.failedFuture(t);
                     }
                 });
-    }
-
-    /**
-     * Asserts that an error is a {@link ServiceInvocationException} with a status code.
-     *
-     * @param error The error to assert.
-     * @param expectedStatusCode The expected status code.
-     * @throws AssertionError if any of the assertions fail.
-     */
-    default void assertServiceInvocationException(
-            final Throwable error,
-            final int expectedStatusCode) {
-        assertThat(error).isInstanceOf(ServiceInvocationException.class);
-        assertThat(((ServiceInvocationException) error).getErrorCode()).isEqualTo(expectedStatusCode);
     }
 
     /**

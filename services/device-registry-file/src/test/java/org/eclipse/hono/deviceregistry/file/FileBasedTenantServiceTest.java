@@ -29,6 +29,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.deviceregistry.DeviceRegistryTestUtils;
+import org.eclipse.hono.deviceregistry.util.Assertions;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.service.management.tenant.TrustedCertificateAuthority;
@@ -348,7 +349,7 @@ public class FileBasedTenantServiceTest implements AbstractTenantServiceTest {
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     // THEN the update fails
-                    assertServiceInvocationException(t, HttpURLConnection.HTTP_FORBIDDEN);
+                    Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_FORBIDDEN);
                 });
                 ctx.completeNow();
             }));
@@ -375,7 +376,7 @@ public class FileBasedTenantServiceTest implements AbstractTenantServiceTest {
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     // THEN the update fails
-                    assertServiceInvocationException(t, HttpURLConnection.HTTP_FORBIDDEN);
+                    Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_FORBIDDEN);
                 });
                 ctx.completeNow();
             }));

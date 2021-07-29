@@ -16,7 +16,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
 import java.util.Optional;
@@ -31,6 +30,7 @@ import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigPrope
 import org.eclipse.hono.deviceregistry.service.device.EdgeDeviceAutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
+import org.eclipse.hono.deviceregistry.util.Assertions;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
@@ -183,10 +183,8 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
         getDeviceManagementService().createDevice(TENANT, Optional.empty(), new Device(), NoopSpan.INSTANCE)
             .onComplete(ok -> ctx.succeeding())
             .compose(ok -> getDeviceManagementService().createDevice(TENANT, Optional.empty(), new Device(), NoopSpan.INSTANCE))
-            .onComplete(ctx.succeeding(response -> {
-                ctx.verify(() -> {
-                    assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
-                });
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_FORBIDDEN));
                 ctx.completeNow();
             }));
     }
@@ -206,10 +204,8 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
         getDeviceManagementService().createDevice(TENANT, Optional.empty(), new Device(), NoopSpan.INSTANCE)
             .onComplete(ok -> ctx.succeeding())
             .compose(ok -> getDeviceManagementService().createDevice(TENANT, Optional.empty(), new Device(), NoopSpan.INSTANCE))
-            .onComplete(ctx.succeeding(response -> {
-                ctx.verify(() -> {
-                    assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
-                });
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_FORBIDDEN));
                 ctx.completeNow();
             }));
     }

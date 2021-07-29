@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.eclipse.hono.deviceregistry.util.Assertions;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.SearchResult;
@@ -62,15 +63,18 @@ public interface AbstractDeviceManagementSearchDevicesTest {
         final Filter filter = new Filter("/enabled", false);
 
         createDevices(tenantId, Map.of(deviceId, new Device()))
-                .compose(ok -> getDeviceManagementService()
-                        .searchDevices(tenantId, pageSize, pageOffset, List.of(filter), List.of(), NoopSpan.INSTANCE))
-                .onComplete(ctx.succeeding(s -> {
-                    ctx.verify(() -> {
-                        assertThat(s.isError()).isTrue();
-                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
-                    });
-                    ctx.completeNow();
-                }));
+            .onComplete(ctx.succeeding())
+            .compose(ok -> getDeviceManagementService().searchDevices(
+                    tenantId,
+                    pageSize,
+                    pageOffset,
+                    List.of(filter),
+                    List.of(),
+                    NoopSpan.INSTANCE))
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_NOT_FOUND));
+                ctx.completeNow();
+            }));
     }
 
     /**
