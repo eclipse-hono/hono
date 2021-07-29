@@ -50,9 +50,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -647,18 +645,17 @@ public final class FileBasedCredentialsService extends AbstractCredentialsManage
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
      * @param span The active OpenTracing span for this operation.
-     * @param resultHandler The operation result.
+     * @return A succeeded future if the credentials have been removed successfully.
+     *         Otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      * @throws NullPointerException if any of the parameters except span is {@code null}.
      */
-    public void remove(
+    public Future<Result<Void>> remove(
             final String tenantId,
             final String deviceId,
-            final Span span,
-            final Handler<AsyncResult<Result<Void>>> resultHandler) {
+            final Span span) {
 
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(resultHandler);
 
         LOG.debug("removing credentials for device [tenant-id: {}, device-id: {}]", tenantId, deviceId);
 
@@ -670,9 +667,12 @@ public final class FileBasedCredentialsService extends AbstractCredentialsManage
             result.complete(Result.from(HttpURLConnection.HTTP_NO_CONTENT));
         } else {
             TracingHelper.logError(span, "modification is disabled for the Credentials service");
-            result.complete(OperationResult.empty(HttpURLConnection.HTTP_FORBIDDEN));
+            result.fail(new ClientErrorException(
+                    tenantId,
+                    HttpURLConnection.HTTP_FORBIDDEN,
+                    "modification is disabled for the Credentials service"));
         }
-        resultHandler.handle(result.future());
+        return result.future();
     }
 
     /**

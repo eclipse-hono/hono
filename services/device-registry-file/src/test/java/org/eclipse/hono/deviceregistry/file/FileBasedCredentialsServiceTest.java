@@ -33,7 +33,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
-import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.DeviceRegistryTestUtils;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.util.Assertions;
@@ -325,14 +324,7 @@ public class FileBasedCredentialsServiceTest implements AbstractCredentialsServi
                         Constants.DEFAULT_TENANT, "sensor1",
                         CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD))
                 .compose(s -> getCredentialsManagementService()
-                        .readCredentials(Constants.DEFAULT_TENANT, "4711", NoopSpan.INSTANCE)
-                        .map(r -> {
-                            if (r.getStatus() == HttpURLConnection.HTTP_OK) {
-                                return null;
-                            } else {
-                                throw new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED);
-                            }
-                        }))
+                        .readCredentials(Constants.DEFAULT_TENANT, "4711", NoopSpan.INSTANCE))
                 .onComplete(ctx.completing());
 
         start(startTracker);
