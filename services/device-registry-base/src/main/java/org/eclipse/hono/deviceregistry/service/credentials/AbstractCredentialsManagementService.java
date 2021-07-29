@@ -108,7 +108,9 @@ public abstract class AbstractCredentialsManagementService implements Credential
      *             as the parent for additional spans created as part of this method's execution.
      * @return A future indicating the outcome of the operation.
      *         <p>
-     *         The result's <em>status</em> property will have a value as specified
+     *         The future will be succeeded if the credentials have been created/updated successfully.
+     *         Otherwise, the future will be failed with a
+     *         {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code as specified
      *         in the Device Registry Management API.
      */
     protected abstract Future<OperationResult<Void>> processUpdateCredentials(
@@ -129,7 +131,8 @@ public abstract class AbstractCredentialsManagementService implements Credential
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will be succeeded with a result containing the retrieved credentials if a device
-     *         with the given identifier exists. The result's <em>status</em> property will have a value as specified
+     *         with the given identifier exists. Otherwise, the future will be failed with a
+     *         {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code as specified
      *         in the Device Registry Management API.
      */
     protected abstract Future<OperationResult<List<CommonCredential>>> processReadCredentials(DeviceKey key, Span span);
@@ -167,7 +170,7 @@ public abstract class AbstractCredentialsManagementService implements Credential
                                     resourceVersion,
                                     span));
                 })
-                .otherwise(t -> DeviceRegistryUtils.mapErrorToResult(t, span));
+                .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 
     @Override
@@ -198,7 +201,7 @@ public abstract class AbstractCredentialsManagementService implements Credential
                     }
                     return v;
                 })
-                .otherwise(t -> DeviceRegistryUtils.mapErrorToResult(t, span));
+                .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 
     private Future<List<CommonCredential>> verifyAndEncodePasswords(final List<CommonCredential> credentials) {
@@ -206,7 +209,7 @@ public abstract class AbstractCredentialsManagementService implements Credential
         return DeviceRegistryUtils.assertTypeAndAuthIdUniqueness(credentials)
                 .compose(ok -> {
                     // Check if we need to encode passwords
-                    if (needToEncode(credentials)) {
+                    if (isEncodingOfSecretsRequired(credentials)) {
                         // ... yes, encode passwords asynchronously
                         return Futures.executeBlocking(this.vertx, () -> checkCredentials(credentials));
                     } else {
@@ -229,7 +232,7 @@ public abstract class AbstractCredentialsManagementService implements Credential
      * @return {@code true} is the list contains at least one password which needs to be encoded on the
      * server side.
      */
-    private static boolean needToEncode(final List<CommonCredential> credentials) {
+    private static boolean isEncodingOfSecretsRequired(final List<CommonCredential> credentials) {
         return credentials
                 .stream()
                 .filter(PasswordCredential.class::isInstance)

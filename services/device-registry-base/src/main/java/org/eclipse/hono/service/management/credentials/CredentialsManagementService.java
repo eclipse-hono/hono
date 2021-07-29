@@ -45,7 +45,9 @@ public interface CredentialsManagementService {
      *             as the parent for additional spans created as part of this method's execution.
      * @return A future indicating the outcome of the operation.
      *         <p>
-     *         The result's <em>status</em> property will have a value as specified
+     *         The future will be succeeded if the credentials have been created/updated successfully.
+     *         Otherwise, the future will be failed with a
+     *         {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code as specified
      *         in the Device Registry Management API.
      * @throws NullPointerException if any of the parameters are {@code null}.
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/credentials/setAllCredentials">
@@ -71,7 +73,8 @@ public interface CredentialsManagementService {
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will be succeeded with a result containing the retrieved credentials if a device
-     *         with the given identifier exists. The result's <em>status</em> property will have a value as specified
+     *         with the given identifier exists. Otherwise, the future will be failed with a
+     *         {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code as specified
      *         in the Device Registry Management API.
      * @throws NullPointerException if any of the parameters are {@code null}.
      * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/credentials/getAllCredentials">

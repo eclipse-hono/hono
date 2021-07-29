@@ -36,6 +36,8 @@ import java.util.stream.Collectors;
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.deviceregistry.util.Assertions;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.Credentials;
@@ -310,51 +312,54 @@ public interface AbstractCredentialsServiceTest {
             final ExecutionBlock whenComplete) {
 
         getCredentialsManagementService().readCredentials(tenantId, deviceId, NoopSpan.INSTANCE)
-                .onComplete(ctx.succeeding(readCredentialsResult -> {
-                    if (log.isTraceEnabled()) {
-                        final String readResult = Optional.ofNullable(readCredentialsResult.getPayload())
-                                .map(list -> list.stream()
-                                            .map(c -> JsonObject.mapFrom(c))
-                                            .collect(JsonArray::new, JsonArray::add, JsonArray::addAll))
-                                .map(JsonArray::encodePrettily)
-                                .orElse(null);
-                            log.trace("read credentials [tenant: {}, device-id: {}] result: {}{}",
-                                    tenantId, deviceId, System.lineSeparator(), readResult);
+            .otherwise(t -> {
+                return OperationResult.empty(ServiceInvocationException.extractStatusCode(t));
+            })
+            .onComplete(ctx.succeeding(readCredentialsResult -> {
+                if (log.isTraceEnabled()) {
+                    final String readResult = Optional.ofNullable(readCredentialsResult.getPayload())
+                            .map(list -> list.stream()
+                                        .map(c -> JsonObject.mapFrom(c))
+                                        .collect(JsonArray::new, JsonArray::add, JsonArray::addAll))
+                            .map(JsonArray::encodePrettily)
+                            .orElse(null);
+                        log.trace("read credentials [tenant: {}, device-id: {}] result: {}{}",
+                                tenantId, deviceId, System.lineSeparator(), readResult);
+                }
+
+                ctx.verify(() -> {
+
+                    // assert a few basics, optionals may be empty
+                    // but must not be null
+                    if (readCredentialsResult.isOk()) {
+                        assertResourceVersion(readCredentialsResult);
                     }
 
-                    ctx.verify(() -> {
+                    managementValidation.accept(readCredentialsResult);
 
-                        // assert a few basics, optionals may be empty
-                        // but must not be null
-                        if (readCredentialsResult.isOk()) {
-                            assertResourceVersion(readCredentialsResult);
-                        }
+                    getCredentialsService().get(
+                            tenantId,
+                            type,
+                            authId,
+                            NoopSpan.INSTANCE)
+                            .onComplete(ctx.succeeding(getCredentialsResult -> {
+                                if (log.isTraceEnabled()) {
+                                    final String getResult = Optional.ofNullable(getCredentialsResult.getPayload())
+                                            .map(JsonObject::encodePrettily)
+                                            .orElse(null);
+                                        log.trace("get credentials [tenant: {}, device-id: {}, auth-id: {}, type: {}] result: {}{}",
+                                                tenantId, deviceId, authId, type, System.lineSeparator(), getResult);
+                                }
+                                ctx.verify(() -> {
+                                    assertThat(getCredentialsResult.getCacheDirective()).isNotNull();
+                                    adapterValidation.accept(getCredentialsResult);
 
-                        managementValidation.accept(readCredentialsResult);
+                                    whenComplete.apply();
+                                });
+                            }));
 
-                        getCredentialsService().get(
-                                tenantId,
-                                type,
-                                authId,
-                                NoopSpan.INSTANCE)
-                                .onComplete(ctx.succeeding(getCredentialsResult -> {
-                                    if (log.isTraceEnabled()) {
-                                        final String getResult = Optional.ofNullable(getCredentialsResult.getPayload())
-                                                .map(JsonObject::encodePrettily)
-                                                .orElse(null);
-                                            log.trace("get credentials [tenant: {}, device-id: {}, auth-id: {}, type: {}] result: {}{}",
-                                                    tenantId, deviceId, authId, type, System.lineSeparator(), getResult);
-                                    }
-                                    ctx.verify(() -> {
-                                        assertThat(getCredentialsResult.getCacheDirective()).isNotNull();
-                                        adapterValidation.accept(getCredentialsResult);
-
-                                        whenComplete.apply();
-                                    });
-                                }));
-
-                    });
-                }));
+                });
+            }));
 
     }
 
@@ -392,12 +397,14 @@ public interface AbstractCredentialsServiceTest {
         final var pwd = Credentials.createPasswordCredential("device1", "secret");
         final var psk = Credentials.createPSKCredential("device2", "shared-key");
 
-        getCredentialsManagementService().updateCredentials(
-                tenantId,
-                deviceId,
-                List.of(pwd, psk),
-                Optional.empty(),
-                NoopSpan.INSTANCE)
+        getDeviceManagementService().createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
+            .onFailure(ctx::failNow)
+            .compose(ok -> getCredentialsManagementService().updateCredentials(
+                    tenantId,
+                    deviceId,
+                    List.of(pwd, psk),
+                    Optional.empty(),
+                    NoopSpan.INSTANCE))
             .onFailure(ctx::failNow)
             .compose(ok -> getCredentialsService().get(tenantId, CredentialsConstants.SECRETS_TYPE_PRESHARED_KEY, "device1"))
             .onComplete(ctx.succeeding(response -> {
@@ -714,12 +721,14 @@ public interface AbstractCredentialsServiceTest {
         final var pwdCredentials = Credentials.createPasswordCredential(authId, "bar");
 
         getDeviceManagementService().createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
+            .onComplete(ctx.succeeding())
             .compose(result -> getCredentialsManagementService().updateCredentials(
                     tenantId,
                     deviceId,
                     List.of(pwdCredentials),
                     Optional.empty(),
                     NoopSpan.INSTANCE))
+            .onComplete(ctx.succeeding())
             .compose(result -> {
                 ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_NO_CONTENT, result.getStatus());
@@ -736,9 +745,9 @@ public interface AbstractCredentialsServiceTest {
                         Optional.of(resourceVersion),
                         NoopSpan.INSTANCE);
             })
-            .onComplete(ctx.succeeding(result -> {
+            .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
-                    assertEquals(HttpURLConnection.HTTP_PRECON_FAILED, result.getStatus());
+                    Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_PRECON_FAILED);
                 });
                 ctx.completeNow();
             }));
@@ -920,34 +929,30 @@ public interface AbstractCredentialsServiceTest {
         final CommonCredential credential = Credentials.createPasswordCredential(authId, "bar");
 
         // create device & set credentials
-
-        final Promise<?> phase1 = Promise.promise();
-
-        getDeviceManagementService()
-                .createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
-                .onComplete(ctx.succeeding(n -> getCredentialsManagementService()
-                .updateCredentials(tenantId, deviceId, List.of(credential), Optional.empty(), NoopSpan.INSTANCE)
-                .onComplete(ctx.succeeding(s -> phase1.complete()))));
-
-        // re-set credentials with wrong ID
-        final Promise<?> phase2 = Promise.promise();
-
-        // Change the password
-        final CommonCredential newCredential = Credentials.createPasswordCredential(authId, "foo");
-        ((PasswordCredential) newCredential).getSecrets().get(0).setId("randomId");
-
-        phase1.future().onComplete(ctx.succeeding(n -> getCredentialsManagementService()
-                .updateCredentials(tenantId, deviceId, Collections.singletonList(newCredential), Optional.empty(),
-                        NoopSpan.INSTANCE)
-                    .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
-
-                        assertEquals(HttpURLConnection.HTTP_BAD_REQUEST, s.getStatus());
-                        phase2.complete();
-                    })))));
-
-        // finally complete
-
-        phase2.future().onComplete(ctx.succeeding(s -> ctx.completeNow()));
+        getDeviceManagementService().createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
+            .onComplete(ctx.succeeding())
+            .compose(ok -> getCredentialsManagementService().updateCredentials(
+                    tenantId,
+                    deviceId,
+                    List.of(credential),
+                    Optional.empty(),
+                    NoopSpan.INSTANCE))
+            .onComplete(ctx.succeeding())
+            .compose(ok -> {
+                // Change the password
+                final CommonCredential newCredential = Credentials.createPasswordCredential(authId, "foo");
+                ((PasswordCredential) newCredential).getSecrets().get(0).setId("randomId");
+                return getCredentialsManagementService().updateCredentials(
+                        tenantId,
+                        deviceId,
+                        Collections.singletonList(newCredential),
+                        Optional.empty(),
+                        NoopSpan.INSTANCE);
+            })
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_BAD_REQUEST));
+                ctx.completeNow();
+            }));
     }
 
 
@@ -963,6 +968,7 @@ public interface AbstractCredentialsServiceTest {
         final var deviceId = UUID.randomUUID().toString();
 
         getDeviceManagementService().createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
+            .onComplete(ctx.succeeding())
             .compose(ok -> {
                 final var secret = new PasswordSecret();
                 secret.setId("any-id");
@@ -974,9 +980,9 @@ public interface AbstractCredentialsServiceTest {
                         Optional.empty(),
                         NoopSpan.INSTANCE);
             })
-            .onComplete(ctx.succeeding(r -> {
+            .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
-                    assertThat(r.getStatus()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
+                    Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_BAD_REQUEST);
                 });
                 ctx.completeNow();
             }));

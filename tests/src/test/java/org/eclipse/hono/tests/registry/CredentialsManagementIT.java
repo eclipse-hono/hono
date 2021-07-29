@@ -395,7 +395,10 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
                 Optional.ofNullable(payload).map(JsonArray::toBuffer).orElse(null),
                 CrudHttpClient.CONTENT_TYPE_JSON,
                 expectedStatus)
-            .onComplete(context.completing());
+            .onComplete(context.succeeding(response -> {
+                context.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                context.completeNow();
+            }));
     }
 
     /**
@@ -480,6 +483,7 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
                 deviceId,
                 List.of(hashedPasswordCredential),
                 HttpURLConnection.HTTP_NO_CONTENT)
+            .onComplete(context.succeeding())
             .compose(httpResponse -> {
                 context.verify(() -> assertResourceVersionHasChanged(resourceVersion, httpResponse.headers()));
                 // now try to update credentials with other version
@@ -490,7 +494,10 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
                         resourceVersion.get() + "_other",
                         HttpURLConnection.HTTP_PRECON_FAILED);
             })
-            .onComplete(context.completing());
+            .onComplete(context.succeeding(response -> {
+                context.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                context.completeNow();
+            }));
     }
 
     /**
@@ -510,7 +517,10 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
                     .setExtensions(Map.of("data", data)));
 
         registry.updateCredentials(tenantId, deviceId, credentials, HttpURLConnection.HTTP_ENTITY_TOO_LARGE)
-            .onComplete(context.completing());
+            .onComplete(context.succeeding(response -> {
+                context.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                context.completeNow();
+            }));
     }
 
     /**
@@ -525,7 +535,10 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
                 Credentials.createPasswordCredential("auth-id", "password", OptionalInt.of(4)));
 
         registry.updateCredentials("non-existing-tenant", deviceId, credentials, HttpURLConnection.HTTP_NOT_FOUND)
-            .onComplete(context.completing());
+            .onComplete(context.succeeding(response -> {
+                context.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                context.completeNow();
+            }));
     }
 
     /**
@@ -612,7 +625,10 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
     public void testGetCredentialsFailsForNonExistingTenant(final VertxTestContext context)  {
 
         registry.getCredentials("non-existing-tenant", "deviceId", HttpURLConnection.HTTP_NOT_FOUND)
-            .onComplete(context.completing());
+            .onComplete(context.succeeding(response -> {
+                context.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                context.completeNow();
+            }));
     }
 
     private static void assertResponseBodyContainsAllCredentials(final JsonArray responseBody, final List<CommonCredential> expected) {

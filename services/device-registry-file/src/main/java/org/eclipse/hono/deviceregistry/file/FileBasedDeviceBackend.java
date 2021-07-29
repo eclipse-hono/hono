@@ -48,7 +48,6 @@ import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -158,22 +157,14 @@ public class FileBasedDeviceBackend implements DeviceBackend, RegistrationServic
             final Span span) {
 
         return registrationService.deleteDevice(tenantId, deviceId, resourceVersion, span)
-                .compose(r -> {
-                    if (r.getStatus() != HttpURLConnection.HTTP_NO_CONTENT) {
-                        return Future.succeededFuture(r);
-                    }
-
-                    // now delete the credentials set
-                    final Promise<Result<Void>> f = Promise.promise();
-                    credentialsService.remove(
-                            tenantId,
-                            deviceId,
-                            span,
-                            f);
-
-                    // pass on the original result
-                    return f.future().map(r);
-                });
+                .compose(r -> credentialsService.remove(tenantId, deviceId, span)
+                        // this means that the registry is configured to not allow modification of credentials
+                        // and this has already been logged to the span
+                        // it also means that modification of devices is allowed which seems to be a mis-configuration
+                        // in any case, we cannot roll back the deletion of the device so we'll have to live
+                        // with the "orphaned" credentials here
+                        .otherwise(t -> r)
+                        .map(r));
     }
 
     @Override
@@ -271,28 +262,18 @@ public class FileBasedDeviceBackend implements DeviceBackend, RegistrationServic
     }
 
     @Override
-    public Future<OperationResult<List<CommonCredential>>> readCredentials(final String tenantId, final String deviceId,
+    public Future<OperationResult<List<CommonCredential>>> readCredentials(
+            final String tenantId,
+            final String deviceId,
             final Span span) {
 
         return credentialsService.readCredentials(tenantId, deviceId, span)
-                .compose(r -> {
-                    if (r.getStatus() == HttpURLConnection.HTTP_NOT_FOUND) {
-                        return registrationService.readDevice(tenantId, deviceId, span)
-                                .map(d -> {
-                                    if (d.getStatus() == HttpURLConnection.HTTP_OK) {
-                                        return OperationResult.ok(HttpURLConnection.HTTP_OK,
-                                                Collections.<CommonCredential> emptyList(),
-                                                r.getCacheDirective(),
-                                                r.getResourceVersion());
-                                    } else {
-                                        return r;
-                                    }
-                                })
-                                .otherwise(t -> OperationResult.empty(ServiceInvocationException.extractStatusCode(t)));
-                    } else {
-                        return Future.succeededFuture(r);
-                    }
-                });
+                .recover(t -> registrationService.readDevice(tenantId, deviceId, span)
+                        .map(OperationResult.ok(
+                                HttpURLConnection.HTTP_OK,
+                                List.of(),
+                                Optional.empty(),
+                                Optional.empty())));
     }
 
     Future<?> saveToFile() {
