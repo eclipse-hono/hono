@@ -34,6 +34,7 @@ import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedDeviceDao;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDocumentBuilder;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
+import org.eclipse.hono.deviceregistry.util.Assertions;
 import org.eclipse.hono.service.credentials.AbstractCredentialsServiceTest;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.management.OperationResult;
@@ -208,10 +209,10 @@ public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsSer
                         Credentials.createPasswordCredential("device2", "secret")),
                 Optional.empty(),
                 NoopSpan.INSTANCE)
-            .onComplete(ctx.succeeding(r -> {
+            .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     verify(tenantInformationService).getTenant(eq(tenantId), any(Span.class));
-                    assertThat(r.getStatus()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
+                    Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_FORBIDDEN);
                 });
                 ctx.completeNow();
             }));

@@ -17,6 +17,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   ID. This will speed up query execution significantly when there are a lot of devices registered for a tenant.
 * The JDBC based device registry's *get Credentials* operation used by the protocol adapters now also supports
   matching credentials against a given *client context*.
+* The device registry implementations did not return a JSON object in a response to a failed request as specified
+  in the Device Registry Management API. This has been fixed.
 
 ## 1.9.0
 

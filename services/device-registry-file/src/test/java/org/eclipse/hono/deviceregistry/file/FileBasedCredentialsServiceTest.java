@@ -33,10 +33,9 @@ import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
-import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.DownstreamSenderFactory;
 import org.eclipse.hono.deviceregistry.DeviceRegistryTestUtils;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
+import org.eclipse.hono.deviceregistry.util.Assertions;
 import org.eclipse.hono.service.credentials.AbstractCredentialsServiceTest;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
@@ -123,8 +122,6 @@ public class FileBasedCredentialsServiceTest implements AbstractCredentialsServi
         this.credentialsConfig = new FileBasedCredentialsConfigProperties();
         this.credentialsConfig.setCacheMaxAge(30);
 
-        final DownstreamSenderFactory downstreamSenderFactoryMock = mock(DownstreamSenderFactory.class);
-        when(downstreamSenderFactoryMock.connect()).thenReturn(Future.succeededFuture());
         this.registrationService = new FileBasedRegistrationService(vertx);
         this.registrationService.setConfig(registrationConfig);
 
@@ -327,14 +324,7 @@ public class FileBasedCredentialsServiceTest implements AbstractCredentialsServi
                         Constants.DEFAULT_TENANT, "sensor1",
                         CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD))
                 .compose(s -> getCredentialsManagementService()
-                        .readCredentials(Constants.DEFAULT_TENANT, "4711", NoopSpan.INSTANCE)
-                        .map(r -> {
-                            if (r.getStatus() == HttpURLConnection.HTTP_OK) {
-                                return null;
-                            } else {
-                                throw new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED);
-                            }
-                        }))
+                        .readCredentials(Constants.DEFAULT_TENANT, "4711", NoopSpan.INSTANCE))
                 .onComplete(ctx.completing());
 
         start(startTracker);
@@ -486,19 +476,20 @@ public class FileBasedCredentialsServiceTest implements AbstractCredentialsServi
 
         // containing a set of credentials
         setCredentials(getCredentialsManagementService(), "tenant", "device", List.of(secret))
-                .compose(ok -> {
-                    // WHEN trying to update the existing credentials
-                    final PasswordCredential newSecret = Credentials.createPasswordCredential("myId", "baz", OptionalInt.empty());
-                    return getCredentialsManagementService().updateCredentials("tenant", "device",
-                            List.of(newSecret),
-                            Optional.empty(),
-                            NoopSpan.INSTANCE);
-                })
-                .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
-                    // THEN the update fails with a 403
-                    assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_FORBIDDEN);
-                    ctx.completeNow();
-                })));
+            .onComplete(ctx.succeeding())
+            .compose(ok -> {
+                // WHEN trying to update the existing credentials
+                final PasswordCredential newSecret = Credentials.createPasswordCredential("myId", "baz", OptionalInt.empty());
+                return getCredentialsManagementService().updateCredentials("tenant", "device",
+                        List.of(newSecret),
+                        Optional.empty(),
+                        NoopSpan.INSTANCE);
+            })
+            .onComplete(ctx.failing(t -> {
+                // THEN the update fails with a 403
+                ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_FORBIDDEN));
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -517,20 +508,17 @@ public class FileBasedCredentialsServiceTest implements AbstractCredentialsServi
         // WHEN trying to add credentials using the bcrypt hash-function
         final PasswordCredential passwordCredential = Credentials.createPasswordCredential("bumlux", "thepwd");
 
-        getCredentialsManagementService()
-            .updateCredentials(
+        getCredentialsManagementService().updateCredentials(
                 "tenant",
                 "device",
                 List.of(passwordCredential),
                 Optional.empty(),
                 NoopSpan.INSTANCE)
-            .onComplete(ctx.succeeding(s -> ctx.verify(() -> {
 
-                // THEN the update fails with a 400 BAD REQUEST
-                assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_BAD_REQUEST));
                 ctx.completeNow();
-            }))
-        );
+            }));
     }
 
     /**
@@ -545,6 +533,7 @@ public class FileBasedCredentialsServiceTest implements AbstractCredentialsServi
         // GIVEN a device with a set of credentials
         final PasswordCredential passwordCredential = Credentials.createPasswordCredential("taken-auth-id", "thepwd");
         setCredentials(getCredentialsManagementService(), "tenant", "existing-device", List.of(passwordCredential))
+            .onComplete(ctx.succeeding())
             .compose(result -> {
                 ctx.verify(() -> assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT));
                 // WHEN trying to add credentials of the same type for another device using the same authentication identifier
@@ -556,14 +545,10 @@ public class FileBasedCredentialsServiceTest implements AbstractCredentialsServi
                         Optional.empty(),
                         NoopSpan.INSTANCE);
             })
-            .onComplete(ctx.succeeding(s -> {
-                ctx.verify(() -> {
-                    // THEN the update fails with a 409 CONFLICT
-                    assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_CONFLICT);
-                });
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_CONFLICT));
                 ctx.completeNow();
-            })
-        );
+            }));
     }
 
     /**
