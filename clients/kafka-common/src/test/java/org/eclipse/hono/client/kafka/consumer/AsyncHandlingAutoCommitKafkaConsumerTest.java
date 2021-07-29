@@ -21,15 +21,18 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -50,6 +53,7 @@ import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -254,6 +258,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig("test");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
         consumerConfig.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "300000"); // periodic commit shall not play a role here
+        consumerConfig.put(AsyncHandlingAutoCommitKafkaConsumer.CONFIG_HONO_OFFSETS_COMMIT_RECORD_COMPLETION_TIMEOUT_MILLIS, "0");
 
         consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
@@ -335,6 +340,98 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
     }
 
     /**
+     * Verifies that the consumer commits record offsets on rebalance, having waited some time for record
+     * handling to be completed.
+     *
+     * @param ctx The vert.x test context.
+     * @throws InterruptedException if the test execution gets interrupted.
+     */
+    @Test
+    public void testConsumerCommitsOffsetsOnRebalanceAfterWaitingForRecordCompletion(final VertxTestContext ctx)
+            throws InterruptedException {
+        final int numTestRecords = 5;
+        final VertxTestContext receivedRecordsCtx = new VertxTestContext();
+        final Checkpoint receivedRecordsCheckpoint = receivedRecordsCtx.checkpoint(numTestRecords);
+        final Map<Long, Promise<Void>> recordsHandlingPromiseMap = new HashMap<>();
+        final Function<KafkaConsumerRecord<String, Buffer>, Future<Void>> handler = record -> {
+            final Promise<Void> promise = Promise.promise();
+            if (recordsHandlingPromiseMap.put(record.offset(), promise) != null) {
+                receivedRecordsCtx.failNow(new IllegalStateException("received record with duplicate offset"));
+            }
+            receivedRecordsCheckpoint.flag();
+            return promise.future();
+        };
+        final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig("test");
+        consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
+        consumerConfig.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "300000"); // periodic commit shall not play a role here
+        consumerConfig.put(AsyncHandlingAutoCommitKafkaConsumer.CONFIG_HONO_OFFSETS_COMMIT_RECORD_COMPLETION_TIMEOUT_MILLIS, "21000");
+
+        final AtomicReference<Handler<Void>> onNextPartitionsRevokedBlockingHandlerRef = new AtomicReference<>();
+        consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig) {
+            @Override
+            protected void onPartitionsRevokedBlocking(
+                    final Set<io.vertx.kafka.client.common.TopicPartition> partitionsSet) {
+                Optional.ofNullable(onNextPartitionsRevokedBlockingHandlerRef.get())
+                        .ifPresent(handler -> handler.handle(null));
+                onNextPartitionsRevokedBlockingHandlerRef.set(null);
+                super.onPartitionsRevokedBlocking(partitionsSet);
+            }
+        };
+        consumer.setKafkaConsumerSupplier(() -> mockConsumer);
+        mockConsumer.updateEndOffsets(Map.of(topicPartition, ((long) 0)));
+        mockConsumer.updatePartitions(topicPartition, KafkaMockConsumer.DEFAULT_NODE);
+        mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(topicPartition));
+        final Context consumerVertxContext = vertx.getOrCreateContext();
+        consumerVertxContext.runOnContext(v -> {
+            consumer.start().onComplete(ctx.succeeding(v2 -> {
+                mockConsumer.schedulePollTask(() -> {
+                    IntStream.range(0, numTestRecords).forEach(offset -> {
+                        mockConsumer.addRecord(
+                                new ConsumerRecord<>(TOPIC, PARTITION, offset, "key_" + offset, Buffer.buffer()));
+                    });
+                });
+            }));
+        });
+        assertWithMessage("records received in 5s")
+                .that(receivedRecordsCtx.awaitCompletion(5, TimeUnit.SECONDS))
+                .isTrue();
+        if (receivedRecordsCtx.failed()) {
+            ctx.failNow(receivedRecordsCtx.causeOfFailure());
+            return;
+        }
+        // records received, complete the handling of all except the first 2 records
+        LongStream.range(2, numTestRecords).forEach(offset -> recordsHandlingPromiseMap.get(offset).complete());
+        ctx.verify(() -> assertThat(recordsHandlingPromiseMap.get(1L).future().isComplete()).isFalse());
+
+        // partitions revoked handler shall get called after the blocking partitions-revoked handling has waited for the records to be marked as completed
+        consumer.setOnPartitionsRevokedHandler(s -> {
+            ctx.verify(() -> assertThat(recordsHandlingPromiseMap.get(1L).future().isComplete()).isTrue());
+        });
+        final Checkpoint commitCheckDone = ctx.checkpoint(1);
+        consumer.setOnPartitionsAssignedHandler(partitions -> {
+            final Map<TopicPartition, OffsetAndMetadata> committed = mockConsumer.committed(Set.of(topicPartition));
+            ctx.verify(() -> {
+                final OffsetAndMetadata offsetAndMetadata = committed.get(topicPartition);
+                assertThat(offsetAndMetadata).isNotNull();
+                assertThat(offsetAndMetadata.offset()).isEqualTo(numTestRecords);
+            });
+            commitCheckDone.flag();
+        });
+        // trigger a rebalance where the currently assigned partition is revoked
+        // (and then assigned again - otherwise its offset wouldn't be returned by mockConsumer.committed())
+        // the remaining 2 records are to be marked as completed with some delay
+        onNextPartitionsRevokedBlockingHandlerRef.set(v -> {
+            consumerVertxContext.runOnContext(v2 -> {
+                recordsHandlingPromiseMap.get(0L).complete();
+                recordsHandlingPromiseMap.get(1L).complete();
+            });
+        });
+        mockConsumer.setRevokeAllOnRebalance(true);
+        mockConsumer.updateEndOffsets(Map.of(topic2Partition, ((long) 0)));
+        mockConsumer.setNextPollRebalancePartitionAssignment(List.of(topicPartition, topic2Partition));
+    }
+
+    /**
      * Verifies that the consumer commits the last fully handled records when it is stopped.
      *
      * @param ctx The vert.x test context.
@@ -357,6 +454,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig("test");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
         consumerConfig.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "300000"); // periodic commit shall not play a role here
+        consumerConfig.put(AsyncHandlingAutoCommitKafkaConsumer.CONFIG_HONO_OFFSETS_COMMIT_RECORD_COMPLETION_TIMEOUT_MILLIS, "0");
 
         consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
@@ -476,8 +574,8 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         };
         final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig("test");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
-        consumerConfig.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG,
-                "300000"); // periodic commit shall not play a role here
+        consumerConfig.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "300000"); // periodic commit shall not play a role here
+        consumerConfig.put(AsyncHandlingAutoCommitKafkaConsumer.CONFIG_HONO_OFFSETS_COMMIT_RECORD_COMPLETION_TIMEOUT_MILLIS, "0");
 
         consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
