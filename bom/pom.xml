@@ -1076,7 +1076,16 @@
               <configuration>
                 <attach>false</attach>
                 <classifier>${classifier.spring.boot.artifact}</classifier>
-                <excludeArtifactIds>hono-legal,hono-demo-certs</excludeArtifactIds>
+                <excludes>
+                  <exclude>
+                    <groupId>${project.groupId}</groupId>
+                    <artifactId>hono-legal</artifactId>
+                  </exclude>
+                  <exclude>
+                    <groupId>${project.groupId}</groupId>
+                    <artifactId>hono-demo-certs</artifactId>
+                  </exclude>
+                </excludes>
               </configuration>
             </execution>
           </executions>
