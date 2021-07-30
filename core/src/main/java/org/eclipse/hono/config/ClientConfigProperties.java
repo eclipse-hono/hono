@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,6 +17,7 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
+import org.eclipse.hono.config.quarkus.ClientOptions;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.Strings;
 
@@ -113,7 +114,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
     private long sendMessageTimeout = DEFAULT_SEND_MESSAGE_TIMEOUT;
 
     /**
-     * Creates new properties with default values.
+     * Creates new properties using default values.
      */
     public ClientConfigProperties() {
         super();
@@ -147,6 +148,33 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
         this.reconnectDelayIncrement = otherProperties.reconnectDelayIncrement;
         this.requestTimeout = otherProperties.requestTimeout;
         this.sendMessageTimeout = otherProperties.sendMessageTimeout;
+    }
+
+    /**
+     * Creates properties based on existing options.
+     *
+     * @param options The options to copy.
+     */
+    public ClientConfigProperties(final ClientOptions options) {
+        super(options.authenticatingClientOptions());
+        setAddressRewriteRule(options.addressRewriteRule().orElse(null));
+        setAmqpHostname(options.amqpHostname().orElse(null));
+        setConnectTimeout(options.connectTimeout());
+        setFlowLatency(options.flowLatency());
+        setIdleTimeout(options.idleTimeout());
+        setInitialCredits(options.initialCredits());
+        setLinkEstablishmentTimeout(options.linkEstablishmentTimeout());
+        setMaxFrameSize(options.maxFrameSize());
+        setMaxMessageSize(options.maxMessageSize());
+        setMaxSessionFrames(options.maxSessionFrames());
+        setMinMaxMessageSize(options.minMaxMessageSize());
+        setName(options.name().orElse(null));
+        setReconnectAttempts(options.reconnectAttempts());
+        setReconnectMinDelay(options.reconnectMinDelay());
+        setReconnectMaxDelay(options.reconnectMaxDelay());
+        setReconnectDelayIncrement(options.reconnectDelayIncrement());
+        setRequestTimeout(options.requestTimeout());
+        setSendMessageTimeout(options.sendMessageTimeout());
     }
 
     /**

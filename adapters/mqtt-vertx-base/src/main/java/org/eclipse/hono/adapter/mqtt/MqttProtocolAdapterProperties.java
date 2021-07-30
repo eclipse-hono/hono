@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -32,6 +32,24 @@ public class MqttProtocolAdapterProperties extends ProtocolAdapterProperties {
 
     private int commandAckTimeout = DEFAULT_COMMAND_ACK_TIMEOUT;
     private long sendMessageToDeviceTimeout = DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT;
+
+    /**
+     * Creates properties using default values.
+     */
+    public MqttProtocolAdapterProperties() {
+        super();
+    }
+
+    /**
+     * Creates properties using existing options.
+     *
+     * @param options The options to copy.
+     */
+    public MqttProtocolAdapterProperties(final MqttProtocolAdapterOptions options) {
+        super(options.adapterOptions());
+        setCommandAckTimeout(options.commandAckTimeout());
+        setSendMessageToDeviceTimeout(options.sendMessageToDeviceTimeout());
+    }
 
     /**
      * Gets the waiting for acknowledgement timeout in milliseconds for commands published with QoS 1.

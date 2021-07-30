@@ -31,10 +31,12 @@ import org.eclipse.hono.adapter.resourcelimits.ConnectedDevicesAsyncCacheLoader;
 import org.eclipse.hono.adapter.resourcelimits.ConnectionDurationAsyncCacheLoader;
 import org.eclipse.hono.adapter.resourcelimits.DataVolumeAsyncCacheLoader;
 import org.eclipse.hono.adapter.resourcelimits.NoopResourceLimitChecks;
+import org.eclipse.hono.adapter.resourcelimits.PrometheusBasedResourceLimitCheckOptions;
 import org.eclipse.hono.adapter.resourcelimits.PrometheusBasedResourceLimitChecks;
+import org.eclipse.hono.adapter.resourcelimits.PrometheusBasedResourceLimitChecksConfig;
 import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
-import org.eclipse.hono.adapter.resourcelimits.quarkus.PrometheusBasedResourceLimitChecksConfig;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.command.CommandConsumerFactory;
 import org.eclipse.hono.client.command.CommandResponseSender;
@@ -52,7 +54,6 @@ import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
-import org.eclipse.hono.client.quarkus.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
@@ -65,9 +66,12 @@ import org.eclipse.hono.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.client.telemetry.kafka.KafkaBasedEventSender;
 import org.eclipse.hono.client.telemetry.kafka.KafkaBasedTelemetrySender;
 import org.eclipse.hono.client.util.MessagingClientProvider;
+import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
-import org.eclipse.hono.config.quarkus.ApplicationConfigProperties;
+import org.eclipse.hono.config.quarkus.ApplicationOptions;
+import org.eclipse.hono.config.quarkus.ClientOptions;
+import org.eclipse.hono.config.quarkus.RequestResponseClientOptions;
 import org.eclipse.hono.service.cache.Caches;
 import org.eclipse.hono.service.quarkus.AbstractServiceApplication;
 import org.eclipse.hono.util.CredentialsObject;
@@ -83,7 +87,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
 import io.opentracing.Tracer;
-import io.quarkus.arc.config.ConfigPrefix;
+import io.smallrye.config.ConfigMapping;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
@@ -109,13 +113,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     protected SendMessageSampler.Factory messageSamplerFactory;
 
     @Inject
-    protected PrometheusBasedResourceLimitChecksConfig resourceLimitChecksConfig;
-
-    @Inject
     protected C protocolAdapterProperties;
-
-    @Inject
-    protected ApplicationConfigProperties appConfig;
 
     @Inject
     protected KafkaProducerConfigProperties kafkaProducerConfig;
@@ -126,24 +124,14 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     @Inject
     protected KafkaAdminClientConfigProperties kafkaAdminClientConfig;
 
-    @ConfigPrefix("hono.messaging")
-    protected RequestResponseClientConfigProperties downstreamSenderConfig;
-
-    @ConfigPrefix("hono.command")
-    protected RequestResponseClientConfigProperties commandConsumerConfig;
-
-    @ConfigPrefix("hono.tenant")
-    protected RequestResponseClientConfigProperties tenantClientConfig;
-
-    @ConfigPrefix("hono.registration")
-    protected RequestResponseClientConfigProperties deviceRegistrationClientConfig;
-
-    @ConfigPrefix("hono.credentials")
-    protected RequestResponseClientConfigProperties credentialsClientConfig;
-
-    @ConfigPrefix("hono.commandRouter")
-    protected RequestResponseClientConfigProperties commandRouterConfig;
-
+    private ApplicationConfigProperties appConfig;
+    private ClientConfigProperties commandConsumerConfig;
+    private ClientConfigProperties downstreamSenderConfig;
+    private RequestResponseClientConfigProperties tenantClientConfig;
+    private RequestResponseClientConfigProperties deviceRegistrationClientConfig;
+    private RequestResponseClientConfigProperties credentialsClientConfig;
+    private RequestResponseClientConfigProperties commandRouterConfig;
+    private PrometheusBasedResourceLimitChecksConfig resourceLimitChecksConfig;
     private ConnectionEventProducerConfig connectionEventsConfig;
 
     private Cache<Object, TenantResult<TenantObject>> tenantResponseCache;
@@ -156,6 +144,80 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
      * @return The adapter instance.
      */
     protected abstract AbstractProtocolAdapterBase<C> adapter();
+
+    @Inject
+    void setApplicationOptions(final ApplicationOptions options) {
+        this.appConfig = new ApplicationConfigProperties(options);
+    }
+
+    @Inject
+    void setCommandConsumerClientOptions(
+            @ConfigMapping(prefix = "hono.command")
+            final ClientOptions options) {
+
+        final var props = new ClientConfigProperties(options);
+        props.setServerRoleIfUnknown("Command & Control");
+        props.setNameIfNotSet(getComponentName());
+        this.commandConsumerConfig = props;
+    }
+
+    @Inject
+    void setDownstreamSenderOptions(
+            @ConfigMapping(prefix = "hono.messaging")
+            final ClientOptions options) {
+
+        final var props = new ClientConfigProperties(options);
+        props.setServerRoleIfUnknown("Downstream");
+        props.setNameIfNotSet(getComponentName());
+        this.downstreamSenderConfig = props;
+    }
+
+    @Inject
+    void setTenantServiceClientConfig(
+            @ConfigMapping(prefix = "hono.tenant")
+            final RequestResponseClientOptions options) {
+        final var props = new RequestResponseClientConfigProperties(options);
+        props.setServerRoleIfUnknown("Tenant");
+        props.setNameIfNotSet(getComponentName());
+        this.tenantClientConfig = props;
+    }
+
+    @Inject
+    void setdeviceRegistrationClientConfig(
+            @ConfigMapping(prefix = "hono.registration")
+            final RequestResponseClientOptions options) {
+        final var props = new RequestResponseClientConfigProperties(options);
+        props.setServerRoleIfUnknown("Device Registration");
+        props.setNameIfNotSet(getComponentName());
+        this.deviceRegistrationClientConfig = props;
+    }
+
+    @Inject
+    void setCredentialsServiceClientConfig(
+            @ConfigMapping(prefix = "hono.credentials")
+            final RequestResponseClientOptions options) {
+        final var props = new RequestResponseClientConfigProperties(options);
+        props.setServerRoleIfUnknown("Credentials");
+        props.setNameIfNotSet(getComponentName());
+        this.credentialsClientConfig = props;
+    }
+
+    @Inject
+    void setCommandRouterClientConfig(
+            @ConfigMapping(prefix = "hono.commandRouter")
+            final RequestResponseClientOptions options) {
+        final var props = new RequestResponseClientConfigProperties(options);
+        props.setServerRoleIfUnknown("Command Router");
+        props.setNameIfNotSet(getComponentName());
+        this.commandRouterConfig = props;
+    }
+
+    @Inject
+    void setResourceLimitCheckConfig(final PrometheusBasedResourceLimitCheckOptions options) {
+        final var props = new PrometheusBasedResourceLimitChecksConfig(options);
+        props.setServerRoleIfUnknown("Prometheus");
+        this.resourceLimitChecksConfig = props;
+    }
 
     @Inject
     void setConnectionEventProducerConfig(final ConnectionEventProducerOptions options) {
@@ -276,12 +338,6 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         }
     }
 
-    private RequestResponseClientConfigProperties tenantServiceClientConfig() {
-        tenantClientConfig.setServerRoleIfUnknown("Tenant");
-        tenantClientConfig.setNameIfNotSet(getComponentName());
-        return tenantClientConfig;
-    }
-
     private Cache<Object, TenantResult<TenantObject>> tenantResponseCache() {
         if (tenantResponseCache == null) {
             tenantResponseCache = Caches.newCaffeineCache(tenantClientConfig);
@@ -296,15 +352,9 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
      */
     protected TenantClient tenantClient() {
         return new ProtonBasedTenantClient(
-                HonoConnection.newConnection(vertx, tenantServiceClientConfig(), tracer),
+                HonoConnection.newConnection(vertx, tenantClientConfig, tracer),
                 messageSamplerFactory,
                 tenantResponseCache());
-    }
-
-    private RequestResponseClientConfigProperties registrationServiceClientConfig() {
-        deviceRegistrationClientConfig.setServerRoleIfUnknown("Device Registration");
-        deviceRegistrationClientConfig.setNameIfNotSet(getComponentName());
-        return deviceRegistrationClientConfig;
     }
 
     private Cache<Object, RegistrationResult> registrationResponseCache() {
@@ -321,15 +371,9 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
      */
     protected DeviceRegistrationClient registrationClient() {
         return new ProtonBasedDeviceRegistrationClient(
-                HonoConnection.newConnection(vertx, registrationServiceClientConfig(), tracer),
+                HonoConnection.newConnection(vertx, deviceRegistrationClientConfig, tracer),
                 messageSamplerFactory,
                 registrationResponseCache());
-    }
-
-    private RequestResponseClientConfigProperties credentialsServiceClientConfig() {
-        credentialsClientConfig.setServerRoleIfUnknown("Credentials");
-        credentialsClientConfig.setNameIfNotSet(getComponentName());
-        return credentialsClientConfig;
     }
 
     private Cache<Object, CredentialsResult<CredentialsObject>> credentialsResponseCache() {
@@ -346,15 +390,9 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
      */
     protected CredentialsClient credentialsClient() {
         return new ProtonBasedCredentialsClient(
-                HonoConnection.newConnection(vertx, credentialsServiceClientConfig(), tracer),
+                HonoConnection.newConnection(vertx, credentialsClientConfig, tracer),
                 messageSamplerFactory,
                 credentialsResponseCache());
-    }
-
-    private RequestResponseClientConfigProperties commandRouterServiceClientConfig() {
-        commandRouterConfig.setServerRoleIfUnknown("Command Router");
-        commandRouterConfig.setNameIfNotSet(getComponentName());
-        return commandRouterConfig;
     }
 
     /**
@@ -364,16 +402,8 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
      */
     protected CommandRouterClient commandRouterClient() {
         return new ProtonBasedCommandRouterClient(
-                HonoConnection.newConnection(vertx, commandRouterServiceClientConfig(), tracer),
+                HonoConnection.newConnection(vertx, commandRouterConfig, tracer),
                 messageSamplerFactory);
-    }
-
-    private ClientConfigProperties downstreamSenderConfig() {
-        // downstreamSenderConfig also used for the commandResponseSender, therefore set role on a copy here
-        final ClientConfigProperties props = new ClientConfigProperties(downstreamSenderConfig);
-        props.setServerRoleIfUnknown("Downstream");
-        props.setNameIfNotSet(getComponentName());
-        return props;
     }
 
     /**
@@ -383,16 +413,10 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
      */
     private ProtonBasedDownstreamSender downstreamSender() {
         return new ProtonBasedDownstreamSender(
-                HonoConnection.newConnection(vertx, downstreamSenderConfig(), tracer),
+                HonoConnection.newConnection(vertx, downstreamSenderConfig, tracer),
                 messageSamplerFactory,
                 protocolAdapterProperties.isDefaultsEnabled(),
                 protocolAdapterProperties.isJmsVendorPropsEnabled());
-    }
-
-    private ClientConfigProperties commandConsumerConfig() {
-        commandConsumerConfig.setServerRoleIfUnknown("Command & Control");
-        commandConsumerConfig.setNameIfNotSet(getComponentName());
-        return commandConsumerConfig;
     }
 
     /**
@@ -401,7 +425,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
      * @return The connection.
      */
     protected HonoConnection commandConsumerConnection() {
-        return HonoConnection.newConnection(vertx, commandConsumerConfig(), tracer);
+        return HonoConnection.newConnection(vertx, commandConsumerConfig, tracer);
     }
 
     /**

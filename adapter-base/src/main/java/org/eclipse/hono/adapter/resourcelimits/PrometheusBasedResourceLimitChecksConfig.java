@@ -51,13 +51,29 @@ public class PrometheusBasedResourceLimitChecksConfig extends AuthenticatingClie
     /**
      * Creates new properties with default values.
      * <p>
-     * The default host is <em> localhost</em> and the default
-     * port is <em>9090</em>.
+     * The default port is set to <em>9090</em>.
      *
      */
     public PrometheusBasedResourceLimitChecksConfig() {
         super();
         setPort(9090);
+    }
+
+    /**
+     * Creates new properties from existing options.
+     * <p>
+     * The default port is set to <em>9090</em>.
+     *
+     * @param options The options to copy.
+     */
+    public PrometheusBasedResourceLimitChecksConfig(final PrometheusBasedResourceLimitCheckOptions options) {
+        super(options.clientOptions());
+        setPort(9090);
+        this.cacheMaxSize = options.cacheMaxSize();
+        this.cacheMinSize = options.cacheMinSize();
+        this.cacheTimeout = options.cacheTimeout();
+        this.connectTimeout = options.connectTimeout();
+        this.queryTimeout = options.queryTimeout();
     }
 
     /**

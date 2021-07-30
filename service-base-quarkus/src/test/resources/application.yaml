@@ -1,0 +1,64 @@
+hono:
+  app:
+    maxInstances: 1
+    startupTimeout: 60
+  server:
+    bindAddress: "10.2.0.1"
+    insecurePort: 11001
+    insecurePortBindAddress: "10.2.0.2"
+    insecurePortEnabled: true
+    nativeTlsRequired: true
+    port: 11000
+  amqp:
+    corsAllowedOrigin: "client.eclipse.org"
+    deviceIdPattern: "[a-z]+"
+    eventLoopBlockedCheckTimeout: 12000
+    maxPayloadSize: 128000
+    networkDebugLoggingEnabled: true
+    receiverLinkCredit: 1000
+    sendTimeOut: 5100
+    tenantIdPattern: "[A-Z]+"
+    waitForDownstreamConnectionEnabled: true
+  command:
+    addressRewriteRule: "([a-z_]+)/([\\w-]+) test-vhost/$1/$2"
+    amqpHostname: "command.hono.eclipseprojects.io"
+    certPath: "/etc/cert.pem"
+    connectTimeout: 1234
+    credentialsPath: "/etc/creds"
+    flowLatency: 321
+    host: "hono.eclipseprojects.io"
+    idleTimeout: 44444
+    initialCredits: 55
+    keyPath: "/etc/key.pem"
+    linkEstablishmentTimeout: 1111
+    maxFrameSize: 32000
+    maxMessageSize: 64000
+    maxSessionFrames: 30
+    minMaxMessageSize: 65000
+    name: "client"
+    password: "secret"
+    pathSeparator: "-"
+    port: 12000
+    reconnectAttempts: 12
+    reconnectMaxDelay: 412
+    reconnectMinDelay: 10
+    requestTimeout: 533
+    secureProtocols: "TLSv1.0,TLSv1.5"
+    sendMessageTimeout: 2121
+    serverRole: "bumlux"
+    tlsEnabled: true
+    trustStorePath: "/etc/trusted-certs.pem"
+    username: "user"
+  tenant:
+    serverRole: "Tenant"
+    responseCacheDefaultTimeout: 300
+    responseCacheMaxSize: 121212
+    responseCacheMinSize: 333
+  auth:
+    serverRole: "Authentication Server"
+    supportedSaslMechanisms: "PLAIN"
+    validation:
+      certPath: "/etc/cert.pem"
+      keyPath: "/etc/key.pem"
+      sharedSecret: "secret"
+      tokenExpiration: 300

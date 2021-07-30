@@ -24,25 +24,49 @@ import org.eclipse.hono.service.auth.AbstractHonoAuthenticationService;
  * Configuration properties for the {@code FileBasedAuthenticationService}.
  *
  */
-public abstract class FileBasedAuthenticationServiceConfigProperties {
+public class FileBasedAuthenticationServiceConfigProperties {
 
     // explicitly initialized with null so that Quarkus doesn't complain about missing configuration property
     private String permissionsPath = null;
+    private SignatureSupportingConfigProperties signingProps = new SignatureSupportingConfigProperties();
     private List<String> supportedSaslMechanisms = List.of(AbstractHonoAuthenticationService.DEFAULT_SASL_MECHANISMS);
+
+    /**
+     * Creates properties from default values.
+     */
+    public FileBasedAuthenticationServiceConfigProperties() {
+        super();
+    }
+
+    /**
+     * Creates properties from existing options.
+     *
+     * @param options The options to copy.
+     */
+    public FileBasedAuthenticationServiceConfigProperties(final FileBasedAuthenticationServiceOptions options) {
+        super();
+        signingProps = new SignatureSupportingConfigProperties(options.signing());
+        this.permissionsPath = options.permissionsPath();
+        this.supportedSaslMechanisms = options.supportedSaslMechanisms();
+    }
 
     /**
      * Gets the properties for determining key material for creating tokens.
      *
      * @return The properties.
      */
-    public abstract SignatureSupportingConfigProperties getSigning();
+    public final SignatureSupportingConfigProperties getSigning() {
+        return signingProps;
+    }
 
     /**
      * Gets the properties for determining key material for validating tokens issued by this service.
      *
      * @return The properties.
      */
-    public abstract SignatureSupportingConfigProperties getValidation();
+    public final SignatureSupportingConfigProperties getValidation() {
+        return signingProps;
+    }
 
     /**
      * Gets the path to the file that the authorization rules are loaded from.

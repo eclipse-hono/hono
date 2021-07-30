@@ -17,7 +17,8 @@ import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 
 import org.eclipse.hono.adapter.http.MicrometerBasedHttpAdapterMetrics;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
+import org.eclipse.hono.adapter.lora.LoraProtocolAdapterOptions;
+import org.eclipse.hono.adapter.lora.LoraProtocolAdapterProperties;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
 
@@ -32,10 +33,16 @@ public class MetricsFactory {
 
     @Singleton
     @Produces
+    LoraProtocolAdapterProperties adapterProperties(final LoraProtocolAdapterOptions adapterOptions) {
+        return new LoraProtocolAdapterProperties(adapterOptions);
+    }
+
+    @Singleton
+    @Produces
     MicrometerBasedHttpAdapterMetrics metrics(
             final Vertx vertx,
             final MeterRegistry registry,
-            final ProtocolAdapterProperties adapterProperties) {
+            final LoraProtocolAdapterProperties adapterProperties) {
         registry.config().commonTags(MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_LORA));
         final var metrics = new MicrometerBasedHttpAdapterMetrics(registry, vertx);
         metrics.setProtocolAdapterProperties(adapterProperties);

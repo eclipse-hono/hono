@@ -16,8 +16,9 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 
+import org.eclipse.hono.adapter.amqp.AmqpAdapterOptions;
+import org.eclipse.hono.adapter.amqp.AmqpAdapterProperties;
 import org.eclipse.hono.adapter.amqp.MicrometerBasedAmqpAdapterMetrics;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
 
@@ -32,10 +33,16 @@ public class MetricsFactory {
 
     @Singleton
     @Produces
+    AmqpAdapterProperties adapterProperties(final AmqpAdapterOptions adapterOptions) {
+        return new AmqpAdapterProperties(adapterOptions);
+    }
+
+    @Singleton
+    @Produces
     MicrometerBasedAmqpAdapterMetrics metrics(
             final Vertx vertx,
             final MeterRegistry registry,
-            final ProtocolAdapterProperties adapterProperties) {
+            final AmqpAdapterProperties adapterProperties) {
         registry.config().commonTags(MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_AMQP));
         final var metrics = new MicrometerBasedAmqpAdapterMetrics(registry, vertx);
         metrics.setProtocolAdapterProperties(adapterProperties);

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,6 +19,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 
+import org.eclipse.hono.config.quarkus.AuthenticatingClientOptions;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.Strings;
 
@@ -28,23 +29,18 @@ import org.eclipse.hono.util.Strings;
  */
 public class AuthenticatingClientConfigProperties extends AbstractConfig {
 
-    /**
-     * The <em>unknown</em> server role.
-     */
-    public static final String SERVER_ROLE_UNKNOWN = "unknown";
-
     private String credentialsPath = null;
     private String host = "localhost";
     private boolean hostnameVerificationRequired = true;
     private String password = null;
     private int port = Constants.PORT_AMQPS;
-    private String serverRole = SERVER_ROLE_UNKNOWN;
+    private String serverRole = Constants.SERVER_ROLE_UNKNOWN;
     private boolean tlsEnabled = false;
     private String username = null;
     private boolean hostConfigured = false;
 
     /**
-     * Creates new properties with default values.
+     * Creates new properties using default values.
      */
     public AuthenticatingClientConfigProperties() {
         super();
@@ -65,6 +61,24 @@ public class AuthenticatingClientConfigProperties extends AbstractConfig {
         this.serverRole = otherProperties.serverRole;
         this.tlsEnabled = otherProperties.tlsEnabled;
         this.username = otherProperties.username;
+    }
+
+    /**
+     * Creates a new instance from existing options.
+     *
+     * @param options The options. All of the options are copied to the newly created instance.
+     */
+    public AuthenticatingClientConfigProperties(final AuthenticatingClientOptions options) {
+        super(options.genericOptions());
+        // use setters in order to enforce checks
+        setCredentialsPath(options.credentialsPath().orElse(null));
+        setHost(options.host());
+        setHostnameVerificationRequired(options.hostnameVerificationRequired());
+        setPassword(options.password().orElse(null));
+        setPort(options.port());
+        setServerRole(options.serverRole());
+        setTlsEnabled(options.tlsEnabled());
+        setUsername(options.username().orElse(null));
     }
 
     /**
@@ -304,7 +318,7 @@ public class AuthenticatingClientConfigProperties extends AbstractConfig {
      * @throws NullPointerException if name is {@code null}.
      */
     public final void setServerRoleIfUnknown(final String defaultRoleName) {
-        if (SERVER_ROLE_UNKNOWN.equals(serverRole)) {
+        if (Constants.SERVER_ROLE_UNKNOWN.equals(serverRole)) {
             setServerRole(defaultRoleName);
         }
     }
@@ -312,7 +326,7 @@ public class AuthenticatingClientConfigProperties extends AbstractConfig {
     /**
      * Sets the name of the role that the server plays from the client's perspective.
      * <p>
-     * The default value of this property is {@link #SERVER_ROLE_UNKNOWN}.
+     * The default value of this property is {@link Constants#SERVER_ROLE_UNKNOWN}.
      *
      * @param roleName The name.
      * @throws NullPointerException if name is {@code null}.
@@ -324,7 +338,7 @@ public class AuthenticatingClientConfigProperties extends AbstractConfig {
     /**
      * Gets the name of the role that the server plays from the client's perspective.
      * <p>
-     * The default value of this property is {@link #SERVER_ROLE_UNKNOWN}.
+     * The default value of this property is {@link Constants#SERVER_ROLE_UNKNOWN}.
      *
      * @return The name.
      */

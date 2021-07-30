@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,7 +17,8 @@ import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 
 import org.eclipse.hono.adapter.mqtt.MicrometerBasedMqttAdapterMetrics;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
+import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterOptions;
+import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
 
@@ -32,10 +33,16 @@ public class MetricsFactory {
 
     @Singleton
     @Produces
+    MqttProtocolAdapterProperties adapterProperties(final MqttProtocolAdapterOptions adapterOptions) {
+        return new MqttProtocolAdapterProperties(adapterOptions);
+    }
+
+    @Singleton
+    @Produces
     MicrometerBasedMqttAdapterMetrics metrics(
             final Vertx vertx,
             final MeterRegistry registry,
-            final ProtocolAdapterProperties adapterProperties) {
+            final MqttProtocolAdapterProperties adapterProperties) {
         registry.config().commonTags(MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_MQTT));
         final var metrics = new MicrometerBasedMqttAdapterMetrics(registry, vertx);
         metrics.setProtocolAdapterProperties(adapterProperties);

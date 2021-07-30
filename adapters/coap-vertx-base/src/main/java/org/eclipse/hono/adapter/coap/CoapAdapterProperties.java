@@ -18,7 +18,7 @@ import java.util.Objects;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 
 /**
- * Properties for configuring an COAP adapter.
+ * Properties for configuring the CoAP protocol adapter.
  */
 public class CoapAdapterProperties extends ProtocolAdapterProperties {
 
@@ -71,6 +71,33 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
     private int exchangeLifetime = DEFAULT_EXCHANGE_LIFETIME;
     private boolean messageOffloadingEnabled = DEFAULT_MESSAGE_OFFLOADING;
     private int timeoutToAck = DEFAULT_TIMEOUT_TO_ACK;
+
+    /**
+     * Creates properties using default values.
+     */
+    public CoapAdapterProperties() {
+        super();
+    }
+
+    /**
+     * Creates properties using existing options.
+     *
+     * @param options The options to copy.
+     */
+    public CoapAdapterProperties(final CoapAdapterOptions options) {
+        super(options.adapterOptions());
+        setCoapThreads(options.coapThreads());
+        setConnectorThreads(options.connectorThreads());
+        setDtlsRetransmissionTimeout(options.dtlsRetransmissionTimeout());
+        setDtlsThreads(options.dtlsThreads());
+        setExchangeLifetime(options.exchangeLifetime());
+        setIdSplitRegex(options.idSplitRegex());
+        this.insecureNetworkConfig = options.insecureNetworkConfig().orElse(null);
+        this.messageOffloadingEnabled = options.messageOffloadingEnabled();
+        this.networkConfig = options.networkConfig().orElse(null);
+        this.secureNetworkConfig = options.secureNetworkConfig().orElse(null);
+        setTimeoutToAck(options.timeoutToAck());
+    }
 
     /**
      * Gets the regular expression used for splitting up

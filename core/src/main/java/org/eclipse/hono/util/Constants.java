@@ -132,9 +132,17 @@ public final class Constants {
      */
     public static final int PORT_AMQPS = 5671;
     /**
+     * The AMQP 1.0 port defined by IANA for TLS encrypted connections.
+     */
+    public static final String PORT_AMQPS_STRING = "5671";
+    /**
      * Default value for a port that is not explicitly configured.
      */
     public static final int PORT_UNCONFIGURED = -1;
+    /**
+     * Default value for a port that is not explicitly configured.
+     */
+    public static final String PORT_UNCONFIGURED_STRING = "-1";
 
     /**
      * The loopback device address.
@@ -237,6 +245,11 @@ public final class Constants {
      * The header name defined for setting the <em>status code</em> of a device respond to a command that was previously received by the device.
      */
     public static final String HEADER_COMMAND_RESPONSE_STATUS = "hono-cmd-status";
+
+    /**
+     * The <em>unknown</em> server role name.
+     */
+    public static final String SERVER_ROLE_UNKNOWN = "unknown";
 
     private Constants() {
     }

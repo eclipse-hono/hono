@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.config;
 
+import org.eclipse.hono.config.quarkus.ApplicationOptions;
+
 /**
  * Configuration of common properties that are valid for an application (and not only a specific server).
  *
@@ -23,7 +25,27 @@ public class ApplicationConfigProperties {
     private int startupTimeout = 20;
 
     /**
+     * Creates new properties using default values.
+     */
+    public ApplicationConfigProperties() {
+        super();
+    }
+
+    /**
+     * Creates a new instance from existing options.
+     *
+     * @param options The options. All of the options are copied to the newly created instance.
+     */
+    public ApplicationConfigProperties(final ApplicationOptions options) {
+        super();
+        setMaxInstances(options.maxInstances());
+        setStartupTimeout(options.startupTimeout());
+    }
+
+    /**
      * Gets the maximum time to wait for the server to start up.
+     * <p>
+     * The default value of this property is 20 (seconds).
      *
      * @return The number of seconds to wait.
      */

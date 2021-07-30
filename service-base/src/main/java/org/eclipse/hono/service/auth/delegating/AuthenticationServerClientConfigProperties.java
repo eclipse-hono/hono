@@ -31,6 +31,24 @@ public class AuthenticationServerClientConfigProperties extends ClientConfigProp
     private List<String> supportedSaslMechanisms = List.of(AbstractHonoAuthenticationService.DEFAULT_SASL_MECHANISMS);
 
     /**
+     * Creates new properties using default values.
+     */
+    public AuthenticationServerClientConfigProperties() {
+        super();
+    }
+
+    /**
+     * Creates new properties from existing options.
+     *
+     * @param options The options to copy.
+     */
+    public AuthenticationServerClientConfigProperties(final AuthenticationServerClientOptions options) {
+        super(options.clientOptions());
+        setSupportedSaslMechanisms(List.copyOf(options.supportedSaslMechanisms()));
+        this.validation = new SignatureSupportingConfigProperties(options.validation());
+    }
+
+    /**
      * Sets the properties configuring key material for validating tokens.
      *
      * @param props The properties.

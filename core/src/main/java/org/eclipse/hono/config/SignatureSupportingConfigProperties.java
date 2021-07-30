@@ -15,6 +15,8 @@ package org.eclipse.hono.config;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
+import org.eclipse.hono.config.quarkus.SignatureSupportingOptions;
+
 /**
  * Common properties required for creating/validating cryptographic signatures.
  *
@@ -25,6 +27,26 @@ public class SignatureSupportingConfigProperties {
     private String keyPath = null;
     private long tokenExpiration = 600L;
     private String certPath = null;
+
+    /**
+     * Creates new properties using default values.
+     */
+    public SignatureSupportingConfigProperties() {
+        super();
+    }
+
+    /**
+     * Creates a new instance from existing options.
+     *
+     * @param options The options to copy.
+     */
+    public SignatureSupportingConfigProperties(final SignatureSupportingOptions options) {
+        super();
+        this.certPath = options.certPath().orElse(null);
+        this.keyPath = options.keyPath().orElse(null);
+        this.sharedSecret = options.sharedSecret().orElse(null);
+        this.tokenExpiration = options.tokenExpiration();
+    }
 
     /**
      * Gets the secret used for creating and validating HmacSHA256 based signatures.
