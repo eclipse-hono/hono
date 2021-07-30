@@ -18,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
@@ -29,13 +30,13 @@ import org.eclipse.hono.util.EventConstants;
 
 import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientOptions;
-import io.vertx.core.http.HttpClientRequest;
+import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -176,9 +177,18 @@ public class HonoHttpDevice {
 
         final CompletableFuture<Void> result = new CompletableFuture<>();
 
-        final HttpClientRequest req = httpClient
-                .post(request.isEvent ? "/event" : "/telemetry")
-                .handler(response -> {
+        httpClient.request(HttpMethod.POST, request.isEvent ? "/event" : "/telemetry")
+            .map(httpRequest -> {
+                httpRequest.headers()
+                    .addAll(standardRequestHeaders)
+                    .addAll(request.getHeaders());
+                return httpRequest;
+            })
+            .compose(httpRequest -> httpRequest.send(Optional.ofNullable(request.payload)
+                    .map(JsonObject::toBuffer)
+                    .orElse(Buffer.buffer())))
+                .onFailure(result::completeExceptionally)
+                .onSuccess(response -> {
                     System.out.println(response.statusCode() + " " + response.statusMessage());
                     if (StatusCodeMapper.isSuccessful(response.statusCode())) {
                         final MultiMap resultMap = response.headers();
@@ -206,36 +216,21 @@ public class HonoHttpDevice {
                     } else {
                         result.completeExceptionally(ServiceInvocationException.create(response.statusCode()));
                     }
-                }).exceptionHandler(t -> result.completeExceptionally(t));
+                });
 
-        req.headers().addAll(standardRequestHeaders);
-        req.headers().addAll(request.getHeaders());
-
-
-        if (request.payload == null) {
-            req.end();
-        } else {
-            req.end(request.payload.encode());
-        }
         return result;
     }
 
     private Future<Integer> sendCommandResponse(final String contentType, final Buffer payload, final String commandReqId, final int status) {
 
-        final Promise<Integer> result = Promise.promise();
-        final HttpClientRequest req = httpClient
-                .post(String.format("/%s/res/%s", CommandConstants.COMMAND_ENDPOINT, commandReqId))
-                .handler(response -> {
-                    result.complete(response.statusCode());
-                });
-        req.putHeader(Constants.HEADER_COMMAND_RESPONSE_STATUS, Integer.toString(status));
-        req.headers().addAll(standardRequestHeaders);
-        if (payload == null) {
-            req.end();
-        } else {
-            req.end(payload);
-        }
-        return result.future();
+        return httpClient.request(HttpMethod.POST, String.format("/%s/res/%s", CommandConstants.COMMAND_ENDPOINT, commandReqId))
+                .map(httpRequest -> {
+                    httpRequest.putHeader(Constants.HEADER_COMMAND_RESPONSE_STATUS, Integer.toString(status));
+                    httpRequest.headers().addAll(standardRequestHeaders);
+                    return httpRequest;
+                })
+                .compose(httpRequest -> httpRequest.send(Optional.ofNullable(payload).orElse(Buffer.buffer())))
+                .map(HttpClientResponse::statusCode);
     }
 
     /**

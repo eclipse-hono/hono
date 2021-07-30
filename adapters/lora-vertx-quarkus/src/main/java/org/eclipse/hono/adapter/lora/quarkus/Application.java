@@ -25,6 +25,8 @@ import org.eclipse.hono.adapter.lora.LoraProtocolAdapterProperties;
 import org.eclipse.hono.adapter.lora.providers.LoraProvider;
 import org.eclipse.hono.adapter.quarkus.AbstractProtocolAdapterApplication;
 
+import io.vertx.ext.web.client.WebClient;
+
 /**
  * The Hono Lora adapter main application class.
  */
@@ -56,7 +58,7 @@ public class Application extends AbstractProtocolAdapterApplication<LoraProtocol
         final List<LoraProvider> providers = new ArrayList<>();
         loraProviders.forEach(handler -> providers.add(handler));
 
-        final LoraProtocolAdapter adapter = new LoraProtocolAdapter();
+        final LoraProtocolAdapter adapter = new LoraProtocolAdapter(WebClient.create(vertx));
         adapter.setConfig(protocolAdapterProperties);
         adapter.setLoraProviders(providers);
         adapter.setMetrics(metrics);

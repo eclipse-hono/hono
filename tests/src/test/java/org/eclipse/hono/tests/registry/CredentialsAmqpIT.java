@@ -50,7 +50,7 @@ public class CredentialsAmqpIT extends CredentialsApiTests {
                 SendMessageSampler.Factory.noop(),
                 null);
 
-        client.start().onComplete(ctx.completing());
+        client.start().onComplete(ctx.succeedingThenComplete());
 
     }
 

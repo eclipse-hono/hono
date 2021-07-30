@@ -91,7 +91,7 @@ public class EventCoapIT extends CoapTestBase {
         final VertxTestContext setup = new VertxTestContext();
         final String messagePayload = UUID.randomUUID().toString();
 
-        helper.registry.addDeviceForTenant(tenantId, new Tenant(), deviceId, SECRET).onComplete(setup.completing());
+        helper.registry.addDeviceForTenant(tenantId, new Tenant(), deviceId, SECRET).onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {

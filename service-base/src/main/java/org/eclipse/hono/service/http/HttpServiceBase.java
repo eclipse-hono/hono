@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -36,7 +36,7 @@ import io.vertx.core.http.HttpServerOptions;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.Router;
-import io.vertx.ext.web.handler.AuthHandler;
+import io.vertx.ext.web.handler.AuthenticationHandler;
 import io.vertx.ext.web.handler.BodyHandler;
 
 /**
@@ -59,7 +59,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
     /**
      * Auth handler to be used on the routes.
      */
-    private AuthHandler authHandler;
+    private AuthenticationHandler authHandler;
 
     /**
      * Adds multiple endpoints to this server.
@@ -97,12 +97,12 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
     }
 
     /**
-     * Sets auth handler.
+     * Sets authentication handler.
      *
      * @param authHandler The handler.
      */
     @Autowired(required = false)
-    public void setAuthHandler(final AuthHandler authHandler) {
+    public void setAuthHandler(final AuthenticationHandler authHandler) {
         this.authHandler = authHandler;
     }
 

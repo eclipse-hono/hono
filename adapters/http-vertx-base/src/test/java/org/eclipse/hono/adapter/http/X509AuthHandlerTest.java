@@ -50,6 +50,7 @@ import org.junit.jupiter.api.Test;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
+import io.vertx.core.MultiMap;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.ext.web.RoutingContext;
@@ -97,6 +98,7 @@ public class X509AuthHandlerTest {
         final HttpServerRequest req = mock(HttpServerRequest.class);
         when(req.isSSL()).thenReturn(true);
         when(req.sslSession()).thenReturn(sslSession);
+        when(req.headers()).thenReturn(MultiMap.caseInsensitiveMultiMap());
         final HttpServerResponse resp = mock(HttpServerResponse.class);
         final RoutingContext ctx = mock(RoutingContext.class);
         when(ctx.get(TracingHandler.CURRENT_SPAN)).thenReturn(mock(Span.class));

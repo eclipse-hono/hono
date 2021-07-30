@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,7 +14,6 @@
 package org.eclipse.hono.service.http;
 
 import java.net.HttpURLConnection;
-import java.util.EnumSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -126,7 +125,9 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
         if (contentType == null) {
             ctx.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "Missing Content-Type header"));
         } else if (!HttpUtils.CONTENT_TYPE_JSON.equalsIgnoreCase(contentType.value())) {
-            ctx.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "Unsupported Content-Type"));
+            ctx.fail(new ClientErrorException(
+                    HttpURLConnection.HTTP_BAD_REQUEST,
+                    String.format("Unsupported Content-Type [%s]", contentType.value())));
         } else {
             try {
                 if (ctx.getBody() != null) {
@@ -331,8 +332,9 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
         final String msg = "error processing request";
         logger.debug(msg, error);
         TracingHelper.logError(span, msg, error);
-        Tags.HTTP_STATUS.set(span, ServiceInvocationException.extractStatusCode(error));
-        ctx.fail(error);
+        final int statusCode = ServiceInvocationException.extractStatusCode(error);
+        Tags.HTTP_STATUS.set(span, statusCode);
+        ctx.fail(statusCode, error);
     }
 
     /**
@@ -359,7 +361,7 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
      * @return The handler.
      */
     protected final CorsHandler createDefaultCorsHandler(final String allowedOrigin) {
-        return createCorsHandler(allowedOrigin, EnumSet.of(
+        return createCorsHandler(allowedOrigin, Set.of(
                 HttpMethod.POST,
                 HttpMethod.GET,
                 HttpMethod.PUT,

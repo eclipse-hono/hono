@@ -182,7 +182,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
      */
     @AfterAll
     public void finishTest(final VertxTestContext ctx) {
-        vertx.close(ctx.completing());
+        vertx.close(ctx.succeedingThenComplete());
     }
 
     /**
@@ -197,7 +197,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         httpClient.post("/telemetry")
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .expect(ResponsePredicate.status(HttpURLConnection.HTTP_UNAUTHORIZED))
-                .send(ctx.completing());
+                .send(ctx.succeedingThenComplete());
     }
 
     /**
@@ -214,7 +214,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .expect(ResponsePredicate.status(HttpURLConnection.HTTP_UNAUTHORIZED))
-                .send(ctx.completing());
+                .send(ctx.succeedingThenComplete());
     }
 
     /**
@@ -236,7 +236,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .expect(ResponsePredicate.status(HttpURLConnection.HTTP_UNAVAILABLE))
-                .sendJsonObject(new JsonObject(), ctx.completing());
+                .sendJsonObject(new JsonObject(), ctx.succeedingThenComplete());
     }
 
     /**
@@ -258,7 +258,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
                 .expect(ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
                 .expect(this::assertCorsHeaders)
-                .sendJsonObject(new JsonObject(), ctx.completing());
+                .sendJsonObject(new JsonObject(), ctx.succeedingThenComplete());
     }
 
     /**
@@ -308,7 +308,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(Constants.HEADER_QOS_LEVEL, String.valueOf(2))
                 .expect(ResponsePredicate.status(HttpURLConnection.HTTP_BAD_REQUEST))
-                .sendJsonObject(new JsonObject(), ctx.completing());
+                .sendJsonObject(new JsonObject(), ctx.succeedingThenComplete());
 
     }
 
@@ -483,7 +483,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
                 .expect(ResponsePredicate.SC_BAD_REQUEST)
-                .sendJsonObject(new JsonObject(), ctx.completing());
+                .sendJsonObject(new JsonObject(), ctx.succeedingThenComplete());
     }
 
     /**
@@ -503,7 +503,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
                 .expect(ResponsePredicate.SC_BAD_REQUEST)
-                .sendJsonObject(new JsonObject(), ctx.completing());
+                .sendJsonObject(new JsonObject(), ctx.succeedingThenComplete());
     }
 
     /**
@@ -522,7 +522,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
                 .expect(ResponsePredicate.SC_BAD_REQUEST)
-                .sendJsonObject(new JsonObject(), ctx.completing());
+                .sendJsonObject(new JsonObject(), ctx.succeedingThenComplete());
     }
 
     /**
@@ -545,7 +545,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
                 .expect(ResponsePredicate.SC_SERVICE_UNAVAILABLE)
-                .sendJsonObject(new JsonObject(), ctx.completing());
+                .sendJsonObject(new JsonObject(), ctx.succeedingThenComplete());
     }
 
     /**
@@ -569,7 +569,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
                 .expect(ResponsePredicate.SC_ACCEPTED)
-                .sendJsonObject(new JsonObject(), ctx.completing());
+                .sendJsonObject(new JsonObject(), ctx.succeedingThenComplete());
     }
 
     private String getCommandResponsePath(final String wrongCommandRequestId) {

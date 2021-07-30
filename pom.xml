@@ -336,6 +336,9 @@
           <version>2.22.2</version>
           <configuration>
             <properties>
+              <systemPropertyVariables>
+                <vertx.json.base64>legacy</vertx.json.base64>
+              </systemPropertyVariables>
               <configurationParameters>
                 junit.jupiter.execution.parallel.enabled = true
                 junit.jupiter.execution.parallel.mode.default = same_thread
@@ -437,7 +440,7 @@
         <plugin>
           <groupId>org.jboss.jandex</groupId>
           <artifactId>jandex-maven-plugin</artifactId>
-          <version>1.0.8</version>
+          <version>1.1.0</version>
           <executions>
             <execution>
               <id>make-index</id>

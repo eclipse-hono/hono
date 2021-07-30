@@ -135,7 +135,7 @@ abstract class DeviceRegistryTestBase {
 
         helper = new IntegrationTestSupport(vertx);
         helper.initRegistryClient();
-        helper.init().onComplete(ctx.completing());
+        helper.init().onComplete(ctx.succeedingThenComplete());
     }
 
     /**

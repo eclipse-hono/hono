@@ -144,7 +144,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                 sender = s;
                 return s;
             })
-            .onComplete(setup.completing());
+            .onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -462,7 +462,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                 log.info("messages received: {}", msgNo);
             }
         })
-        .onComplete(receiverCreation.completing());
+        .onComplete(receiverCreation.succeedingThenComplete());
 
         assertThat(receiverCreation.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         assertThat(receiverCreation.failed()).isFalse();

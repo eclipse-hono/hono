@@ -200,7 +200,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
     public void testAddTenantSucceedsForEmptyBody(final VertxTestContext context) {
 
         getHelper().registry.addTenant(tenantId)
-            .onComplete(context.completing());
+            .onComplete(context.succeedingThenComplete());
     }
 
     /**
@@ -546,7 +546,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
             .compose(ok -> getHelper().registry.getCredentials(tenantId, deviceId, HttpURLConnection.HTTP_NOT_FOUND))
             .compose(ok -> getHelper().registry.getRegistrationInfo(tenantId, deviceId, HttpURLConnection.HTTP_NOT_FOUND))
             .compose(ok -> getHelper().registry.getTenant(tenantId, HttpURLConnection.HTTP_NOT_FOUND))
-            .onComplete(context.completing());
+            .onComplete(context.succeedingThenComplete());
     }
 
     /**
@@ -635,7 +635,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
             getHelper().registry.addTenant(tenantId, tenant)
                     .compose(ok -> getHelper().registry.searchTenants(Optional.empty(), Optional.empty(),
                             List.of(filterJson), List.of(), HttpURLConnection.HTTP_NOT_FOUND))
-                    .onComplete(ctx.completing());
+                    .onComplete(ctx.succeedingThenComplete());
         }
 
         /**
@@ -650,7 +650,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
             getHelper().registry.addTenant(tenantId, new Tenant())
                     .compose(ok -> getHelper().registry.searchTenants(Optional.of(invalidPageSize), Optional.empty(),
                             List.of(), List.of(), HttpURLConnection.HTTP_BAD_REQUEST))
-                    .onComplete(ctx.completing());
+                    .onComplete(ctx.succeedingThenComplete());
         }
 
         /**
@@ -697,7 +697,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
             getHelper().registry.addTenant(tenantId, new Tenant())
                     .compose(ok -> getHelper().registry.searchTenants(Optional.empty(), Optional.of(invalidPageOffset),
                             List.of(), List.of(), HttpURLConnection.HTTP_BAD_REQUEST))
-                    .onComplete(ctx.completing());
+                    .onComplete(ctx.succeedingThenComplete());
         }
 
         /**
@@ -744,7 +744,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
             getHelper().registry.addTenant(tenantId, new Tenant())
                     .compose(ok -> getHelper().registry.searchTenants(Optional.empty(), Optional.empty(),
                             List.of("Invalid filterJson"), List.of(), HttpURLConnection.HTTP_BAD_REQUEST))
-                    .onComplete(ctx.completing());
+                    .onComplete(ctx.succeedingThenComplete());
         }
 
         /**
@@ -829,7 +829,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
             getHelper().registry.addTenant(tenantId, tenant)
                     .compose(ok -> getHelper().registry.searchTenants(Optional.empty(), Optional.empty(),
                             List.of(filterJson), List.of(), HttpURLConnection.HTTP_NOT_FOUND))
-                    .onComplete(ctx.completing());
+                    .onComplete(ctx.succeedingThenComplete());
         }
 
         /**
@@ -879,7 +879,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
             getHelper().registry.addTenant(tenantId, tenant)
                     .compose(ok -> getHelper().registry.searchTenants(Optional.empty(), Optional.empty(),
                             List.of(filterJson), List.of(), HttpURLConnection.HTTP_NOT_FOUND))
-                    .onComplete(ctx.completing());
+                    .onComplete(ctx.succeedingThenComplete());
         }
 
         /**
@@ -893,7 +893,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
             getHelper().registry.addTenant(tenantId, new Tenant())
                     .compose(ok -> getHelper().registry.searchTenants(Optional.empty(), Optional.empty(), List.of(),
                             List.of("Invalid sortJson"), HttpURLConnection.HTTP_BAD_REQUEST))
-                    .onComplete(ctx.completing());
+                    .onComplete(ctx.succeedingThenComplete());
         }
 
         /**

@@ -100,10 +100,10 @@ import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.auth.mongo.MongoAuth;
+import io.vertx.ext.auth.mongo.MongoAuthentication;
+import io.vertx.ext.auth.mongo.MongoAuthenticationOptions;
 import io.vertx.ext.mongo.MongoClient;
-import io.vertx.ext.web.handler.AuthHandler;
+import io.vertx.ext.web.handler.AuthenticationHandler;
 import io.vertx.ext.web.handler.BasicAuthHandler;
 
 /**
@@ -647,25 +647,25 @@ public class ApplicationConfig {
     }
 
     /**
-     * Creates a new instance of an auth handler to provide basic authentication for the 
-     * HTTP based Device Registry Management endpoint.
+     * Creates a new handler supporting the Basic authentication scheme for the HTTP based
+     * Device Registry Management endpoint.
      * <p>
-     * This method creates a {@link BasicAuthHandler} using an auth provider of type
-     * {@link MongoAuth} if the property corresponding to {@link HttpServiceConfigProperties#isAuthenticationRequired()}
+     * This method creates a {@link BasicAuthHandler} using an authentication provider of type
+     * {@link MongoAuthentication} if the property corresponding to {@link HttpServiceConfigProperties#isAuthenticationRequired()}
      * is set to {@code true}.
      *
      * @param httpServiceConfigProperties The properties for configuring the HTTP based device registry
      *                                    management endpoint.
-     * @return The auth handler if the {@link HttpServiceConfigProperties#isAuthenticationRequired()} 
+     * @return The created handler if the {@link HttpServiceConfigProperties#isAuthenticationRequired()} 
      *         is {@code true} or {@code null} otherwise.
      * @see <a href="https://vertx.io/docs/vertx-auth-mongo/java/">Mongo auth provider docs</a>
      */
     @Bean
     @Scope("prototype")
-    public AuthHandler createAuthHandler(final HttpServiceConfigProperties httpServiceConfigProperties) {
+    public AuthenticationHandler createAuthHandler(final HttpServiceConfigProperties httpServiceConfigProperties) {
         if (httpServiceConfigProperties.isAuthenticationRequired()) {
             return BasicAuthHandler.create(
-                    MongoAuth.create(mongoClient(), new JsonObject()),
+                    MongoAuthentication.create(mongoClient(), new MongoAuthenticationOptions()),
                     httpServerProperties().getRealm());
         }
         return null;

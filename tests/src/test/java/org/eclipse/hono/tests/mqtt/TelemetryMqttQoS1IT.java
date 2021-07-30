@@ -118,7 +118,7 @@ public class TelemetryMqttQoS1IT extends MqttPublishTestBase {
 
         final VertxTestContext setup = new VertxTestContext();
 
-        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password).onComplete(setup.completing());
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password).onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {

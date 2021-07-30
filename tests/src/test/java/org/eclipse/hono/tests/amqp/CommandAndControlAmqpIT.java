@@ -110,7 +110,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
         tenantId = helper.getRandomTenantId();
         deviceId = helper.getRandomDeviceId(tenantId);
-        helper.registry.addTenant(tenantId).onComplete(ctx.completing());
+        helper.registry.addTenant(tenantId).onComplete(ctx.succeedingThenComplete());
     }
 
     private Future<MessageConsumer> createEventConsumer(final String tenantId, final Handler<DownstreamMessage<? extends MessageContext>> messageConsumer) {
@@ -334,7 +334,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 },
                 null);
 
-        asyncResponseConsumer.onComplete(setup.completing());
+        asyncResponseConsumer.onComplete(setup.succeedingThenComplete());
 
         assertWithMessage("setup of command response consumer finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
                 .that(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
@@ -651,7 +651,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 KafkaRecordHelper.HEADER_RESPONSE_REQUIRED, true
         );
         kafkaSenderRef.get().sendAndWaitForOutcome(commandTopic, tenantId, deviceId, Buffer.buffer(), properties1)
-                .onComplete(ctx.succeeding());
+                .onComplete(ctx.succeeding(ok -> {}));
 
         log.debug("sending command message lacking subject");
         final String correlationId = "1";
@@ -662,7 +662,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 KafkaRecordHelper.HEADER_RESPONSE_REQUIRED, true
         );
         kafkaSenderRef.get().sendAndWaitForOutcome(commandTopic, tenantId, deviceId, Buffer.buffer(), properties2)
-                .onComplete(ctx.succeeding());
+                .onComplete(ctx.succeeding(ok -> {}));
 
         final long timeToWait = 500;
         if (!expectedCommandResponses.await(timeToWait, TimeUnit.MILLISECONDS)) {
@@ -885,7 +885,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                         response -> failureNotificationReceivedHandler.handle(null),
                         REJECTED_COMMAND_ERROR_MESSAGE::equals)
                 : Future.succeededFuture(null);
-        kafkaAsyncErrorResponseConsumer.onComplete(setup.completing());
+        kafkaAsyncErrorResponseConsumer.onComplete(setup.succeedingThenComplete());
         assertWithMessage("setup of command response consumer finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
                 .that(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
                 .isTrue();
@@ -993,7 +993,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                         response -> failureNotificationReceivedHandler.handle(null),
                         null)
                 : Future.succeededFuture(null);
-        kafkaAsyncErrorResponseConsumer.onComplete(setup.completing());
+        kafkaAsyncErrorResponseConsumer.onComplete(setup.succeedingThenComplete());
         assertWithMessage("setup of command response consumer finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
                 .that(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
                 .isTrue();
@@ -1099,7 +1099,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                     });
                     return result.future();
                 })
-                .onComplete(ctx.completing());
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     /**

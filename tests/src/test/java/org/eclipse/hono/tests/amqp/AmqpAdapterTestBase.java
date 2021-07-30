@@ -103,7 +103,7 @@ public abstract class AmqpAdapterTestBase {
 
         log.info("running {}", testInfo.getDisplayName());
         helper = new IntegrationTestSupport(vertx);
-        helper.init().onComplete(ctx.completing());
+        helper.init().onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -114,7 +114,7 @@ public abstract class AmqpAdapterTestBase {
     @AfterEach
     public void closeConnectionToMessagingNetwork(final VertxTestContext ctx) {
 
-        helper.disconnect().onComplete(ctx.completing());
+        helper.disconnect().onComplete(ctx.succeedingThenComplete());
     }
 
     /**

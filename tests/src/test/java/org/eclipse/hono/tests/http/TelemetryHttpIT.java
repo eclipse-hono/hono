@@ -94,7 +94,7 @@ public class TelemetryHttpIT extends HttpTestBase {
                 .add(Constants.HEADER_QOS_LEVEL, "1");
 
         helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, PWD)
-                .onComplete(setup.completing());
+                .onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -144,7 +144,7 @@ public class TelemetryHttpIT extends HttpTestBase {
 
             })
             // THEN the message gets rejected by the HTTP adapter with a 413
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -232,7 +232,7 @@ public class TelemetryHttpIT extends HttpTestBase {
                             return result.future();
                         },
                         remoteClose -> {}))
-                .onComplete(setup.completing());
+                .onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {

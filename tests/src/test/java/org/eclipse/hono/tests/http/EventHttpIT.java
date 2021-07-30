@@ -85,7 +85,7 @@ public class EventHttpIT extends HttpTestBase {
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI)
                 .add(Constants.HEADER_QOS_LEVEL, String.valueOf(QoS.AT_MOST_ONCE.ordinal()));
 
-        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, PWD).onComplete(setup.completing());
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, PWD).onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -98,7 +98,7 @@ public class EventHttpIT extends HttpTestBase {
                 Buffer.buffer("hello"),
                 requestHeaders,
                 ResponsePredicate.status(HttpURLConnection.HTTP_BAD_REQUEST))
-                .onComplete(ctx.completing());
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -118,7 +118,7 @@ public class EventHttpIT extends HttpTestBase {
                 .add(HttpHeaders.AUTHORIZATION, authorization)
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI);
 
-        helper.registry.addDeviceForTenant(tenantId, new Tenant(), deviceId, PWD).onComplete(setup.completing());
+        helper.registry.addDeviceForTenant(tenantId, new Tenant(), deviceId, PWD).onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {

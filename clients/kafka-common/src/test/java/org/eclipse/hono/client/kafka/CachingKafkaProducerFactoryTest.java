@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.client.kafka;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -24,7 +23,6 @@ import java.util.Optional;
 import java.util.function.BiFunction;
 
 import org.apache.kafka.clients.producer.MockProducer;
-import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.errors.AuthorizationException;
 import org.apache.kafka.common.errors.OutOfOrderSequenceException;
@@ -36,12 +34,14 @@ import org.eclipse.hono.test.VertxMockSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.vertx.core.Context;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.impl.ContextInternal;
+import io.vertx.core.impl.VertxInternal;
+import io.vertx.core.impl.future.PromiseInternal;
 import io.vertx.kafka.client.producer.KafkaProducer;
 import io.vertx.kafka.client.serialization.BufferSerializer;
 
@@ -59,16 +59,23 @@ public class CachingKafkaProducerFactoryTest {
     @BeforeEach
     void setUp() {
 
-        final Vertx vertxMock = mock(Vertx.class);
-        final Context context = VertxMockSupport.mockContext(vertxMock);
+        final VertxInternal vertxMock = mock(VertxInternal.class);
+        final ContextInternal context = VertxMockSupport.mockContextInternal(vertxMock);
+        final PromiseInternal<Void> promiseInternal = VertxMockSupport.promiseInternal();
+        when(promiseInternal.future()).thenReturn(Future.succeededFuture());
+        doAnswer(invocation -> {
+            return promiseInternal;
+        }).when(context).promise();
         when(vertxMock.getOrCreateContext()).thenReturn(context);
 
         doAnswer(invocation -> {
-            final Promise<RecordMetadata> result = Promise.promise();
-            final Handler<Future<RecordMetadata>> blockingCode = invocation.getArgument(0);
+            final Promise<Object> result = Promise.promise();
+            final Handler<Future<Object>> blockingCode = invocation.getArgument(0);
+            final Handler<AsyncResult<Object>> resultHandler = invocation.getArgument(1);
+            result.future().onComplete(resultHandler);
             blockingCode.handle(result.future());
             return null;
-        }).when(context).executeBlocking(VertxMockSupport.anyHandler(), any());
+        }).when(context).executeBlocking(VertxMockSupport.anyHandler(), VertxMockSupport.anyHandler());
 
         final BiFunction<String, Map<String, String>, KafkaProducer<String, Buffer>> instanceSupplier = (n, c) -> {
             final MockProducer<String, Buffer> mockProducer = new MockProducer<>(true, new StringSerializer(),

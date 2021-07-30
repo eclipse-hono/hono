@@ -55,7 +55,7 @@ public class DeviceConnectionJmsIT extends DeviceConnectionApiTests {
                 IntegrationTestSupport.TENANT_ADMIN_PWD);
 
         client = new JmsBasedDeviceConnectionClient(JmsBasedHonoConnection.newConnection(props), props);
-        client.start().onComplete(ctx.completing());
+        client.start().onComplete(ctx.succeedingThenComplete());
     }
 
     /**

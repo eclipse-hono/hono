@@ -344,7 +344,7 @@ public class HonoConnectionImplTest {
         honoConnection = new HonoConnectionImpl(vertx, connectionFactory, props);
         final AtomicInteger reconnectListenerInvocations = new AtomicInteger();
         honoConnection.addReconnectListener(con -> reconnectListenerInvocations.incrementAndGet());
-        honoConnection.connect(options).onComplete(ctx.succeeding());
+        honoConnection.connect(options).onFailure(ctx::failNow);
         ctx.verify(() -> assertThat(connectionFactory.await()).isTrue());
         connectionFactory.setExpectedSucceedingConnectionAttempts(1);
 
@@ -385,7 +385,7 @@ public class HonoConnectionImplTest {
         honoConnection.addReconnectListener(con -> reconnectListenerInvocations.incrementAndGet());
 
         // WHEN trying to connect
-        honoConnection.connect().onComplete(ctx.succeeding());
+        honoConnection.connect().onFailure(ctx::failNow);
 
         ctx.verify(() -> {
             // THEN the client fails twice to connect
@@ -529,7 +529,7 @@ public class HonoConnectionImplTest {
 
         honoConnection.connect().compose(ok -> {
             // GIVEN a client that is in the process of shutting down
-            honoConnection.shutdown(Promise.<Void>promise().future());
+            honoConnection.shutdown(Promise.promise());
             // WHEN the client tries to reconnect before shut down is complete
             return honoConnection.connect();
         })
@@ -564,7 +564,7 @@ public class HonoConnectionImplTest {
                 return honoConnection.connect(new ProtonClientOptions());
             })
             // THEN the connection succeeds
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -707,7 +707,7 @@ public class HonoConnectionImplTest {
         honoConnection.connect()
                 // THEN the "isConnected" futures succeed
                 .compose(v -> CompositeFuture.all(isConnected1FutureRef.get(), isConnected2FutureRef.get()))
-                .onComplete(ctx.succeeding());
+                .onFailure(ctx::failNow);
 
         ctx.verify(() -> {
             // and the client fails twice to connect

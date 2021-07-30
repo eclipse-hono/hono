@@ -26,7 +26,7 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.impl.HttpStatusException;
+import io.vertx.ext.web.handler.HttpException;
 
 
 /**
@@ -68,8 +68,8 @@ public class DefaultFailureHandler implements Handler<RoutingContext> {
                     if (ctx.failure() instanceof ServiceInvocationException) {
                         final ServiceInvocationException e = (ServiceInvocationException) ctx.failure();
                         sendError(ctx.response(), e.getErrorCode(), e.getMessage());
-                    } else if (ctx.failure() instanceof HttpStatusException) {
-                        final HttpStatusException e = (HttpStatusException) ctx.failure();
+                    } else if (ctx.failure() instanceof HttpException) {
+                        final HttpException e = (HttpException) ctx.failure();
                         sendError(ctx.response(), e.getStatusCode(), e.getMessage());
                     } else {
                         LOG.debug("unexpected internal failure", ctx.failure());

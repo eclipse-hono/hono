@@ -102,7 +102,7 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
         registrationService = new MongoDbBasedRegistrationService(deviceDao);
         registrationService.setEdgeDeviceAutoProvisioner(edgeDeviceAutoProvisioner);
 
-        CompositeFuture.all(deviceDao.createIndices(), credentialsDao.createIndices()).onComplete(testContext.completing());
+        CompositeFuture.all(deviceDao.createIndices(), credentialsDao.createIndices()).onComplete(testContext.succeedingThenComplete());
     }
 
     /**
@@ -139,7 +139,7 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
         CompositeFuture.all(
                 deviceDao.deleteAllFromCollection(),
                 credentialsDao.deleteAllFromCollection())
-            .onComplete(testContext.completing());
+            .onComplete(testContext.succeedingThenComplete());
     }
 
     /**
@@ -181,7 +181,7 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
         config.setMaxDevicesPerTenant(1);
 
         getDeviceManagementService().createDevice(TENANT, Optional.empty(), new Device(), NoopSpan.INSTANCE)
-            .onComplete(ok -> ctx.succeeding())
+            .onFailure(ctx::failNow)
             .compose(ok -> getDeviceManagementService().createDevice(TENANT, Optional.empty(), new Device(), NoopSpan.INSTANCE))
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_FORBIDDEN));
@@ -202,7 +202,7 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
                 Future.succeededFuture(new Tenant().setRegistrationLimits(new RegistrationLimits().setMaxNumberOfDevices(1))));
 
         getDeviceManagementService().createDevice(TENANT, Optional.empty(), new Device(), NoopSpan.INSTANCE)
-            .onComplete(ok -> ctx.succeeding())
+            .onFailure(ctx::failNow)
             .compose(ok -> getDeviceManagementService().createDevice(TENANT, Optional.empty(), new Device(), NoopSpan.INSTANCE))
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_FORBIDDEN));

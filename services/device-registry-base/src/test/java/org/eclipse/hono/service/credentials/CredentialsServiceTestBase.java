@@ -721,14 +721,14 @@ public interface CredentialsServiceTestBase {
         final var pwdCredentials = Credentials.createPasswordCredential(authId, "bar");
 
         getDeviceManagementService().createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
-            .onComplete(ctx.succeeding())
+            .onFailure(ctx::failNow)
             .compose(result -> getCredentialsManagementService().updateCredentials(
                     tenantId,
                     deviceId,
                     List.of(pwdCredentials),
                     Optional.empty(),
                     NoopSpan.INSTANCE))
-            .onComplete(ctx.succeeding())
+            .onFailure(ctx::failNow)
             .compose(result -> {
                 ctx.verify(() -> {
                     assertEquals(HttpURLConnection.HTTP_NO_CONTENT, result.getStatus());
@@ -930,14 +930,14 @@ public interface CredentialsServiceTestBase {
 
         // create device & set credentials
         getDeviceManagementService().createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
-            .onComplete(ctx.succeeding())
+            .onFailure(ctx::failNow)
             .compose(ok -> getCredentialsManagementService().updateCredentials(
                     tenantId,
                     deviceId,
                     List.of(credential),
                     Optional.empty(),
                     NoopSpan.INSTANCE))
-            .onComplete(ctx.succeeding())
+            .onFailure(ctx::failNow)
             .compose(ok -> {
                 // Change the password
                 final CommonCredential newCredential = Credentials.createPasswordCredential(authId, "foo");
@@ -968,7 +968,7 @@ public interface CredentialsServiceTestBase {
         final var deviceId = UUID.randomUUID().toString();
 
         getDeviceManagementService().createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
-            .onComplete(ctx.succeeding())
+            .onFailure(ctx::failNow)
             .compose(ok -> {
                 final var secret = new PasswordSecret();
                 secret.setId("any-id");
