@@ -20,11 +20,10 @@ import org.eclipse.hono.client.ServiceInvocationException;
 
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.AuthHandler;
-import io.vertx.ext.web.handler.impl.HttpStatusException;
+import io.vertx.ext.web.handler.HttpException;
 
 /**
- * Utility methods for implementing Hono specific {@link AuthHandler}s.
+ * Utility methods for implementing Hono specific {@link io.vertx.ext.web.handler.AuthenticationHandler}s.
  *
  */
 public final class AuthHandlerTools {
@@ -37,7 +36,7 @@ public final class AuthHandlerTools {
      * Processes an exception that occurred while trying to authenticate
      * a device.
      * <p>
-     * This method checks if the given exception is an {@code HttpStatusException}
+     * This method checks if the given exception is an {@code HttpException}
      * and if so, tries to extract the root cause of the problem from its
      * <em>cause</em> field. If the root cause is a {@link ServiceInvocationException}
      * the routing context is failed with that exception (provided the status code
@@ -53,15 +52,14 @@ public final class AuthHandlerTools {
      * @param ctx The routing context.
      * @param exception The cause of failure to process the request.
      * @param authenticateHeader The value to return in the HTTP Authenticate header.
-     * @see io.vertx.ext.web.handler.impl.AuthHandlerImpl#processException(RoutingContext, Throwable)
+     * @see io.vertx.ext.web.handler.impl.AuthenticationHandlerImpl
      */
     public static void processException(
             final RoutingContext ctx,
             final Throwable exception,
             final String authenticateHeader) {
 
-
-        if (exception instanceof HttpStatusException) {
+        if (exception instanceof HttpException) {
 
             final Throwable failure = Optional.ofNullable(exception.getCause()).map(c -> {
                 if (c instanceof ServiceInvocationException) {
@@ -80,8 +78,8 @@ public final class AuthHandlerTools {
                 statusCode = sie.getErrorCode();
                 payload = null;
             } else {
-                statusCode = ((HttpStatusException) exception).getStatusCode();
-                payload = ((HttpStatusException) exception).getPayload();
+                statusCode = ((HttpException) exception).getStatusCode();
+                payload = ((HttpException) exception).getPayload();
             }
 
             switch (statusCode) {

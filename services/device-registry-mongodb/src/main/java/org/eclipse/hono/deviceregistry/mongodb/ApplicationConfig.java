@@ -65,7 +65,6 @@ import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.credentials.DelegatingCredentialsAmqpEndpoint;
 import org.eclipse.hono.service.http.HttpEndpoint;
-import org.eclipse.hono.service.http.HttpServiceConfigProperties;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.DelegatingCredentialsManagementHttpEndpoint;
 import org.eclipse.hono.service.management.device.DelegatingDeviceManagementHttpEndpoint;
@@ -104,10 +103,11 @@ import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.auth.mongo.MongoAuth;
+import io.vertx.ext.auth.mongo.MongoAuthenticationOptions;
+import io.vertx.ext.auth.mongo.impl.DefaultHashStrategy;
+import io.vertx.ext.auth.mongo.impl.MongoAuthenticationImpl;
 import io.vertx.ext.mongo.MongoClient;
-import io.vertx.ext.web.handler.AuthHandler;
+import io.vertx.ext.web.handler.AuthenticationHandler;
 import io.vertx.ext.web.handler.BasicAuthHandler;
 
 /**
@@ -652,31 +652,47 @@ public class ApplicationConfig {
     }
 
     /**
-     * Creates a new instance of an auth handler to provide basic authentication for the 
-     * HTTP based Device Registry Management endpoint.
-     * <p>
-     * This method creates a {@link BasicAuthHandler} using an auth provider of type
-     * {@link MongoAuth} if the property corresponding to {@link HttpServiceConfigProperties#isAuthenticationRequired()}
-     * is set to {@code true}.
+     * Creates an authentication handler supporting the Basic authentication scheme for the HTTP based
+     * Device Registry Management endpoint.
      *
      * @param httpServiceConfigProperties The properties for configuring the HTTP based device registry
      *                                    management endpoint.
-     * @return The auth handler if the {@link HttpServiceConfigProperties#isAuthenticationRequired()} 
+     * @return The created handler if the {@link MongoDbBasedHttpServiceConfigProperties#isAuthenticationRequired()} 
      *         is {@code true} or {@code null} otherwise.
      * @see <a href="https://vertx.io/docs/vertx-auth-mongo/java/">Mongo auth provider docs</a>
      */
+    @SuppressWarnings("deprecation")
     @Bean
     @Scope("prototype")
-    public AuthHandler createAuthHandler(final MongoDbBasedHttpServiceConfigProperties httpServiceConfigProperties) {
+    public AuthenticationHandler createAuthHandler(final MongoDbBasedHttpServiceConfigProperties httpServiceConfigProperties) {
         if (httpServiceConfigProperties.isAuthenticationRequired()) {
-            final JsonObject config = httpServiceConfigProperties.getAuth().toJsonObject();
-            LOG.debug("creating AuthHandler guarding access to registry's HTTP endpoint using configuration:{}{}",
-                    System.lineSeparator(), config.encodePrettily());
-            final var authProvider = MongoAuth.create(mongoClient(), config);
-            Optional.ofNullable(httpServiceConfigProperties.getAuth().getHashAlgorithm())
-                .ifPresent(authProvider::setHashAlgorithm);
+            final var authConfig = httpServiceConfigProperties.getAuth();
+            LOG.debug("creating AuthenticationHandler guarding access to registry's HTTP endpoint using configuration:{}{}",
+                    System.lineSeparator(), authConfig);
+            final var mongoAuthOptions = new MongoAuthenticationOptions();
+            mongoAuthOptions.setCollectionName(authConfig.getCollectionName());
+            mongoAuthOptions.setUsernameField(authConfig.getUsernameField());
+            // this is a fix for what I believe is a bug in the MongoAuthenticationImpl class
+            // where the usernameField and usernameCredentialField properties are used
+            // inconsistently (and interchangeably)
+            mongoAuthOptions.setUsernameCredentialField(authConfig.getUsernameField());
+            mongoAuthOptions.setPasswordField(authConfig.getPasswordField());
+            // this is a fix for what I believe is a bug in the MongoAuthenticationImpl class
+            // where the passwordField and passwordCredentialField properties are used
+            // inconsistently (and interchangeably)
+            mongoAuthOptions.setPasswordCredentialField(authConfig.getPasswordField());
+            final var hashStrategy = new DefaultHashStrategy();
+            Optional.ofNullable(authConfig.getHashAlgorithm())
+                .ifPresent(hashStrategy::setAlgorithm);
+            Optional.ofNullable(authConfig.getSaltStyle())
+                .ifPresent(hashStrategy::setSaltStyle);
+            final var mongoAuth = new MongoAuthenticationImpl(
+                    mongoClient(),
+                    hashStrategy,
+                    authConfig.getSaltField(),
+                    mongoAuthOptions);
             return BasicAuthHandler.create(
-                    authProvider,
+                    mongoAuth,
                     httpServerProperties().getRealm());
         }
         return null;

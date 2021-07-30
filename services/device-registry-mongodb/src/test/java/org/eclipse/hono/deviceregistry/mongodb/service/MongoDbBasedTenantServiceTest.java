@@ -62,7 +62,7 @@ class MongoDbBasedTenantServiceTest implements AbstractTenantServiceTest {
         dao = MongoDbTestUtils.getTenantDao(vertx, "hono-tenants-test");
         tenantService = new MongoDbBasedTenantService(dao, config);
         tenantManagementService = new MongoDbBasedTenantManagementService(dao, config);
-        dao.createIndices().onComplete(testContext.completing());
+        dao.createIndices().onComplete(testContext.succeedingThenComplete());
     }
 
     /**
@@ -82,7 +82,7 @@ class MongoDbBasedTenantServiceTest implements AbstractTenantServiceTest {
      */
     @AfterEach
     public void cleanCollection(final VertxTestContext testContext) {
-        dao.deleteAllFromCollection().onComplete(testContext.completing());
+        dao.deleteAllFromCollection().onComplete(testContext.succeedingThenComplete());
     }
 
     /**

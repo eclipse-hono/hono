@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -30,7 +30,8 @@ import io.vertx.core.json.JsonObject;
 
 
 /**
- * A base class for implementing auth handlers.
+ * A base class for implementing authentication handlers that use information
+ * from an {@link ExecutionContext} to authenticate a client.
  *
  * @param <T> The type of execution context this handler can authenticate.
  */
@@ -52,9 +53,9 @@ public abstract class ExecutionContextAuthHandler<T extends ExecutionContext> im
     private final PreCredentialsValidationHandler<T> preCredentialsValidationHandler;
 
     /**
-     * Creates a new handler for authenticating MQTT clients.
+     * Creates a new handler for authenticating clients.
      *
-     * @param authProvider The auth provider to use for verifying a client's credentials.
+     * @param authProvider The authentication provider to use for verifying a client's credentials.
      * @param preCredentialsValidationHandler An optional handler to invoke after the credentials got determined and
      *            before they get validated. Can be used to perform checks using the credentials and tenant information
      *            before the potentially expensive credentials validation is done. A failed future returned by the
@@ -114,14 +115,14 @@ public abstract class ExecutionContextAuthHandler<T extends ExecutionContext> im
     }
 
     /**
-     * Gets the auth provider to be used with the given execution context.
+     * Gets the authentication provider to be used with the given execution context.
      * <p>
-     * This default implementation just returns the auth provider given via the constructor.
+     * This default implementation just returns the authentication provider passed in to the constructor.
      * <p>
-     * Subclasses may override this method in order to return an auth provider obtained via the context.
+     * Subclasses may override this method in order to return an authentication provider obtained via the context.
      *
      * @param context The execution context.
-     * @return The auth handler or {@code null}.
+     * @return The authentication provider or {@code null}.
      * @throws NullPointerException if the context is {@code null}
      */
     @Override

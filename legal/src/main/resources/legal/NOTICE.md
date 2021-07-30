@@ -34,7 +34,7 @@ The *AOP Alliance classes* are *Public Domain*.
 
 The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=aopalliance/aopalliance/1.0/aopalliance-1.0-sources.jar).
 
-### Apache Commons CLI ${commons-cli.version}
+### Apache Commons CLI
 
 This product includes software developed by the [Apache Commons CLI project](http://commons.apache.org/proper/commons-cli/).
 
@@ -42,7 +42,7 @@ Your use of *Commons CLI* is subject to the terms and conditions of the Apache S
 A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [GitHub](https://github.com/apache/commons-cli/tree/cli-${commons-cli.version}).
+The source code is available from [GitHub](https://github.com/apache/commons-cli/).
 
 ### Apache Commons Logging 1.2
 
@@ -199,11 +199,11 @@ A copy of the license is contained in the file [CDDL-1.0.txt](CDDL-1.0.txt).
 
 The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=org/jboss/spec/javax/transaction/jboss-transaction-api_1.2_spec/1.1.1.Final/jboss-transaction-api_1.2_spec-1.1.1.Final-sources.jar).
 
-### Javassist ${javassist.version}
+### Javassist
 
 This product includes software developed by the [Javassist project](http://www.javassist.org/).
 
-The Hono project elects to include the *Javaassist* library in this distribution under the Apache Software License 2.0.
+The Hono project elects to include the *Javassist* library in this distribution under the Apache Software License 2.0.
 A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
@@ -239,7 +239,7 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=org/slf4j/jcl-over-slf4j/${slf4j.version}/jcl-over-slf4j-${slf4j.version}-sources.jar).
 
-### JGroups ${jgroups.version}
+### JGroups
 
 This product includes software developed by the [JGroups project](http://www.jgroups.org/).
 
@@ -247,7 +247,7 @@ Your use of *JGroups* is subject to the terms and conditions of the Apache Softw
 A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [GitHub](https://github.com/belaban/JGroups/tree/JGroups-${jgroups.version}).
+The source code is available from [GitHub](https://github.com/belaban/JGroups/).
 
 ### JUL-to-SLF4J ${slf4j.version}
 
@@ -433,7 +433,7 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=org/apache/qpid/proton-j/${proton.version}/proton-j-${proton.version}-sources.jar).
 
-### Protoparser ${protoparser.version}
+### Protoparser
 
 This product includes software developed by the [Protoparser project](https://github.com/square/protoparser).
 
@@ -441,7 +441,7 @@ Your use of *Protoparser* is subject to the terms and conditions of the Apache S
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [GitHub](https://github.com/square/protoparser/tree/protoparser-${protoparser.version}).
+The source code is available from [GitHub](https://github.com/square/protoparser/).
 
 ### Protostream ${protostream.version}
 
@@ -473,7 +473,7 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/fabric8io-images/run-java-sh/tree/${run-java-sh.version}).
 
-### RxJava ${rxjava.version}
+### RxJava
 
 This product includes software developed by the [RxJava project](https://github.com/ReactiveX/RxJava).
 
@@ -481,7 +481,7 @@ Your use of *RxJava* is subject to the terms and conditions of the Apache Softwa
 A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [GitHub](https://github.com/ReactiveX/RxJava/tree/v${rxjava.version}).
+The source code is available from [GitHub](https://github.com/ReactiveX/RxJava).
 
 ### SLF4J API ${slf4j.version}
 

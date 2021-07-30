@@ -29,80 +29,55 @@
 
   <properties>
     <artemis.image.name>quay.io/enmasse/artemis-base:2.13.0</artemis.image.name>
-    <assertj-core.version>3.19.0</assertj-core.version>
+    <assertj-core.version>3.20.2</assertj-core.version>
     <c3p0.version>0.9.5.4</c3p0.version>
-    <caffeine.version>2.8.8</caffeine.version>
     <californium.version>2.6.4</californium.version>
-    <commons-cli.version>1.4</commons-cli.version>
     <cryptvault.version>1.0.2</cryptvault.version>
     <dispatch-router.image.name>quay.io/interconnectedcloud/qdrouterd:1.14.0</dispatch-router.image.name>
-    <fabric8-kubernetes-client.version>5.3.1</fabric8-kubernetes-client.version>
     <guava.version>30.1-jre</guava.version>
     <gson.version>2.8.6</gson.version>
     <h2.version>1.4.200</h2.version>
     <hamcrest-core.version>2.2</hamcrest-core.version>
-    <infinispan.version>12.0.2.Final</infinispan.version>
     <infinispan-image.name>infinispan/server-native:11.0.7.Final-2</infinispan-image.name>
-    <jackson.version>2.12.3</jackson.version>
+    <jackson.version>2.12.4</jackson.version>
     <jaeger.image.name>jaegertracing/all-in-one:1.22</jaeger.image.name>
     <jaeger.version>1.6.0</jaeger.version>
     <java-base-image.name>docker.io/openjdk:11-jre-slim</java-base-image.name>
-    <javassist.version>3.26.0-GA</javassist.version>
     <jaxb.api.version>2.2.12</jaxb.api.version>
     <javax.annotation.api.version>1.3.2</javax.annotation.api.version>
-    <jboss-logging.version>3.4.1.Final</jboss-logging.version>
-    <jgroups.version>4.2.9.Final</jgroups.version>
     <jjwt.version>0.11.2</jjwt.version>
-    <junit.jupiter.version>5.7.1</junit.jupiter.version>
+    <junit.jupiter.version>5.7.2</junit.jupiter.version>
     <!-- when updating the Kafka clients, update the documentation in
     site/documentation/content/admin-guide/hono-kafka-client-configuration.md as well -->
     <kafka-clients.version>2.6.0</kafka-clients.version>
     <kafka.image.name>confluentinc/cp-kafka:6.1.1</kafka.image.name>
     <logback.version>1.2.3</logback.version>
     <mchange-commons.version>0.2.15</mchange-commons.version>
-    <micrometer.version>1.6.7</micrometer.version>
+    <micrometer.version>1.7.3</micrometer.version>
     <mockito.version>3.7.7</mockito.version>
     <mongodb-image.name>mongo:4.2.13</mongodb-image.name>
-    <mongodb-driver.version>3.10.1</mongodb-driver.version>
+    <mongodb-driver.version>4.3.1</mongodb-driver.version>
     <native.image.name>registry.access.redhat.com/ubi8/ubi-minimal:8.4</native.image.name>
-    <!--
-      Quarkus native image build requires a pre 4.1.59 version because it
-      invokes io.netty.handler.ssl.SslContext.newServerContextInternal via reflection and
-      that method's signature has changed in 4.1.59.
-      This is only an issue in the native image build but we might want to consider
-      changing our code in org.eclipse.hono.service.AbstractServiceBase.addTlsKeyCertOptions
-      for checking if a native TLS implementation can/should be used so that we do not require
-      netty-tcnative to be on the build path.
-    -->
-    <netty.version>4.1.58.Final</netty.version>
-    <netty.tcnative.version>2.0.36.Final</netty.tcnative.version>
-    <okhttp.version>4.9.0</okhttp.version>
+    <netty.version>4.1.67.Final</netty.version>
+    <netty.tcnative.version>2.0.40.Final</netty.tcnative.version>
+    <okhttp.version>3.14.9</okhttp.version>
     <opentracing.version>0.33.0</opentracing.version>
     <opentracing-resolver.version>0.1.8</opentracing-resolver.version>
     <postgresql-image.name>postgres:12-alpine</postgresql-image.name>
     <postgresql-jdbc.version>42.2.18</postgresql-jdbc.version>
-    <protobuf.version>3.12.2</protobuf.version>
     <protoparser.version>4.0.3</protoparser.version>
-    <!--
-      This is a dependency of Infinispan 12.0.2. The Quarkus native build fails when using 4.4.0.Final
-      instead of this "weird" version because Infinispan 12.0.2 refers to a method that is no longer
-      available in 4.4.0.Final.
-     -->
-    <protostream.version>4.4.0.Alpha4</protostream.version>
+    <protostream.version>4.4.1.Final</protostream.version>
     <proton.version>0.33.8</proton.version>
     <qpid-jms.version>1.0.0</qpid-jms.version>
-    <quarkus.platform.version>1.13.7.Final</quarkus.platform.version>
-    <reactive-streams.version>1.0.3</reactive-streams.version>
-    <rxjava.version>3.0.4</rxjava.version>
+    <quarkus.platform.version>2.2.2.Final</quarkus.platform.version>
     <slf4j.version>1.7.28</slf4j.version>
-    <snakeyaml.version>1.28</snakeyaml.version>
     <spring.version>5.3.8</spring.version>
     <spring-boot.version>2.4.8</spring-boot.version>
     <spring-security-crypto.version>5.4.7</spring-security-crypto.version>
     <testcontainers.version>1.15.2</testcontainers.version>
     <truth.version>1.1.3</truth.version>
     <!-- when updating Vert.x, check if the Kafka clients need to be updated as well -->
-    <vertx.version>3.9.7</vertx.version>
+    <vertx.version>4.1.3</vertx.version>
     <zookeeper.image.name>confluentinc/cp-zookeeper:6.1.1</zookeeper.image.name>
 
     <!-- The port at which the Prometheus scraping endpoint is exposed -->
@@ -486,7 +461,7 @@
       </dependency>
       <dependency>
         <groupId>io.vertx</groupId>
-        <artifactId>vertx-sql-common</artifactId>
+        <artifactId>vertx-sql-client</artifactId>
         <version>${vertx.version}</version>
       </dependency>
       <dependency>
@@ -518,7 +493,7 @@
        -->
       <dependency>
         <groupId>org.mongodb</groupId>
-        <artifactId>mongodb-driver-async</artifactId>
+        <artifactId>mongodb-driver-reactivestreams</artifactId>
         <version>${mongodb-driver.version}</version>
       </dependency>
       <dependency>
@@ -679,12 +654,6 @@
         <version>${slf4j.version}</version>
         <scope>runtime</scope>
       </dependency>
-      <dependency>
-        <groupId>org.jboss.logging</groupId>
-        <artifactId>jboss-logging</artifactId>
-        <version>${jboss-logging.version}</version>
-        <scope>runtime</scope>
-      </dependency>
 
       <!-- Tracing -->
       <dependency>
@@ -764,84 +733,6 @@
         <scope>runtime</scope>
       </dependency>
 
-      <!-- Infinispan -->
-      <dependency>
-        <groupId>org.infinispan</groupId>
-        <artifactId>infinispan-client-hotrod</artifactId>
-        <version>${infinispan.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.infinispan</groupId>
-        <artifactId>infinispan-core</artifactId>
-        <version>${infinispan.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.infinispan</groupId>
-        <artifactId>infinispan-commons</artifactId>
-        <version>${infinispan.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.infinispan.protostream</groupId>
-        <artifactId>protostream</artifactId>
-        <version>${protostream.version}</version>
-        <scope>compile</scope>
-      </dependency>
-      <dependency>
-        <groupId>io.reactivex.rxjava2</groupId>
-        <artifactId>rxjava</artifactId>
-        <version>${rxjava.version}</version>
-        <scope>runtime</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.reactivestreams</groupId>
-        <artifactId>reactive-streams</artifactId>
-        <version>${reactive-streams.version}</version>
-        <scope>runtime</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.jgroups</groupId>
-        <artifactId>jgroups</artifactId>
-        <version>${jgroups.version}</version>
-        <type>bundle</type>
-        <scope>runtime</scope>
-      </dependency>
-
-      <!-- 
-        The following artifacts have scope provided because they
-        are embedded in the org.infinispan.protostream:protostream
-        artifact and we do not want them to be included in the
-        container images as separate jars files.
-        However, we define them as managed dependencies and
-        also include them in the modules that use Infinispan
-        in order for them to show up in Hono's list of dependencies
-        that is generated by the create_dependencies_list.sh script
-        in the top level folder.
-      -->
-      <dependency>
-        <groupId>org.javassist</groupId>
-        <artifactId>javassist</artifactId>
-        <version>${javassist.version}</version>
-        <scope>provided</scope>
-      </dependency>
-      <dependency>
-        <groupId>commons-cli</groupId>
-        <artifactId>commons-cli</artifactId>
-        <version>${commons-cli.version}</version>
-        <scope>provided</scope>
-      </dependency>
-      <dependency>
-        <groupId>com.google.protobuf</groupId>
-        <artifactId>protobuf-java</artifactId>
-        <version>${protobuf.version}</version>
-        <scope>provided</scope>
-      </dependency>
-      <dependency>
-        <groupId>com.squareup</groupId>
-        <artifactId>protoparser</artifactId>
-        <version>${protoparser.version}</version>
-        <scope>provided</scope>
-      </dependency>
-
       <!-- JDBC -->
       <dependency>
         <groupId>com.h2database</groupId>
@@ -857,27 +748,6 @@
       </dependency>
 
       <!-- Other -->
-      <dependency>
-        <groupId>com.github.ben-manes.caffeine</groupId>
-        <artifactId>caffeine</artifactId>
-        <version>${caffeine.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.checkerframework</groupId>
-            <artifactId>checker-qual</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>com.google.errorprone</groupId>
-            <artifactId>error_prone_annotations</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.yaml</groupId>
-        <artifactId>snakeyaml</artifactId>
-        <version>${snakeyaml.version}</version>
-        <scope>runtime</scope>
-      </dependency>
       <dependency>
         <groupId>io.jsonwebtoken</groupId>
         <artifactId>jjwt-api</artifactId>
@@ -944,22 +814,6 @@
         <artifactId>cryptvault</artifactId>
         <version>${cryptvault.version}</version>
       </dependency>
-      <dependency>
-        <groupId>io.fabric8</groupId>
-        <artifactId>kubernetes-client</artifactId>
-        <version>${fabric8-kubernetes-client.version}</version>
-        <exclusions>
-          <!-- exclude okhttp 3.x artifacts, okhttp 4.x shall be used -->
-          <exclusion>
-            <groupId>com.squareup.okhttp3</groupId>
-            <artifactId>okhttp</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>com.squareup.okhttp3</groupId>
-            <artifactId>logging-interceptor</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
 
       <!-- Testing -->
       <dependency>
@@ -1023,24 +877,6 @@
         <scope>test</scope>
       </dependency>
       <dependency>
-        <groupId>io.vertx</groupId>
-        <artifactId>vertx-rx-java</artifactId>
-        <version>${vertx.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>io.vertx</groupId>
-        <artifactId>vertx-rx-java2</artifactId>
-        <version>${vertx.version}</version>
-        <scope>test</scope>
-        <exclusions>
-          <exclusion>
-            <groupId>io.reactivex.rxjava2</groupId>
-            <artifactId>rxjava</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
         <groupId>org.assertj</groupId>
         <artifactId>assertj-core</artifactId>
         <version>${assertj-core.version}</version>
@@ -1066,12 +902,6 @@
         <scope>test</scope>
       </dependency>
       <dependency>
-        <groupId>org.infinispan</groupId>
-        <artifactId>infinispan-query-dsl</artifactId>
-        <version>${infinispan.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
         <groupId>org.testcontainers</groupId>
         <artifactId>postgresql</artifactId>
         <version>${testcontainers.version}</version>
@@ -1082,35 +912,6 @@
         <artifactId>mongodb</artifactId>
         <version>${testcontainers.version}</version>
         <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>io.fabric8</groupId>
-        <artifactId>kubernetes-server-mock</artifactId>
-        <version>${fabric8-kubernetes-client.version}</version>
-        <scope>test</scope>
-        <exclusions>
-          <!-- exclude okhttp 3.x artifacts, okhttp 4.x shall be used -->
-          <exclusion>
-            <groupId>com.squareup.okhttp3</groupId>
-            <artifactId>mockwebserver</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>com.squareup.okhttp3</groupId>
-            <artifactId>logging-interceptor</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>com.squareup.okhttp3</groupId>
-        <artifactId>mockwebserver</artifactId>
-        <version>${okhttp.version}</version>
-        <scope>test</scope>
-        <exclusions>
-          <exclusion>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-stdlib-jdk8</artifactId>
-          </exclusion>
-        </exclusions>
       </dependency>
     </dependencies>
   </dependencyManagement>

@@ -154,7 +154,7 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
                     // wait 1s to make sure that entry has expired after that
                     vertx.setTimer(1002, tid -> {
                         getClient().getCommandHandlingAdapterInstances(tenantId, deviceId, List.of(), null)
-                                .onComplete(instancesPromise.future());
+                                .onComplete(instancesPromise);
                     });
                     return instancesPromise.future();
                 })
@@ -202,7 +202,7 @@ abstract class DeviceConnectionApiTests extends DeviceRegistryTestBase {
                 .setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstance, null, null)
                 // then remove it
                 .compose(ok -> getClient().removeCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstance, null))
-                .onComplete(ctx.completing());
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     /**

@@ -113,8 +113,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <hono.deviceregistry.supportsSearchTenants>true</hono.deviceregistry.supportsSearchTenants>
     <hono.deviceregistry.image>hono-service-device-registry-mongodb</hono.deviceregistry.image>
     <hono.deviceregistry.resources.folder>deviceregistry-mongodb</hono.deviceregistry.resources.folder>
-    <!-- default memory limit of the device registry container is 300MiB -->
-    <hono.deviceregistry.containerMemoryLimit>314572800</hono.deviceregistry.containerMemoryLimit>
+    <!-- default memory limit of the device registry container is 400MB -->
+    <hono.deviceregistry.containerMemoryLimit>400000000</hono.deviceregistry.containerMemoryLimit>
     <!-- Spring application profiles to activate for the registry -->
     <hono.deviceregistry.spring.profiles>${logging.profile}</hono.deviceregistry.spring.profiles>
     <!--  accept requests with a body size of up to 2000 bytes -->

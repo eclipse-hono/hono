@@ -20,6 +20,7 @@ import java.util.Objects;
 import javax.net.ssl.SSLPeerUnverifiedException;
 
 import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
+import org.eclipse.hono.adapter.auth.device.ExecutionContextAuthHandler;
 import org.eclipse.hono.adapter.auth.device.PreCredentialsValidationHandler;
 import org.eclipse.hono.adapter.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.adapter.auth.device.X509Authentication;
@@ -32,9 +33,10 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.auth.User;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.impl.AuthHandlerImpl;
-import io.vertx.ext.web.handler.impl.HttpStatusException;
+import io.vertx.ext.web.handler.HttpException;
+import io.vertx.ext.web.handler.impl.AuthenticationHandlerImpl;
 
 
 /**
@@ -44,13 +46,13 @@ import io.vertx.ext.web.handler.impl.HttpStatusException;
  * to retrieve X.509 credentials for the device in order to determine the device identifier. 
  * <p>
  * Apart from that, support for a {@link PreCredentialsValidationHandler} and for
- * transferring a span context to the AuthProvider is added here.
+ * transferring a span context to the AuthenticationProvider is added here.
  *
  */
-public class X509AuthHandler extends AuthHandlerImpl implements HonoHttpAuthHandler {
+public class X509AuthHandler extends AuthenticationHandlerImpl<DeviceCredentialsAuthProvider<SubjectDnCredentials>> {
 
     private static final Logger LOG = LoggerFactory.getLogger(X509AuthHandler.class);
-    private static final HttpStatusException UNAUTHORIZED = new HttpStatusException(HttpURLConnection.HTTP_UNAUTHORIZED);
+    private static final HttpException UNAUTHORIZED = new HttpException(HttpURLConnection.HTTP_UNAUTHORIZED);
 
     private final X509Authentication auth;
     private final PreCredentialsValidationHandler<HttpContext> preCredentialsValidationHandler;
@@ -75,8 +77,7 @@ public class X509AuthHandler extends AuthHandlerImpl implements HonoHttpAuthHand
      * Tenant service client.
      *
      * @param clientAuth The service to use for validating the client's certificate path.
-     * @param authProvider The authentication provider to use for verifying
-     *              the device identity.
+     * @param authProvider The authentication provider to use for verifying the device identity.
      * @param preCredentialsValidationHandler An optional handler to invoke after the credentials got determined and
      *            before they get validated. Can be used to perform checks using the credentials and tenant information
      *            before the potentially expensive credentials validation is done. A failed future returned by the
@@ -92,13 +93,11 @@ public class X509AuthHandler extends AuthHandlerImpl implements HonoHttpAuthHand
         this.preCredentialsValidationHandler = preCredentialsValidationHandler;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public PreCredentialsValidationHandler<HttpContext> getPreCredentialsValidationHandler() {
-        return preCredentialsValidationHandler;
-    }
-
-    @Override
-    public final void parseCredentials(final RoutingContext context, final Handler<AsyncResult<JsonObject>> handler) {
+    public void authenticate(final RoutingContext context, final Handler<AsyncResult<User>> handler) {
 
         Objects.requireNonNull(context);
         Objects.requireNonNull(handler);
@@ -107,7 +106,21 @@ public class X509AuthHandler extends AuthHandlerImpl implements HonoHttpAuthHand
             try {
                 final Certificate[] path = context.request().sslSession().getPeerCertificates();
                 auth.validateClientCertificate(path, TracingHandler.serverSpanContext(context))
-                        .onComplete(ar -> processParseCredentialsResult(authProvider, context, null, ar, handler));
+                    .onFailure(t -> handler.handle(Future.failedFuture(t)))
+                    .onSuccess(credentialsJson -> {
+                        final ExecutionContextAuthHandler<HttpContext> authHandler = new ExecutionContextAuthHandler<>(
+                                (DeviceCredentialsAuthProvider<?>) authProvider,
+                                preCredentialsValidationHandler) {
+
+                            @Override
+                            public Future<JsonObject> parseCredentials(final HttpContext context) {
+                                return Future.succeededFuture(credentialsJson);
+                            }
+                        };
+                        authHandler.authenticateDevice(HttpContext.from(context))
+                            .map(deviceUser -> (User) deviceUser)
+                            .onComplete(handler);
+                    });
             } catch (SSLPeerUnverifiedException e) {
                 // client certificate has not been validated
                 LOG.debug("could not retrieve client certificate from request: {}", e.getMessage());
@@ -116,6 +129,7 @@ public class X509AuthHandler extends AuthHandlerImpl implements HonoHttpAuthHand
         } else {
             handler.handle(Future.failedFuture(UNAUTHORIZED));
         }
+
     }
 
     /**

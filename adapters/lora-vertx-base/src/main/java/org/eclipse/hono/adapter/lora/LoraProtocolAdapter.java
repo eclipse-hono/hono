@@ -30,7 +30,6 @@ import org.eclipse.hono.adapter.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.adapter.auth.device.X509AuthProvider;
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.adapter.http.HonoBasicAuthHandler;
-import org.eclipse.hono.adapter.http.HonoChainAuthHandler;
 import org.eclipse.hono.adapter.http.X509AuthHandler;
 import org.eclipse.hono.adapter.lora.providers.LoraProvider;
 import org.eclipse.hono.adapter.lora.providers.LoraProviderMalformedPayloadException;
@@ -68,13 +67,13 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.Message;
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.client.HttpRequest;
+import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.handler.ChainAuthHandler;
 
 
@@ -93,11 +92,21 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
     private static final Tag<String> TAG_LORA_PROVIDER = new StringTag("lora_provider");
 
     private final List<LoraProvider> loraProviders = new ArrayList<>();
+    private final WebClient webClient;
 
     private DeviceCredentialsAuthProvider<UsernamePasswordCredentials> usernamePasswordAuthProvider;
     private DeviceCredentialsAuthProvider<SubjectDnCredentials> clientCertAuthProvider;
     private final Map<SubscriptionKey, Pair<CommandConsumer, LoraProvider>> commandSubscriptions = new ConcurrentHashMap<>();
-    private HttpClient httpClient = null;
+
+    /**
+     * Creates an adapter for a web client.
+     *
+     * @param webClient The client to use for posting command messages to a LoRa provider's network server.
+     * @throws NullPointerException if client is {@code null}.
+     */
+    public LoraProtocolAdapter(final WebClient webClient) {
+        this.webClient = Objects.requireNonNull(webClient);
+    }
 
     /**
      * Sets the LoRa providers that this adapter should support.
@@ -202,15 +211,17 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
 
     private void setupAuthorization(final Router router) {
 
-        final ChainAuthHandler authHandler = new HonoChainAuthHandler(this::handleBeforeCredentialsValidation);
-        authHandler.append(new X509AuthHandler(
+        final ChainAuthHandler authHandler = ChainAuthHandler.any();
+        authHandler.add(new X509AuthHandler(
                 new TenantServiceBasedX509Authentication(getTenantClient(), tracer),
                 Optional.ofNullable(clientCertAuthProvider).orElseGet(
-                        () -> new X509AuthProvider(getCredentialsClient(), tracer))));
-        authHandler.append(new HonoBasicAuthHandler(
+                        () -> new X509AuthProvider(getCredentialsClient(), tracer)),
+                this::handleBeforeCredentialsValidation));
+        authHandler.add(new HonoBasicAuthHandler(
                 Optional.ofNullable(usernamePasswordAuthProvider).orElseGet(
                         () -> new UsernamePasswordAuthProvider(getCredentialsClient(), tracer)),
-                getConfig().getRealm()));
+                getConfig().getRealm(),
+                this::handleBeforeCredentialsValidation));
 
         router.route().handler(authHandler);
     }
@@ -239,7 +250,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
     void handleProviderRoute(final HttpContext ctx, final LoraProvider provider) {
 
         LOG.debug("processing request from provider [name: {}, URI: {}]", provider.getProviderName(),
-                ctx.getRoutingContext().normalisedPath());
+                ctx.getRoutingContext().normalizedPath());
         final Span currentSpan = TracingHelper.buildServerChildSpan(
                 tracer,
                 TracingHandler.serverSpanContext(ctx.getRoutingContext()),
@@ -416,33 +427,24 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
         final LoraCommand loraCommand = loraProvider.getCommand(commandEndpoint, command.getDeviceId(), payload);
         commandContext.getTracingSpan().log(String.format("sending loraCommand to LNS [%s]", loraCommand.getUri()));
         LOG.debug("sending loraCommand to LNS [{}]", loraCommand.getUri());
-        LOG.trace("command payload: {}", loraCommand.getPayload());
-        final HttpClientRequest request = getHttpClient().postAbs(loraCommand.getUri())
-                .handler(httpClientResponse -> {
-                    Tags.HTTP_STATUS.set(commandContext.getTracingSpan(), httpClientResponse.statusCode());
-                    if (StatusCodeMapper.isSuccessful(httpClientResponse.statusCode())) {
-                        sendPromise.tryComplete();
-                    } else {
-                        sendPromise.tryFail(httpClientResponse.statusMessage());
-                    }
-                })
-                .exceptionHandler(sendPromise::tryFail);
+        if (LOG.isTraceEnabled()) {
+            LOG.trace("command payload:{}{}", System.lineSeparator(), loraCommand.getPayload().encodePrettily());
+        }
+        final HttpRequest<Buffer> request = webClient.postAbs(loraCommand.getUri());
         commandEndpoint.getHeaders().forEach(request::putHeader);
         loraProvider.getDefaultHeaders().forEach(request::putHeader);
-        request.end(loraCommand.getPayload().encode(), response -> {
-            if (response.failed()) {
-                sendPromise.tryFail(response.cause());
-            }
-        });
-        return sendPromise.future();
-    }
+        request.sendJson(loraCommand.getPayload())
+            .onFailure(sendPromise::tryFail)
+            .onSuccess(httpClientResponse -> {
+                Tags.HTTP_STATUS.set(commandContext.getTracingSpan(), httpClientResponse.statusCode());
+                if (StatusCodeMapper.isSuccessful(httpClientResponse.statusCode())) {
+                    sendPromise.tryComplete();
+                } else {
+                    sendPromise.tryFail(httpClientResponse.statusMessage());
+                }
+            });
 
-    private HttpClient getHttpClient() {
-        if (httpClient != null) {
-            return httpClient;
-        }
-        httpClient = vertx.createHttpClient();
-        return httpClient;
+        return sendPromise.future();
     }
 
     void handleOptionsRoute(final RoutingContext ctx) {

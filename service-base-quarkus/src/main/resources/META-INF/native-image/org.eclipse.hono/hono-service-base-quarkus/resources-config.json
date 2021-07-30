@@ -18,6 +18,9 @@
       },
       {
         "pattern": "META-INF\\/services\\/io\\.jsonwebtoken\\..*$"
+      },
+      {
+        "pattern": "META-INF\\/services\\/com\\.fasterxml\\.jackson\\..*$"
       }
     ],
     "excludes": [

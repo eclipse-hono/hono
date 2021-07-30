@@ -120,7 +120,7 @@ public class HonoKafkaConsumerIT {
                     vertx.close();
                     vertx = null;
                 })
-                .onComplete(ctx.completing());
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -131,7 +131,7 @@ public class HonoKafkaConsumerIT {
     @AfterEach
     void closeConsumer(final VertxTestContext ctx) {
         if (kafkaConsumer != null) {
-            kafkaConsumer.stop().onComplete(ctx.completing());
+            kafkaConsumer.stop().onComplete(ctx.succeedingThenComplete());
         }
     }
 
@@ -156,7 +156,7 @@ public class HonoKafkaConsumerIT {
         final VertxTestContext setup = new VertxTestContext();
         createTopics(topics, numPartitions)
                 .compose(v -> publishRecords(numTestRecordsPerTopic, "key_", topics))
-                .onComplete(setup.completing());
+                .onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -226,7 +226,7 @@ public class HonoKafkaConsumerIT {
         final VertxTestContext setup = new VertxTestContext();
         createTopics(topics, numPartitions)
                 .compose(v -> publishRecords(numTestRecordsPerTopic, "key_", topics))
-                .onComplete(setup.completing());
+                .onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -295,7 +295,7 @@ public class HonoKafkaConsumerIT {
         final VertxTestContext setup = new VertxTestContext();
         createTopics(topics, numPartitions)
                 .compose(v -> publishRecords(numTestRecordsPerTopic, "key_", topics))
-                .onComplete(setup.completing());
+                .onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -385,7 +385,7 @@ public class HonoKafkaConsumerIT {
         final List<NewTopic> topics = topicNames.stream()
                 .map(t -> new NewTopic(t, numPartitions, REPLICATION_FACTOR))
                 .collect(Collectors.toList());
-        adminClient.createTopics(topics, resultPromise.future());
+        adminClient.createTopics(topics, resultPromise);
         return resultPromise.future();
     }
 

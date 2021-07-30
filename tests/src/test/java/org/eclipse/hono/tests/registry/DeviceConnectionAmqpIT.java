@@ -51,7 +51,7 @@ public class DeviceConnectionAmqpIT extends DeviceConnectionApiTests {
                                 IntegrationTestSupport.TENANT_ADMIN_PWD)),
                 SendMessageSampler.Factory.noop());
 
-        client.start().onComplete(ctx.completing());
+        client.start().onComplete(ctx.succeedingThenComplete());
     }
 
     /**

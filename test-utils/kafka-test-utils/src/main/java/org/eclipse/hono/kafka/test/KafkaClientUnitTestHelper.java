@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.kafka.test;
 
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static com.google.common.truth.Truth.assertThat;
 
@@ -22,10 +23,14 @@ import org.apache.kafka.common.header.internals.RecordHeader;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.eclipse.hono.test.VertxMockSupport;
 
-import io.vertx.core.Vertx;
+import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.impl.ContextInternal;
+import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.json.Json;
 import io.vertx.kafka.client.producer.KafkaProducer;
+import io.vertx.kafka.client.producer.RecordMetadata;
 import io.vertx.kafka.client.serialization.BufferSerializer;
 
 /**
@@ -43,8 +48,21 @@ public class KafkaClientUnitTestHelper {
      * @return The new Kafka producer.
      */
     public static KafkaProducer<String, Buffer> newKafkaProducer(final MockProducer<String, Buffer> producer) {
-        final Vertx vertxMock = mock(Vertx.class);
-        VertxMockSupport.executeBlockingCodeImmediately(vertxMock);
+
+        final VertxInternal vertxMock = mock(VertxInternal.class);
+        final ContextInternal context = VertxMockSupport.mockContextInternal(vertxMock);
+        doAnswer(invocation -> {
+            return Promise.promise();
+        }).when(context).promise();
+
+        doAnswer(invocation -> {
+            final Promise<RecordMetadata> result = Promise.promise();
+            final Handler<Promise<RecordMetadata>> handler = invocation.getArgument(0);
+            handler.handle(result);
+            return result.future();
+        }).when(context).executeBlocking(VertxMockSupport.anyHandler());
+        VertxMockSupport.executeBlockingCodeImmediately(vertxMock, context);
+
         return KafkaProducer.create(vertxMock, producer);
     }
 

@@ -79,7 +79,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
         tenantId = getHelper().getRandomTenantId();
         deviceId = getHelper().getRandomDeviceId(tenantId);
 
-        registry.addTenant(tenantId).onComplete(ctx.completing());
+        registry.addTenant(tenantId).onComplete(ctx.succeedingThenComplete());
 
     }
 
@@ -95,7 +95,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
         device.putExtension("test", "test");
 
         registry.registerDevice(tenantId, deviceId, device)
-                .onComplete(ctx.completing());
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -275,7 +275,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
     public void testAddDeviceSucceedsForEmptyBody(final VertxTestContext ctx) {
 
         registry.registerDevice(tenantId, deviceId, null, HttpURLConnection.HTTP_CREATED)
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -288,7 +288,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
     public void testAddDeviceSucceedsForEmptyBodyAndContentType(final VertxTestContext ctx) {
 
         registry.registerDevice(tenantId, deviceId, (Device) null, null, HttpURLConnection.HTTP_CREATED)
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -355,7 +355,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
     public void testGetDeviceFailsForMissingDeviceId(final VertxTestContext ctx) {
 
         registry.getRegistrationInfo(tenantId, null, HttpURLConnection.HTTP_NOT_FOUND)
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -469,7 +469,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
     public void testUpdateDeviceFailsForMissingDeviceId(final VertxTestContext ctx) {
 
         registry.updateDevice(tenantId, null, new JsonObject(), CrudHttpClient.CONTENT_TYPE_JSON, HttpURLConnection.HTTP_NOT_FOUND)
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -538,7 +538,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             .compose(ok -> registry.deregisterDevice(tenantId, deviceId))
             .compose(ok -> registry.getCredentials(tenantId, deviceId, HttpURLConnection.HTTP_NOT_FOUND))
             .compose(ok -> registry.getRegistrationInfo(tenantId, deviceId, HttpURLConnection.HTTP_NOT_FOUND))
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -550,7 +550,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
     public void testDeregisterDeviceFailsForMissingDeviceId(final VertxTestContext ctx) {
 
         registry.deregisterDevice(tenantId, null, HttpURLConnection.HTTP_NOT_FOUND)
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -606,7 +606,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             registry.registerDevice(tenantId, deviceId, device)
                 .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
                         List.of(filterJson), List.of(), HttpURLConnection.HTTP_NOT_FOUND))
-                .onComplete(ctx.completing());
+                .onComplete(ctx.succeedingThenComplete());
         }
 
         /**
@@ -621,7 +621,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             registry.registerDevice(tenantId, deviceId)
                 .compose(ok -> registry.searchDevices(tenantId, Optional.of(invalidPageSize), Optional.empty(),
                         List.of(), List.of(), HttpURLConnection.HTTP_BAD_REQUEST))
-                .onComplete(ctx.completing());
+                .onComplete(ctx.succeedingThenComplete());
         }
 
         /**
@@ -668,7 +668,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             registry.registerDevice(tenantId, deviceId)
                     .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.of(invalidPageOffset),
                             List.of(), List.of(), HttpURLConnection.HTTP_BAD_REQUEST))
-                    .onComplete(ctx.completing());
+                    .onComplete(ctx.succeedingThenComplete());
         }
 
         /**
@@ -715,7 +715,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             registry.registerDevice(tenantId, deviceId)
                     .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
                             List.of("Invalid filterJson"), List.of(), HttpURLConnection.HTTP_BAD_REQUEST))
-                    .onComplete(ctx.completing());
+                    .onComplete(ctx.succeedingThenComplete());
         }
 
         /**
@@ -799,7 +799,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             registry.registerDevice(tenantId, deviceId, device)
                     .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
                             List.of(filterJson), List.of(), HttpURLConnection.HTTP_NOT_FOUND))
-                    .onComplete(ctx.completing());
+                    .onComplete(ctx.succeedingThenComplete());
         }
 
         /**
@@ -849,7 +849,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             registry.registerDevice(tenantId, deviceId, device)
                     .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(),
                             List.of(filterJson), List.of(), HttpURLConnection.HTTP_NOT_FOUND))
-                    .onComplete(ctx.completing());
+                    .onComplete(ctx.succeedingThenComplete());
         }
 
         /**
@@ -863,7 +863,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             registry.registerDevice(tenantId, deviceId)
                     .compose(ok -> registry.searchDevices(tenantId, Optional.empty(), Optional.empty(), List.of(),
                             List.of("Invalid sortJson"), HttpURLConnection.HTTP_BAD_REQUEST))
-                    .onComplete(ctx.completing());
+                    .onComplete(ctx.succeedingThenComplete());
         }
 
         /**

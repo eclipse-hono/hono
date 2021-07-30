@@ -18,6 +18,9 @@
       },
       {
         "pattern": "META-INF\\/services\\/org\\.infinispan\\.factories\\.impl\\..*$"
+      },
+      {
+        "pattern": "META-INF\\/services\\/org\\.infinispan\\.protostream\\..*$"
       }
     ],
     "excludes": [

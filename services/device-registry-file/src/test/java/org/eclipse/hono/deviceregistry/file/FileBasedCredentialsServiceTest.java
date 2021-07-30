@@ -325,7 +325,7 @@ public class FileBasedCredentialsServiceTest implements CredentialsServiceTestBa
                         CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD))
                 .compose(s -> getCredentialsManagementService()
                         .readCredentials(Constants.DEFAULT_TENANT, "4711", NoopSpan.INSTANCE))
-                .onComplete(ctx.completing());
+                .onComplete(ctx.succeedingThenComplete());
 
         start(startTracker);
     }
@@ -458,7 +458,7 @@ public class FileBasedCredentialsServiceTest implements CredentialsServiceTestBa
                     "OTHER_TENANT",
                     "bumlux",
                     CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD))
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -476,7 +476,7 @@ public class FileBasedCredentialsServiceTest implements CredentialsServiceTestBa
 
         // containing a set of credentials
         setCredentials(getCredentialsManagementService(), "tenant", "device", List.of(secret))
-            .onComplete(ctx.succeeding())
+            .onFailure(ctx::failNow)
             .compose(ok -> {
                 // WHEN trying to update the existing credentials
                 final PasswordCredential newSecret = Credentials.createPasswordCredential("myId", "baz", OptionalInt.empty());
@@ -533,7 +533,7 @@ public class FileBasedCredentialsServiceTest implements CredentialsServiceTestBa
         // GIVEN a device with a set of credentials
         final PasswordCredential passwordCredential = Credentials.createPasswordCredential("taken-auth-id", "thepwd");
         setCredentials(getCredentialsManagementService(), "tenant", "existing-device", List.of(passwordCredential))
-            .onComplete(ctx.succeeding())
+            .onFailure(ctx::failNow)
             .compose(result -> {
                 ctx.verify(() -> assertThat(result.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT));
                 // WHEN trying to add credentials of the same type for another device using the same authentication identifier

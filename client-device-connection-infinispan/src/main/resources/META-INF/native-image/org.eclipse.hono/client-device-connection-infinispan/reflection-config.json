@@ -39,6 +39,48 @@
     "allPublicFields" : true
   },
   {
+    "name" : "org.infinispan.protostream.types.java.CommonContainerTypesSchema",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name" : "org.infinispan.protostream.types.java.CommonTypesSchema",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name" : "org.infinispan.protostream.types.protobuf.AnySchemaImpl",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name" : "org.infinispan.protostream.types.protobuf.DurationSchemaImpl",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name" : "org.infinispan.protostream.types.protobuf.EmptySchemaImpl",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name" : "org.infinispan.protostream.types.protobuf.TimestampSchemaImpl",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name" : "org.infinispan.protostream.types.protobuf.WrappersSchemaImpl",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
     "name" : "java.util.Arrays$ArrayList",
     "allDeclaredConstructors" : true,
     "allPublicConstructors" : true,
@@ -127,6 +169,12 @@
     "allPublicMethods" : true,
     "allDeclaredFields" : true,
     "allPublicFields" : true
+  },
+  {
+    "name" : "org.wildfly.security.password.impl.PasswordFactorySpiImpl",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
   },
   {
     "name" : "org.wildfly.security.sasl.digest.DigestClientFactory",

@@ -89,7 +89,7 @@ public class CorsIT {
                 getRequestHeaders()
                     .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.POST.name()),
-                ResponsePredicate.status(HttpURLConnection.HTTP_OK))
+                ResponsePredicate.status(HttpURLConnection.HTTP_NO_CONTENT))
         .onComplete(ctx.succeeding(response -> {
             ctx.verify(() -> {
                 assertAccessControlHeaders(
@@ -116,7 +116,7 @@ public class CorsIT {
                 getRequestHeaders()
                     .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.PUT.name()),
-                    ResponsePredicate.status(HttpURLConnection.HTTP_OK))
+                    ResponsePredicate.status(HttpURLConnection.HTTP_NO_CONTENT))
         .onComplete(ctx.succeeding(response -> {
             ctx.verify(() -> {
                 assertAccessControlHeaders(
@@ -143,7 +143,7 @@ public class CorsIT {
                 getRequestHeaders()
                     .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.POST.name()),
-                    ResponsePredicate.status(HttpURLConnection.HTTP_OK))
+                    ResponsePredicate.status(HttpURLConnection.HTTP_NO_CONTENT))
         .onComplete(ctx.succeeding(response -> {
             ctx.verify(() -> {
                 assertAccessControlHeaders(response.headers(), HttpMethod.POST, Constants.HEADER_TIME_TILL_DISCONNECT);
@@ -166,7 +166,7 @@ public class CorsIT {
                 getRequestHeaders()
                     .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.PUT.name()),
-                    ResponsePredicate.status(HttpURLConnection.HTTP_OK))
+                    ResponsePredicate.status(HttpURLConnection.HTTP_NO_CONTENT))
         .onComplete(ctx.succeeding(response -> {
             ctx.verify(() -> {
                 assertAccessControlHeaders(response.headers(), HttpMethod.PUT, Constants.HEADER_TIME_TILL_DISCONNECT);
@@ -189,7 +189,7 @@ public class CorsIT {
                 getRequestHeaders()
                     .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.POST.name()),
-                    ResponsePredicate.status(HttpURLConnection.HTTP_OK))
+                    ResponsePredicate.status(HttpURLConnection.HTTP_NO_CONTENT))
         .onComplete(ctx.succeeding(response -> {
             ctx.verify(() -> {
                 assertAccessControlHeaders(response.headers(), HttpMethod.POST, Constants.HEADER_COMMAND_RESPONSE_STATUS);
@@ -212,7 +212,7 @@ public class CorsIT {
                 getRequestHeaders()
                     .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.PUT.name()),
-                    ResponsePredicate.status(HttpURLConnection.HTTP_OK))
+                ResponsePredicate.status(HttpURLConnection.HTTP_NO_CONTENT))
         .onComplete(ctx.succeeding(response -> {
             ctx.verify(() -> {
                 assertAccessControlHeaders(response.headers(), HttpMethod.PUT, Constants.HEADER_COMMAND_RESPONSE_STATUS);

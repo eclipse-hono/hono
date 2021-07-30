@@ -108,7 +108,7 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
         pskCredentials = IntegrationTestSupport.createPskCredentials(authId, "secret");
         registry.addTenant(tenantId)
             .compose(response -> registry.registerDevice(tenantId, deviceId))
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeedingThenComplete());
     }
 
     private static void assertResourceVersionHasChanged(final AtomicReference<String> originalVersion, final MultiMap responseHeaders) {
@@ -221,7 +221,7 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
                 List.of(hashedPasswordCredential),
                 "application/x-www-form-urlencoded",
                 HttpURLConnection.HTTP_BAD_REQUEST)
-            .onComplete(context.completing());
+            .onComplete(context.succeedingThenComplete());
 
     }
 
@@ -268,7 +268,7 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
                 requestBody.toBuffer(),
                 HttpUtils.CONTENT_TYPE_JSON_UTF8,
                 HttpURLConnection.HTTP_BAD_REQUEST)
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -483,7 +483,7 @@ public class CredentialsManagementIT extends DeviceRegistryTestBase {
                 deviceId,
                 List.of(hashedPasswordCredential),
                 HttpURLConnection.HTTP_NO_CONTENT)
-            .onComplete(context.succeeding())
+            .onFailure(context::failNow)
             .compose(httpResponse -> {
                 context.verify(() -> assertResourceVersionHasChanged(resourceVersion, httpResponse.headers()));
                 // now try to update credentials with other version

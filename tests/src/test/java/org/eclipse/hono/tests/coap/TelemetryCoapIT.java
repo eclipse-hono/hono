@@ -91,7 +91,7 @@ public class TelemetryCoapIT extends CoapTestBase {
 
         final VertxTestContext setup = new VertxTestContext();
         helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET)
-        .onComplete(setup.completing());
+        .onComplete(setup.succeedingThenComplete());
         ctx.verify(() -> assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue());
 
         final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
@@ -132,6 +132,6 @@ public class TelemetryCoapIT extends CoapTestBase {
             client.advanced(getHandler(result, ResponseCode.REQUEST_ENTITY_TOO_LARGE), request);
             return result.future();
         })
-        .onComplete(ctx.completing());
+        .onComplete(ctx.succeedingThenComplete());
     }
 }

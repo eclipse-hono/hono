@@ -32,7 +32,7 @@ public interface AuthHandler<T extends ExecutionContext> {
      * Parses the credentials from the execution context into a JsonObject.
      * <p>
      * Implementations should be able to extract the required info for the
-     * auth provider in the format the provider expects.
+     * authentication provider in the format the provider expects.
      *
      * @param context The execution context.
      * @return The credentials.
@@ -50,7 +50,7 @@ public interface AuthHandler<T extends ExecutionContext> {
     Future<DeviceUser> authenticateDevice(T context);
 
     /**
-     * Gets the auth provider that can be used to validate the credentials
+     * Gets the authentication provider that can be used to validate the credentials
      * parsed by this handler.
      *
      * @param context The execution context.

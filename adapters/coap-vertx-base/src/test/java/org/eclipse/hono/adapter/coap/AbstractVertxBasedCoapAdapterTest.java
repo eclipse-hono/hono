@@ -200,7 +200,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
                 // THEN the resource's handler has been run on the adapter's vert.x event loop
                 return resourceInvocation.future();
             })
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeedingThenComplete());
     }
 
     /**

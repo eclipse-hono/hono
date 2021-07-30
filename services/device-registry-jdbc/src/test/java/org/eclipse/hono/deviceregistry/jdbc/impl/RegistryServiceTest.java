@@ -156,7 +156,7 @@ class RegistryServiceTest extends AbstractJdbcRegistryTest {
 
                     return this.credentialsManagement
                             .updateCredentials(DEFAULT_TENANT, "d1", credentials, Optional.empty(), SPAN)
-                            .onComplete(context.succeeding());
+                            .onFailure(context::failNow);
 
                 })
 
@@ -177,7 +177,7 @@ class RegistryServiceTest extends AbstractJdbcRegistryTest {
 
                 })
 
-                .onComplete(context.completing());
+                .onComplete(context.succeedingThenComplete());
 
     }
 

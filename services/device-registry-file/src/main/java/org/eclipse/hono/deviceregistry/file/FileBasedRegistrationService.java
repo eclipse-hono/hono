@@ -284,7 +284,7 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
             }
 
             final Promise<Void> writeHandler = Promise.promise();
-            vertx.fileSystem().writeFile(getConfig().getFilename(), Buffer.factory.buffer(tenants.encodePrettily()),
+            vertx.fileSystem().writeFile(getConfig().getFilename(), Buffer.buffer(tenants.encodePrettily()),
                     writeHandler);
             return writeHandler.future().map(ok -> {
                 dirty.set(false);

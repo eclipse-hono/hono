@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,14 +19,14 @@ import io.opentracing.SpanContext;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.auth.AuthProvider;
+import io.vertx.ext.auth.authentication.AuthenticationProvider;
 
 /**
  * An authentication provider for verifying credentials.
  *
  * @param <T> The type of credentials that this provider can validate.
  */
-public interface DeviceCredentialsAuthProvider<T extends AbstractDeviceCredentials> extends AuthProvider {
+public interface DeviceCredentialsAuthProvider<T extends AbstractDeviceCredentials> extends AuthenticationProvider {
 
     /**
      * Validates credentials provided by a device against the credentials on record

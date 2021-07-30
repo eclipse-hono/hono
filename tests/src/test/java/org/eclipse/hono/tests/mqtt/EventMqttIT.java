@@ -120,7 +120,7 @@ public class EventMqttIT extends MqttPublishTestBase {
         tenant.setDefaults(Map.of(MessageHelper.SYS_HEADER_PROPERTY_TTL, 3)); // seconds
         final VertxTestContext setup = new VertxTestContext();
 
-        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, "secret").onComplete(setup.completing());
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, "secret").onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -159,7 +159,7 @@ public class EventMqttIT extends MqttPublishTestBase {
                 }
             });
             return done.future();
-        }).onComplete(ctx.completing());
+        }).onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -180,7 +180,7 @@ public class EventMqttIT extends MqttPublishTestBase {
 
         helper.registry.addDeviceForTenant(tenantId, new Tenant(), deviceId, password)
                 .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
-                .onComplete(setup.completing());
+                .onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -191,7 +191,7 @@ public class EventMqttIT extends MqttPublishTestBase {
         // WHEN a device that belongs to the tenant publishes an event
         send(tenantId, deviceId, Buffer.buffer(messagePayload), false, null, (sendAttempt, result) -> {
             if (sendAttempt.succeeded()) {
-                LOGGER.debug("successfully sent event [tenant-id: {}, device-id: {}", tenantId, deviceId);
+                LOGGER.debug("successfully sent event [tenant-id: {}, device-id: {}]", tenantId, deviceId);
                 // THEN create a consumer once the event message has been successfully sent
                 LOGGER.debug("opening event consumer for tenant [{}]", tenantId);
                 createConsumer(tenantId, msg -> {

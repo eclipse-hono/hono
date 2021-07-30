@@ -25,7 +25,6 @@ import org.eclipse.hono.adapter.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.adapter.auth.device.X509AuthProvider;
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.adapter.http.HonoBasicAuthHandler;
-import org.eclipse.hono.adapter.http.HonoChainAuthHandler;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.adapter.http.X509AuthHandler;
 import org.eclipse.hono.auth.Device;
@@ -102,15 +101,18 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
         if (getConfig().isAuthenticationRequired()) {
 
-            final ChainAuthHandler authHandler = new HonoChainAuthHandler(this::handleBeforeCredentialsValidation);
-            authHandler.append(new X509AuthHandler(
+            final ChainAuthHandler authHandler = ChainAuthHandler.any();
+            authHandler.add(new X509AuthHandler(
                     new TenantServiceBasedX509Authentication(getTenantClient(), tracer),
                     Optional.ofNullable(clientCertAuthProvider)
-                        .orElseGet(() -> new X509AuthProvider(getCredentialsClient(), tracer))));
-            authHandler.append(new HonoBasicAuthHandler(
+                        .orElseGet(() -> new X509AuthProvider(getCredentialsClient(), tracer)),
+                    this::handleBeforeCredentialsValidation));
+            authHandler.add(new HonoBasicAuthHandler(
                     Optional.ofNullable(usernamePasswordAuthProvider)
                         .orElseGet(() -> new UsernamePasswordAuthProvider(getCredentialsClient(), tracer)),
-                    getConfig().getRealm()));
+                    getConfig().getRealm(),
+                    this::handleBeforeCredentialsValidation));
+
             addTelemetryApiRoutes(router, authHandler);
             addEventApiRoutes(router, authHandler);
             addCommandResponseRoutes(CommandConstants.COMMAND_ENDPOINT, router, authHandler);

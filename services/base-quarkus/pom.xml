@@ -194,6 +194,8 @@
         <quarkus.package.type>native</quarkus.package.type>
         <!--  include all JSSE related classes -->
         <quarkus.native.enable-all-security-services>true</quarkus.native.enable-all-security-services>
+        <!-- allow incomplete class path in order to not require (optional) compression codec dependencies of Netty -->
+        <quarkus.native.additional-build-args>--allow-incomplete-classpath</quarkus.native.additional-build-args>
       </properties>
 
       <dependencies>

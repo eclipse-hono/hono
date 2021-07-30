@@ -197,7 +197,7 @@ public class CorsIT {
                 getRequestHeaders()
                     .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, method.name()),
-                ResponsePredicate.status(HttpURLConnection.HTTP_OK))
+                ResponsePredicate.status(HttpURLConnection.HTTP_NO_CONTENT))
             .onComplete(ctx.succeeding(response -> {
                 ctx.verify(() -> {
                     assertAccessControlHeaders(response.headers(), method);

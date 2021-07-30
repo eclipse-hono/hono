@@ -49,9 +49,11 @@ import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.http.impl.HttpServerRequestInternal;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 
@@ -129,7 +131,6 @@ public class DelegatingDeviceManagementHttpEndpointTest {
                 requestHeaders,
                 requestParams,
                 response);
-        when(request.getHeader("Content-Type")).thenReturn("application/json");
 
         router.handle(request);
 
@@ -186,7 +187,6 @@ public class DelegatingDeviceManagementHttpEndpointTest {
                 requestHeaders,
                 requestParams,
                 response);
-        when(request.getHeader("Content-Type")).thenReturn("application/json");
 
         router.handle(request);
 
@@ -195,7 +195,7 @@ public class DelegatingDeviceManagementHttpEndpointTest {
     }
 
     /**
-     * Makes sure that status properties are ignored when creating a device management via the REST API.
+     * Makes sure that status properties are ignored when creating a device via the management API.
      */
     @SuppressWarnings("unchecked")
     @Test
@@ -205,6 +205,7 @@ public class DelegatingDeviceManagementHttpEndpointTest {
                 .put(RegistryManagementConstants.FIELD_ENABLED, true)
                 .put(RegistryManagementConstants.FIELD_STATUS, new JsonObject().put("created", "foobar"));
         requestBody = json.toBuffer();
+
         final HttpServerResponse response = newResponse();
 
         final HttpServerRequest request = newRequest(
@@ -213,7 +214,6 @@ public class DelegatingDeviceManagementHttpEndpointTest {
                 requestHeaders,
                 requestParams,
                 response);
-        when(request.getHeader("Content-Type")).thenReturn("application/json");
 
         when(service.createDevice(anyString(), any(Optional.class), any(Device.class), any(Span.class)))
                 .thenAnswer(invocation -> {
@@ -253,7 +253,6 @@ public class DelegatingDeviceManagementHttpEndpointTest {
                 requestHeaders,
                 requestParams,
                 response);
-        when(request.getHeader("Content-Type")).thenReturn("application/json");
 
         when(service.updateDevice(anyString(), anyString(), any(Device.class), any(), any(Span.class)))
                 .thenAnswer(invocation -> {
@@ -429,13 +428,14 @@ public class DelegatingDeviceManagementHttpEndpointTest {
             final MultiMap requestParams,
             final HttpServerResponse response) {
 
-        final HttpServerRequest request = mock(HttpServerRequest.class);
+        final HttpServerRequestInternal request = mock(HttpServerRequestInternal.class);
         when(request.method()).thenReturn(method);
         when(request.scheme()).thenReturn("http");
         when(request.host()).thenReturn("localhost");
         when(request.uri()).thenReturn(relativeURI);
         when(request.path()).thenReturn(relativeURI);
         when(request.headers()).thenReturn(requestHeaders);
+        when(request.getHeader(HttpHeaders.CONTENT_TYPE)).thenReturn("application/json");
         when(request.params()).thenReturn(requestParams);
         when(request.response()).thenReturn(response);
         when(request.handler(VertxMockSupport.anyHandler())).thenAnswer(invocation -> {

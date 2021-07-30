@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,10 +14,10 @@
 package org.eclipse.hono.service.management.credentials;
 
 import java.net.HttpURLConnection;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ClientErrorException;
@@ -86,7 +86,7 @@ public class DelegatingCredentialsManagementHttpEndpoint<S extends CredentialsMa
 
 
         // Add CORS handler
-        router.route(pathWithTenantAndDeviceId).handler(createCorsHandler(config.getCorsAllowedOrigin(), EnumSet.of(HttpMethod.GET, HttpMethod.PUT)));
+        router.route(pathWithTenantAndDeviceId).handler(createCorsHandler(config.getCorsAllowedOrigin(), Set.of(HttpMethod.GET, HttpMethod.PUT)));
 
         final BodyHandler bodyHandler = BodyHandler.create();
         bodyHandler.setBodyLimit(config.getMaxPayloadSize());

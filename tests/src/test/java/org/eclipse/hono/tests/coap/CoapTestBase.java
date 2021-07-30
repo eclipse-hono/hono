@@ -175,7 +175,7 @@ public abstract class CoapTestBase {
 
         tenantId = helper.getRandomTenantId();
         deviceId = helper.getRandomDeviceId(tenantId);
-        helper.init().onComplete(ctx.completing());
+        helper.init().onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -197,7 +197,7 @@ public abstract class CoapTestBase {
      */
     @AfterEach
     public void disconnect(final VertxTestContext ctx) {
-        helper.disconnect().onComplete(ctx.completing());
+        helper.disconnect().onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -381,7 +381,7 @@ public abstract class CoapTestBase {
 
         final VertxTestContext setup = new VertxTestContext();
         helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, SECRET)
-        .onComplete(setup.completing());
+        .onComplete(setup.succeedingThenComplete());
         ctx.verify(() -> assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue());
 
         final CoapClient client = getCoapClient();
@@ -415,7 +415,7 @@ public abstract class CoapTestBase {
                 final var tenant = Tenants.createTenantForTrustAnchor(caCert);
                 return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, clientCert);
             })
-            .onComplete(setup.completing());
+            .onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -449,7 +449,7 @@ public abstract class CoapTestBase {
 
         final VertxTestContext setup = new VertxTestContext();
         helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET)
-        .onComplete(setup.completing());
+        .onComplete(setup.succeedingThenComplete());
         ctx.verify(() -> assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue());
 
         final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
@@ -485,7 +485,7 @@ public abstract class CoapTestBase {
         helper.registry.addPskDeviceForTenant(tenantId, tenant, gatewayOneId, SECRET)
         .compose(ok -> helper.registry.addPskDeviceToTenant(tenantId, gatewayTwoId, SECRET))
         .compose(ok -> helper.registry.registerDevice(tenantId, deviceId, deviceData))
-        .onComplete(setup.completing());
+        .onComplete(setup.succeedingThenComplete());
         ctx.verify(() -> assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue());
 
         final CoapClient gatewayOne = getCoapsClient(gatewayOneId, tenantId, SECRET);
@@ -626,7 +626,7 @@ public abstract class CoapTestBase {
             }
         })
         .compose(ok -> Optional.ofNullable(warmUp).map(w -> w.get()).orElseGet(() -> Future.succeededFuture()))
-        .onComplete(setup.completing());
+        .onComplete(setup.succeedingThenComplete());
         ctx.verify(() -> assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue());
 
         final long start = System.currentTimeMillis();
@@ -760,7 +760,7 @@ public abstract class CoapTestBase {
             client.advanced(getHandler(result, ResponseCode.FORBIDDEN), createCoapsRequest(Code.POST, getPostResource(), 0));
             return result.future();
         })
-        .onComplete(ctx.completing());
+        .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -787,7 +787,7 @@ public abstract class CoapTestBase {
             client.advanced(getHandler(result, ResponseCode.NOT_FOUND), createCoapsRequest(Code.POST, getPostResource(), 0));
             return result.future();
         })
-        .onComplete(ctx.completing());
+        .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -819,7 +819,7 @@ public abstract class CoapTestBase {
             client.advanced(getHandler(result, ResponseCode.FORBIDDEN), createCoapsRequest(Code.PUT, getPutResource(tenantId, deviceId), 0));
             return result.future();
         })
-        .onComplete(ctx.completing());
+        .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -850,7 +850,7 @@ public abstract class CoapTestBase {
                     createCoapsRequest(Code.PUT, getPutResource(tenantId, deviceId), 0));
             return result.future();
         })
-        .onComplete(ctx.completing());
+        .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -880,9 +880,9 @@ public abstract class CoapTestBase {
         final VertxTestContext setup = new VertxTestContext();
 
         if (endpointConfig.isSubscribeAsUnauthenticatedDevice()) {
-            helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, SECRET).onComplete(setup.completing());
+            helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, SECRET).onComplete(setup.succeedingThenComplete());
         } else {
-            helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET).onComplete(setup.completing());
+            helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET).onComplete(setup.succeedingThenComplete());
         }
         ctx.verify(() -> assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue());
 
@@ -1018,9 +1018,9 @@ public abstract class CoapTestBase {
 
         final VertxTestContext setup = new VertxTestContext();
         if (endpointConfig.isSubscribeAsUnauthenticatedDevice()) {
-            helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, SECRET).onComplete(setup.completing());
+            helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, SECRET).onComplete(setup.succeedingThenComplete());
         } else {
-            helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET).onComplete(setup.completing());
+            helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET).onComplete(setup.succeedingThenComplete());
         }
         ctx.verify(() -> assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue());
 

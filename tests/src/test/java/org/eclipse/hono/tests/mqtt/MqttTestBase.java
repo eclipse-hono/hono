@@ -95,7 +95,7 @@ public abstract class MqttTestBase {
     public void setUp(final TestInfo testInfo, final VertxTestContext ctx) {
         LOGGER.info("running {}", testInfo.getDisplayName());
         helper = new IntegrationTestSupport(vertx);
-        helper.init().onComplete(ctx.completing());
+        helper.init().onComplete(ctx.succeedingThenComplete());
     }
 
     /**

@@ -244,7 +244,7 @@ public final class FileBasedTenantService extends AbstractTenantManagementServic
 
                     final Promise<Void> writeHandler = Promise.promise();
                     vertx.fileSystem().writeFile(getConfig().getFilename(),
-                            Buffer.factory.buffer(tenantsJson.encodePrettily()), writeHandler);
+                            Buffer.buffer(tenantsJson.encodePrettily()), writeHandler);
                     return writeHandler.future().map(tenantsJson);
                 })
                 .map(tenantsJson -> {

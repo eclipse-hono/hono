@@ -97,10 +97,11 @@ import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.ext.auth.AuthProvider;
-import io.vertx.ext.auth.jdbc.JDBCAuth;
+import io.vertx.ext.auth.authentication.AuthenticationProvider;
+import io.vertx.ext.auth.jdbc.JDBCAuthentication;
+import io.vertx.ext.auth.jdbc.JDBCAuthenticationOptions;
 import io.vertx.ext.jdbc.JDBCClient;
-import io.vertx.ext.web.handler.AuthHandler;
+import io.vertx.ext.web.handler.AuthenticationHandler;
 import io.vertx.ext.web.handler.BasicAuthHandler;
 
 /**
@@ -616,34 +617,34 @@ public class ApplicationConfig {
     }
 
     /**
-     * Provide an auth provider, backed by vert.x {@link JDBCAuth}.
+     * Creates an authentication provider, backed by vert.x {@link io.vertx.ext.auth.jdbc.JDBCAuthentication}.
      *
      * @return The auth provider instance.
      */
     @Bean
     @Scope("prototype")
-    public AuthProvider authProvider() {
+    public AuthenticationProvider authProvider() {
         final JDBCClient client = JdbcProperties.dataSource(vertx(), devicesProperties().getManagement());
-        return JDBCAuth.create(vertx(), client);
+        return JDBCAuthentication.create(client, new JDBCAuthenticationOptions());
     }
 
     /**
-     * Creates a new instance of an auth handler to provide basic authentication for the
-     * HTTP based Device Registry Management endpoint.
+     * Creates a new handler supporting the Basic authentication scheme for the HTTP based
+     * Device Registry Management endpoint.
      * <p>
-     * This method creates a {@link BasicAuthHandler} using the auth provider returned by
+     * This method creates a {@link BasicAuthHandler} using the authentication provider returned by
      * {@link #authProvider()} if the property corresponding to {@link HttpServiceConfigProperties#isAuthenticationRequired()}
      * is set to {@code true}.
      *
      * @param httpServiceConfigProperties The properties for configuring the HTTP based device registry
      *                                    management endpoint.
-     * @return The auth handler if the {@link HttpServiceConfigProperties#isAuthenticationRequired()}
+     * @return The created handler if the {@link HttpServiceConfigProperties#isAuthenticationRequired()}
      *         is {@code true} or {@code null} otherwise.
      * @see <a href="https://vertx.io/docs/vertx-auth-jdbc/java/">JDBC Auth Provider docs</a>
      */
     @Bean
     @Scope("prototype")
-    public AuthHandler createAuthHandler(final HttpServiceConfigProperties httpServiceConfigProperties) {
+    public AuthenticationHandler createAuthHandler(final HttpServiceConfigProperties httpServiceConfigProperties) {
         if (httpServiceConfigProperties != null && httpServiceConfigProperties.isAuthenticationRequired()) {
             return BasicAuthHandler.create(
                     authProvider(),

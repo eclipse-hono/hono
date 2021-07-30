@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,10 +14,10 @@
 package org.eclipse.hono.service.management.device;
 
 import java.net.HttpURLConnection;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
@@ -94,7 +94,7 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
                 PARAM_DEVICE_ID);
 
         // Add CORS handler
-        router.route(pathWithTenant).handler(createCorsHandler(config.getCorsAllowedOrigin(), EnumSet.of(HttpMethod.POST)));
+        router.route(pathWithTenant).handler(createCorsHandler(config.getCorsAllowedOrigin(), Set.of(HttpMethod.POST)));
         router.route(pathWithTenantAndDeviceId).handler(createDefaultCorsHandler(config.getCorsAllowedOrigin()));
 
         final BodyHandler bodyHandler = BodyHandler.create();

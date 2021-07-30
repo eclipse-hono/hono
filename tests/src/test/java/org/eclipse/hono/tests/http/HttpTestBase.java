@@ -186,7 +186,7 @@ import io.vertx.junit5.VertxTestContext;
         tenantId = helper.getRandomTenantId();
         deviceId = helper.getRandomDeviceId(tenantId);
         authorization = getBasicAuth(tenantId, deviceId, PWD);
-        helper.init().onComplete(ctx.completing());
+        helper.init().onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -213,7 +213,7 @@ import io.vertx.junit5.VertxTestContext;
      */
     @AfterEach
     public void disconnect(final VertxTestContext ctx) {
-        helper.disconnect().onComplete(ctx.completing());
+        helper.disconnect().onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -283,7 +283,7 @@ import io.vertx.junit5.VertxTestContext;
 
         helper.registry
             .addDeviceForTenant(tenantId, tenant, deviceId, PWD)
-            .onComplete(setup.completing());
+            .onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -326,7 +326,7 @@ import io.vertx.junit5.VertxTestContext;
         helper.registry.addDeviceForTenant(tenantId, tenant, gatewayOneId, PWD)
             .compose(ok -> helper.registry.addDeviceToTenant(tenantId, gatewayTwoId, PWD))
             .compose(ok -> helper.registry.registerDevice(tenantId, deviceId, device))
-            .onComplete(setup.completing());
+            .onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -381,7 +381,7 @@ import io.vertx.junit5.VertxTestContext;
                 return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
 
             })
-            .onComplete(setup.completing());
+            .onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -421,7 +421,7 @@ import io.vertx.junit5.VertxTestContext;
                 return helper.registry.addTenant(tenantId, tenant);
 
             })
-            .onComplete(setup.completing());
+            .onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -473,7 +473,7 @@ import io.vertx.junit5.VertxTestContext;
                         ResponsePredicate.status(HttpURLConnection.HTTP_UNAUTHORIZED));
             })
             // THEN the connection is refused
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -575,7 +575,7 @@ import io.vertx.junit5.VertxTestContext;
             if (receivedMessageCount.get() % 20 == 0) {
                 logger.info("messages received: {}", receivedMessageCount.get());
             }
-        }).onComplete(setup.completing());
+        }).onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -666,7 +666,7 @@ import io.vertx.junit5.VertxTestContext;
                         ResponsePredicate.status(HttpURLConnection.HTTP_UNAUTHORIZED));
             })
             // THEN the request fails with a 401
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -690,7 +690,7 @@ import io.vertx.junit5.VertxTestContext;
         // GIVEN a device
         helper.registry
                 .addDeviceForTenant(tenantId, tenant, deviceId, PWD)
-                .onComplete(setup.completing());
+                .onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -705,7 +705,7 @@ import io.vertx.junit5.VertxTestContext;
                 requestHeaders,
                 ResponsePredicate.status(HttpURLConnection.HTTP_UNAUTHORIZED))
                 // THEN the request fails with a 401
-                .onComplete(ctx.completing());
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -729,7 +729,7 @@ import io.vertx.junit5.VertxTestContext;
         // GIVEN a device
         helper.registry
                 .addDeviceForTenant(tenantId, tenant, deviceId, PWD)
-                .onComplete(setup.completing());
+                .onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -744,7 +744,7 @@ import io.vertx.junit5.VertxTestContext;
                 requestHeaders,
                 ResponsePredicate.status(HttpURLConnection.HTTP_UNAUTHORIZED))
                 // THEN the request fails with a 401
-                .onComplete(ctx.completing());
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -777,7 +777,7 @@ import io.vertx.junit5.VertxTestContext;
                         ResponsePredicate.status(HttpURLConnection.HTTP_FORBIDDEN));
             })
             // THEN the message gets rejected by the HTTP adapter with a 403
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -809,7 +809,7 @@ import io.vertx.junit5.VertxTestContext;
                         ResponsePredicate.status(HttpURLConnection.HTTP_NOT_FOUND));
             })
             // THEN the message gets rejected by the HTTP adapter with a 404
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -847,7 +847,7 @@ import io.vertx.junit5.VertxTestContext;
 
             })
             // THEN the message gets rejected by the HTTP adapter with a 403
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -884,7 +884,7 @@ import io.vertx.junit5.VertxTestContext;
 
         })
         // THEN the message gets rejected by the HTTP adapter with a 403
-        .onComplete(ctx.completing());
+        .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -988,7 +988,7 @@ import io.vertx.junit5.VertxTestContext;
                     .add(HttpHeaders.ORIGIN, ORIGIN_URI)
                     .add(Constants.HEADER_QOS_LEVEL, "1"),
                 ResponsePredicate.status(200, 300));
-        }).onComplete(setup.completing());
+        }).onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -1072,7 +1072,7 @@ import io.vertx.junit5.VertxTestContext;
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI)
                 .add(Constants.HEADER_TIME_TILL_DISCONNECT, "2");
 
-        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, PWD).onComplete(setup.completing());
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, PWD).onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -1151,7 +1151,7 @@ import io.vertx.junit5.VertxTestContext;
 
         helper.registry
         .addDeviceForTenant(tenantId, tenant, deviceId, PWD)
-        .onComplete(setup.completing());
+        .onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -1266,7 +1266,7 @@ import io.vertx.junit5.VertxTestContext;
 
         helper.registry
         .addDeviceForTenant(tenantId, tenant, deviceId, PWD)
-        .onComplete(setup.completing());
+        .onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {

@@ -29,6 +29,9 @@ import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.impl.ContextInternal;
+import io.vertx.core.impl.VertxInternal;
+import io.vertx.core.impl.future.PromiseInternal;
 
 /**
  * Argument matchers and mocks for the use with vert.x.
@@ -41,20 +44,51 @@ public final class VertxMockSupport {
     /**
      * Creates a mocked vert.x Context which immediately invokes any handler that is passed to its runOnContext method.
      *
-     * @param vertx The vert.x instance that the mock of the context is created for.
+     * @param owner The vert.x instance that will be the owner of the created context.
      * @return The mocked context.
      */
-    public static Context mockContext(final Vertx vertx) {
+    public static Context mockContext(final Vertx owner) {
 
         final Context context = mock(Context.class);
 
-        when(context.owner()).thenReturn(vertx);
+        when(context.owner()).thenReturn(owner);
         doAnswer(invocation -> {
             final Handler<Void> handler = invocation.getArgument(0);
             handler.handle(null);
             return null;
         }).when(context).runOnContext(VertxMockSupport.anyHandler());
         return context;
+    }
+
+    /**
+     * Creates a mocked vert.x Context which immediately invokes any handler that is passed to its runOnContext method.
+     *
+     * @param owner The vert.x instance that will be the owner of the created context.
+     * @return The mocked context.
+     */
+    public static ContextInternal mockContextInternal(final VertxInternal owner) {
+
+        final ContextInternal context = mock(ContextInternal.class);
+
+        when(context.owner()).thenReturn(owner);
+        doAnswer(invocation -> {
+            final Handler<Void> handler = invocation.getArgument(0);
+            handler.handle(null);
+            return null;
+        }).when(context).runOnContext(VertxMockSupport.anyHandler());
+        return context;
+    }
+
+    /**
+     * Creates a promise mock.
+     *
+     * @param <T> The type of the promise.
+     * @return The mocked promise.
+     */
+    public static <T> PromiseInternal<T> promiseInternal() {
+        @SuppressWarnings("unchecked")
+        final PromiseInternal<T> promise = mock(PromiseInternal.class);
+        return promise;
     }
 
     /**
@@ -78,11 +112,21 @@ public final class VertxMockSupport {
      * @param vertx The mocked vert.x instance.
      */
     public static void executeBlockingCodeImmediately(final Vertx vertx) {
+        final Context context = VertxMockSupport.mockContext(vertx);
+        executeBlockingCodeImmediately(vertx, context);
+    }
+
+    /**
+     * Ensures that blocking code is executed immediately on the given vert.x instance.
+     *
+     * @param vertx The mocked vert.x instance.
+     * @param context The (mocked) context to return as the result of {@link Vertx#getOrCreateContext()}.
+     */
+    public static void executeBlockingCodeImmediately(final Vertx vertx, final Context context) {
 
         doAnswer(VertxMockSupport::handleExecuteBlockingInvocation)
                 .when(vertx).executeBlocking(anyHandler(), anyHandler());
 
-        final Context context = VertxMockSupport.mockContext(vertx);
         when(vertx.getOrCreateContext()).thenReturn(context);
 
         doAnswer(VertxMockSupport::handleExecuteBlockingInvocation)

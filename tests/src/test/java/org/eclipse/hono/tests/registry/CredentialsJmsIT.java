@@ -57,7 +57,7 @@ public class CredentialsJmsIT extends CredentialsApiTests {
         client = new JmsBasedCredentialsClient(
                 JmsBasedHonoConnection.newConnection(props),
                 props);
-        client.start().onComplete(ctx.completing());
+        client.start().onComplete(ctx.succeedingThenComplete());
 
     }
 

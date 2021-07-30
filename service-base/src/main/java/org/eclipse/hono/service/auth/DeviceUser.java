@@ -18,8 +18,10 @@ import org.eclipse.hono.auth.Device;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.AuthProvider;
 import io.vertx.ext.auth.User;
+import io.vertx.ext.auth.authorization.Authorization;
 
 /**
  * A class that implements the {@link User} interface for devices that then can be used for authorization validation.
@@ -39,21 +41,19 @@ public class DeviceUser extends Device implements User {
     }
 
     /**
-     * Checks if this device has a particular authority.
-     * <p>
-     * In order for the check to succeed, the JWT must
-     * <ul>
-     * <li>not be expired</li>
-     * <li>contain the given authorities in its <em>aut</em> claim</li>
-     * </ul>
-     *
-     * @param authority The authority to check for.
-     * @param resultHandler The handler to notify about the outcome of the check.
-     * @return Device the device that was checked for authorization.
+     * {@inheritDoc}
      */
     @Override
-    public User isAuthorized(final String authority, final Handler<AsyncResult<Boolean>> resultHandler) {
-        resultHandler.handle(Future.succeededFuture(checkAuthorization(authority)));
+    public JsonObject attributes() {
+        return principal();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public User isAuthorized(final Authorization authority, final Handler<AsyncResult<Boolean>> resultHandler) {
+        resultHandler.handle(Future.failedFuture("the isAuthorized(Authorization, Handler) method is not implemented"));
         return this;
     }
 
@@ -61,15 +61,7 @@ public class DeviceUser extends Device implements User {
      * {@inheritDoc}
      */
     @Override
-    public User clearCache() {
-        return null;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public void setAuthProvider(final AuthProvider authProvider) {
-        // NOOP, JWT is self contained
+        // nothing to do
     }
 }

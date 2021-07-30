@@ -62,7 +62,7 @@ public final class MongoDBBasedDeviceManagementSearchDevicesTest implements Abst
         dao = MongoDbTestUtils.getDeviceDao(vertx, "hono-search-devices-test");
         credentialsDao = MongoDbTestUtils.getCredentialsDao(vertx, "hono-devices-test");
         service = new MongoDbBasedDeviceManagementService(dao, credentialsDao, config);
-        CompositeFuture.all(dao.createIndices(), credentialsDao.createIndices()).onComplete(testContext.completing());
+        CompositeFuture.all(dao.createIndices(), credentialsDao.createIndices()).onComplete(testContext.succeedingThenComplete());
     }
 
     /**
@@ -85,7 +85,7 @@ public final class MongoDBBasedDeviceManagementSearchDevicesTest implements Abst
         CompositeFuture.all(
                 dao.deleteAllFromCollection(),
                 credentialsDao.deleteAllFromCollection())
-            .onComplete(testContext.completing());
+            .onComplete(testContext.succeedingThenComplete());
     }
 
     /**

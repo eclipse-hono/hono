@@ -132,7 +132,7 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
                     vertx.close();
                     vertx = null;
                 })
-                .onComplete(ctx.completing());
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -209,7 +209,7 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
                     targetAdapterInstanceGetterCompletionFutureSupplier);
             CompositeFuture.join(internalConsumer.start(), consumerFactory.start())
                     .compose(f -> createCommandConsumer(tenantId, consumerFactory))
-                    .onComplete(setup.completing());
+                    .onComplete(setup.succeedingThenComplete());
         });
 
         assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
@@ -313,7 +313,7 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
             consumerFactory1Ref.set(consumerFactory1);
             CompositeFuture.join(internalConsumer.start(), consumerFactory1.start())
                     .compose(f -> createCommandConsumer(tenantId, consumerFactory1))
-                    .onComplete(setup.completing());
+                    .onComplete(setup.succeedingThenComplete());
         });
 
         assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();

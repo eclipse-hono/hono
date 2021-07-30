@@ -57,7 +57,7 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
         tenantId = getHelper().getRandomTenantId();
         getHelper().registry
                 .addTenant(tenantId)
-                .onComplete(ctx.completing());
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
