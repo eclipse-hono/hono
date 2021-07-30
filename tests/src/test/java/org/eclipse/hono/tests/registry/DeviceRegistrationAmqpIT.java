@@ -52,7 +52,7 @@ public class DeviceRegistrationAmqpIT extends DeviceRegistrationApiTests {
                                 IntegrationTestSupport.TENANT_ADMIN_PWD)),
                 SendMessageSampler.Factory.noop(),
                 null);
-        registrationClient.start().onComplete(ctx.completing());
+        registrationClient.start().onComplete(ctx.succeedingThenComplete());
     }
 
     /**

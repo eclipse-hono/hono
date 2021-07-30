@@ -129,7 +129,7 @@ public class HonoKafkaConsumerTest {
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
         mockConsumer.updateEndOffsets(Map.of(topicPartition, ((long) 0)));
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(topicPartition));
-        consumer.start().onComplete(ctx.completing());
+        consumer.start().onComplete(ctx.succeedingThenComplete());
     }
 
     /**

@@ -348,7 +348,7 @@ public class HonoKafkaConsumer implements Lifecycle {
                         kafkaConsumer.asStream().pollTimeout(POLL_TIMEOUT);
                         logSubscribedTopicsOnStartComplete();
                     })
-                    .onComplete(startPromise.future());
+                    .onComplete(startPromise);
         });
         return startPromise.future();
     }

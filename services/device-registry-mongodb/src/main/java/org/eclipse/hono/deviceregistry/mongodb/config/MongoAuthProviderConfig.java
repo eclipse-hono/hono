@@ -15,27 +15,27 @@
 package org.eclipse.hono.deviceregistry.mongodb.config;
 
 import java.util.Objects;
-import java.util.Optional;
 
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.mongo.HashAlgorithm;
 import io.vertx.ext.auth.mongo.HashSaltStyle;
-import io.vertx.ext.auth.mongo.MongoAuth;
+import io.vertx.ext.auth.mongo.MongoAuthentication;
 
 /**
- * Configuration properties for the {@link MongoAuth} provider.
+ * Configuration properties for the {@link io.vertx.ext.auth.mongo.MongoAuthentication} provider.
  */
 public final class MongoAuthProviderConfig {
 
-    private String collectionName;
+    private String collectionName = MongoAuthentication.DEFAULT_COLLECTION_NAME;
     private HashSaltStyle saltStyle;
-    private String saltField;
-    private String usernameField;
-    private String passwordField;
+    private String saltField = MongoAuthentication.DEFAULT_SALT_FIELD;
+    private String usernameField = MongoAuthentication.DEFAULT_USERNAME_FIELD;
+    private String passwordField = MongoAuthentication.DEFAULT_PASSWORD_FIELD;
     private HashAlgorithm hashAlgorithm;
 
     /**
      * Gets the name of the Mongo DB collection that contains the user accounts.
+     * <p>
+     * The default value of this property is {@value MongoAuthentication#DEFAULT_COLLECTION_NAME}.
      *
      * @return The collection name or {@code null} if the provider should use the default value.
      */
@@ -45,6 +45,8 @@ public final class MongoAuthProviderConfig {
 
     /**
      * Sets the name of the Mongo DB collection that contains the user accounts.
+     * <p>
+     * The default value of this property is {@value MongoAuthentication#DEFAULT_COLLECTION_NAME}.
      *
      * @param collectionName The name.
      * @throws NullPointerException if name is {@code null}.
@@ -93,6 +95,8 @@ public final class MongoAuthProviderConfig {
 
     /**
      * Gets the name of the field that contains the salt used for an account's password hash.
+     * <p>
+     * The default value of this property is {@value MongoAuthentication#DEFAULT_SALT_FIELD}.
      *
      * @return The field name or {@code null} if the provider should use the default value.
      */
@@ -104,6 +108,8 @@ public final class MongoAuthProviderConfig {
      * Sets the name of the field that contains the salt used for an account's password hash.
      * <p>
      * This property is only relevant if the salt style has been set to {@link HashSaltStyle#COLUMN}.
+     * <p>
+     * The default value of this property is {@value MongoAuthentication#DEFAULT_SALT_FIELD}.
      *
      * @param name The name of the field.
      * @throws NullPointerException if name is {@code null}.
@@ -114,6 +120,8 @@ public final class MongoAuthProviderConfig {
 
     /**
      * Gets the name of the field that contains an account's user name.
+     * <p>
+     * The default value of this property is {@value MongoAuthentication#DEFAULT_USERNAME_FIELD}.
      *
      * @return The field name or {@code null} if the provider should use the default value.
      */
@@ -123,6 +131,8 @@ public final class MongoAuthProviderConfig {
 
     /**
      * Sets the name of the field that contains an account's user name.
+     * <p>
+     * The default value of this property is {@value MongoAuthentication#DEFAULT_USERNAME_FIELD}.
      *
      * @param name The name of the field.
      * @throws NullPointerException if name is {@code null}.
@@ -133,6 +143,8 @@ public final class MongoAuthProviderConfig {
 
     /**
      * Gets the name of the field that contains an account's password (hash).
+     * <p>
+     * The default value of this property is {@value MongoAuthentication#DEFAULT_PASSWORD_FIELD}.
      *
      * @return The field name or {@code null} if the provider should use the default value.
      */
@@ -142,6 +154,8 @@ public final class MongoAuthProviderConfig {
 
     /**
      * Sets the name of the field that contains an account's password (hash).
+     * <p>
+     * The default value of this property is {@value MongoAuthentication#DEFAULT_PASSWORD_FIELD}.
      *
      * @param name The name of the field.
      * @throws NullPointerException if name is {@code null}.
@@ -150,26 +164,10 @@ public final class MongoAuthProviderConfig {
         this.passwordField = Objects.requireNonNull(name);
     }
 
-    /**
-     * Gets the configuration as a JSON object.
-     * <p>
-     * The returned JSON object contains the configuration using the property names
-     * defined by {@link MongoAuth}.
-     *
-     * @return The configuration.
-     */
-    public JsonObject toJsonObject() {
-        final var json = new JsonObject();
-        Optional.ofNullable(collectionName)
-            .ifPresent(v -> json.put(MongoAuth.PROPERTY_COLLECTION_NAME, v));
-        Optional.ofNullable(saltStyle)
-            .ifPresent(v -> json.put(MongoAuth.PROPERTY_SALT_STYLE, v.name()));
-        Optional.ofNullable(saltField)
-            .ifPresent(v -> json.put(MongoAuth.PROPERTY_SALT_FIELD, v));
-        Optional.ofNullable(usernameField)
-            .ifPresent(v -> json.put(MongoAuth.PROPERTY_USERNAME_FIELD, v));
-        Optional.ofNullable(passwordField)
-            .ifPresent(v -> json.put(MongoAuth.PROPERTY_PASSWORD_FIELD, v));
-        return json;
+    @Override
+    public String toString() {
+        return "MongoAuthProviderConfig [collectionName=" + collectionName + ", saltStyle=" + saltStyle + ", saltField="
+                + saltField + ", usernameField=" + usernameField + ", passwordField=" + passwordField
+                + ", hashAlgorithm=" + hashAlgorithm + "]";
     }
 }

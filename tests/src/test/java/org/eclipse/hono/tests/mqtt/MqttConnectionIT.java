@@ -72,7 +72,7 @@ public class MqttConnectionIT extends MqttTestBase {
         deviceId = helper.getRandomDeviceId(tenantId);
         password = "secret";
         deviceCert = SelfSignedCertificate.create(UUID.randomUUID().toString());
-        helper.init().onComplete(ctx.completing());
+        helper.init().onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -90,7 +90,7 @@ public class MqttConnectionIT extends MqttTestBase {
         helper.registry
                 .addDeviceForTenant(tenantId, tenant, deviceId, password)
                 .compose(ok -> connectToAdapter(tlsVersion, IntegrationTestSupport.getUsername(deviceId, tenantId), password))
-                .onComplete(ctx.completing());
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -107,7 +107,7 @@ public class MqttConnectionIT extends MqttTestBase {
                     return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
                 })
                 .compose(ok -> connectToAdapter(deviceCert))
-                .onComplete(ctx.completing());
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     /**

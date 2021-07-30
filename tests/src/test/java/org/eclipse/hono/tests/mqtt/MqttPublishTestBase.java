@@ -225,7 +225,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
 
         final VertxTestContext setup = new VertxTestContext();
 
-        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password).onComplete(setup.completing());
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password).onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -295,7 +295,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
         final Tenant tenant = new Tenant();
         final VertxTestContext setup = new VertxTestContext();
 
-        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password).onComplete(setup.completing());
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password).onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -330,7 +330,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
         .compose(cert -> {
             final var tenant = Tenants.createTenantForTrustAnchor(cert);
             return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
-        }).onComplete(setup.completing());
+        }).onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -362,7 +362,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
 
         final VertxTestContext setup = new VertxTestContext();
 
-        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password).onComplete(setup.completing());
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password).onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -390,7 +390,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
 
         final VertxTestContext setup = new VertxTestContext();
 
-        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password).onComplete(setup.completing());
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password).onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
@@ -455,7 +455,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
 
         final VertxTestContext setup = new VertxTestContext();
 
-        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password).onComplete(setup.completing());
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password).onComplete(setup.succeedingThenComplete());
         final String deviceToSendTo = "nonExistingDevice";
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
@@ -590,7 +590,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
                 }).onFailure(ctx::failNow);
             });
             return subscribeToErrorTopic(errorTopic);
-        }).onComplete(setup.completing());
+        }).onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {

@@ -23,7 +23,7 @@ hono:
         authRealm: "ApplicationRealm"
         authUsername: "${hono.infinispan.username}"
         authPassword: "${hono.infinispan.password}"
-        saslMechanism: "SCRAM-SHA-512"
+        saslMechanism: "DIGEST-SHA-512"
         socketTimeout: 5000
         connectTimeout: 5000
         trustStorePath: "/etc/hono/certs/trusted-certs.pem"

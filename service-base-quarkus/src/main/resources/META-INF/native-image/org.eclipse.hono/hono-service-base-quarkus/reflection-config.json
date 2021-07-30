@@ -21,6 +21,30 @@
     "allPublicFields" : true
   },
   {
+    "name": "com.fasterxml.jackson.core.JsonFactory",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "com.fasterxml.jackson.databind.ObjectMapper",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "com.fasterxml.jackson.datatype.jsr310.JavaTimeModule",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "com.fasterxml.jackson.datatype.jsr310.JSR310Module",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
     "name" : "com.github.benmanes.caffeine.cache.SSMSA",
     "allDeclaredConstructors" : true,
     "allPublicConstructors" : true,

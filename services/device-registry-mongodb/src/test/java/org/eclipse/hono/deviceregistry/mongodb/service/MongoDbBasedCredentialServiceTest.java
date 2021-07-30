@@ -117,7 +117,7 @@ public class MongoDbBasedCredentialServiceTest implements CredentialsServiceTest
                 registrationServiceConfig);
 
         CompositeFuture.all(deviceDao.createIndices(), credentialsDao.createIndices())
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeedingThenComplete());
     }
 
     /**

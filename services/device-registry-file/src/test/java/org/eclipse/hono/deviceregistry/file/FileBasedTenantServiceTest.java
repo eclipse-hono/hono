@@ -184,10 +184,9 @@ public class FileBasedTenantServiceTest implements AbstractTenantServiceTest {
 
         // WHEN starting the service
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().onComplete(ctx.completing(
-            // THEN startup succeeds
-        ));
         svc.start().onComplete(startupTracker);
+        // THEN startup succeeds
+        startupTracker.future().onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -299,7 +298,7 @@ public class FileBasedTenantServiceTest implements AbstractTenantServiceTest {
             // and the loaded tenants can be retrieved from the service 
             .compose(ok -> assertTenantExists(svc, Constants.DEFAULT_TENANT))
             .compose(ok -> assertTenantExists(svc, "OTHER_TENANT"))
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeedingThenComplete());
     }
 
     /**

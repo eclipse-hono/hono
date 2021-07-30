@@ -39,6 +39,7 @@ import org.springframework.context.annotation.Scope;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Vertx;
+import io.vertx.ext.web.client.WebClient;
 
 /**
  * Spring Boot configuration for the LoRa adapter.
@@ -79,7 +80,7 @@ public class Config extends AbstractAdapterConfig {
             final HttpAdapterMetrics metrics,
             final List<LoraProvider> providers) {
 
-        final LoraProtocolAdapter adapter = new LoraProtocolAdapter();
+        final LoraProtocolAdapter adapter = new LoraProtocolAdapter(WebClient.create(vertx()));
         setCollaborators(adapter, adapterProperties(), samplerFactory);
         adapter.setConfig(adapterProperties());
         adapter.setMetrics(metrics);

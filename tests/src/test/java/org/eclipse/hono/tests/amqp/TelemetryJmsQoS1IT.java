@@ -79,7 +79,7 @@ public class TelemetryJmsQoS1IT {
         helper.initRegistryClient();
 
         amqpMessagingNetwork = JmsBasedHonoConnection.newConnection(IntegrationTestSupport.getMessagingNetworkProperties());
-        amqpMessagingNetwork.connect().onComplete(ctx.completing());
+        amqpMessagingNetwork.connect().onComplete(ctx.succeedingThenComplete());
     }
 
     /**

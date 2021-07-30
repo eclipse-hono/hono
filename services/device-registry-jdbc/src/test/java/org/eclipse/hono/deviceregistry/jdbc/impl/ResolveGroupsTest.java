@@ -221,7 +221,7 @@ class ResolveGroupsTest extends AbstractJdbcRegistryTest {
 
                 .collect(Collectors.toList()))
 
-                .onComplete(context.completing());
+                .onComplete(context.succeedingThenComplete());
 
     }
 
@@ -291,7 +291,7 @@ class ResolveGroupsTest extends AbstractJdbcRegistryTest {
 
                         })))
 
-                .onComplete(context.completing());
+                .onComplete(context.succeedingThenComplete());
 
     }
 

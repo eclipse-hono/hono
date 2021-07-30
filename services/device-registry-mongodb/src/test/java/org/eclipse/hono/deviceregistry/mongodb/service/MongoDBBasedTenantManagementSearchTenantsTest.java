@@ -56,7 +56,7 @@ public class MongoDBBasedTenantManagementSearchTenantsTest implements AbstractTe
     public void setup(final VertxTestContext testContext) {
         dao = MongoDbTestUtils.getTenantDao(Vertx.vertx(), "hono-search-tenants-test");
         tenantManagementService = new MongoDbBasedTenantManagementService(dao, config);
-        dao.createIndices().onComplete(testContext.completing());
+        dao.createIndices().onComplete(testContext.succeedingThenComplete());
     }
 
     /**
@@ -76,7 +76,7 @@ public class MongoDBBasedTenantManagementSearchTenantsTest implements AbstractTe
      */
     @AfterEach
     public void cleanCollection(final VertxTestContext testContext) {
-        dao.deleteAllFromCollection().onComplete(testContext.completing());
+        dao.deleteAllFromCollection().onComplete(testContext.succeedingThenComplete());
     }
 
     /**

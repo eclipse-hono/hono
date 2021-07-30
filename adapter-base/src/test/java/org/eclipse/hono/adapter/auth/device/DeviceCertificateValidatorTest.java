@@ -62,6 +62,6 @@ class DeviceCertificateValidatorTest {
                 final TrustAnchor ca = new TrustAnchor(cert.getSubjectX500Principal(), cert.getPublicKey(), null);
                 return validator.validate(List.of(cert), ca);
             })
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeedingThenComplete());
     }
 }

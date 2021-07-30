@@ -150,7 +150,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
      */
     @AfterAll
     public static void shutDown(final VertxTestContext ctx) {
-        vertx.close(ctx.completing());
+        vertx.close(ctx.succeedingThenComplete());
         vertx = null;
     }
 
@@ -646,7 +646,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
                 EndpointType.EVENT,
                 (adapter, mqttContext) -> {
                     adapter.uploadEventMessage(mqttContext, "my-tenant", "4712", mqttContext.message().payload())
-                            .onComplete(ctx.completing());
+                            .onComplete(ctx.succeedingThenComplete());
                 });
     }
 
@@ -670,7 +670,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
                 (adapter, mqttContext) -> {
                     // WHEN forwarding a telemetry message that has been published with QoS 1
                     adapter.uploadTelemetryMessage(mqttContext, "my-tenant", "4712", mqttContext.message().payload())
-                            .onComplete(ctx.completing());
+                            .onComplete(ctx.succeedingThenComplete());
                 });
     }
 
@@ -782,7 +782,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         when(messageFromDevice.topicName()).thenReturn("e/my-tenant/4712");
         final MqttContext context = newMqttContext(messageFromDevice, endpoint, span);
 
-        adapter.uploadEventMessage(context, "my-tenant", "4712", payload).onComplete(ctx.failing());
+        adapter.uploadEventMessage(context, "my-tenant", "4712", payload)
+            .onSuccess(ok -> ctx.failNow("should not have succeeded sending message downstream"));
         assertEventHasBeenSentDownstream("my-tenant", "4712", null);
         // and the peer rejects the message
         outcome.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
@@ -1040,28 +1041,28 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         adapter.uploadMessage(
                 newMqttContext(messageFromDevice, endpoint, span),
                 resourceId,
-                messageFromDevice).onComplete(ctx.succeeding());
+                messageFromDevice).onFailure(ctx::failNow);
 
         resourceId = ResourceIdentifier.from("event", "my-tenant", "4712");
         when(messageFromDevice.topicName()).thenReturn(resourceId.toString());
         adapter.uploadMessage(
                 newMqttContext(messageFromDevice, endpoint, span),
                 resourceId,
-                messageFromDevice).onComplete(ctx.succeeding());
+                messageFromDevice).onFailure(ctx::failNow);
 
         resourceId = ResourceIdentifier.from("t", "my-tenant", "4712");
         when(messageFromDevice.topicName()).thenReturn(resourceId.toString());
         adapter.uploadMessage(
                 newMqttContext(messageFromDevice, endpoint, span),
                 resourceId,
-                messageFromDevice).onComplete(ctx.succeeding());
+                messageFromDevice).onFailure(ctx::failNow);
 
         resourceId = ResourceIdentifier.from("e", "my-tenant", "4712");
         when(messageFromDevice.topicName()).thenReturn(resourceId.toString());
         adapter.uploadMessage(
                 newMqttContext(messageFromDevice, endpoint, span),
                 resourceId,
-                messageFromDevice).onComplete(ctx.succeeding());
+                messageFromDevice).onFailure(ctx::failNow);
 
         resourceId = ResourceIdentifier.from("unknown", "my-tenant", "4712");
         when(messageFromDevice.topicName()).thenReturn(resourceId.toString());

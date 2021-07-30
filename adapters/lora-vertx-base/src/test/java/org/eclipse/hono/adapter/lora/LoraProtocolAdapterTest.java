@@ -20,7 +20,6 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.RETURNS_SELF;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -28,6 +27,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 import static com.google.common.truth.Truth.assertThat;
 
+import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
@@ -58,18 +58,18 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.Tracer.SpanBuilder;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.client.HttpRequest;
+import io.vertx.ext.web.client.HttpResponse;
+import io.vertx.ext.web.client.WebClient;
 
 /**
  * Verifies behavior of {@link LoraProtocolAdapter}.
@@ -85,6 +85,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
 
     private Span processMessageSpan;
     private Vertx vertx;
+    private WebClient webClient;
 
     /**
      * Sets up the fixture.
@@ -94,6 +95,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
 
         vertx = mock(Vertx.class);
         final Context context = VertxMockSupport.mockContext(vertx);
+        webClient = mock(WebClient.class);
 
         this.properties = givenDefaultConfigurationProperties();
         createClients();
@@ -116,7 +118,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         final HttpAdapterMetrics metrics = mock(HttpAdapterMetrics.class);
         when(metrics.startTimer()).thenReturn(mock(Sample.class));
 
-        adapter = new LoraProtocolAdapter();
+        adapter = new LoraProtocolAdapter(webClient);
         adapter.setConfig(properties);
         adapter.setTracer(tracer);
         adapter.init(vertx, context);
@@ -207,6 +209,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
      * Verifies that an uplink message triggers a command subscription.
      *
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void handleCommandForLNS() {
 
@@ -256,24 +259,18 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         when(providerMock.getCommand(any(), any(), any())).thenReturn(loraCommand);
         when(providerMock.getDefaultHeaders()).thenReturn(Map.of("my-provider-header", "my-provider-header-value"));
 
-        final HttpClientRequest httpClientRequest = mock(HttpClientRequest.class, withSettings().defaultAnswer(RETURNS_SELF));
-        doAnswer(invocation -> {
-            final Handler<AsyncResult<Void>> callback = invocation.getArgument(1);
-            callback.handle(Future.succeededFuture());
-            return null;
-        }).when(httpClientRequest).write(anyString(), VertxMockSupport.anyHandler());
+        final HttpRequest<Buffer> httpClientRequest = mock(HttpRequest.class, withSettings().defaultAnswer(RETURNS_SELF));
+        final HttpResponse<Buffer> httpResponse = mock(HttpResponse.class);
+        when(httpResponse.statusCode()).thenReturn(HttpURLConnection.HTTP_NO_CONTENT);
+        when(httpClientRequest.sendJson(any(JsonObject.class))).thenReturn(Future.succeededFuture(httpResponse));
 
-        final HttpClient httpClient = mock(HttpClient.class);
-        when(httpClient.postAbs(anyString())).thenReturn(httpClientRequest);
-        when(vertx.createHttpClient()).thenReturn(httpClient);
-
+        when(webClient.postAbs(anyString())).thenReturn(httpClientRequest);
         commandHandler.handle(commandContext);
 
-        verify(vertx, times(1)).createHttpClient();
-        verify(httpClient, times(1)).postAbs("https://my-server.com/commands/deviceId/send");
+        verify(webClient, times(1)).postAbs("https://my-server.com/commands/deviceId/send");
         verify(httpClientRequest, times(1)).putHeader("my-header", "my-header-value");
         verify(httpClientRequest, times(1)).putHeader("my-provider-header", "my-provider-header-value");
-        verify(httpClientRequest, times(1)).end(eq(json.encode()), VertxMockSupport.anyHandler());
+        verify(httpClientRequest, times(1)).sendJson(eq(json));
     }
 
     /**

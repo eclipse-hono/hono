@@ -390,7 +390,7 @@ public class FileBasedRegistrationServiceTest implements AbstractRegistrationSer
 
                 // complete
 
-                .onComplete(ctx.completing());
+                .onComplete(ctx.succeedingThenComplete());
 
     }
 
@@ -430,7 +430,7 @@ public class FileBasedRegistrationServiceTest implements AbstractRegistrationSer
         // GIVEN a registry whose devices-per-tenant limit has been reached
         registrationConfig.setMaxDevicesPerTenant(1);
         registrationService.createDevice(TENANT, Optional.of(DEVICE), new Device(), NoopSpan.INSTANCE)
-            .onComplete(ctx.succeeding())
+            .onFailure(ctx::failNow)
             // WHEN registering an additional device for the tenant
             .compose(ok -> registrationService.createDevice(
                     TENANT,
@@ -466,7 +466,7 @@ public class FileBasedRegistrationServiceTest implements AbstractRegistrationSer
                 Optional.of(DEVICE),
                 new Device().putExtension("value", "1"),
                 NoopSpan.INSTANCE)
-            .onComplete(ctx.succeeding())
+            .onFailure(ctx::failNow)
             // WHEN trying to update the device
             .compose(ok -> registrationService.updateDevice(
                     TENANT,
@@ -503,7 +503,7 @@ public class FileBasedRegistrationServiceTest implements AbstractRegistrationSer
         // which contains a device
         registrationConfig.setModificationEnabled(false);
         registrationService.createDevice(TENANT, Optional.of(DEVICE), new Device(), NoopSpan.INSTANCE)
-            .onComplete(ctx.succeeding())
+            .onFailure(ctx::failNow)
             // WHEN trying to remove the device
             .compose(ok -> registrationService.deleteDevice(TENANT, DEVICE, Optional.empty(), NoopSpan.INSTANCE))
             .onComplete(ctx.failing(t -> {
@@ -511,7 +511,7 @@ public class FileBasedRegistrationServiceTest implements AbstractRegistrationSer
                 ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_FORBIDDEN));
                 // and the device has not been removed
                 registrationService.readDevice(TENANT, DEVICE, NoopSpan.INSTANCE)
-                    .onComplete(ctx.completing());
+                    .onComplete(ctx.succeedingThenComplete());
             }));
     }
 

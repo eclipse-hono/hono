@@ -565,7 +565,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         givenAnEventSenderForAnyTenant();
 
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().onComplete(ctx.completing());
+        startupTracker.future().onComplete(ctx.succeedingThenComplete());
         adapter.start(startupTracker);
         assertThat(ctx.awaitCompletion(2, TimeUnit.SECONDS)).isTrue();
 
@@ -615,7 +615,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         givenAnEventSenderForAnyTenant();
 
         final Promise<Void> startupTracker = Promise.promise();
-        startupTracker.future().onComplete(ctx.completing());
+        startupTracker.future().onComplete(ctx.succeedingThenComplete());
         adapter.start(startupTracker);
         assertThat(ctx.awaitCompletion(2, TimeUnit.SECONDS)).isTrue();
 

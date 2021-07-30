@@ -86,7 +86,7 @@ public class EventAmqpIT extends AmqpUploadTestBase {
 
         setupProtocolAdapter(tenantId, deviceId, ProtonQoS.AT_LEAST_ONCE, false)
                 .map(s -> sender = s)
-                .onComplete(setup.completing());
+                .onComplete(setup.succeedingThenComplete());
 
         assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {

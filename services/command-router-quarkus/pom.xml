@@ -48,6 +48,17 @@
         </exclusion>
       </exclusions>
     </dependency>
+<!--     <dependency> -->
+<!--       <groupId>io.quarkus</groupId> -->
+<!--       <artifactId>quarkus-elytron-security-common</artifactId> -->
+<!--       <exclusions> -->
+<!--         <exclusion> -->
+<!--           <groupId>io.quarkus</groupId> -->
+<!--           <artifactId>quarkus-ide-launcher</artifactId> -->
+<!--         </exclusion> -->
+<!--       </exclusions> -->
+<!--     </dependency> -->
+
   </dependencies>
 
   <build>
@@ -101,10 +112,20 @@
         <dependency>
            <groupId>io.smallrye</groupId>
            <artifactId>smallrye-metrics</artifactId>
+          <!-- 
+            we explicitly override the version (3.0.1) managed by Quarkus because
+            Infinispan 12.1.7 depends on version 2.4.0 instead.
+           -->
+           <version>2.4.0</version>
         </dependency>
         <dependency>
           <groupId>org.eclipse.microprofile.metrics</groupId>
           <artifactId>microprofile-metrics-api</artifactId>
+          <!-- 
+            we explicitly override the version (3.0) managed by Quarkus because
+            Infinispan 12.1.7 depends on version 2.3 instead.
+           -->
+          <version>2.3</version>
         </dependency>
       </dependencies>
       <build>

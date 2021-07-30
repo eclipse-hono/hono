@@ -13,21 +13,24 @@
 
 package org.eclipse.hono.adapter.http;
 
+import java.util.Base64;
 import java.util.Objects;
 
 import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
+import org.eclipse.hono.adapter.auth.device.ExecutionContextAuthHandler;
 import org.eclipse.hono.adapter.auth.device.PreCredentialsValidationHandler;
 import org.eclipse.hono.service.http.HttpContext;
-import org.eclipse.hono.service.http.HttpUtils;
 
-import io.opentracing.Tracer;
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.auth.AuthProvider;
+import io.vertx.ext.auth.User;
+import io.vertx.ext.auth.authentication.AuthenticationProvider;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.impl.BasicAuthHandlerImpl;
-import io.vertx.ext.web.impl.RoutingContextDecorator;
+import io.vertx.ext.web.handler.BasicAuthHandler;
+import io.vertx.ext.web.handler.HttpException;
+import io.vertx.ext.web.handler.impl.HTTPAuthorizationHandler;
 
 
 /**
@@ -40,30 +43,12 @@ import io.vertx.ext.web.impl.RoutingContextDecorator;
  * transferring a span context to the AuthProvider is added here.
  *
  */
-public class HonoBasicAuthHandler extends BasicAuthHandlerImpl implements HonoHttpAuthHandler {
+public class HonoBasicAuthHandler extends HTTPAuthorizationHandler<AuthenticationProvider> implements BasicAuthHandler {
 
     private final PreCredentialsValidationHandler<HttpContext> preCredentialsValidationHandler;
-    private final Tracer tracer;
 
     /**
-     * Creates a new handler for an auth provider and a realm name.
-     * <p>
-     * This constructor is intended to be used with an auth provider that doesn't extend
-     * {@link DeviceCredentialsAuthProvider}.
-     *
-     * @param authProvider The provider to use for validating credentials.
-     * @param realm The realm name.
-     * @param tracer The tracer to use.
-     * @throws NullPointerException If authProvider is {@code null}.
-     */
-    public HonoBasicAuthHandler(final AuthProvider authProvider, final String realm, final Tracer tracer) {
-        super(Objects.requireNonNull(authProvider), realm);
-        this.tracer = tracer;
-        this.preCredentialsValidationHandler = null;
-    }
-
-    /**
-     * Creates a new handler for an auth provider and a realm name.
+     * Creates a new handler for an authentication provider and a realm name.
      *
      * @param authProvider The provider to use for validating credentials.
      * @param realm The realm name.
@@ -74,7 +59,7 @@ public class HonoBasicAuthHandler extends BasicAuthHandlerImpl implements HonoHt
     }
 
     /**
-     * Creates a new handler for an auth provider and a realm name.
+     * Creates a new handler for an authentication provider and a realm name.
      *
      * @param authProvider The provider to use for validating credentials.
      * @param realm The realm name.
@@ -88,14 +73,59 @@ public class HonoBasicAuthHandler extends BasicAuthHandlerImpl implements HonoHt
             final DeviceCredentialsAuthProvider<?> authProvider,
             final String realm,
             final PreCredentialsValidationHandler<HttpContext> preCredentialsValidationHandler) {
-        super(Objects.requireNonNull(authProvider), realm);
-        this.tracer = null;
+
+        super(Objects.requireNonNull(authProvider), Type.BASIC, realm);
         this.preCredentialsValidationHandler = preCredentialsValidationHandler;
     }
 
     @Override
-    public PreCredentialsValidationHandler<HttpContext> getPreCredentialsValidationHandler() {
-        return preCredentialsValidationHandler;
+    public void authenticate(final RoutingContext context, final Handler<AsyncResult<User>> handler) {
+
+        parseAuthorization(context, parseAuthorization -> {
+            if (parseAuthorization.failed()) {
+                handler.handle(Future.failedFuture(parseAuthorization.cause()));
+                return;
+            }
+
+            final String suser;
+            final String spass;
+
+            try {
+                // decode the payload
+                final String decoded = new String(Base64.getDecoder().decode(parseAuthorization.result()));
+
+                final int colonIdx = decoded.indexOf(":");
+                if (colonIdx != -1) {
+                    suser = decoded.substring(0, colonIdx);
+                    spass = decoded.substring(colonIdx + 1);
+                } else {
+                    suser = decoded;
+                    spass = null;
+                }
+            } catch (RuntimeException e) {
+                handler.handle(Future.failedFuture(new HttpException(400, e)));
+                return;
+            }
+
+            final var credentials = new JsonObject()
+                    .put("username", suser)
+                    .put("password", spass);
+
+            final ExecutionContextAuthHandler<HttpContext> authHandler = new ExecutionContextAuthHandler<>(
+                    (DeviceCredentialsAuthProvider<?>) authProvider,
+                    preCredentialsValidationHandler) {
+
+                @Override
+                public Future<JsonObject> parseCredentials(final HttpContext context) {
+                    return Future.succeededFuture(credentials);
+                }
+            };
+
+            authHandler.authenticateDevice(HttpContext.from(context))
+                .map(deviceUser -> (User) deviceUser)
+                .onComplete(handler);
+        });
+
     }
 
     /**
@@ -114,22 +144,5 @@ public class HonoBasicAuthHandler extends BasicAuthHandlerImpl implements HonoHt
         }
 
         AuthHandlerTools.processException(ctx, exception, authenticateHeader(ctx));
-    }
-
-    @Override
-    public void parseCredentials(final RoutingContext context, final Handler<AsyncResult<JsonObject>> handler) {
-        // In case of exception due to malformed authorisation header, Vertx BasicAuthHandlerImpl invokes
-        // context.fail(e) thereby the DefaultFailureHandler is being invoked. This sends http status code 500
-        // instead of 400. To resolve this, the RoutingContextDecorator is used. The overridden fail(Throwable) method
-        // ensures that http status code 400 is returned.
-        final RoutingContextDecorator routingContextDecorator = new RoutingContextDecorator(context.currentRoute(), context) {
-
-            @Override
-            public void fail(final Throwable throwable) {
-                HttpUtils.badRequest(context, "Malformed authorization header");
-            }
-        };
-        super.parseCredentials(routingContextDecorator,
-                ar -> processParseCredentialsResult(authProvider, context, tracer, ar, handler));
     }
 }

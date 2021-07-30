@@ -23,7 +23,6 @@ import org.eclipse.hono.adapter.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.adapter.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.adapter.http.AbstractVertxBasedHttpProtocolAdapter;
 import org.eclipse.hono.adapter.http.HonoBasicAuthHandler;
-import org.eclipse.hono.adapter.http.HonoChainAuthHandler;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.command.Command;
@@ -102,12 +101,13 @@ public final class SigfoxProtocolAdapter
     }
 
     private void setupAuthorization(final Router router) {
-        final ChainAuthHandler authHandler = new HonoChainAuthHandler(this::handleBeforeCredentialsValidation);
+        final ChainAuthHandler authHandler = ChainAuthHandler.any();
 
-        authHandler.append(new HonoBasicAuthHandler(
+        authHandler.add(new HonoBasicAuthHandler(
                 Optional.ofNullable(this.usernamePasswordAuthProvider).orElseGet(
                         () -> new UsernamePasswordAuthProvider(getCredentialsClient(), this.tracer)),
-                getConfig().getRealm()));
+                getConfig().getRealm(),
+                this::handleBeforeCredentialsValidation));
 
         router.route().handler(authHandler);
     }

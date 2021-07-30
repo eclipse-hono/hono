@@ -64,7 +64,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.impl.NetSocketInternal;
+import io.vertx.core.net.impl.NetSocketInternal;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
@@ -118,7 +118,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
     public void addRandomTenant(final VertxTestContext ctx) {
         tenantId = helper.getRandomTenantId();
         deviceId = helper.getRandomDeviceId(tenantId);
-        helper.registry.addTenant(tenantId).onComplete(ctx.completing());
+        helper.registry.addTenant(tenantId).onComplete(ctx.succeedingThenComplete());
     }
 
     private Future<MessageConsumer> createConsumer(final String tenantId, final Handler<DownstreamMessage<? extends MessageContext>> messageConsumer) {
@@ -506,7 +506,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                 KafkaRecordHelper.HEADER_RESPONSE_REQUIRED, true
         );
         kafkaSenderRef.get().sendAndWaitForOutcome(commandTopic, tenantId, deviceId, Buffer.buffer(), properties1)
-                .onComplete(ctx.succeeding());
+                .onComplete(ctx.succeeding(ok -> {}));
 
         LOGGER.debug("sending command message lacking subject");
         final String correlationId = "1";
@@ -517,7 +517,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                 KafkaRecordHelper.HEADER_RESPONSE_REQUIRED, true
         );
         kafkaSenderRef.get().sendAndWaitForOutcome(commandTopic, tenantId, deviceId, Buffer.buffer(), properties2)
-                .onComplete(ctx.succeeding());
+                .onComplete(ctx.succeeding(ok -> {}));
 
         final long timeToWait = 500;
         if (!expectedCommandResponses.await(timeToWait, TimeUnit.MILLISECONDS)) {
@@ -688,7 +688,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                     });
                     return result.future();
                 })
-                .onComplete(ctx.completing());
+                .onComplete(ctx.succeedingThenComplete());
 
     }
 
