@@ -54,6 +54,16 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=commons-logging/commons-logging/1.2/commons-logging-1.2-sources.jar).
 
+### Apache Log4j 2
+
+This product includes software developed by the [Apache Software Foundation](http://www.apache.org/).
+
+Your use of *Apache Log4j 2* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/apache/logging-log4j2).
+
 ### Apache SSHD
 
 This product includes software developed by the [Apache Software Foundation](https://mina.apache.org/sshd-project/).
