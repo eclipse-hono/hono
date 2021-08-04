@@ -44,6 +44,7 @@
     <logger name="org.eclipse.hono.util" level="TRACE"/>
 
     <logger name="org.apache.kafka" level="INFO"/>
+    <logger name="io.vertx.ext.web.RoutingContext" level="INFO"/>
   </springProfile>
 
   <springProfile name="dev">
@@ -62,12 +63,14 @@
     <logger name="org.eclipse.hono.util" level="DEBUG"/>
 
     <logger name="org.apache.kafka" level="INFO"/>
+    <logger name="io.vertx.ext.web.RoutingContext" level="INFO"/>
   </springProfile>
 
   <springProfile name="prod">
     <logger name="org.eclipse.hono.client.impl.HonoConnectionImpl" level="ERROR"/>
 
     <logger name="org.apache.kafka" level="WARN"/>
+    <logger name="io.vertx.ext.web.RoutingContext" level="WARN"/>
   </springProfile>
 
   <logger name="io.netty.handler.logging.LoggingHandler" level="INFO"/>

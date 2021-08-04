@@ -51,6 +51,7 @@
     <logger name="io.vertx.ext.jdbc" level="INFO"/>
     <logger name="io.vertx.proton.impl" level="INFO"/>
     <logger name="io.vertx.core.net.impl" level="INFO"/>
+    <logger name="io.vertx.ext.web.RoutingContext" level="INFO"/>
   </springProfile>
 
   <springProfile name="prod">
@@ -64,6 +65,7 @@
     <logger name="io.vertx.ext.jdbc" level="INFO"/>
     <logger name="io.vertx.proton.impl" level="INFO"/>
     <logger name="io.vertx.core.net.impl" level="INFO"/>
+    <logger name="io.vertx.ext.web.RoutingContext" level="WARN"/>
   </springProfile>
 
 </configuration>

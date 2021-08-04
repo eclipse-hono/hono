@@ -95,6 +95,8 @@ quarkus:
         level: INFO
       "org.apache.kafka":
         level: WARN
+      "io.vertx.ext.web.RoutingContext":
+        level: WARN
   vertx:
     max-event-loop-execute-time: ${max.event-loop.execute-time}
     prefer-native-transport: true
