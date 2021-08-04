@@ -16,6 +16,7 @@ package org.eclipse.hono.adapter.auth.device;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.auth.DeviceUser;
@@ -103,17 +104,12 @@ public abstract class ExecutionContextAuthHandler<T extends ExecutionContext> im
         if (credentials == null) {
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "malformed credentials"));
         }
-        final Future<Void> preValidationResult = preCredentialsValidationHandler != null
-                ? preCredentialsValidationHandler.handle(credentials, context)
-                : Future.succeededFuture();
         final Promise<DeviceUser> authResult = Promise.promise();
-        preValidationResult.onComplete(ar -> {
-            if (ar.failed()) {
-                authResult.fail(ar.cause());
-            } else {
-                authProvider.authenticate(credentials, context.getTracingContext(), authResult);
-            }
-        });
+        Optional.ofNullable(preCredentialsValidationHandler)
+            .map(handler -> handler.handle(credentials, context))
+            .orElseGet(Future::succeededFuture)
+            .onFailure(authResult::fail)
+            .onSuccess(ok -> authProvider.authenticate(credentials, context.getTracingContext(), authResult));
         return authResult.future();
     }
 
