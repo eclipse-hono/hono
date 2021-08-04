@@ -415,7 +415,7 @@ import io.vertx.junit5.VertxTestContext;
 
         helper.getCertificate(deviceCert.certificatePath())
             .compose(cert -> {
-
+                // GIVEN a tenant configured for auto-provisioning
                 final var tenant = Tenants.createTenantForTrustAnchor(cert);
                 tenant.getTrustedCertificateAuthorities().get(0).setAutoProvisioningEnabled(true);
                 return helper.registry.addTenant(tenantId, tenant);
@@ -429,12 +429,18 @@ import io.vertx.junit5.VertxTestContext;
             return;
         }
 
-        testUploadMessages(ctx, tenantId, count -> httpClientWithClientCert.create(
-                getEndpointUri(),
-                Buffer.buffer("hello " + count),
-                requestHeaders,
-                ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
-            .compose(this::verifyAccessControlExposedHeaders));
+        testUploadMessages(
+                ctx,
+                tenantId,
+                null,
+                count -> httpClientWithClientCert.create(
+                        getEndpointUri(),
+                        Buffer.buffer("hello " + count),
+                        requestHeaders,
+                        ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
+                    .compose(this::verifyAccessControlExposedHeaders),
+                5,
+                null);
     }
 
     /**
