@@ -340,10 +340,11 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
         final String tenantId = credentials.getTenantId();
         final String authId = credentials.getAuthId();
-        if (executionContext.getTracingSpan() == null) {
-            log.warn("handleBeforeCredentialsValidation: no span context set in httpContext");
-        }
-        final Span span = Optional.ofNullable(executionContext.getTracingSpan()).orElse(NoopSpan.INSTANCE);
+        final Span span = Optional.ofNullable(executionContext.getTracingSpan())
+                .orElseGet(() -> {
+                    log.warn("handleBeforeCredentialsValidation: no span context set in httpContext");
+                    return NoopSpan.INSTANCE;
+                });
         return getTenantConfiguration(tenantId, span.context())
                 .recover(t -> Future.failedFuture(CredentialsApiAuthProvider.mapNotFoundToBadCredentialsException(t)))
                 .map(tenantObject -> {

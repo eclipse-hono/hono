@@ -105,13 +105,8 @@ public class HttpAuthProviderAdapter implements AuthProvider {
                 return Future.succeededFuture(authInfo);
             }
         };
-        authHandler.authenticateDevice(httpContext).onComplete(ar -> {
-            if (ar.succeeded()) {
-                resultHandler.handle(Future.succeededFuture(ar.result()));
-            } else {
-                resultHandler.handle(Future.failedFuture(ar.cause()));
-            }
-        });
+        authHandler.authenticateDevice(httpContext)
+            .map(deviceUser -> (User) deviceUser)
+            .onComplete(resultHandler);
     }
-
 }
