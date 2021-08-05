@@ -32,6 +32,7 @@ import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceAndGatewayAutoProvisioner;
 import org.eclipse.hono.service.management.device.DeviceWithId;
 import org.eclipse.hono.service.registration.RegistrationService;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.Lifecycle;
@@ -240,6 +241,8 @@ public class FileBasedDeviceBackend implements DeviceBackend, RegistrationServic
                                             authId,
                                             clientContext,
                                             span);
+                                } else if (credentialsResult.isError()) {
+                                    return Future.succeededFuture(credentialsResult);
                                 } else {
                                     final String deviceId = credentialsResult.getPayload()
                                             .getString(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID);
@@ -250,7 +253,14 @@ public class FileBasedDeviceBackend implements DeviceBackend, RegistrationServic
                             }
                             return Future.succeededFuture(credentialsResult);
                         }))
-                .recover(this::convertToCredentialsResult);
+                .recover(error -> {
+                    LOG.debug("error getting credentials [tenant: {}, type: {}, auth-id: {}]", tenantId, type, authId, error);
+                    TracingHelper.logError(span, error);
+                    final var result = CredentialsResult.from(
+                            ServiceInvocationException.extractStatusCode(error),
+                            new JsonObject().put(Constants.JSON_FIELD_DESCRIPTION, error.getMessage()));
+                    return Future.succeededFuture(result);
+                });
     }
 
     @Override
@@ -312,8 +322,4 @@ public class FileBasedDeviceBackend implements DeviceBackend, RegistrationServic
         return toStringHelper().toString();
     }
 
-    private Future<CredentialsResult<JsonObject>> convertToCredentialsResult(final Throwable error) {
-        return Future.succeededFuture(CredentialsResult.from(ServiceInvocationException.extractStatusCode(error),
-                new JsonObject().put(Constants.JSON_FIELD_DESCRIPTION, error.getMessage())));
-    }
 }

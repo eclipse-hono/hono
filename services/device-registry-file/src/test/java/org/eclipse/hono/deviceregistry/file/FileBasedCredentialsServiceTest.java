@@ -36,8 +36,8 @@ import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.deviceregistry.DeviceRegistryTestUtils;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.util.Assertions;
-import org.eclipse.hono.service.credentials.AbstractCredentialsServiceTest;
 import org.eclipse.hono.service.credentials.CredentialsService;
+import org.eclipse.hono.service.credentials.CredentialsServiceTestBase;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.Credentials;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
@@ -76,7 +76,7 @@ import io.vertx.junit5.VertxTestContext;
  */
 @ExtendWith(VertxExtension.class)
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
-public class FileBasedCredentialsServiceTest implements AbstractCredentialsServiceTest {
+public class FileBasedCredentialsServiceTest implements CredentialsServiceTestBase {
 
     private static final Logger LOG = LoggerFactory.getLogger(FileBasedCredentialsServiceTest.class);
 
