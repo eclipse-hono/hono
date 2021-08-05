@@ -35,8 +35,8 @@ import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDocumentBuilder;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
 import org.eclipse.hono.deviceregistry.util.Assertions;
-import org.eclipse.hono.service.credentials.AbstractCredentialsServiceTest;
 import org.eclipse.hono.service.credentials.CredentialsService;
+import org.eclipse.hono.service.credentials.CredentialsServiceTestBase;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.credentials.Credentials;
 import org.eclipse.hono.service.management.credentials.CredentialsDto;
@@ -76,7 +76,7 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
-public class MongoDbBasedCredentialServiceTest implements AbstractCredentialsServiceTest {
+public class MongoDbBasedCredentialServiceTest implements CredentialsServiceTestBase {
 
     private static final String DB_NAME_CREDENTIALS_TEST = "hono-credentials-test";
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedCredentialServiceTest.class);
