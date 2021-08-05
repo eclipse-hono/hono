@@ -23,6 +23,7 @@ import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.management.device.DeviceAndGatewayAutoProvisioner;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -165,6 +166,8 @@ public abstract class AbstractCredentialsService implements CredentialsService, 
                                             authId,
                                             clientContext,
                                             span);
+                                } else if (credentialsResult.isError()) {
+                                    return Future.succeededFuture(credentialsResult);
                                 } else {
                                     final String deviceId = credentialsResult.getPayload()
                                             .getString(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID);
@@ -177,16 +180,18 @@ public abstract class AbstractCredentialsService implements CredentialsService, 
                             }
                         });
                 })
-                .recover(this::convertToCredentialsResult);
+                .recover(error -> {
+                    LOG.debug("error getting credentials [tenant: {}, type: {}, auth-id: {}]", tenantId, type, authId, error);
+                    TracingHelper.logError(span, error);
+                    final var result = CredentialsResult.from(
+                            ServiceInvocationException.extractStatusCode(error),
+                            new JsonObject().put(Constants.JSON_FIELD_DESCRIPTION, error.getMessage()));
+                    return Future.succeededFuture(result);
+                });
     }
 
     private boolean isAutoProvisioningConfigured() {
         return this.deviceAndGatewayAutoProvisioner != null;
     }
 
-    private Future<CredentialsResult<JsonObject>> convertToCredentialsResult(final Throwable error) {
-        LOG.debug("converting error to response", error);
-        return Future.succeededFuture(CredentialsResult.from(ServiceInvocationException.extractStatusCode(error),
-                new JsonObject().put(Constants.JSON_FIELD_DESCRIPTION, error.getMessage())));
-    }
 }

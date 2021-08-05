@@ -77,9 +77,9 @@ import io.vertx.junit5.VertxTestContext.ExecutionBlock;
  * {@link CredentialsManagementService} in device registry implementations.
  *
  */
-public interface AbstractCredentialsServiceTest {
+public interface CredentialsServiceTestBase {
 
-    Logger log = LoggerFactory.getLogger(AbstractCredentialsServiceTest.class);
+    Logger log = LoggerFactory.getLogger(CredentialsServiceTestBase.class);
     JsonObject CLIENT_CONTEXT = new JsonObject()
             .put("client-id", "some-client-identifier");
 
