@@ -105,11 +105,11 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
             final ChainAuthHandler authHandler = new HonoChainAuthHandler(this::handleBeforeCredentialsValidation);
             authHandler.append(new X509AuthHandler(
                     new TenantServiceBasedX509Authentication(getTenantClient(), tracer),
-                    Optional.ofNullable(clientCertAuthProvider).orElseGet(
-                            () -> new X509AuthProvider(getCredentialsClient(), tracer))));
+                    Optional.ofNullable(clientCertAuthProvider)
+                        .orElseGet(() -> new X509AuthProvider(getCredentialsClient(), tracer))));
             authHandler.append(new HonoBasicAuthHandler(
-                    Optional.ofNullable(usernamePasswordAuthProvider).orElseGet(
-                            () -> new UsernamePasswordAuthProvider(getCredentialsClient(), tracer)),
+                    Optional.ofNullable(usernamePasswordAuthProvider)
+                        .orElseGet(() -> new UsernamePasswordAuthProvider(getCredentialsClient(), tracer)),
                     getConfig().getRealm()));
             addTelemetryApiRoutes(router, authHandler);
             addEventApiRoutes(router, authHandler);
