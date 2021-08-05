@@ -335,10 +335,11 @@
           <artifactId>maven-surefire-plugin</artifactId>
           <version>2.22.2</version>
           <configuration>
+            <systemPropertyVariables>
+              <!-- use Base64 encoder/decoder that is compatible with vert.x 3 -->
+              <vertx.json.base64>legacy</vertx.json.base64>
+            </systemPropertyVariables>
             <properties>
-              <systemPropertyVariables>
-                <vertx.json.base64>legacy</vertx.json.base64>
-              </systemPropertyVariables>
               <configurationParameters>
                 junit.jupiter.execution.parallel.enabled = true
                 junit.jupiter.execution.parallel.mode.default = same_thread
@@ -351,6 +352,12 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-failsafe-plugin</artifactId>
           <version>2.22.2</version>
+          <configuration>
+            <systemPropertyVariables>
+              <!-- use Base64 encoder/decoder that is compatible with vert.x 3 -->
+              <vertx.json.base64>legacy</vertx.json.base64>
+            </systemPropertyVariables>
+          </configuration>
         </plugin>
         <plugin>
           <!--

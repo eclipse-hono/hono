@@ -516,6 +516,11 @@ public final class IntegrationTestSupport {
     private HonoConnection protonBasedHonoConnection;
     private KafkaProducerFactory<String, Buffer> kafkaProducerFactory;
 
+    static {
+        final var type = System.getProperty("vertx.json.base64", "new");
+        LOGGER.info("vert.x uses {} Base64 encoder", type);
+    }
+
     /**
      * Creates a new helper instance.
      *

@@ -1636,7 +1636,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
               <environmentVariables>
                 <PN_TRACE_FRM>${trace.frames}</PN_TRACE_FRM>
               </environmentVariables>
-              <systemProperties>
+              <systemPropertyVariables>
                 <auth.host>${auth.ip}</auth.host>
                 <auth.amqps.port>${auth.amqps.port}</auth.amqps.port>
                 <hono.username>hono-client</hono.username>
@@ -1680,7 +1680,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
 <!--                 <javax.net.debug>ssl:handshake</javax.net.debug> -->
                 <javax.net.ssl.trustStore>${project.build.directory}/certs/trustStore.jks</javax.net.ssl.trustStore>
                 <javax.net.ssl.trustStorePassword>honotrust</javax.net.ssl.trustStorePassword>
-              </systemProperties>
+              </systemPropertyVariables>
               <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
             </configuration>
             <executions>
