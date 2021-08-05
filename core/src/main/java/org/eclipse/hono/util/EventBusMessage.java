@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,7 +14,6 @@
 package org.eclipse.hono.util;
 
 import java.net.HttpURLConnection;
-import java.util.Base64;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -24,7 +23,6 @@ import org.apache.qpid.proton.amqp.UnsignedLong;
 import org.apache.qpid.proton.message.Message;
 
 import io.opentracing.SpanContext;
-import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -323,7 +321,7 @@ public class EventBusMessage {
      *
      * @param msg The AMQP message to retrieve the payload from.
      * @return This message for chaining.
-     * @throws DecodeException if the payload of the AMQP message does not contain proper JSON.
+     * @throws io.vertx.core.json.DecodeException if the payload of the AMQP message does not contain proper JSON.
      */
     public EventBusMessage setJsonPayload(final Message msg) {
         setJsonPayload(MessageHelper.getJsonPayload(msg));
@@ -612,7 +610,7 @@ public class EventBusMessage {
         } else if (id instanceof Binary) {
             json.put(FIELD_CORRELATION_ID_TYPE, "binary");
             final Binary binary = (Binary) id;
-            json.put(FIELD_CORRELATION_ID, Base64.getEncoder().encodeToString(binary.getArray()));
+            json.put(FIELD_CORRELATION_ID, binary.getArray());
         } else {
             throw new IllegalArgumentException("type " + id.getClass().getName() + " is not supported");
         }
@@ -633,16 +631,15 @@ public class EventBusMessage {
         Objects.requireNonNull(json);
 
         final String type = json.getString(FIELD_CORRELATION_ID_TYPE);
-        final String id = json.getString(FIELD_CORRELATION_ID);
         switch (type) {
             case "string":
-                return id;
+                return json.getString(FIELD_CORRELATION_ID);
             case "ulong":
-                return UnsignedLong.valueOf(id);
+                return UnsignedLong.valueOf(json.getString(FIELD_CORRELATION_ID));
             case "uuid":
-                return UUID.fromString(id);
+                return UUID.fromString(json.getString(FIELD_CORRELATION_ID));
             case "binary":
-                return new Binary(Base64.getDecoder().decode(id));
+                return new Binary(json.getBinary(FIELD_CORRELATION_ID));
             default:
                 throw new IllegalArgumentException("type " + type + " is not supported");
         }
