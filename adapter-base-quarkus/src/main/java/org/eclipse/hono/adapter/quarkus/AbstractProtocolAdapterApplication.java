@@ -23,9 +23,10 @@ import javax.inject.Inject;
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.adapter.MessagingClientProviders;
 import org.eclipse.hono.adapter.monitoring.ConnectionEventProducer;
+import org.eclipse.hono.adapter.monitoring.ConnectionEventProducerConfig;
+import org.eclipse.hono.adapter.monitoring.ConnectionEventProducerOptions;
 import org.eclipse.hono.adapter.monitoring.HonoEventConnectionEventProducer;
 import org.eclipse.hono.adapter.monitoring.LoggingConnectionEventProducer;
-import org.eclipse.hono.adapter.monitoring.quarkus.ConnectionEventProducerConfig;
 import org.eclipse.hono.adapter.resourcelimits.ConnectedDevicesAsyncCacheLoader;
 import org.eclipse.hono.adapter.resourcelimits.ConnectionDurationAsyncCacheLoader;
 import org.eclipse.hono.adapter.resourcelimits.DataVolumeAsyncCacheLoader;
@@ -110,9 +111,6 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     protected PrometheusBasedResourceLimitChecksConfig resourceLimitChecksConfig;
 
     @Inject
-    protected ConnectionEventProducerConfig connectionEventsConfig;
-
-    @Inject
     protected C protocolAdapterProperties;
 
     @Inject
@@ -145,6 +143,8 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     @ConfigPrefix("hono.commandRouter")
     protected RequestResponseClientConfigProperties commandRouterConfig;
 
+    private ConnectionEventProducerConfig connectionEventsConfig;
+
     private Cache<Object, TenantResult<TenantObject>> tenantResponseCache;
     private Cache<Object, RegistrationResult> registrationResponseCache;
     private Cache<Object, CredentialsResult<CredentialsObject>> credentialsResponseCache;
@@ -155,6 +155,11 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
      * @return The adapter instance.
      */
     protected abstract AbstractProtocolAdapterBase<C> adapter();
+
+    @Inject
+    void setConnectionEventProducerConfig(final ConnectionEventProducerOptions options) {
+        this.connectionEventsConfig = new ConnectionEventProducerConfig(options);
+    }
 
     @Override
     protected void doStart() {

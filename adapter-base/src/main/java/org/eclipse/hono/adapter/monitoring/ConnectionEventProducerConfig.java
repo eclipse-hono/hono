@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,6 +28,24 @@ public class ConnectionEventProducerConfig {
     private ConnectionEventProducerType type = DEFAULT_TYPE;
     private String logLevel = DEFAULT_LOG_LEVEL;
     private boolean debugLogLevel = false;
+
+    /**
+     * Creates new properties for default values.
+     */
+    public ConnectionEventProducerConfig() {
+        super();
+    }
+
+    /**
+     * Creates new properties from existing options.
+     *
+     * @param options The options to copy.
+     */
+    public ConnectionEventProducerConfig(final ConnectionEventProducerOptions options) {
+        super();
+        setLogLevel(options.logLevel());
+        setProducer(options.producer());
+    }
 
     /**
      * Sets the type of producer of connection events.

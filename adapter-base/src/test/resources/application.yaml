@@ -1,0 +1,12 @@
+hono:
+  connectionEvents:
+    logLevel: "debug"
+    producer: events
+  resourceLimits:
+    prometheusBased:
+      cacheMaxSize: 15500
+      cacheMinSize: 5555
+      cacheTimeout: 555
+      connectTimeout: 777
+      host: "prometheus"
+      queryTimeout: 2222
