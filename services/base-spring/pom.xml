@@ -100,7 +100,8 @@
                         <JAVA_MAJOR_VERSION>${maven.compiler.release}</JAVA_MAJOR_VERSION>
                         <JAVA_APP_NAME>${project.artifactId}</JAVA_APP_NAME>
                         <JAVA_LIB_DIR>/opt/hono/extensions/*</JAVA_LIB_DIR>
-                        <JAVA_OPTIONS>-Dvertx.cacheDirBase=/tmp</JAVA_OPTIONS>
+                        <!-- use Base64 encoder/decoder that is compatible with vert.x 3 -->
+                        <JAVA_OPTIONS>-Dvertx.cacheDirBase=/tmp -Dvertx.json.base64=legacy</JAVA_OPTIONS>
                       </env>
                       <entryPoint>
                         <arg>/opt/hono/run-java.sh</arg>

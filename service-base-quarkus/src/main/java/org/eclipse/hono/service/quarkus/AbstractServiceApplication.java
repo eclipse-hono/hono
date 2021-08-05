@@ -14,6 +14,7 @@
 
 package org.eclipse.hono.service.quarkus;
 
+import java.util.Base64;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -35,6 +36,7 @@ import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
 import io.vertx.core.Vertx;
 import io.vertx.core.impl.cpu.CpuCoreSensor;
+import io.vertx.core.json.impl.JsonUtil;
 
 /**
  * A base class for implementing Quarkus based services.
@@ -60,12 +62,16 @@ public abstract class AbstractServiceApplication implements ComponentNameProvide
      */
     protected void logJvmDetails() {
         if (LOG.isInfoEnabled()) {
-            LOG.info("running on Java VM [version: {}, name: {}, vendor: {}, max memory: {}MiB, processors: {}]",
+
+            final String base64Encoder = Base64.getEncoder() == JsonUtil.BASE64_ENCODER ? "legacy" : "URL safe";
+
+            LOG.info("running on Java VM [version: {}, name: {}, vendor: {}, max memory: {}MiB, processors: {}] with vert.x using {} Base64 encoder",
                     System.getProperty("java.version"),
                     System.getProperty("java.vm.name"),
                     System.getProperty("java.vm.vendor"),
                     Runtime.getRuntime().maxMemory() >> 20,
-                    CpuCoreSensor.availableProcessors());
+                    CpuCoreSensor.availableProcessors(),
+                    base64Encoder);
         }
     }
 

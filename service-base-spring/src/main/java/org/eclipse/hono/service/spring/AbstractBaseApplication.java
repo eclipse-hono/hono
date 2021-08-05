@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.service.spring;
 
+import java.util.Base64;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -37,6 +38,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.impl.cpu.CpuCoreSensor;
+import io.vertx.core.json.impl.JsonUtil;
 
 /**
  * A base class for implementing Spring Boot applications.
@@ -140,12 +142,16 @@ public abstract class AbstractBaseApplication implements ApplicationRunner {
         preFlightCheck();
 
         if (log.isInfoEnabled()) {
-            log.info("running on Java VM [version: {}, name: {}, vendor: {}, max memory: {}MB, processors: {}]",
+
+            final String base64Encoder = Base64.getEncoder() == JsonUtil.BASE64_ENCODER ? "legacy" : "URL safe";
+
+            log.info("running on Java VM [version: {}, name: {}, vendor: {}, max memory: {}MB, processors: {}] with vert.x using {} Base64 encoder",
                     System.getProperty("java.version"),
                     System.getProperty("java.vm.name"),
                     System.getProperty("java.vm.vendor"),
                     Runtime.getRuntime().maxMemory() >> 20,
-                    CpuCoreSensor.availableProcessors());
+                    CpuCoreSensor.availableProcessors(),
+                    base64Encoder);
         }
 
         final int startupTimeoutSeconds = config.getStartupTimeout();
