@@ -24,10 +24,12 @@ import javax.enterprise.inject.Produces;
 import org.eclipse.hono.deviceconnection.infinispan.client.BasicCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.CacheBasedDeviceConnectionInfo;
 import org.eclipse.hono.deviceconnection.infinispan.client.CommonCacheConfig;
+import org.eclipse.hono.deviceconnection.infinispan.client.CommonCacheOptions;
 import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
 import org.eclipse.hono.deviceconnection.infinispan.client.EmbeddedCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.HotrodCache;
-import org.eclipse.hono.deviceconnection.infinispan.client.quarkus.InfinispanRemoteConfigurationProperties;
+import org.eclipse.hono.deviceconnection.infinispan.client.InfinispanRemoteConfigurationOptions;
+import org.eclipse.hono.deviceconnection.infinispan.client.InfinispanRemoteConfigurationProperties;
 import org.eclipse.hono.util.Strings;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.infinispan.configuration.parsing.ConfigurationBuilderHolder;
@@ -38,7 +40,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.opentracing.Tracer;
-import io.quarkus.arc.config.ConfigPrefix;
 import io.vertx.core.Vertx;
 
 /**
@@ -55,9 +56,6 @@ public class DeviceConnectionInfoProducer {
     @ConfigProperty(name = "hono.commandRouter.cache.embedded.configurationFile", defaultValue = "/etc/hono/cache-config.xml")
     String configFile;
 
-    @ConfigPrefix("hono.commandRouter.cache.remote")
-    InfinispanRemoteConfigurationProperties infinispanCacheConfig;
-
     @Produces
     DeviceConnectionInfo deviceConnectionInfo(
             final BasicCache<String, String> cache,
@@ -68,8 +66,11 @@ public class DeviceConnectionInfoProducer {
     @Produces
     BasicCache<String, String> cache(
             final Vertx vertx,
-            final CommonCacheConfig commonCacheConfig) {
+            final CommonCacheOptions commonCacheOptions,
+            final InfinispanRemoteConfigurationOptions remoteCacheConfigurationOptions) {
 
+        final var commonCacheConfig = new CommonCacheConfig(commonCacheOptions);
+        final var infinispanCacheConfig = new InfinispanRemoteConfigurationProperties(remoteCacheConfigurationOptions);
         if (Strings.isNullOrEmpty(infinispanCacheConfig.getServerList())) {
             LOG.info("configuring embedded cache");
             return new EmbeddedCache<>(

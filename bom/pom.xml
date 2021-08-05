@@ -264,11 +264,6 @@
       </dependency>
       <dependency>
         <groupId>org.eclipse.hono</groupId>
-        <artifactId>client-device-connection-infinispan-quarkus</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.eclipse.hono</groupId>
         <artifactId>hono-client-application</artifactId>
         <version>${project.version}</version>
       </dependency>

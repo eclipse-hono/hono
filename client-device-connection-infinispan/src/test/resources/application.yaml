@@ -3,6 +3,8 @@ hono:
     cache:
       common:
         cacheName: "the-cache"
+        checkKey: "the-key"
+        checkValue: "the-value"
       remote:
         serverList: "data-grid:11222"
         authServerName: "data-grid"
@@ -21,3 +23,4 @@ hono:
         trustStoreFileName: "/etc/hono/trust-store-file.p12"
         trustStoreType: "PKCS12"
         trustStorePassword: "trust-store-secret"
+        useSsl: true

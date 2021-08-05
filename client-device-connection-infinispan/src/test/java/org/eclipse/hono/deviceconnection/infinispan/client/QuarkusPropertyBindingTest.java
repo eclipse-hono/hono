@@ -12,16 +12,19 @@
  */
 
 
-package org.eclipse.hono.deviceconnection.infinispan.client.quarkus;
+package org.eclipse.hono.deviceconnection.infinispan.client;
 
 import static com.google.common.truth.Truth.assertThat;
 
 import javax.inject.Inject;
 
+import org.eclipse.hono.deviceconnection.infinispan.client.CommonCacheConfig;
+import org.eclipse.hono.deviceconnection.infinispan.client.CommonCacheOptions;
+import org.eclipse.hono.deviceconnection.infinispan.client.InfinispanRemoteConfigurationOptions;
+import org.eclipse.hono.deviceconnection.infinispan.client.InfinispanRemoteConfigurationProperties;
 import org.infinispan.client.hotrod.impl.ConfigurationProperties;
 import org.junit.jupiter.api.Test;
 
-import io.quarkus.arc.config.ConfigPrefix;
 import io.quarkus.test.junit.QuarkusTest;
 
 
@@ -31,23 +34,28 @@ import io.quarkus.test.junit.QuarkusTest;
  *
  */
 @QuarkusTest
-public class ConfigurationPropertiesTest {
+public class QuarkusPropertyBindingTest {
 
     @Inject
-    CommonCacheConfig commonCacheConfig;
+    CommonCacheOptions commonCacheOptions;
 
-    @ConfigPrefix(value = "hono.commandRouter.cache.remote")
-    InfinispanRemoteConfigurationProperties remoteCacheConfig;
+    @Inject
+    InfinispanRemoteConfigurationOptions remoteCacheOptions;
 
     @Test
     void testCommonCacheConfigurationPropertiesArePickedUp() {
-        assertThat(commonCacheConfig).isNotNull();
+        assertThat(commonCacheOptions).isNotNull();
+        final var commonCacheConfig = new CommonCacheConfig(commonCacheOptions);
         assertThat(commonCacheConfig.getCacheName()).isEqualTo("the-cache");
+        assertThat(commonCacheConfig.getCheckKey()).isEqualTo("the-key");
+        assertThat(commonCacheConfig.getCheckValue()).isEqualTo("the-value");
     }
 
+    @SuppressWarnings("deprecation")
     @Test
     void testRemoteCacheConfigurationPropertiesArePickedUp() {
-        assertThat(remoteCacheConfig).isNotNull();
+        assertThat(remoteCacheOptions).isNotNull();
+        final var remoteCacheConfig = new InfinispanRemoteConfigurationProperties(remoteCacheOptions);
         assertThat(remoteCacheConfig.getServerList()).contains("data-grid:11222");
         assertThat(remoteCacheConfig.getAuthUsername()).isEqualTo("user");
         assertThat(remoteCacheConfig.getAuthPassword()).isEqualTo("secret");
@@ -65,5 +73,6 @@ public class ConfigurationPropertiesTest {
         assertThat(remoteCacheConfig.getTrustStorePath()).isEqualTo("/etc/hono/trust-store.p12");
         assertThat(remoteCacheConfig.getTrustStoreType()).isEqualTo("PKCS12");
         assertThat(remoteCacheConfig.getTrustStorePassword()).isEqualTo("trust-store-secret");
+        assertThat(remoteCacheConfig.getUseSSL()).isTrue();
     }
 }

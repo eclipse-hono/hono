@@ -229,7 +229,6 @@
     <module>cli</module>
     <module>client</module>
     <module>client-device-connection-infinispan</module>
-    <module>client-device-connection-infinispan-quarkus</module>
     <module>clients</module>
     <module>demo-certs</module>
     <module>deploy</module>
