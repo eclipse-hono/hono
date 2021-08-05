@@ -17,16 +17,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
-import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -57,7 +53,6 @@ import org.eclipse.hono.application.client.kafka.impl.KafkaApplicationClientImpl
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.SendMessageTimeoutException;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.GenericSenderLink;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
@@ -81,7 +76,6 @@ import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.CompositeFuture;
@@ -476,7 +470,6 @@ public final class IntegrationTestSupport {
     public static final String PARAMETERIZED_TEST_NAME_PATTERN = "{displayName} [{index}]; parameters: {argumentsWithNames}";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(IntegrationTestSupport.class);
-    private static final BCryptPasswordEncoder bcryptPwdEncoder = new BCryptPasswordEncoder(4);
     private static final int TEST_ENVIRONMENT_TIMEOUT_MULTIPLICATOR = 2;
     private static final int KAFKA_ADD_TO_TEST_SETUP_TIMEOUT = 2; // seconds to add
 
@@ -1333,36 +1326,6 @@ public final class IntegrationTestSupport {
      */
     public static String getUsername(final String deviceId, final String tenant) {
         return String.format("%s@%s", deviceId, tenant);
-    }
-
-    /**
-     * Gets a hash for a password using a given digest based hash function.
-     *
-     * @param hashFunction The hash function.
-     * @param salt The salt.
-     * @param clearTextPassword The password.
-     * @return The Base64 encoded password hash.
-     */
-    public static String getBase64EncodedDigestPasswordHash(final String hashFunction, final byte[] salt, final String clearTextPassword) {
-        try {
-            final MessageDigest digest = MessageDigest.getInstance(hashFunction);
-            if (salt != null) {
-                digest.update(salt);
-            }
-            return Base64.getEncoder().encodeToString(digest.digest(clearTextPassword.getBytes(StandardCharsets.UTF_8)));
-        } catch (final NoSuchAlgorithmException e) {
-            return "hash function not supported";
-        }
-    }
-
-    /**
-     * Gets a hash for a password using the bcrypt hash function.
-     *
-     * @param clearTextPassword The password.
-     * @return The hashed password.
-     */
-    public static String getBcryptHash(final String clearTextPassword) {
-        return bcryptPwdEncoder.encode(clearTextPassword);
     }
 
     /**
