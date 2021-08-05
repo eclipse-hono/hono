@@ -19,6 +19,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   matching credentials against a given *client context*.
 * The device registry implementations did not return a JSON object in a response to a failed request as specified
   in the Device Registry Management API. This has been fixed.
+* The tracing output in error scenarios has been improved in the Mongo DB based device registry.
 
 ## 1.9.0
 
