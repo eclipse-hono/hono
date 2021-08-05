@@ -157,10 +157,20 @@ public class ProtonBasedCredentialsClient extends AbstractRequestResponseService
         Objects.requireNonNull(authId);
         Objects.requireNonNull(clientContext);
 
+        final int clientContextHashCode;
+        if (clientContext.isEmpty()) {
+            clientContextHashCode = clientContext.hashCode();
+        } else {
+            // "normalize" JSON so that binary valued properties always
+            // contain the value's Base64 encoding instead of the raw byte array
+            // and thus always result in the same hash code
+            clientContextHashCode = new JsonObject(clientContext.encode()).hashCode();
+        }
+
         final var responseCacheKey = TriTuple.of(
                 CredentialsConstants.CredentialsAction.get,
                 String.format("%s-%s-%s", tenantId, type, authId),
-                clientContext.hashCode());
+                clientContextHashCode);
 
         final Span span = newChildSpan(spanContext, "get Credentials");
         span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);

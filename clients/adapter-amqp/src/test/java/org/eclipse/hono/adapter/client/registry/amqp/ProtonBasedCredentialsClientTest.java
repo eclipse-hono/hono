@@ -21,6 +21,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -253,6 +254,62 @@ class ProtonBasedCredentialsClientTest {
                     });
                     ctx.completeNow();
                 }));
+    }
+
+    /**
+     * Verifies that Credentials are taken from cache, if cache is configured and the cache contains an entry for
+     * the given criteria.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testGetCredentialsWithClientContextReturnsValueFromCache(final VertxTestContext ctx) {
+
+        // GIVEN a client with a cache containing an entry
+        givenAClient(cache);
+        final String authId = "test-auth";
+        final String credentialsType = CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD;
+        final var bytes = new byte[] {0x01, 0x02};
+
+        final JsonObject credentialsObject = newCredentialsResult("device", authId);
+        final CredentialsResult<CredentialsObject> credentialsResult = client.getResult(
+                HttpURLConnection.HTTP_OK,
+                RequestResponseApiConstants.CONTENT_TYPE_APPLICATION_JSON,
+                credentialsObject.toBuffer(),
+                null,
+                null);
+        when(cache.getIfPresent(any())).thenReturn(credentialsResult);
+
+        final ArgumentCaptor<TriTuple<?, ?, ?>> cacheKey = ArgumentCaptor.forClass(TriTuple.class);
+        // WHEN getting credentials with a client context that contains a raw byte array
+        final var contextWithByteArray = new JsonObject().put("bytes", bytes);
+        client.get("tenant", credentialsType, authId, contextWithByteArray, span.context())
+            .onFailure(ctx::failNow)
+            .compose(result -> {
+                ctx.verify(() -> {
+                    // THEN the credentials are read from the cache
+                    verify(cache).getIfPresent(cacheKey.capture());
+                    assertThat(result).isEqualTo(credentialsResult.getPayload());
+                    verify(sender, never()).send(any(Message.class), VertxMockSupport.anyHandler());
+                    // and the span is finished
+                    verify(span).finish();
+                });
+                // and WHEN getting the same credentials with a client context that contains
+                // the Base64 encoding of the byte array
+                final var contextWithBase64String = new JsonObject().put("bytes", contextWithByteArray.getValue("bytes"));
+                return client.get("tenant", credentialsType, authId, contextWithBase64String, span.context());
+            })
+            .onComplete(ctx.succeeding(result -> {
+                ctx.verify(() -> {
+                    // THEN same credentials are read from the cache using the same key as before
+                    verify(cache, times(2)).getIfPresent(eq(cacheKey.getValue()));
+                    assertThat(result).isEqualTo(credentialsResult.getPayload());
+                    verify(sender, never()).send(any(Message.class), VertxMockSupport.anyHandler());
+                    // and the span is finished
+                    verify(span, times(2)).finish();
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
