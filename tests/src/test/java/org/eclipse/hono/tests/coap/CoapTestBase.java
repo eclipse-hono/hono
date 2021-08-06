@@ -558,7 +558,7 @@ public abstract class CoapTestBase {
     protected void testUploadMessages(
             final VertxTestContext ctx,
             final String tenantId,
-            final Supplier<Future<?>> warmUp,
+            final Supplier<Future<Void>> warmUp,
             final Function<Integer, Future<OptionSet>> requestSender) throws InterruptedException {
         testUploadMessages(ctx, tenantId, warmUp, null, requestSender);
     }
@@ -579,7 +579,7 @@ public abstract class CoapTestBase {
     protected void testUploadMessages(
             final VertxTestContext ctx,
             final String tenantId,
-            final Supplier<Future<?>> warmUp,
+            final Supplier<Future<Void>> warmUp,
             final Consumer<DownstreamMessage<? extends MessageContext>> messageConsumer,
             final Function<Integer, Future<OptionSet>> requestSender) throws InterruptedException {
         testUploadMessages(ctx, tenantId, warmUp, messageConsumer, requestSender, MESSAGES_TO_SEND, null);
@@ -601,7 +601,7 @@ public abstract class CoapTestBase {
     protected void testUploadMessages(
             final VertxTestContext ctx,
             final String tenantId,
-            final Supplier<Future<?>> warmUp,
+            final Supplier<Future<Void>> warmUp,
             final Consumer<DownstreamMessage<? extends MessageContext>> messageConsumer,
             final Function<Integer, Future<OptionSet>> requestSender,
             final int numberOfMessages,
@@ -1120,7 +1120,7 @@ public abstract class CoapTestBase {
      * @param responseOptions The CoAP options from the response.
      * @return A future indicating the outcome of the checks.
      */
-    protected Future<?> assertCoapResponse(final OptionSet responseOptions) {
+    protected Future<Void> assertCoapResponse(final OptionSet responseOptions) {
         return Future.succeededFuture();
     }
 

@@ -407,7 +407,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
             final Message msg = ProtonHelper.message();
             MessageHelper.setPayload(msg, "opaque/binary", payload);
             msg.setAddress(getEndpointName());
-            final Promise<?> sendingComplete = Promise.promise();
+            final Promise<Void> sendingComplete = Promise.promise();
             final Handler<ProtonSender> sendMsgHandler = replenishedSender -> {
                 replenishedSender.sendQueueDrainHandler(null);
                 switch (senderQoS) {
@@ -450,7 +450,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
     protected void doUploadMessages(
             final VertxTestContext messageSending,
             final Function<Handler<Void>, Future<Void>> receiverFactory,
-            final Function<Buffer, Future<?>> sender) throws InterruptedException {
+            final Function<Buffer, Future<Void>> sender) throws InterruptedException {
 
         final AtomicInteger messagesReceived = new AtomicInteger(0);
 

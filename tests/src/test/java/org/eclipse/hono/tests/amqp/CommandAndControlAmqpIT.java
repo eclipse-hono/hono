@@ -429,7 +429,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                                 assertThat(response.getDeviceId()).isEqualTo(commandTargetDeviceId);
                                 assertThat(response.getTenantId()).isEqualTo(tenantId);
                             });
-                            return response;
+                            return (Void) null;
                         });
                 },
                 COMMANDS_TO_SEND);
@@ -440,7 +440,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             final String commandTargetDeviceId,
             final AmqpCommandEndpointConfiguration endpointConfig,
             final BiFunction<ProtonReceiver, ProtonSender, ProtonMessageHandler> commandConsumerFactory,
-            final Function<Buffer, Future<?>> commandSender,
+            final Function<Buffer, Future<Void>> commandSender,
             final int totalNoOfCommandsToSend) throws InterruptedException {
 
         connectAndSubscribe(ctx, commandTargetDeviceId, endpointConfig, commandConsumerFactory, totalNoOfCommandsToSend);

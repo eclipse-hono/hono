@@ -764,7 +764,7 @@ public final class IntegrationTestSupport {
      *
      * @return A future indicating the outcome of the operation.
      */
-    public Future<?> init() {
+    public Future<Void> init() {
         if (isUsingAmqpMessaging()) {
             return init(getMessagingNetworkProperties());
         } else {
@@ -781,7 +781,7 @@ public final class IntegrationTestSupport {
      *                           Network.
      * @return A future indicating the outcome of the operation.
      */
-    public Future<?> init(final ClientConfigProperties downstreamProps) {
+    public Future<Void> init(final ClientConfigProperties downstreamProps) {
 
         initRegistryClient();
         protonBasedHonoConnection = HonoConnection.newConnection(vertx, downstreamProps);
@@ -801,7 +801,7 @@ public final class IntegrationTestSupport {
      *
      * @return A future indicating the outcome of the operation.
      */
-    public Future<?> init(final KafkaConsumerConfigProperties kafkaDownstreamProps) {
+    public Future<Void> init(final KafkaConsumerConfigProperties kafkaDownstreamProps) {
 
         initRegistryClient();
 
@@ -975,7 +975,7 @@ public final class IntegrationTestSupport {
      *
      * @return A future indicating the outcome of the operation.
      */
-    public Future<?> disconnect() {
+    public Future<Void> disconnect() {
         return applicationClient.stop()
                 .onSuccess(ok -> LOGGER.info("connection to messaging network closed"));
     }
@@ -1118,7 +1118,7 @@ public final class IntegrationTestSupport {
      * @return A future that is either succeeded with the response payload from the device or
      *         failed with a {@link ServiceInvocationException}.
      */
-    public Future<DownstreamMessage<?>> sendCommand(
+    public Future<DownstreamMessage<? extends MessageContext>> sendCommand(
             final String tenantId,
             final String deviceId,
             final String command,

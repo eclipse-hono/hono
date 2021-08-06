@@ -505,7 +505,7 @@ import io.vertx.junit5.VertxTestContext;
     protected void testUploadMessages(
             final VertxTestContext ctx,
             final String tenantId,
-            final Function<DownstreamMessage<? extends MessageContext>, Future<?>> messageConsumer,
+            final Function<DownstreamMessage<? extends MessageContext>, Future<Void>> messageConsumer,
             final Function<Integer, Future<HttpResponse<Buffer>>> requestSender) throws InterruptedException {
         testUploadMessages(ctx, tenantId, messageConsumer, requestSender, MESSAGES_TO_SEND, null);
     }
@@ -541,7 +541,7 @@ import io.vertx.junit5.VertxTestContext;
     protected void testUploadMessages(
             final VertxTestContext ctx,
             final String tenantId,
-            final Function<DownstreamMessage<? extends MessageContext>, Future<?>> messageConsumer,
+            final Function<DownstreamMessage<? extends MessageContext>, Future<Void>> messageConsumer,
             final Function<Integer, Future<HttpResponse<Buffer>>> requestSender,
             final int numberOfMessages,
             final QoS expectedQos) throws InterruptedException {
@@ -1091,9 +1091,9 @@ import io.vertx.junit5.VertxTestContext;
                             assertThat(notification.getTenantId()).isEqualTo(tenantId);
                             assertThat(notification.getDeviceId()).isEqualTo(deviceId);
                         });
-                        return Future.succeededFuture();
+                        return Future.<Void>succeededFuture();
                     })
-                    .orElseGet(() -> Future.succeededFuture());
+                    .orElseGet(() -> Future.<Void>succeededFuture());
                 },
                 count -> {
                     return httpClient.create(
@@ -1193,10 +1193,10 @@ import io.vertx.junit5.VertxTestContext;
                                                 assertThat(response.getDeviceId()).isEqualTo(commandTargetDeviceId);
                                                 assertThat(response.getTenantId()).isEqualTo(tenantId);
                                             });
-                                            return response;
+                                            return (Void) null;
                                         });
                             })
-                            .orElseGet(() -> Future.succeededFuture());
+                            .orElseGet(() -> Future.<Void>succeededFuture());
                 },
                 count -> {
                     final Buffer buffer = Buffer.buffer("hello " + count);
@@ -1378,9 +1378,9 @@ import io.vertx.junit5.VertxTestContext;
         }
     }
 
-    private Future<?> assertHttpResponse(final HttpResponse<Buffer> response) {
+    private Future<Void> assertHttpResponse(final HttpResponse<Buffer> response) {
 
-        final Promise<?> result = Promise.promise();
+        final Promise<Void> result = Promise.promise();
         final String allowedOrigin = response.getHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN.toString());
         final boolean hasValidOrigin = allowedOrigin != null
                 && (allowedOrigin.equals(ORIGIN_WILDCARD) || allowedOrigin.equals(ORIGIN_URI));

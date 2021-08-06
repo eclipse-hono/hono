@@ -88,13 +88,14 @@ public class ProtocolGateway {
      * @return A future indicating the outcome of starting the gateway.
      */
     @PostConstruct
-    public Future<?> start() {
+    public Future<Void> start() {
 
         server.setConnectHandler(this::handleConnect);
         return amqpAdapterClientFactory.connect()
                 .compose(ok -> server.start())
                 .onSuccess(s -> LOG.info("successfully started example protocol gateway [tenant: {}]", tenant))
-                .onFailure(t -> LOG.error("failed to start protocol gateway", t));
+                .onFailure(t -> LOG.error("failed to start protocol gateway", t))
+                .mapEmpty();
     }
 
     /**
@@ -282,7 +283,7 @@ public class ProtocolGateway {
      * @param socket The socket to use for sending commands to the device.
      * @return A future indicating the outcome.
      */
-    private Future<?> subscribe(final String deviceId, final NetSocket socket) {
+    private Future<Void> subscribe(final String deviceId, final NetSocket socket) {
 
         final Consumer<Message> messageHandler = m -> {
 
@@ -304,7 +305,8 @@ public class ProtocolGateway {
                 }
             }
         };
-        return amqpAdapterClientFactory.createDeviceSpecificCommandConsumer(deviceId, messageHandler);
+        return amqpAdapterClientFactory.createDeviceSpecificCommandConsumer(deviceId, messageHandler)
+                .mapEmpty();
     }
 
     private Future<ProtonDelivery> respondWithTime(final Message command) {

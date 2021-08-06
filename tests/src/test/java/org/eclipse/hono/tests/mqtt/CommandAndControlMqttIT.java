@@ -265,7 +265,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                             assertThat(response.getDeviceId()).isEqualTo(commandTargetDeviceId);
                             assertThat(response.getTenantId()).isEqualTo(tenantId);
                         });
-                        return response;
+                        return (Void) null;
                     });
         }, endpointConfig, COMMANDS_TO_SEND, qos);
     }
@@ -274,7 +274,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             final VertxTestContext ctx,
             final String commandTargetDeviceId,
             final Handler<MqttPublishMessage> commandConsumer,
-            final Function<Buffer, Future<?>> commandSender,
+            final Function<Buffer, Future<Void>> commandSender,
             final MqttCommandEndpointConfiguration endpointConfig,
             final int totalNoOfCommandsToSend,
             final MqttQoS subscribeQos) throws InterruptedException {
@@ -570,11 +570,12 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             });
             receivedMessagesCounter.incrementAndGet();
         };
-        final Function<Buffer, Future<?>> commandSender = payload -> {
+        final Function<Buffer, Future<Void>> commandSender = payload -> {
             return helper.sendCommand(tenantId, commandTargetDeviceId, "setValue", "text/plain", payload,
                     // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
                     IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= COMMANDS_TO_SEND / 2),
-                    IntegrationTestSupport.getSendCommandTimeout());
+                    IntegrationTestSupport.getSendCommandTimeout())
+                .mapEmpty();
         };
 
         helper.registry
