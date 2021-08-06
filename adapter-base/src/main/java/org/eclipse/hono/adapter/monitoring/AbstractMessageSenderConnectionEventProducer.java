@@ -16,6 +16,7 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.RegistrationAssertion;
 
+import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
@@ -36,9 +37,10 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
             final String remoteId,
             final String protocolAdapter,
             final Device authenticatedDevice,
-            final JsonObject data) {
+            final JsonObject data,
+            final SpanContext spanContext) {
 
-        return sendNotificationEvent(context, authenticatedDevice, protocolAdapter, remoteId, "connected", data);
+        return sendNotificationEvent(context, authenticatedDevice, protocolAdapter, remoteId, "connected", data, spanContext);
     }
 
     @Override
@@ -47,9 +49,10 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
             final String remoteId,
             final String protocolAdapter,
             final Device authenticatedDevice,
-            final JsonObject data) {
+            final JsonObject data,
+            final SpanContext spanContext) {
 
-        return sendNotificationEvent(context, authenticatedDevice, protocolAdapter, remoteId, "disconnected", data);
+        return sendNotificationEvent(context, authenticatedDevice, protocolAdapter, remoteId, "disconnected", data, spanContext);
     }
 
     private Future<?> sendNotificationEvent(
@@ -58,7 +61,8 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
             final String protocolAdapter,
             final String remoteId,
             final String cause,
-            final JsonObject data) {
+            final JsonObject data,
+            final SpanContext spanContext) {
 
         if (authenticatedDevice == null) {
             // we only handle authenticated devices
@@ -68,7 +72,7 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
         final String tenantId = authenticatedDevice.getTenantId();
         final String deviceId = authenticatedDevice.getDeviceId();
 
-        return context.getTenantClient().get(tenantId, null)
+        return context.getTenantClient().get(tenantId, spanContext)
                 .compose(tenant -> {
 
                     final JsonObject payload = new JsonObject();
@@ -86,7 +90,7 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
                             EventConstants.EVENT_CONNECTION_NOTIFICATION_CONTENT_TYPE,
                             payload.toBuffer(),
                             null,
-                            null);
+                            spanContext);
                 });
     }
 }

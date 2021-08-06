@@ -481,7 +481,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             currentSpan.log("abort connection request processing, connection already closed");
             result.fail("connection already closed");
         } else {
-            sendConnectedEvent(endpoint.clientIdentifier(), authenticatedDevice)
+            sendConnectedEvent(endpoint.clientIdentifier(), authenticatedDevice, currentSpan.context())
                 .map(authenticatedDevice)
                 .recover(t -> {
                     log.warn("failed to send connection event for client [clientId: {}]",
@@ -1706,7 +1706,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             final Span span = newSpan("CLOSE");
             AbstractVertxBasedMqttProtocolAdapter.this.onClose(endpoint);
             final CompositeFuture removalDoneFuture = removeAllCommandSubscriptions(span);
-            sendDisconnectedEvent(endpoint.clientIdentifier(), authenticatedDevice);
+            sendDisconnectedEvent(endpoint.clientIdentifier(), authenticatedDevice, span.context());
             if (authenticatedDevice == null) {
                 log.debug("connection to anonymous device [clientId: {}] closed", endpoint.clientIdentifier());
                 metrics.decrementUnauthenticatedConnections();

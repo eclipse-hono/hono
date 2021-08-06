@@ -853,11 +853,13 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 anyString(),
                 anyString(),
                 any(),
+                any(),
                 any())).thenReturn(Future.succeededFuture());
         when(connectionEventProducer.disconnected(
                 any(ConnectionEventProducer.Context.class),
                 anyString(),
                 anyString(),
+                any(),
                 any(),
                 any())).thenReturn(Future.succeededFuture());
         givenAnAdapter(properties);
@@ -886,6 +888,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 anyString(),
                 eq(adapter.getTypeName()),
                 eq(authenticatedDevice),
+                any(),
                 any());
 
         // WHEN the connection to the device is lost
@@ -901,6 +904,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 eq("deviceContainer"),
                 eq(adapter.getTypeName()),
                 eq(authenticatedDevice),
+                any(),
                 any());
 
         // WHEN the device closes its connection to the adapter
@@ -916,6 +920,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 eq("deviceContainer"),
                 eq(adapter.getTypeName()),
                 eq(authenticatedDevice),
+                any(),
                 any());
     }
 

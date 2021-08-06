@@ -82,7 +82,7 @@ class HonoEventConnectionEventProducerTest {
                 .setResourceLimits(new ResourceLimits().setMaxTtl(500));
         when(tenantClient.get(anyString(), any())).thenReturn(Future.succeededFuture(tenant));
 
-        producer.connected(context, "device-internal-id", "custom-adapter", authenticatedDevice, new JsonObject())
+        producer.connected(context, "device-internal-id", "custom-adapter", authenticatedDevice, new JsonObject(), null)
             .onComplete(ctx.succeeding(ok -> {
                 ctx.verify(() -> {
                     verify(sender).sendEvent(

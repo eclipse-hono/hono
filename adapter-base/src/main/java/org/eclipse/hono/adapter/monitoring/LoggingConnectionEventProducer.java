@@ -18,6 +18,7 @@ import org.eclipse.hono.auth.Device;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
@@ -48,7 +49,8 @@ public final class LoggingConnectionEventProducer implements ConnectionEventProd
             final String remoteId,
             final String protocolAdapter,
             final Device authenticatedDevice,
-            final JsonObject data) {
+            final JsonObject data,
+            final SpanContext spanContext) {
 
         return log(String.format("   Connected - ID: %s, Protocol Adapter: %s, Device: %s, Data: %s",
                 remoteId, protocolAdapter, authenticatedDevice, data));
@@ -60,7 +62,8 @@ public final class LoggingConnectionEventProducer implements ConnectionEventProd
             final String remoteId,
             final String protocolAdapter,
             final Device authenticatedDevice,
-            final JsonObject data) {
+            final JsonObject data,
+            final SpanContext spanContext) {
 
         return log(String.format("Disconnected - ID: %s, Protocol Adapter: %s, Device: %s, Data: %s",
                 remoteId, protocolAdapter, authenticatedDevice, data));
