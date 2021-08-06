@@ -76,7 +76,7 @@ public interface ConnectionEventProducer {
      * @return A future which indicates the result of the event production.
      * @throws NullPointerException If either the remote ID or the protocol adapter argument are {@code null}.
      */
-    Future<?> connected(Context context, String remoteId, String protocolAdapter, Device authenticatedDevice,
+    Future<Void> connected(Context context, String remoteId, String protocolAdapter, Device authenticatedDevice,
             JsonObject data, SpanContext spanContext);
 
     /**
@@ -93,6 +93,6 @@ public interface ConnectionEventProducer {
      * @return A future which indicates the result of the event production.
      * @throws NullPointerException If either the remote ID or the protocol adapter argument are {@code null}.
      */
-    Future<?> disconnected(Context context, String remoteId, String protocolAdapter, Device authenticatedDevice,
+    Future<Void> disconnected(Context context, String remoteId, String protocolAdapter, Device authenticatedDevice,
             JsonObject data, SpanContext spanContext);
 }

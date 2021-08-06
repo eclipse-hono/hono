@@ -380,7 +380,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 });
     }
 
-    private Future<?> closeServiceClients() {
+    private Future<Void> closeServiceClients() {
 
         @SuppressWarnings("rawtypes")
         final List<Future> results = new ArrayList<>();
@@ -390,7 +390,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         results.add(commandConsumerFactory.stop());
         results.add(commandRouterClient.stop());
         results.add(messagingClientProviders.stop());
-        return CompositeFuture.all(results);
+        return CompositeFuture.all(results).mapEmpty();
     }
 
     /**
@@ -952,7 +952,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         event.
      * @see ConnectionEventProducer#connected(ConnectionEventProducer.Context, String, String, Device, JsonObject, SpanContext)
      */
-    protected Future<?> sendConnectedEvent(final String remoteId, final Device authenticatedDevice, final SpanContext context) {
+    protected Future<Void> sendConnectedEvent(final String remoteId, final Device authenticatedDevice, final SpanContext context) {
         if (this.connectionEventProducer != null) {
             return getTenantClient().get(authenticatedDevice.getTenantId(), context)
                     .map(this::getEventSender)
@@ -988,7 +988,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         event.
      * @see ConnectionEventProducer#disconnected(ConnectionEventProducer.Context, String, String, Device, JsonObject, SpanContext)
      */
-    protected Future<?> sendDisconnectedEvent(final String remoteId, final Device authenticatedDevice, final SpanContext context) {
+    protected Future<Void> sendDisconnectedEvent(final String remoteId, final Device authenticatedDevice, final SpanContext context) {
         if (this.connectionEventProducer != null) {
             return getTenantClient().get(authenticatedDevice.getTenantId(), context)
                     .map(this::getEventSender)
@@ -1031,7 +1031,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         Otherwise, it will be failed with a {@link ServiceInvocationException}.
      * @throws NullPointerException if any of tenant or device ID are {@code null}.
      */
-    protected final Future<?> sendConnectedTtdEvent(
+    protected final Future<Void> sendConnectedTtdEvent(
             final String tenant,
             final String deviceId,
             final Device authenticatedDevice,
@@ -1057,7 +1057,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         Otherwise, it will be failed with a {@link ServiceInvocationException}.
      * @throws NullPointerException if any of tenant or device ID are {@code null}.
      */
-    protected final Future<?> sendDisconnectedTtdEvent(
+    protected final Future<Void> sendDisconnectedTtdEvent(
             final String tenant,
             final String deviceId,
             final Device authenticatedDevice,
@@ -1067,7 +1067,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     @Override
-    public final Future<?> sendTtdEvent(
+    public final Future<Void> sendTtdEvent(
             final String tenant,
             final String deviceId,
             final Device authenticatedDevice,

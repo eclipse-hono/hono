@@ -151,7 +151,7 @@ public interface ProtocolAdapter {
      *         Otherwise, it will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      * @throws NullPointerException if any of tenant, device ID or TTD are {@code null}.
      */
-    Future<?> sendTtdEvent(
+    Future<Void> sendTtdEvent(
             String tenant,
             String deviceId,
             Device authenticatedDevice,

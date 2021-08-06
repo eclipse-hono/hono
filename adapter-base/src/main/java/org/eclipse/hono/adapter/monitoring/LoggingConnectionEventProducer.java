@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -44,7 +44,7 @@ public final class LoggingConnectionEventProducer implements ConnectionEventProd
     }
 
     @Override
-    public Future<?> connected(
+    public Future<Void> connected(
             final Context context,
             final String remoteId,
             final String protocolAdapter,
@@ -57,7 +57,7 @@ public final class LoggingConnectionEventProducer implements ConnectionEventProd
     }
 
     @Override
-    public Future<?> disconnected(
+    public Future<Void> disconnected(
             final Context context,
             final String remoteId,
             final String protocolAdapter,
@@ -69,7 +69,7 @@ public final class LoggingConnectionEventProducer implements ConnectionEventProd
                 remoteId, protocolAdapter, authenticatedDevice, data));
     }
 
-    private Future<?> log(final String msg) {
+    private Future<Void> log(final String msg) {
         if (config.isDebugLogLevel()) {
             LOG.debug(msg);
         } else {

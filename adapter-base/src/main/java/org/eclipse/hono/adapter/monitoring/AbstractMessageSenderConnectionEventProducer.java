@@ -32,7 +32,7 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
     }
 
     @Override
-    public Future<?> connected(
+    public Future<Void> connected(
             final Context context,
             final String remoteId,
             final String protocolAdapter,
@@ -44,7 +44,7 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
     }
 
     @Override
-    public Future<?> disconnected(
+    public Future<Void> disconnected(
             final Context context,
             final String remoteId,
             final String protocolAdapter,
@@ -55,7 +55,7 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
         return sendNotificationEvent(context, authenticatedDevice, protocolAdapter, remoteId, "disconnected", data, spanContext);
     }
 
-    private Future<?> sendNotificationEvent(
+    private Future<Void> sendNotificationEvent(
             final Context context,
             final Device authenticatedDevice,
             final String protocolAdapter,
