@@ -479,7 +479,7 @@ public class TelemetryResourceTest extends ResourceTestBase {
         final Device authenticatedDevice = new Device("tenant", "device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
 
-        final Future<?> result = resource.handlePost(context);
+        final Future<Void> result = resource.handlePost(context);
 
         // THEN the message is being forwarded downstream
         assertTelemetryMessageHasBeenSentDownstream(

@@ -122,7 +122,7 @@ public class EventResourceTest extends ResourceTestBase {
         final Device authenticatedDevice = new Device("tenant", "device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
 
-        final Future<?> result = resource.handlePost(context);
+        final Future<Void> result = resource.handlePost(context);
 
         assertEventHasBeenSentDownstream("tenant", "device", "text/plain");
         outcome.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed message"));

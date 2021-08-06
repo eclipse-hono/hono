@@ -235,7 +235,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
      *         Otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    protected final Future<?> doUploadMessage(
+    protected final Future<Void> doUploadMessage(
             final CoapContext context,
             final MetricsTags.EndpointType endpoint) {
 
@@ -307,9 +307,9 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                             currentSpan));
 
             return commandConsumerTracker
-                .compose(ok -> {
+                .compose(commandConsumer -> {
                     final Map<String, Object> props = getAdapter().getDownstreamMessageProperties(context);
-                    Optional.ofNullable(commandConsumerTracker.result())
+                    Optional.ofNullable(commandConsumer)
                             .map(c -> ttdTracker.result())
                             .ifPresent(ttd -> props.put(MessageHelper.APP_PROPERTY_DEVICE_TTD, ttd));
                     customizeDownstreamMessageProperties(props, context);
@@ -381,7 +381,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
 
                     context.respond(response);
                     currentSpan.finish();
-                    return null;
+                    return (Void) null;
 
                 }).recover(t -> {
 

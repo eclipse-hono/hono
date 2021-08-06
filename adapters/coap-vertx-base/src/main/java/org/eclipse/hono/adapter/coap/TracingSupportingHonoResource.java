@@ -198,7 +198,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
             }
         };
 
-        final Future<?> result;
+        final Future<Void> result;
         switch (exchange.getRequest().getCode()) {
         case POST:
             result = createCoapContextForPost(coapExchange, currentSpan)
@@ -304,7 +304,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      *         and a CoAP response has been sent back to the client.
      *         Otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      */
-    protected Future<?> handlePost(final CoapContext coapContext) {
+    protected Future<Void> handlePost(final CoapContext coapContext) {
         return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_NOT_IMPLEMENTED));
     }
 
@@ -320,7 +320,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      *         and a CoAP response has been sent back to the client.
      *         Otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      */
-    protected Future<?> handlePut(final CoapContext coapContext) {
+    protected Future<Void> handlePut(final CoapContext coapContext) {
         return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_NOT_IMPLEMENTED));
     }
 

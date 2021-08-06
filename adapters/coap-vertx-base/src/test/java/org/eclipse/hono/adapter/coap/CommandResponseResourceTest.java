@@ -149,7 +149,7 @@ public class CommandResponseResourceTest extends ResourceTestBase {
         final Device authenticatedDevice = new Device("tenant", "device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
 
-        final Future<?> result = resource.uploadCommandResponseMessage(context);
+        final Future<Void> result = resource.uploadCommandResponseMessage(context);
         outcome.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed message"));
 
         result.onComplete(ctx.failing(t -> {
@@ -200,7 +200,7 @@ public class CommandResponseResourceTest extends ResourceTestBase {
         final Device authenticatedDevice = new Device("tenant", "device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
 
-        final Future<?> result = resource.uploadCommandResponseMessage(context);
+        final Future<Void> result = resource.uploadCommandResponseMessage(context);
 
         // THEN the command response is being forwarded downstream
         verify(sender).sendCommandResponse(any(CommandResponse.class), any(SpanContext.class));

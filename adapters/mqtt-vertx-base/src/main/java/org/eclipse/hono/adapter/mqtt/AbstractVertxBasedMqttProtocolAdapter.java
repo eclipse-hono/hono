@@ -862,9 +862,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 deviceId,
                 ctx.authenticatedDevice(),
                 currentSpan.context());
-        final Future<?> tenantValidationTracker = CompositeFuture.all(
+        final Future<TenantObject> tenantValidationTracker = CompositeFuture.all(
                 isAdapterEnabled(tenantObject),
-                checkMessageLimit(tenantObject, payload.length(), currentSpan.context()));
+                checkMessageLimit(tenantObject, payload.length(), currentSpan.context()))
+            .map(tenantObject);
 
         return CompositeFuture.all(tokenTracker, tenantValidationTracker).compose(ok -> {
 

@@ -67,12 +67,12 @@ public class EventResource extends AbstractHonoResource {
     }
 
     @Override
-    public Future<?> handlePost(final CoapContext ctx) {
+    public Future<Void> handlePost(final CoapContext ctx) {
         return uploadEventMessage(ctx);
     }
 
     @Override
-    public Future<?> handlePut(final CoapContext ctx) {
+    public Future<Void> handlePut(final CoapContext ctx) {
         return uploadEventMessage(ctx);
     }
 
@@ -87,7 +87,7 @@ public class EventResource extends AbstractHonoResource {
      *         Otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      * @throws NullPointerException if context is {@code null}.
      */
-    private Future<?> uploadEventMessage(final CoapContext context) {
+    private Future<Void> uploadEventMessage(final CoapContext context) {
 
         Objects.requireNonNull(context);
         if (context.isConfirmable()) {

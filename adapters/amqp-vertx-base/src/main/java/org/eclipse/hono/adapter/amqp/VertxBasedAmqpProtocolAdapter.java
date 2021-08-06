@@ -684,7 +684,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      *         The future will succeed if the message has been processed successfully, otherwise it
      *         will fail with a {@link ServiceInvocationException}.
      */
-    protected Future<?> onMessageReceived(final AmqpContext ctx) {
+    protected Future<Void> onMessageReceived(final AmqpContext ctx) {
 
         log.trace("processing message [address: {}, qos: {}]", ctx.getAddress(), ctx.getRequestedQos());
         final Span msgSpan = ctx.getTracingSpan();
@@ -1117,7 +1117,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      *                    trace the forwarding of the message.
      * @return A future indicating the outcome.
      */
-    private Future<?> uploadMessage(
+    private Future<Void> uploadMessage(
             final AmqpContext context,
             final ResourceIdentifier resource,
             final Span currentSpan) {
@@ -1142,7 +1142,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         }
     }
 
-    private Future<?> doUploadMessage(
+    private Future<Void> doUploadMessage(
             final AmqpContext context,
             final ResourceIdentifier resource,
             final Span currentSpan) {

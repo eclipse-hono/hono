@@ -84,12 +84,12 @@ public class CommandResponseResource extends AbstractHonoResource {
     }
 
     @Override
-    public Future<?> handlePost(final CoapContext ctx) {
+    public Future<Void> handlePost(final CoapContext ctx) {
         return uploadCommandResponseMessage(ctx);
     }
 
     @Override
-    public Future<?> handlePut(final CoapContext ctx) {
+    public Future<Void> handlePut(final CoapContext ctx) {
         return uploadCommandResponseMessage(ctx);
     }
 
@@ -104,7 +104,7 @@ public class CommandResponseResource extends AbstractHonoResource {
      *         Otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      * @throws NullPointerException if context is {@code null}.
      */
-    public final Future<?> uploadCommandResponseMessage(final CoapContext context) {
+    public final Future<Void> uploadCommandResponseMessage(final CoapContext context) {
         Objects.requireNonNull(context);
 
         final Device device = context.getOriginDevice();
