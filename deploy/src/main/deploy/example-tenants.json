@@ -3,11 +3,11 @@
     "tenant-id": "DEFAULT_TENANT",
     "trusted-ca": [
       {
-        "subject-dn": "${trusted-ca.subject-dn}",
-        "public-key": "${trusted-ca.public-key}",
-        "algorithm": "${trusted-ca.algorithm}",
-        "not-before": "${trusted-ca.not-before}",
-        "not-after": "${trusted-ca.not-after}"
+        "subject-dn": "CN=DEFAULT_TENANT_CA,OU=Hono,O=Eclipse IoT,L=Ottawa,C=CA",
+        "public-key": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAElNXF6jy6KA1oe3KVYOCcT1+cF7B+IAOwo7MvVcaoLAvhJi/d2YDVw2NSfSOBpX+M0de8tIx4b7J6e/li2pKafQ==",
+        "algorithm": "EC",
+        "not-before": "2021-07-19T17:36:55+02:00",
+        "not-after": "2022-07-19T17:36:55+02:00"
       }
     ],
     "enabled": true,
