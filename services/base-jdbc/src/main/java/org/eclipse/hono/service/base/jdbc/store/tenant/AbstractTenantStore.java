@@ -111,8 +111,8 @@ public abstract class AbstractTenantStore extends AbstractStore {
                 this.client,
                 this.tracer,
                 span.context(),
-                (connection, context) -> readTenantBy(connection, expanded, context)
-        );
+                (connection, context) -> readTenantBy(connection, expanded, context))
+                .onComplete(x -> span.finish());
 
     }
 
