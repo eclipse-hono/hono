@@ -12,6 +12,11 @@
  *******************************************************************************/
 package org.eclipse.hono.deviceregistry.mongodb.config;
 
+import java.util.Objects;
+import java.util.regex.Pattern;
+
+import org.eclipse.hono.util.RegistryManagementConstants;
+
 /**
  * Configuration properties for Hono's device registration and management APIs.
  */
@@ -72,5 +77,21 @@ public final class MongoDbBasedRegistrationConfigProperties extends AbstractMong
         return DEFAULT_DEVICE_COLLECTION_NAME;
     }
 
-
+    /**
+     * Sets the regular expression that should be used to validate authentication identifiers (user names) of
+     * hashed-password credentials.
+     * <p>
+     * After successful validation of the expression's syntax, the regex is set as the value
+     * of system property {@value RegistryManagementConstants#SYSTEM_PROPERTY_USERNAME_REGEX}.
+     *
+     * @param regex The regular expression to use.
+     * @throws NullPointerException if regex is {@code null}.
+     * @throws java.util.regex.PatternSyntaxException if regex is not a valid regular expression.
+     */
+    public void setUsernamePattern(final String regex) {
+        Objects.requireNonNull(regex);
+        // verify regex syntax
+        Pattern.compile(regex);
+        System.setProperty(RegistryManagementConstants.SYSTEM_PROPERTY_USERNAME_REGEX, regex);
+    }
 }

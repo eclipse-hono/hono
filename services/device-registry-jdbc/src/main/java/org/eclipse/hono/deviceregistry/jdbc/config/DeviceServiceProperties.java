@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,6 +19,9 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Pattern;
+
+import org.eclipse.hono.util.RegistryManagementConstants;
 
 /**
  * Device service properties.
@@ -39,15 +42,15 @@ public class DeviceServiceProperties {
 
     private final Set<String> hashAlgorithmsAllowList = new HashSet<>();
 
-    public int getTaskExecutorQueueSize() {
+    public final int getTaskExecutorQueueSize() {
         return this.taskExecutorQueueSize;
     }
 
-    public void setTaskExecutorQueueSize(final int taskExecutorQueueSize) {
+    public final void setTaskExecutorQueueSize(final int taskExecutorQueueSize) {
         this.taskExecutorQueueSize = taskExecutorQueueSize;
     }
 
-    public Duration getCredentialsTtl() {
+    public final Duration getCredentialsTtl() {
         return this.credentialsTtl;
     }
 
@@ -58,7 +61,7 @@ public class DeviceServiceProperties {
      * @throws NullPointerException if ttl is {@code null}.
      * @throws IllegalArgumentException if the TTL value is less than one second.
      */
-    public void setCredentialsTtl(final Duration credentialsTtl) {
+    public final void setCredentialsTtl(final Duration credentialsTtl) {
         Objects.requireNonNull(credentialsTtl);
         if (credentialsTtl.toSeconds() <= 0) {
             throw new IllegalArgumentException("'credentialsTtl' must be a positive duration of at least one second");
@@ -66,7 +69,7 @@ public class DeviceServiceProperties {
         this.credentialsTtl = credentialsTtl;
     }
 
-    public Duration getRegistrationTtl() {
+    public final Duration getRegistrationTtl() {
         return this.registrationTtl;
     }
 
@@ -77,7 +80,7 @@ public class DeviceServiceProperties {
      * @throws IllegalArgumentException if the TTL value is less than one second.
      */
 
-    public void setRegistrationTtl(final Duration registrationTtl) {
+    public final void setRegistrationTtl(final Duration registrationTtl) {
         if (registrationTtl.toSeconds() <= 0) {
             throw new IllegalArgumentException("'registrationTtl' must be a positive duration of at least one second");
         }
@@ -105,7 +108,7 @@ public class DeviceServiceProperties {
      * @param costfactor The maximum number.
      * @throws IllegalArgumentException if iterations is &lt; 4 or &gt; 31.
      */
-    public void setMaxBcryptCostfactor(final int costfactor) {
+    public final void setMaxBcryptCostfactor(final int costfactor) {
         if (costfactor < 4 || costfactor > 31) {
             throw new IllegalArgumentException("iterations must be > 3 and < 32");
         } else {
@@ -125,7 +128,7 @@ public class DeviceServiceProperties {
      *
      * @return The supported algorithms.
      */
-    public Set<String> getHashAlgorithmsAllowList() {
+    public final Set<String> getHashAlgorithmsAllowList() {
         return Collections.unmodifiableSet(this.hashAlgorithmsAllowList);
     }
 
@@ -141,9 +144,27 @@ public class DeviceServiceProperties {
      * @param hashAlgorithmsAllowList The algorithms to support.
      * @throws NullPointerException if the list is {@code null}.
      */
-    public void setHashAlgorithmsAllowList(final String[] hashAlgorithmsAllowList) {
+    public final void setHashAlgorithmsAllowList(final String[] hashAlgorithmsAllowList) {
         Objects.requireNonNull(hashAlgorithmsAllowList);
         this.hashAlgorithmsAllowList.clear();
         this.hashAlgorithmsAllowList.addAll(Arrays.asList(hashAlgorithmsAllowList));
+    }
+
+    /**
+     * Sets the regular expression that should be used to validate authentication identifiers (user names) of
+     * hashed-password credentials.
+     * <p>
+     * After successful validation of the expression's syntax, the regex is set as the value
+     * of system property {@value RegistryManagementConstants#SYSTEM_PROPERTY_USERNAME_REGEX}.
+     *
+     * @param regex The regular expression to use.
+     * @throws NullPointerException if regex is {@code null}.
+     * @throws java.util.regex.PatternSyntaxException if regex is not a valid regular expression.
+     */
+    public final void setUsernamePattern(final String regex) {
+        Objects.requireNonNull(regex);
+        // verify regex syntax
+        Pattern.compile(regex);
+        System.setProperty(RegistryManagementConstants.SYSTEM_PROPERTY_USERNAME_REGEX, regex);
     }
 }

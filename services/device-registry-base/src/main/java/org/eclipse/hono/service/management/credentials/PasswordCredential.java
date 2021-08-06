@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,8 +19,12 @@ import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import org.eclipse.hono.util.RegistryManagementConstants;
+import org.eclipse.hono.util.Strings;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -35,29 +39,31 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 public class PasswordCredential extends CommonCredential {
 
-    /**
-     * The regular expression that authentication identifiers need to match.
-     */
-    public static final String REGEX_AUTH_ID = "^[a-zA-Z0-9-_=\\.]+$";
-
     static final String TYPE = RegistryManagementConstants.SECRETS_TYPE_HASHED_PASSWORD;
 
-    private static final Pattern PATTERN_AUTH_ID_VALUE = Pattern.compile(REGEX_AUTH_ID);
+    private static final Logger LOG = LoggerFactory.getLogger(PasswordCredential.class);
     /**
-     * A predicate for matching authentication identifiers against the
-     * {@linkplain #PATTERN_AUTH_ID_VALUE default pattern}.
+     * The pattern being used for validating authentication identifiers.
      */
-    private static final Predicate<String> AUTH_ID_VALIDATOR_DEFAULT = authId -> {
-        final Matcher matcher = PATTERN_AUTH_ID_VALUE.matcher(authId);
-        if (matcher.matches()) {
-            return true;
-        } else {
-            throw new IllegalArgumentException("authentication identifier must match pattern "
-                    + PATTERN_AUTH_ID_VALUE.pattern());
-        }
-    };
+    private static Pattern PATTERN_AUTH_ID_VALUE;
 
     private final List<PasswordSecret> secrets = new LinkedList<>();
+
+    static {
+        final String regex = System.getProperty(RegistryManagementConstants.SYSTEM_PROPERTY_USERNAME_REGEX);
+        if (Strings.isNullOrEmpty(regex)) {
+            setAuthIdPattern(RegistryManagementConstants.DEFAULT_PATTERN_USERNAME);
+        } else {
+            try {
+                setAuthIdPattern(Pattern.compile(regex));
+            } catch (final PatternSyntaxException e) {
+                // keep default pattern
+                LOG.warn("auth-id pattern set via system property [{}] is not a valid regular expression",
+                        RegistryManagementConstants.SYSTEM_PROPERTY_USERNAME_REGEX, e);
+                setAuthIdPattern(RegistryManagementConstants.DEFAULT_PATTERN_USERNAME);
+            }
+        }
+    }
 
     /**
      * Creates a new credentials object for an authentication identifier.
@@ -65,24 +71,42 @@ public class PasswordCredential extends CommonCredential {
      * @param authId The authentication identifier.
      * @param secrets The credential's secret password(s).
      * @throws NullPointerException if any of the parameters are {@code null}.
-     * @throws IllegalArgumentException if auth ID does not match {@value #REGEX_AUTH_ID} or if secrets is empty.
+     * @throws IllegalArgumentException if auth ID does not match the configured regular expression or if secrets is empty.
      */
     public PasswordCredential(
-            @JsonProperty(value = RegistryManagementConstants.FIELD_AUTH_ID, required = true) final String authId,
-            @JsonProperty(value = RegistryManagementConstants.FIELD_SECRETS, required = true) final List<PasswordSecret> secrets) {
+            @JsonProperty(value = RegistryManagementConstants.FIELD_AUTH_ID, required = true)
+            final String authId,
+            @JsonProperty(value = RegistryManagementConstants.FIELD_SECRETS, required = true)
+            final List<PasswordSecret> secrets) {
 
         super(authId);
         setSecrets(secrets);
     }
 
+    static void setAuthIdPattern(final Pattern pattern) {
+        Objects.requireNonNull(pattern);
+        PATTERN_AUTH_ID_VALUE = pattern;
+        LOG.info("using regular expression for validating authentication identifiers: {}", pattern.pattern());
+    }
+
+    private static boolean validateAuthId(final String authId) {
+        final Matcher matcher = PATTERN_AUTH_ID_VALUE.matcher(authId);
+        if (matcher.matches()) {
+            return true;
+        } else {
+            throw new IllegalArgumentException("authentication identifier must match regular expression: "
+                    + PATTERN_AUTH_ID_VALUE.pattern());
+        }
+    }
+
     /**
      * {@inheritDoc}
      *
-     * @return A predicate that matches the identifier against the {@linkplain #REGEX_AUTH_ID default pattern}.
+     * @return A predicate that matches the identifier against the {@linkplain #PATTERN_AUTH_ID_VALUE auth-id pattern}.
      */
     @Override
     protected Predicate<String> getAuthIdValidator() {
-        return AUTH_ID_VALIDATOR_DEFAULT;
+        return PasswordCredential::validateAuthId;
     }
 
     /**

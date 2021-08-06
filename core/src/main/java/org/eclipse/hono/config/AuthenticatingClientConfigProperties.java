@@ -28,6 +28,9 @@ import org.eclipse.hono.util.Strings;
  */
 public class AuthenticatingClientConfigProperties extends AbstractConfig {
 
+    /**
+     * The <em>unknown</em> server role.
+     */
     public static final String SERVER_ROLE_UNKNOWN = "unknown";
 
     private String credentialsPath = null;

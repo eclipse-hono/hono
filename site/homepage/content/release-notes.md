@@ -6,6 +6,12 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 ## 1.10.0 (not yet released)
 
+### New Features
+
+* The JDBC and Mongo DB based registry implementations now support configuration of a regular expression that should
+  be used to validate authentication identifiers (user names) of hashed-password credentials. Please refer to the
+  corresponding Admin Guides for details.
+
 ### Fixes & Enhancements
 
 * The Quarkus based variants of Hono's components now support configuring the Hot Rod client with a key and/or

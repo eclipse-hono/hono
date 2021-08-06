@@ -12,6 +12,8 @@
  *******************************************************************************/
 package org.eclipse.hono.util;
 
+import java.util.regex.Pattern;
+
 /**
  * Constants &amp; utility methods used throughout the Device Management API.
  */
@@ -39,107 +41,130 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
 
     // FIELD DEFINITIONS
 
-    // DEVICES
+    // GENERIC
 
     /**
-     * The name of the field that contains the identifiers of those gateways that may act on behalf of the device.
+     * The name of the field that contains the extension fields.
      */
-    public static final String FIELD_VIA = RegistrationConstants.FIELD_VIA;
+    public static final String FIELD_EXT = "ext";
 
     /**
-     * The name of the field that contains the identifiers of groups of gateways that may act on behalf of the device.
+     * The name of the field that contains the identifier of an entity.
      */
-    public static final String FIELD_VIA_GROUPS = "viaGroups";
+    public static final String FIELD_ID = "id";
 
     /**
-     * The name of the field that contains the status data for the device.
-     * The status object contains the creation date, the last edit date and the last user.
+     * The name of the field that contains meta information about an entity like creation date and time of last
+     * modification.
+     *
+     * @see #FIELD_STATUS_CREATION_DATE
+     * @see #FIELD_STATUS_LAST_UPDATE
+     * @see #FIELD_STATUS_LAST_USER
      */
     public static final String FIELD_STATUS = "status";
-
     /**
      * The name of the field that contains the creation date of the device.
      */
     public static final String FIELD_STATUS_CREATION_DATE = "created";
-
     /**
      * The name of the field that contains the last update date of the device.
      */
     public static final String FIELD_STATUS_LAST_UPDATE = "updated";
-
     /**
      * The name of the field that contains the last user that edited the device.
      */
     public static final String FIELD_STATUS_LAST_USER = "last-user";
 
     /**
+     * The name of the field that contains the JSON pointer corresponding to the field used for filtering entities.
+     */
+    public static final String FIELD_FILTER_FIELD = "field";
+    /**
+     * The name of the field that contains the operator used for filtering entities.
+     */
+    public static final String FIELD_FILTER_OPERATOR = "op";
+    /**
+     * The name of the field that contains the value used for filtering entities.
+     */
+    public static final String FIELD_FILTER_VALUE = "value";
+    /**
+     * The name of the field that contains the result of a search operation.
+     */
+    public static final String FIELD_RESULT_SET_PAGE = "result";
+    /**
+     * The name of the field that contains the total number of objects in the result set of a search operation.
+     */
+    public static final String FIELD_RESULT_SET_SIZE = "total";
+    /**
+     * The name of the field that contains sort direction used by a search operation to sort the result set.
+     */
+    public static final String FIELD_SORT_DIRECTION = "direction";
+
+    /**
+     * The name of the query parameter that contains the filter JSON object for a search operation.
+     */
+    public static final String PARAM_FILTER_JSON = "filterJson";
+    /**
+     * The name of the query parameter that contains the page offset for a search operation.
+     */
+    public static final String PARAM_PAGE_OFFSET = "pageOffset";
+    /**
+     * The name of the query parameter that contains the page size for a search operation.
+     */
+    public static final String PARAM_PAGE_SIZE = "pageSize";
+    /**
+     * The name of the query parameter that contains the sort JSON object used by a search operation to sort the
+     * result set.
+     */
+    public static final String PARAM_SORT_JSON = "sortJson";
+
+
+    // DEVICES
+
+    /**
+     * The name of the authority which authorizes a gateway to perform auto-provisioning.
+     */
+    public static final String AUTHORITY_AUTO_PROVISIONING_ENABLED = "auto-provisioning-enabled";
+    /**
+     * The name of the property that contains information about the service endpoint to use for sending
+     * commands to a device.
+     */
+    public static final String COMMAND_ENDPOINT = "command-endpoint";
+    /**
+     * The name of the property that contains the authorities of a device.
+     */
+    public static final String FIELD_AUTHORITIES = "authorities";
+    /**
+     * The name of the field that contains a boolean indicating if a device has been auto-provisioned.
+     */
+    public static final String FIELD_AUTO_PROVISIONED   = "auto-provisioned";
+    /**
+     * The name of the field that contains a boolean indicating if a notification for an auto-provisioned device was sent.
+     */
+    public static final String FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT = "auto-provisioning-notification-sent";
+    /**
      * The name of the field that contains the name of a service that can be used to transform downstream messages
      * uploaded by the device before they are forwarded to downstream consumers.
      */
     public static final String FIELD_DOWNSTREAM_MESSAGE_MAPPER = "downstream-message-mapper";
-
+    /**
+     * The name of the field that contains the names of the gateway groups that the (gateway) device is a member of.
+     */
+    public static final String FIELD_MEMBER_OF = "memberOf";
     /**
      * The name of the field that contains the name of a service that can be used to transform upstream commands
      * to be sent to the device.
      */
     public static final String FIELD_UPSTREAM_MESSAGE_MAPPER = "upstream-message-mapper";
-
     /**
-     * The name of the field that contains the names of the gateway groups that the (gateway) device is a member of.
+     * The name of the field that contains the identifiers of those gateways that may act on behalf of the device.
      */
-    public static final String FIELD_MEMBER_OF = "memberOf";
-
+    public static final String FIELD_VIA = RegistrationConstants.FIELD_VIA;
     /**
-     * The name of the field that contains the JSON pointer corresponding to the field used for filtering devices.
+     * The name of the field that contains the identifiers of groups of gateways that may act on behalf of the device.
      */
-    public static final String FIELD_FILTER_FIELD = "field";
+    public static final String FIELD_VIA_GROUPS = "viaGroups";
 
-    /**
-     * The name of the query parameter that contains the filter JSON object for search devices operation.
-     */
-    public static final String PARAM_FILTER_JSON = "filterJson";
-
-    /**
-     * The name of the field that contains the operator used for filtering devices.
-     */
-    public static final String FIELD_FILTER_OPERATOR = "op";
-
-    /**
-     * The name of the field that contains the value used for filtering devices.
-     */
-    public static final String FIELD_FILTER_VALUE = "value";
-
-    /**
-     * The name of the query parameter that contains the page offset for search devices operation.
-     */
-    public static final String PARAM_PAGE_OFFSET = "pageOffset";
-
-    /**
-     * The name of the query parameter that contains the page size for search devices operation.
-     */
-    public static final String PARAM_PAGE_SIZE = "pageSize";
-
-    /**
-     * The name of the field that contains sort direction used by search devices operation to sort the result set.
-     */
-    public static final String FIELD_SORT_DIRECTION = "direction";
-
-    /**
-     * The name of the query parameter that contains the sort JSON object used by search devices operation to sort the
-     * result set.
-     */
-    public static final String PARAM_SORT_JSON = "sortJson";
-
-    /**
-     * The name of the field that contains the total number of objects in the result set of the search devices
-     * operation.
-     */
-    public static final String FIELD_RESULT_SET_SIZE = "total";
-
-    /**
-     * The name of the field that contains the result of the search devices operation.
-     */
-    public static final String FIELD_RESULT_SET_PAGE = "result";
 
     // CREDENTIALS
 
@@ -160,18 +185,10 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String FIELD_SECRETS                     = "secrets";
     /**
-     * The name of the field that contains the extension fields.
+     * The name of the system property that contains the regular expression to use for validating
+     * authentication IDs of <em>hashed-password</em> secrets.
      */
-    public static final String FIELD_EXT                         = "ext";
-    /**
-     * The name of the property that defines the messaging type to be used for a tenant.
-     */
-    public static final String FIELD_EXT_MESSAGING_TYPE = "messaging-type";
-
-    /**
-     * The name of the field that contains the id of the entity (e.g. secret id).
-     */
-    public static final String FIELD_ID = "id";
+    public static final String SYSTEM_PROPERTY_USERNAME_REGEX = "hono.registry.usernameRegex";
 
     // SECRETS
 
@@ -232,6 +249,7 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String HASH_FUNCTION_SHA256              = "sha-256";
 
+
     // TENANTS
 
     /**
@@ -253,6 +271,21 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED = "device-authentication-required";
     /**
+     * The name of the property that indicates whether a unregistered device that authenticates with
+     * a client certificate should be auto-provisioned as a gateway. 
+     */
+    public static final String FIELD_AUTO_PROVISION_AS_GATEWAY = "auto-provision-as-gateway";
+    /**
+     * The name of the property that defines the device identifier template for the devices/gateways
+     * being auto-provisioned.
+     */
+    public static final String FIELD_AUTO_PROVISIONING_DEVICE_ID_TEMPLATE = "auto-provisioning-device-id-template";
+    /**
+     * The name of the property that indicates whether a CA cert can be used to
+     * automatically provision new devices. 
+     */
+    public static final String FIELD_AUTO_PROVISIONING_ENABLED = "auto-provisioning-enabled";
+    /**
      * The name of the property that contains the configuration options to limit 
      * the device connection duration of tenants.
      */
@@ -269,6 +302,10 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      * The name of the property that contains the date on which the data volume limit came into effect.
      */
     public static final String FIELD_EFFECTIVE_SINCE = "effective-since";
+    /**
+     * The name of the property that defines the messaging type to be used for a tenant.
+     */
+    public static final String FIELD_EXT_MESSAGING_TYPE = "messaging-type";
     /**
      * The name of the property that contains the maximum number of bytes to be allowed for a tenant.
      */
@@ -359,39 +396,6 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      * a {@link TracingSamplingMode} value.
      */
     public static final String FIELD_TRACING_SAMPLING_MODE_PER_AUTH_ID = "sampling-mode-per-auth-id";
-
-    /**
-     * The default regular expression to validate tenant IDs supplied when creating tenants are legal.
-     */
-    public static final String DEFAULT_TENANT_ID_PATTERN = "^[a-zA-Z0-9-_\\.]+$";
-
-    /**
-     * The default regular expression to validate device IDs supplied when creating devices are legal.
-     */
-    public static final String DEFAULT_DEVICE_ID_PATTERN = "^[a-zA-Z0-9-_\\.:=]+$";
-
-    /**
-     * The name of the field that contains a boolean indicating if an entity was auto-provisioned.
-     */
-    public static final String FIELD_AUTO_PROVISIONED   = "auto-provisioned";
-
-    /**
-     * The name of the property that indicates whether a CA cert can be used to
-     * automatically provision new devices. 
-     */
-    public static final String FIELD_AUTO_PROVISIONING_ENABLED = "auto-provisioning-enabled";
-
-    /**
-     * The name of the property that indicates whether a unregistered device that authenticates with
-     * a client certificate should be auto-provisioned as a gateway. 
-     */
-    public static final String FIELD_AUTO_PROVISION_AS_GATEWAY = "auto-provision-as-gateway";
-
-    /**
-     * The name of the property that defines the device identifier template for the devices/gateways
-     * being auto-provisioned.
-     */
-    public static final String FIELD_AUTO_PROVISIONING_DEVICE_ID_TEMPLATE = "auto-provisioning-device-id-template";
     /**
      * The name of the place holder for subject DN in the device-id template used during auto-provisioning.
      */
@@ -400,25 +404,30 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      * The name of the place holder for subject DN's Common Name in the device-id template used during auto-provisioning.
      */
     public static final String PLACEHOLDER_SUBJECT_CN = "{{subject-cn}}";
-    /**
-     * The name of the field that contains a boolean indicating if a notification for an auto-provisioned device was sent.
-     */
-    public static final String FIELD_AUTO_PROVISIONING_NOTIFICATION_SENT = "auto-provisioning-notification-sent";
+
+
+    // DEFAULTS
 
     /**
-     * The name of the property that contains the authorities of a device.
+     * The default regular expression to validate device IDs supplied when creating devices are legal.
      */
-    public static final String FIELD_AUTHORITIES = "authorities";
+    public static final String DEFAULT_REGEX_DEVICE_ID = "^[a-zA-Z0-9-_\\.:=]+$";
 
     /**
-     * The name of the authority which authorizes a gateway to perform auto-provisioning.
+     * The default regular expression to validate tenant IDs supplied when creating tenants are legal.
      */
-    public static final String AUTHORITY_AUTO_PROVISIONING_ENABLED = "auto-provisioning-enabled";
+    public static final String DEFAULT_REGEX_TENANT_ID = "^[a-zA-Z0-9-_\\.]+$";
 
     /**
-     * The name of the property that contains command-endpoint of a device.
+     * The default regular expression for validating authentication IDs supplied when creating hashed-password credentials.
      */
-    public static final String COMMAND_ENDPOINT = "command-endpoint";
+    public static final String DEFAULT_REGEX_USERNAME = "^[a-zA-Z0-9-_=\\.]+$";
+    /**
+     * The default pattern for validating authentication IDs supplied when creating hashed-password credentials.
+     * <p>
+     * Based on {@link #DEFAULT_PATTERN_USERNAME}.
+     */
+    public static final Pattern DEFAULT_PATTERN_USERNAME = Pattern.compile(DEFAULT_REGEX_USERNAME);
 
     private RegistryManagementConstants() {
         // prevent instantiation

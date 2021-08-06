@@ -47,10 +47,11 @@ and availability.
 | `HONO_REGISTRY_JDBC_MANAGEMENT_PASSWORD`         <br> `--hono.registry.jdbc.management.password`          | no  | -    | The password used to access the database. |
 | `HONO_REGISTRY_JDBC_MANAGEMENT_MAXIMUMPOOLSIZE`  <br> `--hono.registry.jdbc.management.maximumPoolSize`   | no  | Depends on the connection pool implementation. `15` for C3P0. | The maximum size of the connection pool. |
 | `HONO_REGISTRY_JDBC_MANAGEMENT_TABLENAME`        <br> `--hono.registry.jdbc.management`                   | no  | -    | The name of the table the datastore uses. If the datastore requires multiple tables, this is the prefix. |
-| `HONO_REGISTRY_SVC_TASKEXECUTORQUEUESIZE`        <br> `--hono.registry.svc.taskExecutorQueueSize`         | no  | `1024` | The size of the executor queue for hashing passwords. |
 | `HONO_REGISTRY_SVC_CREDENTIALSTTL`               <br> `--hono.registry.svc.credentialsTtl`                | no  | `1m` | The TTL for credentials responses. |
-| `HONO_REGISTRY_SVC_REGISTRATIONTTL`              <br> `--hono.registry.svc.registrationTtl`               | no  | `1m` | The TTL for registrations responses. |
 | `HONO_REGISTRY_SVC_MAXBCRYPTITERATIONS`          <br> `--hono.registry.svc.maxBcryptIterations`           | no  | `10` | The maximum number of allowed bcrypt iterations. |
+| `HONO_REGISTRY_SVC_REGISTRATIONTTL`              <br> `--hono.registry.svc.registrationTtl`               | no  | `1m` | The TTL for registrations responses. |
+| `HONO_REGISTRY_SVC_TASKEXECUTORQUEUESIZE`        <br> `--hono.registry.svc.taskExecutorQueueSize`         | no  | `1024` | The size of the executor queue for hashing passwords. |
+| `HONO_REGISTRY_SVC_USERNAMEPATTERN`              <br> `--hono.registry.svc.usernamePattern`               | no | `^[a-zA-Z0-9-_=\\.]+$` | The regular expression to use for validating authentication identifiers (user names) of hashed-password credentials. |
 | `HONO_TENANT_JDBC_ADAPTER_URL`                   <br> `--hono.tenant.jdbc.adapter.url`                    | yes | -    | The JDBC URL to the database. |
 | `HONO_TENANT_JDBC_ADAPTER_DRIVERCLASS`           <br> `--hono.tenant.jdbc.adapter.driverClass`            | no  | The default driver registered for the JDBC URL. | The class name of the JDBC driver.|
 | `HONO_TENANT_JDBC_ADAPTER_USERNAME`              <br> `--hono.tenant.jdbc.adapter.username`               | no  | -    | The username used to access the database. |

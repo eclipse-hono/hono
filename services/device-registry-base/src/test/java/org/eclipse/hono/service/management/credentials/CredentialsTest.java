@@ -34,11 +34,13 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.util.RegistryManagementConstants;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.json.DecodeException;
@@ -57,6 +59,11 @@ public class CredentialsTest {
     private static final String NOT_AFTER_STRING = "2031-09-11T11:38:00Z";
     private static final Instant NOT_AFTER = Instant.parse(NOT_AFTER_STRING);
     private static final String SECRET_COMMENT = "secret comment";
+
+    @BeforeEach
+    void setDefaultUsernamePattern() {
+        PasswordCredential.setAuthIdPattern(RegistryManagementConstants.DEFAULT_PATTERN_USERNAME);
+    }
 
     static Stream<String> illegalPasswordCredentialAuthIds() {
         return Stream.of("$", "#", "%", "!", "(", ")", "?", ",", ";", ":", "@", " ", "");
@@ -155,6 +162,28 @@ public class CredentialsTest {
         assertEquals("abc", secret.getSalt());
         assertEquals(RegistryManagementConstants.HASH_FUNCTION_SHA256, secret.getHashFunction());
         assertEquals("2a5d81942494986ce6e23aadfa18cd426a1d7ab90629a0814d244c4cd82cc81f", secret.getPasswordHash());
+    }
+
+    /**
+     * Test the decoding of a JSON Object to a simple password credential succeeds for authentication identifiers
+     * that would be rejected as illegal by default, if an <em>accept all</em> username verification pattern has
+     * been set.
+     */
+    @Test
+    public void testDecodePasswordCredentialSucceedsWithLaxAuthIdPattern() {
+
+        PasswordCredential.setAuthIdPattern(Pattern.compile(".*"));
+        final JsonObject pwdSecret = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_SECRETS_PWD_PLAIN, "the-pwd");
+
+        illegalPasswordCredentialAuthIds().forEach(illegalAuthId -> {
+            final JsonObject jsonCredential = new JsonObject()
+                    .put(RegistryManagementConstants.FIELD_TYPE, RegistryManagementConstants.SECRETS_TYPE_HASHED_PASSWORD)
+                    .put(RegistryManagementConstants.FIELD_AUTH_ID, illegalAuthId)
+                    .put(RegistryManagementConstants.FIELD_SECRETS, new JsonArray().add(pwdSecret));
+            final PasswordCredential credential = jsonCredential.mapTo(PasswordCredential.class);
+            assertThat(credential.getAuthId()).isEqualTo(illegalAuthId);
+        });
     }
 
     /**
