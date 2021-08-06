@@ -332,8 +332,8 @@ public interface AbstractTenantManagementSearchTenantsTest {
      * @param tenantWithIds A list of tenant with ids.
      * @return A succeeded future if all the tenants have been created successfully.
      */
-    default Future<?> createTenants(final Map<String, Tenant> tenantWithIds) {
-        Future<?> createTenantsFuture = Future.succeededFuture();
+    default Future<Void> createTenants(final Map<String, Tenant> tenantWithIds) {
+        Future<Void> createTenantsFuture = Future.succeededFuture();
 
         for (final Map.Entry<String, Tenant> entry : tenantWithIds.entrySet()) {
             createTenantsFuture = createTenantsFuture.compose(ok -> getTenantManagementService()

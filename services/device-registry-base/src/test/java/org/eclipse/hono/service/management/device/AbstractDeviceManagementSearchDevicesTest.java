@@ -316,8 +316,8 @@ public interface AbstractDeviceManagementSearchDevicesTest {
      * @param devices The devices to create.
      * @return A succeeded future if all devices have been created successfully.
      */
-    default Future<?> createDevices(final String tenantId, final Map<String, Device> devices) {
-        Future<?> current = Future.succeededFuture();
+    default Future<Void> createDevices(final String tenantId, final Map<String, Device> devices) {
+        Future<Void> current = Future.succeededFuture();
 
         for (final Map.Entry<String, Device> entry : devices.entrySet()) {
 

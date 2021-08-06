@@ -76,9 +76,9 @@ public class Application extends AbstractApplication {
      * {@inheritDoc}
      */
     @Override
-    protected Future<?> deployRequiredVerticles(final int maxInstances) {
+    protected Future<Void> deployRequiredVerticles(final int maxInstances) {
 
-        return CompositeFuture.all(deployVerticle(serviceImplementation), deployVerticle(authService));
+        return CompositeFuture.all(deployVerticle(serviceImplementation), deployVerticle(authService)).mapEmpty();
     }
 
     private Future<String> deployVerticle(final Object component) {

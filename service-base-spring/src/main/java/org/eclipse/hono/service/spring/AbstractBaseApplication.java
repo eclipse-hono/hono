@@ -184,7 +184,7 @@ public abstract class AbstractBaseApplication implements ApplicationRunner {
      *
      * @return A future indicating success. Application start-up fails if the returned future fails.
      */
-    protected Future<?> deployVerticles() {
+    protected Future<Void> deployVerticles() {
         return Future.succeededFuture();
     }
 
@@ -197,7 +197,7 @@ public abstract class AbstractBaseApplication implements ApplicationRunner {
      *
      * @return A future indicating success. Application start-up fails if the returned future fails.
      */
-    protected Future<?> postDeployVerticles() {
+    protected Future<Void> postDeployVerticles() {
         return Future.succeededFuture();
     }
 

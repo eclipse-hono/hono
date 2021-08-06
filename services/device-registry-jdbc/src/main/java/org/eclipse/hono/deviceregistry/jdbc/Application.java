@@ -74,10 +74,11 @@ public class Application extends AbstractApplication {
      * Deploys a single instance of the authentication service.
      */
     @Override
-    protected Future<?> deployRequiredVerticles(final int maxInstances) {
+    protected Future<Void> deployRequiredVerticles(final int maxInstances) {
 
         return deployVerticle(authService)
-                .onSuccess(id -> registerHealthCheckProvider(authService));
+                .onSuccess(id -> registerHealthCheckProvider(authService))
+                .mapEmpty();
     }
 
     /**

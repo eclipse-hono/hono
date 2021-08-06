@@ -772,12 +772,12 @@ public interface AbstractRegistrationServiceTest {
      * @param deviceId The identifier of the device.
      * @return A succeeded future if the device is registered.
      */
-    default Future<?> assertCanReadDevice(final String tenantId, final String deviceId) {
+    default Future<Void> assertCanReadDevice(final String tenantId, final String deviceId) {
 
         return getDeviceManagementService().readDevice(tenantId, deviceId, NoopSpan.INSTANCE)
             .compose(r -> {
                 if (r.isOk()) {
-                    return Future.succeededFuture(r);
+                    return Future.succeededFuture();
                 } else {
                     return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED));
                 }
@@ -795,7 +795,7 @@ public interface AbstractRegistrationServiceTest {
      * @return A new future that will succeed when the read/get operations succeed and the assertions are valid.
      *         Otherwise the future must fail.
      */
-    default Future<?> assertDevice(
+    default Future<Void> assertDevice(
             final String tenant,
             final String deviceId,
             final Optional<String> gatewayId,
@@ -821,7 +821,8 @@ public interface AbstractRegistrationServiceTest {
                 f2.map(r -> {
                     adapterAssertions.handle(r);
                     return null;
-                }));
+                }))
+                .mapEmpty();
     }
 
     /**
@@ -830,9 +831,9 @@ public interface AbstractRegistrationServiceTest {
      * @param devices The device identifiers to check.
      * @return A succeeded future if none of the devices exist.
      */
-    default Future<?> assertDevicesNotFound(final Set<String> devices) {
+    default Future<Void> assertDevicesNotFound(final Set<String> devices) {
 
-        Future<?> current = Future.succeededFuture();
+        Future<Void> current = Future.succeededFuture();
 
         for (final String deviceId : devices) {
             current = current.compose(ok -> assertDevice(TENANT, deviceId, Optional.empty(),
@@ -856,9 +857,9 @@ public interface AbstractRegistrationServiceTest {
      * @param devices The devices and device information.
      * @return A future, reporting the assertion status.
      */
-    default Future<?> assertDevices(final Map<String, Device> devices) {
+    default Future<Void> assertDevices(final Map<String, Device> devices) {
 
-        Future<?> current = Future.succeededFuture();
+        Future<Void> current = Future.succeededFuture();
 
         for (final Map.Entry<String, Device> entry : devices.entrySet()) {
             final var device = entry.getValue();
@@ -895,7 +896,7 @@ public interface AbstractRegistrationServiceTest {
      * @param device The device data.
      * @return A succeeded future if the device has been created successfully.
      */
-    default Future<?> createDevice(final String deviceId, final Device device) {
+    default Future<Void> createDevice(final String deviceId, final Device device) {
         return createDevices(Map.of(deviceId, device));
     }
 
@@ -905,9 +906,9 @@ public interface AbstractRegistrationServiceTest {
      * @param devices The devices to create.
      * @return A succeeded future if all devices have been created successfully.
      */
-    default Future<?> createDevices(final Map<String, Device> devices) {
+    default Future<Void> createDevices(final Map<String, Device> devices) {
 
-        Future<?> current = Future.succeededFuture();
+        Future<Void> current = Future.succeededFuture();
         for (final Map.Entry<String, Device> entry : devices.entrySet()) {
 
             current = current.compose(ok -> getDeviceManagementService()

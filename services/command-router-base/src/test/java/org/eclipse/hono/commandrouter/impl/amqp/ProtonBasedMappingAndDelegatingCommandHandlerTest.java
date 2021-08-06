@@ -358,15 +358,15 @@ public class ProtonBasedMappingAndDelegatingCommandHandlerTest {
         return sender;
     }
 
-    private static HonoConnection mockHonoConnection(final Vertx vertx, final ClientConfigProperties props) {
+    private static <T> HonoConnection mockHonoConnection(final Vertx vertx, final ClientConfigProperties props) {
         final Tracer tracer = NoopTracerFactory.create();
         final HonoConnection connection = mock(HonoConnection.class);
         when(connection.getVertx()).thenReturn(vertx);
         when(connection.getConfig()).thenReturn(props);
         when(connection.getTracer()).thenReturn(tracer);
         when(connection.executeOnContext(VertxMockSupport.anyHandler())).then(invocation -> {
-            final Promise<?> result = Promise.promise();
-            final Handler<Future<?>> handler = invocation.getArgument(0);
+            final Promise<T> result = Promise.promise();
+            final Handler<Future<T>> handler = invocation.getArgument(0);
             handler.handle(result.future());
             return result.future();
         });

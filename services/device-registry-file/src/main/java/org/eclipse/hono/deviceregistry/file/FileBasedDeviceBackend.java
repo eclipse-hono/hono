@@ -286,16 +286,18 @@ public class FileBasedDeviceBackend implements DeviceBackend, RegistrationServic
                                 Optional.empty())));
     }
 
-    Future<?> saveToFile() {
+    Future<Void> saveToFile() {
         return CompositeFuture.all(
                 this.registrationService.saveToFile(),
-                this.credentialsService.saveToFile());
+                this.credentialsService.saveToFile())
+            .mapEmpty();
     }
 
-    Future<?> loadFromFile() {
+    Future<Void> loadFromFile() {
         return CompositeFuture.all(
                 this.registrationService.loadRegistrationData(),
-                this.credentialsService.loadCredentials());
+                this.credentialsService.loadCredentials())
+            .mapEmpty();
     }
 
     /**

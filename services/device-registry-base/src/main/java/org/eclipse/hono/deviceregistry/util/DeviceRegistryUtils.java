@@ -280,7 +280,7 @@ public final class DeviceRegistryUtils {
      *         The future will be failed with a {@link ClientErrorException} if the elements are
      *         not unique.
      */
-    public static Future<?> assertTypeAndAuthIdUniqueness(final List<? extends CommonCredential> credentials) {
+    public static Future<Void> assertTypeAndAuthIdUniqueness(final List<? extends CommonCredential> credentials) {
 
         final long uniqueAuthIdAndTypeCount = credentials.stream()
             .map(credential -> String.format("%s::%s", credential.getType(), credential.getAuthId()))

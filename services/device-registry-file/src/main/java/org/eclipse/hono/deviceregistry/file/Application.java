@@ -69,7 +69,7 @@ public class Application extends AbstractBaseApplication {
     }
 
     @Override
-    protected final Future<?> deployVerticles() {
+    protected final Future<Void> deployVerticles() {
 
         return super.deployVerticles().compose(ok -> {
 
@@ -83,7 +83,7 @@ public class Application extends AbstractBaseApplication {
                 futures.add(result.future());
             }
 
-            return CompositeFuture.all(futures);
+            return CompositeFuture.all(futures).mapEmpty();
 
         });
 

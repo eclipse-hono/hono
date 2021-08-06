@@ -251,7 +251,7 @@ public class TableManagementStore extends AbstractDeviceStore {
 
     }
 
-    private Future<?> createGroups(
+    private Future<Void> createGroups(
             final SQLConnection connection,
             final DeviceKey key,
             final Set<String> memberOf,
@@ -273,11 +273,12 @@ public class TableManagementStore extends AbstractDeviceStore {
                             .update(connection)
                             .recover(SQL::translateException);
                 })
-                .collect(Collectors.toList()));
+                .collect(Collectors.toList()))
+                .mapEmpty();
 
     }
 
-    private Future<?> deleteGroups(final SQLConnection connection,
+    private Future<Void> deleteGroups(final SQLConnection connection,
                                    final DeviceKey key,
                                    final SpanContext context) {
 
@@ -291,7 +292,8 @@ public class TableManagementStore extends AbstractDeviceStore {
         return expanded
                 .trace(this.tracer, context)
                 .update(connection)
-                .recover(SQL::translateException);
+                .recover(SQL::translateException)
+                .mapEmpty();
 
     }
 

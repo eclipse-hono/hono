@@ -60,7 +60,7 @@ public class AbstractApplication extends AbstractBaseApplication {
     }
 
     @Override
-    protected Future<?> deployVerticles() {
+    protected Future<Void> deployVerticles() {
         // call into super ...
         return super.deployVerticles()
                 // ... then deploy the required verticles
@@ -80,7 +80,7 @@ public class AbstractApplication extends AbstractBaseApplication {
      * @param maxInstances The number of service verticle instances to deploy.
      * @return A future indicating success. Application start-up fails if the returned future fails.
      */
-    protected Future<?> deployRequiredVerticles(final int maxInstances) {
+    protected Future<Void> deployRequiredVerticles(final int maxInstances) {
         return Future.succeededFuture();
     }
 
@@ -91,7 +91,7 @@ public class AbstractApplication extends AbstractBaseApplication {
      * @return A future indicating the outcome of the operation. The future will
      *         be succeeded if the service instances have been deployed successfully.
      */
-    private Future<?> deployServiceVerticles(final int maxInstances) {
+    private Future<Void> deployServiceVerticles(final int maxInstances) {
 
         @SuppressWarnings("rawtypes")
         final List<Future> deploymentTracker = new ArrayList<>();
@@ -111,7 +111,7 @@ public class AbstractApplication extends AbstractBaseApplication {
             }
         }
 
-        return CompositeFuture.all(deploymentTracker);
+        return CompositeFuture.all(deploymentTracker).mapEmpty();
     }
 
     /**

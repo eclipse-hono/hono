@@ -64,9 +64,9 @@ public class Application extends AbstractApplication {
      * Deploys the authentication service verticle.
      */
     @Override
-    protected Future<?> deployRequiredVerticles(final int maxInstances) {
+    protected Future<Void> deployRequiredVerticles(final int maxInstances) {
 
-        return deployVerticle(authService);
+        return deployVerticle(authService).mapEmpty();
     }
 
     private Future<String> deployVerticle(final Object component) {

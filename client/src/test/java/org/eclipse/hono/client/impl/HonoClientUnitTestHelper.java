@@ -113,12 +113,13 @@ public final class HonoClientUnitTestHelper {
     /**
      * Creates a mocked Hono connection.
      *
+     * @param <T> The type of result when executing code on the connection's vert.x Context.
      * @param vertx The vert.x instance to use.
      * @param props The client properties to use.
      * @param tracer The tracer to use.
      * @return The connection.
      */
-    public static HonoConnection mockHonoConnection(
+    public static <T> HonoConnection mockHonoConnection(
             final Vertx vertx,
             final ClientConfigProperties props,
             final Tracer tracer) {
@@ -128,8 +129,8 @@ public final class HonoClientUnitTestHelper {
         when(connection.getConfig()).thenReturn(props);
         when(connection.getTracer()).thenReturn(tracer);
         when(connection.executeOnContext(VertxMockSupport.anyHandler())).then(invocation -> {
-            final Promise<?> result = Promise.promise();
-            final Handler<Future<?>> handler = invocation.getArgument(0);
+            final Promise<T> result = Promise.promise();
+            final Handler<Future<T>> handler = invocation.getArgument(0);
             handler.handle(result.future());
             return result.future();
         });
