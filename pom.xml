@@ -232,7 +232,6 @@
     <module>client-device-connection-infinispan-quarkus</module>
     <module>clients</module>
     <module>demo-certs</module>
-    <module>deploy</module>
     <module>examples</module>
     <module>legal</module>
     <module>service-base</module>
