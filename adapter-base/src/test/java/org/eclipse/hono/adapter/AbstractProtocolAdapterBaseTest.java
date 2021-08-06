@@ -628,7 +628,7 @@ public class AbstractProtocolAdapterBaseTest {
         when(tenantClient.get(eq(Constants.DEFAULT_TENANT), any())).thenReturn(Future.succeededFuture(tenantObject));
 
         // THEN the adapter forwards the connection event message downstream
-        adapter.sendConnectedEvent("remote-id", authenticatedDevice)
+        adapter.sendConnectedEvent("remote-id", authenticatedDevice, null)
             .onComplete(ctx.succeeding(result -> {
                 ctx.verify(() -> {
                         verify(amqpEventSender).sendEvent(
@@ -671,7 +671,7 @@ public class AbstractProtocolAdapterBaseTest {
         when(tenantClient.get(eq(Constants.DEFAULT_TENANT), any())).thenReturn(Future.succeededFuture(tenantObject));
 
         // THEN the adapter forwards the connection event message downstream
-        adapter.sendConnectedEvent("remote-id", authenticatedDevice)
+        adapter.sendConnectedEvent("remote-id", authenticatedDevice, null)
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
                         verify(kafkaEventSender).sendEvent(

@@ -347,12 +347,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         con.disconnectHandler(lostConnection -> {
             log.debug("lost connection to device [container: {}]", con.getRemoteContainer());
             onConnectionLoss(con);
-            decrementConnectionCount(con);
         });
         con.closeHandler(remoteClose -> {
             handleRemoteConnectionClose(con, remoteClose);
             onConnectionLoss(con);
-            decrementConnectionCount(con);
         });
 
         // when a begin frame is received
@@ -394,6 +392,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         @SuppressWarnings("rawtypes")
         final List<Future> handlerResults = getConnectionLossHandlers(con).stream().map(handler -> handler.apply(span))
                 .collect(Collectors.toList());
+        decrementConnectionCount(con, span.context());
         CompositeFuture.join(handlerResults).recover(thr -> {
             Tags.ERROR.set(span, true);
             return Future.failedFuture(thr);
@@ -422,7 +421,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             .compose(ok -> checkAuthorizationAndResourceLimits(authenticatedDevice, con, span))
             .compose(ok -> sendConnectedEvent(
                     Optional.ofNullable(con.getRemoteContainer()).orElse("unknown"),
-                    authenticatedDevice))
+                    authenticatedDevice,
+                    span.context()))
             .map(ok -> {
                 con.setContainer(getTypeName());
                 con.setOfferedCapabilities(new Symbol[] {Constants.CAP_ANONYMOUS_RELAY});
@@ -550,7 +550,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         con.disconnect();
     }
 
-    private void decrementConnectionCount(final ProtonConnection con) {
+    private void decrementConnectionCount(final ProtonConnection con, final SpanContext context) {
 
         final Device device = getAuthenticatedDevice(con);
         if (device == null) {
@@ -560,7 +560,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         }
         sendDisconnectedEvent(
                 Optional.ofNullable(con.getRemoteContainer()).orElse("unknown"),
-                device);
+                device,
+                context);
     }
 
     /**

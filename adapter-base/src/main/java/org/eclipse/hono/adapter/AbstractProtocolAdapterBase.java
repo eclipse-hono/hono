@@ -947,29 +947,32 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *
      * @param remoteId The remote ID.
      * @param authenticatedDevice The (optional) authenticated device.
+     * @param context The currently active OpenTracing span context or @{code null}.
      * @return A failed future if an event producer is set but the event could not be published. Otherwise, a succeeded
      *         event.
-     * @see ConnectionEventProducer#connected(ConnectionEventProducer.Context, String, String, Device, JsonObject)
+     * @see ConnectionEventProducer#connected(ConnectionEventProducer.Context, String, String, Device, JsonObject, SpanContext)
      */
-    protected Future<?> sendConnectedEvent(final String remoteId, final Device authenticatedDevice) {
+    protected Future<?> sendConnectedEvent(final String remoteId, final Device authenticatedDevice, final SpanContext context) {
         if (this.connectionEventProducer != null) {
-            return getTenantClient().get(authenticatedDevice.getTenantId(),
-                    null)
+            return getTenantClient().get(authenticatedDevice.getTenantId(), context)
                     .map(this::getEventSender)
-                    .compose(es -> this.connectionEventProducer.connected(new ConnectionEventProducer.Context() {
+                    .compose(es -> this.connectionEventProducer.connected(
+                            new ConnectionEventProducer.Context() {
+                                @Override
+                                public EventSender getMessageSenderClient() {
+                                    return es;
+                                }
 
-                        @Override
-                        public EventSender getMessageSenderClient() {
-                            return es;
-                        }
-
-                        @Override
-                        public TenantClient getTenantClient() {
-                            return AbstractProtocolAdapterBase.this.getTenantClient();
-                        }
-
-                    }, remoteId, getTypeName(),
-                            authenticatedDevice, null));
+                                @Override
+                                public TenantClient getTenantClient() {
+                                    return AbstractProtocolAdapterBase.this.getTenantClient();
+                                }
+                            },
+                            remoteId, 
+                            getTypeName(), 
+                            authenticatedDevice, 
+                            null,
+                            context));
         } else {
             return Future.succeededFuture();
         }
@@ -980,28 +983,32 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *
      * @param remoteId The remote ID.
      * @param authenticatedDevice The (optional) authenticated device.
+     * @param context The currently active OpenTracing span context or @{code null}.
      * @return A failed future if an event producer is set but the event could not be published. Otherwise, a succeeded
      *         event.
-     * @see ConnectionEventProducer#disconnected(ConnectionEventProducer.Context, String, String, Device, JsonObject)
+     * @see ConnectionEventProducer#disconnected(ConnectionEventProducer.Context, String, String, Device, JsonObject, SpanContext)
      */
-    protected Future<?> sendDisconnectedEvent(final String remoteId, final Device authenticatedDevice) {
+    protected Future<?> sendDisconnectedEvent(final String remoteId, final Device authenticatedDevice, final SpanContext context) {
         if (this.connectionEventProducer != null) {
-            return getTenantClient().get(authenticatedDevice.getTenantId(), null)
+            return getTenantClient().get(authenticatedDevice.getTenantId(), context)
                     .map(this::getEventSender)
-                    .compose(es -> this.connectionEventProducer.disconnected(new ConnectionEventProducer.Context() {
+                    .compose(es -> this.connectionEventProducer.disconnected(
+                            new ConnectionEventProducer.Context() {
+                                @Override
+                                public EventSender getMessageSenderClient() {
+                                    return es;
+                                }
 
-                        @Override
-                        public EventSender getMessageSenderClient() {
-                            return es;
-                        }
-
-                        @Override
-                        public TenantClient getTenantClient() {
-                            return AbstractProtocolAdapterBase.this.getTenantClient();
-                        }
-
-                    }, remoteId, getTypeName(),
-                            authenticatedDevice, null));
+                                @Override
+                                public TenantClient getTenantClient() {
+                                    return AbstractProtocolAdapterBase.this.getTenantClient();
+                                }
+                            },
+                            remoteId,
+                            getTypeName(),
+                            authenticatedDevice,
+                            null,
+                            context));
         } else {
             return Future.succeededFuture();
         }
