@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,7 +25,7 @@ public class TenantServiceProperties {
 
     private Duration tenantTtl = DEFAULT_TENANT_TTL;
 
-    public Duration getTenantTtl() {
+    public final Duration getTenantTtl() {
         return this.tenantTtl;
     }
 
@@ -36,7 +36,7 @@ public class TenantServiceProperties {
      * @throws NullPointerException if ttl is {@code null}.
      * @throws IllegalArgumentException if the duration is less than one second.
      */
-    public void setTenantTtl(final Duration tenantTtl) {
+    public final void setTenantTtl(final Duration tenantTtl) {
         Objects.requireNonNull(tenantTtl);
 
         if (tenantTtl.toSeconds() <= 0) {

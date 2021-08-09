@@ -55,8 +55,8 @@ public class ServiceConfigProperties extends ServerConfig {
     private int receiverLinkCredit = DEFAULT_RECEIVER_LINK_CREDITS;
     private String corsAllowedOrigin = "*";
     private long sendTimeOut = DEFAULT_SEND_TIMEOUT_IN_MS;
-    private Pattern tenantIdPattern = Pattern.compile(RegistryManagementConstants.DEFAULT_TENANT_ID_PATTERN);
-    private Pattern deviceIdPattern = Pattern.compile(RegistryManagementConstants.DEFAULT_DEVICE_ID_PATTERN);
+    private Pattern tenantIdPattern = Pattern.compile(RegistryManagementConstants.DEFAULT_REGEX_TENANT_ID);
+    private Pattern deviceIdPattern = Pattern.compile(RegistryManagementConstants.DEFAULT_REGEX_DEVICE_ID);
 
     /**
      * Sets the maximum size of a message payload this server accepts from clients.
@@ -230,7 +230,7 @@ public class ServiceConfigProperties extends ServerConfig {
     /**
      * Gets the pattern defining valid device identifiers.
      * <p>
-     * The default value of this property is {@value org.eclipse.hono.util.RegistryManagementConstants#DEFAULT_DEVICE_ID_PATTERN}.
+     * The default value of this property is {@value org.eclipse.hono.util.RegistryManagementConstants#DEFAULT_REGEX_DEVICE_ID}.
      *
      * @return The pattern.
      */
@@ -241,7 +241,7 @@ public class ServiceConfigProperties extends ServerConfig {
     /**
      * Sets the regular expression defining valid device identifiers.
      * <p>
-     * The default value of this property is {@value org.eclipse.hono.util.RegistryManagementConstants#DEFAULT_DEVICE_ID_PATTERN}
+     * The default value of this property is {@value org.eclipse.hono.util.RegistryManagementConstants#DEFAULT_REGEX_DEVICE_ID}
      *
      * @param regex The regular expression.
      * @throws NullPointerException if regex is {@code null}.
@@ -254,7 +254,7 @@ public class ServiceConfigProperties extends ServerConfig {
     /**
      * Gets the pattern defining valid tenant identifiers.
      * <p>
-     * The default value of this property is {@value org.eclipse.hono.util.RegistryManagementConstants#DEFAULT_TENANT_ID_PATTERN}.
+     * The default value of this property is {@value org.eclipse.hono.util.RegistryManagementConstants#DEFAULT_REGEX_TENANT_ID}.
      *
      * @return The pattern.
      */
@@ -265,7 +265,7 @@ public class ServiceConfigProperties extends ServerConfig {
     /**
      * Sets the regular expression defining valid tenant identifiers.
      * <p>
-     * The default value of this property is {@link org.eclipse.hono.util.RegistryManagementConstants#DEFAULT_TENANT_ID_PATTERN}
+     * The default value of this property is {@link org.eclipse.hono.util.RegistryManagementConstants#DEFAULT_REGEX_TENANT_ID}
      *
      * @param regex The regular expression.
      * @throws NullPointerException if regex is {@code null}.

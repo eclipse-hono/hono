@@ -60,6 +60,7 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_REGISTRY_SVC_COLLECTION_NAME`<br>`--hono.registry.svc.collectionName` | no | `devices` | The name of the MongoDB collection where the server stores registered device information.|
 | `HONO_REGISTRY_SVC_MAX_DEVICES_PER_TENANT`<br>`--hono.registry.svc.maxDevicesPerTenant` | no | `-1` | The number of devices that can be registered for each tenant. It is an error to set this property to a value < -1. The value `-1` indicates that no limit is set.|
 | `HONO_REGISTRY_SVC_RECEIVER_LINK_CREDIT`<br>`--hono.registry.svc.receiverLinkCredit` | no | `100` | The number of credits to flow to a client connecting to the Device Registration endpoint. |
+| `HONO_REGISTRY_SVC_USERNAMEPATTERN`<br>`--hono.registry.svc.usernamePattern` | no | `^[a-zA-Z0-9-_=\\.]+$` | The regular expression to use for validating authentication identifiers (user names) of hashed-password credentials. |
 | `HONO_TENANT_SVC_CACHE_MAX_AGE`<br>`--hono.tenant.svc.cacheMaxAge` | no | `180` | The maximum period of time (seconds) that information returned by the service's operations may be cached for. |
 | `HONO_TENANT_SVC_COLLECTION_NAME`<br>`--hono.tenant.svc.collectionName` | no | `tenants` | The name of the MongoDB collection where the server stores tenants information.|
 | `HONO_TENANT_SVC_RECEIVER_LINK_CREDIT`<br>`--hono.tenant.svc.receiverLinkCredit` | no | `100` | The number of credits to flow to a client connecting to the Tenant endpoint. |
