@@ -129,6 +129,9 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 TracingHelper.logError(span, e);
                 // fall back to default value
                 result.complete(Boolean.FALSE);
+                if (e instanceof InterruptedException) {
+                    Thread.currentThread().interrupt();
+                }
             }
         } else {
             LOG.trace("Prometheus query [tenant: {}] still running, using default value", tenant.getTenantId());
@@ -209,11 +212,14 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                             .map(limit -> (limitedResource.getCurrentValue() + payloadSize) > limit)
                             .orElse(false);
                     result.complete(isExceeded);
-                } catch (InterruptedException | ExecutionException t) {
+                } catch (InterruptedException | ExecutionException e) {
                     // this means that the query could not be run successfully
-                    TracingHelper.logError(span, t);
+                    TracingHelper.logError(span, e);
                     // fall back to default value
                     result.complete(Boolean.FALSE);
+                    if (e instanceof InterruptedException) {
+                        Thread.currentThread().interrupt();
+                    }
                 }
             } else {
                 LOG.trace("Prometheus query [tenant: {}] still running, using default value", tenant.getTenantId());
@@ -258,11 +264,14 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                         .map(limit -> limitedResource.getCurrentValue().compareTo(limit) >= 0)
                         .orElse(false);
                 result.complete(isExceeded);
-            } catch (InterruptedException | ExecutionException t) {
+            } catch (InterruptedException | ExecutionException e) {
                 // this means that the query could not be run successfully
-                TracingHelper.logError(span, t);
+                TracingHelper.logError(span, e);
                 // fall back to default value
                 result.complete(Boolean.FALSE);
+                if (e instanceof InterruptedException) {
+                    Thread.currentThread().interrupt();
+                }
             }
         } else {
             LOG.trace("Prometheus query [tenant: {}] still running, using default value", tenant.getTenantId());

@@ -1055,6 +1055,9 @@ public final class IntegrationTestSupport {
         try {
             return result.get(timeoutSeconds, TimeUnit.SECONDS);
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
             throw new IllegalStateException("could not set up gateway device", e);
         }
     }
