@@ -425,7 +425,7 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
     /**
      * The default pattern for validating authentication IDs supplied when creating hashed-password credentials.
      * <p>
-     * Based on {@link #DEFAULT_PATTERN_USERNAME}.
+     * Based on {@link #DEFAULT_REGEX_USERNAME}.
      */
     public static final Pattern DEFAULT_PATTERN_USERNAME = Pattern.compile(DEFAULT_REGEX_USERNAME);
 

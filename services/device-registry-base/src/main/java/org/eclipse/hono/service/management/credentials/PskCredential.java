@@ -34,7 +34,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * The <em>auth-id</em> in this case serves as the <em>PSK identity</em>. According to
  * <a href="https://datatracker.ietf.org/doc/html/rfc4279#section-5.1">RFC 4279, Section 5.1</a>,
  * the PSK identity can be an arbitrary UTF-8 encoded string of up to 2^16-1 bytes length.
- * There are nor restrictions regarding the characters being allowed in the identifier.
+ * There are no restrictions regarding the characters being allowed in the identifier.
  */
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 public class PskCredential extends CommonCredential {
