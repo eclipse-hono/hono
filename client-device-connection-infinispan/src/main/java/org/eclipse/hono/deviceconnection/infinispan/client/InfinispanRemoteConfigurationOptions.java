@@ -25,7 +25,7 @@ import io.smallrye.config.WithDefault;
  * Options for configuring a Hotrod connection to a remote cache.
  *
  */
-@ConfigMapping(prefix = "hono.commandRouter.cache.remote", namingStrategy = NamingStrategy.VERBATIM)
+@ConfigMapping(prefix = "hono.cache.infinispan", namingStrategy = NamingStrategy.VERBATIM)
 public interface InfinispanRemoteConfigurationOptions {
 
     /**

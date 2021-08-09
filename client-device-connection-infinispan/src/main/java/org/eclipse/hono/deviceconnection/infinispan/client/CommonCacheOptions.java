@@ -23,7 +23,7 @@ import io.smallrye.config.WithDefault;
  * Common options for configuring a cache.
  *
  */
-@ConfigMapping(prefix = "hono.commandRouter.cache.common", namingStrategy = NamingStrategy.VERBATIM)
+@ConfigMapping(prefix = "hono.cache.common", namingStrategy = NamingStrategy.VERBATIM)
 public interface CommonCacheOptions {
 
     /**

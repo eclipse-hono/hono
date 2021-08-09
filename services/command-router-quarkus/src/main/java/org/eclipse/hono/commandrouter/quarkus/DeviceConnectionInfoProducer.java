@@ -40,6 +40,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.opentracing.Tracer;
+import io.smallrye.config.ConfigMapping;
 import io.vertx.core.Vertx;
 
 /**
@@ -66,7 +67,9 @@ public class DeviceConnectionInfoProducer {
     @Produces
     BasicCache<String, String> cache(
             final Vertx vertx,
+            @ConfigMapping(prefix = "hono.commandRouter.cache.common")
             final CommonCacheOptions commonCacheOptions,
+            @ConfigMapping(prefix = "hono.commandRouter.cache.remote")
             final InfinispanRemoteConfigurationOptions remoteCacheConfigurationOptions) {
 
         final var commonCacheConfig = new CommonCacheConfig(commonCacheOptions);
