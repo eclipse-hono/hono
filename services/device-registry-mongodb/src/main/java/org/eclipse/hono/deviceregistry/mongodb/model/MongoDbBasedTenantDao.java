@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.deviceregistry.mongodb.utils.MongoDbDocumentBuilder;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.management.Filter;
@@ -80,6 +81,64 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
         super(mongoClient, collectionName, tracer, null);
     }
 
+    private Future<String> findErroneousSubjectDnIndex() {
+
+        return listIndexes()
+            .map(indexes -> {
+                final Optional<JsonObject> index = indexes.stream()
+                        .filter(JsonObject.class::isInstance)
+                        .map(JsonObject.class::cast)
+                        .filter(idx -> {
+                            return Optional.ofNullable(idx.getJsonObject("key"))
+                                    .map(key -> key.containsKey("tenant.trusted-ca.subject-dn"))
+                                    .orElse(false);
+                        })
+                        .filter(idx -> {
+                            return Optional.ofNullable(idx.getJsonObject("partialFilterExpression"))
+                                    .flatMap(expr -> Optional.ofNullable(expr.getJsonObject("tenant.trusted-ca")))
+                                    .map(condition -> condition.getBoolean("$exists", Boolean.FALSE))
+                                    .orElse(false);
+                        })
+                        .findFirst();
+                if (index.isPresent()) {
+                    if (LOG.isInfoEnabled()) {
+                        LOG.info("found erroneous index [collection: {}]:{}{}",
+                                collectionName, System.lineSeparator(), index.get().encodePrettily());
+                    }
+                    return index.get().getString("name");
+                } else {
+                    throw new ClientErrorException(
+                            HttpURLConnection.HTTP_NOT_FOUND,
+                            "did not find erroneous subject-dn index");
+                }
+            });
+    }
+
+    private Future<Void> removeErroneousIndexes() {
+
+        return findErroneousSubjectDnIndex()
+            .compose(indexName -> {
+                LOG.info("dropping erroneous index [collection: {}, name: {}]", collectionName, indexName);
+                final Promise<JsonObject> result = Promise.promise();
+                mongoClient.runCommand(
+                        "dropIndexes",
+                        new JsonObject()
+                            .put("dropIndexes", collectionName)
+                            .put("index", indexName),
+                        result);
+                return result.future();
+            })
+            .recover(t -> {
+                if (ServiceInvocationException.extractStatusCode(t) == HttpURLConnection.HTTP_NOT_FOUND) {
+                    LOG.info("no erroneous subject-dn index found");
+                } else {
+                    LOG.warn("failed to delete index", t);
+                }
+                return Future.succeededFuture();
+            })
+            .mapEmpty();
+    }
+
     /**
      * Creates the indices in the MongoDB that can be used to make querying of data more efficient.
      *
@@ -90,21 +149,28 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
         final Promise<Void> result = Promise.promise();
 
         if (creatingIndices.compareAndSet(false, true)) {
-            // create unique index on tenant ID
-            return createIndex(
-                    new JsonObject().put(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, 1),
-                    new IndexOptions().unique(true))
-                // create unique index on tenant.trusted-ca.subject-dn
-                // to ensure that two tenants never share a trusted-ca
+            // remove erroneous unique index on trusted-ca.subject-dn if it exists
+            return removeErroneousIndexes()
+                // create unique index on tenant ID
                 .compose(ok -> createIndex(
-                        new JsonObject().put(TenantDto.FIELD_TENANT + "." +
-                                RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA + "." +
-                                RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN, 1),
-                        new IndexOptions().unique(true)
+                        new JsonObject().put(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, 1),
+                        new IndexOptions().unique(true)))
+                .compose(ok -> removeErroneousIndexes())
+                // create (partial) unique index on tenant.trusted-ca.subject-dn
+                // to ensure that two tenants never share a trusted-ca
+                .compose(ok -> {
+                    final var subjectDnField = String.format("%s.%s.%s",
+                            TenantDto.FIELD_TENANT,
+                            RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA,
+                            RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN);
+                    return createIndex(
+                            new JsonObject().put(subjectDnField, 1),
+                            new IndexOptions()
+                                .unique(true)
                                 .partialFilterExpression(new JsonObject().put(
-                                        TenantDto.FIELD_TENANT + "." +
-                                                RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA,
-                                        new JsonObject().put("$exists", true)))))
+                                        subjectDnField,
+                                        new JsonObject().put("$exists", true))));
+                })
                 .onSuccess(ok -> indicesCreated.set(true))
                 .onComplete(r -> {
                     creatingIndices.set(false);

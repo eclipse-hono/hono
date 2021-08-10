@@ -564,6 +564,51 @@ public interface AbstractTenantServiceTest {
     }
 
     /**
+     * Verifies that multiple tenants can contain an empty collection of trusted CAs.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    default void testUpdateTenantAllowsEmptyCaArray(final VertxTestContext ctx) {
+
+        final var trustedCaOne = new TrustedCertificateAuthority();
+        trustedCaOne.setSubjectDn("CN=one");
+        trustedCaOne.setPublicKey("NOTAKEY".getBytes(StandardCharsets.UTF_8));
+
+        final var trustedCaTwo = new TrustedCertificateAuthority();
+        trustedCaTwo.setSubjectDn("CN=two");
+        trustedCaTwo.setPublicKey("NOTAKEY".getBytes(StandardCharsets.UTF_8));
+
+        // GIVEN two tenants with one CA configured each
+        addTenant("tenantOne", new Tenant().setTrustedCertificateAuthorities(List.of(trustedCaOne)))
+            .onFailure(ctx::failNow)
+            .compose(ok -> addTenant("tenantTwo", new Tenant().setTrustedCertificateAuthorities(List.of(trustedCaTwo))))
+            .onFailure(ctx::failNow)
+            .compose(ok -> {
+                // WHEN removing the CA from the first tenant
+                final var updatedTenantOne = new Tenant().setTrustedCertificateAuthorities(List.of());
+                return getTenantManagementService().updateTenant(
+                        "tenantOne",
+                        updatedTenantOne,
+                        Optional.empty(),
+                        NoopSpan.INSTANCE);
+            })
+            // THEN the update succeeds
+            .onFailure(ctx::failNow)
+            .compose(ok -> {
+                // and WHEN removing the CA from the second tenant
+                final var updatedTenantTwo = new Tenant().setTrustedCertificateAuthorities(List.of());
+                return getTenantManagementService().updateTenant(
+                        "tenantTwo",
+                        updatedTenantTwo,
+                        Optional.empty(),
+                        NoopSpan.INSTANCE);
+            })
+            // THEN the update succeeds as well
+            .onComplete(ctx.completing());
+    }
+
+    /**
      * Verifies that a tenant is registered.
      *
      * @param svc The service to probe.

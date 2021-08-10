@@ -42,6 +42,7 @@ import io.vertx.junit5.VertxTestContext;
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 class MongoDbBasedTenantServiceTest implements AbstractTenantServiceTest {
 
+    private static final String DB_NAME_TENANTS_TEST = "hono-tenants-test";
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedTenantServiceTest.class);
 
     private final MongoDbBasedTenantsConfigProperties config = new MongoDbBasedTenantsConfigProperties();
@@ -59,7 +60,7 @@ class MongoDbBasedTenantServiceTest implements AbstractTenantServiceTest {
     public void startService(final VertxTestContext testContext) {
 
         vertx = Vertx.vertx();
-        dao = MongoDbTestUtils.getTenantDao(vertx, "hono-tenants-test");
+        dao = MongoDbTestUtils.getTenantDao(vertx, DB_NAME_TENANTS_TEST);
         tenantService = new MongoDbBasedTenantService(dao, config);
         tenantManagementService = new MongoDbBasedTenantManagementService(dao, config);
         dao.createIndices().onComplete(testContext.completing());

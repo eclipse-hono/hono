@@ -24,6 +24,7 @@ import javax.annotation.PreDestroy;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.deviceregistry.util.FieldLevelEncryption;
 import org.eclipse.hono.service.management.BaseDto;
 import org.eclipse.hono.service.management.SearchResult;
@@ -40,6 +41,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.json.pointer.JsonPointer;
 import io.vertx.ext.mongo.IndexOptions;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.mongo.MongoClientDeleteResult;
@@ -144,15 +146,40 @@ public abstract class MongoDbBasedDao {
 
         final Promise<Void> result = Promise.promise();
 
-        LOG.debug("creating index [collection: {}]", collectionName);
         mongoClient.createIndexWithOptions(collectionName, keys, options, result);
         return result.future()
                 .onSuccess(ok -> {
-                    LOG.debug("successfully created index [collection: {}]", collectionName);
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("successfully created index [collection: {}, keys: {}, options: {}]",
+                                collectionName, keys.encode(), options.toJson().encode());
+                    }
                 })
                 .onFailure(t -> {
-                    LOG.info("failed to create index [collection: {}]", collectionName, t);
+                    LOG.warn("failed to create index [collection: {}]", collectionName, t);
                 });
+    }
+
+    /**
+     * Retrieves the indexes defined on the collection that this DAO operates on.
+     *
+     * @return A future indicating the outcome of the operation.
+     *         The future will be succeeded with an array of {@code JsonObject}s representing the indexes if the
+     *         query succeeded. Otherwise the future will be failed with a {@link ServiceInvocationException}.
+     */
+    protected final Future<JsonArray> listIndexes() {
+
+        final Promise<JsonObject> resultHandler = Promise.promise();
+        mongoClient.runCommand("listIndexes", new JsonObject().put("listIndexes", collectionName), resultHandler);
+        return resultHandler.future()
+            .map(result -> {
+                final var indexes = (JsonArray) JsonPointer.from("/cursor/firstBatch").queryJsonOrDefault(result, new JsonArray());
+                if (LOG.isTraceEnabled()) {
+                    LOG.trace("found indexes [collection: {}]:{}{}",
+                            collectionName, System.lineSeparator(), indexes.encodePrettily());
+                }
+                return indexes;
+            })
+            .recover(t -> DeviceRegistryUtils.mapError(t, null));
     }
 
     /**
