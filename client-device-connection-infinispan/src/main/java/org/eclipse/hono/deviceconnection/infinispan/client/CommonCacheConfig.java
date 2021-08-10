@@ -27,6 +27,25 @@ public class CommonCacheConfig {
     private String checkKey = "KEY_CONNECTION_CHECK";
     private String checkValue = "VALUE_CONNECTION_CHECK";
 
+    /**
+     * Creates properties for default values.
+     */
+    public CommonCacheConfig() {
+        super();
+    }
+
+    /**
+     * Creates properties for existing options.
+     *
+     * @param options The options to copy.
+     */
+    public CommonCacheConfig(final CommonCacheOptions options) {
+        super();
+        this.cacheName = options.cacheName();
+        this.checkKey = options.checkKey();
+        this.checkValue = options.checkValue();
+    }
+
     public void setCacheName(final String cacheName) {
         this.cacheName = cacheName;
     }

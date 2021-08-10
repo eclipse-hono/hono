@@ -1,0 +1,25 @@
+hono:
+  cache:
+    common:
+      cacheName: "the-cache"
+      checkKey: "the-key"
+      checkValue: "the-value"
+    infinispan:
+      serverList: "data-grid:11222"
+      authServerName: "data-grid"
+      authUsername: "user"
+      authPassword: "secret"
+      authRealm: "ApplicationRealm"
+      saslMechanism: "DIGEST-MD5"
+      socketTimeout: 5000
+      connectTimeout: 5000
+      keyStoreFileName: "/etc/hono/key-store.p12"
+      keyStoreType: "PKCS12"
+      keyStorePassword: "key-store-secret"
+      keyAlias: "infinispan"
+      keyStoreCertificatePassword: "cert-secret"
+      trustStorePath: "/etc/hono/trust-store.p12"
+      trustStoreFileName: "/etc/hono/trust-store-file.p12"
+      trustStoreType: "PKCS12"
+      trustStorePassword: "trust-store-secret"
+      useSsl: true

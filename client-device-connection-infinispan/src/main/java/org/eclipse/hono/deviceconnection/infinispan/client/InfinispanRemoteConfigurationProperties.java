@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -31,6 +31,51 @@ import com.google.common.base.MoreObjects;
 public class InfinispanRemoteConfigurationProperties extends ConfigurationProperties {
 
     private static final Logger LOG = LoggerFactory.getLogger(InfinispanRemoteConfigurationProperties.class);
+
+    /**
+     * Creates properties using default values.
+     */
+    public InfinispanRemoteConfigurationProperties() {
+        super();
+    }
+
+    /**
+     * Creates properties from existing options.
+     *
+     * @param options The options to copy.
+     */
+    @SuppressWarnings("deprecation")
+    public InfinispanRemoteConfigurationProperties(final InfinispanRemoteConfigurationOptions options) {
+        super();
+
+        options.authPassword().ifPresent(this::setAuthPassword);
+        options.authRealm().ifPresent(this::setAuthRealm);
+        options.authServerName().ifPresent(this::setAuthServerName);
+        options.authUsername().ifPresent(this::setAuthUsername);
+
+        setCluster(options.cluster());
+        setConnectionPool(options.connectionPool());
+        setConnectTimeout(options.connectTimeout());
+
+        options.keyAlias().ifPresent(this::setKeyAlias);
+        options.keyStoreCertificatePassword().ifPresent(this::setKeyStoreCertificatePassword);
+        options.keyStoreFileName().ifPresent(this::setKeyStoreFileName);
+        options.keyStorePassword().ifPresent(this::setKeyStorePassword);
+        options.keyStoreType().ifPresent(this::setKeyStoreType);
+
+        options.saslMechanism().ifPresent(this::setSaslMechanism);
+        setSaslProperties(options.saslProperties());
+
+        options.serverList().ifPresent(this::setServerList);
+        setSocketTimeout(options.socketTimeout());
+
+        options.trustStoreFileName().ifPresent(this::setTrustStoreFileName);
+        options.trustStorePassword().ifPresent(this::setTrustStorePassword);
+        options.trustStorePath().ifPresent(this::setTrustStorePath);
+        options.trustStoreType().ifPresent(this::setTrustStoreType);
+
+        setUseSSL(options.useSsl());
+    }
 
     /**
      * Gets a builder for this configuration.

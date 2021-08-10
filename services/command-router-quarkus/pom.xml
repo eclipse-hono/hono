@@ -29,10 +29,6 @@
       <artifactId>hono-service-command-router-base</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>client-device-connection-infinispan-quarkus</artifactId>
-    </dependency>
-    <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-kafka-client</artifactId>
       <exclusions>
@@ -88,6 +84,11 @@
     <profile>
       <id>build-native-image</id>
       <dependencies>
+        <dependency>
+          <groupId>jakarta.json</groupId>
+          <artifactId>jakarta.json-api</artifactId>
+          <version>1.1.6</version>
+        </dependency>
         <dependency>
            <groupId>io.smallrye</groupId>
            <artifactId>smallrye-metrics</artifactId>
