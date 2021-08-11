@@ -20,6 +20,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The device registry implementations did not return a JSON object in a response to a failed request as specified
   in the Device Registry Management API. This has been fixed.
 * The tracing output in error scenarios has been improved in the Mongo DB based device registry.
+* The MongoDB based registry erroneously rejected requests that would result in multiple tenants having an empty
+  set of trusted CAs. This has been fixed.
 
 ## 1.9.0
 
