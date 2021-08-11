@@ -78,11 +78,12 @@ public class Tenant {
     private ResourceLimits resourceLimits;
 
     @JsonProperty(RegistryManagementConstants.FIELD_TRACING)
-    @JsonInclude(Include.NON_EMPTY)
+    @JsonInclude(Include.NON_NULL)
     private TenantTracingConfig tracing;
 
     @JsonProperty(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA)
-    private List<TrustedCertificateAuthority> trustedCertificateAuthorities;
+    @JsonInclude(Include.NON_EMPTY)
+    private List<TrustedCertificateAuthority> trustedCertificateAuthorities = List.of();
 
     @JsonProperty(RegistryManagementConstants.FIELD_REGISTRATION_LIMITS)
     @JsonInclude(Include.NON_DEFAULT)
@@ -118,7 +119,7 @@ public class Tenant {
         this.registrationLimits = other.registrationLimits;
         this.tracing = other.tracing;
         if (Objects.nonNull(other.trustedCertificateAuthorities)) {
-            this.trustedCertificateAuthorities = new ArrayList<>(other.trustedCertificateAuthorities);
+            this.trustedCertificateAuthorities = List.copyOf(other.trustedCertificateAuthorities);
         }
     }
 
@@ -399,7 +400,7 @@ public class Tenant {
      */
     public Tenant setTrustedCertificateAuthorities(final List<TrustedCertificateAuthority> trustedCertificateAuthorities) {
         if (trustedCertificateAuthorities != null) {
-            this.trustedCertificateAuthorities = Collections.unmodifiableList(trustedCertificateAuthorities);
+            this.trustedCertificateAuthorities = List.copyOf(trustedCertificateAuthorities);
         }
         return this;
     }
