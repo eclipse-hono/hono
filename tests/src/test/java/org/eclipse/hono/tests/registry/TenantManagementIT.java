@@ -392,6 +392,39 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
     }
 
     /**
+     * Verifies that setting an empty list of trusted CAs on multiple tenants does not result in a unique key
+     * violation.
+     *
+     * @param context The Vert.x test context.
+     */
+    @Test
+    public void testUpdateTenantPreventsEmptyCaArray(final VertxTestContext context) {
+
+        final var tenantTwoId = getHelper().getRandomTenantId();
+        final PublicKey publicKey = TenantApiTests.getRandomPublicKey();
+        final TrustedCertificateAuthority trustAnchor1 = Tenants
+                .createTrustAnchor("test-ca", "CN=test-dn-1", publicKey.getEncoded(), publicKey.getAlgorithm(),
+                        Instant.now(), Instant.now().plus(365, ChronoUnit.DAYS));
+        final TrustedCertificateAuthority trustAnchor2 = Tenants
+                .createTrustAnchor(null, "CN=test-dn-2", publicKey.getEncoded(), publicKey.getAlgorithm(),
+                        Instant.now(), Instant.now().plus(365, ChronoUnit.DAYS));
+
+        getHelper().registry.addTenant(tenantId, new Tenant().setTrustedCertificateAuthorities(List.of(trustAnchor1)))
+            .compose(ok -> getHelper().registry.addTenant(
+                    tenantTwoId,
+                    new Tenant().setTrustedCertificateAuthorities(List.of(trustAnchor2))))
+            .compose(ok -> getHelper().registry.updateTenant(
+                    tenantId,
+                    new Tenant().setTrustedCertificateAuthorities(List.of()),
+                    HttpURLConnection.HTTP_NO_CONTENT))
+            .compose(ok -> getHelper().registry.updateTenant(
+                    tenantTwoId,
+                    new Tenant().setTrustedCertificateAuthorities(List.of()),
+                    HttpURLConnection.HTTP_NO_CONTENT))
+            .onComplete(context.completing());
+    }
+
+    /**
      * Verifies that the service rejects an update request for a non-existing tenant.
      *
      * @param context The vert.x test context.

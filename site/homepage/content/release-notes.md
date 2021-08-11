@@ -13,6 +13,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   client certificate.
 * The Mongo DB based registry implementation now uses a proper DB index to find credentials by type and authentication
   ID. This will speed up query execution significantly when there are a lot of devices registered for a tenant.
+* The MongoDB based registry erroneously rejected requests that would result in multiple tenants having an empty
+  set of trusted CAs. This has been fixed.
 
 ## 1.8.2
 
