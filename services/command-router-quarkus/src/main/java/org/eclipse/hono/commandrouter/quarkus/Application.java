@@ -29,6 +29,7 @@ import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
 import org.eclipse.hono.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.client.util.MessagingClientProvider;
+import org.eclipse.hono.commandrouter.AdapterInstanceStatusService;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterAmqpServer;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
@@ -55,6 +56,9 @@ import org.slf4j.LoggerFactory;
 
 import com.github.benmanes.caffeine.cache.Cache;
 
+import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.client.Watcher;
+import io.fabric8.kubernetes.client.WatcherException;
 import io.opentracing.Tracer;
 import io.quarkus.arc.config.ConfigPrefix;
 import io.vertx.core.CompositeFuture;
@@ -69,6 +73,18 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
  */
 @ApplicationScoped
 public class Application extends AbstractServiceApplication {
+
+    // workaround so that the Quarkus KubernetesClientProcessor finds a Pod watcher and registers corresponding model classes
+    static {
+        new Watcher<Pod>() {
+            @Override
+            public void eventReceived(final Action action, final Pod resource) {
+            }
+            @Override
+            public void onClose(final WatcherException cause) {
+            }
+        };
+    }
 
     private static final String COMPONENT_NAME = "Hono Command Router";
     private static final Logger LOG = LoggerFactory.getLogger(Application.class);
@@ -108,6 +124,9 @@ public class Application extends AbstractServiceApplication {
 
     @Inject
     AuthenticationService authenticationService;
+
+    @Inject
+    AdapterInstanceStatusService adapterInstanceStatusService;
 
     private Cache<Object, RegistrationResult> registrationResponseCache;
 
@@ -196,6 +215,7 @@ public class Application extends AbstractServiceApplication {
                 tenantClient,
                 deviceConnectionInfo,
                 commandConsumerFactoryProvider(tenantClient, commandTargetMapper),
+                adapterInstanceStatusService,
                 tracer);
     }
 

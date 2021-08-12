@@ -11,6 +11,12 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The JDBC and Mongo DB based registry implementations now support configuration of a regular expression that should
   be used to validate authentication identifiers (user names) of hashed-password credentials. Please refer to the
   corresponding Admin Guides for details.
+* The Command Router component is now able to determine the state of protocol adapter instances, preventing command
+  & control messages to be sent to already terminated adapter instances. Hono Kubernetes deployments where not all
+  protocol adapters are part of the same Kubernetes cluster and namespace that the Command Router component is in,
+  need to disable this feature via the `hono.commandRouter.svc.kubernetesBasedAdapterInstanceStatusServiceEnabled`
+  property. Please refer to the [Command Router Admin Guide]({{% doclink "/admin-guide/command-router-config/#service-configuration" %}})
+  for details.
 
 ### Fixes & Enhancements
 

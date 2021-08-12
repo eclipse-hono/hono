@@ -23,6 +23,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static com.google.common.truth.Truth.assertThat;
@@ -40,6 +41,7 @@ import java.util.stream.Stream;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.test.TracingMockSupport;
+import org.eclipse.hono.util.AdapterInstanceStatus;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,7 +53,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Timeout;
@@ -365,11 +366,10 @@ class CacheBasedDeviceConnectionInfoTest {
      * Verifies that the <em>getCommandHandlingAdapterInstances</em> operation fails
      * if the adapter instance mapping entry has expired.
      *
-     * @param vertx The vert.x instance.
      * @param ctx The vert.x context.
      */
     @Test
-    public void testGetCommandHandlingAdapterInstancesWithExpiredEntry(final Vertx vertx, final VertxTestContext ctx) {
+    public void testGetCommandHandlingAdapterInstancesWithExpiredEntry(final VertxTestContext ctx) {
 
         when(cache.get(anyString())).thenReturn(Future.succeededFuture(null));
 
@@ -383,6 +383,78 @@ class CacheBasedDeviceConnectionInfoTest {
                 });
                 ctx.completeNow();
             }));
+    }
+
+    /**
+     * Verifies that the <em>getCommandHandlingAdapterInstances</em> operation fails
+     * if the adapter instance mapping entry is associated with a terminated adapter.
+     *
+     * @param ctx The vert.x context.
+     */
+    @Test
+    public void testGetCommandHandlingAdapterInstancesWithTerminatedAdapterInstance(final VertxTestContext ctx) {
+
+        final AdapterInstanceStatusProvider statusProvider = mock(AdapterInstanceStatusProvider.class);
+        info = new CacheBasedDeviceConnectionInfo(cache, tracer, statusProvider);
+
+        final String deviceId = "testDevice";
+        final String adapterInstance = "adapterInstance";
+
+        when(cache.get(anyString())).thenReturn(Future.succeededFuture(adapterInstance));
+        when(statusProvider.getStatus(adapterInstance)).thenReturn(AdapterInstanceStatus.DEAD);
+        when(cache.remove(anyString(), anyString())).thenReturn(Future.succeededFuture(Boolean.TRUE));
+
+        info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, Set.of(), span)
+                .onComplete(ctx.failing(t -> {
+                    ctx.verify(() -> {
+                        verify(cache).get(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT,
+                                deviceId)));
+                        assertThat(t).isInstanceOf(ClientErrorException.class);
+                        assertThat(((ClientErrorException) t).getErrorCode())
+                                .isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
+                        // verify mapping entry for terminated adapter instance has been removed
+                        verify(cache).remove(
+                                eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, deviceId)),
+                                eq(adapterInstance));
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
+     * Verifies that the <em>getCommandHandlingAdapterInstances</em> operation fails
+     * if the adapter instance mapping entry is associated with a adapter having the state 'SUSPECTED_DEAD'.
+     *
+     * @param ctx The vert.x context.
+     */
+    @Test
+    public void testGetCommandHandlingAdapterInstancesWithSuspectedAdapterInstance(final VertxTestContext ctx) {
+
+        final AdapterInstanceStatusProvider statusProvider = mock(AdapterInstanceStatusProvider.class);
+        info = new CacheBasedDeviceConnectionInfo(cache, tracer, statusProvider);
+
+        final String deviceId = "testDevice";
+        final String adapterInstance = "adapterInstance";
+
+        when(cache.get(anyString())).thenReturn(Future.succeededFuture(adapterInstance));
+        when(statusProvider.getStatus(adapterInstance)).thenReturn(AdapterInstanceStatus.SUSPECTED_DEAD);
+        when(cache.remove(anyString(), anyString())).thenReturn(Future.succeededFuture(Boolean.TRUE));
+
+        info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, Set.of(), span)
+                .onComplete(ctx.failing(t -> {
+                    ctx.verify(() -> {
+                        verify(cache).get(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT,
+                                deviceId)));
+                        assertThat(t).isInstanceOf(ClientErrorException.class);
+                        assertThat(((ClientErrorException) t).getErrorCode())
+                                .isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
+                        // verify mapping entry for terminated adapter instance has not been removed
+                        verify(cache, never()).remove(
+                                eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, deviceId)),
+                                eq(adapterInstance));
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**
@@ -663,6 +735,110 @@ class CacheBasedDeviceConnectionInfoTest {
                 });
                 ctx.completeNow();
             }));
+    }
+
+    /**
+     * Verifies that the <em>getCommandHandlingAdapterInstances</em> operation succeeds with a result containing
+     * the mapping of a gateway device if the also existing mapping belonging to the *the given device* is associated
+     * with an adapter instance identified as already terminated.
+     *
+     * @param extraUnusedViaGateways Test values.
+     * @param ctx The vert.x context.
+     */
+    @ParameterizedTest(name = PARAMETERIZED_TEST_NAME_PATTERN)
+    @MethodSource("extraUnusedViaGateways")
+    public void testGetCommandHandlingAdapterInstancesWithTerminatedAdapterInstanceContainer(final Set<String> extraUnusedViaGateways, final VertxTestContext ctx) {
+
+        final AdapterInstanceStatusProvider statusProvider = mock(AdapterInstanceStatusProvider.class);
+        info = new CacheBasedDeviceConnectionInfo(cache, tracer, statusProvider);
+
+        final String deviceId = "testDevice";
+        final String adapterInstance = "adapterInstance";
+        final String otherAdapterInstance = "otherAdapterInstance";
+        final String gatewayId = "gw-1";
+        final Set<String> viaGateways = new HashSet<>(Set.of(gatewayId));
+        viaGateways.addAll(extraUnusedViaGateways);
+
+        // GIVEN testDevice has no last known gateway registered
+        when(cache.get(eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId))))
+                .thenReturn(Future.succeededFuture());
+
+        // and testDevice's and gw-1's command handling adapter instances are set to
+        // adapterInstance and otherAdapterInstance respectively
+        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways))))
+                .thenReturn(Future.succeededFuture(Map.of(
+                        CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, deviceId), adapterInstance,
+                        CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, gatewayId), otherAdapterInstance)));
+        when(cache.remove(anyString(), anyString())).thenReturn(Future.succeededFuture(Boolean.TRUE));
+
+        when(statusProvider.getStatus(adapterInstance)).thenReturn(AdapterInstanceStatus.DEAD);
+        when(statusProvider.getStatus(otherAdapterInstance)).thenReturn(AdapterInstanceStatus.ALIVE);
+
+        info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span)
+                .onComplete(ctx.succeeding(result -> {
+                    ctx.verify(() -> {
+                        assertNotNull(result);
+                        assertGetInstancesResultMapping(result, gatewayId, otherAdapterInstance);
+                        assertGetInstancesResultSize(result, 1);
+                        // verify mapping entry for terminated adapter instance has been removed
+                        verify(cache).remove(
+                                eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, deviceId)),
+                                eq(adapterInstance));
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
+     * Verifies that the <em>getCommandHandlingAdapterInstances</em> operation succeeds with a result containing
+     * the mapping of a gateway device if the also existing mapping belonging to the *the given device* is associated
+     * with an adapter instance having the 'SUSPECTED_DEAD' status.
+     *
+     * @param extraUnusedViaGateways Test values.
+     * @param ctx The vert.x context.
+     */
+    @ParameterizedTest(name = PARAMETERIZED_TEST_NAME_PATTERN)
+    @MethodSource("extraUnusedViaGateways")
+    public void testGetCommandHandlingAdapterInstancesWithSuspectedAdapterInstanceContainer(final Set<String> extraUnusedViaGateways, final VertxTestContext ctx) {
+
+        final AdapterInstanceStatusProvider statusProvider = mock(AdapterInstanceStatusProvider.class);
+        info = new CacheBasedDeviceConnectionInfo(cache, tracer, statusProvider);
+
+        final String deviceId = "testDevice";
+        final String adapterInstance = "adapterInstance";
+        final String otherAdapterInstance = "otherAdapterInstance";
+        final String gatewayId = "gw-1";
+        final Set<String> viaGateways = new HashSet<>(Set.of(gatewayId));
+        viaGateways.addAll(extraUnusedViaGateways);
+
+        // GIVEN testDevice has no last known gateway registered
+        when(cache.get(eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId))))
+                .thenReturn(Future.succeededFuture());
+
+        // and testDevice's and gw-1's command handling adapter instances are set to
+        // adapterInstance and otherAdapterInstance respectively
+        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways))))
+                .thenReturn(Future.succeededFuture(Map.of(
+                        CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, deviceId), adapterInstance,
+                        CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, gatewayId), otherAdapterInstance)));
+        when(cache.remove(anyString(), anyString())).thenReturn(Future.succeededFuture(Boolean.TRUE));
+
+        when(statusProvider.getStatus(adapterInstance)).thenReturn(AdapterInstanceStatus.SUSPECTED_DEAD);
+        when(statusProvider.getStatus(otherAdapterInstance)).thenReturn(AdapterInstanceStatus.ALIVE);
+
+        info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span)
+                .onComplete(ctx.succeeding(result -> {
+                    ctx.verify(() -> {
+                        assertNotNull(result);
+                        assertGetInstancesResultMapping(result, gatewayId, otherAdapterInstance);
+                        assertGetInstancesResultSize(result, 1);
+                        // verify mapping entry for terminated adapter instance has not been removed
+                        verify(cache, never()).remove(
+                                eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, deviceId)),
+                                eq(adapterInstance));
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**

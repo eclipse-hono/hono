@@ -17,10 +17,14 @@ package org.eclipse.hono.commandrouter.quarkus;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
+import javax.inject.Singleton;
 
+import org.eclipse.hono.commandrouter.AdapterInstanceStatusService;
+import org.eclipse.hono.commandrouter.impl.KubernetesBasedAdapterInstanceStatusService;
 import org.eclipse.hono.deviceconnection.infinispan.client.BasicCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.CacheBasedDeviceConnectionInfo;
 import org.eclipse.hono.deviceconnection.infinispan.client.CommonCacheConfig;
@@ -60,8 +64,9 @@ public class DeviceConnectionInfoProducer {
     @Produces
     DeviceConnectionInfo deviceConnectionInfo(
             final BasicCache<String, String> cache,
-            final Tracer tracer) {
-        return new CacheBasedDeviceConnectionInfo(cache, tracer);
+            final Tracer tracer,
+            final AdapterInstanceStatusService adapterInstanceStatusService) {
+        return new CacheBasedDeviceConnectionInfo(cache, tracer, adapterInstanceStatusService);
     }
 
     @Produces
@@ -111,5 +116,17 @@ public class DeviceConnectionInfoProducer {
             LOG.info("using default embedded cache configuration:{}{}", System.lineSeparator(), builder.toString());
             return builderHolder;
         }
+    }
+
+    @Produces
+    @Singleton
+    AdapterInstanceStatusService adapterInstanceStatusService(
+            final CommandRouterServiceConfigProperties commandRouterServiceConfigProperties) {
+        final AdapterInstanceStatusService service = commandRouterServiceConfigProperties
+                .isKubernetesBasedAdapterInstanceStatusServiceEnabled()
+                        ? KubernetesBasedAdapterInstanceStatusService.create()
+                        : null;
+        return Optional.ofNullable(service)
+                .orElse(AdapterInstanceStatusService.UNKNOWN_STATUS_PROVIDING_SERVICE);
     }
 }
