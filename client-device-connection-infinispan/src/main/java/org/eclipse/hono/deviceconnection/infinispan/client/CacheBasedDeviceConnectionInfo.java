@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -27,6 +28,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.AdapterInstanceStatus;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.MessageHelper;
@@ -62,12 +64,12 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
     private static final Logger LOG = LoggerFactory.getLogger(CacheBasedDeviceConnectionInfo.class);
 
     /**
-     * Prefix for cache entries having gateway id values, concerning <em>lastKnownGatewayForDevice</em>
+     * Key prefix for cache entries having gateway id values, concerning <em>lastKnownGatewayForDevice</em>
      * operations.
      */
     private static final String KEY_PREFIX_GATEWAY_ENTRIES_VALUE = "gw";
     /**
-     * Prefix for cache entries having protocol adapter instance id values, concerning
+     * Key prefix for cache entries having protocol adapter instance id values, concerning
      * <em>commandHandlingAdapterInstance</em> operations.
      */
     private static final String KEY_PREFIX_ADAPTER_INSTANCE_VALUES = "ai";
@@ -75,6 +77,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
 
     final Cache<String, String> cache;
     final Tracer tracer;
+    final AdapterInstanceStatusProvider adapterInstanceStatusProvider;
 
     /**
      * Creates a client for accessing device connection information.
@@ -84,8 +87,23 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
      * @throws NullPointerException if cache or tracer is {@code null}.
      */
     public CacheBasedDeviceConnectionInfo(final Cache<String, String> cache, final Tracer tracer) {
+        this(cache, tracer, null);
+    }
+
+    /**
+     * Creates a client for accessing device connection information.
+     *
+     * @param cache The remote cache that contains the data.
+     * @param tracer The tracer instance.
+     * @param adapterInstanceStatusProvider The provider of the adapter instance status (may be {@code null}).
+     * @throws NullPointerException if cache or tracer is {@code null}.
+     */
+    public CacheBasedDeviceConnectionInfo(final Cache<String, String> cache, final Tracer tracer,
+            final AdapterInstanceStatusProvider adapterInstanceStatusProvider) {
         this.cache = Objects.requireNonNull(cache);
         this.tracer = Objects.requireNonNull(tracer);
+        this.adapterInstanceStatusProvider = Optional.ofNullable(adapterInstanceStatusProvider)
+                .orElse(AdapterInstanceStatusProvider.UNKNOWN_STATUS_PROVIDER);
     }
 
     /**
@@ -143,9 +161,6 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
                 });
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<JsonObject> getLastKnownGatewayForDevice(final String tenantId, final String deviceId, final Span span) {
         Objects.requireNonNull(tenantId);
@@ -205,10 +220,8 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
         Objects.requireNonNull(adapterInstanceId);
         Objects.requireNonNull(span);
 
-        final String key = getAdapterInstanceEntryKey(tenantId, deviceId);
-
         return cache
-                .remove(key, adapterInstanceId)
+                .remove(getAdapterInstanceEntryKey(tenantId, deviceId), adapterInstanceId)
                 .recover(t -> {
                     LOG.debug("failed to remove the cache entry for the command handling adapter instance [tenant: {}, device-id: {}, adapter-instance: {}]",
                             tenantId, deviceId, adapterInstanceId, t);
@@ -242,6 +255,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
              // get the command handling adapter instance for the device (no gateway involved)
             resultFuture = cache.get(getAdapterInstanceEntryKey(tenantId, deviceId))
                     .recover(t -> failedToGetEntriesWhenGettingInstances(tenantId, deviceId, t, span))
+                    .map(adapterInstanceId -> checkAdapterInstanceId(adapterInstanceId, tenantId, deviceId, span))
                     .compose(adapterInstanceId -> {
                         if (adapterInstanceId == null) {
                             LOG.debug("no command handling adapter instances found [tenant: {}, device-id: {}]",
@@ -277,8 +291,8 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
         // (this saves the extra lastKnownGateway check if only one adapter instance is returned)
         return cache.getAll(getAdapterInstanceEntryKeys(tenantId, deviceId, viaGateways))
                 .recover(t -> failedToGetEntriesWhenGettingInstances(tenantId, deviceId, t, span))
-                .compose(getAllMap -> {
-                    final Map<String, String> deviceToInstanceMap = convertAdapterInstanceEntryKeys(getAllMap);
+                .map(getAllMap -> checkAdapterInstanceIds(tenantId, convertAdapterInstanceEntryKeys(getAllMap), span))
+                .compose(deviceToInstanceMap -> {
                     final Future<JsonObject> resultFuture;
                     if (deviceToInstanceMap.isEmpty()) {
                         LOG.debug("no command handling adapter instances found [tenant: {}, device-id: {}]",
@@ -361,8 +375,8 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
                         // fetch command handling instances for lastKnownGateway and device
                         return cache.getAll(getAdapterInstanceEntryKeys(tenantId, deviceId, lastKnownGateway))
                                 .recover(t -> failedToGetEntriesWhenGettingInstances(tenantId, deviceId, t, span))
-                                .compose(getAllMap -> {
-                                    final Map<String, String> deviceToInstanceMap = convertAdapterInstanceEntryKeys(getAllMap);
+                                .map(getAllMap -> checkAdapterInstanceIds(tenantId, convertAdapterInstanceEntryKeys(getAllMap), span))
+                                .compose(deviceToInstanceMap -> {
                                     if (deviceToInstanceMap.isEmpty()) {
                                         // no adapter instances found for last-known-gateway and device - check all via gateways
                                         span.log("last known gateway '" + lastKnownGateway + "' has no adapter instance assigned, returning all matching adapter instances");
@@ -390,8 +404,8 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
             final String deviceId, final Set<String> viaGateways, final Span span) {
         return cache.getAll(getAdapterInstanceEntryKeys(tenantId, deviceId, viaGateways))
                 .recover(t -> failedToGetEntriesWhenGettingInstances(tenantId, deviceId, t, span))
-                .compose(getAllMap -> {
-                    final Map<String, String> deviceToInstanceMap = convertAdapterInstanceEntryKeys(getAllMap);
+                .map(getAllMap -> checkAdapterInstanceIds(tenantId, convertAdapterInstanceEntryKeys(getAllMap), span))
+                .compose(deviceToInstanceMap -> {
                     final Future<JsonObject> resultFuture;
                     if (deviceToInstanceMap.isEmpty()) {
                         LOG.debug("no command handling adapter instances found [tenant: {}, device-id: {}]",
@@ -487,6 +501,44 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
 
     private static JsonObject getAdapterInstancesResultJson(final String deviceId, final String adapterInstanceId) {
         return getAdapterInstancesResultJson(Map.of(deviceId, adapterInstanceId));
+    }
+
+    private Map<String, String> checkAdapterInstanceIds(final String tenantId,
+            final Map<String, String> deviceToInstanceIdMap, final Span span) {
+        return deviceToInstanceIdMap.entrySet().stream()
+                .filter(deviceToInstanceId -> checkAdapterInstanceId(deviceToInstanceId.getValue(), tenantId,
+                        deviceToInstanceId.getKey(), span) != null)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    private String checkAdapterInstanceId(final String adapterInstanceId, final String tenantId, final String deviceId,
+            final Span span) {
+        if (adapterInstanceId != null) {
+            final AdapterInstanceStatus status = adapterInstanceStatusProvider.getStatus(adapterInstanceId);
+            if (status == AdapterInstanceStatus.DEAD) {
+                LOG.debug("ignoring found adapter instance id, belongs to already terminated container [tenant: {}, device-id: {}, adapter-instance-id: {}]",
+                        tenantId, deviceId, adapterInstanceId);
+                span.log("ignoring found adapter instance id [" + adapterInstanceId + "], belongs to already terminated container");
+                cache.remove(getAdapterInstanceEntryKey(tenantId, deviceId), adapterInstanceId)
+                        .onSuccess(removed -> {
+                            if (removed) {
+                                LOG.debug("removed entry with obsolete adapter instance id '{}' [tenant: {}, device-id: {}]",
+                                        adapterInstanceId, tenantId, deviceId);
+                            }
+                        })
+                        .onFailure(thr -> {
+                            LOG.debug("error removing entry with obsolete adapter instance id '{}' [tenant: {}, device-id: {}]",
+                                    adapterInstanceId, tenantId, deviceId, thr);
+                        });
+                return null;
+            } else if (status == AdapterInstanceStatus.SUSPECTED_DEAD) {
+                LOG.debug("ignoring found adapter instance id, belongs to container with state 'SUSPECTED_DEAD' [tenant: {}, device-id: {}, adapter-instance-id: {}]",
+                        tenantId, deviceId, adapterInstanceId);
+                span.log("ignoring found adapter instance id [" + adapterInstanceId + "], belongs to container with state 'SUSPECTED_DEAD'");
+                return null;
+            }
+        }
+        return adapterInstanceId;
     }
 
     /**

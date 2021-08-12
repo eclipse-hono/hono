@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.util;
 
+import java.util.regex.Pattern;
+
 /**
  * Constants &amp; utility methods used throughout the Command and Control API.
  */
@@ -86,6 +88,14 @@ public class CommandConstants {
      * {@code command/[tenant]/[device-id]/res/<req-id>/<status>}
      */
     public static final int TOPIC_POSITION_RESPONSE_REQ_ID = 4;
+
+    /**
+     * Pattern of the adapter instance identifier, used when routing a command message to a protocol
+     * adapter running in a Kubernetes cluster.
+     * <p>
+     * The first matcher group contains the first 12 characters of the docker container id of the adapter instance.
+     */
+    public static final Pattern KUBERNETES_ADAPTER_INSTANCE_ID_PATTERN = Pattern.compile("^.*_([0-9a-f]{12})_\\d+$");
 
     private CommandConstants() {
         // prevent instantiation

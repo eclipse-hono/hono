@@ -32,6 +32,7 @@ import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.client.util.ServiceClient;
+import org.eclipse.hono.commandrouter.AdapterInstanceStatusService;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterServiceConfigProperties;
 import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
@@ -69,6 +70,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
     private final TenantClient tenantClient;
     private final DeviceConnectionInfo deviceConnectionInfo;
     private final MessagingClientProvider<CommandConsumerFactory> commandConsumerFactoryProvider;
+    private final AdapterInstanceStatusService adapterInstanceStatusService;
     private final Tracer tracer;
     private final Deque<Pair<String, Integer>> tenantsToEnable = new LinkedList<>();
     private final Set<String> reenabledTenants = new HashSet<>();
@@ -80,7 +82,6 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
      */
     private Context context;
 
-
     /**
      * Creates a new CommandRouterServiceImpl.
      *
@@ -89,6 +90,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
      * @param tenantClient The tenant client.
      * @param deviceConnectionInfo The client for accessing device connection data.
      * @param commandConsumerFactoryProvider The factory provider to use for creating clients to receive commands.
+     * @param adapterInstanceStatusService The service providing info about the status of adapter instances.
      * @param tracer The Open Tracing tracer to use for tracking processing of requests.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
@@ -98,6 +100,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
             final TenantClient tenantClient,
             final DeviceConnectionInfo deviceConnectionInfo,
             final MessagingClientProvider<CommandConsumerFactory> commandConsumerFactoryProvider,
+            final AdapterInstanceStatusService adapterInstanceStatusService,
             final Tracer tracer) {
 
         this.config = Objects.requireNonNull(config);
@@ -105,6 +108,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
         this.tenantClient = Objects.requireNonNull(tenantClient);
         this.deviceConnectionInfo = Objects.requireNonNull(deviceConnectionInfo);
         this.commandConsumerFactoryProvider = Objects.requireNonNull(commandConsumerFactoryProvider);
+        this.adapterInstanceStatusService = Objects.requireNonNull(adapterInstanceStatusService);
         this.tracer = Objects.requireNonNull(tracer);
     }
 
@@ -138,6 +142,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
                 ((Lifecycle) deviceConnectionInfo).start();
             }
             commandConsumerFactoryProvider.start();
+            adapterInstanceStatusService.start();
         }
 
         return Future.succeededFuture();
@@ -156,8 +161,9 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
                 results.add(((Lifecycle) deviceConnectionInfo).stop());
             }
             results.add(commandConsumerFactoryProvider.stop());
+            results.add(adapterInstanceStatusService.stop());
             tenantsToEnable.clear();
-            return CompositeFuture.all(results)
+            return CompositeFuture.join(results)
                     .onFailure(t -> {
                         LOG.info("error while stopping command router", t);
                     })

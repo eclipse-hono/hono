@@ -26,12 +26,14 @@ import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
 import org.eclipse.hono.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.client.util.MessagingClientProvider;
+import org.eclipse.hono.commandrouter.AdapterInstanceStatusService;
 import org.eclipse.hono.commandrouter.CacheBasedDeviceConnectionService;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterAmqpServer;
 import org.eclipse.hono.commandrouter.CommandRouterServiceConfigProperties;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.commandrouter.impl.CommandRouterServiceImpl;
+import org.eclipse.hono.commandrouter.impl.KubernetesBasedAdapterInstanceStatusService;
 import org.eclipse.hono.commandrouter.impl.amqp.ProtonBasedCommandConsumerFactoryImpl;
 import org.eclipse.hono.commandrouter.impl.kafka.KafkaBasedCommandConsumerFactoryImpl;
 import org.eclipse.hono.config.ApplicationConfigProperties;
@@ -225,11 +227,13 @@ public class ApplicationConfig {
      * Exposes a Command Router service as a Spring bean.
      *
      * @param deviceConnectionInfo The client to access device connection data.
+     * @param adapterInstanceStatusService The service providing info about the status of adapter instances.
      * @return The service implementation.
      */
     @Bean
     @Scope("prototype")
-    public CommandRouterService commandRouterService(final CacheBasedDeviceConnectionInfo deviceConnectionInfo) {
+    public CommandRouterService commandRouterService(final CacheBasedDeviceConnectionInfo deviceConnectionInfo,
+            final AdapterInstanceStatusService adapterInstanceStatusService) {
         final DeviceRegistrationClient registrationClient = registrationClient();
         final TenantClient tenantClient = tenantClient();
 
@@ -258,6 +262,7 @@ public class ApplicationConfig {
                 tenantClient,
                 deviceConnectionInfo,
                 commandConsumerFactoryProvider,
+                adapterInstanceStatusService,
                 getTracer());
     }
 
@@ -266,12 +271,13 @@ public class ApplicationConfig {
      *
      * @param cache The cache storing the device connection data.
      * @param tracer The tracer instance.
+     * @param adapterInstanceStatusService The service providing status information regarding an adapter instance.
      * @return The service implementation.
      */
     @Bean
     public CacheBasedDeviceConnectionInfo deviceConnectionInfo(final BasicCache<String, String> cache,
-            final Tracer tracer) {
-        return new CacheBasedDeviceConnectionInfo(cache, tracer);
+            final Tracer tracer, final AdapterInstanceStatusService adapterInstanceStatusService) {
+        return new CacheBasedDeviceConnectionInfo(cache, tracer, adapterInstanceStatusService);
     }
 
     /**
@@ -445,6 +451,22 @@ public class ApplicationConfig {
     @Bean
     public MeterRegistryCustomizer<MeterRegistry> commonTags() {
         return r -> r.config().commonTags(MetricsTags.forService(Constants.SERVICE_NAME_COMMAND_ROUTER));
+    }
+
+    /**
+     * Exposes the adapter instance liveness service as a Spring bean.
+     *
+     * @param commandRouterServiceConfigProperties The Command Router service configuration properties.
+     * @return The adapter instance liveness service.
+     */
+    @Bean
+    public AdapterInstanceStatusService adapterInstanceStatusService(final CommandRouterServiceConfigProperties commandRouterServiceConfigProperties) {
+        final AdapterInstanceStatusService service = commandRouterServiceConfigProperties
+                .isKubernetesBasedAdapterInstanceStatusServiceEnabled()
+                        ? KubernetesBasedAdapterInstanceStatusService.create()
+                        : null;
+        return Optional.ofNullable(service)
+                .orElse(AdapterInstanceStatusService.UNKNOWN_STATUS_PROVIDING_SERVICE);
     }
 
     /**

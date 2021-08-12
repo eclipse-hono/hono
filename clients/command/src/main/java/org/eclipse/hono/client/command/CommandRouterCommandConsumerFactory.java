@@ -101,6 +101,18 @@ public class CommandRouterCommandConsumerFactory implements CommandConsumerFacto
         }
     }
 
+    /**
+     * Creates a new adapter instance identifier.
+     * <p>
+     * If this method is invoked from within a docker container in a Kubernetes cluster, the format is
+     * <em>[prefix]_[docker_container_id]_[counter]</em>, with prefix being the name of the Kubernetes pod.
+     * See also {@link org.eclipse.hono.util.CommandConstants#KUBERNETES_ADAPTER_INSTANCE_ID_PATTERN}.
+     * <p>
+     * If not running in a Kubernetes cluster, a random id with the given adapter name as prefix is used.
+     *
+     * @param adapterName The adapter name.
+     * @return the unique adapter instance identifier.
+     */
     private static String getNewAdapterInstanceId(final String adapterName) {
         final String k8sContainerId = KubernetesContainerUtil.getContainerId();
         if (k8sContainerId == null || k8sContainerId.length() < 12) {
