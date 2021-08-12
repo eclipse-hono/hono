@@ -16,6 +16,7 @@ import java.util.Optional;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
+import javax.inject.Singleton;
 
 import io.jaegertracing.Configuration;
 import io.opentracing.Tracer;
@@ -30,6 +31,7 @@ import io.quarkus.arc.properties.IfBuildProperty;
 @ApplicationScoped
 public class TracerProducer {
 
+    @Singleton
     @Produces
     @DefaultBean
     Tracer tracer() {
@@ -37,6 +39,7 @@ public class TracerProducer {
                 .orElse(NoopTracerFactory.create());
     }
 
+    @Singleton
     @Produces
     @IfBuildProperty(name = "hono.tracing", stringValue = "jaeger")
     Tracer jaegerTracer() {
