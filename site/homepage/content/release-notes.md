@@ -28,6 +28,25 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The MongoDB based registry erroneously rejected requests that would result in multiple tenants having an empty
   set of trusted CAs. This has been fixed.
 
+## 1.9.1
+
+### Fixes & Enhancements
+
+* The Quarkus based variants of Hono's components now support configuring the Hot Rod client with a key and/or
+  trust store in order to enable TLS secured connections to Infinispan servers and to authenticate using a
+  client certificate.
+* The MongoDB based DeviceManagementService erroneously removed the original device registration when trying to
+  register a new device using the existing device's identifier. This has been fixed.
+* The Mongo DB based registry implementation now uses a proper DB index to find credentials by type and authentication
+  ID. This will speed up query execution significantly when there are a lot of devices registered for a tenant.
+* The JDBC based device registry's *get Credentials* operation used by the protocol adapters now also supports
+  matching credentials against a given *client context*.
+* The device registry implementations did not return a JSON object in a response to a failed request as specified
+  in the Device Registry Management API. This has been fixed.
+* The tracing output in error scenarios has been improved in the Mongo DB based device registry.
+* The MongoDB based registry erroneously rejected requests that would result in multiple tenants having an empty
+  set of trusted CAs. This has been fixed.
+
 ## 1.9.0
 
 ### New Features
@@ -100,6 +119,18 @@ description = "Information about changes in recent Hono releases. Includes new f
 ## End of life
 
 * The Maven profiles for compiling in support for exporting metrics to Graphite and InfluxDB have been removed.
+
+## 1.8.3
+
+### Fixes & Enhancements
+
+* The Quarkus based variants of Hono's components now support configuring the Hot Rod client with a key and/or
+  trust store in order to enable TLS secured connections to Infinispan servers and to authenticate using a
+  client certificate.
+* The Mongo DB based registry implementation now uses a proper DB index to find credentials by type and authentication
+  ID. This will speed up query execution significantly when there are a lot of devices registered for a tenant.
+* The MongoDB based registry erroneously rejected requests that would result in multiple tenants having an empty
+  set of trusted CAs. This has been fixed.
 
 ## 1.8.2
 
