@@ -18,7 +18,7 @@
     <groupId>org.eclipse.hono</groupId>
     <artifactId>hono-adapters-spring</artifactId>
     <relativePath>../base-spring</relativePath>
-    <version>1.9.1-SNAPSHOT</version>
+    <version>1.9.1</version>
   </parent>
   <artifactId>hono-adapter-http-vertx</artifactId>
   <name>Hono HTTP Adapter</name>
