@@ -29,6 +29,7 @@
   </root>
 
   <springProfile name="trace">
+    <logger name="org.eclipse.hono.adapter.auth.device" level="TRACE"/>
     <logger name="org.eclipse.hono.adapter.mqtt" level="TRACE"/>
     <logger name="org.eclipse.hono.adapter.mqtt.impl" level="TRACE"/>
     <logger name="org.eclipse.hono.client" level="TRACE"/>
@@ -40,13 +41,13 @@
     <logger name="org.eclipse.hono.connection" level="TRACE"/>
     <logger name="org.eclipse.hono.service" level="TRACE"/>
     <logger name="org.eclipse.hono.service.auth" level="TRACE"/>
-    <logger name="org.eclipse.hono.service.auth.device" level="TRACE"/>
     <logger name="org.eclipse.hono.util" level="TRACE"/>
 
     <logger name="org.apache.kafka" level="INFO"/>
   </springProfile>
 
   <springProfile name="dev">
+    <logger name="org.eclipse.hono.adapter.auth.device" level="DEBUG"/>
     <logger name="org.eclipse.hono.adapter.mqtt" level="DEBUG"/>
     <logger name="org.eclipse.hono.adapter.mqtt.impl" level="DEBUG"/>
     <logger name="org.eclipse.hono.client" level="DEBUG"/>
@@ -58,7 +59,6 @@
     <logger name="org.eclipse.hono.connection" level="DEBUG"/>
     <logger name="org.eclipse.hono.service" level="DEBUG"/>
     <logger name="org.eclipse.hono.service.auth" level="DEBUG"/>
-    <logger name="org.eclipse.hono.service.auth.device" level="DEBUG"/>
     <logger name="org.eclipse.hono.util" level="DEBUG"/>
 
     <logger name="org.apache.kafka" level="INFO"/>

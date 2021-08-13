@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+    Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -39,10 +39,10 @@
 
   <springProfile name="dev">
     <logger name="org.eclipse.hono.adapter" level="DEBUG"/>
+    <logger name="org.eclipse.hono.adapter.auth.device" level="DEBUG"/>
     <logger name="org.eclipse.hono.client" level="DEBUG"/>
     <logger name="org.eclipse.hono.connection" level="DEBUG"/>
     <logger name="org.eclipse.hono.deviceconnection.infinispan.client" level="DEBUG"/>
-    <logger name="org.eclipse.hono.service.auth.device" level="DEBUG"/>
   </springProfile>
 
   <springProfile name="prod">
