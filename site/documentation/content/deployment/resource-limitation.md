@@ -28,7 +28,7 @@ The following JVM options can be used in Java 9 and later in order to change thi
 
 In Kubernetes (and OpenShift) the resource limits for a *pod*, and thus the container(s) that are part of the pod, can be configured in the corresponding *PodSpec*. The following example from the HTTP adapter's Kubernetes *Deployment* resource descriptor illustrates the mechanism:
 
-~~~json
+~~~yaml
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
