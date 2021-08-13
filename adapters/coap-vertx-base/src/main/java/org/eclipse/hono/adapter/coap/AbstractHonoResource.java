@@ -518,7 +518,6 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
 
         final Handler<CommandContext> commandHandler = commandContext -> {
 
-            waitForCommandSpan.finish();
             final Span processCommandSpan = TracingHelper
                     .buildFollowsFromSpan(getTracer(), waitForCommandSpan.context(), "process received command")
                     .withTag(Tags.COMPONENT.getKey(), getAdapter().getTypeName())
@@ -536,6 +535,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
             if (isCommandValid(command, processCommandSpan)) {
 
                 if (requestProcessed.compareAndSet(false, true)) {
+                    waitForCommandSpan.finish();
                     getAdapter().checkMessageLimit(tenantObject, command.getPayloadSize(), processCommandSpan.context())
                             .onComplete(result -> {
                                 if (result.succeeded()) {
@@ -569,6 +569,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                             command.getPayloadSize(),
                             commandSample);
                     commandContext.release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, errorMsg));
+                    TracingHelper.logError(processCommandSpan, errorMsg);
                     processCommandSpan.finish();
                 }
 
@@ -582,6 +583,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                         commandSample);
                 LOG.debug("command message is invalid: {}", command);
                 commandContext.reject("malformed command message");
+                TracingHelper.logError(processCommandSpan, "malformed command message");
                 processCommandSpan.finish();
             }
         };

@@ -1008,7 +1008,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
         final Handler<CommandContext> commandHandler = commandContext -> {
 
-            waitForCommandSpan.finish();
             final Span processCommandSpan = TracingHelper
                     .buildFollowsFromSpan(tracer, waitForCommandSpan.context(), "process received command")
                     .withTag(Tags.COMPONENT.getKey(), getTypeName())
@@ -1026,6 +1025,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             if (isCommandValid(command, processCommandSpan)) {
 
                 if (requestProcessed.compareAndSet(false, true)) {
+                    waitForCommandSpan.finish();
                     checkMessageLimit(tenantObject, command.getPayloadSize(), processCommandSpan.context())
                     .onComplete(result -> {
                         if (result.succeeded()) {
@@ -1059,6 +1059,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             command.getPayloadSize(),
                             commandSample);
                     commandContext.release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, errorMsg));
+                    TracingHelper.logError(processCommandSpan, errorMsg);
                     processCommandSpan.finish();
                 }
 
@@ -1072,6 +1073,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                         commandSample);
                 log.debug("command message is invalid: {}", command);
                 commandContext.reject("malformed command message");
+                TracingHelper.logError(processCommandSpan, "malformed command message");
                 processCommandSpan.finish();
             }
         };
