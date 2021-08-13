@@ -21,7 +21,10 @@
   <packaging>pom</packaging>
 
   <name>Hono</name>
-  <description>Hono provides a scalable messaging infrastructure targeted at Internet of Things use cases.</description>
+  <description>
+    Eclipse Hono provides remote service interfaces for connecting large numbers of IoT devices to a back end and
+    interacting with them in a uniform way regardless of the device communication protocol.
+  </description>
   <url>https://www.eclipse.org/hono</url>
   <inceptionYear>2016</inceptionYear>
 
@@ -32,9 +35,10 @@
 
   <licenses>
     <license>
-      <name>Eclipse Public License - Version 2.0</name>
+      <name>EPL-2.0</name>
       <url>http://www.eclipse.org/legal/epl-2.0</url>
-      <comments>SPDX-License-Identifier: EPL-2.0</comments>
+      <comments>Eclipse Public License - Version 2.0</comments>
+      <distribution>repo</distribution>
     </license>
   </licenses>
 
@@ -51,7 +55,7 @@
 
   <ciManagement>
     <system>Jenkins</system>
-    <url>https://ci.eclipse.org/hono/job/Hono-CI/</url>
+    <url>https://github.com/eclipse/hono/actions</url>
   </ciManagement>
 
   <distributionManagement>
