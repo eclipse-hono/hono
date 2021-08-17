@@ -63,7 +63,7 @@ servers:
    - url: '{server}/v1'
      variables:
         server:
-           default: http://hono.eclipseprojects.io:28080
+           default: https://hono.eclipseprojects.io:28443
            description: Hono Sandbox
 
 security:
