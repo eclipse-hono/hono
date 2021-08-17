@@ -21,18 +21,20 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n\t\"device-id\": \"4711\",\n\t\"manufacturer\": \"ACME Corp.\"\n}"
+					"raw": "{}"
 				},
 				"url": {
-					"raw": "http://{{hono.host}}:{{hono.registry.port}}/registration/{{tenant}}",
+					"raw": "http://{{hono.host}}:{{hono.registry.port}}/v1/devices/{{tenant}}/4711",
 					"protocol": "http",
 					"host": [
 						"{{hono.host}}"
 					],
 					"port": "{{hono.registry.port}}",
 					"path": [
-						"registration",
-						"{{tenant}}"
+						"v1",
+						"devices",
+						"{{tenant}}",
+						"4711"
 					]
 				}
 			},
@@ -48,14 +50,15 @@
 				"header": [],
 				"body": {},
 				"url": {
-					"raw": "http://{{hono.host}}:{{hono.registry.port}}/registration/{{tenant}}/4711",
+					"raw": "http://{{hono.host}}:{{hono.registry.port}}/v1/devices/{{tenant}}/4711",
 					"protocol": "http",
 					"host": [
 						"{{hono.host}}"
 					],
 					"port": "{{hono.registry.port}}",
 					"path": [
-						"registration",
+						"v1",
+						"devices",
 						"{{tenant}}",
 						"4711"
 					]
@@ -78,17 +81,18 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n\t\"device-id\": \"4711\",\n\t\"manufacturer\": \"ACME Corp.\",\n\t\"model-no\": \"Best Ever\"\n}"
+					"raw": "{\"ext\":{\"ep\":\"IMEI4711\"}}"
 				},
 				"url": {
-					"raw": "http://{{hono.host}}:{{hono.registry.port}}/registration/{{tenant}}/4711",
+					"raw": "http://{{hono.host}}:{{hono.registry.port}}/v1/devices/{{tenant}}/4711",
 					"protocol": "http",
 					"host": [
 						"{{hono.host}}"
 					],
 					"port": "{{hono.registry.port}}",
 					"path": [
-						"registration",
+						"v1",
+						"devices",
 						"{{tenant}}",
 						"4711"
 					]
@@ -106,14 +110,15 @@
 				"header": [],
 				"body": {},
 				"url": {
-					"raw": "http://{{hono.host}}:{{hono.registry.port}}/registration/{{tenant}}/4711",
+					"raw": "http://{{hono.host}}:{{hono.registry.port}}/v1/devices/{{tenant}}/4711",
 					"protocol": "http",
 					"host": [
 						"{{hono.host}}"
 					],
 					"port": "{{hono.registry.port}}",
 					"path": [
-						"registration",
+						"v1",
+						"devices",
 						"{{tenant}}",
 						"4711"
 					]
