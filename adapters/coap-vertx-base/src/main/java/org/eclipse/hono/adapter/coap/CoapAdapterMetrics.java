@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,8 +13,8 @@
 
 package org.eclipse.hono.adapter.coap;
 
-import org.eclipse.hono.adapter.metric.Metrics;
-import org.eclipse.hono.adapter.metric.NoopBasedMetrics;
+import org.eclipse.hono.service.metric.Metrics;
+import org.eclipse.hono.service.metric.NoopBasedMetrics;
 
 /**
  * Metrics for the COAP based adapters.

@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.adapter.metric;
+package org.eclipse.hono.service.metric;
 
 import java.util.Map;
 import java.util.Objects;
@@ -24,7 +24,6 @@ import java.util.function.Supplier;
 
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
-import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.service.util.ServiceBaseUtils;

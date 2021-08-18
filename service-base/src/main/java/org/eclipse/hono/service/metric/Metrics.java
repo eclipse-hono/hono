@@ -11,9 +11,8 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.adapter.metric;
+package org.eclipse.hono.service.metric;
 
-import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.TenantObject;
 
 import io.micrometer.core.instrument.Timer.Sample;
