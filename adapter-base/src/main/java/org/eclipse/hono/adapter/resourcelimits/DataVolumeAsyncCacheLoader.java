@@ -20,8 +20,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
-import org.eclipse.hono.adapter.metric.MicrometerBasedMetrics;
 import org.eclipse.hono.service.metric.MetricsTags;
+import org.eclipse.hono.service.metric.MicrometerBasedMetrics;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.TenantConstants;
 import org.slf4j.Logger;

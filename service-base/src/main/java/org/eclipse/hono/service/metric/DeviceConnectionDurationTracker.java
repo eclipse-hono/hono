@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.adapter.metric;
+package org.eclipse.hono.service.metric;
 
 import java.time.Duration;
 import java.time.Instant;
