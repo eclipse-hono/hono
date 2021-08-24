@@ -24,7 +24,8 @@ import javax.annotation.PostConstruct;
 
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.amqp.AmqpApplicationClient;
-import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.util.MessageHelper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -53,7 +54,6 @@ public class Commander extends AbstractApplicationClient {
 
     /**
      * Starts this component.
-     *
      */
     @PostConstruct
     void start() {
@@ -78,11 +78,12 @@ public class Commander extends AbstractApplicationClient {
 
         final Future<Void> sendResult;
         if (command.isOneWay()) {
-            log.info("Command sent to device");
+            System.out.println("Command sent to device.");
             sendResult = client.sendOneWayCommand(tenantId, deviceId, command.getName(), command.getContentType(),
                     Buffer.buffer(command.getPayload()), null, null);
         } else {
-            log.info("Command sent to device... [waiting for response for max. {} seconds]", commandTimeOutInSeconds);
+            System.out.printf("Command sent to device... [waiting for response for max. %d seconds]", commandTimeOutInSeconds);
+            System.out.println();
             sendResult = client.sendCommand(tenantId, deviceId, command.getName(), command.getContentType(),
                     Buffer.buffer(command.getPayload()), UUID.randomUUID().toString(), null,
                     Duration.ofSeconds(commandTimeOutInSeconds), null)
@@ -90,20 +91,21 @@ public class Commander extends AbstractApplicationClient {
         }
 
         return sendResult.otherwise(error -> {
-            if (ServerErrorException.extractStatusCode(error) == HttpURLConnection.HTTP_UNAVAILABLE) {
-                log.error(
-                        "Error sending command (error code 503). Is the device really waiting for a command? (device [{}] in tenant [{}])",
+            if (ServiceInvocationException.extractStatusCode(error) == HttpURLConnection.HTTP_UNAVAILABLE) {
+                System.out.printf("Error sending command (error code 503). Is the device really waiting for a command? (device [%s] in tenant [%s])",
                         deviceId, tenantId);
             } else {
-                log.error("Error sending command: {}", error.getMessage());
+                System.out.printf("Error sending command: %s", error.getMessage());
             }
+            System.out.println();
             return null;
         });
     }
 
     private Void printResponse(final DownstreamMessage<?> result) {
-        log.info("Received Command response : {}",
+        System.out.printf("Received Command response: %s",
                 Optional.ofNullable(result.getPayload()).orElseGet(Buffer::buffer));
+        System.out.println();
         return null;
     }
 
@@ -119,10 +121,14 @@ public class Commander extends AbstractApplicationClient {
             final String honoCmd = scanner.nextLine();
             System.out.println(">>>>>>>>> Enter command payload:");
             final String honoPayload = scanner.nextLine();
-            System.out.println(">>>>>>>>> Enter content type:");
+            final String suggestedContentType = honoPayload.trim().startsWith("{") && honoPayload.trim().endsWith("}")
+                    ? MessageHelper.CONTENT_TYPE_APPLICATION_JSON
+                    : "text/plain";
+            System.out.println(">>>>>>>>> Enter content type (leave empty for '" + suggestedContentType + "' default):");
             final String honoContentType = scanner.nextLine();
             System.out.println();
-            userInputFuture.complete(new Command(honoCmd, honoPayload, honoContentType));
+            final String contentTypeToUse = honoContentType.isBlank() ? suggestedContentType : honoContentType;
+            userInputFuture.complete(new Command(honoCmd, honoPayload, contentTypeToUse));
         }, result);
         return result.future();
     }
