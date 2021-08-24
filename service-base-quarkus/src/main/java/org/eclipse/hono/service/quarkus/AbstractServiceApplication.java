@@ -29,6 +29,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics;
 import io.micrometer.core.instrument.binder.jvm.JvmMemoryMetrics;
 import io.micrometer.core.instrument.binder.jvm.JvmThreadMetrics;
+import io.micrometer.core.instrument.binder.system.FileDescriptorMetrics;
 import io.micrometer.core.instrument.binder.system.ProcessorMetrics;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
@@ -77,6 +78,7 @@ public abstract class AbstractServiceApplication implements ComponentNameProvide
         new ProcessorMetrics().bindTo(meterRegistry);
         new JvmMemoryMetrics().bindTo(meterRegistry);
         new JvmThreadMetrics().bindTo(meterRegistry);
+        new FileDescriptorMetrics().bindTo(meterRegistry);
         this.jvmGcMetrics = new JvmGcMetrics();
         jvmGcMetrics.bindTo(meterRegistry);
     }
