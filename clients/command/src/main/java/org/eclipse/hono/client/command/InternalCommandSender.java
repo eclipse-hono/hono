@@ -36,6 +36,10 @@ public interface InternalCommandSender extends Lifecycle {
      * @param adapterInstanceId The protocol adapter instance id to send the command to.
      * @return A future that will be succeeded once the outcome of the send operation has been applied to
      *         the command context.
+     *         <p>
+     *         The future will be failed with a {@link org.eclipse.hono.client.ServerErrorException} if the message
+     *         could not be sent or if no acknowledgement was received from the peer in time (if the
+     *         transport protocol supports this).
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     Future<Void> sendCommand(CommandContext commandContext, String adapterInstanceId);

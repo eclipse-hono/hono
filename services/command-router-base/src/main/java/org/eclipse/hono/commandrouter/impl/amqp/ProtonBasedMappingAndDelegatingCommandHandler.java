@@ -25,6 +25,7 @@ import org.eclipse.hono.client.command.amqp.ProtonBasedCommandContext;
 import org.eclipse.hono.client.command.amqp.ProtonBasedInternalCommandSender;
 import org.eclipse.hono.client.impl.CommandConsumer;
 import org.eclipse.hono.client.registry.TenantClient;
+import org.eclipse.hono.commandrouter.CommandRouterMetrics;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.commandrouter.impl.AbstractMappingAndDelegatingCommandHandler;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -33,6 +34,7 @@ import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.Strings;
 
+import io.micrometer.core.instrument.Timer;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
@@ -50,13 +52,15 @@ public class ProtonBasedMappingAndDelegatingCommandHandler extends AbstractMappi
      * @param tenantClient The Tenant service client.
      * @param connection The connection to the AMQP network.
      * @param commandTargetMapper The mapper component to determine the command target.
+     * @param metrics The component to use for reporting metrics.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public ProtonBasedMappingAndDelegatingCommandHandler(
             final TenantClient tenantClient,
             final HonoConnection connection,
-            final CommandTargetMapper commandTargetMapper) {
-        super(tenantClient, commandTargetMapper, new ProtonBasedInternalCommandSender(connection));
+            final CommandTargetMapper commandTargetMapper,
+            final CommandRouterMetrics metrics) {
+        super(tenantClient, commandTargetMapper, new ProtonBasedInternalCommandSender(connection), metrics);
         this.tracer = connection.getTracer();
     }
 
@@ -85,6 +89,8 @@ public class ProtonBasedMappingAndDelegatingCommandHandler extends AbstractMappi
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(messageDelivery);
         Objects.requireNonNull(message);
+
+        final Timer.Sample timer = getMetrics().startTimer();
 
         // this is the place where a command message on the "command/${tenant}" address arrives *first*
         if (!ResourceIdentifier.isValid(message.getAddress())) {
@@ -122,10 +128,11 @@ public class ProtonBasedMappingAndDelegatingCommandHandler extends AbstractMappi
         command.logToSpan(currentSpan);
         final ProtonBasedCommandContext commandContext = new ProtonBasedCommandContext(command, messageDelivery, currentSpan);
         if (command.isValid()) {
-            mapAndDelegateIncomingCommand(commandContext);
+            mapAndDelegateIncomingCommand(commandContext, timer);
         } else {
             // command message is invalid
             commandContext.reject("malformed command message");
+            reportInvalidCommand(commandContext, timer);
         }
     }
 }

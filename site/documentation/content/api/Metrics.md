@@ -45,6 +45,7 @@ The names of Hono's standard components are as follows:
 | ----------------- | ------------------ |
 | Auth Server       | `hono-auth`         |
 | Device Registry   | `hono-registry`     |
+| Command Router    | `hono-command-router` |
 | AMQP adapter      | `hono-amqp`         |
 | CoAP adapter      | `hono-coap`         |
 | HTTP adapter      | `hono-http`         |
@@ -108,4 +109,4 @@ For an incoming message of size 10KB, it is reported as 12KB.
 
 ### Service Metrics
 
-Hono's service components do not report any metrics at the moment.
+Hono's service components do not report own metrics at the moment. The Command Router service component reports the *hono.commands.received* and *hono.commands.payload* metrics for command messages that could not be forwarded to a protocol adapter.

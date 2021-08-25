@@ -32,6 +32,7 @@ import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.commandrouter.AdapterInstanceStatusService;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterAmqpServer;
+import org.eclipse.hono.commandrouter.CommandRouterMetrics;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.commandrouter.impl.CommandRouterServiceImpl;
 import org.eclipse.hono.commandrouter.impl.amqp.ProtonBasedCommandConsumerFactoryImpl;
@@ -45,9 +46,7 @@ import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.service.cache.Caches;
 import org.eclipse.hono.service.commandrouter.CommandRouterService;
 import org.eclipse.hono.service.commandrouter.DelegatingCommandRouterAmqpEndpoint;
-import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.quarkus.AbstractServiceApplication;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
@@ -128,6 +127,9 @@ public class Application extends AbstractServiceApplication {
     @Inject
     AdapterInstanceStatusService adapterInstanceStatusService;
 
+    @Inject
+    CommandRouterMetrics metrics;
+
     private Cache<Object, RegistrationResult> registrationResponseCache;
 
     private Cache<Object, TenantResult<TenantObject>> tenantResponseCache;
@@ -143,9 +145,6 @@ public class Application extends AbstractServiceApplication {
         if (!(authenticationService instanceof Verticle)) {
             throw new IllegalStateException("Authentication service must be a vert.x Verticle");
         }
-
-        LOG.info("adding common tags to meter registry");
-        meterRegistry.config().commonTags(MetricsTags.forService(Constants.SERVICE_NAME_COMMAND_ROUTER));
 
         LOG.info("deploying {} {} instances ...", appConfig.getMaxInstances(), getComponentName());
 
@@ -237,6 +236,7 @@ public class Application extends AbstractServiceApplication {
                     KafkaProducerFactory.sharedProducerFactory(vertx),
                     kafkaProducerConfig,
                     kafkaConsumerConfig,
+                    metrics,
                     tracer));
         }
         final ClientConfigProperties commandConsumerFactoryConfig = commandConsumerFactoryConfig();
@@ -245,6 +245,7 @@ public class Application extends AbstractServiceApplication {
                     HonoConnection.newConnection(vertx, commandConsumerFactoryConfig, tracer),
                     tenantClient,
                     commandTargetMapper,
+                    metrics,
                     SendMessageSampler.Factory.noop()));
         }
         return commandConsumerFactoryProvider;

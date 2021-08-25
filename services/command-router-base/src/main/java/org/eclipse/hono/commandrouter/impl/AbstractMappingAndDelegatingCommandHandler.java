@@ -26,7 +26,9 @@ import org.eclipse.hono.client.command.InternalCommandSender;
 import org.eclipse.hono.client.registry.DeviceDisabledOrNotRegisteredException;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.registry.TenantDisabledOrNotRegisteredException;
+import org.eclipse.hono.commandrouter.CommandRouterMetrics;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
+import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.Lifecycle;
@@ -36,6 +38,7 @@ import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.micrometer.core.instrument.Timer;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
@@ -53,6 +56,7 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
     private final TenantClient tenantClient;
     private final CommandTargetMapper commandTargetMapper;
     private final InternalCommandSender internalCommandSender;
+    private final CommandRouterMetrics metrics;
 
     /**
      * Creates a new MappingAndDelegatingCommandHandler instance.
@@ -60,16 +64,19 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
      * @param tenantClient The Tenant service client.
      * @param commandTargetMapper The mapper component to determine the command target.
      * @param internalCommandSender The command sender to publish commands to the internal command topic.
+     * @param metrics The component to use for reporting metrics.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public AbstractMappingAndDelegatingCommandHandler(
             final TenantClient tenantClient,
             final CommandTargetMapper commandTargetMapper,
-            final InternalCommandSender internalCommandSender) {
+            final InternalCommandSender internalCommandSender,
+            final CommandRouterMetrics metrics) {
 
         this.tenantClient = Objects.requireNonNull(tenantClient);
         this.commandTargetMapper = Objects.requireNonNull(commandTargetMapper);
         this.internalCommandSender = Objects.requireNonNull(internalCommandSender);
+        this.metrics = Objects.requireNonNull(metrics);
     }
 
     @Override
@@ -90,6 +97,15 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
     protected abstract MessagingType getMessagingType();
 
     /**
+     * Gets the component to use for reporting metrics.
+     *
+     * @return The metrics component.
+     */
+    protected final CommandRouterMetrics getMetrics() {
+        return metrics;
+    }
+
+    /**
      * Delegates an incoming command to the protocol adapter instance that the target
      * device is connected to.
      * <p>
@@ -97,10 +113,12 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
      * and delegates the command to the resulting protocol adapter instance.
      *
      * @param commandContext The context of the command to send.
+     * @param timer The timer indicating the amount of time used for processing the command message.
      * @return A future indicating the output of the operation.
      * @throws NullPointerException if the commandContext is {@code null}.
      */
-    protected final Future<Void> mapAndDelegateIncomingCommand(final CommandContext commandContext) {
+    protected final Future<Void> mapAndDelegateIncomingCommand(final CommandContext commandContext,
+            final Timer.Sample timer) {
         final Command command = commandContext.getCommand();
 
         // determine last used gateway device id
@@ -152,6 +170,7 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
                     } else {
                         commandContext.release(error);
                     }
+                    reportCommandProcessingError(command, tenantObjectFuture.result(), error, timer);
                     return Future.failedFuture(cause);
                 })
                 .compose(result -> {
@@ -169,7 +188,7 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
                                 targetAdapterInstanceId, command);
                         commandContext.getTracingSpan().log("determined target gateway [" + targetGatewayId + "]");
                     }
-                    return sendCommand(commandContext, targetAdapterInstanceId);
+                    return sendCommand(commandContext, targetAdapterInstanceId, tenantObjectFuture.result(), timer);
                 });
     }
 
@@ -184,9 +203,55 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
      *
      * @param commandContext Context of the command to send.
      * @param targetAdapterInstanceId The target protocol adapter instance id.
+     * @param tenantObject The tenant of the command target device.
+     * @param timer The timer indicating the amount of time used for processing the command message.
      * @return A future indicating the output of the operation.
      */
-    protected Future<Void> sendCommand(final CommandContext commandContext, final String targetAdapterInstanceId) {
-        return internalCommandSender.sendCommand(commandContext, targetAdapterInstanceId);
+    protected Future<Void> sendCommand(final CommandContext commandContext, final String targetAdapterInstanceId,
+            final TenantObject tenantObject, final Timer.Sample timer) {
+        return internalCommandSender.sendCommand(commandContext, targetAdapterInstanceId)
+                .onFailure(thr -> reportCommandProcessingError(commandContext.getCommand(), tenantObject, thr, timer));
+    }
+
+    /**
+     * Reports a command for which processing failed.
+     *
+     * @param command The command to report.
+     * @param tenantObject The tenant of the command target device.
+     * @param processingException The exception that occurred during processing of the command.
+     * @param timer The timer indicating the amount of time used for processing the command message.
+     */
+    protected void reportCommandProcessingError(final Command command, final TenantObject tenantObject,
+            final Throwable processingException, final Timer.Sample timer) {
+        metrics.reportCommand(
+                command.isOneWay() ? MetricsTags.Direction.ONE_WAY : MetricsTags.Direction.REQUEST,
+                command.getTenant(),
+                tenantObject,
+                MetricsTags.ProcessingOutcome.from(processingException),
+                command.getPayloadSize(),
+                timer);
+    }
+
+    /**
+     * Reports an invalid command.
+     *
+     * @param commandContext The context of the command to report.
+     * @param timer The timer indicating the amount of time used for processing the command message.
+     */
+    protected void reportInvalidCommand(final CommandContext commandContext, final Timer.Sample timer) {
+        final Command command = commandContext.getCommand();
+        final Future<TenantObject> tenantObjectFuture = tenantClient
+                .get(command.getTenant(), commandContext.getTracingContext());
+        tenantObjectFuture
+                .recover(thr -> Future.succeededFuture(null)) // ignore error here
+                .onSuccess(tenantObjectOrNull -> {
+                    metrics.reportCommand(
+                            command.isOneWay() ? MetricsTags.Direction.ONE_WAY : MetricsTags.Direction.REQUEST,
+                            command.getTenant(),
+                            tenantObjectOrNull,
+                            MetricsTags.ProcessingOutcome.UNPROCESSABLE,
+                            command.getPayloadSize(),
+                            timer);
+                });
     }
 }

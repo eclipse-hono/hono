@@ -27,6 +27,7 @@ import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.impl.CachingClientFactory;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
+import org.eclipse.hono.commandrouter.CommandRouterMetrics;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.CommandConstants;
@@ -74,6 +75,7 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
      * @param commandTargetMapper The component for mapping an incoming command to the gateway (if applicable) and
      *            protocol adapter instance that can handle it. Note that no initialization of this factory will be done
      *            here, that is supposed to be done by the calling method.
+     * @param metrics The component to use for reporting metrics.
      * @param samplerFactory The sampler factory to use.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
@@ -81,13 +83,14 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
             final HonoConnection connection,
             final TenantClient tenantClient,
             final CommandTargetMapper commandTargetMapper,
+            final CommandRouterMetrics metrics,
             final SendMessageSampler.Factory samplerFactory) {
         super(connection, samplerFactory);
         Objects.requireNonNull(tenantClient);
         Objects.requireNonNull(commandTargetMapper);
 
         mappingAndDelegatingCommandHandler = new ProtonBasedMappingAndDelegatingCommandHandler(tenantClient, connection,
-                commandTargetMapper);
+                commandTargetMapper, metrics);
         mappingAndDelegatingCommandConsumerFactory = new CachingClientFactory<>(connection.getVertx(), c -> true);
     }
 
