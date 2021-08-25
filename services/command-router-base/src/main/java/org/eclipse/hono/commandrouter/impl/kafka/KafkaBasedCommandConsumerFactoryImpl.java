@@ -26,6 +26,7 @@ import org.eclipse.hono.client.kafka.consumer.AsyncHandlingAutoCommitKafkaConsum
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
+import org.eclipse.hono.commandrouter.CommandRouterMetrics;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.MessagingType;
@@ -65,6 +66,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
     private final CommandTargetMapper commandTargetMapper;
     private final KafkaConsumerConfigProperties kafkaConsumerConfig;
     private final Tracer tracer;
+    private final CommandRouterMetrics metrics;
     private final KafkaBasedInternalCommandSender internalCommandSender;
     private final KafkaBasedCommandResponseSender kafkaBasedCommandResponseSender;
 
@@ -83,6 +85,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
      * @param kafkaProducerFactory The producer factory for creating Kafka producers for sending messages.
      * @param kafkaProducerConfig The Kafka producer configuration.
      * @param kafkaConsumerConfig The Kafka consumer configuration.
+     * @param metrics The component to use for reporting metrics.
      * @param tracer The tracer instance.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
@@ -93,6 +96,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
             final KafkaProducerFactory<String, Buffer> kafkaProducerFactory,
             final KafkaProducerConfigProperties kafkaProducerConfig,
             final KafkaConsumerConfigProperties kafkaConsumerConfig,
+            final CommandRouterMetrics metrics,
             final Tracer tracer) {
 
         this.vertx = Objects.requireNonNull(vertx);
@@ -101,6 +105,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
         Objects.requireNonNull(kafkaProducerFactory);
         Objects.requireNonNull(kafkaProducerConfig);
         this.kafkaConsumerConfig = Objects.requireNonNull(kafkaConsumerConfig);
+        this.metrics = Objects.requireNonNull(metrics);
         this.tracer = Objects.requireNonNull(tracer);
 
         internalCommandSender = new KafkaBasedInternalCommandSender(kafkaProducerFactory, kafkaProducerConfig, tracer);
@@ -140,7 +145,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
         }
         final KafkaCommandProcessingQueue commandQueue = new KafkaCommandProcessingQueue(context);
         commandHandler = new KafkaBasedMappingAndDelegatingCommandHandler(tenantClient, commandQueue,
-                commandTargetMapper, internalCommandSender, kafkaBasedCommandResponseSender, tracer);
+                commandTargetMapper, internalCommandSender, kafkaBasedCommandResponseSender, metrics, tracer);
 
         final Map<String, String> consumerConfig = kafkaConsumerConfig.getConsumerConfig("consumer");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);

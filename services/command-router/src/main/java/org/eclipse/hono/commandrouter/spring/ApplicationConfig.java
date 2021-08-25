@@ -30,8 +30,10 @@ import org.eclipse.hono.commandrouter.AdapterInstanceStatusService;
 import org.eclipse.hono.commandrouter.CacheBasedDeviceConnectionService;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterAmqpServer;
+import org.eclipse.hono.commandrouter.CommandRouterMetrics;
 import org.eclipse.hono.commandrouter.CommandRouterServiceConfigProperties;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
+import org.eclipse.hono.commandrouter.MicrometerBasedCommandRouterMetrics;
 import org.eclipse.hono.commandrouter.impl.CommandRouterServiceImpl;
 import org.eclipse.hono.commandrouter.impl.KubernetesBasedAdapterInstanceStatusService;
 import org.eclipse.hono.commandrouter.impl.amqp.ProtonBasedCommandConsumerFactoryImpl;
@@ -228,12 +230,13 @@ public class ApplicationConfig {
      *
      * @param deviceConnectionInfo The client to access device connection data.
      * @param adapterInstanceStatusService The service providing info about the status of adapter instances.
+     * @param metrics The component to use for reporting metrics.
      * @return The service implementation.
      */
     @Bean
     @Scope("prototype")
     public CommandRouterService commandRouterService(final CacheBasedDeviceConnectionInfo deviceConnectionInfo,
-            final AdapterInstanceStatusService adapterInstanceStatusService) {
+            final AdapterInstanceStatusService adapterInstanceStatusService, final CommandRouterMetrics metrics) {
         final DeviceRegistrationClient registrationClient = registrationClient();
         final TenantClient tenantClient = tenantClient();
 
@@ -247,6 +250,7 @@ public class ApplicationConfig {
                     kafkaProducerFactory(),
                     kafkaProducerConfig(),
                     kafkaConsumerConfig(),
+                    metrics,
                     getTracer()));
         }
         if (commandConsumerFactoryConfig().isHostConfigured()) {
@@ -254,6 +258,7 @@ public class ApplicationConfig {
                     commandConsumerConnection(),
                     tenantClient,
                     commandTargetMapper,
+                    metrics,
                     SendMessageSampler.Factory.noop()));
         }
         return new CommandRouterServiceImpl(
@@ -488,6 +493,18 @@ public class ApplicationConfig {
     @Bean
     public HealthCheckServer healthCheckServer() {
         return new VertxBasedHealthCheckServer(vertx(), healthCheckProperties());
+    }
+
+    /**
+     * Exposes the metrics component as a Spring bean.
+     *
+     * @param registry The metrics registry.
+     * @param vertx The vert.x instance.
+     * @return The metrics component.
+     */
+    @Bean
+    CommandRouterMetrics metrics(final MeterRegistry registry, final Vertx vertx) {
+        return new MicrometerBasedCommandRouterMetrics(registry, vertx);
     }
 
     // ---- Optional beans letting the Command Router component also implement the Device Connection API (e.g. for integration tests) ----

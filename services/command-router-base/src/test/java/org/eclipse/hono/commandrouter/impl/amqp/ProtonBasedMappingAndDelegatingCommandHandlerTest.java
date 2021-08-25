@@ -38,6 +38,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.registry.TenantClient;
+import org.eclipse.hono.commandrouter.CommandRouterMetrics;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.test.VertxMockSupport;
@@ -105,8 +106,9 @@ public class ProtonBasedMappingAndDelegatingCommandHandlerTest {
         when(tenantClient.get(eq(tenantId), any())).thenReturn(Future.succeededFuture(TenantObject.from(tenantId)));
         commandTargetMapper = mock(CommandTargetMapper.class);
 
+        final CommandRouterMetrics metrics = mock(CommandRouterMetrics.class);
         mappingAndDelegatingCommandHandler = new ProtonBasedMappingAndDelegatingCommandHandler(tenantClient,
-                connection, commandTargetMapper);
+                connection, commandTargetMapper, metrics);
     }
 
     /**

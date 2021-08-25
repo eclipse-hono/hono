@@ -23,10 +23,13 @@ import org.eclipse.hono.client.command.kafka.KafkaBasedInternalCommandSender;
 import org.eclipse.hono.client.impl.CommandConsumer;
 import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
 import org.eclipse.hono.client.registry.TenantClient;
+import org.eclipse.hono.commandrouter.CommandRouterMetrics;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.commandrouter.impl.AbstractMappingAndDelegatingCommandHandler;
 import org.eclipse.hono.util.MessagingType;
+import org.eclipse.hono.util.TenantObject;
 
+import io.micrometer.core.instrument.Timer;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
@@ -51,6 +54,7 @@ public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappin
      * @param commandTargetMapper The mapper component to determine the command target.
      * @param internalCommandSender The command sender to publish commands to the internal command topic.
      * @param kafkaBasedCommandResponseSender The sender used to send command responses.
+     * @param metrics The component to use for reporting metrics.
      * @param tracer The tracer instance.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
@@ -60,8 +64,9 @@ public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappin
             final CommandTargetMapper commandTargetMapper,
             final KafkaBasedInternalCommandSender internalCommandSender,
             final KafkaBasedCommandResponseSender kafkaBasedCommandResponseSender,
+            final CommandRouterMetrics metrics,
             final Tracer tracer) {
-        super(tenantClient, commandTargetMapper, internalCommandSender);
+        super(tenantClient, commandTargetMapper, internalCommandSender, metrics);
         this.commandQueue = Objects.requireNonNull(commandQueue);
         this.kafkaBasedCommandResponseSender = Objects.requireNonNull(kafkaBasedCommandResponseSender);
         this.tracer = Objects.requireNonNull(tracer);
@@ -92,6 +97,7 @@ public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappin
     public Future<Void> mapAndDelegateIncomingCommandMessage(final KafkaConsumerRecord<String, Buffer> consumerRecord) {
         Objects.requireNonNull(consumerRecord);
 
+        final Timer.Sample timer = getMetrics().startTimer();
         final KafkaBasedCommand command;
         try {
             command = KafkaBasedCommand.from(consumerRecord);
@@ -111,12 +117,13 @@ public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappin
         if (!command.isValid()) {
             log.debug("received invalid command record [{}]", command);
             commandContext.reject("malformed command message");
+            reportInvalidCommand(commandContext, timer);
             return Future.failedFuture("command is invalid");
         }
         log.trace("received valid command record [{}]", command);
         commandQueue.add(commandContext);
 
-        return mapAndDelegateIncomingCommand(commandContext)
+        return mapAndDelegateIncomingCommand(commandContext, timer)
                 .onFailure(thr -> commandQueue.remove(commandContext));
     }
 
@@ -129,13 +136,16 @@ public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappin
      *
      * @param commandContext Context of the command to send.
      * @param targetAdapterInstanceId The target protocol adapter instance id.
+     * @param tenantObject The tenant of the command target device.
+     * @param timer The timer indicating the amount of time used for processing the command message.
      * @return A future indicating the output of the operation.
      */
     @Override
-    protected Future<Void> sendCommand(final CommandContext commandContext, final String targetAdapterInstanceId) {
+    protected Future<Void> sendCommand(final CommandContext commandContext, final String targetAdapterInstanceId,
+            final TenantObject tenantObject, final Timer.Sample timer) {
         final KafkaBasedCommandContext cmdContext = (KafkaBasedCommandContext) commandContext;
         return commandQueue.applySendCommandAction(cmdContext,
-                () -> super.sendCommand(commandContext, targetAdapterInstanceId));
+                () -> super.sendCommand(commandContext, targetAdapterInstanceId, tenantObject, timer));
     }
 
 }

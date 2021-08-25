@@ -12,6 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.tests.commandrouter;
 
+import static org.mockito.Mockito.mock;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.util.ArrayList;
@@ -37,6 +38,7 @@ import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.consumer.HonoKafkaConsumer;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 import org.eclipse.hono.client.registry.TenantClient;
+import org.eclipse.hono.commandrouter.CommandRouterMetrics;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.commandrouter.impl.kafka.KafkaBasedCommandConsumerFactoryImpl;
 import org.eclipse.hono.test.TracingMockSupport;
@@ -418,9 +420,10 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
         final KafkaConsumerConfigProperties kafkaConsumerConfig = new KafkaConsumerConfigProperties();
         kafkaConsumerConfig.setConsumerConfig(Map.of(
                 ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS));
+        final CommandRouterMetrics metrics = mock(CommandRouterMetrics.class);
         final var kafkaBasedCommandConsumerFactoryImpl = new KafkaBasedCommandConsumerFactoryImpl(vertx, tenantClient,
                 commandTargetMapper, producerFactory, IntegrationTestSupport.getKafkaProducerConfig(),
-                kafkaConsumerConfig, tracer);
+                kafkaConsumerConfig, metrics, tracer);
         kafkaBasedCommandConsumerFactoryImpl.setGroupId(commandRouterGroupId);
         componentsToStopAfterTest.add(kafkaBasedCommandConsumerFactoryImpl);
         return kafkaBasedCommandConsumerFactoryImpl;

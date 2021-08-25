@@ -38,6 +38,7 @@ import org.eclipse.hono.client.command.kafka.KafkaBasedCommandResponseSender;
 import org.eclipse.hono.client.command.kafka.KafkaBasedInternalCommandSender;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.registry.TenantClient;
+import org.eclipse.hono.commandrouter.CommandRouterMetrics;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
@@ -49,6 +50,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
+import io.opentracing.Tracer;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -98,8 +100,10 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
 
         final Context context = VertxMockSupport.mockContext(mock(Vertx.class));
         final KafkaCommandProcessingQueue commandQueue = new KafkaCommandProcessingQueue(context);
+        final CommandRouterMetrics metrics = mock(CommandRouterMetrics.class);
+        final Tracer tracer = TracingMockSupport.mockTracer(TracingMockSupport.mockSpan());
         cmdHandler = new KafkaBasedMappingAndDelegatingCommandHandler(tenantClient, commandQueue, commandTargetMapper,
-                internalCommandSender, kafkaBasedCommandResponseSender, TracingMockSupport.mockTracer(TracingMockSupport.mockSpan()));
+                internalCommandSender, kafkaBasedCommandResponseSender, metrics, tracer);
     }
 
     /**
