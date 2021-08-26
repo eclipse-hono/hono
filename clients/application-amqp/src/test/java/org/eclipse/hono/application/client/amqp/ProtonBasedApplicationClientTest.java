@@ -19,6 +19,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -35,6 +36,7 @@ import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.messaging.Released;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.test.VertxMockSupport;
@@ -180,6 +182,43 @@ class ProtonBasedApplicationClientTest {
                 });
                 ctx.completeNow();
             }));
+    }
+
+    /**
+     * Verifies that the close handler provided when creating the message consumer is invoked
+     * when the consumer connection gets closed by the remote peer.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    void testConsumerCloseHandlerIsInvokedOnDisconnect(final VertxTestContext ctx) {
+
+        @SuppressWarnings("unchecked")
+        final ArgumentCaptor<DisconnectListener<HonoConnection>> disconnectHandlerCaptor = ArgumentCaptor.forClass(DisconnectListener.class);
+        verify(connection, atLeastOnce()).addDisconnectListener(disconnectHandlerCaptor.capture());
+
+        final Handler<DownstreamMessage<AmqpMessageContext>> consumer = VertxMockSupport.mockHandler();
+        final Handler<Throwable> closeHandler = VertxMockSupport.mockHandler();
+
+        // GIVEN a consumer created with a close handler
+        client.createTelemetryConsumer("tenant", consumer, closeHandler)
+                .onComplete(ctx.succeeding(mc -> {
+                    ctx.verify(() -> {
+                        verify(connection).createReceiver(
+                                eq("telemetry/tenant"),
+                                eq(ProtonQoS.AT_LEAST_ONCE),
+                                any(ProtonMessageHandler.class),
+                                anyInt(),
+                                anyBoolean(),
+                                VertxMockSupport.anyHandler());
+
+                        // WHEN the underlying connection is closed and the disconnect handlers get invoked
+                        disconnectHandlerCaptor.getAllValues().forEach(h -> h.onDisconnect(connection));
+                        // THEN the consumer close handler is invoked
+                        verify(closeHandler).handle(any());
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**
