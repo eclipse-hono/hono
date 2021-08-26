@@ -49,6 +49,9 @@ public interface AmqpApplicationClient
      *                     The handler will be invoked with an exception indicating the cause of the consumer
      *                     being closed or {@code null} if unknown.
      *                     <p>
+     *                     Note that the handler will also be invoked when the underlying AMQP connection is being
+     *                     closed by the remote peer without the peer having explicitly closed the consumer before.
+     *                     <p>
      *                     Implementors are encouraged to specify in detail the types of exceptions that might
      *                     be passed in, what kind of problem they indicate and what the consequences regarding the
      *                     underlying messaging infrastructure will be.

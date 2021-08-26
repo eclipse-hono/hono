@@ -14,13 +14,17 @@
 
 package org.eclipse.hono.application.client.amqp;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
+import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.client.ClientErrorException;
@@ -38,6 +42,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
+import io.vertx.core.impl.NoStackTraceThrowable;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
 
@@ -51,6 +56,8 @@ public class ProtonBasedApplicationClient extends ProtonBasedCommandSender imple
 
     private static final Logger LOG = LoggerFactory.getLogger(ProtonBasedApplicationClient.class);
 
+    private final List<Handler<Throwable>> consumerCloseHandlers = new ArrayList<>();
+
     /**
      * Creates a new vertx-proton based based application client.
      *
@@ -60,6 +67,18 @@ public class ProtonBasedApplicationClient extends ProtonBasedCommandSender imple
      */
     public ProtonBasedApplicationClient(final HonoConnection connection) {
         super(connection, SendMessageSampler.Factory.noop());
+    }
+
+    @Override
+    protected void onDisconnect() {
+        // consumer close handlers shall be called upon disconnect from remote peer,
+        // so skip invocation here if disconnect is done during shutdown
+        if (!connection.isShutdown()) {
+            final Throwable error = new NoStackTraceThrowable("disconnected");
+            consumerCloseHandlers.forEach(h -> h.handle(error));
+            consumerCloseHandlers.clear();
+        }
+        super.onDisconnect();
     }
 
     @Override
@@ -76,6 +95,7 @@ public class ProtonBasedApplicationClient extends ProtonBasedCommandSender imple
     @Override
     public final void disconnect(final Handler<AsyncResult<Void>> completionHandler) {
         LOG.info("disconnecting from Hono endpoint");
+        consumerCloseHandlers.clear();
         connection.disconnect(completionHandler);
     }
 
@@ -235,8 +255,7 @@ public class ProtonBasedApplicationClient extends ProtonBasedCommandSender imple
             final Handler<DownstreamMessage<AmqpMessageContext>> messageHandler,
             final Handler<Throwable> closeHandler) {
 
-        return GenericReceiverLink.create(
-                connection,
+        return createConsumer(
                 sourceAddress,
                 (delivery, message) -> {
                     try {
@@ -247,17 +266,41 @@ public class ProtonBasedApplicationClient extends ProtonBasedCommandSender imple
                             ProtonHelper.accepted(delivery, true);
                         }
                     } catch (final Throwable t) {
-                        handleException(t, delivery);
+                        handleMessageHandlerError(t, delivery);
                     }
-                },
-                false,
-                s -> Optional.ofNullable(closeHandler).ifPresent(h -> h.handle(null)))
-            .map(recv -> new MessageConsumer() {
-                @Override
-                public Future<Void> close() {
-                    return recv.close();
-                }
-            });
+                }, 
+                closeHandler);
+    }
+
+    private Future<MessageConsumer> createConsumer(
+            final String sourceAddress,
+            final BiConsumer<ProtonDelivery, Message> messageConsumer,
+            final Handler<Throwable> closeHandler) {
+
+        // wrap the handler to ensure distinct objects are added to the consumerCloseHandlers list
+        // preventing issues if the same closeHandler instance is used for multiple createConsumer() invocations
+        final Handler<Throwable> wrappedCloseHandler = closeHandler != null ? (thr -> closeHandler.handle(thr)) : null;
+        return connection
+                .isConnected(getDefaultConnectionCheckTimeout())
+                .compose(v -> GenericReceiverLink.create(
+                        connection,
+                        sourceAddress,
+                        messageConsumer,
+                        false,
+                        s -> {
+                            if (closeHandler != null) {
+                                consumerCloseHandlers.remove(wrappedCloseHandler);
+                                closeHandler.handle(null);
+                            }
+                        }))
+                .onSuccess(v -> Optional.ofNullable(wrappedCloseHandler).ifPresent(consumerCloseHandlers::add))
+                .map(receiverLink -> new MessageConsumer() {
+                    @Override
+                    public Future<Void> close() {
+                        Optional.ofNullable(wrappedCloseHandler).ifPresent(consumerCloseHandlers::remove);
+                        return receiverLink.close();
+                    }
+                });
     }
 
     private Future<MessageConsumer> createAsyncConsumer(
@@ -265,37 +308,27 @@ public class ProtonBasedApplicationClient extends ProtonBasedCommandSender imple
             final Function<DownstreamMessage<AmqpMessageContext>, Future<Void>> messageHandler,
             final Handler<Throwable> closeHandler) {
 
-        return GenericReceiverLink.create(
-                connection,
+        return createConsumer(
                 sourceAddress,
                 (delivery, message) -> {
                     try {
                         final var msg = ProtonBasedDownstreamMessage.from(message, delivery);
                         messageHandler.apply(msg)
-                            .onSuccess(ok -> {
-                                if (!delivery.isSettled()) {
-                                    LOG.debug("client provided message handler did not settle message, auto-accepting ...");
-                                    ProtonHelper.accepted(delivery, true);
-                                }
-                            })
-                            .onFailure(t -> {
-                                handleException(t, delivery);
-                            });
+                                .onSuccess(ok -> {
+                                    if (!delivery.isSettled()) {
+                                        LOG.debug("client provided message handler did not settle message, auto-accepting ...");
+                                        ProtonHelper.accepted(delivery, true);
+                                    }
+                                })
+                                .onFailure(t -> handleMessageHandlerError(t, delivery));
                     } catch (final Throwable t) {
-                        handleException(t, delivery);
+                        handleMessageHandlerError(t, delivery);
                     }
                 },
-                false,
-                s -> Optional.ofNullable(closeHandler).ifPresent(h -> h.handle(null)))
-            .map(recv -> new MessageConsumer() {
-                @Override
-                public Future<Void> close() {
-                    return recv.close();
-                }
-            });
+                closeHandler);
     }
 
-    private void handleException(final Throwable error, final ProtonDelivery delivery) {
+    private void handleMessageHandlerError(final Throwable error, final ProtonDelivery delivery) {
         LOG.debug("client provided message handler threw exception [local state: {}, settled: {}]",
                 Optional.ofNullable(delivery.getLocalState()).map(s -> s.getType().name()).orElse(null),
                 delivery.isSettled(),
