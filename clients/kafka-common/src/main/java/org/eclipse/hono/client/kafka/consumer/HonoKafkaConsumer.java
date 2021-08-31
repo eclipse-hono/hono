@@ -680,43 +680,34 @@ public class HonoKafkaConsumer implements Lifecycle {
         // and if not, potentially create it here implicitly
         // (partitionsFor() will create the topic if it doesn't exist, provided "auto.create.topics.enable" is true)
         HonoKafkaConsumerHelper.partitionsFor(kafkaConsumer, topic, topicCheckFuture);
-        return topicCheckFuture.future()
-                .recover(thr -> {
-                    log.warn("ensureTopicIsAmongSubscribedTopics: error getting partitions for topic [{}]", topic, thr);
-                    return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
-                            "error getting topic partitions", thr));
-                }).compose(partitions -> {
+        topicCheckFuture.future()
+                .onFailure(thr -> log.warn("ensureTopicIsAmongSubscribedTopics: error getting partitions for topic [{}]", topic, thr))
+                .onSuccess(partitions -> {
                     if (partitions.isEmpty()) {
                         log.warn("ensureTopicIsAmongSubscribedTopics: topic doesn't exist and didn't get auto-created: {}", topic);
+                    }
+                });
+        // the topic list of a wildcard subscription only gets refreshed periodically by default (interval is defined by "metadata.max.age.ms");
+        // therefore enforce a refresh here by again subscribing to the topic pattern
+        log.debug("ensureTopicIsAmongSubscribedTopics: wait for subscription update and rebalance [{}]", topic);
+        return subscribeAndWaitForRebalance()
+                .compose(v -> {
+                    if (!subscribedTopicPatternTopics.contains(topic)) {
+                        // first metadata refresh could have failed with a LEADER_NOT_AVAILABLE error for the new topic;
+                        // seems to happen when some other topics have just been deleted for example
+                        log.debug("ensureTopicIsAmongSubscribedTopics: subscription not updated with topic after rebalance; try again [topic: {}]", topic);
+                        return subscribeAndWaitForRebalance();
+                    }
+                    return Future.succeededFuture(v);
+                })
+                .compose(v -> {
+                    if (!subscribedTopicPatternTopics.contains(topic)) {
+                        log.warn("ensureTopicIsAmongSubscribedTopics: subscription not updated with topic after rebalance [topic: {}]", topic);
                         return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
-                                "topic doesn't exist and didn't get auto-created"));
+                                "subscription not updated with topic after rebalance"));
                     }
-                    // again check topics in case rebalance happened in between
-                    if (subscribedTopicPatternTopics.contains(topic)) {
-                        return Future.succeededFuture();
-                    }
-                    // the topic list of a wildcard subscription only gets refreshed periodically by default (interval is defined by "metadata.max.age.ms");
-                    // therefore enforce a refresh here by again subscribing to the topic pattern
-                    log.debug("ensureTopicIsAmongSubscribedTopics: verified topic existence, wait for subscription update and rebalance [{}]", topic);
-                    return subscribeAndWaitForRebalance()
-                            .compose(v -> {
-                                if (!subscribedTopicPatternTopics.contains(topic)) {
-                                    // first metadata refresh could have failed with a LEADER_NOT_AVAILABLE error for the new topic;
-                                    // seems to happen when some other topics have just been deleted for example
-                                    log.debug("ensureTopicIsAmongSubscribedTopics: subscription not updated with topic after rebalance; try again [topic: {}]", topic);
-                                    return subscribeAndWaitForRebalance();
-                                }
-                                return Future.succeededFuture(v);
-                            })
-                            .compose(v -> {
-                                if (!subscribedTopicPatternTopics.contains(topic)) {
-                                    log.warn("ensureTopicIsAmongSubscribedTopics: subscription not updated with topic after rebalance [topic: {}]", topic);
-                                    return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
-                                                    "subscription not updated with topic after rebalance"));
-                                }
-                                log.debug("ensureTopicIsAmongSubscribedTopics: done updating topic subscription");
-                                return Future.succeededFuture(v);
-                            });
+                    log.debug("ensureTopicIsAmongSubscribedTopics: done updating topic subscription");
+                    return Future.succeededFuture(v);
                 });
     }
 
