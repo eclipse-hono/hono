@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -102,7 +103,7 @@ public class HonoKafkaConsumer implements Lifecycle {
      * Note that these are not (necessarily) the topics that this particular kafkaConsumer
      * here will receive messages for.
      */
-    private Set<String> subscribedTopicPatternTopics = new HashSet<>();
+    private volatile Set<String> subscribedTopicPatternTopics = new HashSet<>();
     private Handler<Set<TopicPartition>> onPartitionsAssignedHandler;
     private Handler<Set<TopicPartition>> onRebalanceDoneHandler;
     private Handler<Set<TopicPartition>> onPartitionsRevokedHandler;
@@ -338,34 +339,31 @@ public class HonoKafkaConsumer implements Lifecycle {
     }
 
     /**
-     * To be invoked after partition assignment, making sure that with the completion of the returned future,
-     * partition offset positions have been set according to either the last committed state or the auto offset
-     * reset config ("latest" being relevant here) if no offset is committed yet.
+     * Ensures that partition offset positions have been set according to either the last committed state
+     * or the auto offset reset config ("latest" being relevant here) if no offset is committed yet.
      * <p>
-     * This makes sure records published after the returned future is completed are actually received by the consumer.
+     * This makes sure records published after this method returns are actually received by the consumer.
      * <p>
-     * Note that the returned future is never failed here.
+     * To be invoked on the Kafka polling thread on partition assignment.
      */
-    private Future<Void> ensurePositionsHaveBeenSetIfNeeded(final Set<TopicPartition> assignedPartitions) {
+    private void ensurePositionsHaveBeenSetIfNeeded(final Set<TopicPartition> assignedPartitions) {
         // skip if offset reset config set to "earliest", no need to wait for the result here since consumer will receive all records anyway
-        if (assignedPartitions.isEmpty()
-                || "earliest".equals(consumerConfig.get(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG))) {
-            return Future.succeededFuture();
+        if ("earliest".equals(consumerConfig.get(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG))) {
+            return;
         }
-        final Promise<Void> resultPromise = Promise.promise();
-        runOnKafkaWorkerThread(v -> {
+        final Set<TopicPartition> filteredPartitions = assignedPartitions.stream()
+                .filter(tp -> !subscribedTopicPatternTopics.contains(tp.getTopic())).collect(Collectors.toSet());
+        if (!filteredPartitions.isEmpty()) {
             final Consumer<String, Buffer> wrappedConsumer = kafkaConsumer.asStream().unwrap();
             try {
-                log.trace("fetching positions for {} assigned partitions...", assignedPartitions.size());
-                assignedPartitions.forEach(partition -> wrappedConsumer.position(Helper.to(partition)));
-                log.trace("done fetching positions for {} assigned partitions...", assignedPartitions.size());
+                log.trace("fetching positions for {} out of {} newly assigned partitions...", filteredPartitions.size(), assignedPartitions.size());
+                filteredPartitions.forEach(partition -> wrappedConsumer.position(Helper.to(partition)));
+                log.trace("done fetching positions for {} out of {} newly assigned partitions", filteredPartitions.size(), assignedPartitions.size());
             } catch (final Exception e) {
-                log.error("error fetching positions for {} assigned partitions", assignedPartitions.size(), e);
-            } finally {
-                runOnContext(v2 -> resultPromise.complete());
+                log.error("error fetching positions for {} out of {} newly assigned partitions", filteredPartitions.size(),
+                        assignedPartitions.size(), e);
             }
-        });
-        return resultPromise.future();
+        }
     }
 
     private void logSubscribedTopicsOnStartComplete() {
@@ -404,6 +402,7 @@ public class HonoKafkaConsumer implements Lifecycle {
                 if (log.isDebugEnabled()) {
                     log.debug("partitions assigned: [{}]", HonoKafkaConsumerHelper.getPartitionsDebugString(partitions));
                 }
+                ensurePositionsHaveBeenSetIfNeeded(partitionsSet);
                 onPartitionsAssignedBlocking(partitionsSet);
                 final Set<TopicPartition> allAssignedPartitions = Optional.ofNullable(onRebalanceDoneHandler)
                         .map(h -> Helper.from(getKafkaConsumer().asStream().unwrap().assignment()))
@@ -502,8 +501,7 @@ public class HonoKafkaConsumer implements Lifecycle {
             // update subscribedTopicPatternTopics (subscription() will return the actual topics, i.e. not the topic pattern if one is used)
             final Promise<Set<String>> subscriptionResultPromise = Promise.promise();
             kafkaConsumer.subscription(subscriptionResultPromise);
-            // update 'subscribedTopicPatternTopics' only after partition positions have been retrieved (ensureTopicIsAmongSubscribedTopicPatternTopics() relies on that)
-            CompositeFuture.all(subscriptionResultPromise.future(), ensurePositionsHaveBeenSetIfNeeded(partitionsSet))
+            subscriptionResultPromise.future()
                     .onSuccess(result -> subscribedTopicPatternTopics = new HashSet<>(subscriptionResultPromise.future().result()))
                     .onFailure(thr -> log.info("failed to get subscription", thr))
                     .map((Void) null)
@@ -512,9 +510,8 @@ public class HonoKafkaConsumer implements Lifecycle {
         } else {
             // fixed topic list used: calling kafkaConsumer.subscription() here would be of no use since it always
             // returns the topics used in the kafkaConsumer.subscribe(Collection) call, regardless of whether they exist
-            ensurePositionsHaveBeenSetIfNeeded(partitionsSet)
-                    .onComplete(ar -> Optional.ofNullable(subscribeDonePromiseRef.getAndSet(null))
-                            .ifPresent(Promise::tryComplete));
+            Optional.ofNullable(subscribeDonePromiseRef.getAndSet(null))
+                    .ifPresent(Promise::tryComplete);
         }
         if (onPartitionsAssignedHandler != null) {
             onPartitionsAssignedHandler.handle(partitionsSet);
