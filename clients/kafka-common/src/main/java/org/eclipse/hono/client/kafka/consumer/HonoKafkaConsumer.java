@@ -29,7 +29,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -347,22 +346,22 @@ public class HonoKafkaConsumer implements Lifecycle {
      * To be invoked on the Kafka polling thread on partition assignment.
      */
     private void ensurePositionsHaveBeenSetIfNeeded(final Set<TopicPartition> assignedPartitions) {
-        // skip if offset reset config set to "earliest", no need to wait for the result here since consumer will receive all records anyway
-        if ("earliest".equals(consumerConfig.get(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG))) {
-            return;
-        }
-        final Set<TopicPartition> filteredPartitions = assignedPartitions.stream()
-                .filter(tp -> !subscribedTopicPatternTopics.contains(tp.getTopic())).collect(Collectors.toSet());
-        if (!filteredPartitions.isEmpty()) {
-            final Consumer<String, Buffer> wrappedConsumer = kafkaConsumer.asStream().unwrap();
-            try {
-                log.trace("fetching positions for {} out of {} newly assigned partitions...", filteredPartitions.size(), assignedPartitions.size());
-                filteredPartitions.forEach(partition -> wrappedConsumer.position(Helper.to(partition)));
-                log.trace("done fetching positions for {} out of {} newly assigned partitions", filteredPartitions.size(), assignedPartitions.size());
-            } catch (final Exception e) {
-                log.error("error fetching positions for {} out of {} newly assigned partitions", filteredPartitions.size(),
-                        assignedPartitions.size(), e);
-            }
+        // not needed if offset reset config set to "earliest", no need to wait for the retrieval of fetch positions in that case since consumer will receive all records anyway
+        if (!"earliest".equals(consumerConfig.get(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG))) {
+            // check if among the assigned partitions there is one of a newly created topic;
+            // take the first such partition to fetch its position, thereby triggering a complete update of fetch positions (via KafkaConsumer#updateFetchPositions())
+            assignedPartitions.stream()
+                    .filter(tp -> !subscribedTopicPatternTopics.contains(tp.getTopic()))
+                    .findFirst()
+                    .ifPresent(firstNewTopicPartition -> {
+                        log.trace("triggering update of fetch positions (via fetch of position for new {})...", firstNewTopicPartition);
+                        try {
+                            kafkaConsumer.asStream().unwrap().position(Helper.to(firstNewTopicPartition));
+                        } catch (final Exception e) {
+                            log.warn("error fetching position for {}: {}", firstNewTopicPartition, e.toString());
+                        }
+                        log.trace("done triggering update of fetch positions (via fetch of position for new {})", firstNewTopicPartition);
+                    });
         }
     }
 
@@ -703,7 +702,7 @@ public class HonoKafkaConsumer implements Lifecycle {
                         return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
                                 "subscription not updated with topic after rebalance"));
                     }
-                    log.debug("ensureTopicIsAmongSubscribedTopics: done updating topic subscription");
+                    log.debug("ensureTopicIsAmongSubscribedTopics: done updating topic subscription [{}]", topic);
                     return Future.succeededFuture(v);
                 });
     }
