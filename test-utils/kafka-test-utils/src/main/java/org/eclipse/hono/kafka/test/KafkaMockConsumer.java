@@ -14,8 +14,10 @@
 package org.eclipse.hono.kafka.test;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
@@ -24,11 +26,14 @@ import java.util.stream.Collectors;
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.MockConsumer;
+import org.apache.kafka.clients.consumer.OffsetAndMetadata;
+import org.apache.kafka.clients.consumer.OffsetCommitCallback;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
 import org.apache.kafka.common.Node;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
 
+import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 
 /**
@@ -43,6 +48,7 @@ public class KafkaMockConsumer extends MockConsumer<String, Buffer> {
     private Collection<TopicPartition> onSubscribeRebalancePartitionAssignment;
     private ConsumerRebalanceListener rebalanceListener;
     private final AtomicBoolean skipSettingClosedFlagOnNextClose = new AtomicBoolean();
+    private final List<Handler<Map<TopicPartition, OffsetAndMetadata>>> commitListeners = new ArrayList<>();
 
     /**
      * Creates a new KafkaMockConsumer.
@@ -163,5 +169,19 @@ public class KafkaMockConsumer extends MockConsumer<String, Buffer> {
         if (!skipSettingClosedFlagOnNextClose.compareAndSet(true, false)) {
             super.close();
         }
+    }
+
+    @Override
+    public synchronized void commitAsync(final Map<TopicPartition, OffsetAndMetadata> offsets, final OffsetCommitCallback callback) {
+        commitListeners.forEach(l -> l.handle(offsets));
+        super.commitAsync(offsets, callback);
+    }
+
+    /**
+     * Adds a listener to be called when offsets are committed.
+     * @param commitListener The listener to add.
+     */
+    public void addCommitListener(final Handler<Map<TopicPartition, OffsetAndMetadata>> commitListener) {
+        commitListeners.add(commitListener);
     }
 }

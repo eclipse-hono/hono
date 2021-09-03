@@ -33,7 +33,6 @@ import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
@@ -89,6 +88,8 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
     /**
      * The name of the configuration property to define the period for which committing an already committed offset is
      * skipped, until it may be recommitted if it is still the latest offset.
+     * This is to ensure that the offset commit message isn't being discarded at some point
+     * (see the <em>offsets.retention.minutes</em> broker config setting, default being 7 days).
      */
     public static final String CONFIG_HONO_OFFSETS_SKIP_RECOMMIT_PERIOD_SECONDS = "hono.offsets.skip.recommit.period.seconds";
     /**
@@ -109,8 +110,10 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
     /**
      * The default period for which committing an already committed offset is skipped,
      * until it may be recommitted if it is still the latest offset.
+     * This is to ensure that the offset commit message isn't being discarded at some point
+     * (see the <em>offsets.retention.minutes</em> broker config setting, default being 7 days).
      */
-    public static final Duration DEFAULT_OFFSETS_SKIP_RECOMMIT_PERIOD = Duration.ofMinutes(30);
+    public static final Duration DEFAULT_OFFSETS_SKIP_RECOMMIT_PERIOD = Duration.ofHours(1);
     /**
      * The default amount of time to wait for the completion of yet incomplete record result futures before doing
      * a synchronous offset commit as part of handling the revocation of a partition assignment, e.g. when the
@@ -147,6 +150,14 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
     private final long skipOffsetRecommitPeriodSeconds;
     private final long offsetsCommitRecordCompletionTimeoutMillis;
     private final Map<TopicPartition, TopicPartitionOffsets> offsetsMap = new HashMap<>();
+    /**
+     * Map keeping the last offsets committed by this consumer for the partitions of the subscribed topics.
+     * It is used to skip unnecessary offset commits while not having to query the committed offsets from the server.
+     * <p>
+     * Offsets here are the same as used in consumer.position() and consumer.commit() invocations (i.e. they refer to
+     * the next record to be read).
+     */
+    private final Map<TopicPartition, Long> lastKnownCommittedOffsets = new HashMap<>();
     private final AtomicBoolean periodicCommitInvocationInProgress = new AtomicBoolean();
     private final AtomicInteger recordsInProcessingCounter = new AtomicInteger();
     private final AtomicReference<UncompletedRecordsCompletionLatch> uncompletedRecordsCompletionLatchRef = new AtomicReference<>();
@@ -310,12 +321,51 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
 
     @Override
     protected void onPartitionsAssignedBlocking(final Set<io.vertx.kafka.client.common.TopicPartition> partitionsSet) {
-        final Consumer<String, Buffer> wrappedConsumer = getKafkaConsumer().asStream().unwrap();
-        clearObsoleteTopicPartitionOffsets(wrappedConsumer.assignment());
+        clearObsoleteTopicPartitionOffsets(getUnderlyingConsumer().assignment());
+        // remove lastKnownCommittedOffsets entries belonging to deleted topics
+        if (topicPattern != null) {
+            final Set<String> subscribedTopicPatternTopics = getSubscribedTopicPatternTopics();
+            lastKnownCommittedOffsets.entrySet()
+                    .removeIf(entry -> !subscribedTopicPatternTopics.contains(entry.getKey().topic()));
+        }
+        if (!"earliest".equals(consumerConfig.get(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG)) && !partitionsSet.isEmpty()) {
+            // for each partition ensure an offset gets committed on the next commit if there possibly has never been a commit before;
+            // otherwise records published during an upcoming rebalance might be skipped if the partition gets assigned
+            // to another consumer which then just begins reading on the latest offset, not the offset from before the rebalance
+            ensureOffsetCommitsExistForNewlyAssignedPartitions(partitionsSet);
+        }
+    }
+
+    // synchronized because offsetsMap is accessed from vert.x event loop and kafka polling thread
+    private synchronized void ensureOffsetCommitsExistForNewlyAssignedPartitions(
+            final Set<io.vertx.kafka.client.common.TopicPartition> partitionsSet) {
+        final List<TopicPartition> partitionsForNextCommit = new LinkedList<>();
+        partitionsSet.stream().map(Helper::to)
+                .filter(partition -> !offsetsMap.containsKey(partition))
+                .forEach(partition -> {
+                    try {
+                        final long position = getUnderlyingConsumer().position(partition);
+                        final boolean positionCommitted = Optional
+                                .ofNullable(lastKnownCommittedOffsets.get(partition))
+                                .map(committedPos -> committedPos.equals(position)).orElse(false);
+                        if (!positionCommitted) {
+                            partitionsForNextCommit.add(partition);
+                        }
+                        offsetsMap.put(partition,
+                                new TopicPartitionOffsets(partition, position, positionCommitted));
+                    } catch (final Exception ex) {
+                        log.warn("error fetching position for newly assigned partition [{}]", partition, ex);
+                    }
+                });
+        if (log.isDebugEnabled() && !partitionsForNextCommit.isEmpty()) {
+            log.debug("onPartitionsAssigned: partitions to be part of next offset commit: [{}]",
+                    HonoKafkaConsumerHelper.getPartitionsDebugString(partitionsForNextCommit));
+        }
     }
 
     @Override
     protected void onPartitionsRevokedBlocking(final Set<io.vertx.kafka.client.common.TopicPartition> partitionsSet) {
+        // potentially wait some time for record processing to finish before committing offsets
         if (!partitionsSet.isEmpty() && offsetsCommitRecordCompletionTimeoutMillis > 0) {
             UncompletedRecordsCompletionLatch latch = null;
             synchronized (uncompletedRecordsCompletionLatchRef) {
@@ -344,6 +394,7 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
             }
         }
         commitOffsetsSync();
+        // offsetsMap kept unchanged here - will be updated on the following onPartitionsAssigned
     }
 
     /**
@@ -359,9 +410,8 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
                 if (log.isTraceEnabled()) {
                     log.trace("commitSync; offsets: [{}]", HonoKafkaConsumerHelper.getOffsetsDebugString(offsets));
                 }
-                // commit invoked on the wrappedConsumer, so that it is run synchronously on the current thread
-                final Consumer<String, Buffer> wrappedConsumer = getKafkaConsumer().asStream().unwrap();
-                wrappedConsumer.commitSync(offsets);
+                // commit invoked on the underlying consumer, so that it is run synchronously on the current thread
+                getUnderlyingConsumer().commitSync(offsets);
                 setCommittedOffsets(offsets);
                 log.trace("commitSync succeeded");
             } catch (final Exception e) {
@@ -385,9 +435,8 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
                     if (log.isTraceEnabled()) {
                         log.trace("do periodic commit; offsets: [{}]", HonoKafkaConsumerHelper.getOffsetsDebugString(offsets));
                     }
-                    final Consumer<String, Buffer> wrappedConsumer = getKafkaConsumer().asStream().unwrap();
                     try {
-                        wrappedConsumer.commitAsync(offsets, (committedOffsets, error) -> {
+                        getUnderlyingConsumer().commitAsync(offsets, (committedOffsets, error) -> {
                             if (error != null) {
                                 log.info("periodic commit failed: {}", error.toString());
                             } else {
@@ -456,6 +505,7 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
         offsets.forEach((partition, offsetAndMetadata) -> {
             Optional.ofNullable(offsetsMap.get(partition))
                     .ifPresent(queue -> queue.setLastCommittedOffset(offsetAndMetadata.offset() - 1));
+            lastKnownCommittedOffsets.put(partition, offsetAndMetadata.offset());
         });
     }
 
@@ -464,11 +514,12 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
      */
     class TopicPartitionOffsets {
 
+        private static final long UNDEFINED_OFFSET = -2;
         private final TopicPartition topicPartition;
         private final Deque<OffsetsQueueEntry> queue = new LinkedList<>();
 
-        private long lastSequentiallyCompletedOffset = -1;
-        private long lastCommittedOffset = -1;
+        private long lastSequentiallyCompletedOffset = UNDEFINED_OFFSET;
+        private long lastCommittedOffset = UNDEFINED_OFFSET;
         private Instant lastCommitTime;
 
         /**
@@ -479,6 +530,25 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
          */
         TopicPartitionOffsets(final TopicPartition topicPartition) {
             this.topicPartition = Objects.requireNonNull(topicPartition);
+        }
+
+        /**
+         * Creates a new TopicPartitionOffsets object with the initial fetch position.
+         * <p>
+         * If the <em>initialPositionCommitted</em> parameter is {@code false}, meaning the given position hasn't
+         * (necessarily) been committed yet, the position will be marked as to be committed in the next offset commit,
+         * as indicated by the return values of {@link #needsCommit()} and {@link #getLastSequentiallyCompletedOffsetForCommit()}.
+         *
+         * @param topicPartition The topic partition to store the offsets for.
+         * @param initialPosition The offset of the next record that will be fetched for this partition.
+         * @param initialPositionCommitted {@code true} if the given <em>initialPosition</em>> is known to have already
+         *            been committed.
+         * @throws NullPointerException if topicPartition is {@code null}.
+         */
+        TopicPartitionOffsets(final TopicPartition topicPartition, final long initialPosition, final boolean initialPositionCommitted) {
+            this(topicPartition);
+            this.lastSequentiallyCompletedOffset = initialPosition - 1;
+            this.lastCommittedOffset = initialPositionCommitted ? this.lastSequentiallyCompletedOffset : UNDEFINED_OFFSET;
         }
 
         /**
@@ -505,18 +575,18 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
          */
         public Optional<Long> getLastSequentiallyCompletedOffsetForCommit() {
             cleanupAndUpdateLastCompletedOffset();
-            if (lastSequentiallyCompletedOffset == -1) {
+            if (lastSequentiallyCompletedOffset == UNDEFINED_OFFSET) {
                 return Optional.empty();
             }
             if (!queue.isEmpty()) {
-                log.trace("getOffsetsToCommit: record with offset {} to use for commit is {} entries behind last received offset {}; partition [{}]",
+                log.trace("getOffsetsToCommit: offset {} to use for commit is {} entries behind last received offset {}; partition [{}]",
                         lastSequentiallyCompletedOffset, queue.size(), queue.getLast().getOffset(), topicPartition);
             }
             if (lastSequentiallyCompletedOffset != lastCommittedOffset) {
                 return Optional.of(lastSequentiallyCompletedOffset);
             } else if (lastCommitTime != null
                     && lastCommitTime.isBefore(Instant.now().minusSeconds(skipOffsetRecommitPeriodSeconds))) {
-                log.trace("getOffsetsToCommit: record with offset {} will be recommitted (last commit {} too long ago); partition [{}]",
+                log.trace("getOffsetsToCommit: offset {} will be recommitted (last commit {} too long ago); partition [{}]",
                         lastSequentiallyCompletedOffset, lastCommitTime, topicPartition);
                 return Optional.of(lastSequentiallyCompletedOffset);
             } else {
@@ -561,7 +631,7 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
          */
         public boolean needsCommit() {
             cleanupAndUpdateLastCompletedOffset();
-            return lastSequentiallyCompletedOffset != -1 && lastSequentiallyCompletedOffset != lastCommittedOffset;
+            return lastSequentiallyCompletedOffset != UNDEFINED_OFFSET && lastSequentiallyCompletedOffset != lastCommittedOffset;
         }
 
         /**
@@ -571,10 +641,14 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
          */
         public String getStateInfo() {
             cleanupAndUpdateLastCompletedOffset();
-            return '{' + "lastSequentiallyCompletedOffset=" + lastSequentiallyCompletedOffset
-                    + ", lastCommittedOffset=" + lastCommittedOffset
+            return '{' + "lastSequentiallyCompletedOffset=" + getOffsetString(lastSequentiallyCompletedOffset)
+                    + ", lastCommittedOffset=" + getOffsetString(lastCommittedOffset)
                     + (queue.size() <= 20 ? ", queue=" + queue : ", queue.size=" + queue.size())
                     + '}';
+        }
+
+        private String getOffsetString(final long offset) {
+            return offset == UNDEFINED_OFFSET ? "undefined" : Long.toString(offset);
         }
     }
 

@@ -552,6 +552,100 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
     }
 
     /**
+     * Verifies that the consumer commits the initial partition offset on the first offset commit after
+     * the partition got assigned to the consumer.
+     *
+     * @param ctx The vert.x test context.
+     * @throws InterruptedException if the test execution gets interrupted.
+     */
+    @Test
+    public void testConsumerCommitsInitialOffset(final VertxTestContext ctx) throws InterruptedException {
+        final Promise<Void> testRecordsReceived = Promise.promise();
+        final Function<KafkaConsumerRecord<String, Buffer>, Future<Void>> handler = record -> {
+            testRecordsReceived.complete();
+            return Future.succeededFuture();
+        };
+        final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig("test");
+        consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
+        // 100ms commit interval - keep the value not too low,
+        // otherwise the frequent commit task on the event loop thread will prevent the test main thread from getting things done
+        consumerConfig.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "100");
+
+        consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
+        consumer.setKafkaConsumerSupplier(() -> mockConsumer);
+        mockConsumer.updateEndOffsets(Map.of(topicPartition, ((long) 0)));
+        mockConsumer.updatePartitions(topicPartition, KafkaMockConsumer.DEFAULT_NODE);
+        mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(topicPartition));
+
+        final VertxTestContext consumerStartedCtx = new VertxTestContext();
+        consumer.start().onComplete(ctx.succeeding(v2 -> {
+            consumerStartedCtx.completeNow();
+        }));
+        assertWithMessage("consumer started in 5s")
+                .that(consumerStartedCtx.awaitCompletion(5, TimeUnit.SECONDS))
+                .isTrue();
+        if (consumerStartedCtx.failed()) {
+            ctx.failNow(consumerStartedCtx.causeOfFailure());
+            return;
+        }
+        final List<Map<TopicPartition, OffsetAndMetadata>> reportedCommits = new ArrayList<>();
+        mockConsumer.addCommitListener(reportedCommits::add);
+
+        final CountDownLatch rebalance1Done = new CountDownLatch(1);
+        final Checkpoint commitCheckDone = ctx.checkpoint(3);
+        consumer.setOnPartitionsAssignedHandler(partitions -> {
+            final Map<TopicPartition, OffsetAndMetadata> committed = mockConsumer.committed(Set.of(topicPartition, topic2Partition));
+            ctx.verify(() -> {
+                // the rebalance where topicPartition got revoked should have triggered a commit of offset 0 for topicPartition
+                assertThat(reportedCommits.size()).isEqualTo(1);
+                final OffsetAndMetadata offsetAndMetadata = committed.get(topicPartition);
+                assertThat(offsetAndMetadata).isNotNull();
+                assertThat(offsetAndMetadata.offset()).isEqualTo(0);
+            });
+            commitCheckDone.flag();
+            rebalance1Done.countDown();
+        });
+        // now force a rebalance which should trigger the above onPartitionsAssignedHandler
+        mockConsumer.updateEndOffsets(Map.of(topic2Partition, ((long) 0)));
+        mockConsumer.rebalance(List.of(topic2Partition));
+        if (!rebalance1Done.await(5, TimeUnit.SECONDS)) {
+            ctx.failNow(new IllegalStateException("partitionsAssigned handler not invoked"));
+        }
+
+        final CountDownLatch rebalance2Done = new CountDownLatch(1);
+        consumer.setOnPartitionsAssignedHandler(partitions -> {
+            final Map<TopicPartition, OffsetAndMetadata> committed = mockConsumer.committed(Set.of(topicPartition, topic2Partition));
+            ctx.verify(() -> {
+                // the 2nd rebalance where topic2Partition got revoked and topicPartition got assigned
+                // should have triggered a commit of offset 0 for topic2Partition
+                assertThat(reportedCommits.size()).isEqualTo(2);
+                final OffsetAndMetadata offsetAndMetadata = committed.get(topic2Partition);
+                assertThat(offsetAndMetadata).isNotNull();
+                assertThat(offsetAndMetadata.offset()).isEqualTo(0);
+            });
+            commitCheckDone.flag();
+            rebalance2Done.countDown();
+        });
+        // now again force a rebalance which should trigger the above onPartitionsAssignedHandler
+        // - this time again with the first partition
+        mockConsumer.updateEndOffsets(Map.of(topicPartition, ((long) 0)));
+        mockConsumer.rebalance(List.of(topicPartition));
+        if (!rebalance2Done.await(5, TimeUnit.SECONDS)) {
+            ctx.failNow(new IllegalStateException("partitionsAssigned handler not invoked"));
+        }
+
+        consumer.setOnPartitionsAssignedHandler(partitions -> {
+            ctx.verify(() -> {
+                // the 3rd rebalance where all partitions got revoked should have triggered no new commits
+                assertThat(reportedCommits.size()).isEqualTo(2);
+            });
+            commitCheckDone.flag();
+        });
+        // now force a 3rd rebalance, assigning no partition
+        mockConsumer.rebalance(List.of());
+    }
+
+    /**
      * Verifies that a scenario of a partition being revoked and not assigned again, while there are
      * still not fully handled records, is identified by the consumer.
      *
@@ -610,9 +704,12 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         consumer.setOnPartitionsAssignedHandler(partitions -> {
             final Map<TopicPartition, OffsetAndMetadata> committed = mockConsumer.committed(Set.of(topicPartition));
             ctx.verify(() -> {
-                // the rebalance after having completed the records of the now unassigned partition
-                // should have triggered no offset commits
-                assertThat(committed).isEmpty();
+                // the last rebalance where topicPartition got revoked should have just
+                // triggered a commit of offset 0; the 3 records that only got completed
+                // after the rebalance shouldn't have been taken into account in the commit
+                final OffsetAndMetadata offsetAndMetadata = committed.get(topicPartition);
+                assertThat(offsetAndMetadata).isNotNull();
+                assertThat(offsetAndMetadata.offset()).isEqualTo(0);
             });
             commitCheckDone.flag();
         });
