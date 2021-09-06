@@ -178,9 +178,6 @@ org.jetbrains:annotations:jar:13.0
 org.jetbrains.kotlin:kotlin-stdlib-common:jar:1.4.32
 org.jetbrains.kotlin:kotlin-stdlib:jar:1.4.32
 org.jgroups:jgroups:jar:4.2.9.Final
-org.junit.jupiter:junit-jupiter-engine:jar:5.7.1
-org.junit.platform:junit-platform-commons:jar:1.7.1
-org.junit.platform:junit-platform-engine:jar:1.7.1
 org.latencyutils:LatencyUtils:jar:2.0.3
 org.lz4:lz4-java:jar:1.7.1
 org.mockito:mockito-core:jar:3.7.7
