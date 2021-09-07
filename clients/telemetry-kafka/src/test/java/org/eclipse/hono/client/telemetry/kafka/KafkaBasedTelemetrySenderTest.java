@@ -74,8 +74,8 @@ public class KafkaBasedTelemetrySenderTest {
         final QoS qos = QoS.AT_MOST_ONCE;
         final String payload = "the-payload";
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
-        final CachingKafkaProducerFactory<String, Buffer> factory = new CachingKafkaProducerFactory<>(
-                (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+        final CachingKafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory
+                .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
         final KafkaBasedTelemetrySender sender = new KafkaBasedTelemetrySender(factory, kafkaProducerConfig,
                 true, tracer);
 
@@ -113,8 +113,8 @@ public class KafkaBasedTelemetrySenderTest {
         final String contentType = "the-content-type";
         final String payload = "the-payload";
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
-        final CachingKafkaProducerFactory<String, Buffer> factory = new CachingKafkaProducerFactory<>(
-                (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+        final CachingKafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory
+                .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
         final KafkaBasedTelemetrySender sender = new KafkaBasedTelemetrySender(factory, kafkaProducerConfig,
                 true, tracer);
 
@@ -143,8 +143,9 @@ public class KafkaBasedTelemetrySenderTest {
      */
     @Test
     public void testThatConstructorThrowsOnMissingParameter() {
-        final CachingKafkaProducerFactory<String, Buffer> factory = new CachingKafkaProducerFactory<>(
-                (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(KafkaClientUnitTestHelper.newMockProducer(true)));
+        final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
+        final CachingKafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory
+                .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
 
         assertThrows(NullPointerException.class,
                 () -> new KafkaBasedTelemetrySender(null, kafkaProducerConfig, true, tracer));
@@ -164,8 +165,10 @@ public class KafkaBasedTelemetrySenderTest {
     @Test
     public void testThatSendTelemetryThrowsOnMissingMandatoryParameter() {
         final QoS qos = QoS.AT_LEAST_ONCE;
-        final CachingKafkaProducerFactory<String, Buffer> factory = new CachingKafkaProducerFactory<>(
-                (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(KafkaClientUnitTestHelper.newMockProducer(true)));
+        final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
+        final CachingKafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory
+                .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+
         final KafkaBasedTelemetrySender sender = new KafkaBasedTelemetrySender(factory, kafkaProducerConfig,
                 true, tracer);
 

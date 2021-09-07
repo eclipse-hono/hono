@@ -76,7 +76,7 @@ public class CachingKafkaProducerFactoryTest {
             return KafkaProducer.create(vertxMock, mockProducer);
         };
 
-        factory = new CachingKafkaProducerFactory<>(instanceSupplier);
+        factory = CachingKafkaProducerFactory.testFactory(instanceSupplier);
 
         configProperties.setProducerConfig(Map.of("bootstrap.servers", "localhost:9092"));
     }

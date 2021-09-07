@@ -99,8 +99,8 @@ public class KafkaBasedCommandSenderTest {
         producerConfig.setProducerConfig(Map.of("client.id", "application-test-sender"));
 
         mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
-        final CachingKafkaProducerFactory<String, Buffer> producerFactory = new CachingKafkaProducerFactory<>(
-                (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+        final CachingKafkaProducerFactory<String, Buffer> producerFactory = CachingKafkaProducerFactory
+                .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
         commandSender = new KafkaBasedCommandSender(
                 vertx,
                 consumerConfig,
@@ -271,8 +271,8 @@ public class KafkaBasedCommandSenderTest {
                 });
             }
         };
-        final CachingKafkaProducerFactory<String, Buffer> producerFactory = new CachingKafkaProducerFactory<>(
-                (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+        final CachingKafkaProducerFactory<String, Buffer> producerFactory = CachingKafkaProducerFactory
+                .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
         commandSender = new KafkaBasedCommandSender(
                 vertx,
                 consumerConfig,

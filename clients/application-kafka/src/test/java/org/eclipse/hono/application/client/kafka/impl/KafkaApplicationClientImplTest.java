@@ -76,8 +76,8 @@ public class KafkaApplicationClientImplTest {
     @BeforeEach
     void setUp(final Vertx vertx) {
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
-        final CachingKafkaProducerFactory<String, Buffer> producerFactory = new CachingKafkaProducerFactory<>(
-                (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+        final CachingKafkaProducerFactory<String, Buffer> producerFactory = CachingKafkaProducerFactory
+                .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
 
         tenantId = UUID.randomUUID().toString();
 

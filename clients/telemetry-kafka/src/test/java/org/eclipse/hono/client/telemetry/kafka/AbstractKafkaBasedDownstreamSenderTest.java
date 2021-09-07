@@ -445,9 +445,10 @@ public class AbstractKafkaBasedDownstreamSenderTest {
 
     }
 
-    private CachingKafkaProducerFactory<String, Buffer> newProducerFactory(final MockProducer<String, Buffer> mockProducer) {
-        return new CachingKafkaProducerFactory<>(
-                (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+    private CachingKafkaProducerFactory<String, Buffer> newProducerFactory(
+            final MockProducer<String, Buffer> mockProducer) {
+        return CachingKafkaProducerFactory
+                .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
     }
 
     private AbstractKafkaBasedDownstreamSender newSender(final MockProducer<String, Buffer> mockProducer) {
