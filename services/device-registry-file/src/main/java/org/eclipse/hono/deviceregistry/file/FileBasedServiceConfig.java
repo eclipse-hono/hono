@@ -18,6 +18,7 @@ import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.kafka.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.telemetry.EventSender;
@@ -185,7 +186,7 @@ public class FileBasedServiceConfig {
         }
 
         if (kafkaProducerConfig().isConfigured()) {
-            final KafkaProducerFactory<String, Buffer> factory = KafkaProducerFactory.sharedProducerFactory(vertx);
+            final KafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory.sharedFactory(vertx);
             result.setClient(new KafkaBasedEventSender(factory, kafkaProducerConfig(), true, tracer));
         }
 

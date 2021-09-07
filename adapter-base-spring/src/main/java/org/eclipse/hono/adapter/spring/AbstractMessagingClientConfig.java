@@ -21,6 +21,7 @@ import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.command.amqp.ProtonBasedCommandResponseSender;
 import org.eclipse.hono.client.command.kafka.KafkaBasedCommandResponseSender;
+import org.eclipse.hono.client.kafka.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
@@ -78,7 +79,7 @@ public abstract class AbstractMessagingClientConfig implements ComponentNameProv
         if (kafkaProducerConfig().isConfigured()) {
             log.info("Kafka Producer is configured, adding Kafka messaging clients");
             final KafkaProducerConfigProperties producerConfig = kafkaProducerConfig();
-            final KafkaProducerFactory<String, Buffer> factory = KafkaProducerFactory.sharedProducerFactory(vertx);
+            final KafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory.sharedFactory(vertx);
 
             telemetrySenderProvider.setClient(new KafkaBasedTelemetrySender(factory, producerConfig,
                     adapterProperties.isDefaultsEnabled(), tracer));

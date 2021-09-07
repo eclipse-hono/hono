@@ -29,6 +29,7 @@ import org.eclipse.hono.application.client.amqp.ProtonBasedApplicationClient;
 import org.eclipse.hono.application.client.kafka.impl.KafkaApplicationClientImpl;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.kafka.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
@@ -144,7 +145,7 @@ public class HonoExampleApplicationBase {
         producerConfig.setCommonClientConfig(properties);
         producerConfig.setDefaultClientIdPrefix(clientIdPrefix);
 
-        final KafkaProducerFactory<String, Buffer> producerFactory = KafkaProducerFactory.sharedProducerFactory(vertx);
+        final KafkaProducerFactory<String, Buffer> producerFactory = CachingKafkaProducerFactory.sharedFactory(vertx);
         return new KafkaApplicationClientImpl(vertx, consumerConfig, producerFactory, producerConfig);
     }
 

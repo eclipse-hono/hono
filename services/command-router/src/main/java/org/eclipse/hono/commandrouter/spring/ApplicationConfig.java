@@ -18,6 +18,7 @@ import java.util.Optional;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.kafka.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
@@ -445,7 +446,7 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public KafkaProducerFactory<String, Buffer> kafkaProducerFactory() {
-        return KafkaProducerFactory.sharedProducerFactory(vertx());
+        return CachingKafkaProducerFactory.sharedFactory(vertx());
     }
 
     /**

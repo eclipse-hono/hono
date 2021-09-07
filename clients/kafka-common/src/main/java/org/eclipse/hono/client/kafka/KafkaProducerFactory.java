@@ -13,10 +13,7 @@
 
 package org.eclipse.hono.client.kafka;
 
-import java.util.Map;
-
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.kafka.client.producer.KafkaProducer;
 
 /**
@@ -30,23 +27,6 @@ import io.vertx.kafka.client.producer.KafkaProducer;
  * @param <V> The type for the record value serialization.
  */
 public interface KafkaProducerFactory<K, V> {
-
-    /**
-     * Creates a new factory that produces {@link KafkaProducer#createShared(Vertx, String, Map) shared producers}.
-     * Shared producers can safely be shared between verticle instances.
-     * <p>
-     * Config must always be the same for the same key in {@link #getOrCreateProducer(String, KafkaProducerConfigProperties)}.
-     * <p>
-     * The resources of a shared producer are released when the last producer with a given name is closed.
-     *
-     * @param vertx The Vert.x instance to use.
-     * @param <K> The type for the record key serialization.
-     * @param <V> The type for the record value serialization.
-     * @return An instance of the factory.
-     */
-    static <K, V> KafkaProducerFactory<K, V> sharedProducerFactory(final Vertx vertx) {
-        return new CachingKafkaProducerFactory<>((name, config) -> KafkaProducer.createShared(vertx, name, config));
-    }
 
     /**
      * Gets a producer for sending data to Kafka.
