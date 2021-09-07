@@ -87,6 +87,28 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
     }
 
     /**
+     * Creates a new factory that produces Vert.x Kafka producers.
+     *
+     * The factory will create one producer (if it not already exists) per name. The producers of each instance of the
+     * factory are independent of each other. To share producers between Verticles (improves batching), use
+     * {@link #sharedFactory(Vertx)} instead.
+     *
+     * If using multiple instances of the factory
+     * <p>
+     * Config must always be the same for the same key in
+     * {@link #getOrCreateProducer(String, KafkaProducerConfigProperties)}.
+     * <p>
+     *
+     * @param vertx The Vert.x instance to use.
+     * @param <K> The type for the record key serialization.
+     * @param <V> The type for the record value serialization.
+     * @return An instance of the factory.
+     */
+    public static <K, V> KafkaProducerFactory<K, V> nonSharedFactory(final Vertx vertx) {
+        return new CachingKafkaProducerFactory<>((name, config) -> KafkaProducer.create(vertx, config));
+    }
+
+    /**
      * Creates a new producer factory that creates producers from the given function.
      *
      * This provides the flexibility to control how the producers are created and is intended for unit test.
