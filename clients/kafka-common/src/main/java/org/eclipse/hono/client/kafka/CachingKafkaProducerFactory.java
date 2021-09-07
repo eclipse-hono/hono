@@ -54,13 +54,12 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
     /**
      * Creates a new producer factory.
      * <p>
-     * Use {@link #sharedFactory(Vertx)} to create producers that can safely be shared
-     * between verticle instances.
+     * Use {@link #sharedFactory(Vertx)} to create producers that can safely be shared between verticle instances.
      *
      * @param producerInstanceSupplier The function that provides new producer instances. Parameters are the producer
-     *                                 name and the producer configuration.
+     *            name and the producer configuration.
      */
-    public CachingKafkaProducerFactory(
+    private CachingKafkaProducerFactory(
             final BiFunction<String, Map<String, String>, KafkaProducer<K, V>> producerInstanceSupplier) {
         this.producerInstanceSupplier = producerInstanceSupplier;
     }
@@ -85,6 +84,22 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
      */
     public static <K, V> KafkaProducerFactory<K, V> sharedFactory(final Vertx vertx) {
         return new CachingKafkaProducerFactory<>((name, config) -> KafkaProducer.createShared(vertx, name, config));
+    }
+
+    /**
+     * Creates a new producer factory that creates producers from the given function.
+     *
+     * This provides the flexibility to control how the producers are created and is intended for unit test.
+     *
+     * @param producerInstanceSupplier The function that provides new producer instances. Parameters are the producer
+     *            name and the producer configuration.
+     * @param <K> The type for the record key serialization.
+     * @param <V> The type for the record value serialization.
+     * @return An instance of the factory.
+     */
+    public static <K, V> CachingKafkaProducerFactory<K, V> testFactory(
+            final BiFunction<String, Map<String, String>, KafkaProducer<K, V>> producerInstanceSupplier) {
+        return new CachingKafkaProducerFactory<>(producerInstanceSupplier);
     }
 
     /**

@@ -73,8 +73,8 @@ public class KafkaBasedEventSenderTest {
         final String contentType = "the-content-type";
         final String payload = "the-payload";
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
-        final CachingKafkaProducerFactory<String, Buffer> factory = new CachingKafkaProducerFactory<>(
-                (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+        final CachingKafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory
+                .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
         final KafkaBasedEventSender sender = new KafkaBasedEventSender(factory, kafkaProducerConfig, true, tracer);
 
         // WHEN sending a message
@@ -90,21 +90,22 @@ public class KafkaBasedEventSenderTest {
                         assertThat(actual.value().toString()).isEqualTo(payload);
 
                         // ...AND contains the standard headers
-                        KafkaClientUnitTestHelper.assertStandardHeaders(actual, device.getDeviceId(), contentType, QoS.AT_LEAST_ONCE.ordinal());
+                        KafkaClientUnitTestHelper.assertStandardHeaders(actual, device.getDeviceId(), contentType,
+                                QoS.AT_LEAST_ONCE.ordinal());
                     });
                     ctx.completeNow();
                 }));
 
     }
 
-
     /**
      * Verifies that the constructor throws a nullpointer exception if a parameter is {@code null}.
      */
     @Test
     public void testThatConstructorThrowsOnMissingParameter() {
-        final CachingKafkaProducerFactory<String, Buffer> factory = new CachingKafkaProducerFactory<>(
-                (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(KafkaClientUnitTestHelper.newMockProducer(true)));
+        final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
+        final CachingKafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory
+                .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
 
         assertThrows(NullPointerException.class,
                 () -> new KafkaBasedEventSender(null, kafkaProducerConfig, true, tracer));
@@ -123,8 +124,10 @@ public class KafkaBasedEventSenderTest {
      */
     @Test
     public void testThatSendEventThrowsOnMissingMandatoryParameter() {
-        final CachingKafkaProducerFactory<String, Buffer> factory = new CachingKafkaProducerFactory<>(
-                (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(KafkaClientUnitTestHelper.newMockProducer(true)));
+        final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
+        final CachingKafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory
+                .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+
         final KafkaBasedEventSender sender = new KafkaBasedEventSender(factory, kafkaProducerConfig, true, tracer);
 
         assertThrows(NullPointerException.class,
