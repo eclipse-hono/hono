@@ -35,7 +35,7 @@ import io.vertx.kafka.client.producer.KafkaProducer;
  * A factory for creating Kafka producers. Created producers are being cached.
  * <p>
  * This implementation provides no synchronization and should not be used by multiple threads. To create producers that
- * can safely be shared between verticle instances, use {@link KafkaProducerFactory#sharedProducerFactory(Vertx)}.
+ * can safely be shared between verticle instances, use {@link #sharedFactory(Vertx)}.
  * <p>
  * Producers are closed and removed from the cache if they throw a {@link #isFatalError(Throwable) fatal exception}.
  * This is triggered by {@link KafkaProducer#exceptionHandler(Handler)} and run asynchronously after the
@@ -54,7 +54,7 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
     /**
      * Creates a new producer factory.
      * <p>
-     * Use {@link KafkaProducerFactory#sharedProducerFactory(Vertx)} to create producers that can safely be shared
+     * Use {@link #sharedFactory(Vertx)} to create producers that can safely be shared
      * between verticle instances.
      *
      * @param producerInstanceSupplier The function that provides new producer instances. Parameters are the producer
@@ -63,6 +63,28 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
     public CachingKafkaProducerFactory(
             final BiFunction<String, Map<String, String>, KafkaProducer<K, V>> producerInstanceSupplier) {
         this.producerInstanceSupplier = producerInstanceSupplier;
+    }
+
+    /**
+     * Creates a new factory that produces {@link KafkaProducer#createShared(Vertx, String, Map) sharedFactory
+     * producers}. Shared producers can safely be sharedFactory between verticle instances and improve efficiency by
+     * leveraging the batching capabilities of the Kafka client.
+     *
+     * Producers with the same name will be shared (per Vert.x instance), meaning they are shared between instances of
+     * the factory.
+     * <p>
+     * Config must always be the same for the same key in
+     * {@link #getOrCreateProducer(String, KafkaProducerConfigProperties)}.
+     * <p>
+     * The resources of a sharedFactory producer are released when the last producer with a given name is closed.
+     *
+     * @param vertx The Vert.x instance to use.
+     * @param <K> The type for the record key serialization.
+     * @param <V> The type for the record value serialization.
+     * @return An instance of the factory.
+     */
+    public static <K, V> KafkaProducerFactory<K, V> sharedFactory(final Vertx vertx) {
+        return new CachingKafkaProducerFactory<>((name, config) -> KafkaProducer.createShared(vertx, name, config));
     }
 
     /**
@@ -82,7 +104,7 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
 
         activeProducers.computeIfAbsent(producerName, (name) -> {
             final KafkaProducer<K, V> producer = producerInstanceSupplier.apply(producerName, config.getProducerConfig(producerName));
-            return producer.exceptionHandler(getExceptionHandler(name, producer));
+            return producer.exceptionHandler(getExceptionHandler(producerName, producer));
         });
 
         return activeProducers.get(producerName);

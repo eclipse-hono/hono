@@ -57,6 +57,7 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.SendMessageTimeoutException;
 import org.eclipse.hono.client.amqp.GenericSenderLink;
+import org.eclipse.hono.client.kafka.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
@@ -805,7 +806,7 @@ public final class IntegrationTestSupport {
 
         initRegistryClient();
 
-        kafkaProducerFactory = KafkaProducerFactory.sharedProducerFactory(vertx);
+        kafkaProducerFactory = CachingKafkaProducerFactory.sharedFactory(vertx);
         applicationClient = new KafkaApplicationClientImpl(vertx, kafkaDownstreamProps, kafkaProducerFactory,
                 getKafkaProducerConfig());
 

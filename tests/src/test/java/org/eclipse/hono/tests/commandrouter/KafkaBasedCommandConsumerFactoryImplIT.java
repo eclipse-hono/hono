@@ -32,6 +32,7 @@ import java.util.stream.IntStream;
 import javax.security.auth.x500.X500Principal;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.eclipse.hono.client.kafka.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
@@ -398,7 +399,7 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
 
     private KafkaBasedCommandConsumerFactoryImpl getKafkaBasedCommandConsumerFactory(
             final Supplier<Future<Void>> targetAdapterInstanceGetterCompletionFutureSupplier) {
-        final KafkaProducerFactory<String, Buffer> producerFactory = KafkaProducerFactory.sharedProducerFactory(vertx);
+        final KafkaProducerFactory<String, Buffer> producerFactory = CachingKafkaProducerFactory.sharedFactory(vertx);
         final TenantClient tenantClient = getTenantClient();
         final CommandTargetMapper commandTargetMapper = new CommandTargetMapper() {
             @Override

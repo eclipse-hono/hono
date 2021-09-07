@@ -19,8 +19,8 @@ import javax.inject.Inject;
 
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.kafka.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
-import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 import org.eclipse.hono.client.quarkus.ClientConfigProperties;
 import org.eclipse.hono.client.quarkus.RequestResponseClientConfigProperties;
@@ -233,7 +233,7 @@ public class Application extends AbstractServiceApplication {
                     vertx,
                     tenantClient,
                     commandTargetMapper,
-                    KafkaProducerFactory.sharedProducerFactory(vertx),
+                    CachingKafkaProducerFactory.sharedFactory(vertx),
                     kafkaProducerConfig,
                     kafkaConsumerConfig,
                     metrics,

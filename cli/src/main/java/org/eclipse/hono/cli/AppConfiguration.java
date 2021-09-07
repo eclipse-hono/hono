@@ -19,6 +19,7 @@ import org.eclipse.hono.application.client.amqp.ProtonBasedApplicationClient;
 import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
 import org.eclipse.hono.application.client.kafka.impl.KafkaApplicationClientImpl;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.kafka.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
@@ -108,7 +109,7 @@ public class AppConfiguration {
     @Profile("kafka")
     @Bean
     public KafkaProducerFactory<String, Buffer> kafkaProducerFactory() {
-        return KafkaProducerFactory.sharedProducerFactory(vertx());
+        return CachingKafkaProducerFactory.sharedFactory(vertx());
     }
 
     /**

@@ -47,6 +47,7 @@ import org.eclipse.hono.client.command.amqp.ProtonBasedDelegatingCommandConsumer
 import org.eclipse.hono.client.command.amqp.ProtonBasedInternalCommandConsumer;
 import org.eclipse.hono.client.command.kafka.KafkaBasedCommandResponseSender;
 import org.eclipse.hono.client.command.kafka.KafkaBasedInternalCommandConsumer;
+import org.eclipse.hono.client.kafka.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
@@ -203,7 +204,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             Optional.ofNullable(getComponentName()).ifPresent(kafkaProducerConfig::setDefaultClientIdPrefix);
             LOG.debug("KafkaProducerConfig: " + kafkaProducerConfig.getProducerConfig("log"));
 
-            final KafkaProducerFactory<String, Buffer> factory = KafkaProducerFactory.sharedProducerFactory(vertx);
+            final KafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory.sharedFactory(vertx);
             telemetrySenderProvider.setClient(new KafkaBasedTelemetrySender(factory, kafkaProducerConfig,
                     protocolAdapterProperties.isDefaultsEnabled(), tracer));
             eventSenderProvider.setClient(new KafkaBasedEventSender(factory, kafkaProducerConfig,
