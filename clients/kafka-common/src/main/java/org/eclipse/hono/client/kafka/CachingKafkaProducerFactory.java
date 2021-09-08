@@ -65,17 +65,13 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
     }
 
     /**
-     * Creates a new factory that produces {@link KafkaProducer#createShared(Vertx, String, Map) sharedFactory
-     * producers}. Shared producers can safely be sharedFactory between verticle instances and improve efficiency by
-     * leveraging the batching capabilities of the Kafka client.
+     * Creates a new factory that produces {@link KafkaProducer#createShared(Vertx, String, Map) shared producers}.
+     * Shared producers can safely be shared between verticle instances and improve efficiency by leveraging the
+     * batching capabilities of the Kafka client.
      *
-     * Producers with the same name will be shared (per Vert.x instance), meaning they are shared between instances of
-     * the factory.
+     * Producers with the same name will be shared between factory instances created via this method.
      * <p>
-     * Config must always be the same for the same key in
-     * {@link #getOrCreateProducer(String, KafkaProducerConfigProperties)}.
-     * <p>
-     * The resources of a sharedFactory producer are released when the last producer with a given name is closed.
+     * The resources of a shared producer are released when the last producer with a given name is closed.
      *
      * @param vertx The Vert.x instance to use.
      * @param <K> The type for the record key serialization.
@@ -111,7 +107,7 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
     /**
      * Creates a new producer factory that creates producers from the given function.
      *
-     * This provides the flexibility to control how the producers are created and is intended for unit test.
+     * This provides the flexibility to control how the producers are created and is intended for unit tests.
      *
      * @param producerInstanceSupplier The function that provides new producer instances. Parameters are the producer
      *            name and the producer configuration.
