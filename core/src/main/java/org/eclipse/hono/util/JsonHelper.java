@@ -59,7 +59,7 @@ public final class JsonHelper {
                 }
                 return clazz.cast(binaryValue);
             } catch (final IllegalArgumentException | ClassCastException e) {
-                LOG.debug("field [{}] does not contain a proper base64 string", name);
+                LOG.debug("field [{}] does not contain a proper base64 string", name, e);
                 return defaultValue;
             }
         }

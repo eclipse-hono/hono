@@ -222,13 +222,27 @@ public final class DeviceRegistryUtils {
                                 authId, tenantId));
             }
             return Future.succeededFuture(Optional.of(cert));
-        } catch (final CertificateException | ClassCastException | IllegalArgumentException error) {
+        } catch (final IllegalArgumentException error) {
+            LOG.error("failed to decode certificate from client context with authId [%s] for tenant [%s]:{}{}",
+                    System.lineSeparator(),
+                    clientContext.encodePrettily(),
+                    error);
+            TracingHelper.logError(span, "failed to decode certificate from client context", error);
+            return Future.failedFuture(new ClientErrorException(
+                    tenantId,
+                    HttpURLConnection.HTTP_BAD_REQUEST,
+                    "failed to decode certificate from client context",
+                    error));
+        } catch (final CertificateException | ClassCastException error) {
             final String errorMessage = String.format(
-                    "Error getting certificate from client context with authId [%s] for tenant [%s]", authId, tenantId);
+                    "error getting certificate from client context with authId [%s] for tenant [%s]", authId, tenantId);
             LOG.error(errorMessage, error);
             TracingHelper.logError(span, errorMessage, error);
-            return Future
-                    .failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, errorMessage, error));
+            return Future.failedFuture(new ClientErrorException(
+                    tenantId,
+                    HttpURLConnection.HTTP_BAD_REQUEST,
+                    errorMessage,
+                    error));
         }
     }
 

@@ -27,6 +27,9 @@ import java.util.stream.Collectors;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -44,6 +47,8 @@ import io.vertx.core.json.JsonObject;
  */
 @JsonInclude(value = Include.NON_NULL)
 public final class TenantObject extends JsonBackedValueObject {
+
+    private static final Logger LOG = LoggerFactory.getLogger(TenantObject.class);
 
     @JsonIgnore
     private List<Adapter> adapters;
@@ -217,23 +222,30 @@ public final class TenantObject extends JsonBackedValueObject {
             return null;
         } else {
             final String subjectDn = getProperty(keyProps, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class);
-            final byte[] encodedKey = getProperty(keyProps, TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, byte[].class);
-            if (subjectDn == null || encodedKey == null) {
+            if (subjectDn == null) {
+                LOG.debug("trust anchor definition does not contain required property {}",
+                        TenantConstants.FIELD_PAYLOAD_SUBJECT_DN);
                 return null;
-            } else {
-                try {
-                    final String type = getProperty(
-                            keyProps,
-                            TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM,
-                            String.class,
-                            "RSA");
-                    final X509EncodedKeySpec keySpec = new X509EncodedKeySpec(encodedKey);
-                    final KeyFactory factory = KeyFactory.getInstance(type);
-                    final PublicKey publicKey = factory.generatePublic(keySpec);
-                    return new TrustAnchor(subjectDn, publicKey, null);
-                } catch (final GeneralSecurityException e) {
-                    return null;
-                }
+            }
+            final byte[] encodedKey = getProperty(keyProps, TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, byte[].class);
+            if (encodedKey == null) {
+                LOG.debug("trust anchor definition does not contain required property {}",
+                        TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY);
+                return null;
+            }
+            try {
+                final String type = getProperty(
+                        keyProps,
+                        TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM,
+                        String.class,
+                        "RSA");
+                final X509EncodedKeySpec keySpec = new X509EncodedKeySpec(encodedKey);
+                final KeyFactory factory = KeyFactory.getInstance(type);
+                final PublicKey publicKey = factory.generatePublic(keySpec);
+                return new TrustAnchor(subjectDn, publicKey, null);
+            } catch (final GeneralSecurityException e) {
+                LOG.debug("failed to instantiate trust anchor's public key", e);
+                return null;
             }
         }
     }

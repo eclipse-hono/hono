@@ -183,6 +183,11 @@ public class ProtonBasedCredentialsClient extends AbstractRequestResponseService
                             final JsonObject specification = CredentialsConstants
                                     .getSearchCriteria(type, authId)
                                     .mergeIn(clientContext);
+                            if (LOG.isTraceEnabled()) {
+                                LOG.trace("getting credentials using spec:{}{}",
+                                        System.lineSeparator(),
+                                        specification.encodePrettily());
+                            }
                             return client.createAndSendRequest(
                                     CredentialsConstants.CredentialsAction.get.toString(),
                                     null,
