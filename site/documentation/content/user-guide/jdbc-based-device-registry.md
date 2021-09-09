@@ -1,6 +1,6 @@
 +++
 title = "JDBC Based Device Registry"
-weight = 207
+weight = 285
 +++
 
 The JDBC based Device Registry component provides implementations of Hono's [Tenant API]({{< relref "/api/tenant" >}}), [Device Registration API]({{< relref "/api/device-registration" >}}) and [Credentials API]({{< relref "/api/credentials" >}}). As such it exposes AMQP 1.0 based endpoints for retrieving the relevant information. Protocol adapters use these APIs to determine a device's registration status, e.g. if it is enabled and if it is registered with a particular tenant, and to authenticate a device before accepting any data for processing from it.

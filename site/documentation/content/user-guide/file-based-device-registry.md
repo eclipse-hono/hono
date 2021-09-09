@@ -1,6 +1,6 @@
 +++
 title = "File Based Device Registry"
-weight = 210
+weight = 289
 +++
 
 The Device Registry component provides exemplary implementations of Hono's [Tenant API]({{< relref "/api/tenant" >}}), [Device Registration API]({{< relref "/api/device-registration" >}}) and [Credentials API]({{< relref "/api/credentials" >}}).

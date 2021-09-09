@@ -1,6 +1,6 @@
 +++
 title = "MongoDB Based Device Registry"
-weight = 205
+weight = 280
 +++
 
 The MongoDB based Device Registry component provides implementations of Hono's [Tenant API]({{< relref "/api/tenant" >}}),
