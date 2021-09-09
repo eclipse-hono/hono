@@ -9,3 +9,5 @@ Eclipse Hono&trade; provides these device registry implementations:
 [File Based Device Registry]({{< relref "/user-guide/file-based-device-registry" >}})
 
 [MongoDB Based Device Registry]({{< relref "/user-guide/mongodb-based-device-registry" >}}).
+
+[JDBC Based Device Registry]({{< relref "/user-guide/jdbc-based-device-registry" >}}).
