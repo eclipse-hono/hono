@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -352,35 +353,6 @@ public class HonoKafkaConsumer implements Lifecycle {
         return startPromise.future();
     }
 
-    /**
-     * Ensures that partition offset positions have been set according to either the last committed state
-     * or the auto offset reset config ("latest" being relevant here) if no offset is committed yet.
-     * <p>
-     * This makes sure records published after this method returns are actually received by the consumer.
-     * <p>
-     * To be invoked on the Kafka polling thread on partition assignment.
-     */
-    private void ensurePositionsHaveBeenSetIfNeeded(final Set<TopicPartition> assignedPartitions,
-            final Set<String> knownTopicsFromBeforeRebalance) {
-        // not needed if offset reset config set to "earliest", no need to wait for the retrieval of fetch positions in that case since consumer will receive all records anyway
-        if (!"earliest".equals(consumerConfig.get(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG))) {
-            // check if among the assigned partitions there is one of a newly created topic;
-            // take the first such partition to fetch its position, thereby triggering a complete update of fetch positions (via KafkaConsumer#updateFetchPositions())
-            assignedPartitions.stream()
-                    .filter(tp -> !knownTopicsFromBeforeRebalance.contains(tp.getTopic()))
-                    .findFirst()
-                    .ifPresent(firstNewTopicPartition -> {
-                        log.trace("triggering update of fetch positions (via fetch of position for new {}) ...", firstNewTopicPartition);
-                        try {
-                            getUnderlyingConsumer().position(Helper.to(firstNewTopicPartition));
-                        } catch (final Exception e) {
-                            log.warn("error fetching position for {}", firstNewTopicPartition, e);
-                        }
-                        log.trace("done triggering update of fetch positions (via fetch of position for new {})", firstNewTopicPartition);
-                    });
-        }
-    }
-
     private void logSubscribedTopicsOnStartComplete() {
         if (topicPattern != null) {
             if (subscribedTopicPatternTopics.size() <= 5) {
@@ -452,6 +424,35 @@ public class HonoKafkaConsumer implements Lifecycle {
                 context.runOnContext(v -> HonoKafkaConsumer.this.onPartitionsRevoked(partitionsSet));
             }
         });
+    }
+
+    /**
+     * Ensures that partition offset positions have been fetched and set internally according to either the last
+     * committed state or the auto offset reset config ("latest" being relevant here) if no offset is committed yet.
+     * <p>
+     * This makes sure records published after this method returns are actually received by the consumer.
+     * <p>
+     * To be invoked on the Kafka polling thread on partition assignment.
+     */
+    private void ensurePositionsHaveBeenSetIfNeeded(final Set<TopicPartition> assignedPartitions,
+            final Set<String> knownTopicsFromBeforeRebalance) {
+        // not needed if offset reset config set to "earliest", no need to wait for the retrieval of fetch positions in that case since consumer will receive all records anyway
+        if (!"earliest".equals(consumerConfig.get(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG))) {
+            // fetch partition positions of newly created topics
+            final Set<TopicPartition> newPartitions = assignedPartitions.stream()
+                    .filter(tp -> !knownTopicsFromBeforeRebalance.contains(tp.getTopic())).collect(Collectors.toSet());
+            if (!newPartitions.isEmpty()) {
+                // handle an exception across all position() invocations - the underlying server fetch that may trigger an exception is done for multiple partitions anyway
+                try {
+                    log.trace("fetching positions for {} out of {} newly assigned partitions...", newPartitions.size(), assignedPartitions.size());
+                    newPartitions.forEach(partition -> getUnderlyingConsumer().position(Helper.to(partition)));
+                    log.trace("done fetching positions for {} out of {} newly assigned partitions", newPartitions.size(), assignedPartitions.size());
+                } catch (final Exception e) {
+                    log.error("error fetching positions for {} out of {} newly assigned partitions", newPartitions.size(),
+                            assignedPartitions.size(), e);
+                }
+            }
+        }
     }
 
     /**
