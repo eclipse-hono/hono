@@ -31,16 +31,13 @@ import java.util.concurrent.TimeUnit;
 import org.eclipse.hono.service.management.BaseDto;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TenantDto;
-import org.eclipse.hono.test.VertxMockSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 import io.opentracing.noop.NoopSpan;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.FindOptions;
 import io.vertx.ext.mongo.MongoClient;
@@ -124,12 +121,8 @@ public class MongoDbBasedTenantDaoTest {
     @Test
     public void testCreateSetsCreationDate(final VertxTestContext ctx) {
 
-        when(mongoClient.insert(anyString(), any(JsonObject.class), VertxMockSupport.anyHandler()))
-            .thenAnswer(invocation -> {
-                final Handler<AsyncResult<String>> resultHandler = invocation.getArgument(2);
-                resultHandler.handle(Future.succeededFuture("initial-version"));
-                return mongoClient;
-            });
+        when(mongoClient.insert(anyString(), any(JsonObject.class)))
+            .thenReturn(Future.succeededFuture("initial-version"));
 
         final var dto = TenantDto.forCreation("tenantId", new Tenant(), "initial-version");
 
@@ -138,7 +131,7 @@ public class MongoDbBasedTenantDaoTest {
                 ctx.verify(() -> {
                     assertThat(version).isEqualTo("initial-version");
                     final var document = ArgumentCaptor.forClass(JsonObject.class);
-                    verify(mongoClient).insert(eq("tenants"), document.capture(), VertxMockSupport.anyHandler());
+                    verify(mongoClient).insert(eq("tenants"), document.capture());
                     MongoDbBasedTenantDaoTest.assertCreationDocumentContainsStatusProperties(
                             document.getValue(),
                             "initial-version");
@@ -168,13 +161,8 @@ public class MongoDbBasedTenantDaoTest {
                 any(JsonObject.class),
                 any(JsonObject.class),
                 any(FindOptions.class),
-                any(UpdateOptions.class),
-                VertxMockSupport.anyHandler()))
-            .thenAnswer(invocation -> {
-                final Handler<AsyncResult<JsonObject>> resultHandler = invocation.getArgument(5);
-                resultHandler.handle(Future.succeededFuture(new JsonObject().put(TenantDto.FIELD_VERSION, "new-version")));
-                return mongoClient;
-            });
+                any(UpdateOptions.class)))
+            .thenReturn(Future.succeededFuture(new JsonObject().put(TenantDto.FIELD_VERSION, "new-version")));
 
         final var dto = TenantDto.forUpdate(() -> existingRecord, new Tenant(), "new-version");
 
@@ -188,8 +176,7 @@ public class MongoDbBasedTenantDaoTest {
                             any(JsonObject.class),
                             document.capture(),
                             any(FindOptions.class),
-                            any(UpdateOptions.class),
-                            VertxMockSupport.anyHandler());
+                            any(UpdateOptions.class));
                     MongoDbBasedTenantDaoTest.assertUpdateDocumentContainsStatusProperties(
                             document.getValue(),
                             "new-version",

@@ -173,7 +173,6 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                 .withTag(TracingHelper.TAG_DEVICE_ID, credentials.getDeviceId())
                 .start();
 
-        final Promise<String> addCredentialsPromise = Promise.promise();
         credentials.getCredentials().stream().forEach(cred -> cred.encryptFields(fieldLevelEncryption));
         final var document = JsonObject.mapFrom(credentials);
 
@@ -183,9 +182,7 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                     System.lineSeparator(), document.encodePrettily());
         }
 
-        mongoClient.insert(collectionName, document, addCredentialsPromise);
-
-        return addCredentialsPromise.future()
+        return mongoClient.insert(collectionName, document)
                 .map(added -> {
                     span.log("successfully added credentials");
                     LOG.debug("successfully added credentials for device [tenant: {}, device-id: {}, resource-version: {}]",
@@ -238,11 +235,8 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                 .withTenantId(tenantId)
                 .withDeviceId(deviceId)
                 .document();
-        final Promise<JsonObject> findCredentialsPromise = Promise.promise();
 
-        mongoClient.findOne(collectionName, findCredentialsQuery, null, findCredentialsPromise);
-
-        return findCredentialsPromise.future()
+        return mongoClient.findOne(collectionName, findCredentialsQuery, null)
                 .map(result -> {
                     if (result == null) {
                         throw new ClientErrorException(
@@ -292,10 +286,7 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
             LOG.trace("retrieving credentials using filter:{}{}", System.lineSeparator(), filter.encodePrettily());
         }
 
-        final Promise<JsonObject> findCredentialsPromise = Promise.promise();
-        mongoClient.findOne(collectionName, filter, PROJECTION_CREDS_BY_TYPE_AND_AUTH_ID, findCredentialsPromise);
-
-        return findCredentialsPromise.future()
+        return mongoClient.findOne(collectionName, filter, PROJECTION_CREDS_BY_TYPE_AND_AUTH_ID)
                 .map(result -> {
                     if (result == null) {
                         throw new ClientErrorException(
@@ -347,7 +338,6 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                 .document();
 
         final var document = JsonObject.mapFrom(credentials);
-        final Promise<JsonObject> replaceCredentialsPromise = Promise.promise();
 
         if (LOG.isTraceEnabled()) {
             LOG.trace("updating credentials of device [tenant: {}, device-id: {}, resource-version; {}]:{}{}",
@@ -355,15 +345,12 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                     System.lineSeparator(), document.encodePrettily());
         }
 
-        mongoClient.findOneAndReplaceWithOptions(
+        return mongoClient.findOneAndReplaceWithOptions(
                 collectionName,
                 replaceCredentialsQuery,
                 document,
                 new FindOptions(),
-                new UpdateOptions().setReturningNewDocument(true),
-                replaceCredentialsPromise);
-
-        return replaceCredentialsPromise.future()
+                new UpdateOptions().setReturningNewDocument(true))
                 .compose(result -> {
                     if (result == null) {
                         return MongoDbBasedDao.checkForVersionMismatchAndFail(
@@ -425,11 +412,8 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                 .withTenantId(tenantId)
                 .withDeviceId(deviceId)
                 .document();
-        final Promise<JsonObject> removeCredentialsPromise = Promise.promise();
 
-        mongoClient.findOneAndDelete(collectionName, removeCredentialsQuery, removeCredentialsPromise);
-
-        return removeCredentialsPromise.future()
+        return mongoClient.findOneAndDelete(collectionName, removeCredentialsQuery)
                 .compose(result -> {
                     if (result == null) {
                         return MongoDbBasedDao.checkForVersionMismatchAndFail(

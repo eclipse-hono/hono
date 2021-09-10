@@ -155,11 +155,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                 .withTag(TracingHelper.TAG_DEVICE_ID, deviceConfig.getDeviceId())
                 .start();
 
-        final Promise<String> addDevicePromise = Promise.promise();
-
-        mongoClient.insert(collectionName, JsonObject.mapFrom(deviceConfig), addDevicePromise);
-
-        return addDevicePromise.future()
+        return mongoClient.insert(collectionName, JsonObject.mapFrom(deviceConfig))
                 .map(success -> {
                     span.log("successfully created device");
                     LOG.debug("successfully created device [tenant: {}, device-id: {}, resource-version: {}]",
@@ -208,9 +204,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
         final JsonObject findDeviceQuery = MongoDbDocumentBuilder.builder().withTenantId(tenantId)
                 .withDeviceId(deviceId)
                 .document();
-        final Promise<JsonObject> readDevicePromise = Promise.promise();
-        mongoClient.findOne(collectionName, findDeviceQuery, null, readDevicePromise);
-        return readDevicePromise.future()
+        return mongoClient.findOne(collectionName, findDeviceQuery, null)
                 .map(result -> {
                     if (result == null) {
                         throw new ClientErrorException(tenantId, HttpURLConnection.HTTP_NOT_FOUND, "device not found");
@@ -256,15 +250,10 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
         final FindOptions findOptions = new FindOptions()
                 .setFields(new JsonObject().put(RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, true).put("_id", false));
 
-        final Promise<List<JsonObject>> queryResult = Promise.promise();
-
-        mongoClient.findWithOptions(
+        return mongoClient.findWithOptions(
                 collectionName,
                 resolveGroupMembersQuery,
-                findOptions,
-                queryResult);
-
-        return queryResult.future()
+                findOptions)
                 .map(documents -> {
                     if (documents == null) {
                         final Set<String> result = Set.of();
@@ -365,21 +354,17 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                 .withDeviceId(deviceConfig.getDeviceId())
                 .document();
 
-        final Promise<JsonObject> updateDevicePromise = Promise.promise();
         final var document = JsonObject.mapFrom(deviceConfig);
         if (LOG.isTraceEnabled()) {
             LOG.trace("replacing existing device document with:{}{}", System.lineSeparator(), document.encodePrettily());
         }
 
-        mongoClient.findOneAndReplaceWithOptions(
+        return mongoClient.findOneAndReplaceWithOptions(
                             collectionName,
                             updateDeviceQuery,
                             document,
                             new FindOptions(),
-                            new UpdateOptions().setReturningNewDocument(true),
-                            updateDevicePromise);
-
-        return updateDevicePromise.future()
+                            new UpdateOptions().setReturningNewDocument(true))
                 .compose(result -> {
                     if (result == null) {
                         return MongoDbBasedDao.checkForVersionMismatchAndFail(
@@ -426,11 +411,7 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                 .withDeviceId(deviceId)
                 .document();
 
-        final Promise<JsonObject> deleteDevicePromise = Promise.promise();
-
-        mongoClient.findOneAndDelete(collectionName, deleteDeviceQuery, deleteDevicePromise);
-
-        return deleteDevicePromise.future()
+        return mongoClient.findOneAndDelete(collectionName, deleteDeviceQuery)
                 .compose(result -> {
                     if (result == null) {
                         return MongoDbBasedDao.checkForVersionMismatchAndFail(
@@ -460,14 +441,11 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
                 .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
                 .start();
 
-        final Promise<Long> countResult = Promise.promise();
-        mongoClient.count(
+        return mongoClient.count(
                 collectionName,
-                MongoDbDocumentBuilder.builder().withTenantId(tenantId).document(),
-                countResult);
-        return countResult.future()
-                .onFailure(t -> TracingHelper.logError(span, "error counting devices", t))
-                .recover(this::mapError)
-                .onComplete(r -> span.finish());
+                MongoDbDocumentBuilder.builder().withTenantId(tenantId).document())
+            .onFailure(t -> TracingHelper.logError(span, "error counting devices", t))
+            .recover(this::mapError)
+            .onComplete(r -> span.finish());
     }
 }

@@ -160,11 +160,8 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                 .withTag(TracingHelper.TAG_TENANT_ID, tenantConfig.getTenantId())
                 .start();
 
-        final Promise<String> createTenantPromise = Promise.promise();
         final JsonObject newTenantDtoJson = JsonObject.mapFrom(tenantConfig);
-        mongoClient.insert(collectionName, newTenantDtoJson, createTenantPromise);
-
-        return createTenantPromise.future()
+        return mongoClient.insert(collectionName, newTenantDtoJson)
                 .map(tenantObjectIdResult -> {
                     LOG.debug("successfully created tenant [tenant-id: {}, version: {}]",
                             tenantConfig.getTenantId(), tenantConfig.getVersion());
@@ -205,30 +202,26 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
 
     private Future<TenantDto> getById(final String tenantId, final Span span) {
 
-        final Promise<JsonObject> findTenantPromise = Promise.promise();
-        mongoClient.findOne(
+        return mongoClient.findOne(
                 collectionName,
                 MongoDbDocumentBuilder.builder().withTenantId(tenantId).document(),
-                null,
-                findTenantPromise);
-
-        return findTenantPromise.future()
-                .map(tenantJsonResult -> {
-                    if (tenantJsonResult == null) {
-                        throw new ClientErrorException(tenantId, HttpURLConnection.HTTP_NOT_FOUND, "no such tenant");
-                    } else {
-                        if (LOG.isTraceEnabled()) {
-                            LOG.trace("tenant from collection:{}{}", System.lineSeparator(), tenantJsonResult.encodePrettily());
-                        }
-                        return TenantDto.forRead(tenantJsonResult.getString(Constants.JSON_FIELD_TENANT_ID),
-                                tenantJsonResult.getJsonObject(TenantDto.FIELD_TENANT).mapTo(Tenant.class),
-                                tenantJsonResult.getInstant(TenantDto.FIELD_CREATED),
-                                tenantJsonResult.getInstant(TenantDto.FIELD_UPDATED_ON),
-                                tenantJsonResult.getString(TenantDto.FIELD_VERSION));
+                null)
+            .map(tenantJsonResult -> {
+                if (tenantJsonResult == null) {
+                    throw new ClientErrorException(tenantId, HttpURLConnection.HTTP_NOT_FOUND, "no such tenant");
+                } else {
+                    if (LOG.isTraceEnabled()) {
+                        LOG.trace("tenant from collection:{}{}", System.lineSeparator(), tenantJsonResult.encodePrettily());
                     }
-                })
-                .onFailure(t -> TracingHelper.logError(span, "error retrieving tenant", t))
-                .recover(this::mapError);
+                    return TenantDto.forRead(tenantJsonResult.getString(Constants.JSON_FIELD_TENANT_ID),
+                            tenantJsonResult.getJsonObject(TenantDto.FIELD_TENANT).mapTo(Tenant.class),
+                            tenantJsonResult.getInstant(TenantDto.FIELD_CREATED),
+                            tenantJsonResult.getInstant(TenantDto.FIELD_UPDATED_ON),
+                            tenantJsonResult.getString(TenantDto.FIELD_VERSION));
+                }
+            })
+            .onFailure(t -> TracingHelper.logError(span, "error retrieving tenant", t))
+            .recover(this::mapError);
     }
 
     /**
@@ -247,31 +240,27 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                 .withTag(TracingHelper.TAG_SUBJECT_DN, dn)
                 .start();
 
-        final Promise<JsonObject> findTenantPromise = Promise.promise();
-        mongoClient.findOne(
+        return mongoClient.findOne(
                 collectionName,
                 MongoDbDocumentBuilder.builder().withCa(dn).document(),
-                new JsonObject(),
-                findTenantPromise);
-
-        return findTenantPromise.future()
-                .map(tenantJsonResult -> {
-                    if (tenantJsonResult == null) {
-                        LOG.debug("could not find tenant [subject DN: {}]", dn);
-                        throw new ClientErrorException(
-                                HttpURLConnection.HTTP_NOT_FOUND,
-                                "no such tenant");
-                    } else {
-                        return TenantDto.forRead(tenantJsonResult.getString(Constants.JSON_FIELD_TENANT_ID),
-                                tenantJsonResult.getJsonObject(TenantDto.FIELD_TENANT).mapTo(Tenant.class),
-                                tenantJsonResult.getInstant(TenantDto.FIELD_CREATED),
-                                tenantJsonResult.getInstant(TenantDto.FIELD_UPDATED_ON),
-                                tenantJsonResult.getString(TenantDto.FIELD_VERSION));
-                    }
-                })
-                .onFailure(t -> TracingHelper.logError(span, "error retrieving tenant", t))
-                .recover(this::mapError)
-                .onComplete(r -> span.finish());
+                new JsonObject())
+            .map(tenantJsonResult -> {
+                if (tenantJsonResult == null) {
+                    LOG.debug("could not find tenant [subject DN: {}]", dn);
+                    throw new ClientErrorException(
+                            HttpURLConnection.HTTP_NOT_FOUND,
+                            "no such tenant");
+                } else {
+                    return TenantDto.forRead(tenantJsonResult.getString(Constants.JSON_FIELD_TENANT_ID),
+                            tenantJsonResult.getJsonObject(TenantDto.FIELD_TENANT).mapTo(Tenant.class),
+                            tenantJsonResult.getInstant(TenantDto.FIELD_CREATED),
+                            tenantJsonResult.getInstant(TenantDto.FIELD_UPDATED_ON),
+                            tenantJsonResult.getString(TenantDto.FIELD_VERSION));
+                }
+            })
+            .onFailure(t -> TracingHelper.logError(span, "error retrieving tenant", t))
+            .recover(this::mapError)
+            .onComplete(r -> span.finish());
     }
 
     /**
@@ -297,42 +286,38 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                 .withTenantId(newTenantConfig.getTenantId())
                 .document();
 
-        final Promise<JsonObject> updateTenantPromise = Promise.promise();
-        mongoClient.findOneAndReplaceWithOptions(
+        return mongoClient.findOneAndReplaceWithOptions(
                 collectionName,
                 updateTenantQuery,
                 JsonObject.mapFrom(newTenantConfig),
                 new FindOptions(),
-                new UpdateOptions().setReturningNewDocument(true),
-                updateTenantPromise);
-
-        return updateTenantPromise.future()
-                .compose(updateResult -> {
-                    if (updateResult == null) {
-                        return MongoDbBasedDao.checkForVersionMismatchAndFail(
-                                newTenantConfig.getTenantId(), resourceVersion, getById(newTenantConfig.getTenantId(), span));
-                    } else {
-                        LOG.debug("successfully updated tenant [tenant-id: {}]", newTenantConfig.getTenantId());
-                        span.log("successfully updated tenant");
-                        return Future.succeededFuture(updateResult.getString(TenantDto.FIELD_VERSION));
-                    }
-                })
-                .recover(error -> {
-                    if (MongoDbBasedDao.isDuplicateKeyError(error)) {
-                        LOG.debug("conflict updating tenant [{}]. An existing tenant uses a certificate authority with the same Subject DN",
-                                newTenantConfig.getTenantId(),
-                                error);
-                        TracingHelper.logError(span, "an existing tenant uses a certificate authority with the same Subject DN");
-                        return Future.failedFuture(new ClientErrorException(
-                                newTenantConfig.getTenantId(),
-                                HttpURLConnection.HTTP_CONFLICT,
-                                "an existing tenant uses a certificate authority with the same Subject DN"));
-                    } else {
-                        TracingHelper.logError(span, "error updating tenant", error);
-                        return mapError(error);
-                    }
-                })
-                .onComplete(r -> span.finish());
+                new UpdateOptions().setReturningNewDocument(true))
+            .compose(updateResult -> {
+                if (updateResult == null) {
+                    return MongoDbBasedDao.checkForVersionMismatchAndFail(
+                            newTenantConfig.getTenantId(), resourceVersion, getById(newTenantConfig.getTenantId(), span));
+                } else {
+                    LOG.debug("successfully updated tenant [tenant-id: {}]", newTenantConfig.getTenantId());
+                    span.log("successfully updated tenant");
+                    return Future.succeededFuture(updateResult.getString(TenantDto.FIELD_VERSION));
+                }
+            })
+            .recover(error -> {
+                if (MongoDbBasedDao.isDuplicateKeyError(error)) {
+                    LOG.debug("conflict updating tenant [{}]. An existing tenant uses a certificate authority with the same Subject DN",
+                            newTenantConfig.getTenantId(),
+                            error);
+                    TracingHelper.logError(span, "an existing tenant uses a certificate authority with the same Subject DN");
+                    return Future.failedFuture(new ClientErrorException(
+                            newTenantConfig.getTenantId(),
+                            HttpURLConnection.HTTP_CONFLICT,
+                            "an existing tenant uses a certificate authority with the same Subject DN"));
+                } else {
+                    TracingHelper.logError(span, "error updating tenant", error);
+                    return mapError(error);
+                }
+            })
+            .onComplete(r -> span.finish());
     }
 
     /**
@@ -358,9 +343,7 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                 .withTenantId(tenantId)
                 .document();
 
-        final Promise<JsonObject> deleteTenantPromise = Promise.promise();
-        mongoClient.findOneAndDelete(collectionName, deleteTenantQuery, deleteTenantPromise);
-        return deleteTenantPromise.future()
+        return mongoClient.findOneAndDelete(collectionName, deleteTenantQuery)
                 .compose(deleteResult -> {
                     if (deleteResult == null) {
                         return MongoDbBasedDao.checkForVersionMismatchAndFail(tenantId,

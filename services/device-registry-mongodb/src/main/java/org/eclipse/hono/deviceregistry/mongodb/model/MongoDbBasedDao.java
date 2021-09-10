@@ -42,7 +42,6 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.IndexOptions;
 import io.vertx.ext.mongo.MongoClient;
-import io.vertx.ext.mongo.MongoClientDeleteResult;
 
 /**
  * A base class for implementing data access objects that persist data into MongoDB collections.
@@ -142,11 +141,8 @@ public abstract class MongoDbBasedDao {
 
         Objects.requireNonNull(keys);
 
-        final Promise<Void> result = Promise.promise();
-
         LOG.debug("creating index [collection: {}]", collectionName);
-        mongoClient.createIndexWithOptions(collectionName, keys, options, result);
-        return result.future()
+        return mongoClient.createIndexWithOptions(collectionName, keys, options)
                 .onSuccess(ok -> {
                     LOG.debug("successfully created index [collection: {}]", collectionName);
                 })
@@ -269,12 +265,7 @@ public abstract class MongoDbBasedDao {
      *         failed future.
      */
     public final Future<Void> deleteAllFromCollection() {
-        final Promise<MongoClientDeleteResult> result = Promise.promise();
-        mongoClient.removeDocuments(
-                collectionName,
-                new JsonObject(),
-                result);
-        return result.future()
+        return mongoClient.removeDocuments(collectionName, new JsonObject())
                 .recover(this::mapError)
                 .mapEmpty();
     }

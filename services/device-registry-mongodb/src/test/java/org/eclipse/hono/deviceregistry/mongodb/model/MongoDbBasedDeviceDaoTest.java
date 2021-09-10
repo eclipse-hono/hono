@@ -29,16 +29,13 @@ import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceDto;
-import org.eclipse.hono.test.VertxMockSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 import io.opentracing.noop.NoopSpan;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.FindOptions;
 import io.vertx.ext.mongo.MongoClient;
@@ -76,12 +73,8 @@ public class MongoDbBasedDeviceDaoTest {
     @Test
     public void testCreateSetsCreationDate(final VertxTestContext ctx) {
 
-        when(mongoClient.insert(anyString(), any(JsonObject.class), VertxMockSupport.anyHandler()))
-            .thenAnswer(invocation -> {
-                final Handler<AsyncResult<String>> resultHandler = invocation.getArgument(2);
-                resultHandler.handle(Future.succeededFuture("initial-version"));
-                return mongoClient;
-            });
+        when(mongoClient.insert(anyString(), any(JsonObject.class)))
+            .thenReturn(Future.succeededFuture("initial-version"));
 
         final var dto = DeviceDto.forCreation(DeviceDto::new, "tenantId", "deviceId", new Device(), "initial-version");
 
@@ -90,7 +83,7 @@ public class MongoDbBasedDeviceDaoTest {
                 ctx.verify(() -> {
                     assertThat(version).isEqualTo("initial-version");
                     final var document = ArgumentCaptor.forClass(JsonObject.class);
-                    verify(mongoClient).insert(eq("devices"), document.capture(), VertxMockSupport.anyHandler());
+                    verify(mongoClient).insert(eq("devices"), document.capture());
                     MongoDbBasedTenantDaoTest.assertCreationDocumentContainsStatusProperties(
                             document.getValue(),
                             "initial-version");
@@ -124,13 +117,8 @@ public class MongoDbBasedDeviceDaoTest {
                 any(JsonObject.class),
                 any(JsonObject.class),
                 any(FindOptions.class),
-                any(UpdateOptions.class),
-                VertxMockSupport.anyHandler()))
-            .thenAnswer(invocation -> {
-                final Handler<AsyncResult<JsonObject>> resultHandler = invocation.getArgument(5);
-                resultHandler.handle(Future.succeededFuture(new JsonObject().put(DeviceDto.FIELD_VERSION, "new-version")));
-                return mongoClient;
-            });
+                any(UpdateOptions.class)))
+            .thenReturn(Future.succeededFuture(new JsonObject().put(DeviceDto.FIELD_VERSION, "new-version")));
 
         final var dto = DeviceDto.forUpdate(() -> existingRecord, "tenantId", "deviceId", new Device(), "new-version");
 
@@ -143,8 +131,7 @@ public class MongoDbBasedDeviceDaoTest {
                             any(JsonObject.class),
                             document.capture(),
                             any(FindOptions.class),
-                            any(UpdateOptions.class),
-                            VertxMockSupport.anyHandler());
+                            any(UpdateOptions.class));
                     MongoDbBasedTenantDaoTest.assertUpdateDocumentContainsStatusProperties(
                             document.getValue(),
                             "new-version",
