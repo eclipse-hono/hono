@@ -172,7 +172,6 @@ maven/mavencentral/org.jboss.logmanager/jboss-logmanager-embedded/1.0.9, Apache-
 maven/mavencentral/org.jboss.logmanager/log4j2-jboss-logmanager/1.0.0.Beta1, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.jboss.slf4j/slf4j-jboss-logmanager/1.1.0.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.jboss.spec.javax.transaction/jboss-transaction-api_1.2_spec/1.1.1.Final, GPL-2.0-only WITH Classpath-exception-2.0 OR CDDL-1.0, approved, clearlydefined
-maven/mavencentral/org.jboss.spec.javax.xml.bind/jboss-jaxb-api_2.3_spec/2.0.0.Final, NOASSERTION, restricted, clearlydefined
 maven/mavencentral/org.jboss.threads/jboss-threads/3.2.0.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.jetbrains/annotations/13.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.jetbrains.kotlin/kotlin-stdlib/1.4.32, Apache-2.0, approved, clearlydefined

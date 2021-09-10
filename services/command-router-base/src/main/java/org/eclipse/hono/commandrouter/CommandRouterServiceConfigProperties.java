@@ -12,17 +12,17 @@
  *******************************************************************************/
 package org.eclipse.hono.commandrouter;
 
-import org.eclipse.hono.config.ServiceConfigProperties;
-
 /**
  * Configuration properties for Hono's Command Router service.
  */
-public class CommandRouterServiceConfigProperties extends ServiceConfigProperties {
+public class CommandRouterServiceConfigProperties {
 
     private boolean kubernetesBasedAdapterInstanceStatusServiceEnabled = true;
 
     /**
      * Checks whether the Kubernetes based service to get the status of an adapter instance is enabled.
+     * <p>
+     * The default value of this property is {@code true}.
      *
      * @return {@code true} if the status service is enabled.
      */
@@ -32,6 +32,8 @@ public class CommandRouterServiceConfigProperties extends ServiceConfigPropertie
 
     /**
      * Sets whether the Kubernetes based service to get the status of an adapter instance should be enabled.
+     * <p>
+     * The default value of this property is {@code true}.
      *
      * @param kubernetesBasedAdapterInstanceStatusServiceEnabled {@code true} if the status service should be enabled.
      * @return This instance for setter chaining.
@@ -41,5 +43,4 @@ public class CommandRouterServiceConfigProperties extends ServiceConfigPropertie
         this.kubernetesBasedAdapterInstanceStatusServiceEnabled = kubernetesBasedAdapterInstanceStatusServiceEnabled;
         return this;
     }
-
 }

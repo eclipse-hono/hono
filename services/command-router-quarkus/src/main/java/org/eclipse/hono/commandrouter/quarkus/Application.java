@@ -97,9 +97,6 @@ public class Application extends AbstractServiceApplication {
     @ConfigPrefix("hono.commandRouter.amqp")
     ServiceConfigProperties amqpServerProperties;
 
-    @Inject
-    CommandRouterServiceConfigProperties serviceConfig;
-
     @ConfigPrefix("hono.command")
     ClientConfigProperties commandConsumerFactoryConfig;
 
@@ -198,7 +195,7 @@ public class Application extends AbstractServiceApplication {
                 }
             }
         };
-        endpoint.setConfiguration(serviceConfig);
+        endpoint.setConfiguration(amqpServerProperties);
         endpoint.setTracer(tracer);
         return endpoint;
     }
@@ -209,7 +206,7 @@ public class Application extends AbstractServiceApplication {
 
         final CommandTargetMapper commandTargetMapper = CommandTargetMapper.create(registrationClient, deviceConnectionInfo, tracer);
         return new CommandRouterServiceImpl(
-                serviceConfig,
+                amqpServerProperties,
                 registrationClient,
                 tenantClient,
                 deviceConnectionInfo,

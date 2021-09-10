@@ -34,7 +34,7 @@ import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.commandrouter.AdapterInstanceStatusService;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
-import org.eclipse.hono.commandrouter.CommandRouterServiceConfigProperties;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.commandrouter.CommandRouterResult;
@@ -65,7 +65,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
 
     private static final Logger LOG = LoggerFactory.getLogger(CommandRouterServiceImpl.class);
 
-    private final CommandRouterServiceConfigProperties config;
+    private final ServiceConfigProperties config;
     private final DeviceRegistrationClient registrationClient;
     private final TenantClient tenantClient;
     private final DeviceConnectionInfo deviceConnectionInfo;
@@ -85,7 +85,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
     /**
      * Creates a new CommandRouterServiceImpl.
      *
-     * @param config The command router service configuration.
+     * @param config The command router's AMQP server configuration.
      * @param registrationClient The device registration client.
      * @param tenantClient The tenant client.
      * @param deviceConnectionInfo The client for accessing device connection data.
@@ -95,7 +95,7 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public CommandRouterServiceImpl(
-            final CommandRouterServiceConfigProperties config,
+            final ServiceConfigProperties config,
             final DeviceRegistrationClient registrationClient,
             final TenantClient tenantClient,
             final DeviceConnectionInfo deviceConnectionInfo,

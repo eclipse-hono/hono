@@ -263,7 +263,7 @@ public class ApplicationConfig {
                     SendMessageSampler.Factory.noop()));
         }
         return new CommandRouterServiceImpl(
-                commandRouterServiceConfigProperties(),
+                amqpServerProperties(),
                 registrationClient,
                 tenantClient,
                 deviceConnectionInfo,

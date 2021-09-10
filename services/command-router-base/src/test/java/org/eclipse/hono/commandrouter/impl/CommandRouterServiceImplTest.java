@@ -36,7 +36,7 @@ import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.commandrouter.AdapterInstanceStatusService;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
-import org.eclipse.hono.commandrouter.CommandRouterServiceConfigProperties;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.MessagingType;
@@ -96,7 +96,7 @@ public class CommandRouterServiceImplTest {
         context = VertxMockSupport.mockContext(vertx);
         when(context.owner()).thenReturn(vertx);
         service = new CommandRouterServiceImpl(
-                new CommandRouterServiceConfigProperties(),
+                new ServiceConfigProperties(),
                 registrationClient,
                 tenantClient,
                 deviceConnectionInfo,

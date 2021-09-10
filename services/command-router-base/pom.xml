@@ -71,6 +71,11 @@
       <artifactId>spring-beans</artifactId>
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>io.smallrye.config</groupId>
+      <artifactId>smallrye-config</artifactId>
+      <optional>true</optional>
+    </dependency>
   </dependencies>
 
   <build>

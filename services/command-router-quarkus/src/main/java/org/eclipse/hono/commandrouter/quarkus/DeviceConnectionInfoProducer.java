@@ -24,6 +24,7 @@ import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 
 import org.eclipse.hono.commandrouter.AdapterInstanceStatusService;
+import org.eclipse.hono.commandrouter.CommandRouterServiceOptions;
 import org.eclipse.hono.commandrouter.impl.KubernetesBasedAdapterInstanceStatusService;
 import org.eclipse.hono.deviceconnection.infinispan.client.BasicCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.CacheBasedDeviceConnectionInfo;
@@ -121,9 +122,9 @@ public class DeviceConnectionInfoProducer {
     @Produces
     @Singleton
     AdapterInstanceStatusService adapterInstanceStatusService(
-            final CommandRouterServiceConfigProperties commandRouterServiceConfigProperties) {
-        final AdapterInstanceStatusService service = commandRouterServiceConfigProperties
-                .isKubernetesBasedAdapterInstanceStatusServiceEnabled()
+            final CommandRouterServiceOptions commandRouterServiceOptions) {
+        final AdapterInstanceStatusService service = commandRouterServiceOptions
+                .kubernetesBasedAdapterInstanceStatusServiceEnabled()
                         ? KubernetesBasedAdapterInstanceStatusService.create()
                         : null;
         return Optional.ofNullable(service)
