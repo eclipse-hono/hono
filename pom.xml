@@ -385,13 +385,13 @@
             <dependency>
               <groupId>com.puppycrawl.tools</groupId>
               <artifactId>checkstyle</artifactId>
-              <version>8.41.1</version>
+              <version>8.45.1</version>
             </dependency>
           </dependencies>
           <executions>
             <execution>
               <id>checkstyle-check</id>
-              <phase>verify</phase>
+              <phase>validate</phase>
               <goals>
                 <goal>check</goal>
               </goals>

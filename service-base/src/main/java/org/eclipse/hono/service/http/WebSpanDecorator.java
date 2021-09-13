@@ -101,7 +101,7 @@ public interface WebSpanDecorator {
             }
         }
 
-        public static Map<String, Object> exceptionLogs(final Throwable throwable) {
+        static Map<String, Object> exceptionLogs(final Throwable throwable) {
             final Map<String, Object> errorLog = new HashMap<>(2);
             errorLog.put("event", Tags.ERROR.getKey());
             errorLog.put("error.object", throwable);
