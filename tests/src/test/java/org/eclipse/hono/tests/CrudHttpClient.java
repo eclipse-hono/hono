@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -68,11 +68,11 @@ public final class CrudHttpClient {
      * Creates a new client for a host and port.
      *
      * @param vertx The vert.x instance to use.
-     * @param options The client options to use for connecting to servers.
+     * @param httpClientOptions The HTTP client client options to use for connecting to servers.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public CrudHttpClient(final Vertx vertx, final HttpClientOptions options) {
-        this.options = new WebClientOptions(Objects.requireNonNull(options));
+    public CrudHttpClient(final Vertx vertx, final HttpClientOptions httpClientOptions) {
+        this.options = new WebClientOptions(Objects.requireNonNull(httpClientOptions));
         this.client = WebClient.create(vertx, this.options);
         this.context = vertx.getOrCreateContext();
     }
@@ -211,9 +211,8 @@ public final class CrudHttpClient {
                 .orElse(null);
 
         return create(
-                createRequestOptions().setURI(uri),
+                createRequestOptions().setURI(uri).setHeaders(requestHeaders),
                 body,
-                requestHeaders,
                 successPredicates);
     }
 
@@ -240,9 +239,8 @@ public final class CrudHttpClient {
         Objects.requireNonNull(uri);
 
         return create(
-                createRequestOptions().setURI(uri),
+                createRequestOptions().setURI(uri).setHeaders(requestHeaders),
                 body,
-                requestHeaders,
                 successPredicates);
     }
 
@@ -251,7 +249,6 @@ public final class CrudHttpClient {
      *
      * @param requestOptions The options to use for the request.
      * @param body The body to post (may be {@code null}).
-     * @param requestHeaders The headers to include in the request (may be {@code null}).
      * @param successPredicates Checks on the HTTP response that need to pass for the request
      *                          to be considered successful.
      * @return A future indicating the outcome of the request. The future will be completed with the
@@ -263,7 +260,6 @@ public final class CrudHttpClient {
     public Future<HttpResponse<Buffer>> create(
             final RequestOptions requestOptions,
             final Buffer body,
-            final MultiMap requestHeaders,
             final ResponsePredicate ... successPredicates) {
 
         Objects.requireNonNull(requestOptions);
@@ -272,7 +268,6 @@ public final class CrudHttpClient {
 
         context.runOnContext(go -> {
             final HttpRequest<Buffer> req = client.request(HttpMethod.POST, requestOptions);
-            Optional.ofNullable(requestHeaders).ifPresent(req::putHeaders);
             addResponsePredicates(req, successPredicates);
             if (body == null) {
                 req.send(result);
@@ -423,9 +418,8 @@ public final class CrudHttpClient {
         Objects.requireNonNull(uri);
 
         return update(
-                createRequestOptions().setURI(uri),
+                createRequestOptions().setURI(uri).setHeaders(requestHeaders),
                 body,
-                requestHeaders,
                 successPredicates);
     }
 
@@ -434,7 +428,6 @@ public final class CrudHttpClient {
      *
      * @param requestOptions The options to use for the request.
      * @param body The content to update the resource with.
-     * @param requestHeaders The headers to include in the request.
      * @param successPredicates Checks on the HTTP response that need to pass for the request
      *                          to be considered successful.
      * @return A future indicating the outcome of the request. The future will be completed with the
@@ -446,7 +439,6 @@ public final class CrudHttpClient {
     public Future<HttpResponse<Buffer>> update(
             final RequestOptions requestOptions,
             final Buffer body,
-            final MultiMap requestHeaders,
             final ResponsePredicate ... successPredicates) {
 
         Objects.requireNonNull(requestOptions);
@@ -455,7 +447,6 @@ public final class CrudHttpClient {
 
         context.runOnContext(go -> {
             final HttpRequest<Buffer> req = client.request(HttpMethod.PUT, requestOptions);
-            Optional.ofNullable(requestHeaders).ifPresent(req::putHeaders);
             addResponsePredicates(req, successPredicates);
             if (body == null) {
                 req.send(result);
@@ -485,9 +476,32 @@ public final class CrudHttpClient {
     }
 
     /**
+     * Retrieves a resource representation using an HTTP GET request.
+     *
+     * @param uri The resource to retrieve.
+     * @param requestHeaders The headers to include in the request.
+     * @param successPredicates Checks on the HTTP response that need to pass for the request
+     *                          to be considered successful.
+     * @return A future indicating the outcome of the request. The future will be completed with the
+     *         HTTP response if all checks on the response have succeeded.
+     *         Otherwise the future will be failed with the error produced by the first failing
+     *         predicate.
+     * @throws NullPointerException if URI is {@code null}.
+     */
+    public Future<HttpResponse<Buffer>> get(
+            final String uri,
+            final MultiMap requestHeaders,
+            final ResponsePredicate ... successPredicates) {
+
+        Objects.requireNonNull(uri);
+        return get(createRequestOptions().setURI(uri).setHeaders(requestHeaders), successPredicates);
+    }
+
+    /**
      * Retrieves a resource representation using a HTTP GET request.
      *
      * @param uri The resource to retrieve.
+     * @param requestHeaders The headers to include in the request.
      * @param queryParams The query parameters for the request.
      * @param successPredicates Checks on the HTTP response that need to pass for the request
      *                          to be considered successful.
@@ -499,11 +513,12 @@ public final class CrudHttpClient {
      */
     public Future<HttpResponse<Buffer>> get(
             final String uri,
+            final MultiMap requestHeaders,
             final MultiMap queryParams,
             final ResponsePredicate ... successPredicates) {
 
         Objects.requireNonNull(uri);
-        return get(createRequestOptions().setURI(uri), queryParams, successPredicates);
+        return get(createRequestOptions().setURI(uri).setHeaders(requestHeaders), queryParams, successPredicates);
     }
 
     /**
@@ -579,6 +594,29 @@ public final class CrudHttpClient {
     /**
      * Deletes a resource using an HTTP DELETE request.
      *
+     * @param uri The resource to delete.
+     * @param requestHeaders The headers to include in the request.
+     * @param successPredicates Checks on the HTTP response that need to pass for the request
+     *                          to be considered successful.
+     * @return A future indicating the outcome of the request. The future will be completed with the
+     *         HTTP response if all checks on the response have succeeded.
+     *         Otherwise the future will be failed with the error produced by the first failing
+     *         predicate.
+     * @throws NullPointerException if URI is {@code null}.
+     */
+    public Future<HttpResponse<Buffer>> delete(
+            final String uri,
+            final MultiMap requestHeaders,
+            final ResponsePredicate ... successPredicates) {
+
+        Objects.requireNonNull(uri);
+
+        return delete(createRequestOptions().setURI(uri).setHeaders(requestHeaders), successPredicates);
+    }
+
+    /**
+     * Deletes a resource using an HTTP DELETE request.
+     *
      * @param requestOptions The options to use for the request.
      * @param successPredicates Checks on the HTTP response that need to pass for the request
      *                          to be considered successful.
@@ -588,7 +626,9 @@ public final class CrudHttpClient {
      *         predicate.
      * @throws NullPointerException if options is {@code null}.
      */
-    public Future<HttpResponse<Buffer>> delete(final RequestOptions requestOptions, final ResponsePredicate ... successPredicates) {
+    public Future<HttpResponse<Buffer>> delete(
+            final RequestOptions requestOptions,
+            final ResponsePredicate ... successPredicates) {
 
         Objects.requireNonNull(requestOptions);
 

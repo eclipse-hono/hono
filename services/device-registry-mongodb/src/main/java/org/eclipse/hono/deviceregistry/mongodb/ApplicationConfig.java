@@ -34,6 +34,7 @@ import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedCredentialsConfigProperties;
+import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedHttpServiceConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedTenantsConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbConfigProperties;
@@ -79,6 +80,8 @@ import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.service.tenant.DelegatingTenantAmqpEndpoint;
 import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.util.Constants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
@@ -114,6 +117,7 @@ import io.vertx.ext.web.handler.BasicAuthHandler;
 @Import(PrometheusSupport.class)
 public class ApplicationConfig {
 
+    private static final Logger LOG = LoggerFactory.getLogger(ApplicationConfig.class);
     private static final String BEAN_NAME_AMQP_SERVER = "amqpServer";
     private static final String BEAN_NAME_HTTP_SERVER = "httpServer";
 
@@ -619,8 +623,8 @@ public class ApplicationConfig {
     @Qualifier(Constants.QUALIFIER_HTTP)
     @Bean
     @ConfigurationProperties(prefix = "hono.registry.http")
-    public HttpServiceConfigProperties httpServerProperties() {
-        return new HttpServiceConfigProperties();
+    public MongoDbBasedHttpServiceConfigProperties httpServerProperties() {
+        return new MongoDbBasedHttpServiceConfigProperties();
     }
 
     /**
@@ -663,10 +667,16 @@ public class ApplicationConfig {
      */
     @Bean
     @Scope("prototype")
-    public AuthHandler createAuthHandler(final HttpServiceConfigProperties httpServiceConfigProperties) {
+    public AuthHandler createAuthHandler(final MongoDbBasedHttpServiceConfigProperties httpServiceConfigProperties) {
         if (httpServiceConfigProperties.isAuthenticationRequired()) {
+            final JsonObject config = httpServiceConfigProperties.getAuth().toJsonObject();
+            LOG.debug("creating AuthHandler guarding access to registry's HTTP endpoint using configuration:{}{}",
+                    System.lineSeparator(), config.encodePrettily());
+            final var authProvider = MongoAuth.create(mongoClient(), config);
+            Optional.ofNullable(httpServiceConfigProperties.getAuth().getHashAlgorithm())
+                .ifPresent(authProvider::setHashAlgorithm);
             return BasicAuthHandler.create(
-                    MongoAuth.create(mongoClient(), new JsonObject()),
+                    authProvider,
                     httpServerProperties().getRealm());
         }
         return null;
