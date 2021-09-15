@@ -799,10 +799,9 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         final String otherDeviceId = helper.getRandomDeviceId(tenantId);
 
         final VertxTestContext setup = new VertxTestContext();
-        final Checkpoint setupDone = setup.checkpoint();
 
         connectToAdapter(tenantId, otherDeviceId, password, (Supplier<Future<MessageConsumer>>) null)
-                .onSuccess(v -> helper.registry.addDeviceToTenant(tenantId, deviceId, password))
+                .compose(v -> helper.registry.addDeviceToTenant(tenantId, deviceId, password))
                 // subscribe using otherDeviceId so that the Command Router creates the tenant-specific consumer
                 .compose(con -> subscribeToCommands(endpointConfig, tenantId, otherDeviceId)
                         .map(recv -> {
@@ -810,7 +809,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                                     .failNow(new IllegalStateException("should not have received command")));
                             return null;
                         }))
-                .onComplete(setup.succeeding(v -> setupDone.flag()));
+                .onComplete(setup.completing());
 
         assertWithMessage("setup of adapter finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
                 .that(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
