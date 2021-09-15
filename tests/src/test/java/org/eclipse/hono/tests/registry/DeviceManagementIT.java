@@ -554,18 +554,17 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
     }
 
     /**
-     * Verifies that a request to deregister a device fails if the given tenant does not exist.
+     * Verifies that a request to deregister a device succeeds even if the given tenant does not exist (anymore).
      *
      * @param ctx The vert.x test context
      */
     @Test
-    public void testDeregisterDeviceFailsForNonExistingTenant(final VertxTestContext ctx) {
+    public void testDeregisterDeviceSucceedsForNonExistingTenant(final VertxTestContext ctx) {
 
-        registry.deregisterDevice("non-existing-tenant", deviceId, HttpURLConnection.HTTP_NOT_FOUND)
-            .onComplete(ctx.succeeding(response -> {
-                ctx.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
-                ctx.completeNow();
-            }));
+        registry.addDeviceToTenant(tenantId, deviceId, "secret")
+            .compose(ok -> registry.removeTenant(tenantId))
+            .compose(ok -> registry.deregisterDevice(tenantId, deviceId, HttpURLConnection.HTTP_NO_CONTENT))
+            .onComplete(ctx.completing());
     }
 
     /**

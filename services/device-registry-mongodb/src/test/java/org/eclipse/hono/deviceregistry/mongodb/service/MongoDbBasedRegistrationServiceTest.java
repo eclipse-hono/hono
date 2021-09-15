@@ -14,6 +14,7 @@ package org.eclipse.hono.deviceregistry.mongodb.service;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -50,6 +51,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.CompositeFuture;
@@ -208,5 +210,34 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
                 ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_FORBIDDEN));
                 ctx.completeNow();
             }));
+    }
+
+    /**
+     * Verifies that a request to delete a device succeeds even if the tenant that the device belongs to does not
+     * exist (anymore).
+     *
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testDeleteDeviceSucceedsForNonExistingTenant(final VertxTestContext ctx) {
+        when(tenantInformationService.tenantExists(eq(TENANT), any(Span.class)))
+            .thenReturn(
+                    // report that tenant exists when createDevice is invoked
+                    Future.succeededFuture(OperationResult.ok(
+                            HttpURLConnection.HTTP_OK,
+                            TenantKey.from(TENANT),
+                            Optional.empty(),
+                            Optional.empty())),
+                    // report that tenant does not exist afterwards
+                    Future.succeededFuture(OperationResult.from(HttpURLConnection.HTTP_NOT_FOUND)));
+
+        getDeviceManagementService().createDevice(TENANT, Optional.empty(), new Device(), NoopSpan.INSTANCE)
+            .compose(result -> getDeviceManagementService().deleteDevice(
+                    TENANT,
+                    result.getPayload().getId(),
+                    Optional.empty(),
+                    NoopSpan.INSTANCE))
+            .onComplete(ctx.completing());
     }
 }
