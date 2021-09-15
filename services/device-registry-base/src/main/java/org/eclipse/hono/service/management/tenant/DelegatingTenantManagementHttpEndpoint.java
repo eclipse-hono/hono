@@ -142,6 +142,7 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
 
         getRequestParameter(ctx, PARAM_TENANT_ID, getPredicate(config.getTenantIdPattern(), false))
             .compose(tenantId -> {
+                TracingHelper.TAG_TENANT_ID.set(span, tenantId);
                 logger.debug("retrieving tenant [id: {}]", tenantId);
                 return getService().readTenant(tenantId, span);
             })
@@ -165,6 +166,8 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
         CompositeFuture.all(tenantId, payload)
             .compose(ok -> {
                 final Optional<String> tid = Optional.ofNullable(tenantId.result());
+                tid.ifPresent(s -> TracingHelper.TAG_TENANT_ID.set(span, s));
+
                 logger.debug("creating tenant [{}]", tid.orElse("<auto>"));
                 return getService().createTenant(tid, payload.result(), span);
             })
@@ -196,6 +199,7 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
 
         CompositeFuture.all(tenantId, payload)
             .compose(tenant -> {
+                TracingHelper.TAG_TENANT_ID.set(span, tenantId.result());
                 logger.debug("updating tenant [{}]", tenantId.result());
                 return getService().updateTenant(tenantId.result(), payload.result(), Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION)), span);
             })
@@ -215,6 +219,7 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
 
         getRequestParameter(ctx, PARAM_TENANT_ID, getPredicate(config.getTenantIdPattern(), false))
             .compose(tenantId -> {
+                TracingHelper.TAG_TENANT_ID.set(span, tenantId);
                 logger.debug("removing tenant [{}]", tenantId);
                 final Optional<String> resourceVersion = Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION));
                 return getService().deleteTenant(tenantId, resourceVersion, span);

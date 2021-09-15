@@ -115,6 +115,7 @@ public class DelegatingCredentialsManagementHttpEndpoint<S extends CredentialsMa
 
         CompositeFuture.all(tenantId, deviceId)
             .compose(ok -> {
+                TracingHelper.setDeviceTags(span, tenantId.result(), deviceId.result());
                 logger.debug("getting credentials [tenant: {}, device-id: {}]]",
                         tenantId.result(), deviceId.result());
                 return getService().readCredentials(tenantId.result(), deviceId.result(), span);
@@ -156,6 +157,7 @@ public class DelegatingCredentialsManagementHttpEndpoint<S extends CredentialsMa
 
         CompositeFuture.all(tenantId, deviceId, updatedCredentials)
             .compose(ok -> {
+                TracingHelper.setDeviceTags(span, tenantId.result(), deviceId.result());
                 logger.debug("updating {} credentials [tenant: {}, device-id: {}]",
                         updatedCredentials.result().size(), tenantId.result(), deviceId.result());
                 final Optional<String> resourceVersion = Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION));

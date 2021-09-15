@@ -147,6 +147,7 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
 
         CompositeFuture.all(tenantId, deviceId)
             .compose(ok -> {
+                TracingHelper.setDeviceTags(span, tenantId.result(), deviceId.result());
                 logger.debug("retrieving device [tenant: {}, device-id: {}]", tenantId.result(), deviceId.result());
                 return getService().readDevice(tenantId.result(), deviceId.result(), span);
             })
@@ -181,6 +182,7 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
                 RegistryManagementConstants.PARAM_SORT_JSON, Sort.class);
 
         CompositeFuture.all(pageSize, pageOffset, filters, sortOptions)
+                .onSuccess(ok -> TracingHelper.TAG_TENANT_ID.set(span, tenantId))
                 .compose(ok -> getService().searchDevices(
                         tenantId,
                         pageSize.result(),
@@ -209,6 +211,8 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
         CompositeFuture.all(tenantId, deviceId, device)
             .compose(ok -> {
                 final Optional<String> did = Optional.ofNullable(deviceId.result());
+                TracingHelper.TAG_TENANT_ID.set(span, tenantId.result());
+                did.ifPresent(s -> TracingHelper.TAG_DEVICE_ID.set(span, s));
                 logger.debug("creating device [tenant: {}, device-id: {}]", tenantId.result(), did.orElse("<auto>"));
                 return getService().createDevice(tenantId.result(), did, device.result(), span);
             })
@@ -238,6 +242,7 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
 
         CompositeFuture.all(tenantId, deviceId, device)
             .compose(ok -> {
+                TracingHelper.setDeviceTags(span, tenantId.result(), deviceId.result());
                 logger.debug("updating device [tenant: {}, device-id: {}]", tenantId.result(), deviceId.result());
                 final Optional<String> resourceVersion = Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION));
                 return getService().updateDevice(tenantId.result(), deviceId.result(), device.result(), resourceVersion, span);
@@ -261,6 +266,7 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
 
         CompositeFuture.all(tenantId, deviceId)
             .compose(ok -> {
+                TracingHelper.setDeviceTags(span, tenantId.result(), deviceId.result());
                 logger.debug("removing device [tenant: {}, device-id: {}]", tenantId.result(), deviceId.result());
                 final Optional<String> resourceVersion = Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION));
                 return getService().deleteDevice(tenantId.result(), deviceId.result(), resourceVersion, span);
