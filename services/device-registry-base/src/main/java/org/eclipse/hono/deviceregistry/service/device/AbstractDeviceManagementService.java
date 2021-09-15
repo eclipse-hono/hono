@@ -14,6 +14,7 @@ package org.eclipse.hono.deviceregistry.service.device;
 
 import java.net.HttpURLConnection;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -32,9 +33,13 @@ import org.eclipse.hono.service.management.Sort;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.device.DeviceWithId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Span;
+import io.opentracing.log.Fields;
+import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 
 /**
@@ -43,6 +48,8 @@ import io.vertx.core.Future;
  * It checks the parameters, validate tenant using {@link TenantInformationService} and creates {@link DeviceKey} for device operations.
  */
 public abstract class AbstractDeviceManagementService implements DeviceManagementService {
+
+    private static final Logger LOG = LoggerFactory.getLogger(AbstractDeviceManagementService.class);
 
     protected TenantInformationService tenantInformationService = new NoopTenantInformationService();
 
@@ -287,13 +294,23 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
 
         return this.tenantInformationService
                 .tenantExists(tenantId, span)
-                .compose(result -> result.isError()
-                        ? Future.failedFuture(ServiceInvocationException.create(
-                                tenantId,
-                                result.getStatus(),
-                                "tenant does not exist",
-                                null))
-                        : processDeleteDevice(DeviceKey.from(result.getPayload(), deviceId), resourceVersion, span))
+                .otherwise(t -> OperationResult.from(ServiceInvocationException.extractStatusCode(t)))
+                .compose(result -> {
+                    switch (result.getStatus()) {
+                    case HttpURLConnection.HTTP_NOT_FOUND:
+                        span.log("tenant does not exist (anymore)");
+                        LOG.info("trying to delete device of non-existing tenant [tenant-id: {}, device-id: {}]",
+                                tenantId, deviceId);
+                        break;
+                    default:
+                        span.log(Map.of(
+                                Fields.EVENT, "could not determine tenant status",
+                                Tags.HTTP_STATUS.getKey(), result.getStatus()));
+                        LOG.info("could not determine tenant status [tenant-id: {}, code: {}]",
+                                tenantId, result.getStatus());
+                    }
+                    return processDeleteDevice(DeviceKey.from(tenantId, deviceId), resourceVersion, span);
+                })
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 
