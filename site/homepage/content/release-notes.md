@@ -17,6 +17,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   need to disable this feature via the `hono.commandRouter.svc.kubernetesBasedAdapterInstanceStatusServiceEnabled`
   property. Please refer to the [Command Router Admin Guide]({{% doclink "/admin-guide/command-router-config/#service-configuration" %}})
   for details.
+* The authentication provider used to guard access to the Mongo DB based registry implementation's HTTP endpoint
+  can now be configured using environment variables. Please refer to the registry's Admin Guide for details.
 
 ### Fixes & Enhancements
 

@@ -27,7 +27,6 @@ import java.util.Optional;
 
 import javax.security.auth.x500.X500Principal;
 
-import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.service.management.credentials.PskCredential;
@@ -98,6 +97,7 @@ public final class DeviceRegistryHttpClient {
     private static final String CONTENT_TYPE_APPLICATION_JSON = "application/json";
     private final CrudHttpClient httpClient;
     private final Map<String, Object> tenantExtensions;
+    private final String authenticationHeaderValue;
 
     /**
      * Creates a new client for a host and port.
@@ -112,6 +112,7 @@ public final class DeviceRegistryHttpClient {
     public DeviceRegistryHttpClient(final Vertx vertx, final String host, final int port, final Map<String, Object> tenantExtensions) {
         this.httpClient = new CrudHttpClient(vertx, host, port);
         this.tenantExtensions = Objects.requireNonNull(tenantExtensions);
+        this.authenticationHeaderValue = IntegrationTestSupport.getRegistryManagementApiAuthHeader();
     }
 
     private static String credentialsByDeviceUri(final String tenant, final String deviceId) {
@@ -159,6 +160,19 @@ public final class DeviceRegistryHttpClient {
     private static String searchTenantsUri() {
         return String.format("/%s/%s",
                 RegistryManagementConstants.API_VERSION, RegistryManagementConstants.TENANT_HTTP_ENDPOINT);
+    }
+
+    private MultiMap getRequestHeaders() {
+        return getRequestHeaders(null);
+    }
+
+    private MultiMap getRequestHeaders(final String contentType) {
+        final var headers = MultiMap.caseInsensitiveMultiMap();
+        Optional.ofNullable(contentType)
+            .ifPresent(v -> headers.add(HttpHeaders.CONTENT_TYPE, v));
+        Optional.ofNullable(authenticationHeaderValue)
+            .ifPresent(v -> headers.add(HttpHeaders.AUTHORIZATION, v));
+        return headers;
     }
 
     // tenant management
@@ -261,15 +275,19 @@ public final class DeviceRegistryHttpClient {
      * @return A future indicating the outcome of the operation. The future will succeed if the response contained the
      *         expected status code. Otherwise the future will fail.
      */
-    public Future<HttpResponse<Buffer>> addTenant(final String tenantId, final JsonObject requestPayload, final String contentType,
+    public Future<HttpResponse<Buffer>> addTenant(
+            final String tenantId,
+            final JsonObject requestPayload,
+            final String contentType,
             final int expectedStatusCode) {
 
         final String uri = tenantInstanceUri(tenantId);
-        LOG.debug("adding tenant: {}", requestPayload.encodePrettily());
+        Optional.ofNullable(requestPayload)
+            .ifPresent(p -> LOG.debug("adding tenant: {}", p.encodePrettily()));
         return httpClient.create(
                 uri,
-                requestPayload,
-                contentType,
+                Optional.ofNullable(requestPayload).map(JsonObject::toBuffer).orElse(null),
+                getRequestHeaders(contentType),
                 ResponsePredicate.status(expectedStatusCode));
     }
 
@@ -298,7 +316,7 @@ public final class DeviceRegistryHttpClient {
     public Future<HttpResponse<Buffer>> getTenant(final String tenantId, final int expectedStatusCode) {
 
         final String uri = tenantInstanceUri(tenantId);
-        return httpClient.get(uri, ResponsePredicate.status(expectedStatusCode));
+        return httpClient.get(uri, getRequestHeaders(), ResponsePredicate.status(expectedStatusCode));
     }
 
     /**
@@ -315,7 +333,11 @@ public final class DeviceRegistryHttpClient {
 
         final String uri = tenantInstanceUri(tenantId);
         final JsonObject payload = JsonObject.mapFrom(requestPayload);
-        return httpClient.update(uri, payload, ResponsePredicate.status(expectedStatusCode));
+        return httpClient.update(
+                uri,
+                payload.toBuffer(),
+                getRequestHeaders(CONTENT_TYPE_APPLICATION_JSON),
+                ResponsePredicate.status(expectedStatusCode));
     }
 
     /**
@@ -372,7 +394,7 @@ public final class DeviceRegistryHttpClient {
      */
     public Future<HttpResponse<Buffer>> removeTenant(final String tenantId, final ResponsePredicate ... successPredicates) {
         final String uri = tenantInstanceUri(tenantId);
-        return httpClient.delete(uri, successPredicates);
+        return httpClient.delete(uri, getRequestHeaders(), successPredicates);
     }
 
     /**
@@ -406,7 +428,7 @@ public final class DeviceRegistryHttpClient {
         filters.forEach(filterJson -> queryParams.add(RegistryManagementConstants.PARAM_FILTER_JSON, filterJson));
         sortOptions.forEach(sortJson -> queryParams.add(RegistryManagementConstants.PARAM_SORT_JSON, sortJson));
 
-        return httpClient.get(searchTenantsUri(), queryParams, (ResponsePredicate[]) null);
+        return httpClient.get(searchTenantsUri(), getRequestHeaders(), queryParams, (ResponsePredicate[]) null);
     }
 
     /**
@@ -442,7 +464,7 @@ public final class DeviceRegistryHttpClient {
         filters.forEach(filterJson -> queryParams.add(RegistryManagementConstants.PARAM_FILTER_JSON, filterJson));
         sortOptions.forEach(sortJson -> queryParams.add(RegistryManagementConstants.PARAM_SORT_JSON, sortJson));
 
-        return httpClient.get(searchTenantsUri(), queryParams, ResponsePredicate.status(expectedStatusCode));
+        return httpClient.get(searchTenantsUri(), getRequestHeaders(), queryParams, ResponsePredicate.status(expectedStatusCode));
     }
     // device registration
 
@@ -572,8 +594,8 @@ public final class DeviceRegistryHttpClient {
                 .orElseGet(() -> registrationWithoutIdUri(tenantId));
         return httpClient.create(
                 uri,
-                device,
-                contentType,
+                Optional.ofNullable(device).map(JsonObject::toBuffer).orElse(null),
+                getRequestHeaders(contentType),
                 ResponsePredicate.status(expectedStatus));
     }
 
@@ -616,7 +638,11 @@ public final class DeviceRegistryHttpClient {
 
         Objects.requireNonNull(tenantId);
         final String requestUri = registrationInstanceUri(tenantId, deviceId);
-        return httpClient.update(requestUri, data, contentType, ResponsePredicate.status(expectedStatus));
+        return httpClient.update(
+                requestUri,
+                data.toBuffer(),
+                getRequestHeaders(contentType),
+                ResponsePredicate.status(expectedStatus));
     }
 
     /**
@@ -649,7 +675,7 @@ public final class DeviceRegistryHttpClient {
 
         Objects.requireNonNull(tenantId);
         final String requestUri = registrationInstanceUri(tenantId, deviceId);
-        return httpClient.get(requestUri, ResponsePredicate.status(expectedStatus));
+        return httpClient.get(requestUri, getRequestHeaders(), ResponsePredicate.status(expectedStatus));
     }
 
     /**
@@ -689,6 +715,24 @@ public final class DeviceRegistryHttpClient {
      *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The identifier of the device.
+     * @param ignoreMissing Ignore a missing device.
+     * @return A future indicating the outcome of the operation. The future will succeed if the registration information
+     *         has been removed. Otherwise the future will fail.
+     * @throws NullPointerException if the tenant is {@code null}.
+     */
+    public Future<HttpResponse<Buffer>> deregisterDevice(
+            final String tenantId,
+            final String deviceId,
+            final boolean ignoreMissing) {
+
+        return deregisterDevice(tenantId, deviceId, okOrIgnoreMissing(ignoreMissing));
+    }
+
+    /**
+     * Removes registration information for a device.
+     *
+     * @param tenantId The tenant that the device belongs to.
+     * @param deviceId The identifier of the device.
      * @param successPredicates Checks on the HTTP response that need to pass for the request
      *                          to be considered successful.
      * @return A future indicating the outcome of the operation. The future will succeed if the registration information
@@ -702,27 +746,7 @@ public final class DeviceRegistryHttpClient {
 
         Objects.requireNonNull(tenantId);
         final String requestUri = registrationInstanceUri(tenantId, deviceId);
-        return httpClient.delete(requestUri, successPredicates);
-
-    }
-
-    /**
-     * Removes registration information for a device.
-     *
-     * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The identifier of the device.
-     * @param ignoreMissing Ignore a missing device.
-     * @return A future indicating the outcome of the operation. The future will succeed if the registration information
-     *         has been removed. Otherwise the future will fail.
-     * @throws NullPointerException if the tenant is {@code null}.
-     */
-    public Future<HttpResponse<Buffer>> deregisterDevice(
-            final String tenantId,
-            final String deviceId,
-            final boolean ignoreMissing) {
-
-        return deregisterDevice(tenantId, deviceId, okOrIgnoreMissing(ignoreMissing));
-
+        return httpClient.delete(requestUri, getRequestHeaders(), successPredicates);
     }
 
     /**
@@ -762,13 +786,13 @@ public final class DeviceRegistryHttpClient {
         filters.forEach(filterJson -> queryParams.add(RegistryManagementConstants.PARAM_FILTER_JSON, filterJson));
         sortOptions.forEach(sortJson -> queryParams.add(RegistryManagementConstants.PARAM_SORT_JSON, sortJson));
 
-        return httpClient.get(requestUri, queryParams, ResponsePredicate.status(expectedStatusCode));
+        return httpClient.get(requestUri, getRequestHeaders(), queryParams, ResponsePredicate.status(expectedStatusCode));
     }
 
     // credentials management
 
     /**
-     * Add credentials for a device.
+     * Adds credentials for a device.
      * <p>
      * This method simply invokes {@link #addCredentials(String, String, Collection, int)} with
      * {@link HttpURLConnection#HTTP_CREATED} as the expected status code.
@@ -786,7 +810,7 @@ public final class DeviceRegistryHttpClient {
     }
 
     /**
-     * Add credentials for a device.
+     * Adds credentials for a device.
      * <p>
      * This method simply invokes {@link #addCredentials(String, String, Collection, String, int)} with
      * <em>application/json</em> as the content type and {@link HttpURLConnection#HTTP_CREATED} as the expected status
@@ -806,7 +830,7 @@ public final class DeviceRegistryHttpClient {
     }
 
     /**
-     * Add credentials for a device.
+     * Adds credentials for a device.
      *
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The device credentials belongs to.
@@ -827,7 +851,7 @@ public final class DeviceRegistryHttpClient {
         Objects.requireNonNull(tenantId);
         final String uri = credentialsByDeviceUri(tenantId, deviceId);
 
-        return httpClient.get(uri, ResponsePredicate.status(HttpURLConnection.HTTP_OK))
+        return httpClient.get(uri, getRequestHeaders(), ResponsePredicate.status(HttpURLConnection.HTTP_OK))
                 .compose(httpResponse -> {
 
                     // new list of secrets
@@ -841,7 +865,10 @@ public final class DeviceRegistryHttpClient {
 
                     // encode array, not list - workaround for vert.x json issue
                     final var payload = Json.encodeToBuffer(currentSecrets.toArray(CommonCredential[]::new));
-                    return httpClient.update(uri, payload, contentType,
+                    return httpClient.update(
+                            uri,
+                            payload,
+                            getRequestHeaders(contentType),
                             ResponsePredicate.status(expectedStatusCode));
                 });
 
@@ -876,7 +903,7 @@ public final class DeviceRegistryHttpClient {
 
         Objects.requireNonNull(tenantId);
         final String uri = credentialsByDeviceUri(tenantId, deviceId);
-        return httpClient.get(uri, ResponsePredicate.status(expectedStatusCode));
+        return httpClient.get(uri, getRequestHeaders(), ResponsePredicate.status(expectedStatusCode));
     }
 
     /**
@@ -922,9 +949,8 @@ public final class DeviceRegistryHttpClient {
         Objects.requireNonNull(tenantId);
         final String uri = credentialsByDeviceUri(tenantId, deviceId);
 
-        final MultiMap headers = MultiMap.caseInsensitiveMultiMap()
-                .add(HttpHeaders.IF_MATCH, expectedResourceVersion)
-                .add(HttpHeaders.CONTENT_TYPE, HttpUtils.CONTENT_TYPE_JSON);
+        final MultiMap headers = getRequestHeaders(CONTENT_TYPE_APPLICATION_JSON)
+                .add(HttpHeaders.IF_MATCH, expectedResourceVersion);
 
         // encode array not list, workaround for vert.x issue
         final var payload = Json.encodeToBuffer(credentialsSpec.toArray(CommonCredential[]::new));
@@ -949,7 +975,7 @@ public final class DeviceRegistryHttpClient {
             final Collection<CommonCredential> credentialsSpec,
             final int expectedStatusCode) {
 
-        return updateCredentials(tenantId, deviceId, credentialsSpec, CrudHttpClient.CONTENT_TYPE_JSON,
+        return updateCredentials(tenantId, deviceId, credentialsSpec, CONTENT_TYPE_APPLICATION_JSON,
                 expectedStatusCode);
     }
 
@@ -1003,7 +1029,11 @@ public final class DeviceRegistryHttpClient {
         Objects.requireNonNull(tenantId);
         final String uri = credentialsByDeviceUri(tenantId, deviceId);
 
-        return httpClient.update(uri, payload, contentType, ResponsePredicate.status(expectedStatusCode));
+        return httpClient.update(
+                uri,
+                payload,
+                getRequestHeaders(contentType),
+                ResponsePredicate.status(expectedStatusCode));
     }
 
     // convenience methods

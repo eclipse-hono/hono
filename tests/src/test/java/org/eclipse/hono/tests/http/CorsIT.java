@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -52,18 +52,27 @@ public class CorsIT {
      */
     protected static CrudHttpClient httpClient;
 
-    private static final Vertx VERTX = Vertx.vertx();
+    private static final String authenticationHeaderValue = IntegrationTestSupport.getRegistryManagementApiAuthHeader();
 
     /**
      * Sets up clients.
+     *
+     * @param vertx The vert.x instance to run on.
      */
     @BeforeAll
-    public static void init() {
+    public static void init(final Vertx vertx) {
 
         httpClient = new CrudHttpClient(
-                VERTX,
+                vertx,
                 IntegrationTestSupport.HTTP_HOST,
                 IntegrationTestSupport.HTTP_PORT);
+    }
+
+    private MultiMap getRequestHeaders() {
+        final var requestHeaders = MultiMap.caseInsensitiveMultiMap();
+        Optional.ofNullable(authenticationHeaderValue)
+            .ifPresent(v -> requestHeaders.add(HttpHeaders.AUTHORIZATION, v));
+        return requestHeaders;
     }
 
     /**
@@ -77,7 +86,7 @@ public class CorsIT {
 
         httpClient.options(
                 "/" + TelemetryConstants.TELEMETRY_ENDPOINT,
-                MultiMap.caseInsensitiveMultiMap()
+                getRequestHeaders()
                     .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.POST.name()),
                 ResponsePredicate.status(HttpURLConnection.HTTP_OK))
@@ -104,7 +113,7 @@ public class CorsIT {
 
         httpClient.options(
                 String.format("/%s/%s/%s", TelemetryConstants.TELEMETRY_ENDPOINT, "my-tenant", "my-device"),
-                MultiMap.caseInsensitiveMultiMap()
+                getRequestHeaders()
                     .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.PUT.name()),
                     ResponsePredicate.status(HttpURLConnection.HTTP_OK))
@@ -131,7 +140,7 @@ public class CorsIT {
 
         httpClient.options(
                 "/" + EventConstants.EVENT_ENDPOINT,
-                MultiMap.caseInsensitiveMultiMap()
+                getRequestHeaders()
                     .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.POST.name()),
                     ResponsePredicate.status(HttpURLConnection.HTTP_OK))
@@ -154,7 +163,7 @@ public class CorsIT {
 
         httpClient.options(
                 String.format("/%s/%s/%s", EventConstants.EVENT_ENDPOINT, "my-tenant", "my-device"),
-                MultiMap.caseInsensitiveMultiMap()
+                getRequestHeaders()
                     .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.PUT.name()),
                     ResponsePredicate.status(HttpURLConnection.HTTP_OK))
@@ -177,7 +186,7 @@ public class CorsIT {
 
         httpClient.options(
                 String.format("/%s/res/%s", CommandConstants.COMMAND_ENDPOINT, "cmd-request-id"),
-                MultiMap.caseInsensitiveMultiMap()
+                getRequestHeaders()
                     .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.POST.name()),
                     ResponsePredicate.status(HttpURLConnection.HTTP_OK))
@@ -200,7 +209,7 @@ public class CorsIT {
 
         httpClient.options(
                 String.format("/%s/res/%s/%s/%s", CommandConstants.COMMAND_ENDPOINT, "my-tenant", "my-device", "cmd-request-id"),
-                MultiMap.caseInsensitiveMultiMap()
+                getRequestHeaders()
                     .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
                     .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, HttpMethod.PUT.name()),
                     ResponsePredicate.status(HttpURLConnection.HTTP_OK))

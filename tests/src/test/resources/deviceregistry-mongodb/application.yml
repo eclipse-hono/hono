@@ -28,10 +28,16 @@ hono:
       insecurePortEnabled: true
       insecurePortBindAddress: 0.0.0.0
     http:
-      authenticationRequired: false
+      authenticationRequired: true
       insecurePortEnabled: true
       insecurePortBindAddress: 0.0.0.0
       maxPayloadSize: ${hono.deviceregistry.maxPayloadSize}
+      auth:
+        collectionName: "registryusers"
+        usernameField: "login"
+        passwordField: "pwdHash"
+        saltField: "spice"
+        hashAlgorithm: "PBKDF2"
     svc:
   credentials:
     svc:

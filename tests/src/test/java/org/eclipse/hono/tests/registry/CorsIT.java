@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,7 @@
 package org.eclipse.hono.tests.registry;
 
 import java.net.HttpURLConnection;
+import java.util.Optional;
 
 import org.eclipse.hono.tests.CrudHttpClient;
 import org.eclipse.hono.tests.DeviceRegistryHttpClient;
@@ -42,6 +43,8 @@ public class CorsIT {
      * A client for sending requests to the device registry management API.
      */
     protected static CrudHttpClient httpClient;
+
+    private static final String authenticationHeaderValue = IntegrationTestSupport.getRegistryManagementApiAuthHeader();
 
     /**
      * Sets up clients.
@@ -191,16 +194,23 @@ public class CorsIT {
 
         httpClient.options(
                 uri,
-                MultiMap.caseInsensitiveMultiMap()
-                        .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
-                        .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, method.name()),
-                        ResponsePredicate.status(HttpURLConnection.HTTP_OK))
+                getRequestHeaders()
+                    .add(HttpHeaders.ORIGIN, CrudHttpClient.ORIGIN_URI)
+                    .add(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, method.name()),
+                ResponsePredicate.status(HttpURLConnection.HTTP_OK))
             .onComplete(ctx.succeeding(response -> {
                 ctx.verify(() -> {
                     assertAccessControlHeaders(response.headers(), method);
                  });
                 ctx.completeNow();
             }));
+    }
+
+    private MultiMap getRequestHeaders() {
+        final var requestHeaders = MultiMap.caseInsensitiveMultiMap();
+        Optional.ofNullable(authenticationHeaderValue)
+            .ifPresent(v -> requestHeaders.add(HttpHeaders.AUTHORIZATION, v));
+        return requestHeaders;
     }
 
     private static void assertAccessControlHeaders(

@@ -119,6 +119,17 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <hono.deviceregistry.spring.profiles>${logging.profile}</hono.deviceregistry.spring.profiles>
     <!--  accept requests with a body size of up to 2000 bytes -->
     <hono.deviceregistry.maxPayloadSize>2000</hono.deviceregistry.maxPayloadSize>
+    <!-- the credentials required for accessing the (Mongo DB) registry's HTTP endpoint -->
+    <hono.deviceregistry.http.authConfig.username>test-client</hono.deviceregistry.http.authConfig.username>
+    <hono.deviceregistry.http.authConfig.salt>secret</hono.deviceregistry.http.authConfig.salt>
+    <hono.deviceregistry.http.authConfig.password>sauce</hono.deviceregistry.http.authConfig.password>
+    <!--
+      password hash is the (uppercase) Hex representation of the PBKDF2 SHA-512 digest of "secretsauce" (salt + password)
+      created using https://stuff.birkenstab.de/pbkdf2/
+    -->
+    <hono.deviceregistry.http.authConfig.passwordHash>
+      5905BFCF36F5852A0E75B9D0727F3E26FD9701FD3C6A182F360EBD1FBFD321A8E1D7E392AEA7D8AF84B445186C86532E22D99892DE5EE95C86C0783198AA9840
+    </hono.deviceregistry.http.authConfig.passwordHash>
 
     <hono.mongodb.disabled>false</hono.mongodb.disabled>
     <hono.mongodb.host>hono-mongodb.hono</hono.mongodb.host>
@@ -1656,6 +1667,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                 <deviceregistry.host>${deviceregistry.ip}</deviceregistry.host>
                 <deviceregistry.amqp.port>${deviceregistry.amqp.port}</deviceregistry.amqp.port>
                 <deviceregistry.http.port>${deviceregistry.http.port}</deviceregistry.http.port>
+                <deviceregistry.http.authConfig.username>${hono.deviceregistry.http.authConfig.username}</deviceregistry.http.authConfig.username>
+                <deviceregistry.http.authConfig.password>${hono.deviceregistry.http.authConfig.password}</deviceregistry.http.authConfig.password>
                 <deviceregistry.supportsGatewayMode>${hono.deviceregistry.supportsGatewayMode}</deviceregistry.supportsGatewayMode>
                 <deviceregistry.supportsSearchDevices>${hono.deviceregistry.supportsSearchDevices}</deviceregistry.supportsSearchDevices>
                 <deviceregistry.supportsSearchTenants>${hono.deviceregistry.supportsSearchTenants}</deviceregistry.supportsSearchTenants>

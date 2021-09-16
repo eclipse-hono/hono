@@ -18,12 +18,14 @@ import static com.google.common.truth.Truth.assertWithMessage;
 
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -225,6 +227,16 @@ public final class IntegrationTestSupport {
      */
     public static final String PROPERTY_DEVICEREGISTRY_AMQP_PORT = "deviceregistry.amqp.port";
     /**
+     * The name of the system property to use for setting the user name for authenticating to the Device Registry's
+     * HTTP endpoint.
+     */
+    public static final String PROPERTY_DEVICEREGISTRY_HTTP_AUTHCONFIG_USERNAME = "deviceregistry.http.authConfig.username";
+    /**
+     * The name of the system property to use for setting the password for authenticating to the Device Registry's
+     * HTTP endpoint.
+     */
+    public static final String PROPERTY_DEVICEREGISTRY_HTTP_AUTHCONFIG_PASSWORD = "deviceregistry.http.authConfig.password";
+    /**
      * The name of the system property to use for setting the port number that the Device Registry
      * should listen on for HTTP connections.
      */
@@ -350,7 +362,14 @@ public final class IntegrationTestSupport {
      */
     public static final String TENANT_ADMIN_PWD = System.getProperty(PROPERTY_TENANT_ADMIN_PASSWORD);
 
-
+    /**
+     * The user name to use for authenticating to the Device Registry's HTTP endpoint.
+     */
+    public static final String HONO_DEVICEREGISTRY_AUTHCONFIG_USERNAME = System.getProperty(PROPERTY_DEVICEREGISTRY_HTTP_AUTHCONFIG_USERNAME);
+    /**
+     * The user name to use for authenticating to the Device Registry's HTTP endpoint.
+     */
+    public static final String HONO_DEVICEREGISTRY_AUTHCONFIG_PASSWORD = System.getProperty(PROPERTY_DEVICEREGISTRY_HTTP_AUTHCONFIG_PASSWORD);
     /**
      * The IP address of the Device Registry.
      */
@@ -670,6 +689,23 @@ public final class IntegrationTestSupport {
                 IntegrationTestSupport.HONO_DEVICEREGISTRY_AMQP_PORT,
                 username,
                 password);
+    }
+
+    /**
+     * Gets the value for the HTTP *Authentication* header to use in requests to the Device Registry's HTTP endpoint.
+     * <p>
+     * The user name and password are read from system properties {@value #HONO_DEVICEREGISTRY_AUTHCONFIG_USERNAME} and
+     * {@value #HONO_DEVICEREGISTRY_AUTHCONFIG_PASSWORD} respectively.
+     *
+     * @return The header value or {@code null} if no credentials have been set.
+     */
+    public static String getRegistryManagementApiAuthHeader() {
+        return Optional.ofNullable(IntegrationTestSupport.HONO_DEVICEREGISTRY_AUTHCONFIG_USERNAME)
+                .map(username -> {
+                    final String credentials = username + ":" + IntegrationTestSupport.HONO_DEVICEREGISTRY_AUTHCONFIG_PASSWORD;
+                    return "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
+                })
+                .orElse(null);
     }
 
     /**
