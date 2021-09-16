@@ -568,6 +568,28 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
     }
 
     /**
+     * Verifies that a request to deregister all devices of a tenant succeeds.
+     *
+     * @param ctx The vert.x test context
+     */
+    @Test
+    public void testDeregisterDevicesOfTenantSucceeds(final VertxTestContext ctx) {
+
+        final String otherDeviceId = getHelper().getRandomDeviceId(tenantId);
+
+        registry.addDeviceToTenant(tenantId, deviceId, "secret")
+            .compose(ok -> registry.addDeviceToTenant(tenantId, otherDeviceId, "othersecret"))
+            .onFailure(ctx::failNow)
+            .compose(ok -> registry.deregisterDevicesOfTenant(tenantId))
+            .onFailure(ctx::failNow)
+            .compose(ok -> registry.getRegistrationInfo(tenantId, deviceId, HttpURLConnection.HTTP_NOT_FOUND))
+            .compose(ok -> registry.getCredentials(tenantId, deviceId, HttpURLConnection.HTTP_NOT_FOUND))
+            .compose(ok -> registry.getRegistrationInfo(tenantId, otherDeviceId, HttpURLConnection.HTTP_NOT_FOUND))
+            .compose(ok -> registry.getCredentials(tenantId, otherDeviceId, HttpURLConnection.HTTP_NOT_FOUND))
+            .onComplete(ctx.completing());
+    }
+
+    /**
      * Verifies that a request to deregister a non-existing device fails.
      *
      * @param ctx The vert.x test context.

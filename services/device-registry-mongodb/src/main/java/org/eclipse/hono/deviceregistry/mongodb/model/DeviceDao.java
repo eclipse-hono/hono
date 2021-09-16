@@ -144,6 +144,20 @@ public interface DeviceDao {
     Future<Void> delete(String tenantId, String deviceId, Optional<String> resourceVersion, SpanContext tracingContext);
 
     /**
+     * Deletes all device instances of a tenant.
+     *
+     * @param tenantId The tenant that the devices belong to.
+     * @param tracingContext The context to track the processing of the request in
+     *                       or {@code null} if no such context exists.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will be succeeded if all devices belonging to the given tenant have been deleted.
+     *         Otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
+     * @throws NullPointerException if tenant ID is {@code null}.
+     */
+    Future<Void> delete(String tenantId, SpanContext tracingContext);
+
+    /**
      * Gets the number of device instances for a tenant.
      *
      * @param tenantId The tenant to get the number of devices for.

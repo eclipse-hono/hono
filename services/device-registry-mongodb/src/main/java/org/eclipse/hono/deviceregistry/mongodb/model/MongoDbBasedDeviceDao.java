@@ -432,6 +432,36 @@ public final class MongoDbBasedDeviceDao extends MongoDbBasedDao implements Devi
      * {@inheritDoc}
      */
     @Override
+    public Future<Void> delete(final String tenantId, final SpanContext tracingContext) {
+
+        Objects.requireNonNull(tenantId);
+
+        final Span span = tracer.buildSpan("delete all of Tenant's Devices")
+                .addReference(References.CHILD_OF, tracingContext)
+                .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
+                .start();
+
+        final JsonObject removeDevicesQuery = MongoDbDocumentBuilder.builder()
+                .withTenantId(tenantId)
+                .document();
+        return mongoClient.removeDocuments(collectionName, removeDevicesQuery)
+                .compose(result -> {
+                    span.log("successfully deleted devices");
+                    LOG.debug("successfully deleted devices of tenant [tenant-id: {}]", tenantId);
+                    return Future.succeededFuture((Void) null);
+                })
+                .recover(error -> {
+                    LOG.debug("error deleting devices", error);
+                    TracingHelper.logError(span, "error deleting devices", error);
+                    return mapError(error);
+                })
+                .onComplete(r -> span.finish());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public Future<Long> count(final String tenantId, final SpanContext tracingContext) {
 
         Objects.requireNonNull(tenantId);

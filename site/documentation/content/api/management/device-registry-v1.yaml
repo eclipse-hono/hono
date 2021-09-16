@@ -384,6 +384,24 @@ paths:
             404:
                $ref: '#/components/responses/NotFound'
 
+      delete:
+         tags:
+            - devices
+         summary: Delete all devices of a tenant.
+         description: |
+            Clients use this operation to remove all devices of a tenant from the registry.
+
+            When the operation succeeds, none of the registration information and credentials of devices
+            belonging to the tenant must be accessible anymore. These entities should be reported as *not found*.
+         operationId: deleteDevicesOfTenant
+         responses:
+            204:
+               description: All devices of the tenant have been deleted
+            400:
+               $ref: '#/components/responses/MalformedRequest'
+            401:
+               $ref: '#/components/responses/Unauthorized'
+
    /devices/{tenantId}/{deviceId}:
 
       parameters:

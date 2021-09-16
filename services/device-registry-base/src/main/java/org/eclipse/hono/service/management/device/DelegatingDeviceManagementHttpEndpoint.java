@@ -65,6 +65,7 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
     private static final String SPAN_NAME_SEARCH_DEVICES = "search Devices from management API";
     private static final String SPAN_NAME_UPDATE_DEVICE = "update Device from management API";
     private static final String SPAN_NAME_REMOVE_DEVICE = "remove Device from management API";
+    private static final String SPAN_NAME_REMOVE_DEVICES_OF_TENANT = "remove all of Tenant's Devices from management API";
 
     private static final String DEVICE_MANAGEMENT_ENDPOINT_NAME = String.format("%s/%s",
                     RegistryManagementConstants.API_VERSION,
@@ -131,6 +132,11 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
         router.delete(pathWithTenantAndDeviceId)
                 .handler(this::extractIfMatchVersionParam)
                 .handler(this::doDeleteDevice);
+
+        // DELETE all of a tenant's devices
+        router.delete(pathWithTenant)
+                .handler(this::doDeleteDevicesOfTenant);
+
     }
 
     private void doGetDevice(final RoutingContext ctx) {
@@ -270,6 +276,26 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
                 logger.debug("removing device [tenant: {}, device-id: {}]", tenantId.result(), deviceId.result());
                 final Optional<String> resourceVersion = Optional.ofNullable(ctx.get(KEY_RESOURCE_VERSION));
                 return getService().deleteDevice(tenantId.result(), deviceId.result(), resourceVersion, span);
+            })
+            .onSuccess(result -> writeResponse(ctx, result, span))
+            .onFailure(t -> failRequest(ctx, t, span))
+            .onComplete(s -> span.finish());
+    }
+
+    private void doDeleteDevicesOfTenant(final RoutingContext ctx) {
+
+        final Span span = TracingHelper.buildServerChildSpan(
+                tracer,
+                TracingHandler.serverSpanContext(ctx),
+                SPAN_NAME_REMOVE_DEVICES_OF_TENANT,
+                getClass().getSimpleName()
+        ).start();
+
+        getRequestParameter(ctx, PARAM_TENANT_ID, getPredicate(config.getTenantIdPattern(), false))
+            .compose(tenantId -> {
+                TracingHelper.TAG_TENANT_ID.set(span, tenantId);
+                logger.debug("removing all devices of tenant [tenant: {}]", tenantId);
+                return getService().deleteDevicesOfTenant(tenantId, span);
             })
             .onSuccess(result -> writeResponse(ctx, result, span))
             .onFailure(t -> failRequest(ctx, t, span))

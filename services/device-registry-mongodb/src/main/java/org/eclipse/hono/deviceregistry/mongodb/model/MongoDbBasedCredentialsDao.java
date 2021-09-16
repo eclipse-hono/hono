@@ -434,4 +434,32 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                 .recover(this::mapError)
                 .onComplete(r -> span.finish());
     }
+
+    @Override
+    public Future<Void> delete(final String tenantId, final SpanContext tracingContext) {
+
+        Objects.requireNonNull(tenantId);
+
+        final Span span = tracer.buildSpan("delete Credentials of all of Tenant's Devices")
+                .addReference(References.CHILD_OF, tracingContext)
+                .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
+                .start();
+
+        final JsonObject removeCredentialsQuery = MongoDbDocumentBuilder.builder()
+                .withTenantId(tenantId)
+                .document();
+
+        return mongoClient.removeDocuments(collectionName, removeCredentialsQuery)
+                .compose(result -> {
+                    span.log("successfully deleted credentials");
+                    LOG.debug("successfully deleted credentials for devices of tenant [tenant-id: {}]", tenantId);
+                    return Future.succeededFuture((Void) null);
+                })
+                .recover(error -> {
+                    LOG.debug("error deleting credentials", error);
+                    TracingHelper.logError(span, "error deleting credentials", error);
+                    return mapError(error);
+                })
+                .onComplete(r -> span.finish());
+    }
 }

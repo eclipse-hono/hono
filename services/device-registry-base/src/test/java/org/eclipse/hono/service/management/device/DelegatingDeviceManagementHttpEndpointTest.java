@@ -421,6 +421,34 @@ public class DelegatingDeviceManagementHttpEndpointTest {
                 any(Span.class));
     }
 
+    /**
+     * Verifies that the endpoint uses the tenant ID provided in a request's URI
+     * for deleting all of a tenant's devices.
+     */
+    @Test
+    public void testDeleteDevicesUsesTenantIdFromUriParam() {
+
+        when(service.deleteDevicesOfTenant(anyString(), any(Span.class)))
+            .thenReturn(Future.succeededFuture(OperationResult.from(HttpURLConnection.HTTP_NO_CONTENT)));
+
+        final HttpServerResponse response = newResponse();
+
+        final HttpServerRequest request = newRequest(
+                HttpMethod.DELETE,
+                "/v1/devices/mytenant",
+                requestHeaders,
+                requestParams,
+                response);
+
+        router.handle(request);
+
+        verify(response).setStatusCode(HttpURLConnection.HTTP_NO_CONTENT);
+        verify(service).deleteDevicesOfTenant(
+                eq("mytenant"),
+                any(Span.class));
+    }
+
+
     private HttpServerRequest newRequest(
             final HttpMethod method,
             final String relativeURI,

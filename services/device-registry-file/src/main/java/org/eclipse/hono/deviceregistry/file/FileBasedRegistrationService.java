@@ -29,6 +29,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.deviceregistry.service.device.AbstractRegistrationService;
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
@@ -433,6 +434,13 @@ public class FileBasedRegistrationService extends AbstractRegistrationService
         dirty.set(true);
         return Future.succeededFuture(Result.from(HttpURLConnection.HTTP_NO_CONTENT));
 
+    }
+
+    @Override
+    public Future<Result<Void>> deleteDevicesOfTenant(final String tenantId, final Span span) {
+        return Future.failedFuture(new ServerErrorException(
+                HttpURLConnection.HTTP_NOT_IMPLEMENTED,
+                "this registry does not support the delete devices of tenant operation"));
     }
 
     @Override

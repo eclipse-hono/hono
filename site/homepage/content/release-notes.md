@@ -19,6 +19,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   for details.
 * The authentication provider used to guard access to the Mongo DB based registry implementation's HTTP endpoint
   can now be configured using environment variables. Please refer to the registry's Admin Guide for details.
+* The Registry Management API has been extended with an operation to delete all devices (including credentials) of a
+  tenant. Both the Mongo DB and the JDBC based registry implementations support this operation.
 
 ### Fixes & Enhancements
 

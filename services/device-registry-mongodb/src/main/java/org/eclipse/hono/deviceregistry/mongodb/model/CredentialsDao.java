@@ -111,4 +111,19 @@ public interface CredentialsDao {
      * @throws NullPointerException if any of tenant, device ID or resource version are {@code null}.
      */
     Future<Void> delete(String tenantId, String deviceId, Optional<String> resourceVersion, SpanContext tracingContext);
+
+    /**
+     * Deletes all credentials of devices belonging to a tenant.
+     *
+     * @param tenantId The tenant that the devices belong to.
+     * @param tracingContext The context to track the processing of the request in
+     *                       or {@code null} if no such context exists.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will be succeeded if all credentials of devices that belong to the given tenant
+     *         have been deleted.
+     *         Otherwise, the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
+     * @throws NullPointerException if tenant ID is {@code null}.
+     */
+    Future<Void> delete(String tenantId, SpanContext tracingContext);
 }
