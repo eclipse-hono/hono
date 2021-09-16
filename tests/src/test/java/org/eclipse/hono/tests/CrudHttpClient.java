@@ -68,7 +68,7 @@ public final class CrudHttpClient {
      * Creates a new client for a host and port.
      *
      * @param vertx The vert.x instance to use.
-     * @param httpClientOptions The HTTP client client options to use for connecting to servers.
+     * @param httpClientOptions The HTTP client options to use for connecting to servers.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public CrudHttpClient(final Vertx vertx, final HttpClientOptions httpClientOptions) {
