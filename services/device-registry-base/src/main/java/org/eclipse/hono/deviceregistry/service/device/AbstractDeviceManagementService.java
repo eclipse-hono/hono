@@ -160,6 +160,36 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
     protected abstract Future<Result<Void>> processDeleteDevice(DeviceKey key, Optional<String> resourceVersion, Span span);
 
     /**
+     * Deletes all devices of a tenant.
+     * <p>
+     * This method is invoked by {@link #deleteDevicesOfTenant(String, Span)} after all parameter checks
+     * have succeeded.
+     * <p>
+     * This default implementation returns a future failed with a {@link org.eclipse.hono.client.ServerErrorException}
+     * having a {@link HttpURLConnection#HTTP_NOT_IMPLEMENTED} status code.
+     *
+     * @param tenantId The tenant that the devices to be deleted belong to.
+     * @param span The active OpenTracing span to use for tracking this operation.
+     *             <p>
+     *             Implementations <em>must not</em> invoke the {@link Span#finish()} nor the {@link Span#finish(long)}
+     *             methods. However,implementations may log (error) events on this span, set tags and use this span
+     *             as the parent for additional spans created as part of this method's execution.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will be succeeded if all of the tenant's devices have been deleted successfully.
+     *         Otherwise, the future will be failed with a
+     *         {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code as specified
+     *         in the Device Registry Management API.
+     */
+    protected Future<Result<Void>> processDeleteDevicesOfTenant(final String tenantId, final Span span) {
+
+        return Future.failedFuture(new ServerErrorException(
+                tenantId,
+                HttpURLConnection.HTTP_NOT_IMPLEMENTED,
+                "this implementation does not support the delete devices of tenant operation"));
+    }
+
+    /**
      * Finds devices for search criteria.
      * <p>
      * This method is invoked by {@link #searchDevices(String, int, int, List, List, Span)} after all parameter checks
@@ -297,6 +327,8 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
                 .otherwise(t -> OperationResult.from(ServiceInvocationException.extractStatusCode(t)))
                 .compose(result -> {
                     switch (result.getStatus()) {
+                    case HttpURLConnection.HTTP_OK:
+                        break;
                     case HttpURLConnection.HTTP_NOT_FOUND:
                         span.log("tenant does not exist (anymore)");
                         LOG.info("trying to delete device of non-existing tenant [tenant-id: {}, device-id: {}]",
@@ -310,6 +342,35 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
                                 tenantId, result.getStatus());
                     }
                     return processDeleteDevice(DeviceKey.from(tenantId, deviceId), resourceVersion, span);
+                })
+                .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
+    }
+
+    @Override
+    public final Future<Result<Void>> deleteDevicesOfTenant(final String tenantId, final Span span) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(span);
+
+        return this.tenantInformationService
+                .tenantExists(tenantId, span)
+                .otherwise(t -> OperationResult.from(ServiceInvocationException.extractStatusCode(t)))
+                .compose(result -> {
+                    switch (result.getStatus()) {
+                    case HttpURLConnection.HTTP_OK:
+                        break;
+                    case HttpURLConnection.HTTP_NOT_FOUND:
+                        span.log("tenant does not exist (anymore)");
+                        LOG.info("trying to delete devices of non-existing tenant [tenant-id: {}]", tenantId);
+                        break;
+                    default:
+                        span.log(Map.of(
+                                Fields.EVENT, "could not determine tenant status",
+                                Tags.HTTP_STATUS.getKey(), result.getStatus()));
+                        LOG.info("could not determine tenant status [tenant-id: {}, code: {}]",
+                                tenantId, result.getStatus());
+                    }
+                    return processDeleteDevicesOfTenant(tenantId, span);
                 })
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }

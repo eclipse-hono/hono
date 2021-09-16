@@ -179,4 +179,25 @@ public interface DeviceManagementService {
      *      Device Registry Management API - Delete Device Registration</a>
      */
     Future<Result<Void>> deleteDevice(String tenantId, String deviceId, Optional<String> resourceVersion, Span span);
+
+    /**
+     * Deletes all devices of a tenant.
+     *
+     * @param tenantId The tenant that the devices to be deleted belong to.
+     * @param span The active OpenTracing span to use for tracking this operation.
+     *             <p>
+     *             Implementations <em>must not</em> invoke the {@link Span#finish()} nor the {@link Span#finish(long)}
+     *             methods. However,implementations may log (error) events on this span, set tags and use this span
+     *             as the parent for additional spans created as part of this method's execution.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will be succeeded if all of the tenant's devices have been deleted successfully.
+     *         Otherwise, the future will be failed with a
+     *         {@link org.eclipse.hono.client.ServiceInvocationException} containing an error code as specified
+     *         in the Device Registry Management API.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/deleteDevicesOfTenant">
+     *      Device Registry Management API - Delete Devices of Tenant</a>
+     */
+    Future<Result<Void>> deleteDevicesOfTenant(String tenantId, Span span);
 }

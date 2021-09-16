@@ -679,6 +679,32 @@ public final class DeviceRegistryHttpClient {
     }
 
     /**
+     * Removes registration information for all devices of a tenant.
+     *
+     * @param tenantId The tenant that the devices belong to.
+     * @return A future indicating the outcome of the operation. The future will succeed if the registration information
+     *         has been removed. Otherwise the future will fail.
+     * @throws NullPointerException if tenant ID is {@code null}.
+     */
+    public Future<HttpResponse<Buffer>> deregisterDevicesOfTenant(final String tenantId) {
+
+        Objects.requireNonNull(tenantId);
+        final String requestUri = registrationWithoutIdUri(tenantId);
+        return httpClient.delete(
+                requestUri,
+                getRequestHeaders(),
+                ResponsePredicate.create(response -> {
+            if (response.statusCode() == HttpURLConnection.HTTP_NO_CONTENT ||
+                    response.statusCode() == HttpURLConnection.HTTP_NOT_IMPLEMENTED) {
+                return ResponsePredicateResult.success();
+            } else {
+                return ResponsePredicateResult.failure(
+                        String.format("expected status code 204 or 501 but got %d", response.statusCode()));
+            }
+        }));
+    }
+
+    /**
      * Removes registration information for a device.
      *
      * @param tenantId The tenant that the device belongs to.

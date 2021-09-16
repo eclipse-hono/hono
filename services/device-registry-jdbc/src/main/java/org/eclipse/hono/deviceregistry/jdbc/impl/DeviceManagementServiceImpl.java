@@ -120,6 +120,15 @@ public class DeviceManagementServiceImpl extends AbstractDeviceManagementService
     }
 
     @Override
+    protected Future<Result<Void>> processDeleteDevicesOfTenant(final String tenantId, final Span span) {
+
+        return this.store
+                .dropTenant(tenantId, span.context())
+                .map(r -> Result.<Void>from(HttpURLConnection.HTTP_NO_CONTENT))
+                .recover(e -> Services.recover(e));
+    }
+
+    @Override
     protected String generateDeviceId(final String tenantId) {
         return UUID.randomUUID().toString();
     }

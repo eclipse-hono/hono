@@ -169,6 +169,12 @@ public class FileBasedDeviceBackend implements DeviceBackend, RegistrationServic
     }
 
     @Override
+    public Future<Result<Void>> deleteDevicesOfTenant(final String tenantId, final Span span) {
+
+        return registrationService.deleteDevicesOfTenant(tenantId, span);
+    }
+
+    @Override
     public Future<OperationResult<Id>> createDevice(
             final String tenantId,
             final Optional<String> deviceId,
