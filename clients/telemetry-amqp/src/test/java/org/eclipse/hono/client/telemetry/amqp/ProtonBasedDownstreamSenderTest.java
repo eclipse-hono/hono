@@ -23,6 +23,8 @@ import static org.mockito.Mockito.when;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Supplier;
 
 import org.apache.qpid.proton.message.Message;
@@ -34,6 +36,7 @@ import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.TenantObject;
@@ -42,6 +45,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.opentracing.Span;
+import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopSpan;
 import io.opentracing.noop.NoopTracerFactory;
@@ -87,8 +91,8 @@ public class ProtonBasedDownstreamSenderTest {
     }
 
     /**
-     * Verifies that a ClientErrorException that occurs when creating an AMQP sender link is
-     * mapped to a ServerErrorException with status 503 by the <em>sendEvent</em> method.
+     * Verifies that a ClientErrorException that occurs when creating an AMQP sender link is mapped to a
+     * ServerErrorException with status 503 by the <em>sendEvent</em> method.
      *
      * @param ctx The vert.x test context.
      */
@@ -104,8 +108,8 @@ public class ProtonBasedDownstreamSenderTest {
     }
 
     /**
-     * Verifies that a ClientErrorException that occurs when creating an AMQP sender link is
-     * mapped to a ServerErrorException with status 503 by the <em>sendTelemetry</em> method.
+     * Verifies that a ClientErrorException that occurs when creating an AMQP sender link is mapped to a
+     * ServerErrorException with status 503 by the <em>sendTelemetry</em> method.
      *
      * @param ctx The vert.x test context.
      */
@@ -125,8 +129,9 @@ public class ProtonBasedDownstreamSenderTest {
             final Supplier<Future<Void>> sendMethod) {
 
         // GIVEN a scenario where creating the AMQP sender always fails with a client error
-        when(connection.createSender(anyString(), any(), any())).thenReturn(Future.failedFuture(new ClientErrorException(
-                HttpURLConnection.HTTP_NOT_FOUND, "cannot open sender")));
+        when(connection.createSender(anyString(), any(), any()))
+                .thenReturn(Future.failedFuture(new ClientErrorException(
+                        HttpURLConnection.HTTP_NOT_FOUND, "cannot open sender")));
 
         // WHEN sending a message
         sendMethod.get()
@@ -152,5 +157,25 @@ public class ProtonBasedDownstreamSenderTest {
         final RegistrationAssertion device = new RegistrationAssertion("4711");
         sender.sendEvent(tenant, device, "text/plain", Buffer.buffer("hello"), null, span.context());
         verify(protonSender).send(argThat(Message::isDurable), VertxMockSupport.anyHandler());
+    }
+
+    /**
+     * Verifies that a TTL values in the <em>properties</em> parameter of
+     * {@link org.eclipse.hono.client.telemetry.EventSender#sendEvent(TenantObject, RegistrationAssertion, String, Buffer, Map, SpanContext)}
+     * are correctly taken as seconds and set as milliseconds at the message.
+     */
+    @Test
+    public void testThatTtlIsSetInMilliseconds() {
+
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
+        final RegistrationAssertion device = new RegistrationAssertion("4711");
+
+        // WHEN sending an event with properties that contain a TTL in seconds
+        final Map<String, Object> props = new HashMap<>();
+        props.put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 2);
+        sender.sendEvent(tenant, device, "text/plain", Buffer.buffer("hello"), props, span.context());
+
+        // THEN the TTL at the message is correctly set in milliseconds
+        verify(protonSender).send(argThat(message -> message.getTtl() == 2000), VertxMockSupport.anyHandler());
     }
 }

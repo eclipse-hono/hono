@@ -115,7 +115,7 @@ public final class KafkaRecordHelper {
         return getHeaderValue(headers, MessageHelper.SYS_HEADER_PROPERTY_TTL, Long.class)
                 .map(ttl -> {
                     final Instant now = Instant.now();
-                    final Instant elapseTime = getCreationTime(headers).orElse(now).plus(Duration.ofSeconds(ttl));
+                    final Instant elapseTime = getCreationTime(headers).orElse(now).plus(Duration.ofMillis(ttl));
                     return elapseTime.isBefore(now);
                 })
                 .orElse(Boolean.FALSE);

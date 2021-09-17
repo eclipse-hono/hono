@@ -303,6 +303,34 @@ public class AbstractKafkaBasedDownstreamSenderTest {
     }
 
     /**
+     * Verifies that if the properties contain a <em>ttl</em> property, the value in corresponding Kafka header is
+     * converted from seconds to milliseconds.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testThatTtlIsSetInMilliseconds(final VertxTestContext ctx) {
+        final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
+        final AbstractKafkaBasedDownstreamSender sender = newSender(mockProducer);
+
+        // GIVEN properties that contain a TTL in seconds
+        final Map<String, Object> properties = new HashMap<>();
+        properties.put("ttl", 2L);
+
+        // WHEN sending the message
+        sender.send(topic, tenant, device, qos, CONTENT_TYPE, null, properties, null, null)
+                .onComplete(ctx.succeeding(t -> {
+                    ctx.verify(() -> {
+                        // THEN the TTL in the header is correctly set in milliseconds
+                        final ProducerRecord<String, Buffer> record = mockProducer.history().get(0);
+                        assertThat(record.headers().headers("ttl")).hasSize(1);
+                        assertThat(record.headers()).contains(new RecordHeader("ttl", Json.encode(2000L).getBytes()));
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
      * Verifies that if the properties contain a <em>ttd</em> property but no <em>creation-time</em> then the later is
      * added.
      *
@@ -345,9 +373,8 @@ public class AbstractKafkaBasedDownstreamSenderTest {
         final AbstractKafkaBasedDownstreamSender sender = newSender(mockProducer);
 
         // GIVEN properties that contain a TTL
-        final long ttl = 99L;
         final Map<String, Object> properties = new HashMap<>();
-        properties.put("ttl", ttl);
+        properties.put("ttl", 99L);
 
         // WHEN sending the message
         sender.send(topic, tenant, device, qos, CONTENT_TYPE, null, properties, null, null)
@@ -355,8 +382,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
                     ctx.verify(() -> {
                         // THEN the producer record contains a creation time
                         final ProducerRecord<String, Buffer> record = mockProducer.history().get(0);
-                        assertThat(record.headers().headers("ttl")).hasSize(1);
-                        assertThat(record.headers()).contains(new RecordHeader("ttl", Json.encode(ttl).getBytes()));
+                        assertThat(record.headers().headers("creation-time")).hasSize(1);
                         assertThat(record.headers().headers("creation-time")).isNotNull();
                     });
                     ctx.completeNow();

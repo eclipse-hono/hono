@@ -35,6 +35,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   in the Device Registry Management API. This has been fixed.
 * The MongoDB based registry erroneously rejected requests that would result in multiple tenants having an empty
   set of trusted CAs. This has been fixed.
+* The _ttl_ header in downstream messages with Kafka had been set in seconds instead of milliseconds, as defined
+  by the [API specification]({{% doclink "/api/telemetry-kafka" %}}). This has been fixed.
 
 ## 1.9.1
 

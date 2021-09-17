@@ -140,6 +140,7 @@ public abstract class AbstractKafkaBasedDownstreamSender extends AbstractKafkaBa
         // (5) if still no content type present, set the default content type
         headerProperties.putIfAbsent(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, MessageHelper.CONTENT_TYPE_OCTET_STREAM);
 
+        // ensure that creation-time is present if TTD or TTL are set
         if (headerProperties.containsKey(MessageHelper.APP_PROPERTY_DEVICE_TTD)
                 || headerProperties.containsKey(MessageHelper.SYS_HEADER_PROPERTY_TTL)) {
 
@@ -152,6 +153,16 @@ public abstract class AbstractKafkaBasedDownstreamSender extends AbstractKafkaBa
                 headerProperties.put(MessageHelper.SYS_PROPERTY_CREATION_TIME, timestamp);
             }
         }
+
+        // change TTL from seconds to milliseconds (according to API specification)
+        headerProperties.computeIfPresent(MessageHelper.SYS_HEADER_PROPERTY_TTL, (k, v) -> {
+            if (v instanceof Number) {
+                return ((Number) v).longValue() * 1000L;
+            } else {
+                log.error("TTL property is not a number [{}]", v);
+                return v;
+            }
+        });
 
         return headerProperties;
     }
