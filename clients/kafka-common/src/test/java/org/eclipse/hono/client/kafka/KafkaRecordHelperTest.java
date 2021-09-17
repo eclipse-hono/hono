@@ -166,10 +166,9 @@ public class KafkaRecordHelperTest {
      */
     @Test
     public void testThatTtlIsNotElapsed() {
-        final long createTime = Instant.now().toEpochMilli();
 
-        headers.add(KafkaRecordHelper.createKafkaHeader("ttl", 5));
-        headers.add(KafkaRecordHelper.createKafkaHeader("creation-time", createTime));
+        headers.add(KafkaRecordHelper.createKafkaHeader("ttl", 5000L));
+        headers.add(KafkaRecordHelper.createKafkaHeader("creation-time", Instant.now().toEpochMilli()));
 
         assertThat(KafkaRecordHelper.isTtlElapsed(headers)).isFalse();
     }
@@ -179,10 +178,9 @@ public class KafkaRecordHelperTest {
      */
     @Test
     public void testIsTtlElapsed() {
-        final long createTime = Instant.now().minusSeconds(6).toEpochMilli();
 
-        headers.add(KafkaRecordHelper.createKafkaHeader("ttl", 5));
-        headers.add(KafkaRecordHelper.createKafkaHeader("creation-time", createTime));
+        headers.add(KafkaRecordHelper.createKafkaHeader("ttl", 5000L));
+        headers.add(KafkaRecordHelper.createKafkaHeader("creation-time", Instant.now().minusSeconds(6).toEpochMilli()));
 
         assertThat(KafkaRecordHelper.isTtlElapsed(headers)).isTrue();
     }
