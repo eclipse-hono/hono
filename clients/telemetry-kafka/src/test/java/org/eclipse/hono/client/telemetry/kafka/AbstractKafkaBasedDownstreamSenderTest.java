@@ -33,6 +33,7 @@ import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
+import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -115,8 +116,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
                         assertThat(actual.key()).isEqualTo(DEVICE_ID);
                         assertThat(actual.topic()).isEqualTo(topic.toString());
                         assertThat(actual.value().toString()).isEqualTo(payload);
-                        assertThat(actual.headers().headers("foo")).hasSize(1);
-                        assertThat(actual.headers()).contains(new RecordHeader("foo", "bar".getBytes()));
+                        assertUniqueHeaderWithExpectedValue(actual.headers(), "foo", "bar");
 
                         // ...AND contains the standard headers
                         KafkaClientUnitTestHelper.assertStandardHeaders(actual, DEVICE_ID, CONTENT_TYPE, qos.ordinal());
@@ -294,9 +294,90 @@ public class AbstractKafkaBasedDownstreamSenderTest {
                 .send(topic, tenant, device, qos, contentTypeParameter, null, properties, null, null)
                 .onComplete(ctx.succeeding(v -> {
                     ctx.verify(() -> {
-                        final Headers actual = mockProducer.history().get(0).headers();
-                        assertThat(actual.headers(CONTENT_TYPE_KEY)).hasSize(1);
-                        assertThat(actual).contains(new RecordHeader(CONTENT_TYPE_KEY, expectedContentType.getBytes()));
+                        assertUniqueHeaderWithExpectedValue(mockProducer.history().get(0).headers(), CONTENT_TYPE_KEY,
+                                expectedContentType);
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
+     * Verifies that if the properties contain a <em>ttl</em> property that is below the <em>max-ttl</em> of the tenant,
+     * it is set as a Kafka header and the value in corresponding Kafka header is converted from seconds to
+     * milliseconds.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testThatTtlFromDeviceIsPreserved(final VertxTestContext ctx) {
+        final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
+        final AbstractKafkaBasedDownstreamSender sender = newSender(mockProducer);
+
+        // GIVEN a tenant with maximum TTL configured and a lower one in the properties
+        tenant.setResourceLimits(new ResourceLimits().setMaxTtl(30));
+        tenant.setDefaults(new JsonObject().put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 15));
+        final Map<String, Object> properties = Map.of("ttl", 10);
+
+        // WHEN sending the message
+        sender.send(topic, tenant, device, qos, CONTENT_TYPE, null, properties, null, null)
+                .onComplete(ctx.succeeding(t -> {
+                    ctx.verify(() -> {
+                        // THEN the TTL from the properties is used
+                        assertUniqueHeaderWithExpectedValue(mockProducer.history().get(0).headers(), "ttl",
+                                Json.encode(10_000L));
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
+     * Verifies that if the properties do not contain a <em>ttl</em> property but the tenant has a default value
+     * configured, the latter one is used.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testThatTtlFromDefaultsIsUsed(final VertxTestContext ctx) {
+        final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
+        final AbstractKafkaBasedDownstreamSender sender = newSender(mockProducer);
+
+        // GIVEN a tenant with maximum TTL configured and a lower one configured in the defaults
+        tenant.setResourceLimits(new ResourceLimits().setMaxTtl(30));
+        tenant.setDefaults(new JsonObject().put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 10));
+
+        // WHEN sending the message
+        sender.send(topic, tenant, device, qos, CONTENT_TYPE, null, null, null, null)
+                .onComplete(ctx.succeeding(t -> {
+                    ctx.verify(() -> {
+                        // THEN the TTL from the defaults is used
+                        assertUniqueHeaderWithExpectedValue(mockProducer.history().get(0).headers(), "ttl",
+                                Json.encode(10_000L));
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
+     * Verifies that defaults defined at the device level take precedence over properties defined at the tenant level.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testThatTtlFromDeviceDefaultsTakesPrecendenceOverTenantDefaults(final VertxTestContext ctx) {
+        final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
+        final AbstractKafkaBasedDownstreamSender sender = newSender(mockProducer);
+
+        // GIVEN a tenant with default TTL configured and a device with another default TTL
+        device.setDefaults(Map.of(MessageHelper.SYS_HEADER_PROPERTY_TTL, 20));
+        tenant.setDefaults(new JsonObject().put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 10));
+
+        // WHEN sending the message
+        sender.send(topic, tenant, device, qos, CONTENT_TYPE, null, null, null, null)
+                .onComplete(ctx.succeeding(t -> {
+                    ctx.verify(() -> {
+                        // THEN the TTL from the device's defaults is used
+                        assertUniqueHeaderWithExpectedValue(mockProducer.history().get(0).headers(), "ttl",
+                                Json.encode(20_000L));
                     });
                     ctx.completeNow();
                 }));
@@ -304,34 +385,62 @@ public class AbstractKafkaBasedDownstreamSenderTest {
 
     /**
      * Verifies that if the properties contain a <em>ttl</em> property, the value in corresponding Kafka header is
-     * converted from seconds to milliseconds.
+     * limited by the <em>max-ttl</em> specified for a tenant, if the <em>time-to-live</em> provided by the device
+     * exceeds the <em>max-ttl</em>.
      *
      * @param ctx The vert.x test context.
      */
     @Test
-    public void testThatTtlIsSetInMilliseconds(final VertxTestContext ctx) {
+    public void testThatTtlIsLimitedToMaxValue(final VertxTestContext ctx) {
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         final AbstractKafkaBasedDownstreamSender sender = newSender(mockProducer);
 
-        // GIVEN properties that contain a TTL in seconds
-        final Map<String, Object> properties = new HashMap<>();
-        properties.put("ttl", 2L);
+        // GIVEN a tenant with max TTL configured...
+        tenant.setResourceLimits(new ResourceLimits().setMaxTtl(10));
+        // ...AND properties that contain a higher TTL
+        tenant.setDefaults(new JsonObject().put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 15));
+        final Map<String, Object> properties = Map.of("ttl", 30);
 
         // WHEN sending the message
         sender.send(topic, tenant, device, qos, CONTENT_TYPE, null, properties, null, null)
                 .onComplete(ctx.succeeding(t -> {
                     ctx.verify(() -> {
-                        // THEN the TTL in the header is correctly set in milliseconds
-                        final ProducerRecord<String, Buffer> record = mockProducer.history().get(0);
-                        assertThat(record.headers().headers("ttl")).hasSize(1);
-                        assertThat(record.headers()).contains(new RecordHeader("ttl", Json.encode(2000L).getBytes()));
+                        // THEN the TTL is limited to the max TTL
+                        assertUniqueHeaderWithExpectedValue(mockProducer.history().get(0).headers(), "ttl",
+                                Json.encode(10_000L));
                     });
                     ctx.completeNow();
                 }));
     }
 
     /**
-     * Verifies that if the properties contain a <em>ttd</em> property but no <em>creation-time</em> then the later is
+     * Verifies that if the properties do not contain a <em>ttl</em> property, the <em>max-ttl</em> is used as the
+     * effective TTL.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testThatMaxValueIsUsedByDefault(final VertxTestContext ctx) {
+        final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
+        final AbstractKafkaBasedDownstreamSender sender = newSender(mockProducer);
+
+        // GIVEN a tenant with max TTL configured but no TTL set in the properties
+        tenant.setResourceLimits(new ResourceLimits().setMaxTtl(30));
+
+        // WHEN sending the message
+        sender.send(topic, tenant, device, qos, CONTENT_TYPE, null, null, null, null)
+                .onComplete(ctx.succeeding(t -> {
+                    ctx.verify(() -> {
+                        // THEN the max TTL is used
+                        assertUniqueHeaderWithExpectedValue(mockProducer.history().get(0).headers(), "ttl",
+                                Json.encode(30_000L));
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
+     * Verifies that if the properties contain a <em>ttd</em> property but no <em>creation-time</em> then the latter is
      * added.
      *
      * @param ctx The vert.x test context.
@@ -351,10 +460,9 @@ public class AbstractKafkaBasedDownstreamSenderTest {
                 .onComplete(ctx.succeeding(t -> {
                     ctx.verify(() -> {
                         // THEN the producer record contains a creation time
-                        final ProducerRecord<String, Buffer> record = mockProducer.history().get(0);
-                        assertThat(record.headers().headers("ttd")).hasSize(1);
-                        assertThat(record.headers()).contains(new RecordHeader("ttd", Json.encode(ttd).getBytes()));
-                        assertThat(record.headers().headers("creation-time")).isNotNull();
+                        final Headers headers = mockProducer.history().get(0).headers();
+                        assertUniqueHeaderWithExpectedValue(headers, "ttd", Json.encode(ttd));
+                        assertThat(headers.headers("creation-time")).isNotNull();
                     });
                     ctx.completeNow();
                 }));
@@ -362,7 +470,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
     }
 
     /**
-     * Verifies that if the properties contain a <em>ttl</em> property but no <em>creation-time</em> then the later is
+     * Verifies that if the properties contain a <em>ttl</em> property but no <em>creation-time</em> then the latter is
      * added.
      *
      * @param ctx The vert.x test context.
@@ -412,10 +520,8 @@ public class AbstractKafkaBasedDownstreamSenderTest {
                 .onComplete(ctx.succeeding(t -> {
                     ctx.verify(() -> {
                         // THEN the creation time is preserved
-                        final ProducerRecord<String, Buffer> record = mockProducer.history().get(0);
-                        assertThat(record.headers().headers("creation-time")).hasSize(1);
-                        assertThat(record.headers()).contains(new RecordHeader("creation-time",
-                                Json.encode(creationTime).getBytes()));
+                        assertUniqueHeaderWithExpectedValue(mockProducer.history().get(0).headers(), "creation-time",
+                                Json.encode(creationTime));
                     });
                     ctx.completeNow();
                 }));
@@ -469,6 +575,11 @@ public class AbstractKafkaBasedDownstreamSenderTest {
         assertThrows(NullPointerException.class,
                 () -> sender.send(topic, tenant, device, null, CONTENT_TYPE, null, null, null, null));
 
+    }
+
+    private void assertUniqueHeaderWithExpectedValue(final Headers headers, final String key, final String expected) {
+        assertThat(headers.headers(key)).hasSize(1);
+        assertThat(headers).contains(new RecordHeader(key, expected.getBytes()));
     }
 
     private CachingKafkaProducerFactory<String, Buffer> newProducerFactory(
