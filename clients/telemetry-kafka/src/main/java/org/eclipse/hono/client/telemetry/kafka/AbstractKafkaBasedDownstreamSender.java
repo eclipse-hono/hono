@@ -26,6 +26,8 @@ import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
+import org.eclipse.hono.util.ResourceLimits;
+import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 
 import io.opentracing.SpanContext;
@@ -154,14 +156,33 @@ public abstract class AbstractKafkaBasedDownstreamSender extends AbstractKafkaBa
             }
         }
 
-        // change TTL from seconds to milliseconds (according to API specification)
-        headerProperties.computeIfPresent(MessageHelper.SYS_HEADER_PROPERTY_TTL, (k, v) -> {
-            if (v instanceof Number) {
-                return ((Number) v).longValue() * 1000L;
+        // make sure that device provided TTL is capped at max TTL (if set)
+        headerProperties.compute(MessageHelper.SYS_HEADER_PROPERTY_TTL, (k, v) -> {
+
+            final long maxTtl = Optional.ofNullable(tenant)
+                    .flatMap(t -> Optional.ofNullable(t.getResourceLimits()))
+                    .map(ResourceLimits::getMaxTtl)
+                    .orElse(TenantConstants.UNLIMITED_TTL);
+
+            final long ttlSeconds;
+            if (v instanceof Number) { // TTL is configured
+                final long ttl = ((Number) v).longValue();
+                if (maxTtl != TenantConstants.UNLIMITED_TTL && ttl > maxTtl) {
+                    log.debug("limiting TTL [{}s] to max TTL [{}s]", ttl, maxTtl);
+                    ttlSeconds = maxTtl;
+                } else {
+                    log.trace("keeping message TTL [{}s, max TTL: {}s]", ttl, maxTtl);
+                    ttlSeconds = ttl;
+                }
             } else {
-                log.error("TTL property is not a number [{}]", v);
-                return v;
+                if (maxTtl != TenantConstants.UNLIMITED_TTL) {
+                    log.debug("setting TTL to tenant's max TTL [{}s]", maxTtl);
+                    ttlSeconds = maxTtl;
+                } else {
+                    return null;
+                }
             }
+            return ttlSeconds * 1000L; // API specification defines TTL in milliseconds
         });
 
         return headerProperties;
