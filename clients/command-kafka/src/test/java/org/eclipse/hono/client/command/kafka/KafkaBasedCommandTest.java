@@ -22,6 +22,7 @@ import static com.google.common.truth.Truth.assertThat;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
@@ -232,6 +233,31 @@ public class KafkaBasedCommandTest {
         assertFalse(command.isValid());
         // verify the returned validation error contains all missing/invalid fields
         assertThat(command.getInvalidCommandReason()).contains("subject");
+    }
+
+    /**
+     * Verifies the return value of getDeliveryFailureNotificationProperties().
+     */
+    @Test
+    public void testGetDeliveryFailureNotificationProperties() {
+        final String topic = new HonoTopic(HonoTopic.Type.COMMAND, Constants.DEFAULT_TENANT).toString();
+        final String correlationId = "the-correlation-id";
+        final String deviceId = "4711";
+        final String subject = "doThis";
+
+        final List<KafkaHeader> headers = new ArrayList<>(getHeaders(deviceId, subject, correlationId));
+        headers.add(KafkaHeader.header(KafkaBasedCommand.DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX, "v1"));
+        headers.add(KafkaHeader.header(KafkaBasedCommand.DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX, "toBeIgnored"));
+        headers.add(KafkaHeader.header(KafkaBasedCommand.DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX + "-title", "v2"));
+        final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(topic, deviceId,
+                headers);
+        final KafkaBasedCommand cmd = KafkaBasedCommand.from(commandRecord);
+        final Map<String, String> deliveryFailureNotificationProperties = cmd.getDeliveryFailureNotificationProperties();
+        assertThat(deliveryFailureNotificationProperties.size()).isEqualTo(2);
+        assertThat(deliveryFailureNotificationProperties
+                .get(KafkaBasedCommand.DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX)).isEqualTo("v1");
+        assertThat(deliveryFailureNotificationProperties
+                .get(KafkaBasedCommand.DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX + "-title")).isEqualTo("v2");
     }
 
     private List<KafkaHeader> getHeaders(final String deviceId, final String subject) {

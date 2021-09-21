@@ -15,6 +15,7 @@ package org.eclipse.hono.client.command.kafka;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import org.apache.kafka.clients.producer.MockProducer;
@@ -68,6 +69,12 @@ public class KafkaBasedCommandResponseSenderTest {
         final String contentType = "the-content-type";
         final String payload = "the-payload";
         final int status = 200;
+        final String additionalHeader1Name = "testHeader1";
+        final String additionalHeader1Value = "testHeader1Value";
+        final String additionalHeader2Name = "testHeader2";
+        final String additionalHeader2Value = "testHeader2Value";
+        final Map<String, Object> additionalProperties = Map.of(additionalHeader1Name, additionalHeader1Value,
+                additionalHeader2Name, additionalHeader2Value);
         final CommandResponse commandResponse = CommandResponse.fromAddressAndCorrelationId(
                 String.format("%s/%s/%s", CommandConstants.COMMAND_RESPONSE_ENDPOINT, tenantId,
                         Commands.getDeviceFacingReplyToId("", deviceId, MessagingType.kafka)),
@@ -75,6 +82,7 @@ public class KafkaBasedCommandResponseSenderTest {
                 Buffer.buffer(payload),
                 contentType,
                 status);
+        commandResponse.setAdditionalProperties(additionalProperties);
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         final CachingKafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory
                 .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
@@ -110,6 +118,13 @@ public class KafkaBasedCommandResponseSenderTest {
                         assertThat(headers.headers(MessageHelper.SYS_PROPERTY_CONTENT_TYPE)).hasSize(1);
                         assertThat(headers).contains(
                                 new RecordHeader(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, contentType.getBytes()));
+
+                        assertThat(headers.headers(additionalHeader1Name)).hasSize(1);
+                        assertThat(headers).contains(
+                                new RecordHeader(additionalHeader1Name, additionalHeader1Value.getBytes()));
+                        assertThat(headers.headers(additionalHeader2Name)).hasSize(1);
+                        assertThat(headers).contains(
+                                new RecordHeader(additionalHeader2Name, additionalHeader2Value.getBytes()));
                     });
                     ctx.completeNow();
                 }));

@@ -13,7 +13,9 @@
 
 package org.eclipse.hono.client.command;
 
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Predicate;
 
 import org.eclipse.hono.util.MessagingType;
@@ -44,6 +46,8 @@ public final class CommandResponse {
     private final String correlationId;
     private final String replyToId;
     private final MessagingType messagingType;
+
+    private Map<String, Object> additionalProperties;
 
     /**
      * Creates a command response.
@@ -248,6 +252,24 @@ public final class CommandResponse {
      */
     public MessagingType getMessagingType() {
         return messagingType;
+    }
+
+    /**
+     * Gets additional properties set for this command response.
+     *
+     * @return The properties.
+     */
+    public Map<String, Object> getAdditionalProperties() {
+        return Optional.ofNullable(additionalProperties).orElseGet(Map::of);
+    }
+
+    /**
+     * Sets additional properties for this command response.
+     *
+     * @param additionalProperties The properties to set.
+     */
+    public void setAdditionalProperties(final Map<String, Object> additionalProperties) {
+        this.additionalProperties = additionalProperties;
     }
 
     @Override

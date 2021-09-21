@@ -14,6 +14,7 @@
 
 package org.eclipse.hono.client.command.amqp;
 
+import java.util.Map;
 import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
@@ -71,8 +72,9 @@ public class ProtonBasedCommandResponseSender extends AbstractServiceClient impl
         });
     }
 
-    private Message createDownstreamMessage(final CommandResponse response) {
+    private Message createDownstreamMessage(final CommandResponse response, final Map<String, Object> properties) {
         final Message msg = ProtonHelper.message();
+        MessageHelper.setApplicationProperties(msg, properties);
         MessageHelper.setCreationTime(msg);
         msg.setCorrelationId(response.getCorrelationId());
         MessageHelper.setPayload(msg, response.getContentType(), response.getPayload());
@@ -98,7 +100,7 @@ public class ProtonBasedCommandResponseSender extends AbstractServiceClient impl
         return createSender(response.getTenantId(), response.getReplyToId())
                 .recover(thr -> Future.failedFuture(StatusCodeMapper.toServerError(thr)))
                 .compose(sender -> {
-                    final Message msg = createDownstreamMessage(response);
+                    final Message msg = createDownstreamMessage(response, response.getAdditionalProperties());
                     final Span span = newChildSpan(context, "forward Command response");
                     if (response.getMessagingType() != getMessagingType()) {
                         span.log(String.format("using messaging type %s instead of type %s used for the original command",
