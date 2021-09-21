@@ -289,7 +289,14 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
         return producerFactory.getOrCreateProducer(producerName, config);
     }
 
-    private List<KafkaHeader> encodePropertiesAsKafkaHeaders(final Map<String, Object> properties, final Span span) {
+    /**
+     * Encodes the given properties as a list of Kafka record headers.
+     *
+     * @param properties The properties to encode.
+     * @param span The span to log to if there are exceptions encoding the properties.
+     * @return The created header list.
+     */
+    protected final List<KafkaHeader> encodePropertiesAsKafkaHeaders(final Map<String, Object> properties, final Span span) {
         final List<KafkaHeader> headers = new ArrayList<>();
 
             properties.forEach((k, v) -> {

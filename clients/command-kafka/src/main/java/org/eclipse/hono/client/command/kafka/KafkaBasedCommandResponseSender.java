@@ -12,6 +12,7 @@
  */
 package org.eclipse.hono.client.command.kafka;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -68,16 +69,18 @@ public class KafkaBasedCommandResponseSender extends AbstractKafkaBasedMessageSe
                     getMessagingType(), response.getMessagingType()));
         }
         return sendAndWaitForOutcome(topic, response.getTenantId(), response.getDeviceId(), response.getPayload(),
-                getHeaders(response), span);
+                getHeaders(response, span), span);
     }
 
-    private List<KafkaHeader> getHeaders(final CommandResponse response) {
-        return List.of(KafkaRecordHelper.createKafkaHeader(MessageHelper.SYS_PROPERTY_CORRELATION_ID,
-                response.getCorrelationId()),
-                KafkaRecordHelper.createKafkaHeader(MessageHelper.APP_PROPERTY_DEVICE_ID, response.getDeviceId()),
-                KafkaRecordHelper.createKafkaHeader(MessageHelper.APP_PROPERTY_STATUS, response.getStatus()),
-                KafkaRecordHelper.createKafkaHeader(MessageHelper.SYS_PROPERTY_CONTENT_TYPE,
-                        Objects.nonNull(response.getContentType()) ? response.getContentType()
-                                : MessageHelper.CONTENT_TYPE_OCTET_STREAM));
+    private List<KafkaHeader> getHeaders(final CommandResponse response, final Span span) {
+
+        final List<KafkaHeader> headers = new ArrayList<>(encodePropertiesAsKafkaHeaders(response.getAdditionalProperties(), span));
+        headers.add(KafkaRecordHelper.createKafkaHeader(MessageHelper.SYS_PROPERTY_CORRELATION_ID, response.getCorrelationId()));
+        headers.add(KafkaRecordHelper.createKafkaHeader(MessageHelper.APP_PROPERTY_DEVICE_ID, response.getDeviceId()));
+        headers.add(KafkaRecordHelper.createKafkaHeader(MessageHelper.APP_PROPERTY_STATUS, response.getStatus()));
+        headers.add(KafkaRecordHelper.createKafkaHeader(MessageHelper.SYS_PROPERTY_CONTENT_TYPE,
+                Objects.nonNull(response.getContentType()) ? response.getContentType()
+                        : MessageHelper.CONTENT_TYPE_OCTET_STREAM));
+        return headers;
     }
 }

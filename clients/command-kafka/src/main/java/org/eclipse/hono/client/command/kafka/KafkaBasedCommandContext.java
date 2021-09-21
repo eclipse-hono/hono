@@ -14,6 +14,7 @@
 package org.eclipse.hono.client.command.kafka;
 
 import java.net.HttpURLConnection;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -184,6 +185,7 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
                 correlationId,
                 "",
                 MessagingType.kafka);
+        commandResponse.setAdditionalProperties(Collections.unmodifiableMap(command.getDeliveryFailureNotificationProperties()));
         return commandResponseSender.sendCommandResponse(commandResponse, span.context())
                 .onFailure(thr -> {
                     LOG.debug("failed to publish command response [{}]", commandResponse, thr);

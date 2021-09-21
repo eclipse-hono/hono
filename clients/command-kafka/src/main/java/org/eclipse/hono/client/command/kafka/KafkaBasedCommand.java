@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.StringJoiner;
+import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.client.command.Commands;
@@ -27,17 +28,27 @@ import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.Strings;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
 import io.opentracing.log.Fields;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
+import io.vertx.kafka.client.producer.KafkaHeader;
 
 /**
  * A command used in a Kafka based client.
  *
  */
 public final class KafkaBasedCommand implements Command {
+
+    /**
+     * Prefix of command record headers to be returned in {@link #getDeliveryFailureNotificationProperties()}.
+     */
+    static final String DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX = "delivery-failure-notification-metadata";
+
+    private static final Logger LOG = LoggerFactory.getLogger(KafkaBasedCommand.class);
 
     /**
      * If present, the command is invalid.
@@ -185,6 +196,20 @@ public final class KafkaBasedCommand implements Command {
                 subject,
                 contentType,
                 responseRequired);
+    }
+
+    /**
+     * Gets the set of properties to be set on the command response message if delivery of this command fails.
+     *
+     * @return The properties.
+     */
+    public Map<String, String> getDeliveryFailureNotificationProperties() {
+        return record.headers().stream()
+                .filter(header -> header.key().startsWith(DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX))
+                .collect(Collectors.toMap(KafkaHeader::key, header -> header.value().toString(), (v1, v2) -> {
+                    LOG.debug("ignoring duplicate delivery notification header with value [{}] for {}", v2, this);
+                    return v1;
+                }));
     }
 
     @Override
