@@ -20,8 +20,12 @@ import javax.inject.Inject;
 import org.eclipse.hono.authentication.AuthenticationEndpoint;
 import org.eclipse.hono.authentication.SimpleAuthenticationServer;
 import org.eclipse.hono.authentication.file.FileBasedAuthenticationService;
-import org.eclipse.hono.config.quarkus.ApplicationConfigProperties;
-import org.eclipse.hono.config.quarkus.ServiceConfigProperties;
+import org.eclipse.hono.authentication.file.FileBasedAuthenticationServiceConfigProperties;
+import org.eclipse.hono.authentication.file.FileBasedAuthenticationServiceOptions;
+import org.eclipse.hono.config.ApplicationConfigProperties;
+import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.config.quarkus.ApplicationOptions;
+import org.eclipse.hono.config.quarkus.ServiceOptions;
 import org.eclipse.hono.service.auth.AuthTokenHelper;
 import org.eclipse.hono.service.auth.AuthTokenHelperImpl;
 import org.eclipse.hono.service.auth.AuthenticationService;
@@ -32,7 +36,7 @@ import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.quarkus.arc.config.ConfigPrefix;
+import io.smallrye.config.ConfigMapping;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Promise;
@@ -47,18 +51,30 @@ public class Application extends AbstractServiceApplication {
     private static final String COMPONENT_NAME = "Hono Authentication Server";
     private static final Logger LOG = LoggerFactory.getLogger(Application.class);
 
-    @Inject
-    ApplicationConfigProperties appConfig;
-
-    @ConfigPrefix("hono.auth.amqp")
-    ServiceConfigProperties amqpProps;
-
-    @Inject
-    FileBasedAuthenticationServiceConfigProperties serviceConfig;
+    private ApplicationConfigProperties appConfig;
+    private ServiceConfigProperties amqpProps;
+    private FileBasedAuthenticationServiceConfigProperties serviceConfig;
 
     @Override
     public String getComponentName() {
         return COMPONENT_NAME;
+    }
+
+    @Inject
+    void setApplicationOptions(final ApplicationOptions options) {
+        this.appConfig = new ApplicationConfigProperties(options);
+    }
+
+    @Inject
+    void setServiceOptions(
+            @ConfigMapping(prefix = "hono.auth.amqp")
+            final ServiceOptions options) {
+        this.amqpProps = new ServiceConfigProperties(options);
+    }
+
+    @Inject
+    void setAuthenticationServiceOptions(final FileBasedAuthenticationServiceOptions options) {
+        this.serviceConfig = new FileBasedAuthenticationServiceConfigProperties(options);
     }
 
     @Override

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,6 +16,7 @@ package org.eclipse.hono.config;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
+import org.eclipse.hono.config.quarkus.ServiceOptions;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 /**
@@ -57,6 +58,31 @@ public class ServiceConfigProperties extends ServerConfig {
     private long sendTimeOut = DEFAULT_SEND_TIMEOUT_IN_MS;
     private Pattern tenantIdPattern = Pattern.compile(RegistryManagementConstants.DEFAULT_REGEX_TENANT_ID);
     private Pattern deviceIdPattern = Pattern.compile(RegistryManagementConstants.DEFAULT_REGEX_DEVICE_ID);
+
+    /**
+     * Creates new properties using default values.
+     */
+    public ServiceConfigProperties() {
+        super();
+    }
+
+    /**
+     * Creates a new instance from existing options.
+     *
+     * @param options The options to copy.
+     */
+    public ServiceConfigProperties(final ServiceOptions options) {
+        super(options.serverOptions());
+        setCorsAllowedOrigin(options.corsAllowedOrigin());
+        setDeviceIdPattern(options.deviceIdPattern());
+        setEventLoopBlockedCheckTimeout(options.eventLoopBlockedCheckTimeout());
+        setMaxPayloadSize(options.maxPayloadSize());
+        setNetworkDebugLoggingEnabled(options.networkDebugLoggingEnabled());
+        setReceiverLinkCredit(options.receiverLinkCredit());
+        setSendTimeOut(options.sendTimeOut());
+        setTenantIdPattern(options.tenantIdPattern());
+        setWaitForDownstreamConnectionEnabled(options.waitForDownstreamConnectionEnabled());
+    }
 
     /**
      * Sets the maximum size of a message payload this server accepts from clients.

@@ -35,7 +35,30 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
     private boolean defaultsEnabled = true;
     private int maxConnections = 0;
     private Duration tenantIdleTimeout = DEFAULT_TENANT_IDLE_TIMEOUT;
-    private HashMap<String, MapperEndpoint> mapperEndpoints = new HashMap<>();
+    private Map<String, MapperEndpoint> mapperEndpoints = new HashMap<>();
+
+    /**
+     * Creates properties using default values.
+     */
+    public ProtocolAdapterProperties() {
+        super();
+    }
+
+    /**
+     * Creates properties using existing options.
+     *
+     * @param options The options to copy.
+     */
+    public ProtocolAdapterProperties(final ProtocolAdapterOptions options) {
+        super(options.serviceOptions());
+        this.authenticationRequired = options.authenticationRequired();
+        this.defaultsEnabled = options.defaultsEnabled();
+        this.jmsVendorPropsEnabled = options.jmsVendorPropsEnabled();
+        options.mapperEndpoints().entrySet()
+            .forEach(entry -> mapperEndpoints.put(entry.getKey(), new MapperEndpoint(entry.getValue())));
+        this.maxConnections = options.maxConnections();
+        this.tenantIdleTimeout = options.tenantIdleTimeout();
+    }
 
     /**
      * Checks whether the protocol adapter always authenticates devices using their provided credentials as defined

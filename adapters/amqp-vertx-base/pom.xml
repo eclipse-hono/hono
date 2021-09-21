@@ -23,6 +23,14 @@
   <name>Hono AMQP Adapter base</name>
   <url>https://www.eclipse.org/hono</url>
 
+  <dependencies>
+    <dependency>
+      <groupId>io.smallrye.config</groupId>
+      <artifactId>smallrye-config</artifactId>
+      <optional>true</optional>
+    </dependency>
+  </dependencies>
+
   <build>
     <plugins>
       <plugin>

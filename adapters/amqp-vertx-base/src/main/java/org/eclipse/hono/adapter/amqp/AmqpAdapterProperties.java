@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -46,6 +46,26 @@ public class AmqpAdapterProperties extends ProtocolAdapterProperties {
     private int maxSessionFrames = DEFAULT_MAX_SESSION_FRAMES;
     private int idleTimeout = DEFAULT_IDLE_TIMEOUT_MILLIS;
     private long sendMessageToDeviceTimeout = DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT;
+
+    /**
+     * Creates properties using default values.
+     */
+    public AmqpAdapterProperties() {
+        super();
+    }
+
+    /**
+     * Creates properties using existing options.
+     *
+     * @param options The options to copy.
+     */
+    public AmqpAdapterProperties(final AmqpAdapterOptions options) {
+        super(options.adapterOptions());
+        setIdleTimeout(options.idleTimeout());
+        setMaxFrameSize(options.maxFrameSize());
+        setMaxSessionFrames(options.maxSessionFrames());
+        setSendMessageToDeviceTimeout(options.sendMessageToDeviceTimeout());
+    }
 
     /**
      * Gets the maximum number of bytes that can be sent in an AMQP message delivery

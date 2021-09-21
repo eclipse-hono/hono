@@ -222,8 +222,8 @@ public class ApplicationConfig {
      */
     @Bean
     @ConfigurationProperties(prefix = "hono.command-router.svc")
-    public CommandRouterServiceConfigProperties commandRouterServiceConfigProperties() {
-        return new CommandRouterServiceConfigProperties();
+    public ServiceConfigProperties commandRouterServiceConfigProperties() {
+        return new ServiceConfigProperties();
     }
 
     /**
@@ -236,8 +236,11 @@ public class ApplicationConfig {
      */
     @Bean
     @Scope("prototype")
-    public CommandRouterService commandRouterService(final CacheBasedDeviceConnectionInfo deviceConnectionInfo,
-            final AdapterInstanceStatusService adapterInstanceStatusService, final CommandRouterMetrics metrics) {
+    public CommandRouterService commandRouterService(
+            final CacheBasedDeviceConnectionInfo deviceConnectionInfo,
+            final AdapterInstanceStatusService adapterInstanceStatusService,
+            final CommandRouterMetrics metrics) {
+
         final DeviceRegistrationClient registrationClient = registrationClient();
         final TenantClient tenantClient = tenantClient();
 

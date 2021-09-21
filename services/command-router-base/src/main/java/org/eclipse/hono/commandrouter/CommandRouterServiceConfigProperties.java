@@ -20,6 +20,22 @@ public class CommandRouterServiceConfigProperties {
     private boolean kubernetesBasedAdapterInstanceStatusServiceEnabled = true;
 
     /**
+     * Creates new properties using default values.
+     */
+    public CommandRouterServiceConfigProperties() {
+        super();
+    }
+
+    /**
+     * Creates a new instance from existing options.
+     *
+     * @param options The options to copy.
+     */
+    public CommandRouterServiceConfigProperties(final CommandRouterServiceOptions options) {
+        setKubernetesBasedAdapterInstanceStatusServiceEnabled(options.kubernetesBasedAdapterInstanceStatusServiceEnabled());
+    }
+
+    /**
      * Checks whether the Kubernetes based service to get the status of an adapter instance is enabled.
      * <p>
      * The default value of this property is {@code true}.

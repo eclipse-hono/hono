@@ -28,6 +28,26 @@ public final class MapperEndpoint {
     private String uri;
 
     /**
+     * Creates properties using default values.
+     */
+    public MapperEndpoint() {
+        super();
+    }
+
+    /**
+     * Creates properties using existing options.
+     *
+     * @param options The options to copy.
+     */
+    public MapperEndpoint(final MapperEndpointOptions options) {
+        super();
+        this.host = options.host().orElse(null);
+        this.port = options.port().orElse(null);
+        this.tlsEnabled = options.tlsEnabled();
+        options.uri().ifPresent(this::setUri);
+    }
+
+    /**
      * Gets the host name or IP address of this mapper.
      *
      * @return The host name.

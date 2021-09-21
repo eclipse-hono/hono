@@ -19,7 +19,8 @@ import java.util.List;
 import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 
-import org.eclipse.hono.config.quarkus.ServerConfig;
+import org.eclipse.hono.config.ServerConfig;
+import org.eclipse.hono.config.quarkus.ServerOptions;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.metric.PrometheusScrapingResource;
@@ -27,8 +28,8 @@ import org.eclipse.hono.service.metric.PrometheusScrapingResource;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.quarkus.arc.DefaultBean;
-import io.quarkus.arc.config.ConfigPrefix;
 import io.quarkus.arc.properties.IfBuildProperty;
+import io.smallrye.config.ConfigMapping;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.Router;
@@ -61,7 +62,7 @@ public class HealthCheckServerProducer {
      * Creates a new Health Check server.
      *
      * @param vertx The vert.x instance to use.
-     * @param healthCheckServerConfig The configuration properties for the health check server.
+     * @param healthCheckServerOptions The configuration properties for the health check server.
      * @param additionalResources Additional resources that the server should expose.
      * @return The server.
      */
@@ -69,10 +70,11 @@ public class HealthCheckServerProducer {
     @Produces
     HealthCheckServer healthCheckServer(
             final Vertx vertx,
-            @ConfigPrefix("hono.healthCheck")
-            final ServerConfig healthCheckServerConfig,
+            @ConfigMapping(prefix = "hono.healthCheck")
+            final ServerOptions healthCheckServerOptions,
             final List<Handler<Router>> additionalResources) {
-        final VertxBasedHealthCheckServer server = new VertxBasedHealthCheckServer(vertx, healthCheckServerConfig);
+        final var config = new ServerConfig(healthCheckServerOptions);
+        final VertxBasedHealthCheckServer server = new VertxBasedHealthCheckServer(vertx, config);
         server.setAdditionalResources(additionalResources);
         return server;
     }

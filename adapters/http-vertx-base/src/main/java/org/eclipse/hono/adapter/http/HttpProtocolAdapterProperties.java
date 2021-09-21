@@ -31,6 +31,23 @@ public class HttpProtocolAdapterProperties extends ProtocolAdapterProperties {
     private String realm = DEFAULT_REALM;
 
     /**
+     * Creates properties using default values.
+     */
+    public HttpProtocolAdapterProperties() {
+        super();
+    }
+
+    /**
+     * Creates properties using existing options.
+     *
+     * @param options The options to copy.
+     */
+    public HttpProtocolAdapterProperties(final HttpProtocolAdapterOptions options) {
+        super(options.adapterOptions());
+        this.realm = options.realm();
+    }
+
+    /**
      * Gets the name of the realm that unauthenticated devices are prompted to provide credentials for.
      * <p>
      * The realm is used in the <em>WWW-Authenticate</em> header returned to devices

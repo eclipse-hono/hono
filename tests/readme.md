@@ -158,3 +158,12 @@ Connection service component instead, the `device-connection-service` maven prof
 ```sh
 mvn verify -Prun-tests -Dhono.commandrouting.mode=dev-con-service
 ```
+
+### Running the Tests with Kafka as the Messaging Infrastructure
+
+By default, the integration tests are run using the AMQP 1.0 based QPid Dispatch Router and ActiveMQ Artemis message
+broker as messaging infrastructure. In order to use a Kafka broker instead, the `kafka` Maven profile can be activated:
+
+```sh
+mvn verify -Prun-tests -Dhono.messaging-infra.type=kafka
+```

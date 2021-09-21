@@ -1,0 +1,8 @@
+hono:
+  auth:
+    svc:
+      permissionsPath: "/etc/permissions.json"
+      signing:
+        sharedSecret: "secret"
+        tokenExpiration: 1000
+      supportedSaslMechanisms: "PLAIN"

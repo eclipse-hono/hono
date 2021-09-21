@@ -16,8 +16,9 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 
+import org.eclipse.hono.adapter.coap.CoapAdapterOptions;
+import org.eclipse.hono.adapter.coap.CoapAdapterProperties;
 import org.eclipse.hono.adapter.coap.MicrometerBasedCoapAdapterMetrics;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
 
@@ -32,10 +33,16 @@ public class MetricsFactory {
 
     @Singleton
     @Produces
+    CoapAdapterProperties adapterProperties(final CoapAdapterOptions adapterOptions) {
+        return new CoapAdapterProperties(adapterOptions);
+    }
+
+    @Singleton
+    @Produces
     MicrometerBasedCoapAdapterMetrics metrics(
             final Vertx vertx,
             final MeterRegistry registry,
-            final ProtocolAdapterProperties adapterProperties) {
+            final CoapAdapterProperties adapterProperties) {
         registry.config().commonTags(MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP));
         final var metrics = new MicrometerBasedCoapAdapterMetrics(registry, vertx);
         metrics.setProtocolAdapterProperties(adapterProperties);

@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
@@ -20,16 +20,18 @@ import javax.inject.Inject;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
+import org.eclipse.hono.config.MapperEndpoint;
+import org.eclipse.hono.config.ProtocolAdapterOptions;
+import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
 
 /**
- * Verifies that {@link KafkaRuntimeConfigProducer} parses yaml files correctly and exposes the configuration as a
- * beans.
+ * Verifies that Quarkus binds properties from yaml files to configuration objects.
  */
 @QuarkusTest
-public class KafkaRuntimeConfigProducerTest {
+public class QuarkusPropertyBindingTest {
 
     @Inject
     KafkaProducerConfigProperties kafkaProducerConfig;
@@ -39,6 +41,9 @@ public class KafkaRuntimeConfigProducerTest {
 
     @Inject
     KafkaAdminClientConfigProperties kafkaAdminClientConfig;
+
+    @Inject
+    ProtocolAdapterOptions protocolAdapterOptions;
 
     /**
      * Asserts that the Kafka configuration is exposed as a beans.
@@ -107,4 +112,17 @@ public class KafkaRuntimeConfigProducerTest {
         assertThat(kafkaProducerConfig.getProducerConfig("test").get("number")).isEqualTo("123");
     }
 
+    /**
+     * Verifies that Quarkus correctly binds properties from a yaml file to a
+     * {@link ProtocolAdapterOptions} instance.
+     */
+    @Test
+    public void testProtocolAdapterOptionsBinding() {
+        assertThat(protocolAdapterOptions).isNotNull();
+        final var props = new ProtocolAdapterProperties(protocolAdapterOptions);
+        final MapperEndpoint telemetryMapper = props.getMapperEndpoint("telemetry");
+        assertThat(telemetryMapper).isNotNull();
+        assertThat(telemetryMapper.getUri()).isEqualTo("https://mapper.eclipseprojects.io/telemetry");
+        assertThat(telemetryMapper.isTlsEnabled()).isTrue();
+    }
 }

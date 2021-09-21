@@ -14,6 +14,7 @@
 package org.eclipse.hono.client;
 
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.config.quarkus.RequestResponseClientOptions;
 
 /**
  * Configuration properties for clients invoking request/response operations
@@ -41,6 +42,25 @@ public class RequestResponseClientConfigProperties extends ClientConfigPropertie
     private int responseCacheMinSize = DEFAULT_RESPONSE_CACHE_MIN_SIZE;
     private long responseCacheMaxSize = DEFAULT_RESPONSE_CACHE_MAX_SIZE;
     private long responseCacheDefaultTimeout = DEFAULT_RESPONSE_CACHE_TIMEOUT;
+
+    /**
+     * Creates new properties using default values.
+     */
+    public RequestResponseClientConfigProperties() {
+        super();
+    }
+
+    /**
+     * Creates properties based on existing options.
+     *
+     * @param options The options to copy.
+     */
+    public RequestResponseClientConfigProperties(final RequestResponseClientOptions options) {
+        super(options.clientOptions());
+        setResponseCacheDefaultTimeout(options.responseCacheDefaultTimeout());
+        setResponseCacheMaxSize(options.responseCacheMaxSize());
+        setResponseCacheMinSize(options.responseCacheMinSize());
+    }
 
     /**
      * Gets the minimum size of the response cache.

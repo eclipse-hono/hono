@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.hono.config.quarkus.GenericOptions;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.PortConfigurationHelper;
 import org.eclipse.hono.util.Strings;
@@ -101,6 +102,28 @@ public abstract class AbstractConfig {
         this.trustStoreFormat = other.trustStoreFormat;
         this.trustStorePassword = other.trustStorePassword;
         this.trustStorePath = other.trustStorePath;
+    }
+
+
+    /**
+     * Creates a new instance from generic options.
+     *
+     * @param other The options. All of the options are copied to the newly created instance.
+     */
+    public AbstractConfig(final GenericOptions other) {
+        this();
+        this.certPath = other.certPath().orElse(null);
+        this.keyFormat = other.keyFormat().orElse(null);
+        this.keyPath = other.keyPath().orElse(null);
+        this.keyStorePassword = other.keyStorePassword().orElse(null);
+        this.keyStorePath = other.keyStorePath().orElse(null);
+        this.pathSeparator = other.pathSeparator();
+        this.secureProtocols = Collections.unmodifiableList(new ArrayList<>(other.secureProtocols()));
+        this.supportedCipherSuites = Collections.unmodifiableList(
+                new ArrayList<>(other.supportedCipherSuites().orElse(Collections.emptyList())));
+        this.trustStoreFormat = other.trustStoreFormat().orElse(null);
+        this.trustStorePassword = other.trustStorePassword().orElse(null);
+        this.trustStorePath = other.trustStorePath().orElse(null);
     }
 
     /**

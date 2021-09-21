@@ -15,6 +15,7 @@ package org.eclipse.hono.config;
 
 import java.util.Objects;
 
+import org.eclipse.hono.config.quarkus.ServerOptions;
 import org.eclipse.hono.util.Constants;
 
 /**
@@ -29,6 +30,33 @@ public class ServerConfig extends AbstractConfig {
     private String insecurePortBindAddress = Constants.LOOPBACK_DEVICE_ADDRESS;
     private int insecurePort = Constants.PORT_UNCONFIGURED;
     private boolean sni = false;
+
+    /**
+     * Creates new properties using default values.
+     */
+    public ServerConfig() {
+        super();
+    }
+
+    /**
+     * Creates a new instance from existing options.
+     *
+     * @param options The options. All of the options are copied to the newly created instance.
+     */
+    public ServerConfig(final ServerOptions options) {
+        super(options.genericOptions());
+        this.bindAddress = options.bindAddress();
+        if (options.insecurePort() > Constants.PORT_UNCONFIGURED) {
+            setInsecurePort(options.insecurePort());
+        }
+        this.insecurePortBindAddress = options.insecurePortBindAddress();
+        this.insecurePortEnabled = options.insecurePortEnabled();
+        this.nativeTlsRequired = options.nativeTlsRequired();
+        if (options.port() > Constants.PORT_UNCONFIGURED) {
+            setPort(options.port());
+        }
+        this.sni = options.sni();
+    }
 
     /**
      * Checks if the current thread is running on the Graal Substrate VM.
@@ -102,11 +130,11 @@ public class ServerConfig extends AbstractConfig {
 
 
     /**
-     * Checks if this service has been configured to bind to the secure port during startup.
+     * Checks whether this service should listen to the secure port.
      * <p>
      * Subclasses may override this method in order to do more sophisticated checks.
      *
-     * @return {@code true} if <em>config</em> contains a valid key and certificate.
+     * @return {@code true} if a valid key and certificate have been configured for this service..
      */
     public boolean isSecurePortEnabled() {
         return getKeyCertOptions() != null;
@@ -143,22 +171,25 @@ public class ServerConfig extends AbstractConfig {
     }
 
     /**
-     * Checks if this server is configured to listen on an insecure port (i.e. without TLS) at all. If {@code false}, it
-     * is guaranteed by the server that no opened port is insecure. If {@code true}, it enables the definition of an
-     * insecure port (as the only port <u>or</u> additionally to the secure port).
+     * Checks whether this service should listen to the insecure port.
+     * <p>
+     * The default value of this property is {@code false}.
+     * <p>
+     * Subclasses may override this method in order to do more sophisticated checks.
      *
-     * @return {@code false} if the server guarantees that no opened port is insecure.
+     * @return {@code true} if the insecure port has been enabled explicitly using {@link #setInsecurePortEnabled(boolean)}
+     *                      or implicitly using {@link #setInsecurePort(int)}.
      */
-    public final boolean isInsecurePortEnabled() {
-        return insecurePortEnabled;
+    public boolean isInsecurePortEnabled() {
+        return insecurePortEnabled || insecurePort > Constants.PORT_UNCONFIGURED;
     }
 
     /**
-     * Sets if this server should support insecure AMQP 1.0 ports (i.e. without TLS) at all. If {@code false}, it is
-     * guaranteed by the server that no opened port is insecure. If {@code true}, it enables the definition of an
-     * insecure port (as the only port <u>or</u> additionally to the secure port).
+     * Sets whether this server should listen on the insecure port.
+     * <p>
+     * The default value of this property is {@code false}.
      *
-     * @param insecurePortEnabled {@code false} if the server shall guarantee that no opened port is insecure.
+     * @param insecurePortEnabled {@code true} if the server should listen on the insecure port.
      */
     public final void setInsecurePortEnabled(final boolean insecurePortEnabled) {
         this.insecurePortEnabled = insecurePortEnabled;

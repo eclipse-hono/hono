@@ -21,6 +21,8 @@ import javax.inject.Inject;
 import org.eclipse.hono.adapter.monitoring.ConnectionEventProducerConfig;
 import org.eclipse.hono.adapter.monitoring.ConnectionEventProducerConfig.ConnectionEventProducerType;
 import org.eclipse.hono.adapter.monitoring.ConnectionEventProducerOptions;
+import org.eclipse.hono.adapter.resourcelimits.PrometheusBasedResourceLimitCheckOptions;
+import org.eclipse.hono.adapter.resourcelimits.PrometheusBasedResourceLimitChecksConfig;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
@@ -36,6 +38,9 @@ public class QuarkusPropertyBindingTest {
     @Inject
     ConnectionEventProducerOptions eventProducerOptions;
 
+    @Inject
+    PrometheusBasedResourceLimitCheckOptions resourceLimitChecksOptions;
+
     @Test
     void testConnectionEventProducerOptionsBinding() {
         assertThat(eventProducerOptions).isNotNull();
@@ -43,5 +48,20 @@ public class QuarkusPropertyBindingTest {
         assertThat(props.getLogLevel()).isEqualTo("debug");
         assertThat(props.isDebugLogLevel()).isTrue();
         assertThat(props.getType()).isEqualTo(ConnectionEventProducerType.events);
+    }
+
+    @Test
+    void testResourceLimitCheckOptionsBinding() {
+        assertThat(resourceLimitChecksOptions).isNotNull();
+        final var props = new PrometheusBasedResourceLimitChecksConfig(resourceLimitChecksOptions);
+        assertThat(props.getCacheMaxSize()).isEqualTo(15500);
+        assertThat(props.getCacheMinSize()).isEqualTo(5555);
+        assertThat(props.getCacheTimeout()).isEqualTo(555);
+        assertThat(props.getConnectTimeout()).isEqualTo(777);
+        assertThat(props.getQueryTimeout()).isEqualTo(2222);
+
+        // client options
+        assertThat(props.isHostConfigured()).isTrue();
+        assertThat(props.getHost()).isEqualTo("prometheus");
     }
 }

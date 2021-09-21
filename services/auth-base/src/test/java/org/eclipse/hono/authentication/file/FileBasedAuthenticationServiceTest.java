@@ -25,7 +25,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.auth.Authorities;
 import org.eclipse.hono.auth.HonoUser;
-import org.eclipse.hono.config.SignatureSupportingConfigProperties;
 import org.eclipse.hono.service.auth.AuthTokenHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,23 +53,7 @@ public class FileBasedAuthenticationServiceTest {
 
     @BeforeEach
     void createInstance(final Vertx vertx) {
-        this.props = new FileBasedAuthenticationServiceConfigProperties() {
-            private final SignatureSupportingConfigProperties signatureProps = new SignatureSupportingConfigProperties();
-            /**
-             * {@inheritDoc}
-             */
-            @Override
-            public SignatureSupportingConfigProperties getSigning() {
-                return signatureProps;
-            }
-            /**
-             * {@inheritDoc}
-             */
-            @Override
-            public SignatureSupportingConfigProperties getValidation() {
-                return signatureProps;
-            }
-        };
+        this.props = new FileBasedAuthenticationServiceConfigProperties();
         this.authService = getService("target/test-classes/authentication-service-test-permissions.json");
         authService.init(vertx, vertx.getOrCreateContext());
     }
@@ -107,7 +90,7 @@ public class FileBasedAuthenticationServiceTest {
         props.setPermissionsPath("file://target/test-classes/authentication-service-test-permissions.json");
         authService.setConfig(props);
 
-        givenAStartedService().onComplete(ctx.completing());
+        givenAStartedService().onComplete(ctx.succeedingThenComplete());
     }
 
     /**

@@ -21,6 +21,7 @@ import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.service.auth.AuthTokenHelperImpl;
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
+import org.eclipse.hono.service.auth.delegating.AuthenticationServerClientConfigProperties;
 import org.eclipse.hono.service.auth.delegating.DelegatingAuthenticationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,23 +44,22 @@ public class DelegatingAuthenticationServiceProducer {
     @Produces
     AuthenticationService delegatingAuthenticationService(
             final Vertx vertx,
-            final AuthenticationServerClientConfigProperties authClientProps) {
+            final AuthenticationServerClientConfigProperties authServerClientConfig) {
 
         LOG.info("creating {} instance", DelegatingAuthenticationService.class.getName());
-        authClientProps.setServerRoleIfUnknown("Authentication Server");
         final var service = new DelegatingAuthenticationService();
-        service.setConfig(authClientProps);
-        service.setConnectionFactory(ConnectionFactory.newConnectionFactory(vertx, authClientProps));
+        service.setConfig(authServerClientConfig);
+        service.setConnectionFactory(ConnectionFactory.newConnectionFactory(vertx, authServerClientConfig));
         return service;
     }
 
     @Produces
     ProtonSaslAuthenticatorFactory honoSaslAuthenticatorFactory(
             final Vertx vertx,
-            final AuthenticationServerClientConfigProperties authClientProps,
+            final AuthenticationServerClientConfigProperties authServerClientConfig,
             final AuthenticationService authenticationService) {
 
-        final var authTokenValidator = AuthTokenHelperImpl.forValidating(vertx, authClientProps.getValidation());
+        final var authTokenValidator = AuthTokenHelperImpl.forValidating(vertx, authServerClientConfig.getValidation());
         return new HonoSaslAuthenticatorFactory(vertx, authTokenValidator, authenticationService);
     }
 }

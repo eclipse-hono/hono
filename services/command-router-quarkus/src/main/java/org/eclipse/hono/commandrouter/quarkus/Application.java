@@ -18,12 +18,11 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.kafka.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
-import org.eclipse.hono.client.quarkus.ClientConfigProperties;
-import org.eclipse.hono.client.quarkus.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
@@ -37,8 +36,13 @@ import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.commandrouter.impl.CommandRouterServiceImpl;
 import org.eclipse.hono.commandrouter.impl.amqp.ProtonBasedCommandConsumerFactoryImpl;
 import org.eclipse.hono.commandrouter.impl.kafka.KafkaBasedCommandConsumerFactoryImpl;
-import org.eclipse.hono.config.quarkus.ApplicationConfigProperties;
-import org.eclipse.hono.config.quarkus.ServiceConfigProperties;
+import org.eclipse.hono.config.ApplicationConfigProperties;
+import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.config.quarkus.ApplicationOptions;
+import org.eclipse.hono.config.quarkus.ClientOptions;
+import org.eclipse.hono.config.quarkus.RequestResponseClientOptions;
+import org.eclipse.hono.config.quarkus.ServiceOptions;
 import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
@@ -59,7 +63,7 @@ import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
 import io.opentracing.Tracer;
-import io.quarkus.arc.config.ConfigPrefix;
+import io.smallrye.config.ConfigMapping;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Promise;
@@ -92,21 +96,6 @@ public class Application extends AbstractServiceApplication {
     Tracer tracer;
 
     @Inject
-    ApplicationConfigProperties appConfig;
-
-    @ConfigPrefix("hono.commandRouter.amqp")
-    ServiceConfigProperties amqpServerProperties;
-
-    @ConfigPrefix("hono.command")
-    ClientConfigProperties commandConsumerFactoryConfig;
-
-    @ConfigPrefix("hono.registration")
-    RequestResponseClientConfigProperties deviceRegistrationClientConfig;
-
-    @ConfigPrefix("hono.tenant")
-    RequestResponseClientConfigProperties tenantClientConfig;
-
-    @Inject
     KafkaProducerConfigProperties kafkaProducerConfig;
 
     @Inject
@@ -127,9 +116,57 @@ public class Application extends AbstractServiceApplication {
     @Inject
     CommandRouterMetrics metrics;
 
-    private Cache<Object, RegistrationResult> registrationResponseCache;
+    private ApplicationConfigProperties appConfig;
+    private ServiceConfigProperties amqpServerProperties;
+    private ClientConfigProperties commandConsumerFactoryConfig;
+    private RequestResponseClientConfigProperties deviceRegistrationClientConfig;
+    private RequestResponseClientConfigProperties tenantClientConfig;
 
+    private Cache<Object, RegistrationResult> registrationResponseCache;
     private Cache<Object, TenantResult<TenantObject>> tenantResponseCache;
+
+    @Inject
+    void setApplicationOptions(final ApplicationOptions options) {
+        this.appConfig = new ApplicationConfigProperties(options);
+    }
+
+    @Inject
+    void setAmqpServerOptions(
+            @ConfigMapping(prefix = "hono.commandRouter.amqp")
+            final ServiceOptions options) {
+        this.amqpServerProperties = new ServiceConfigProperties(options);
+    }
+
+    @Inject
+    void setCommandClientOptions(
+            @ConfigMapping(prefix = "hono.command")
+            final ClientOptions options) {
+
+        final var props = new ClientConfigProperties(options);
+        props.setServerRoleIfUnknown("Command & Control");
+        props.setNameIfNotSet(getComponentName());
+        this.commandConsumerFactoryConfig = props;
+    }
+
+    @Inject
+    void setTenantServiceClientConfig(
+            @ConfigMapping(prefix = "hono.tenant")
+            final RequestResponseClientOptions options) {
+        final var props = new RequestResponseClientConfigProperties(options);
+        props.setServerRoleIfUnknown("Tenant");
+        props.setNameIfNotSet(getComponentName());
+        this.tenantClientConfig = props;
+    }
+
+    @Inject
+    void setDeviceRegistrationClientConfig(
+            @ConfigMapping(prefix = "hono.registration")
+            final RequestResponseClientOptions options) {
+        final var props = new RequestResponseClientConfigProperties(options);
+        props.setServerRoleIfUnknown("Device Registration");
+        props.setNameIfNotSet(getComponentName());
+        this.deviceRegistrationClientConfig = props;
+    }
 
     @Override
     public String getComponentName() {
@@ -215,13 +252,8 @@ public class Application extends AbstractServiceApplication {
                 tracer);
     }
 
-    private ClientConfigProperties commandConsumerFactoryConfig() {
-        commandConsumerFactoryConfig.setServerRoleIfUnknown("Command & Control");
-        commandConsumerFactoryConfig.setNameIfNotSet(getComponentName());
-        return commandConsumerFactoryConfig;
-    }
-
-    private MessagingClientProvider<CommandConsumerFactory> commandConsumerFactoryProvider(final TenantClient tenantClient,
+    private MessagingClientProvider<CommandConsumerFactory> commandConsumerFactoryProvider(
+            final TenantClient tenantClient,
             final CommandTargetMapper commandTargetMapper) {
 
         final MessagingClientProvider<CommandConsumerFactory> commandConsumerFactoryProvider = new MessagingClientProvider<>();
@@ -236,7 +268,6 @@ public class Application extends AbstractServiceApplication {
                     metrics,
                     tracer));
         }
-        final ClientConfigProperties commandConsumerFactoryConfig = commandConsumerFactoryConfig();
         if (commandConsumerFactoryConfig.isHostConfigured()) {
             commandConsumerFactoryProvider.setClient(new ProtonBasedCommandConsumerFactoryImpl(
                     HonoConnection.newConnection(vertx, commandConsumerFactoryConfig, tracer),
@@ -248,23 +279,11 @@ public class Application extends AbstractServiceApplication {
         return commandConsumerFactoryProvider;
     }
 
-    private RequestResponseClientConfigProperties registrationServiceClientConfig() {
-        deviceRegistrationClientConfig.setServerRoleIfUnknown("Device Registration");
-        deviceRegistrationClientConfig.setNameIfNotSet(getComponentName());
-        return deviceRegistrationClientConfig;
-    }
-
     private Cache<Object, RegistrationResult> registrationResponseCache() {
         if (registrationResponseCache == null) {
             registrationResponseCache = Caches.newCaffeineCache(deviceRegistrationClientConfig);
         }
         return registrationResponseCache;
-    }
-
-    private RequestResponseClientConfigProperties tenantServiceClientConfig() {
-        tenantClientConfig.setServerRoleIfUnknown("Tenant");
-        tenantClientConfig.setNameIfNotSet(getComponentName());
-        return tenantClientConfig;
     }
 
     private Cache<Object, TenantResult<TenantObject>> tenantResponseCache() {
@@ -281,7 +300,7 @@ public class Application extends AbstractServiceApplication {
      */
     protected DeviceRegistrationClient registrationClient() {
         return new ProtonBasedDeviceRegistrationClient(
-                HonoConnection.newConnection(vertx, registrationServiceClientConfig(), tracer),
+                HonoConnection.newConnection(vertx, deviceRegistrationClientConfig, tracer),
                 SendMessageSampler.Factory.noop(),
                 registrationResponseCache());
     }
@@ -293,7 +312,7 @@ public class Application extends AbstractServiceApplication {
      */
     protected TenantClient tenantClient() {
         return new ProtonBasedTenantClient(
-                HonoConnection.newConnection(vertx, tenantServiceClientConfig(), tracer),
+                HonoConnection.newConnection(vertx, tenantClientConfig, tracer),
                 SendMessageSampler.Factory.noop(),
                 tenantResponseCache());
     }
