@@ -11,14 +11,19 @@ Protocol adapters use this API to store and retrieve information about the gatew
 <!--more-->
 
 {{% note title="Deprecation" %}}
-The Device Connection service is deprecated and will be replaced by the [Command Router service]({{< relref "/admin-guide/command-router-config" >}}), implementing the [Command Router API]({{< relref "/api/command-router" >}}).
-For now, either the Device Connection service or the Command Router service may be used by protocol adapters.
+The Device Connection service is deprecated and will be removed from Hono completely in version 2.0.0.
+Protocol adapters use the [Command Router service]({{< relref "/admin-guide/command-router-config" >}}) by default.
+For backwards compatibility, adapters can still be configured to use the Device Connection service as described in
+the [Protocol Adapter Options Guide]({{< relref "common-config.md/#device-connection-service-connection-configuration" >}}).
 {{% /note %}}
 
-The Device Connection component provides a production grade implementation of the Device Connection API which uses a remote *data grid* for storing information about device connections. The data grid can be scaled out independently from the Device Connection service components to meet the storage demands at hand.
+The Device Connection component provides a production grade implementation of the Device Connection API which uses a
+remote *data grid* for storing information about device connections. The data grid can be scaled out independently
+from the Device Connection service components to meet the storage demands at hand.
 
-The Device Connection component is implemented as a Spring Boot application. It can be run either directly from the command line or by means of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-service-device-connection/) created from it.
-
+The Device Connection component is implemented as a Spring Boot application. It can be run either directly from the
+command line or by means of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-service-device-connection/)
+created from it.
 
 ## Service Configuration
 

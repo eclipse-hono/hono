@@ -106,16 +106,22 @@ determine the overall number of responses that can be cached.
 ### Device Connection Service Connection Configuration
 
 {{% note title="Deprecation" %}}
-The Device Connection service is deprecated and will be replaced by the [Command Router service]({{< relref "/admin-guide/command-router-config" >}}), implementing the [Command Router API]({{< relref "/api/command-router" >}}).
-For now, depending on which of these service components is used, protocol adapters may configure the use of either the Device Connection service or the Command Router service as described [below](./#command-router-service-connection-configuration).
+The Device Connection service is deprecated and will be removed from Hono completely in version 2.0.0.
+Protocol adapters use the [Command Router service]({{< relref "/admin-guide/command-router-config" >}}) by default and
+thus require a [Command Router Service Connection]({{< relref "#command-router-service-connection-configuration" >}})
+to be configured.
+
+For backwards compatibility, adapters can still be configured to use the Device Connection service as described in this
+section.
 {{% /note %}}
 
 Protocol adapters connect to an implementation of Hono's [Device Connection API]({{< relref "/api/device-connection" >}})
 in order to determine the gateway that a device is connected via to a protocol adapter. This information is required in order to
 forward commands issued by applications to the protocol adapter instance that the gateway is connected to.
 
-The connection to the Device Connection service is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
-where the `${PREFIX}` is set to `HONO_DEVICECONNECTION`.
+The connection to the Device Connection service is configured according to
+[Hono Client Configuration]({{< relref "hono-client-configuration.md" >}}) where the `${PREFIX}` is set to
+`HONO_DEVICECONNECTION`.
 
 Responses from the Device Connection service are never cached, so the properties for configuring the cache are ignored.
 
@@ -143,8 +149,9 @@ In general, the service supports all configuration properties of the [Infinispan
 ### Command Router Service Connection Configuration
 
 {{% note %}}
-The Command Router service will replace the Device Connection service. 
-For now, depending on which of these service components is used, protocol adapters may configure the use of either the Device Connection service as described [above](./#device-connection-service-connection-configuration) or the Command Router service.
+The Command Router service is the successor to the deprecated Device Connection service.
+However, for backwards compatibility, adapters can still be configured to use the Device Connection service instead as described
+[above]({{< relref "#device-connection-service-connection-configuration" >}}).
 {{% /note %}}
 
 Protocol adapters connect to an implementation of Hono's [Command Router API]({{< relref "/api/command-router" >}})
