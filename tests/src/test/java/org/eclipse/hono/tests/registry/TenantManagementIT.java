@@ -456,7 +456,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
                     tenantTwoId,
                     new Tenant().setTrustedCertificateAuthorities(List.of()),
                     HttpURLConnection.HTTP_NO_CONTENT))
-            .onComplete(context.completing());
+            .onComplete(context.succeedingThenComplete());
     }
 
     /**

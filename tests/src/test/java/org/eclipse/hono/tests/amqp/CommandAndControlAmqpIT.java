@@ -809,7 +809,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                                     .failNow(new IllegalStateException("should not have received command")));
                             return null;
                         }))
-                .onComplete(setup.completing());
+                .onComplete(setup.succeedingThenComplete());
 
         assertWithMessage("setup of adapter finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
                 .that(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))

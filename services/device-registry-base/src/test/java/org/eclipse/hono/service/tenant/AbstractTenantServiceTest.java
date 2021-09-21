@@ -486,7 +486,7 @@ public interface AbstractTenantServiceTest {
         addTenant("tenant")
             .compose(ok -> assertTenantExists(getTenantManagementService(), "tenant"))
             .compose(ok -> getTenantManagementService().deleteTenant("tenant", Optional.empty(), NoopSpan.INSTANCE))
-            .onComplete(ctx.succeeding())
+            .onFailure(ctx::failNow)
             .compose(ok -> getTenantManagementService().readTenant("tenant", NoopSpan.INSTANCE))
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_NOT_FOUND));
@@ -606,7 +606,7 @@ public interface AbstractTenantServiceTest {
                         NoopSpan.INSTANCE);
             })
             // THEN the update succeeds as well
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeedingThenComplete());
     }
 
     /**

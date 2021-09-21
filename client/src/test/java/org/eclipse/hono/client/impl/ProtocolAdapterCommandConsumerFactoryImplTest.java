@@ -260,7 +260,7 @@ public class ProtocolAdapterCommandConsumerFactoryImplTest {
                 .onComplete(consumerCreationAndRemoval.succeeding(consumer -> {
                     // close the consumer again
                     consumer.close(null)
-                            .onComplete(consumerCreationAndRemoval.completing());
+                            .onComplete(consumerCreationAndRemoval.succeedingThenComplete());
                 }));
         assertThat(consumerCreationAndRemoval.awaitCompletion(2, TimeUnit.SECONDS)).isTrue();
         if (consumerCreationAndRemoval.failed()) {
@@ -299,7 +299,7 @@ public class ProtocolAdapterCommandConsumerFactoryImplTest {
         final VertxTestContext consumerCreation = new VertxTestContext();
         final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
         commandConsumerFactory.createCommandConsumer(tenantId, deviceId, commandHandler, null, null)
-                .onComplete(consumerCreation.completing());
+                .onComplete(consumerCreation.succeedingThenComplete());
         assertThat(consumerCreation.awaitCompletion(2, TimeUnit.SECONDS)).isTrue();
         if (consumerCreation.failed()) {
             consumerCreation.failNow(consumerCreation.causeOfFailure());

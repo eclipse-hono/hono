@@ -282,7 +282,7 @@ public class VertxBasedMqttProtocolAdapterTest {
 
         message = newMessage(MqttQoS.AT_LEAST_ONCE, "unknown");
         context = newContext(message, span, null);
-        adapter.mapTopic(context).onComplete(ctx.failing());
+        adapter.mapTopic(context).onSuccess(v -> ctx.failNow("should not have succeeded mapping topic"));
         ctx.completeNow();
 
     }

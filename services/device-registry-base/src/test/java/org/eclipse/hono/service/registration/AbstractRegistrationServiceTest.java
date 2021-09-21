@@ -497,13 +497,13 @@ public interface AbstractRegistrationServiceTest {
         final String deviceId = randomDeviceId();
 
         createDevice(deviceId, new Device())
-            .onComplete(ctx.succeeding())
+            .onFailure(ctx::failNow)
             .compose(response -> getDeviceManagementService().deleteDevice(
                     TENANT,
                     deviceId,
                     Optional.empty(),
                     NoopSpan.INSTANCE))
-            .onComplete(ctx.succeeding())
+            .onFailure(ctx::failNow)
             .compose(response -> {
                 ctx.verify(() -> assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT));
                 return getDeviceManagementService().readDevice(TENANT, deviceId, NoopSpan.INSTANCE);
@@ -544,7 +544,7 @@ public interface AbstractRegistrationServiceTest {
         final String deviceId = randomDeviceId();
 
         getDeviceManagementService().createDevice(TENANT, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
-            .onComplete(ctx.succeeding())
+            .onFailure(ctx::failNow)
             .compose(response -> {
                 ctx.verify(() -> assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_CREATED));
                 final String resourceVersion = response.getResourceVersion().orElse(null);

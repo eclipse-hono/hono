@@ -111,7 +111,7 @@ public class ProtonBasedCommandSenderTest {
         final Future<Void> sendCommandFuture = commandSender
                 .sendOneWayCommand(tenantId, deviceId, subject, null, Buffer.buffer("{\"value\": 20}"),
                         applicationProperties, NoopSpan.INSTANCE.context())
-                .onComplete(ctx.completing());
+                .onComplete(ctx.succeedingThenComplete());
 
         // VERIFY that the command is being sent
         verify(sender).send(messageCaptor.capture(), dispositionHandlerCaptor.capture());
@@ -151,7 +151,7 @@ public class ProtonBasedCommandSenderTest {
         final Future<Void> sendCommandFuture = commandSender
                 .sendAsyncCommand(tenantId, deviceId, subject, null, Buffer.buffer("{\"value\": 20}"),
                         correlationId, replyId, applicationProperties, NoopSpan.INSTANCE.context())
-                .onComplete(ctx.completing());
+                .onComplete(ctx.succeedingThenComplete());
 
         // VERIFY that the command is being sent
         verify(sender).send(messageCaptor.capture(), dispositionHandlerCaptor.capture());

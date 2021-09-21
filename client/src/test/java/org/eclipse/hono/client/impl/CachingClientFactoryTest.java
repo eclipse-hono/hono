@@ -183,7 +183,7 @@ public class CachingClientFactoryTest {
             factory.getOrCreateClient(
                     "tenant",
                     () -> Future.succeededFuture(new Object()),
-                    ctx.completing());
+                    ctx.succeedingThenComplete());
         }));
 
     }

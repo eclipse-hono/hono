@@ -63,7 +63,7 @@ public interface AbstractDeviceManagementSearchDevicesTest {
         final Filter filter = new Filter("/enabled", false);
 
         createDevices(tenantId, Map.of(deviceId, new Device()))
-            .onComplete(ctx.succeeding())
+            .onFailure(ctx::failNow)
             .compose(ok -> getDeviceManagementService().searchDevices(
                     tenantId,
                     pageSize,

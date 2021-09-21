@@ -150,7 +150,7 @@ public class TelemetrySenderTest extends AbstractAmqpAdapterClientDownstreamSend
         final Future<ProtonDelivery> deliveryFuture = telemetrySender.sendAndWaitForOutcome(DEVICE_ID, PAYLOAD,
                 CONTENT_TYPE, APPLICATION_PROPERTIES);
 
-        deliveryFuture.onComplete(ctx.completing());
+        deliveryFuture.onComplete(ctx.succeedingThenComplete());
 
         // THEN the future waits for the disposition to be updated by the peer
         assertThat(deliveryFuture.isComplete()).isFalse();

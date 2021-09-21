@@ -113,7 +113,7 @@ public class CommandResponderTest extends AbstractAmqpAdapterClientDownstreamSen
         final Future<ProtonDelivery> deliveryFuture = commandResponder.sendCommandResponse(DEVICE_ID, ADDRESS,
                 CORRELATION_ID, STATUS, PAYLOAD, CONTENT_TYPE, APPLICATION_PROPERTIES);
 
-        deliveryFuture.onComplete(ctx.completing());
+        deliveryFuture.onComplete(ctx.succeedingThenComplete());
 
         // THEN the future waits for the disposition to be updated by the peer
         assertThat(deliveryFuture.isComplete()).isFalse();
