@@ -183,7 +183,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     }
 
     @Inject
-    void setdeviceRegistrationClientConfig(
+    void setDeviceRegistrationClientConfig(
             @ConfigMapping(prefix = "hono.registration")
             final RequestResponseClientOptions options) {
         final var props = new RequestResponseClientConfigProperties(options);

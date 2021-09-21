@@ -116,6 +116,7 @@ public class QuarkusPropertyBindingTest {
      * Verifies that Quarkus correctly binds properties from a yaml file to a
      * {@link ProtocolAdapterOptions} instance.
      */
+    @Test
     public void testProtocolAdapterOptionsBinding() {
         assertThat(protocolAdapterOptions).isNotNull();
         final var props = new ProtocolAdapterProperties(protocolAdapterOptions);

@@ -35,7 +35,7 @@ public class QuarkusPropertyBindingTest {
 
     /**
      * Verifies that Quarkus correctly binds properties from a yaml file to a
-     * {@link ServiceOptions} instance.
+     * {@link FileBasedAuthenticationServiceOptions} instance.
      */
     @Test
     public void testServiceOptionsBinding() {

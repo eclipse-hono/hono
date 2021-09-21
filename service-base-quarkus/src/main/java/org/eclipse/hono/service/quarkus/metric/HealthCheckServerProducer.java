@@ -62,7 +62,7 @@ public class HealthCheckServerProducer {
      * Creates a new Health Check server.
      *
      * @param vertx The vert.x instance to use.
-     * @param healthCheckServerConfig The configuration properties for the health check server.
+     * @param healthCheckServerOptions The configuration properties for the health check server.
      * @param additionalResources Additional resources that the server should expose.
      * @return The server.
      */

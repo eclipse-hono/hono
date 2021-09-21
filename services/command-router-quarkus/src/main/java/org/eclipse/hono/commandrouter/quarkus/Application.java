@@ -159,7 +159,7 @@ public class Application extends AbstractServiceApplication {
     }
 
     @Inject
-    void setdeviceRegistrationClientConfig(
+    void setDeviceRegistrationClientConfig(
             @ConfigMapping(prefix = "hono.registration")
             final RequestResponseClientOptions options) {
         final var props = new RequestResponseClientConfigProperties(options);
