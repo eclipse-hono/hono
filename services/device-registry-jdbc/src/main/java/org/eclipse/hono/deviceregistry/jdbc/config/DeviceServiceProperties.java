@@ -28,16 +28,61 @@ import org.eclipse.hono.util.RegistryManagementConstants;
  */
 public class DeviceServiceProperties {
 
+    /**
+     * The value indicating an <em>unlimited</em> number of devices to be allowed for a tenant.
+     */
+    public static final int UNLIMITED_DEVICES_PER_TENANT = -1;
+
     private static final Duration DEFAULT_CREDENTIALS_TTL = Duration.ofMinutes(1);
     private static final Duration DEFAULT_REGISTRATION_TTL = Duration.ofMinutes(1);
     private static final int DEFAULT_MAX_BCRYPT_COSTFACTOR = 10;
+
+    private final Set<String> hashAlgorithmsAllowList = new HashSet<>();
 
     private Duration credentialsTtl = DEFAULT_CREDENTIALS_TTL;
     private Duration registrationTtl = DEFAULT_REGISTRATION_TTL;
 
     private int maxBcryptCostfactor = DEFAULT_MAX_BCRYPT_COSTFACTOR;
 
-    private final Set<String> hashAlgorithmsAllowList = new HashSet<>();
+    private int maxDevicesPerTenant = UNLIMITED_DEVICES_PER_TENANT;
+
+    /**
+     * Checks if the number of devices per tenant is limited.
+     *
+     * @return {@code true} if the configured number of devices per tenant is &gt;
+     *         {@value #UNLIMITED_DEVICES_PER_TENANT}.
+     */
+    public boolean isNumberOfDevicesPerTenantLimited() {
+        return maxDevicesPerTenant > UNLIMITED_DEVICES_PER_TENANT;
+    }
+
+    /**
+     * Gets the maximum number of devices that can be registered for each tenant.
+     * <p>
+     * The default value of this property is {@value #UNLIMITED_DEVICES_PER_TENANT}.
+     *
+     * @return The maximum number of devices.
+     */
+    public int getMaxDevicesPerTenant() {
+        return maxDevicesPerTenant;
+    }
+
+    /**
+     * Sets the maximum number of devices that can be registered for each tenant.
+     * <p>
+     * The default value of this property is {@value #UNLIMITED_DEVICES_PER_TENANT}.
+     *
+     * @param maxDevices The maximum number of devices.
+     * @throws IllegalArgumentException if the number of devices is is set to less
+     *                                  than {@value #UNLIMITED_DEVICES_PER_TENANT}.
+     */
+    public void setMaxDevicesPerTenant(final int maxDevices) {
+        if (maxDevices < UNLIMITED_DEVICES_PER_TENANT) {
+            throw new IllegalArgumentException(
+                    String.format("Maximum devices must be set to value >= %s", UNLIMITED_DEVICES_PER_TENANT));
+        }
+        this.maxDevicesPerTenant = maxDevices;
+    }
 
     /**
      * Gets the duration after which retrieved credentials information must be considered stale.

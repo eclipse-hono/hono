@@ -98,9 +98,7 @@ public final class MongoDbBasedCredentialsManagementService extends AbstractCred
 
         TracingHelper.TAG_DEVICE_ID.set(span, deviceKey.getDeviceId());
 
-        return tenantInformationService.getTenant(deviceKey.getTenantId(), span)
-                .compose(tenant -> tenant.checkCredentialsLimitExceeded(deviceKey.getTenantId(), updatedCredentials))
-                .compose(ok -> dao.getByDeviceId(deviceKey.getTenantId(), deviceKey.getDeviceId(), span.context()))
+        return dao.getByDeviceId(deviceKey.getTenantId(), deviceKey.getDeviceId(), span.context())
                 .compose(existingCredentialsDto -> {
                     // keep original credentials for merging, if necessary
                     final var existingCredentials = existingCredentialsDto.getData();

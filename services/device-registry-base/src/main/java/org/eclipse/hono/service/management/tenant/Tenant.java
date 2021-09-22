@@ -565,7 +565,6 @@ public class Tenant {
                 .findFirst();
     }
 
-
     /**
      * Checks if a given set of credentials exceeds the maximum number of credentials per device that
      * has been configured for this tenant.
@@ -602,6 +601,52 @@ public class Tenant {
                             String.format(
                                     "configured credentials limit exceeded [tenant-id: %s, max credentials: %d]",
                                     tenantId, maxNumberOfCredentialsPerDevice)));
+        }
+    }
+
+    /**
+     * Checks if a tenant's current number of devices exceeds the maximum number of devices that
+     * has been configured for this tenant or globally.
+     *
+     * @param tenantId The tenant's identifier.
+     * @param currentDeviceCount The current number of devices registered for the tenant.
+     * @param globalDevicesPerTenantLimit The globally defined maximum number of devices per tenant. A value
+     *                                    &lt;= 0 will be interpreted as no limit being defined.
+     * @return A succeeded future if the check succeeds. Otherwise, the future will be failed
+     *         with a {@link ClientErrorException} with a status code of {@value HttpURLConnection#HTTP_FORBIDDEN}.
+     * @throws NullPointerException if tenant ID is {@code null}.
+     */
+    public Future<Void> checkDeviceLimitReached(
+            final String tenantId,
+            final long currentDeviceCount,
+            final int globalDevicesPerTenantLimit) {
+
+        Objects.requireNonNull(tenantId);
+
+        final boolean isLimitedAtTenantLevel = Optional.ofNullable(getRegistrationLimits())
+                .map(RegistrationLimits::isNumberOfDevicesLimited)
+                .orElse(false);
+
+        if (globalDevicesPerTenantLimit <= 0 && !isLimitedAtTenantLevel) {
+            return Future.succeededFuture();
+        }
+
+        final int maxNumberOfDevices;
+        if (isLimitedAtTenantLevel) {
+            maxNumberOfDevices = getRegistrationLimits().getMaxNumberOfDevices();
+        } else {
+            maxNumberOfDevices = globalDevicesPerTenantLimit;
+        }
+
+        if (currentDeviceCount < maxNumberOfDevices) {
+            return Future.succeededFuture();
+        } else {
+            return Future.failedFuture(
+                    new ClientErrorException(
+                            HttpURLConnection.HTTP_FORBIDDEN,
+                            String.format(
+                                    "configured device limit reached [tenant-id: %s, max devices: %d]",
+                                    tenantId, maxNumberOfDevices)));
         }
     }
 }

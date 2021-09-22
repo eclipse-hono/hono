@@ -14,9 +14,7 @@ package org.eclipse.hono.deviceregistry.mongodb.service;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static com.google.common.truth.Truth.assertThat;
 
@@ -56,7 +54,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -220,7 +217,6 @@ public class MongoDbBasedCredentialServiceTest implements CredentialsServiceTest
                 NoopSpan.INSTANCE)
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
-                    verify(tenantInformationService).getTenant(eq(tenantId), any(Span.class));
                     Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_FORBIDDEN);
                 });
                 ctx.completeNow();

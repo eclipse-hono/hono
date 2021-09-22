@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -38,6 +38,7 @@ public class DeviceManagementServiceImpl extends AbstractDeviceManagementService
 
     private final TableManagementStore store;
     private final Optional<CacheDirective> ttl;
+    private final DeviceServiceProperties config;
 
     /**
      * Create a new instance.
@@ -48,13 +49,19 @@ public class DeviceManagementServiceImpl extends AbstractDeviceManagementService
     public DeviceManagementServiceImpl(final TableManagementStore store, final DeviceServiceProperties properties) {
         this.store = store;
         this.ttl = Optional.of(CacheDirective.maxAgeDirective(properties.getRegistrationTtl()));
+        this.config = properties;
     }
 
     @Override
     protected Future<OperationResult<Id>> processCreateDevice(final DeviceKey key, final Device device, final Span span) {
 
-        return this.store.createDevice(key, device, span.context())
-
+        return this.tenantInformationService.getTenant(key.getTenantId(), span)
+                .compose(tenant -> this.store.createDevice(
+                        key,
+                        device,
+                        tenant,
+                        config.getMaxDevicesPerTenant(),
+                        span.context()))
                 .map(r -> OperationResult
                         .ok(
                                 HttpURLConnection.HTTP_CREATED,
@@ -132,5 +139,4 @@ public class DeviceManagementServiceImpl extends AbstractDeviceManagementService
     protected String generateDeviceId(final String tenantId) {
         return UUID.randomUUID().toString();
     }
-
 }

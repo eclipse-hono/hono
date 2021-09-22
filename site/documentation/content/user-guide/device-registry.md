@@ -61,11 +61,10 @@ operation defined by the Device Registry Management API. Invoking this operation
 response.
 {{% /note %}}
 
+#### Registration Limits
 
-{{% note title="Mongo DB Registry Specifics" %}}
-
-The Mongo DB based registry supports the enforcement of *registration limits* defined at the tenant level.
-In particular, the registry enforces
+The registry implementations support the enforcement of *registration limits* defined at the tenant level.
+In particular, the registries enforce
 
 * the maximum number of devices that can be registered for each tenant and
 * the maximum number of credentials that can be registered for each device of a tenant.
@@ -82,7 +81,7 @@ needs to be set explicitly on the tenant like in the example below:
 }
 ```
 
-The Mongo DB based registry can also be configured with a global limit for the number of devices that can be registered
+The registry implementations can also be configured with a global limit for the number of devices that can be registered
 per tenant. The value can be set via the registry's *HONO_REGISTRY_SVC_MAXDEVICESPERTENANT* configuration variable.
 The maximum number of devices allowed for a particular tenant is then determined as follows:
 
@@ -90,7 +89,6 @@ The maximum number of devices allowed for a particular tenant is then determined
 1. Otherwise, if the *HONO_REGISTRY_SVC_MAXDEVICESPERTENANT* configuration variable has a value > `-1` then that value
    is used as the limit.
 1. Otherwise, the number of devices is unlimited.
-{{% /note %}}
 
 ### Managing Devices
 

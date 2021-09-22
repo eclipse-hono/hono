@@ -18,6 +18,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -36,6 +37,7 @@ import org.eclipse.hono.service.base.jdbc.store.model.JdbcBasedDeviceDto;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.CredentialsDto;
 import org.eclipse.hono.service.management.device.Device;
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,6 +78,8 @@ public class TableManagementStore extends AbstractDeviceStore {
     private final Statement insertCredentialEntryStatement;
     private final Statement deleteAllCredentialsStatement;
     private final Statement updateDeviceVersionStatement;
+
+    private final Statement countDevicesOfTenantStatement;
 
     /**
      * Create a new instance.
@@ -174,6 +178,11 @@ public class TableManagementStore extends AbstractDeviceStore {
                         "next_version",
                         "expected_version");
 
+        this.countDevicesOfTenantStatement = cfg
+                .getRequiredStatement("countDevicesOfTenant")
+                .validateParameters(
+                        "tenant_id");
+
     }
 
     /**
@@ -206,10 +215,18 @@ public class TableManagementStore extends AbstractDeviceStore {
      *
      * @param key The key of the device to create.
      * @param device The device data.
+     * @param tenant The configuration of the tenant that the device belongs to.
+     * @param globalDevicesPerTenantLimit The globally defined maximum number of devices per tenant. A value
+     *                                    &lt;= 0 will be interpreted as no limit being defined.
      * @param spanContext The span to contribute to.
      * @return A future, tracking the outcome of the operation.
      */
-    public Future<Versioned<Void>> createDevice(final DeviceKey key, final Device device, final SpanContext spanContext) {
+    public Future<Versioned<Void>> createDevice(
+            final DeviceKey key,
+            final Device device,
+            final Tenant tenant,
+            final int globalDevicesPerTenantLimit,
+            final SpanContext spanContext) {
 
         final Span span = TracingHelper.buildChildSpan(this.tracer, spanContext, "create device", getClass().getSimpleName())
                 .withTag(TracingHelper.TAG_TENANT_ID, key.getTenantId())
@@ -236,11 +253,15 @@ public class TableManagementStore extends AbstractDeviceStore {
 
                     log.debug("createDevice - statement: {}", expanded);
 
-                    return expanded
-
-                            .trace(this.tracer, context)
-                            .update(this.client)
-                            .recover(SQL::translateException)
+                    return getDeviceCount(key.getTenantId(), span.context())
+                            .compose(currentDeviceCount -> tenant.checkDeviceLimitReached(
+                                    key.getTenantId(),
+                                    currentDeviceCount,
+                                    globalDevicesPerTenantLimit))
+                            .compose(ok -> expanded
+                                    .trace(this.tracer, context)
+                                    .update(this.client)
+                                    .recover(SQL::translateException))
 
                             .compose(x -> createGroups(connection, key, new HashSet<>(device.getMemberOf()), context));
 
@@ -551,6 +572,46 @@ public class TableManagementStore extends AbstractDeviceStore {
     }
 
     /**
+     * Gets the number of devices that are registered for a tenant.
+     *
+     * @param tenantId The tenant to count devices for.
+     * @param spanContext The span to contribute to.
+     * @return A future tracking the outcome of the operation.
+     * @throws NullPointerException if tenant is {@code null}.
+     */
+    public Future<Integer> getDeviceCount(final String tenantId, final SpanContext spanContext) {
+
+        Objects.requireNonNull(tenantId);
+
+        final Span span = TracingHelper.buildChildSpan(this.tracer, spanContext, "get device count", getClass().getSimpleName())
+                .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
+                .start();
+
+        final var expanded = this.countDevicesOfTenantStatement.expand(params -> {
+            params.put("tenant_id", tenantId);
+        });
+
+        log.debug("count - statement: {}", expanded);
+
+        return expanded
+                .trace(this.tracer, span.context())
+                .query(this.client)
+                .map(r -> {
+                    final var entries = r.getRows(true);
+                    switch (entries.size()) {
+                        case 1:
+                            final Integer count = entries.get(0).getInteger("DEVICECOUNT");
+                            log.debug("found {} devices registered for tenant [tenant-id: {}]", count, tenantId);
+                            return count;
+                        default:
+                            throw new IllegalStateException("Could not count devices of tenant");
+                    }
+                })
+                .onComplete(x -> span.finish());
+
+    }
+
+    /**
      * Set all credentials for a device.
      * <p>
      * This will set/update all credentials of the device. If the device does not exist, the result
@@ -584,86 +645,86 @@ public class TableManagementStore extends AbstractDeviceStore {
 
                 readDeviceForUpdate(connection, key, context)
 
-                        // check if we got back a result, if not this will abort early
-                        .compose(result -> extractVersionForUpdate(result, resourceVersion))
+                    // check if we got back a result, if not this will abort early
+                    .compose(result -> extractVersionForUpdate(result, resourceVersion))
 
-                        // take the version and start processing on
-                        .compose(version -> Future.succeededFuture()
+                    // take the version and start processing on
+                    .compose(version -> Future.succeededFuture()
 
-                                .compose(x -> {
-                                    final Promise<CredentialsDto> result = Promise.promise();
-                                    final var updatedCredentialsDto = CredentialsDto.forUpdate(
-                                            key.getTenantId(),
-                                            key.getDeviceId(),
-                                            credentials,
-                                            nextVersion);
+                            .compose(x -> {
+                                final Promise<CredentialsDto> result = Promise.promise();
+                                final var updatedCredentialsDto = CredentialsDto.forUpdate(
+                                        key.getTenantId(),
+                                        key.getDeviceId(),
+                                        credentials,
+                                        nextVersion);
 
-                                    if (updatedCredentialsDto.requiresMerging()) {
-                                        getCredentialsDto(key, connection, span)
-                                            .map(updatedCredentialsDto::merge)
-                                            .onComplete(result);
-                                    } else {
-                                        // simply replace the existing credentials with the
-                                        // updated ones provided by the client
-                                        result.complete(updatedCredentialsDto);
-                                    }
-                                    return result.future();
-                                })
+                                if (updatedCredentialsDto.requiresMerging()) {
+                                    getCredentialsDto(key, connection, span)
+                                        .map(updatedCredentialsDto::merge)
+                                        .onComplete(result);
+                                } else {
+                                    // simply replace the existing credentials with the
+                                    // updated ones provided by the client
+                                    result.complete(updatedCredentialsDto);
+                                }
+                                return result.future();
+                            })
 
-                                .compose(updatedCredentials -> this.deleteAllCredentialsStatement
-                                        // delete the existing entries
-                                        .expand(map -> {
-                                            map.put("tenant_id", key.getTenantId());
-                                            map.put("device_id", key.getDeviceId());
-                                        })
-                                        .trace(this.tracer, span.context())
-                                        .update(connection)
-                                        .map(updatedCredentials)
-                                )
+                            .compose(updatedCredentials -> this.deleteAllCredentialsStatement
+                                    // delete the existing entries
+                                    .expand(map -> {
+                                        map.put("tenant_id", key.getTenantId());
+                                        map.put("device_id", key.getDeviceId());
+                                    })
+                                    .trace(this.tracer, span.context())
+                                    .update(connection)
+                                    .map(updatedCredentials)
+                            )
 
-                                // then create new entries
-                                .compose(updatedCredentials -> {
-                                    updatedCredentials.createMissingSecretIds();
-                                    return CompositeFuture.all(updatedCredentials.getData().stream()
-                                        .map(JsonObject::mapFrom)
-                                        .filter(c -> c.containsKey("type") && c.containsKey("auth-id"))
-                                        .map(c -> this.insertCredentialEntryStatement
-                                                .expand(map -> {
-                                                    map.put("tenant_id", key.getTenantId());
-                                                    map.put("device_id", key.getDeviceId());
-                                                    map.put("type", c.getString("type"));
-                                                    map.put("auth_id", c.getString("auth-id"));
-                                                    map.put("data", c.toString());
-                                                })
-                                                .trace(this.tracer, span.context())
-                                                .update(connection))
-                                        .collect(Collectors.toList()))
-                                        .mapEmpty();
-                                })
+                            // then create new entries
+                            .compose(updatedCredentials -> {
+                                updatedCredentials.createMissingSecretIds();
+                                return CompositeFuture.all(updatedCredentials.getData().stream()
+                                    .map(JsonObject::mapFrom)
+                                    .filter(c -> c.containsKey("type") && c.containsKey("auth-id"))
+                                    .map(c -> this.insertCredentialEntryStatement
+                                            .expand(map -> {
+                                                map.put("tenant_id", key.getTenantId());
+                                                map.put("device_id", key.getDeviceId());
+                                                map.put("type", c.getString("type"));
+                                                map.put("auth_id", c.getString("auth-id"));
+                                                map.put("data", c.toString());
+                                            })
+                                            .trace(this.tracer, span.context())
+                                            .update(connection))
+                                    .collect(Collectors.toList()))
+                                    .mapEmpty();
+                            })
 
-                                // update the version, this will release the lock
-                                .compose(x -> this.updateDeviceVersionStatement
-                                        .expand(map -> {
-                                            map.put("tenant_id", key.getTenantId());
-                                            map.put("device_id", key.getDeviceId());
-                                            map.put("expected_version", version);
-                                            map.put("next_version", nextVersion);
-                                        })
-                                        .trace(this.tracer, span.context())
-                                        .update(connection)
+                            // update the version, this will release the lock
+                            .compose(x -> this.updateDeviceVersionStatement
+                                    .expand(map -> {
+                                        map.put("tenant_id", key.getTenantId());
+                                        map.put("device_id", key.getDeviceId());
+                                        map.put("expected_version", version);
+                                        map.put("next_version", nextVersion);
+                                    })
+                                    .trace(this.tracer, span.context())
+                                    .update(connection)
 
-                                        // check the update outcome
-                                        .compose(TableManagementStore::checkUpdateOutcome))
+                                    // check the update outcome
+                                    .compose(TableManagementStore::checkUpdateOutcome))
 
-                                .map(true)
+                            .map(true)
 
-                        ))
+                    ))
 
-                // when not found, then return "false"
-                .recover(err -> recoverNotFound(span, err, () -> false))
+                    // when not found, then return "false"
+                    .recover(err -> recoverNotFound(span, err, () -> false))
 
-                .map(ok -> new Versioned<>(nextVersion, ok))
-                .onComplete(x -> span.finish());
+                    .map(ok -> new Versioned<>(nextVersion, ok))
+                    .onComplete(x -> span.finish());
 
     }
 

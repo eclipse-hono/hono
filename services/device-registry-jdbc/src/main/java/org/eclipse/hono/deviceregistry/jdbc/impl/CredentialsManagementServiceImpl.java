@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -62,9 +62,7 @@ public class CredentialsManagementServiceImpl extends AbstractCredentialsManagem
             final Optional<String> resourceVersion,
             final Span span) {
 
-        return this.store
-
-                .setCredentials(key, credentials, resourceVersion, span.context())
+        return this.store.setCredentials(key, credentials, resourceVersion, span.context())
 
                 .<OperationResult<Void>>map(r -> {
                     if (Boolean.TRUE.equals(r.getValue())) {

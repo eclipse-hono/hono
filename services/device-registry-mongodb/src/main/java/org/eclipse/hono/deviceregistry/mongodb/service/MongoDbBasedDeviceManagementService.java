@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.model.CredentialsDao;
 import org.eclipse.hono.deviceregistry.mongodb.model.DeviceDao;
@@ -34,7 +33,6 @@ import org.eclipse.hono.service.management.credentials.CredentialsDto;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceDto;
 import org.eclipse.hono.service.management.device.DeviceWithId;
-import org.eclipse.hono.service.management.tenant.RegistrationLimits;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tracing.TracingHelper;
 
@@ -234,33 +232,10 @@ public final class MongoDbBasedDeviceManagementService extends AbstractDeviceMan
 
     private Future<Void> checkDeviceLimitReached(final Tenant tenant, final String tenantId, final Span span) {
 
-        final boolean isLimitedAtTenantLevel = Optional.ofNullable(tenant.getRegistrationLimits())
-                .map(RegistrationLimits::isNumberOfDevicesLimited)
-                .orElse(false);
-
-        if (!config.isNumberOfDevicesPerTenantLimited() && !isLimitedAtTenantLevel) {
-            return Future.succeededFuture();
-        }
-
-        final int maxNumberOfDevices;
-        if (isLimitedAtTenantLevel) {
-            maxNumberOfDevices = tenant.getRegistrationLimits().getMaxNumberOfDevices();
-        } else {
-            maxNumberOfDevices = config.getMaxDevicesPerTenant();
-        }
-
         return deviceDao.count(tenantId, span.context())
-                .compose(existingNoOfDevices -> {
-                    if (existingNoOfDevices >= maxNumberOfDevices) {
-                        return Future.failedFuture(
-                                new ClientErrorException(
-                                        HttpURLConnection.HTTP_FORBIDDEN,
-                                        String.format(
-                                                "configured device limit reached [tenant-id: %s, max devices: %d]",
-                                                tenantId, maxNumberOfDevices)));
-                    } else {
-                        return Future.succeededFuture();
-                    }
-                });
+                .compose(currentDeviceCount -> tenant.checkDeviceLimitReached(
+                        tenantId,
+                        currentDeviceCount,
+                        config.getMaxDevicesPerTenant()));
     }
 }
