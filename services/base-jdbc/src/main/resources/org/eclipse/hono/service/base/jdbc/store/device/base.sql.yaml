@@ -166,3 +166,8 @@ deleteAllMemberOf: |
       tenant_id=:tenant_id
    AND
       device_id=:device_id
+
+countDevicesOfTenant: |
+   SELECT COUNT(*) AS deviceCount FROM %1$s
+   WHERE
+      tenant_id=:tenant_id

@@ -10,6 +10,9 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 * The Authentication Server now also reports the `hono.connections.attempts` metric which counts the number of authentication
   attempts made by clients.
+* The JDBC DB based registry now also supports enforcement of registration limits configured at the tenant level.
+  In particular, the maximum number of devices and the maximum number of credentials per device can be set in
+  a tenant's registration-limits property. Please refer to the User Guide for details.
 
 ### Fixes & Enhancements
 

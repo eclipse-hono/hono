@@ -13,8 +13,14 @@
 
 package org.eclipse.hono.deviceregistry.jdbc.impl;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.io.IOException;
 import java.io.StringReader;
+import java.net.HttpURLConnection;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.DriverManager;
@@ -31,12 +37,16 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.deviceregistry.jdbc.config.DeviceServiceProperties;
 import org.eclipse.hono.deviceregistry.jdbc.config.TenantServiceProperties;
+import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
+import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
 import org.eclipse.hono.service.base.jdbc.config.JdbcProperties;
 import org.eclipse.hono.service.base.jdbc.store.device.DeviceStores;
 import org.eclipse.hono.service.base.jdbc.store.tenant.Stores;
 import org.eclipse.hono.service.credentials.CredentialsService;
+import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.service.tenant.TenantService;
@@ -51,6 +61,7 @@ import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopSpan;
 import io.opentracing.noop.NoopTracerFactory;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
 
@@ -77,12 +88,14 @@ abstract class AbstractJdbcRegistryTest {
     private static final Path BASE_DIR = Path.of("target/data").toAbsolutePath();
 
     protected CredentialsService credentialsAdapter;
-    protected CredentialsManagementService credentialsManagement;
+    protected CredentialsManagementServiceImpl credentialsManagement;
     protected RegistrationService registrationAdapter;
-    protected DeviceManagementService registrationManagement;
+    protected DeviceManagementServiceImpl registrationManagement;
 
     protected TenantService tenantAdapter;
     protected TenantManagementService tenantManagement;
+    protected DeviceServiceProperties properties;
+    protected TenantInformationService tenantInformationService;
 
     @BeforeEach
     void startDevices(final Vertx vertx) throws IOException, SQLException {
@@ -96,7 +109,7 @@ abstract class AbstractJdbcRegistryTest {
             RunScript.execute(connection, script);
         }
 
-        final var properties = new DeviceServiceProperties();
+        properties = new DeviceServiceProperties();
 
         this.credentialsAdapter = new CredentialsServiceImpl(
                 DeviceStores.adapterStoreFactory().createTable(vertx, TRACER, jdbc, Optional.empty(), Optional.empty(), Optional.empty()),
@@ -118,6 +131,18 @@ abstract class AbstractJdbcRegistryTest {
                 properties
         );
 
+        tenantInformationService = mock(TenantInformationService.class);
+        when(tenantInformationService.getTenant(anyString(), any())).thenReturn(Future.succeededFuture(new Tenant()));
+        when(tenantInformationService.tenantExists(anyString(), any())).thenAnswer(invocation -> {
+            return Future.succeededFuture(OperationResult.ok(
+                    HttpURLConnection.HTTP_OK,
+                    TenantKey.from(invocation.getArgument(0)),
+                    Optional.empty(),
+                    Optional.empty()));
+        });
+
+        registrationManagement.setTenantInformationService(tenantInformationService);
+        credentialsManagement.setTenantInformationService(tenantInformationService);
     }
 
     private JdbcProperties resolveJdbcProperties() {

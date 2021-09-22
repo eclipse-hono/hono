@@ -152,24 +152,14 @@ public abstract class AbstractCredentialsManagementService implements Credential
         Objects.requireNonNull(span);
 
         return this.tenantInformationService
-                .tenantExists(tenantId, span)
-                .compose(result -> {
-
-                    if (result.isError()) {
-                        return Future.failedFuture(ServiceInvocationException.create(
-                                tenantId,
-                                result.getStatus(),
-                                "tenant does not exist",
-                                null));
-                    }
-
-                    return verifyAndEncodePasswords(credentials)
-                            .compose(encodedCredentials -> processUpdateCredentials(
-                                    DeviceKey.from(result.getPayload(), deviceId),
-                                    encodedCredentials,
-                                    resourceVersion,
-                                    span));
-                })
+                .getTenant(tenantId, span)
+                .compose(tenant -> tenant.checkCredentialsLimitExceeded(tenantId, credentials))
+                .compose(ok -> verifyAndEncodePasswords(credentials))
+                .compose(encodedCredentials -> processUpdateCredentials(
+                        DeviceKey.from(tenantId, deviceId),
+                        encodedCredentials,
+                        resourceVersion,
+                        span))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 
