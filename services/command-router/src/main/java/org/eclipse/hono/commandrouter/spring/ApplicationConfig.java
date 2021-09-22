@@ -22,6 +22,10 @@ import org.eclipse.hono.client.kafka.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
+import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
+import org.eclipse.hono.client.kafka.metrics.KafkaMetricsConfig;
+import org.eclipse.hono.client.kafka.metrics.MicrometerKafkaClientMetricsSupport;
+import org.eclipse.hono.client.kafka.metrics.NoopKafkaClientMetricsSupport;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
@@ -231,6 +235,7 @@ public class ApplicationConfig {
      *
      * @param deviceConnectionInfo The client to access device connection data.
      * @param adapterInstanceStatusService The service providing info about the status of adapter instances.
+     * @param meterRegistry The meter registry.
      * @param metrics The component to use for reporting metrics.
      * @return The service implementation.
      */
@@ -239,6 +244,7 @@ public class ApplicationConfig {
     public CommandRouterService commandRouterService(
             final CacheBasedDeviceConnectionInfo deviceConnectionInfo,
             final AdapterInstanceStatusService adapterInstanceStatusService,
+            final MeterRegistry meterRegistry,
             final CommandRouterMetrics metrics) {
 
         final DeviceRegistrationClient registrationClient = registrationClient();
@@ -247,14 +253,17 @@ public class ApplicationConfig {
         final CommandTargetMapper commandTargetMapper = CommandTargetMapper.create(registrationClient, deviceConnectionInfo, getTracer());
         final MessagingClientProvider<CommandConsumerFactory> commandConsumerFactoryProvider = new MessagingClientProvider<>();
         if (kafkaProducerConfig().isConfigured() && kafkaConsumerConfig().isConfigured()) {
+            final KafkaClientMetricsSupport kafkaClientMetricsSupport = kafkaClientMetricsSupport(meterRegistry, kafkaMetricsConfig());
+            final KafkaProducerFactory<String, Buffer> kafkaProducerFactory = kafkaProducerFactory(kafkaClientMetricsSupport);
             commandConsumerFactoryProvider.setClient(new KafkaBasedCommandConsumerFactoryImpl(
                     vertx(),
                     tenantClient,
                     commandTargetMapper,
-                    kafkaProducerFactory(),
+                    kafkaProducerFactory,
                     kafkaProducerConfig(),
                     kafkaConsumerConfig(),
                     metrics,
+                    kafkaClientMetricsSupport,
                     getTracer()));
         }
         if (commandConsumerFactoryConfig().isHostConfigured()) {
@@ -444,12 +453,14 @@ public class ApplicationConfig {
     /**
      * Exposes a factory for creating producers for sending messages via the Kafka cluster.
      *
+     * @param kafkaClientMetricsSupport The Kafka client metrics support.
      * @return The factory.
      */
     @Bean
-    @Scope("prototype")
-    public KafkaProducerFactory<String, Buffer> kafkaProducerFactory() {
-        return CachingKafkaProducerFactory.sharedFactory(vertx());
+    public KafkaProducerFactory<String, Buffer> kafkaProducerFactory(final KafkaClientMetricsSupport kafkaClientMetricsSupport) {
+        final KafkaProducerFactory<String, Buffer> kafkaProducerFactory = CachingKafkaProducerFactory.sharedFactory(vertx());
+        kafkaProducerFactory.setMetricsSupport(kafkaClientMetricsSupport);
+        return kafkaProducerFactory;
     }
 
     /**
@@ -509,6 +520,31 @@ public class ApplicationConfig {
     @Bean
     CommandRouterMetrics metrics(final MeterRegistry registry, final Vertx vertx) {
         return new MicrometerBasedCommandRouterMetrics(registry, vertx);
+    }
+
+    /**
+     * Exposes the Kafka metrics support as a Spring bean.
+     *
+     * @param registry The metrics registry.
+     * @param config The Kafka metrics config.
+     * @return The Kafka metrics support.
+     */
+    @Bean
+    KafkaClientMetricsSupport kafkaClientMetricsSupport(final MeterRegistry registry, final KafkaMetricsConfig config) {
+        return config.isEnabled()
+                ? new MicrometerKafkaClientMetricsSupport(registry, config.isUseDefaultMetrics(), config.getMetricsPrefixes())
+                : NoopKafkaClientMetricsSupport.INSTANCE;
+    }
+
+    /**
+     * Gets the Kafka metrics config as a Spring bean.
+     *
+     * @return The config.
+     */
+    @Bean
+    @ConfigurationProperties(prefix = "hono.kafka.metrics")
+    public KafkaMetricsConfig kafkaMetricsConfig() {
+        return new KafkaMetricsConfig();
     }
 
     // ---- Optional beans letting the Command Router component also implement the Device Connection API (e.g. for integration tests) ----

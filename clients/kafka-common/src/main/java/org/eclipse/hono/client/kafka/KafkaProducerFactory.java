@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,6 +12,8 @@
  */
 
 package org.eclipse.hono.client.kafka;
+
+import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 
 import io.vertx.core.Future;
 import io.vertx.kafka.client.producer.KafkaProducer;
@@ -58,5 +60,12 @@ public interface KafkaProducerFactory<K, V> {
      *         existed with the given name.
      */
     Future<Void> closeProducer(String producerName);
+
+    /**
+     * Sets Kafka metrics support with which producers created by this factory will be registered.
+     *
+     * @param metricsSupport The metrics support.
+     */
+    void setMetricsSupport(KafkaClientMetricsSupport metricsSupport);
 
 }

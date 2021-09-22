@@ -13,6 +13,7 @@
 package org.eclipse.hono.adapter.quarkus;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -54,6 +55,10 @@ import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
+import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
+import org.eclipse.hono.client.kafka.metrics.KafkaMetricsOptions;
+import org.eclipse.hono.client.kafka.metrics.MicrometerKafkaClientMetricsSupport;
+import org.eclipse.hono.client.kafka.metrics.NoopKafkaClientMetricsSupport;
 import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
@@ -123,6 +128,9 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
     @Inject
     protected KafkaAdminClientConfigProperties kafkaAdminClientConfig;
+
+    @Inject
+    protected KafkaMetricsOptions kafkaMetricsOptions;
 
     private ApplicationConfigProperties appConfig;
     private ClientConfigProperties commandConsumerConfig;
@@ -259,6 +267,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         final MessagingClientProvider<TelemetrySender> telemetrySenderProvider = new MessagingClientProvider<>();
         final MessagingClientProvider<EventSender> eventSenderProvider = new MessagingClientProvider<>();
         final MessagingClientProvider<CommandResponseSender> commandResponseSenderProvider = new MessagingClientProvider<>();
+        final KafkaClientMetricsSupport kafkaClientMetricsSupport = kafkaClientMetricsSupport(kafkaMetricsOptions);
 
         if (kafkaProducerConfig.isConfigured()) {
             LOG.info("Kafka Producer is configured, adding Kafka messaging clients");
@@ -267,6 +276,8 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             LOG.debug("KafkaProducerConfig: " + kafkaProducerConfig.getProducerConfig("log"));
 
             final KafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory.sharedFactory(vertx);
+            factory.setMetricsSupport(kafkaClientMetricsSupport);
+
             telemetrySenderProvider.setClient(new KafkaBasedTelemetrySender(factory, kafkaProducerConfig,
                     protocolAdapterProperties.isDefaultsEnabled(), tracer));
             eventSenderProvider.setClient(new KafkaBasedEventSender(factory, kafkaProducerConfig,
@@ -299,7 +310,8 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                     && kafkaCommandResponseSender != null) {
                 commandConsumerFactory.registerInternalCommandConsumer(
                         (id, handlers) -> new KafkaBasedInternalCommandConsumer(vertx, kafkaAdminClientConfig,
-                                kafkaConsumerConfig, kafkaCommandResponseSender, id, handlers, tracer));
+                                kafkaConsumerConfig, kafkaCommandResponseSender, id, handlers, tracer)
+                                        .setMetricsSupport(kafkaClientMetricsSupport));
             }
 
             adapter.setCommandConsumerFactory(commandConsumerFactory);
@@ -522,5 +534,18 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         } else {
             return new NoopResourceLimitChecks();
         }
+    }
+
+    /**
+     * Creates the Kafka metrics support.
+     *
+     * @param options The Kafka metrics options.
+     * @return The Kafka metrics support.
+     */
+    public KafkaClientMetricsSupport kafkaClientMetricsSupport(final KafkaMetricsOptions options) {
+        return options.enabled()
+                ? new MicrometerKafkaClientMetricsSupport(meterRegistry, options.useDefaultMetrics(),
+                        options.metricsPrefixes().orElse(List.of()))
+                : NoopKafkaClientMetricsSupport.INSTANCE;
     }
 }

@@ -25,6 +25,7 @@ import org.apache.kafka.common.errors.OutOfOrderSequenceException;
 import org.apache.kafka.common.errors.ProducerFencedException;
 import org.apache.kafka.common.errors.UnsupportedForMessageFormatException;
 import org.apache.kafka.common.errors.UnsupportedVersionException;
+import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,6 +56,8 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
 
     private final Map<String, KafkaProducer<K, V>> activeProducers = new HashMap<>();
     private final BiFunction<String, Map<String, String>, KafkaProducer<K, V>> producerInstanceSupplier;
+
+    private KafkaClientMetricsSupport metricsSupport;
 
     /**
      * Creates a new producer factory.
@@ -126,6 +129,16 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
     }
 
     /**
+     * Sets Kafka metrics support with which producers created by this factory will be registered.
+     *
+     * @param metricsSupport The metrics support.
+     */
+    @Override
+    public final void setMetricsSupport(final KafkaClientMetricsSupport metricsSupport) {
+        this.metricsSupport = metricsSupport;
+    }
+
+    /**
      * Gets a producer for sending data to Kafka.
      * <p>
      * This method first tries to look up an already existing producer using the given name. If no producer exists yet,
@@ -144,6 +157,7 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
             final Map<String, String> producerConfig = config.getProducerConfig(producerName);
             final String clientId = producerConfig.get(ProducerConfig.CLIENT_ID_CONFIG);
             final KafkaProducer<K, V> producer = producerInstanceSupplier.apply(producerName, producerConfig);
+            Optional.ofNullable(metricsSupport).ifPresent(ms -> ms.registerKafkaProducer(producer.unwrap()));
             return producer.exceptionHandler(getExceptionHandler(producerName, producer, clientId));
         });
 
@@ -156,7 +170,9 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
             if (isFatalError(t)) {
                 LOG.error("fatal producer error occurred, closing producer [clientId: {}]", clientId, t);
                 activeProducers.remove(producerName);
-                producer.close();
+                producer.close()
+                        .onComplete(ar -> Optional.ofNullable(metricsSupport)
+                                .ifPresent(ms -> ms.unregisterKafkaProducer(producer.unwrap())));
             } else {
                 LOG.error("producer error occurred [clientId: {}]", clientId, t);
             }
@@ -186,7 +202,9 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
         } else {
             final Promise<Void> promise = Promise.promise();
             producer.close(promise);
-            return promise.future();
+            return promise.future()
+                    .onComplete(ar -> Optional.ofNullable(metricsSupport)
+                            .ifPresent(ms -> ms.unregisterKafkaProducer(producer.unwrap())));
         }
     }
 

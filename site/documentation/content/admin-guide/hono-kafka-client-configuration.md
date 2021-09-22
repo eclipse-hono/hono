@@ -141,6 +141,19 @@ The properties must be prefixed with `HONO_KAFKA_COMMONCLIENTCONFIG_` and `hono.
 A property with the same name defined in the configuration of one of the specific client types above will have precedence
 over the common property.
 
+## Kafka client metrics configuration
+
+Protocol adapters and the Command Router component by default report a set of metrics concerning the Kafka clients used for sending and receiving messages.
+
+The metrics support can be configured using the following environment variables or corresponding command line options:
+
+| Environment Variable<br>Command Line Option | Mandatory | Default | Description                                                             |
+| :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
+| `HONO_KAFKA_METRICS_ENABLED`<br>`--hono.kafka.metrics.enabled` | no | `true` | If set to `false`, no Kafka client metrics will be reported.  |
+| `HONO_KAFKA_METRICS_USEDEFAULTMETRICS`<br>`--hono.kafka.metrics.useDefaultMetrics` | no | `true` | If set to `true`, a set of Kafka consumer and producer related default metrics will be reported. Additional metrics can be added via the `HONO_KAFKA_METRICS_METRICSPREFIXES` property described below. |
+| `HONO_KAFKA_METRICS_METRICSPREFIXES`<br>`--hono.kafka.metrics.metricsPrefixes`| no | - | A comma separated list of prefixes of the metrics to be reported for the Kafka clients (in addition to the default metrics if these are used). The complete list of metrics can be viewed in the [Kafka documentation](https://kafka.apache.org/documentation.html#selector_monitoring). The metric names to be used here have the form `kafka.[metric group].[metric name]`. The metric group can be obtained from the *type* value in the *MBean name*, omitting the `-metrics` suffix. E.g. for an MBean name containing `kafka.consumer:type=consumer-fetch-manager-metrics`, the group is `consumer.fetch.manager` (all dashes are to be replaced by dots in metric group and name). An example of a corresponding metric name would be `kafka.consumer.fetch.manager.bytes.consumed.total` <br>To include all metrics, the property value can be set to the `kafka` prefix. |
+
+
 ## Required Kafka Version
 
 Hono's protocol adapters (and other components) use the Kafka clients in version 2.6. It is recommended to provide a 

@@ -61,6 +61,15 @@
       <groupId>io.vertx</groupId>
       <artifactId>vertx-kafka-client</artifactId>
     </dependency>
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.smallrye.config</groupId>
+      <artifactId>smallrye-config</artifactId>
+      <optional>true</optional>
+    </dependency>
 
     <!-- Testing -->
     <dependency>
