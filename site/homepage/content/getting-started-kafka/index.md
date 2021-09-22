@@ -227,14 +227,15 @@ The telemetry data produced by devices is usually consumed by downstream applica
 In this guide we will use the Hono command line client to simulate such an application.
 The client will connect to the Kafka cluster that provides Hono's north bound Kafka based [Telemetry]({{% doclink "/api/telemetry-kafka/" %}}) and [Event API]({{% doclink "/api/event-kafka/" %}})s, subscribe to all telemetry and event messages and log the messages to the console.
 
-Open a new terminal window, set the `KAFKA_IP` environment variable and start the client from the command line. If you
-are using the Sandbox server (make sure to replace `my-tenant` with your tenant identifier):
+Open a new terminal window, set the `KAFKA_IP` environment variable and start the client from the command line. 
+
+If you are using the Sandbox server (make sure to replace `my-tenant` with your tenant identifier):
 
 ~~~sh
 # in directory where the hono-cli-*-exec.jar file has been downloaded to
 export MY_TENANT=my-tenant
 export KAFKA_IP=hono.eclipseprojects.io
-java -jar hono-cli-*-exec.jar --hono.kafka.commonClientConfig.bootstrap.servers=$KAFKA_IP:9092 --hono.kafka.commonClientConfig.security.protocol=SASL_PLAINTEXT --hono.kafka.commonClientConfig.sasl.jaas.config="org.apache.kafka.common.security.scram.ScramLoginModule required username=\"hono\" password=\"hono-secret\";" --hono.kafka.commonClientConfig.sasl.mechanism=SCRAM-SHA-512 --spring.profiles.active=receiver,kafka --tenant.id=$MY_TENANT
+java -jar hono-cli-*-exec.jar --spring.profiles.active=receiver,kafka,sandbox --tenant.id=$MY_TENANT
 ~~~
 
 Otherwise, if you are using a local Minikube cluster, first save the truststore file of the Kafka broker to your file
@@ -251,8 +252,12 @@ and then start the client (make sure to replace `my-tenant`):
 # in directory where the hono-cli-*-exec.jar file has been downloaded to
 export MY_TENANT=my-tenant
 export KAFKA_IP=$(kubectl get service eclipse-hono-kafka-0-external --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)
-java -jar hono-cli-*-exec.jar --hono.kafka.commonClientConfig.bootstrap.servers=$KAFKA_IP:9092 --hono.kafka.commonClientConfig.security.protocol=SASL_SSL --hono.kafka.commonClientConfig.sasl.jaas.config="org.apache.kafka.common.security.scram.ScramLoginModule required username=\"hono\" password=\"hono-secret\";" --hono.kafka.commonClientConfig.sasl.mechanism=SCRAM-SHA-512 --spring.profiles.active=receiver,kafka --tenant.id=$MY_TENANT --hono.kafka.commonClientConfig.ssl.truststore.location=$KAFKA_TRUSTSTORE_PATH --hono.kafka.commonClientConfig.ssl.truststore.password=honotrust --hono.kafka.commonClientConfig.ssl.endpoint.identification.algorithm="" 
+java -jar hono-cli-*-exec.jar --hono.kafka.commonClientConfig.bootstrap.servers=$KAFKA_IP:9092 --hono.kafka.commonClientConfig.ssl.truststore.location=$KAFKA_TRUSTSTORE_PATH --spring.profiles.active=receiver,kafka,local --tenant.id=$MY_TENANT 
 ~~~
+
+
+Note that the profiles `sandbox` respectively `local` enable default configurations for TLS and the authentication of an existing example Kafka user.
+
 
 ## Publishing Telemetry Data to the HTTP Adapter
 
@@ -355,7 +360,7 @@ If you are using the Sandbox server (don't forget to set the environment variabl
 
 ~~~sh
 # in directory where the hono-cli-*-exec.jar file has been downloaded to
-java -jar hono-cli-*-exec.jar --hono.kafka.commonClientConfig.bootstrap.servers=$KAFKA_IP:9092 --hono.kafka.commonClientConfig.security.protocol=SASL_PLAINTEXT --hono.kafka.commonClientConfig.sasl.jaas.config="org.apache.kafka.common.security.scram.ScramLoginModule required username=\"hono\" password=\"hono-secret\";" --hono.kafka.commonClientConfig.sasl.mechanism=SCRAM-SHA-512 --spring.profiles.active=command,kafka --tenant.id=$MY_TENANT --device.id=$MY_DEVICE
+java -jar hono-cli-*-exec.jar --spring.profiles.active=command,kafka,sandbox --tenant.id=$MY_TENANT --device.id=$MY_DEVICE
 ~~~
 
 Otherwise, if you are using a local Minikube cluster (don't forget to set the environment variables `KAFKA_IP`,
@@ -363,7 +368,7 @@ Otherwise, if you are using a local Minikube cluster (don't forget to set the en
 
 ~~~sh
 # in directory where the hono-cli-*-exec.jar file has been downloaded to
-java -jar hono-cli-*-exec.jar --hono.kafka.commonClientConfig.bootstrap.servers=$KAFKA_IP:9092 --hono.kafka.commonClientConfig.security.protocol=SASL_SSL --hono.kafka.commonClientConfig.sasl.jaas.config="org.apache.kafka.common.security.scram.ScramLoginModule required username=\"hono\" password=\"hono-secret\";" --hono.kafka.commonClientConfig.sasl.mechanism=SCRAM-SHA-512 --spring.profiles.active=command,kafka --tenant.id=$MY_TENANT --device.id=$MY_DEVICE --hono.kafka.commonClientConfig.ssl.truststore.location=$KAFKA_TRUSTSTORE_PATH --hono.kafka.commonClientConfig.ssl.truststore.password=honotrust --hono.kafka.commonClientConfig.ssl.endpoint.identification.algorithm="" 
+java -jar hono-cli-*-exec.jar --hono.kafka.commonClientConfig.bootstrap.servers=$KAFKA_IP:9092 --hono.kafka.commonClientConfig.ssl.truststore.location=$KAFKA_TRUSTSTORE_PATH --spring.profiles.active=command,kafka,local --tenant.id=$MY_TENANT --device.id=$MY_DEVICE
 ~~~
 
 Note that this time the profile `command` is activated instead of `receiver`, which enables a different mode of the Command Line Client.
