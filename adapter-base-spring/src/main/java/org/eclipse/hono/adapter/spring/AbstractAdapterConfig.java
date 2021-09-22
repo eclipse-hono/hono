@@ -46,6 +46,10 @@ import org.eclipse.hono.client.command.amqp.ProtonBasedInternalCommandConsumer;
 import org.eclipse.hono.client.command.kafka.KafkaBasedInternalCommandConsumer;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
+import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
+import org.eclipse.hono.client.kafka.metrics.KafkaMetricsConfig;
+import org.eclipse.hono.client.kafka.metrics.MicrometerKafkaClientMetricsSupport;
+import org.eclipse.hono.client.kafka.metrics.NoopKafkaClientMetricsSupport;
 import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
@@ -86,6 +90,7 @@ import org.springframework.context.annotation.Scope;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.opentracing.Tracer;
 import io.opentracing.contrib.tracerresolver.TracerResolver;
 import io.opentracing.noop.NoopTracerFactory;
@@ -103,6 +108,9 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
 
     @Autowired
     private ApplicationContext context;
+
+    @Autowired
+    private MeterRegistry meterRegistry;
 
     /**
      * Sets collaborators required by all protocol adapters.
@@ -123,8 +131,9 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
 
         final KafkaAdminClientConfigProperties kafkaAdminClientConfig = kafkaAdminClientConfig();
         final KafkaConsumerConfigProperties kafkaConsumerConfig = kafkaConsumerConfig();
+        final KafkaClientMetricsSupport kafkaClientMetricsSupport = kafkaClientMetricsSupport(kafkaMetricsConfig());
         final MessagingClientProviders messagingClientProviders = messagingClientProviders(samplerFactory, getTracer(),
-                vertx(), adapterProperties);
+                vertx(), adapterProperties, kafkaClientMetricsSupport);
 
         final TenantClient tenantClient = tenantClient(samplerFactory);
         final DeviceRegistrationClient registrationClient = registrationClient(samplerFactory);
@@ -154,7 +163,8 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
                     && kafkaCommandResponseSender != null) {
                 commandConsumerFactory.registerInternalCommandConsumer(
                         (id, handlers) -> new KafkaBasedInternalCommandConsumer(vertx(), kafkaAdminClientConfig,
-                                kafkaConsumerConfig, kafkaCommandResponseSender, id, handlers, getTracer()));
+                                kafkaConsumerConfig, kafkaCommandResponseSender, id, handlers, getTracer())
+                                        .setMetricsSupport(kafkaClientMetricsSupport));
             }
             adapter.setCommandConsumerFactory(commandConsumerFactory);
         }
@@ -705,5 +715,29 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
                 builder.buildAsync(new DataVolumeAsyncCacheLoader(webClient, config, getTracer())),
                 tenantClient,
                 getTracer());
+    }
+
+    /**
+     * Exposes the Kafka metrics support as a Spring bean.
+     *
+     * @param config The Kafka metrics config.
+     * @return The Kafka metrics support.
+     */
+    @Bean
+    public KafkaClientMetricsSupport kafkaClientMetricsSupport(final KafkaMetricsConfig config) {
+        return config.isEnabled()
+                ? new MicrometerKafkaClientMetricsSupport(meterRegistry, config.isUseDefaultMetrics(), config.getMetricsPrefixes())
+                : NoopKafkaClientMetricsSupport.INSTANCE;
+    }
+
+    /**
+     * Gets the Kafka metrics config as a Spring bean.
+     *
+     * @return The config.
+     */
+    @Bean
+    @ConfigurationProperties(prefix = "hono.kafka.metrics")
+    public KafkaMetricsConfig kafkaMetricsConfig() {
+        return new KafkaMetricsConfig();
     }
 }

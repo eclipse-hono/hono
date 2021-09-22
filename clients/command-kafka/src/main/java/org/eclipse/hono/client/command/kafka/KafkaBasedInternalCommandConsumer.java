@@ -34,6 +34,7 @@ import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
+import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Lifecycle;
@@ -79,6 +80,7 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
 
     private KafkaConsumer<String, Buffer> consumer;
     private Context context;
+    private KafkaClientMetricsSupport metricsSupport;
 
     /**
      * Creates a consumer.
@@ -156,7 +158,18 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
         this.adapterInstanceId = Objects.requireNonNull(adapterInstanceId);
         this.commandHandlers = Objects.requireNonNull(commandHandlers);
         this.tracer = Objects.requireNonNull(tracer);
-        consumerCreator = () -> consumer;
+        consumerCreator = () -> kafkaConsumer;
+    }
+
+    /**
+     * Sets Kafka metrics support with which this consumer will be registered.
+     *
+     * @param metricsSupport The metrics support to set.
+     * @return This object for command chaining.
+     */
+    public final KafkaBasedInternalCommandConsumer setMetricsSupport(final KafkaClientMetricsSupport metricsSupport) {
+        this.metricsSupport = metricsSupport;
+        return this;
     }
 
     @Override
@@ -169,6 +182,7 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
         }
         // create KafkaConsumer here so that it is created in the Vert.x context of the start() method (KafkaConsumer uses vertx.getOrCreateContext())
         consumer = consumerCreator.get();
+        Optional.ofNullable(metricsSupport).ifPresent(ms -> ms.registerKafkaConsumer(consumer.unwrap()));
         // trigger creation of adapter specific topic and consumer
         return createTopic().compose(v -> subscribeToTopic());
     }
@@ -247,7 +261,10 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
         final Promise<Void> consumerClosePromise = Promise.promise();
         LOG.debug("stop: close consumer");
         consumer.close(consumerClosePromise);
-        consumerClosePromise.future().onComplete(ar -> LOG.debug("consumer closed"));
+        consumerClosePromise.future().onComplete(ar -> {
+            LOG.debug("consumer closed");
+            Optional.ofNullable(metricsSupport).ifPresent(ms -> ms.unregisterKafkaConsumer(consumer.unwrap()));
+        });
         return CompositeFuture.all(adminClientClosePromise.future(), consumerClosePromise.future())
                 .mapEmpty();
     }

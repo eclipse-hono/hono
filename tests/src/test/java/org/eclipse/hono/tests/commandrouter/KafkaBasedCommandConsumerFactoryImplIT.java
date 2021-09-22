@@ -38,6 +38,7 @@ import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.consumer.HonoKafkaConsumer;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
+import org.eclipse.hono.client.kafka.metrics.NoopKafkaClientMetricsSupport;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.commandrouter.CommandRouterMetrics;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
@@ -424,7 +425,7 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
         final CommandRouterMetrics metrics = mock(CommandRouterMetrics.class);
         final var kafkaBasedCommandConsumerFactoryImpl = new KafkaBasedCommandConsumerFactoryImpl(vertx, tenantClient,
                 commandTargetMapper, producerFactory, IntegrationTestSupport.getKafkaProducerConfig(),
-                kafkaConsumerConfig, metrics, tracer);
+                kafkaConsumerConfig, metrics, NoopKafkaClientMetricsSupport.INSTANCE, tracer);
         kafkaBasedCommandConsumerFactoryImpl.setGroupId(commandRouterGroupId);
         componentsToStopAfterTest.add(kafkaBasedCommandConsumerFactoryImpl);
         return kafkaBasedCommandConsumerFactoryImpl;

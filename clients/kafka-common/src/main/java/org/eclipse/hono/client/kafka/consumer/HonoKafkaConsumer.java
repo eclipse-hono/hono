@@ -36,6 +36,7 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
+import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.eclipse.hono.util.Lifecycle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -101,6 +102,7 @@ public class HonoKafkaConsumer implements Lifecycle {
     private Handler<Set<TopicPartition>> onPartitionsRevokedHandler;
     private boolean respectTtl = true;
     private Supplier<Consumer<String, Buffer>> kafkaConsumerSupplier;
+    private KafkaClientMetricsSupport metricsSupport;
 
     /**
      * Creates a consumer to receive records on the given topics.
@@ -218,6 +220,15 @@ public class HonoKafkaConsumer implements Lifecycle {
     }
 
     /**
+     * Sets Kafka metrics support with which this consumer will be registered.
+     *
+     * @param metricsSupport The metrics support to set.
+     */
+    public final void setMetricsSupport(final KafkaClientMetricsSupport metricsSupport) {
+        this.metricsSupport = metricsSupport;
+    }
+
+    /**
      * Defines whether records that contain a <em>ttl</em> header where the time-to-live has elapsed should be ignored.
      * <p>
      * The default is true.
@@ -309,6 +320,7 @@ public class HonoKafkaConsumer implements Lifecycle {
             kafkaConsumer = Optional.ofNullable(kafkaConsumerSupplier)
                     .map(supplier -> KafkaConsumer.create(vertx, supplier.get()))
                     .orElseGet(() -> KafkaConsumer.create(vertx, consumerConfig, String.class, Buffer.class));
+            Optional.ofNullable(metricsSupport).ifPresent(ms -> ms.registerKafkaConsumer(kafkaConsumer.unwrap()));
             kafkaConsumer.handler(record -> {
                 if (!startPromise.future().isComplete()) {
                     log.debug("postponing record handling until start() is completed [topic: {}, partition: {}, offset: {}]",
@@ -556,7 +568,9 @@ public class HonoKafkaConsumer implements Lifecycle {
         }
         final Promise<Void> consumerClosePromise = Promise.promise();
         kafkaConsumer.close(consumerClosePromise);
-        return consumerClosePromise.future();
+        return consumerClosePromise.future().onComplete(ar -> {
+            Optional.ofNullable(metricsSupport).ifPresent(ms -> ms.unregisterKafkaConsumer(kafkaConsumer.unwrap()));
+        });
     }
 
     /**

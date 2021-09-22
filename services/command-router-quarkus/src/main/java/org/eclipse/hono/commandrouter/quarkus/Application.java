@@ -12,6 +12,7 @@
  */
 package org.eclipse.hono.commandrouter.quarkus;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -22,7 +23,12 @@ import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.kafka.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
+import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
+import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
+import org.eclipse.hono.client.kafka.metrics.KafkaMetricsOptions;
+import org.eclipse.hono.client.kafka.metrics.MicrometerKafkaClientMetricsSupport;
+import org.eclipse.hono.client.kafka.metrics.NoopKafkaClientMetricsSupport;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
@@ -68,6 +74,7 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Promise;
 import io.vertx.core.Verticle;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
 
@@ -121,6 +128,7 @@ public class Application extends AbstractServiceApplication {
     private ClientConfigProperties commandConsumerFactoryConfig;
     private RequestResponseClientConfigProperties deviceRegistrationClientConfig;
     private RequestResponseClientConfigProperties tenantClientConfig;
+    private KafkaClientMetricsSupport kafkaClientMetricsSupport;
 
     private Cache<Object, RegistrationResult> registrationResponseCache;
     private Cache<Object, TenantResult<TenantObject>> tenantResponseCache;
@@ -166,6 +174,14 @@ public class Application extends AbstractServiceApplication {
         props.setServerRoleIfUnknown("Device Registration");
         props.setNameIfNotSet(getComponentName());
         this.deviceRegistrationClientConfig = props;
+    }
+
+    @Inject
+    void setKafkaClientMetricsSupport(final KafkaMetricsOptions options) {
+        this.kafkaClientMetricsSupport = options.enabled()
+                ? new MicrometerKafkaClientMetricsSupport(meterRegistry, options.useDefaultMetrics(),
+                        options.metricsPrefixes().orElse(List.of()))
+                : NoopKafkaClientMetricsSupport.INSTANCE;
     }
 
     @Override
@@ -258,14 +274,17 @@ public class Application extends AbstractServiceApplication {
 
         final MessagingClientProvider<CommandConsumerFactory> commandConsumerFactoryProvider = new MessagingClientProvider<>();
         if (kafkaProducerConfig.isConfigured() && kafkaConsumerConfig.isConfigured()) {
+            final KafkaProducerFactory<String, Buffer> kafkaProducerFactory = CachingKafkaProducerFactory.sharedFactory(vertx);
+            kafkaProducerFactory.setMetricsSupport(kafkaClientMetricsSupport);
             commandConsumerFactoryProvider.setClient(new KafkaBasedCommandConsumerFactoryImpl(
                     vertx,
                     tenantClient,
                     commandTargetMapper,
-                    CachingKafkaProducerFactory.sharedFactory(vertx),
+                    kafkaProducerFactory,
                     kafkaProducerConfig,
                     kafkaConsumerConfig,
                     metrics,
+                    kafkaClientMetricsSupport,
                     tracer));
         }
         if (commandConsumerFactoryConfig.isHostConfigured()) {

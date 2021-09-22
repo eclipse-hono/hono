@@ -25,6 +25,7 @@ import org.eclipse.hono.client.kafka.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
+import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.TelemetrySender;
 import org.eclipse.hono.client.telemetry.amqp.ProtonBasedDownstreamSender;
@@ -48,7 +49,6 @@ import io.opentracing.Tracer;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 
-
 /**
  * A base class that provides helper methods for configuring messaging clients.
  */
@@ -64,13 +64,15 @@ public abstract class AbstractMessagingClientConfig implements ComponentNameProv
      * @param tracer The tracer instance.
      * @param vertx The Vert.x instance to use.
      * @param adapterProperties The adapter's configuration properties.
+     * @param kafkaClientMetricsSupport The Kafka metrics support.
      * @return The created messaging clients.
      */
     protected MessagingClientProviders messagingClientProviders(
             final SendMessageSampler.Factory samplerFactory,
             final Tracer tracer,
             final Vertx vertx,
-            final ProtocolAdapterProperties adapterProperties) {
+            final ProtocolAdapterProperties adapterProperties,
+            final KafkaClientMetricsSupport kafkaClientMetricsSupport) {
 
         final MessagingClientProvider<TelemetrySender> telemetrySenderProvider = new MessagingClientProvider<>();
         final MessagingClientProvider<EventSender> eventSenderProvider = new MessagingClientProvider<>();
@@ -80,6 +82,7 @@ public abstract class AbstractMessagingClientConfig implements ComponentNameProv
             log.info("Kafka Producer is configured, adding Kafka messaging clients");
             final KafkaProducerConfigProperties producerConfig = kafkaProducerConfig();
             final KafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory.sharedFactory(vertx);
+            factory.setMetricsSupport(kafkaClientMetricsSupport);
 
             telemetrySenderProvider.setClient(new KafkaBasedTelemetrySender(factory, producerConfig,
                     adapterProperties.isDefaultsEnabled(), tracer));

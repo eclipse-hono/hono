@@ -24,6 +24,7 @@ import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.consumer.AsyncHandlingAutoCommitKafkaConsumer;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
+import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterMetrics;
@@ -69,6 +70,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
     private final CommandRouterMetrics metrics;
     private final KafkaBasedInternalCommandSender internalCommandSender;
     private final KafkaBasedCommandResponseSender kafkaBasedCommandResponseSender;
+    private final KafkaClientMetricsSupport kafkaClientMetricsSupport;
 
     private String groupId = DEFAULT_GROUP_ID;
     private KafkaBasedMappingAndDelegatingCommandHandler commandHandler;
@@ -86,6 +88,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
      * @param kafkaProducerConfig The Kafka producer configuration.
      * @param kafkaConsumerConfig The Kafka consumer configuration.
      * @param metrics The component to use for reporting metrics.
+     * @param kafkaClientMetricsSupport The Kafka metrics support.
      * @param tracer The tracer instance.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
@@ -97,6 +100,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
             final KafkaProducerConfigProperties kafkaProducerConfig,
             final KafkaConsumerConfigProperties kafkaConsumerConfig,
             final CommandRouterMetrics metrics,
+            final KafkaClientMetricsSupport kafkaClientMetricsSupport,
             final Tracer tracer) {
 
         this.vertx = Objects.requireNonNull(vertx);
@@ -106,6 +110,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
         Objects.requireNonNull(kafkaProducerConfig);
         this.kafkaConsumerConfig = Objects.requireNonNull(kafkaConsumerConfig);
         this.metrics = Objects.requireNonNull(metrics);
+        this.kafkaClientMetricsSupport = Objects.requireNonNull(kafkaClientMetricsSupport);
         this.tracer = Objects.requireNonNull(tracer);
 
         internalCommandSender = new KafkaBasedInternalCommandSender(kafkaProducerFactory, kafkaProducerConfig, tracer);
@@ -151,6 +156,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
         kafkaConsumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, COMMANDS_TOPIC_PATTERN,
                 commandHandler::mapAndDelegateIncomingCommandMessage, consumerConfig);
+        kafkaConsumer.setMetricsSupport(kafkaClientMetricsSupport);
         kafkaConsumer.setOnRebalanceDoneHandler(
                 partitions -> commandQueue.setCurrentlyHandledPartitions(Helper.to(partitions)));
 
