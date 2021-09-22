@@ -5,6 +5,7 @@
 **/bin/
 **/.vertx/
 **/.factorypath
+**/.env
 
 # Eclipse files
 **/.classpath
