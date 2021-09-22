@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,11 +14,16 @@
 
 package org.eclipse.hono.config;
 
+import static org.mockito.Mockito.*;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Optional;
 
+import org.eclipse.hono.config.quarkus.AuthenticatingClientOptions;
+import org.eclipse.hono.config.quarkus.GenericOptions;
+import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.Test;
 
 
@@ -77,5 +82,23 @@ public class AuthenticatingClientConfigPropertiesTest {
         // AbstractConfig props
         assertThat(newProps.getTrustStorePath()).isEqualTo("path/to/truststore");
         assertThat(newProps.getKeyFormat()).isEqualTo(FileFormat.PEM);
+    }
+
+    /**
+     * Verifies that the constructor accepting options does not set the host name
+     * to the default value.
+     */
+    @Test
+    public void testCreateFromOptions() {
+        final GenericOptions genericOptions = mock(GenericOptions.class);
+        final AuthenticatingClientOptions options = mock(AuthenticatingClientOptions.class);
+        when(options.genericOptions()).thenReturn(genericOptions);
+        when(options.host()).thenReturn(Optional.empty());
+        when(options.username()).thenReturn(Optional.empty());
+        when(options.password()).thenReturn(Optional.empty());
+        when(options.serverRole()).thenReturn(Constants.SERVER_ROLE_UNKNOWN);
+
+        final AuthenticatingClientConfigProperties props = new AuthenticatingClientConfigProperties(options);
+        assertThat(props.isHostConfigured()).isFalse();
     }
 }

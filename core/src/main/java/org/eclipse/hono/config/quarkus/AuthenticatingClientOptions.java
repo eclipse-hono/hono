@@ -36,13 +36,10 @@ public interface AuthenticatingClientOptions {
 
     /**
      * Gets the name or literal IP address of the host that the client is configured to connect to.
-     * <p>
-     * The default value of this property is <em>localhost</em>.
      *
      * @return The host name.
      */
-    @WithDefault("localhost")
-    String host();
+    Optional<String> host();
 
     /**
      * Gets the TCP port of the server that this client is configured to connect to.

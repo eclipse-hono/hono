@@ -72,7 +72,7 @@ public class AuthenticatingClientConfigProperties extends AbstractConfig {
         super(options.genericOptions());
         // use setters in order to enforce checks
         setCredentialsPath(options.credentialsPath().orElse(null));
-        setHost(options.host());
+        options.host().ifPresent(this::setHost);
         setHostnameVerificationRequired(options.hostnameVerificationRequired());
         setPassword(options.password().orElse(null));
         setPort(options.port());

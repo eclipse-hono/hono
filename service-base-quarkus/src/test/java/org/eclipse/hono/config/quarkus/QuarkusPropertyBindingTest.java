@@ -88,6 +88,7 @@ public class QuarkusPropertyBindingTest {
         assertThat(props.getCredentialsPath()).isEqualTo("/etc/creds");
         assertThat(props.getFlowLatency()).isEqualTo(321);
         assertThat(props.getHeartbeatInterval()).isEqualTo(22222);
+        assertThat(props.isHostConfigured()).isTrue();
         assertThat(props.getHost()).isEqualTo("hono.eclipseprojects.io");
         assertThat(props.getIdleTimeout()).isEqualTo(44444);
         assertThat(props.getInitialCredits()).isEqualTo(55);
