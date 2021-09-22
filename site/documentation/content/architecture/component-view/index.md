@@ -39,11 +39,7 @@ The *Device Registry* component implements the [Credentials API]({{< relref "/ap
 and [Device Registration API]({{< relref "/api/device-registration" >}}).
 Clients opening a connection to the *DeviceRegistryServer* are authenticated by means of an external service accessed via the *Auth* port.
 
-Hono provides the following Device Registry implementations:
-
-- [MongoDB Based Device Registry]({{< relref "/user-guide/mongodb-based-device-registry" >}})
-- [JDBC Based Device Registry]({{< relref "/user-guide/jdbc-based-device-registry" >}})
-- [File Based Device Registry]({{< relref "/user-guide/file-based-device-registry" >}})
+Please refer to the [Device Registry]({{< relref "device-registry" >}}) user guide for details.
 
 ## Command Router
 
