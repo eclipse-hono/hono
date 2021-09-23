@@ -18,6 +18,7 @@ import java.net.HttpURLConnection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
@@ -28,6 +29,7 @@ import org.eclipse.hono.util.Adapter;
 import org.junit.jupiter.api.Test;
 
 import io.opentracing.noop.NoopSpan;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.junit5.VertxTestContext;
 
@@ -63,18 +65,18 @@ public interface AbstractTenantManagementSearchTenantsTest {
         final Filter filter = new Filter("/enabled", false);
 
         createTenants(Map.of(tenantId, new Tenant().setEnabled(true)))
-                .compose(ok -> getTenantManagementService().searchTenants(
-                        pageSize,
-                        pageOffset,
-                        List.of(filter),
-                        List.of(),
-                        NoopSpan.INSTANCE))
-                .onComplete(ctx.failing(t -> {
-                    ctx.verify(() -> {
-                        assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
-                    });
-                    ctx.completeNow();
-                }));
+            .compose(ok -> getTenantManagementService().searchTenants(
+                    pageSize,
+                    pageOffset,
+                    List.of(filter),
+                    List.of(),
+                    NoopSpan.INSTANCE))
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -93,18 +95,18 @@ public interface AbstractTenantManagementSearchTenantsTest {
         createTenants(Map.of(
                 tenantId1, new Tenant().setEnabled(true),
                 tenantId2, new Tenant().setEnabled(false)))
-                        .compose(ok -> getTenantManagementService()
-                                .searchTenants(pageSize, pageOffset, List.of(filter), List.of(), NoopSpan.INSTANCE))
-                        .onComplete(ctx.succeeding(s -> {
-                            ctx.verify(() -> {
-                                assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+            .compose(ok -> getTenantManagementService()
+                    .searchTenants(pageSize, pageOffset, List.of(filter), List.of(), NoopSpan.INSTANCE))
+            .onComplete(ctx.succeeding(s -> {
+                ctx.verify(() -> {
+                    assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
 
-                                final SearchResult<TenantWithId> searchResult = s.getPayload();
-                                assertThat(searchResult.getTotal()).isEqualTo(1);
-                                assertThat(searchResult.getResult().get(0).getId()).isEqualTo(tenantId1);
-                            });
-                            ctx.completeNow();
-                        }));
+                    final SearchResult<TenantWithId> searchResult = s.getPayload();
+                    assertThat(searchResult.getTotal()).isEqualTo(1);
+                    assertThat(searchResult.getResult().get(0).getId()).isEqualTo(tenantId1);
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -126,21 +128,20 @@ public interface AbstractTenantManagementSearchTenantsTest {
                 tenantId1, new Tenant().setEnabled(true).setExtensions(Map.of("group", "A")),
                 tenantId2, new Tenant().setEnabled(true).addAdapterConfig(new Adapter("MQTT"))
                         .setExtensions(Map.of("group", "A"))))
-                                .compose(ok -> getTenantManagementService()
-                                        .searchTenants(pageSize, pageOffset, List.of(filter1, filter2, filter3),
-                                                List.of(), NoopSpan.INSTANCE)
-                                        .onComplete(ctx.succeeding(s -> {
-                                            ctx.verify(() -> {
-                                                assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+            .compose(ok -> getTenantManagementService()
+                    .searchTenants(pageSize, pageOffset, List.of(filter1, filter2, filter3),
+                            List.of(), NoopSpan.INSTANCE))
+            .onComplete(ctx.succeeding(s -> {
+                ctx.verify(() -> {
+                    assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
 
-                                                final SearchResult<TenantWithId> searchResult = s.getPayload();
-                                                assertThat(searchResult.getTotal()).isEqualTo(1);
-                                                assertThat(searchResult.getResult()).hasSize(1);
-                                                assertThat(searchResult.getResult().get(0).getId())
-                                                        .isEqualTo(tenantId2);
-                                            });
-                                            ctx.completeNow();
-                                        })));
+                    final SearchResult<TenantWithId> searchResult = s.getPayload();
+                    assertThat(searchResult.getTotal()).isEqualTo(1);
+                    assertThat(searchResult.getResult()).hasSize(1);
+                    assertThat(searchResult.getResult().get(0).getId()).isEqualTo(tenantId2);
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -160,17 +161,17 @@ public interface AbstractTenantManagementSearchTenantsTest {
         createTenants(Map.of(
                 tenantId1, new Tenant().setEnabled(true),
                 tenantId2, new Tenant().setEnabled(true)))
-                        .compose(ok -> getTenantManagementService()
-                                .searchTenants(pageSize, pageOffset, List.of(filter), List.of(), NoopSpan.INSTANCE))
-                        .onComplete(ctx.succeeding(s -> {
-                            ctx.verify(() -> {
-                                assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
-                                final SearchResult<TenantWithId> searchResult = s.getPayload();
-                                assertThat(searchResult.getTotal()).isEqualTo(2);
-                                assertThat(searchResult.getResult()).hasSize(1);
-                            });
-                            ctx.completeNow();
-                        }));
+            .compose(ok -> getTenantManagementService()
+                    .searchTenants(pageSize, pageOffset, List.of(filter), List.of(), NoopSpan.INSTANCE))
+            .onComplete(ctx.succeeding(s -> {
+                ctx.verify(() -> {
+                    assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                    final SearchResult<TenantWithId> searchResult = s.getPayload();
+                    assertThat(searchResult.getTotal()).isEqualTo(2);
+                    assertThat(searchResult.getResult()).hasSize(1);
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -192,19 +193,22 @@ public interface AbstractTenantManagementSearchTenantsTest {
         createTenants(Map.of(
                 tenantId1, new Tenant().setEnabled(true).setExtensions(Map.of("id", "1")),
                 tenantId2, new Tenant().setEnabled(true).setExtensions(Map.of("id", "2"))))
-                        .compose(ok -> getTenantManagementService()
-                                .searchTenants(pageSize, pageOffset, List.of(filter), List.of(sortOption),
-                                        NoopSpan.INSTANCE))
-                        .onComplete(ctx.succeeding(s -> {
-                            ctx.verify(() -> {
-                                assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
-                                final SearchResult<TenantWithId> searchResult = s.getPayload();
-                                assertThat(searchResult.getTotal()).isEqualTo(2);
-                                assertThat(searchResult.getResult()).hasSize(1);
-                                assertThat(searchResult.getResult().get(0).getId()).isEqualTo(tenantId1);
-                            });
-                            ctx.completeNow();
-                        }));
+            .compose(ok -> getTenantManagementService().searchTenants(
+                    pageSize,
+                    pageOffset,
+                    List.of(filter),
+                    List.of(sortOption),
+                    NoopSpan.INSTANCE))
+            .onComplete(ctx.succeeding(s -> {
+                ctx.verify(() -> {
+                    assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                    final SearchResult<TenantWithId> searchResult = s.getPayload();
+                    assertThat(searchResult.getTotal()).isEqualTo(2);
+                    assertThat(searchResult.getResult()).hasSize(1);
+                    assertThat(searchResult.getResult().get(0).getId()).isEqualTo(tenantId1);
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -230,19 +234,22 @@ public interface AbstractTenantManagementSearchTenantsTest {
                 tenantId1, new Tenant().setEnabled(false).setExtensions(Map.of("id", "1", "group", "B")),
                 tenantId2, new Tenant().setEnabled(true).setExtensions(Map.of("id", "2", "group", "B")),
                 tenantId3, new Tenant().setEnabled(true).setExtensions(Map.of("id", "3", "group", "B"))))
-                        .compose(ok -> getTenantManagementService()
-                                .searchTenants(pageSize, pageOffset, List.of(filter), List.of(sortOption1, sortOption2),
-                                        NoopSpan.INSTANCE))
-                        .onComplete(ctx.succeeding(s -> {
-                            ctx.verify(() -> {
-                                assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
-                                final SearchResult<TenantWithId> searchResult = s.getPayload();
-                                assertThat(searchResult.getTotal()).isEqualTo(2);
-                                assertThat(searchResult.getResult()).hasSize(1);
-                                assertThat(searchResult.getResult().get(0).getId()).isEqualTo(tenantId2);
-                            });
-                            ctx.completeNow();
-                        }));
+            .compose(ok -> getTenantManagementService().searchTenants(
+                    pageSize,
+                    pageOffset,
+                    List.of(filter),
+                    List.of(sortOption1, sortOption2),
+                    NoopSpan.INSTANCE))
+            .onComplete(ctx.succeeding(s -> {
+                ctx.verify(() -> {
+                    assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                    final SearchResult<TenantWithId> searchResult = s.getPayload();
+                    assertThat(searchResult.getTotal()).isEqualTo(2);
+                    assertThat(searchResult.getResult()).hasSize(1);
+                    assertThat(searchResult.getResult().get(0).getId()).isEqualTo(tenantId2);
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -269,20 +276,22 @@ public interface AbstractTenantManagementSearchTenantsTest {
                         Map.of("id", "tenant2-id", "value", "test$2Value")),
                 tenantId3, new Tenant().setEnabled(true).setExtensions(
                         Map.of("id", "tenant3-id", "value", "test$3Value"))))
-                                .compose(ok -> getTenantManagementService()
-                                        .searchTenants(pageSize, pageOffset, List.of(filter1, filter2),
-                                                List.of(sortOption),
-                                                NoopSpan.INSTANCE))
-                                .onComplete(ctx.succeeding(s -> {
-                                    ctx.verify(() -> {
-                                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
-                                        final SearchResult<TenantWithId> searchResult = s.getPayload();
-                                        assertThat(searchResult.getTotal()).isEqualTo(1);
-                                        assertThat(searchResult.getResult()).hasSize(1);
-                                        assertThat(searchResult.getResult().get(0).getId()).isEqualTo(tenantId2);
-                                    });
-                                    ctx.completeNow();
-                                }));
+            .compose(ok -> getTenantManagementService().searchTenants(
+                    pageSize,
+                    pageOffset,
+                    List.of(filter1, filter2),
+                    List.of(sortOption),
+                    NoopSpan.INSTANCE))
+            .onComplete(ctx.succeeding(s -> {
+                ctx.verify(() -> {
+                    assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                    final SearchResult<TenantWithId> searchResult = s.getPayload();
+                    assertThat(searchResult.getTotal()).isEqualTo(1);
+                    assertThat(searchResult.getResult()).hasSize(1);
+                    assertThat(searchResult.getResult().get(0).getId()).isEqualTo(tenantId2);
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -310,39 +319,43 @@ public interface AbstractTenantManagementSearchTenantsTest {
                         Map.of("id", "testTenant-2", "value", "test$2Value")),
                 tenantId3, new Tenant().setEnabled(true).setExtensions(
                         Map.of("id", "testTenant-3", "value", "test$3Value"))))
-                                .compose(ok -> getTenantManagementService()
-                                        .searchTenants(pageSize, pageOffset, List.of(filter1, filter2),
-                                                List.of(sortOption),
-                                                NoopSpan.INSTANCE))
-                                .onComplete(ctx.succeeding(s -> {
-                                    ctx.verify(() -> {
-                                        assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
-                                        final SearchResult<TenantWithId> searchResult = s.getPayload();
-                                        assertThat(searchResult.getTotal()).isEqualTo(2);
-                                        assertThat(searchResult.getResult()).hasSize(1);
-                                        assertThat(searchResult.getResult().get(0).getId()).isEqualTo(tenantId3);
-                                    });
-                                    ctx.completeNow();
-                                }));
+            .compose(ok -> getTenantManagementService().searchTenants(
+                    pageSize,
+                    pageOffset,
+                    List.of(filter1, filter2),
+                    List.of(sortOption),
+                    NoopSpan.INSTANCE))
+            .onComplete(ctx.succeeding(s -> {
+                ctx.verify(() -> {
+                    assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
+                    final SearchResult<TenantWithId> searchResult = s.getPayload();
+                    assertThat(searchResult.getTotal()).isEqualTo(2);
+                    assertThat(searchResult.getResult()).hasSize(1);
+                    assertThat(searchResult.getResult().get(0).getId()).isEqualTo(tenantId3);
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
      * Creates a set of tenants.
      *
-     * @param tenantWithIds A list of tenant with ids.
+     * @param tenantsToCreate The tenants to be created. The keys are the tenant identifiers.
      * @return A succeeded future if all the tenants have been created successfully.
      */
-    default Future<Void> createTenants(final Map<String, Tenant> tenantWithIds) {
-        Future<Void> createTenantsFuture = Future.succeededFuture();
+    default Future<Void> createTenants(final Map<String, Tenant> tenantsToCreate) {
 
-        for (final Map.Entry<String, Tenant> entry : tenantWithIds.entrySet()) {
-            createTenantsFuture = createTenantsFuture.compose(ok -> getTenantManagementService()
-                    .createTenant(Optional.of(entry.getKey()), entry.getValue(), NoopSpan.INSTANCE)
+        @SuppressWarnings("rawtypes")
+        final List<Future> creationResult = tenantsToCreate.entrySet().stream()
+                .map(entry -> getTenantManagementService().createTenant(
+                        Optional.of(entry.getKey()),
+                        entry.getValue(),
+                        NoopSpan.INSTANCE)
                     .map(r -> {
                         assertThat(r.getStatus()).isEqualTo(HttpURLConnection.HTTP_CREATED);
                         return null;
-                    }));
-        }
-        return createTenantsFuture;
+                    }))
+                .collect(Collectors.toList());
+        return CompositeFuture.all(creationResult).mapEmpty();
     }
 }

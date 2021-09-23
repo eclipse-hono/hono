@@ -50,11 +50,12 @@ public class MongoDBBasedTenantManagementSearchTenantsTest implements AbstractTe
     /**
      * Starts up the service.
      *
+     * @param vertx The vert.x instance to run on.
      * @param testContext The test context to use for running asynchronous tests.
      */
     @BeforeAll
-    public void setup(final VertxTestContext testContext) {
-        dao = MongoDbTestUtils.getTenantDao(Vertx.vertx(), "hono-search-tenants-test");
+    public void setup(final Vertx vertx, final VertxTestContext testContext) {
+        dao = MongoDbTestUtils.getTenantDao(vertx, "hono-search-tenants-test");
         tenantManagementService = new MongoDbBasedTenantManagementService(dao, config);
         dao.createIndices().onComplete(testContext.succeedingThenComplete());
     }
@@ -72,10 +73,12 @@ public class MongoDBBasedTenantManagementSearchTenantsTest implements AbstractTe
     /**
      * Cleans up the collection after tests.
      *
+     * @param testInfo Test case meta information.
      * @param testContext The test context to use for running asynchronous tests.
      */
     @AfterEach
-    public void cleanCollection(final VertxTestContext testContext) {
+    public void cleanCollection(final TestInfo testInfo, final VertxTestContext testContext) {
+        LOG.info("finished {}", testInfo.getDisplayName());
         dao.deleteAllFromCollection().onComplete(testContext.succeedingThenComplete());
     }
 
