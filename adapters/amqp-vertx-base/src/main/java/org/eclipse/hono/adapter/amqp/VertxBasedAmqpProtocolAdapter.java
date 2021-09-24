@@ -22,6 +22,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -118,6 +119,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
      * The amount of memory (bytes) required for each connection.
      */
     private static final int MEMORY_PER_CONNECTION = 20_000;
+
+    private final AtomicReference<Promise<Void>> stopResultPromiseRef = new AtomicReference<>();
 
     /**
      * The AMQP server instance that maps to a secure port.
@@ -241,33 +244,41 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
     @Override
     protected void doStop(final Promise<Void> stopPromise) {
+        if (!stopResultPromiseRef.compareAndSet(null, stopPromise)) {
+            stopResultPromiseRef.get().future().onComplete(stopPromise);
+            log.trace("stop already called");
+            return;
+        }
         CompositeFuture.all(stopSecureServer(), stopInsecureServer())
         .map(ok -> (Void) null)
+        .onComplete(ar -> log.info("AMQP server(s) closed"))
         .onComplete(stopPromise);
     }
 
+    private boolean stopCalled() {
+        return stopResultPromiseRef.get() != null;
+    }
+
     private Future<Void> stopInsecureServer() {
-        final Promise<Void> result = Promise.promise();
         if (insecureServer != null) {
-            log.info("Shutting down insecure server");
+            final Promise<Void> result = Promise.promise();
+            log.info("closing insecure AMQP server ...");
             insecureServer.close(result);
+            return result.future();
         } else {
-            result.complete();
+            return Future.succeededFuture();
         }
-        return result.future();
     }
 
     private Future<Void> stopSecureServer() {
-        final Promise<Void> result = Promise.promise();
         if (secureServer != null) {
-
-            log.info("Shutting down secure server");
+            final Promise<Void> result = Promise.promise();
+            log.info("closing secure AMQP server ...");
             secureServer.close(result);
-
+            return result.future();
         } else {
-            result.complete();
+            return Future.succeededFuture();
         }
-        return result.future();
     }
 
     private Future<Void> bindInsecureServer() {
@@ -387,8 +398,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     }
 
     private void onConnectionLoss(final ProtonConnection con) {
-        final Span span = newSpan("handle closing of connection", getAuthenticatedDevice(con),
-                getTraceSamplingPriority(con));
+        final String operationName = "handle closing of connection" + (stopCalled() ? " on server shutdown" : "");
+        final Span span = newSpan(operationName, getAuthenticatedDevice(con), getTraceSamplingPriority(con));
         @SuppressWarnings("rawtypes")
         final List<Future> handlerResults = getConnectionLossHandlers(con).stream().map(handler -> handler.apply(span))
                 .collect(Collectors.toList());
