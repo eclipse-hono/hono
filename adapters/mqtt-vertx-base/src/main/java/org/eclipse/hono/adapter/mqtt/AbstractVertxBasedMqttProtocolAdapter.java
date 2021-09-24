@@ -122,6 +122,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     private static final int IANA_SECURE_MQTT_PORT = 8883;
     private static final String LOG_FIELD_TOPIC_FILTER = "filter";
 
+    private final AtomicReference<Promise<Void>> stopResultPromiseRef = new AtomicReference<>();
+
     private MqttAdapterMetrics metrics = MqttAdapterMetrics.NOOP;
 
     private MqttServer server;
@@ -361,9 +363,14 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     @Override
     protected final void doStop(final Promise<Void> stopPromise) {
-
+        if (!stopResultPromiseRef.compareAndSet(null, stopPromise)) {
+            stopResultPromiseRef.get().future().onComplete(stopPromise);
+            log.trace("stop already called");
+            return;
+        }
         final Promise<Void> serverTracker = Promise.promise();
         if (this.server != null) {
+            log.info("closing secure MQTT server ...");
             this.server.close(serverTracker);
         } else {
             serverTracker.complete();
@@ -371,6 +378,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
         final Promise<Void> insecureServerTracker = Promise.promise();
         if (this.insecureServer != null) {
+            log.info("closing insecure MQTT server ...");
             this.insecureServer.close(insecureServerTracker);
         } else {
             insecureServerTracker.complete();
@@ -378,7 +386,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
         CompositeFuture.all(serverTracker.future(), insecureServerTracker.future())
             .map(ok -> (Void) null)
+            .onComplete(ar -> log.info("MQTT server(s) closed"))
             .onComplete(stopPromise);
+    }
+
+    private boolean stopCalled() {
+        return stopResultPromiseRef.get() != null;
     }
 
     /**
@@ -1704,7 +1717,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
          * Closes a connection to a client.
          */
         protected final void onClose() {
-            final Span span = newSpan("CLOSE");
+            final String operationName = stopCalled() ? "CLOSE on server shutdown" : "CLOSE";
+            final Span span = newSpan(operationName);
             AbstractVertxBasedMqttProtocolAdapter.this.onClose(endpoint);
             final CompositeFuture removalDoneFuture = removeAllCommandSubscriptions(span);
             sendDisconnectedEvent(endpoint.clientIdentifier(), authenticatedDevice, span.context());
