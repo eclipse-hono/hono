@@ -222,8 +222,8 @@ public class ApplicationConfig {
      */
     @Bean
     @ConfigurationProperties(prefix = "hono.command-router.svc")
-    public ServiceConfigProperties commandRouterServiceConfigProperties() {
-        return new ServiceConfigProperties();
+    public CommandRouterServiceConfigProperties commandRouterServiceConfigProperties() {
+        return new CommandRouterServiceConfigProperties();
     }
 
     /**
