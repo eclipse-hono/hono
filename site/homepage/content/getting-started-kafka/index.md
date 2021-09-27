@@ -225,16 +225,16 @@ Content-Length: 0
 
 The telemetry data produced by devices is usually consumed by downstream applications that use it to implement their corresponding business functionality.
 In this guide we will use the Hono command line client to simulate such an application.
-The client will connect to the Kafka cluster that provides Hono's north bound Kafka based [Telemetry]({{% doclink "/api/telemetry-kafka/" %}}) and [Event API]({{% doclink "/api/event-kafka/" %}})s, subscribe to all telemetry and event messages and log the messages to the console.
+The client will connect to the Kafka cluster that provides Hono's north bound Kafka based [Telemetry]({{% doclink "/api/telemetry-kafka/" %}}) 
+and [Event API]({{% doclink "/api/event-kafka/" %}})s, subscribe to all telemetry and event messages and log the messages to the console.
 
-Open a new terminal window, set the `KAFKA_IP` environment variable and start the client from the command line. 
+Open a new terminal window to run the client from the command line. 
 
 If you are using the Sandbox server (make sure to replace `my-tenant` with your tenant identifier):
 
 ~~~sh
 # in directory where the hono-cli-*-exec.jar file has been downloaded to
 export MY_TENANT=my-tenant
-export KAFKA_IP=hono.eclipseprojects.io
 java -jar hono-cli-*-exec.jar --spring.profiles.active=receiver,kafka,sandbox --tenant.id=$MY_TENANT
 ~~~
 
@@ -246,7 +246,7 @@ export KAFKA_TRUSTSTORE_PATH=/tmp/truststore.jks
 kubectl get secrets eclipse-hono-kafka-jks --template="{{index .data \"kafka.truststore.jks\" | base64decode}}" -n hono > $KAFKA_TRUSTSTORE_PATH
 ~~~
 
-and then start the client (make sure to replace `my-tenant`):
+Then set the `KAFKA_IP` environment variable and  start the client (make sure to replace `my-tenant`):
 
 ~~~sh
 # in directory where the hono-cli-*-exec.jar file has been downloaded to
@@ -356,7 +356,7 @@ Create a subscription to the command topic in the terminal for the simulated dev
 
 Now that the device is waiting to receive commands, the application can start sending them.
 Start the Command Line Client in the terminal for the application side.
-If you are using the Sandbox server (don't forget to set the environment variables `KAFKA_IP`, `MY_TENANT` and `MY_DEVICE`):
+If you are using the Sandbox server (don't forget to set the environment variables `MY_TENANT` and `MY_DEVICE`):
 
 ~~~sh
 # in directory where the hono-cli-*-exec.jar file has been downloaded to
