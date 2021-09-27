@@ -26,22 +26,19 @@ jobs:
       matrix:
         device-registry: [file,jdbc,mongodb]
         include:
-          # let the file based registry test-run use the command router, Quarkus based components (running on JVM)
-          # and AMQP 1.0 messaging network.
+          # Use quarkus-jvm images: file registry, kafka messaging, spring-boot-command-router with embedded cache
           - device-registry: file
-            commandrouting-mode: command-router
+            commandrouting-mode: spring-boot-command-router
             commandrouting-cache: embedded
             component-type: quarkus-jvm
             messaging-type: kafka
-          # let the jdbc test-run use the device connection service component (instead of the command router),
-          # Spring Boot based components and AMQP 1.0 messaging network.
+          # Use spring-boot images: jdbc registry, amqp messaging, dev-con-service with embedded cache
           - device-registry: jdbc
             commandrouting-mode: dev-con-service
             commandrouting-cache: embedded
             component-type: spring-boot
             messaging-type: amqp
-          # let the mongodb test-run use the command router, Spring Boot based components and Kafka
-          # as the messaging system.
+          # Use quarkus-jvm images: mongodb registry, amqp messaging, command-router with server cache
           - device-registry: mongodb
             commandrouting-mode: command-router
             commandrouting-cache: server

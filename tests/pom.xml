@@ -575,6 +575,20 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       </properties>
     </profile>
     <profile>
+      <!-- overriding the above "components-quarkus-jvm"/"components-quarkus-native" profiles in terms of the command-router properties -->
+      <id>command-router-spring-boot</id>
+      <activation>
+        <property>
+          <name>hono.commandrouting.mode</name>
+          <value>spring-boot-command-router</value>
+        </property>
+      </activation>
+      <properties>
+        <hono.command-router.config-dir>etc/hono</hono.command-router.config-dir>
+        <hono.command-router.image>hono-service-command-router</hono.command-router.image>
+      </properties>
+    </profile>
+    <profile>
       <id>run-tests</id>
       <build>
         <plugins>
