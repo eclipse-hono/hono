@@ -158,6 +158,7 @@ Connection service component instead, the `device-connection-service` maven prof
 ```sh
 mvn verify -Prun-tests -Dhono.commandrouting.mode=dev-con-service
 ```
+Note that the Quarkus based component images cannot be used in this case.
 
 ### Running the Tests with Kafka as the Messaging Infrastructure
 
