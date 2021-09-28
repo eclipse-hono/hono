@@ -67,6 +67,7 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
 
     private final Supplier<KafkaConsumer<String, Buffer>> consumerCreator;
     private final String adapterInstanceId;
+    private final String clientId;
     private final CommandHandlers commandHandlers;
     private final Tracer tracer;
     private final CommandResponseSender commandResponseSender;
@@ -119,6 +120,7 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
         // there will be no offsets stored for this consumer - so the "auto.offset.reset" config is relevant
         // - set it to "earliest" just in case records have already been published to it
         consumerConfig.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        this.clientId = consumerConfig.get(ConsumerConfig.CLIENT_ID_CONFIG);
         consumerCreator = () -> KafkaConsumer.create(vertx, consumerConfig, String.class, Buffer.class);
     }
 
@@ -130,6 +132,7 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
      * @param context The vert.x context to run on.
      * @param kafkaAdminClient The Kafka admin client to use.
      * @param kafkaConsumer The Kafka consumer to use.
+     * @param clientId The consumer client identifier.
      * @param commandResponseSender The sender used to send command responses.
      * @param adapterInstanceId The adapter instance id.
      * @param commandHandlers The command handlers to choose from for handling a received command.
@@ -140,6 +143,7 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
             final Context context,
             final Admin kafkaAdminClient,
             final KafkaConsumer<String, Buffer> kafkaConsumer,
+            final String clientId,
             final CommandResponseSender commandResponseSender,
             final String adapterInstanceId,
             final CommandHandlers commandHandlers,
@@ -147,6 +151,7 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
         this.context = Objects.requireNonNull(context);
         this.adminClient = Objects.requireNonNull(kafkaAdminClient);
         this.consumer = Objects.requireNonNull(kafkaConsumer);
+        this.clientId = Objects.requireNonNull(clientId);
         this.commandResponseSender = Objects.requireNonNull(commandResponseSender);
         this.adapterInstanceId = Objects.requireNonNull(adapterInstanceId);
         this.commandHandlers = Objects.requireNonNull(commandHandlers);
@@ -187,7 +192,7 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
     private Future<Void> subscribeToTopic() {
         consumer.handler(this::handleCommandMessage);
         consumer.exceptionHandler(thr -> {
-            LOG.error("consumer error occurred", thr);
+            LOG.error("consumer error occurred [adapterInstanceId: {}, clientId: {}]", adapterInstanceId, clientId, thr);
         });
         consumer.partitionsRevokedHandler(this::onPartitionsRevoked);
         final Promise<Void> partitionAssignedPromise = Promise.promise();

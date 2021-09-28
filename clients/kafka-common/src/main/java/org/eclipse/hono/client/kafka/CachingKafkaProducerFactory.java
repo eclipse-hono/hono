@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,12 +18,15 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiFunction;
 
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.errors.AuthorizationException;
 import org.apache.kafka.common.errors.OutOfOrderSequenceException;
 import org.apache.kafka.common.errors.ProducerFencedException;
 import org.apache.kafka.common.errors.UnsupportedForMessageFormatException;
 import org.apache.kafka.common.errors.UnsupportedVersionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -47,6 +50,8 @@ import io.vertx.kafka.client.producer.KafkaProducer;
  * @param <V> The type for the record value serialization.
  */
 public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K, V> {
+
+    private static final Logger LOG = LoggerFactory.getLogger(CachingKafkaProducerFactory.class);
 
     private final Map<String, KafkaProducer<K, V>> activeProducers = new HashMap<>();
     private final BiFunction<String, Map<String, String>, KafkaProducer<K, V>> producerInstanceSupplier;
@@ -78,7 +83,7 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
      * @param <V> The type for the record value serialization.
      * @return An instance of the factory.
      */
-    public static <K, V> KafkaProducerFactory<K, V> sharedFactory(final Vertx vertx) {
+    public static <K, V> CachingKafkaProducerFactory<K, V> sharedFactory(final Vertx vertx) {
         return new CachingKafkaProducerFactory<>((name, config) -> KafkaProducer.createShared(vertx, name, config));
     }
 
@@ -100,7 +105,7 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
      * @param <V> The type for the record value serialization.
      * @return An instance of the factory.
      */
-    public static <K, V> KafkaProducerFactory<K, V> nonSharedFactory(final Vertx vertx) {
+    public static <K, V> CachingKafkaProducerFactory<K, V> nonSharedFactory(final Vertx vertx) {
         return new CachingKafkaProducerFactory<>((name, config) -> KafkaProducer.create(vertx, config));
     }
 
@@ -136,19 +141,24 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
     public KafkaProducer<K, V> getOrCreateProducer(final String producerName, final KafkaProducerConfigProperties config) {
 
         activeProducers.computeIfAbsent(producerName, (name) -> {
-            final KafkaProducer<K, V> producer = producerInstanceSupplier.apply(producerName, config.getProducerConfig(producerName));
-            return producer.exceptionHandler(getExceptionHandler(producerName, producer));
+            final Map<String, String> producerConfig = config.getProducerConfig(producerName);
+            final String clientId = producerConfig.get(ProducerConfig.CLIENT_ID_CONFIG);
+            final KafkaProducer<K, V> producer = producerInstanceSupplier.apply(producerName, producerConfig);
+            return producer.exceptionHandler(getExceptionHandler(producerName, producer, clientId));
         });
 
         return activeProducers.get(producerName);
     }
 
-    private Handler<Throwable> getExceptionHandler(final String producerName, final KafkaProducer<K, V> producer) {
+    private Handler<Throwable> getExceptionHandler(final String producerName, final KafkaProducer<K, V> producer, final String clientId) {
         return t -> {
             // this is executed asynchronously after the send operation has finished
             if (isFatalError(t)) {
+                LOG.error("fatal producer error occurred, closing producer [clientId: {}]", clientId, t);
                 activeProducers.remove(producerName);
                 producer.close();
+            } else {
+                LOG.error("producer error occurred [clientId: {}]", clientId, t);
             }
         };
     }

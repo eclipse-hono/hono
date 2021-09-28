@@ -76,6 +76,7 @@ public class KafkaBasedInternalCommandConsumerTest {
                 context,
                 kafkaAdminClient,
                 kafkaConsumer,
+                "testClientId",
                 commandResponseSender,
                 adapterInstanceId,
                 commandHandlers,
