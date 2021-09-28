@@ -40,7 +40,6 @@ import org.eclipse.hono.util.Lifecycle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -68,13 +67,6 @@ public class HonoKafkaConsumer implements Lifecycle {
      * Timeout used waiting for a rebalance after a subscription was updated.
      */
     private static final long WAIT_FOR_REBALANCE_TIMEOUT = TimeUnit.SECONDS.toMillis(30);
-    /**
-     * Default value for 'max.poll.interval.ms', i.e. the maximum delay between invocations of poll(), also
-     * the time commit() will block when retrying the commit on an UNKNOWN_TOPIC_OR_PARTITION error.
-     * Kafka consumer default is 5min. Since the vert.x kafka consumer continuously polls, we can set this
-     * to a much lower value.
-     */
-    private static final String DEFAULT_MAX_POLL_INTERNAL_MS = Long.toString(TimeUnit.SECONDS.toMillis(20));
 
     private static final Duration POLL_TIMEOUT = Duration.ofSeconds(1);
 
@@ -179,9 +171,6 @@ public class HonoKafkaConsumer implements Lifecycle {
 
         if ((topics == null) == (topicPattern == null)) {
             throw new NullPointerException("either topics or topicPattern has to be set");
-        }
-        if (!consumerConfig.containsKey(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG)) {
-            consumerConfig.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, DEFAULT_MAX_POLL_INTERNAL_MS);
         }
         if (!consumerConfig.containsKey(ConsumerConfig.GROUP_ID_CONFIG)) {
             if ("true".equals(consumerConfig.get(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG))) {
@@ -338,7 +327,8 @@ public class HonoKafkaConsumer implements Lifecycle {
                     }
                 });
             });
-            kafkaConsumer.exceptionHandler(error -> log.error("consumer error occurred", error));
+            kafkaConsumer.exceptionHandler(error -> log.error("consumer error occurred [client.id: {}]",
+                    consumerConfig.get(ConsumerConfig.CLIENT_ID_CONFIG), error));
             installRebalanceListeners();
             // subscribe and wait for rebalance to make sure that when start() completes,
             // the consumer is actually ready to receive records already
@@ -722,14 +712,6 @@ public class HonoKafkaConsumer implements Lifecycle {
                     log.debug("ensureTopicIsAmongSubscribedTopics: done updating topic subscription [{}]", topic);
                     return Future.succeededFuture(v);
                 });
-    }
-
-    private static <T> void tryCompletePromise(final Promise<T> promise, final AsyncResult<T> asyncResult) {
-        if (asyncResult.succeeded()) {
-            promise.tryComplete(asyncResult.result());
-        } else {
-            promise.tryFail(asyncResult.cause());
-        }
     }
 
     /**
