@@ -122,6 +122,7 @@ public class ProtonBasedDownstreamSender extends SenderCachingServiceClient impl
                     final ResourceIdentifier target = ResourceIdentifier.from(EventConstants.EVENT_ENDPOINT, tenant.getTenantId(), device.getDeviceId());
                     final Message message = createMessage(tenant, device, QoS.AT_LEAST_ONCE, target, contentType, payload, properties);
                     message.setDurable(true);
+                    sender.setErrorInfoLoggingEnabled(true); // log on INFO level since events are usually brokered and therefore errors here might indicate issues with the broker
                     return sender.sendAndWaitForOutcome(message, newChildSpan(context, "forward Event"));
                 })
                 .mapEmpty();
