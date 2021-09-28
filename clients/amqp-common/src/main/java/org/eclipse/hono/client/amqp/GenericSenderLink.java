@@ -78,6 +78,8 @@ public class GenericSenderLink extends AbstractHonoClient {
     private final String targetAddress;
     private final SendMessageSampler sampler;
 
+    private boolean errorInfoLoggingEnabled;
+
     /**
      * Creates a new sender.
      *
@@ -293,6 +295,15 @@ public class GenericSenderLink extends AbstractHonoClient {
 
         return checkForCreditAndSend(message, currentSpan,
                 () -> sendMessageAndWaitForOutcome(message, currentSpan, false));
+    }
+
+    /**
+     * Sets whether message sending errors should be logged on INFO level.
+     *
+     * @param errorInfoLoggingEnabled {@code true} if errors should be logged on INFO level.
+     */
+    public void setErrorInfoLoggingEnabled(final boolean errorInfoLoggingEnabled) {
+        this.errorInfoLoggingEnabled = errorInfoLoggingEnabled;
     }
 
     private Future<ProtonDelivery> checkForCreditAndSend(
@@ -609,16 +620,11 @@ public class GenericSenderLink extends AbstractHonoClient {
         return Optional.ofNullable(message.getAddress()).orElse(targetAddress);
     }
 
-    /**
-     * Logs an error that occurred when sending a message.
-     * <p>
-     * This method logs on DEBUG level by default. Subclasses may override this
-     * method to use a different log level.
-     *
-     * @param format The log format string.
-     * @param arguments The arguments of the format string.
-     */
     private void logMessageSendingError(final String format, final Object... arguments) {
-        log.debug(format, arguments);
+        if (errorInfoLoggingEnabled) {
+            log.info(format, arguments);
+        } else {
+            log.debug(format, arguments);
+        }
     }
 }
