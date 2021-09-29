@@ -40,7 +40,7 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
-class MongoDbBasedTenantServiceTest implements AbstractTenantServiceTest {
+public class MongoDbBasedTenantServiceTest implements AbstractTenantServiceTest {
 
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedTenantServiceTest.class);
 
@@ -48,17 +48,16 @@ class MongoDbBasedTenantServiceTest implements AbstractTenantServiceTest {
     private MongoDbBasedTenantService tenantService;
     private MongoDbBasedTenantManagementService tenantManagementService;
     private MongoDbBasedTenantDao dao;
-    private Vertx vertx;
 
     /**
      * Starts up the service.
      *
+     * @param vertx The vert.x instance to run on.
      * @param testContext The test context to use for running asynchronous tests.
      */
     @BeforeAll
-    public void startService(final VertxTestContext testContext) {
+    public void startService(final Vertx vertx, final VertxTestContext testContext) {
 
-        vertx = Vertx.vertx();
         dao = MongoDbTestUtils.getTenantDao(vertx, "hono-tenants-test");
         tenantService = new MongoDbBasedTenantService(dao, config);
         tenantManagementService = new MongoDbBasedTenantManagementService(dao, config);

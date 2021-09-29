@@ -189,7 +189,7 @@ public abstract class MongoDbBasedDao {
         final Promise<JsonObject> searchPromise = Promise.promise();
 
         if (LOG.isTraceEnabled()) {
-            LOG.trace("search resources aggregate pipeline query: [{}]", aggregationPipelineQuery.encodePrettily());
+            LOG.trace("searching resources using aggregate pipeline: [{}]", aggregationPipelineQuery.encodePrettily());
         }
 
         mongoClient.aggregate(collectionName, aggregationPipelineQuery)

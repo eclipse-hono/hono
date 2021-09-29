@@ -36,13 +36,15 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
 /**
- * Tests for {@link MongoDbBasedDeviceManagementService#searchDevices(String, int, int, java.util.List, java.util.List, io.opentracing.Span)}.
+ * Tests verifying behavior of
+ * {@link MongoDbBasedDeviceManagementService#searchDevices(String, int, int, java.util.List, java.util.List, io.opentracing.Span)}.
  */
 @ExtendWith(VertxExtension.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
 public final class MongoDBBasedDeviceManagementSearchDevicesTest implements AbstractDeviceManagementSearchDevicesTest {
 
+    private static final String DB_NAME = "hono-search-devices-test";
     private static final Logger LOG = LoggerFactory.getLogger(MongoDBBasedDeviceManagementSearchDevicesTest.class);
     private final MongoDbBasedRegistrationConfigProperties config = new MongoDbBasedRegistrationConfigProperties();
     private MongoDbBasedDeviceDao dao;
@@ -59,8 +61,8 @@ public final class MongoDBBasedDeviceManagementSearchDevicesTest implements Abst
     public void setup(final VertxTestContext testContext) {
 
         vertx = Vertx.vertx();
-        dao = MongoDbTestUtils.getDeviceDao(vertx, "hono-search-devices-test");
-        credentialsDao = MongoDbTestUtils.getCredentialsDao(vertx, "hono-devices-test");
+        dao = MongoDbTestUtils.getDeviceDao(vertx, DB_NAME);
+        credentialsDao = MongoDbTestUtils.getCredentialsDao(vertx, DB_NAME);
         service = new MongoDbBasedDeviceManagementService(dao, credentialsDao, config);
         CompositeFuture.all(dao.createIndices(), credentialsDao.createIndices()).onComplete(testContext.succeedingThenComplete());
     }

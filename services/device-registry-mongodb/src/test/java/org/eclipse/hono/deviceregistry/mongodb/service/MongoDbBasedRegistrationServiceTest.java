@@ -70,6 +70,7 @@ import io.vertx.junit5.VertxTestContext;
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class MongoDbBasedRegistrationServiceTest implements AbstractRegistrationServiceTest {
 
+    private static final String DB_NAME = "hono-devices-test";
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedRegistrationServiceTest.class);
 
     private final MongoDbBasedRegistrationConfigProperties config = new MongoDbBasedRegistrationConfigProperties();
@@ -90,8 +91,8 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
     public void startService(final VertxTestContext testContext) {
 
         vertx = Vertx.vertx();
-        deviceDao = MongoDbTestUtils.getDeviceDao(vertx, "hono-devices-test");
-        credentialsDao = MongoDbTestUtils.getCredentialsDao(vertx, "hono-devices-test");
+        deviceDao = MongoDbTestUtils.getDeviceDao(vertx, DB_NAME);
+        credentialsDao = MongoDbTestUtils.getCredentialsDao(vertx, DB_NAME);
         deviceManagementService = new MongoDbBasedDeviceManagementService(deviceDao, credentialsDao, config);
 
         final EdgeDeviceAutoProvisioner edgeDeviceAutoProvisioner = new EdgeDeviceAutoProvisioner(
@@ -238,6 +239,6 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
                     result.getPayload().getId(),
                     Optional.empty(),
                     NoopSpan.INSTANCE))
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeedingThenComplete());
     }
 }

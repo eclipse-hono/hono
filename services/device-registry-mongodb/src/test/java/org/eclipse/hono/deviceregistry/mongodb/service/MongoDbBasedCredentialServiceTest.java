@@ -78,7 +78,7 @@ import io.vertx.junit5.VertxTestContext;
 @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
 public class MongoDbBasedCredentialServiceTest implements CredentialsServiceTestBase {
 
-    private static final String DB_NAME_CREDENTIALS_TEST = "hono-credentials-test";
+    private static final String DB_NAME = "hono-credentials-test";
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedCredentialServiceTest.class);
 
     private final MongoDbBasedCredentialsConfigProperties credentialsServiceConfig = new MongoDbBasedCredentialsConfigProperties();
@@ -102,7 +102,7 @@ public class MongoDbBasedCredentialServiceTest implements CredentialsServiceTest
 
         vertx = Vertx.vertx();
 
-        credentialsDao = MongoDbTestUtils.getCredentialsDao(vertx, DB_NAME_CREDENTIALS_TEST);
+        credentialsDao = MongoDbTestUtils.getCredentialsDao(vertx, DB_NAME);
         credentialsService = new MongoDbBasedCredentialsService(credentialsDao, credentialsServiceConfig);
         credentialsManagementService = new MongoDbBasedCredentialsManagementService(
                 vertx,
@@ -110,7 +110,7 @@ public class MongoDbBasedCredentialServiceTest implements CredentialsServiceTest
                 credentialsServiceConfig,
                 new SpringBasedHonoPasswordEncoder());
 
-        deviceDao = MongoDbTestUtils.getDeviceDao(vertx, DB_NAME_CREDENTIALS_TEST);
+        deviceDao = MongoDbTestUtils.getDeviceDao(vertx, DB_NAME);
         deviceManagementService = new MongoDbBasedDeviceManagementService(
                 deviceDao,
                 credentialsDao,
@@ -228,7 +228,7 @@ public class MongoDbBasedCredentialServiceTest implements CredentialsServiceTest
 
         final var tenantId = UUID.randomUUID().toString();
 
-        final MongoClient mongoClient = MongoDbTestUtils.getMongoClient(vertx, DB_NAME_CREDENTIALS_TEST);
+        final MongoClient mongoClient = MongoDbTestUtils.getMongoClient(vertx, DB_NAME);
 
         final var dto1 = CredentialsDto.forCreation(
                 tenantId,
