@@ -170,6 +170,7 @@ public abstract class MongoDbBasedDao {
      *         with a {@link ClientErrorException} with status {@link HttpURLConnection#HTTP_NOT_FOUND}.
      *         The future will be failed with a {@link ServiceInvocationException} if the query could not be executed.
      * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws IllegalArgumentException if page size is &lt;= 0 or page offset is &lt; 0.
      * @see <a href="https://docs.mongodb.com/manual/core/aggregation-pipeline">MongoDB Aggregation Pipeline</a>
      */
     protected <T> Future<SearchResult<T>> processSearchResource(
@@ -179,8 +180,13 @@ public abstract class MongoDbBasedDao {
             final JsonObject sortDocument,
             final Function<JsonObject, List<T>> resultMapper) {
 
-        Objects.requireNonNull(mongoClient);
-        Objects.requireNonNull(collectionName);
+        if (pageSize <= 0) {
+            throw new IllegalArgumentException("page size must be a positive integer");
+        }
+        if (pageOffset < 0) {
+            throw new IllegalArgumentException("page offset must not be negative");
+        }
+
         Objects.requireNonNull(filterDocument);
         Objects.requireNonNull(sortDocument);
         Objects.requireNonNull(resultMapper);
@@ -189,12 +195,13 @@ public abstract class MongoDbBasedDao {
         final Promise<JsonObject> searchPromise = Promise.promise();
 
         if (LOG.isTraceEnabled()) {
-            LOG.trace("searching resources using aggregate pipeline: [{}]", aggregationPipelineQuery.encodePrettily());
+            LOG.trace("searching resources using aggregation pipeline:{}{}",
+                    System.lineSeparator(), aggregationPipelineQuery.encodePrettily());
         }
 
         mongoClient.aggregate(collectionName, aggregationPipelineQuery)
-                .exceptionHandler(searchPromise::fail)
-                .handler(searchPromise::complete);
+            .exceptionHandler(searchPromise::fail)
+            .handler(searchPromise::complete);
 
         return searchPromise.future()
                 .map(result -> Optional.ofNullable(result.getInteger(RegistryManagementConstants.FIELD_RESULT_SET_SIZE))
