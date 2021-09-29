@@ -101,6 +101,8 @@ public abstract class MongoDbBasedDao {
 
     /**
      * Releases this DAO's connection to the Mongo DB.
+     * <p>
+     * This method invokes {@link #close(Handler)} with {@code null} as the close handler.
      */
     @PreDestroy
     public final void close() {
@@ -110,10 +112,9 @@ public abstract class MongoDbBasedDao {
     /**
      * Releases this DAO's connection to the Mongo DB.
      *
-     * @param handler The handler to notify about the outcome.
+     * @param closeHandler The handler to notify about the outcome.
      */
-    @PreDestroy
-    public final void close(final Handler<AsyncResult<Void>> handler) {
+    public final void close(final Handler<AsyncResult<Void>> closeHandler) {
         if (mongoClient != null) {
             mongoClient.close(ar -> {
                 if (ar.succeeded()) {
@@ -121,7 +122,7 @@ public abstract class MongoDbBasedDao {
                 } else {
                     LOG.info("error closing connection to Mongo DB", ar.cause());
                 }
-                Optional.ofNullable(handler).ifPresent(h -> h.handle(ar));
+                Optional.ofNullable(closeHandler).ifPresent(h -> h.handle(ar));
             });
         }
     }
