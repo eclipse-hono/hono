@@ -36,7 +36,9 @@ import com.mongodb.MongoException;
 
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -102,9 +104,25 @@ public abstract class MongoDbBasedDao {
      */
     @PreDestroy
     public final void close() {
+        close(null);
+    }
+
+    /**
+     * Releases this DAO's connection to the Mongo DB.
+     *
+     * @param handler The handler to notify about the outcome.
+     */
+    @PreDestroy
+    public final void close(final Handler<AsyncResult<Void>> handler) {
         if (mongoClient != null) {
-            LOG.info("releasing connection to Mongo DB");
-            mongoClient.close();
+            mongoClient.close(ar -> {
+                if (ar.succeeded()) {
+                    LOG.info("successfully closed connection to Mongo DB");
+                } else {
+                    LOG.info("error closing connection to Mongo DB", ar.cause());
+                }
+                Optional.ofNullable(handler).ifPresent(h -> h.handle(ar));
+            });
         }
     }
 

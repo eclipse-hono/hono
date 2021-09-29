@@ -30,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.CompositeFuture;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
@@ -92,11 +93,21 @@ public final class MongoDBBasedDeviceManagementSearchDevicesTest implements Abst
 
     /**
      * Releases the connection to the Mongo DB.
+     *
+     * @param testContext The test context to use for running asynchronous tests.
      */
     @AfterAll
-    public void closeDao() {
-        dao.close();
-        credentialsDao.close();
+    public void closeDao(final VertxTestContext testContext) {
+        final Promise<Void> credentialsCloseHandler = Promise.promise();
+        credentialsDao.close(credentialsCloseHandler);
+
+        credentialsCloseHandler.future()
+            .compose(ok -> {
+                final Promise<Void> vertxCloseHandler = Promise.promise();
+                vertx.close(vertxCloseHandler);
+                return vertxCloseHandler.future();
+            })
+            .onComplete(testContext.succeedingThenComplete());
     }
 
     @Override

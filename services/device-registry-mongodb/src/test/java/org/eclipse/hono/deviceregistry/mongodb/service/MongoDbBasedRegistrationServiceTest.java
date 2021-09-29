@@ -56,6 +56,7 @@ import io.opentracing.noop.NoopSpan;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
@@ -147,11 +148,23 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
 
     /**
      * Releases the connection to the Mongo DB.
+     *
+     * @param testContext The test context to use for running asynchronous tests.
      */
     @AfterAll
-    public void closeDao() {
-        deviceDao.close();
-        credentialsDao.close();
+    public void closeDao(final VertxTestContext testContext) {
+        final Promise<Void> credentialsCloseHandler = Promise.promise();
+        credentialsDao.close(credentialsCloseHandler);
+        final Promise<Void> deviceCloseHandler = Promise.promise();
+        deviceDao.close(deviceCloseHandler);
+
+        CompositeFuture.all(credentialsCloseHandler.future(), deviceCloseHandler.future())
+            .compose(ok -> {
+                final Promise<Void> vertxCloseHandler = Promise.promise();
+                vertx.close(vertxCloseHandler);
+                return vertxCloseHandler.future();
+            })
+            .onComplete(testContext.succeedingThenComplete());
     }
 
     @Override

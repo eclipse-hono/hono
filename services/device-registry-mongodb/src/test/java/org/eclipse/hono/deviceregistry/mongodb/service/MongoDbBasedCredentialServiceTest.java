@@ -166,9 +166,18 @@ public class MongoDbBasedCredentialServiceTest implements CredentialsServiceTest
     @AfterAll
     public void finishTest(final VertxTestContext testContext) {
 
-        credentialsDao.close();
-        deviceDao.close();
-        vertx.close(s -> testContext.completeNow());
+        final Promise<Void> credentialsCloseHandler = Promise.promise();
+        credentialsDao.close(credentialsCloseHandler);
+        final Promise<Void> deviceCloseHandler = Promise.promise();
+        deviceDao.close(deviceCloseHandler);
+
+        CompositeFuture.all(credentialsCloseHandler.future(), deviceCloseHandler.future())
+            .compose(ok -> {
+                final Promise<Void> vertxCloseHandler = Promise.promise();
+                vertx.close(vertxCloseHandler);
+                return vertxCloseHandler.future();
+            })
+            .onComplete(testContext.succeedingThenComplete());
     }
 
     @Override

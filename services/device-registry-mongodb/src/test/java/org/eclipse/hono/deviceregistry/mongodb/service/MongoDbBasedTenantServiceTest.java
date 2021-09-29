@@ -29,6 +29,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
@@ -48,16 +49,17 @@ public class MongoDbBasedTenantServiceTest implements AbstractTenantServiceTest 
     private MongoDbBasedTenantService tenantService;
     private MongoDbBasedTenantManagementService tenantManagementService;
     private MongoDbBasedTenantDao dao;
+    private Vertx vertx;
 
     /**
      * Starts up the service.
      *
-     * @param vertx The vert.x instance to run on.
      * @param testContext The test context to use for running asynchronous tests.
      */
     @BeforeAll
-    public void startService(final Vertx vertx, final VertxTestContext testContext) {
+    public void startService(final VertxTestContext testContext) {
 
+        vertx = Vertx.vertx();
         dao = MongoDbTestUtils.getTenantDao(vertx, "hono-tenants-test");
         tenantService = new MongoDbBasedTenantService(dao, config);
         tenantManagementService = new MongoDbBasedTenantManagementService(dao, config);
@@ -86,9 +88,21 @@ public class MongoDbBasedTenantServiceTest implements AbstractTenantServiceTest 
 
     /**
      * Releases the connection to the Mongo DB.
+     *
+     * @param testContext The test context to use for running asynchronous tests.
      */
     @AfterAll
-    public void closeDao() {
+    public void closeDao(final VertxTestContext testContext) {
+        final Promise<Void> daoCloseHandler = Promise.promise();
+        dao.close(daoCloseHandler);
+
+        daoCloseHandler.future()
+            .compose(ok -> {
+                final Promise<Void> vertxCloseHandler = Promise.promise();
+                vertx.close(vertxCloseHandler);
+                return vertxCloseHandler.future();
+            })
+            .onComplete(testContext.succeedingThenComplete());
         dao.close();
     }
 
