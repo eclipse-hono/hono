@@ -216,6 +216,8 @@ public abstract class MongoDbBasedDao {
         if (LOG.isTraceEnabled()) {
             LOG.trace("searching resources using aggregation pipeline:{}{}",
                     System.lineSeparator(), aggregationPipelineQuery.encodePrettily());
+        } else {
+            LOG.debug("searching resources");
         }
 
         mongoClient.aggregate(collectionName, aggregationPipelineQuery)

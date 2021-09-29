@@ -285,6 +285,7 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
             throw new IllegalArgumentException("page offset must not be negative");
         }
 
+        log.debug("searchTenants");
         return processSearchTenants(pageSize, pageOffset, filters, sortOptions, span)
                 .recover(t -> DeviceRegistryUtils.mapError(t, null));
     }
