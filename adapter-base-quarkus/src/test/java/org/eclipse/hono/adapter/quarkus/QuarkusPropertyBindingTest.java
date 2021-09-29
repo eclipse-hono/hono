@@ -18,8 +18,8 @@ import static com.google.common.truth.Truth.assertThat;
 import javax.inject.Inject;
 
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
-import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
+import org.eclipse.hono.client.kafka.producer.KafkaProducerConfigProperties;
 import org.eclipse.hono.config.MapperEndpoint;
 import org.eclipse.hono.config.ProtocolAdapterOptions;
 import org.eclipse.hono.config.ProtocolAdapterProperties;

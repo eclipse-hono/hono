@@ -23,10 +23,10 @@ import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.InternalCommandSender;
 import org.eclipse.hono.client.kafka.HonoTopic;
-import org.eclipse.hono.client.kafka.KafkaProducerConfigProperties;
-import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
+import org.eclipse.hono.client.kafka.producer.KafkaProducerConfigProperties;
+import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.util.MessageHelper;
 
 import io.opentracing.Tracer;

@@ -32,13 +32,13 @@ import java.util.stream.IntStream;
 import javax.security.auth.x500.X500Principal;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.eclipse.hono.client.kafka.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.HonoTopic;
-import org.eclipse.hono.client.kafka.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.consumer.HonoKafkaConsumer;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.metrics.NoopKafkaClientMetricsSupport;
+import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
+import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.commandrouter.CommandRouterMetrics;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;

@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.client.kafka;
+package org.eclipse.hono.client.kafka.producer;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties;
 
 /**
  * Configuration properties for Kafka producers.

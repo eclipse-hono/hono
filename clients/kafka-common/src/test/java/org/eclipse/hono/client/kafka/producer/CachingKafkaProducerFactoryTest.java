@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.client.kafka;
+package org.eclipse.hono.client.kafka.producer;
 
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;

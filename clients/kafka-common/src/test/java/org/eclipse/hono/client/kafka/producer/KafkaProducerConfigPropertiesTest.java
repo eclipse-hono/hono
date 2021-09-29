@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.client.kafka;
+package org.eclipse.hono.client.kafka.producer;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static com.google.common.truth.Truth.assertThat;
@@ -19,6 +19,7 @@ import static com.google.common.truth.Truth.assertThat;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties;
 import org.junit.jupiter.api.Test;
 
 /**
