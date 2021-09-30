@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.config.quarkus;
+package org.eclipse.hono.service.quarkus;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -23,6 +23,11 @@ import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.config.quarkus.ApplicationOptions;
+import org.eclipse.hono.config.quarkus.ClientOptions;
+import org.eclipse.hono.config.quarkus.RequestResponseClientOptions;
+import org.eclipse.hono.config.quarkus.ServerOptions;
+import org.eclipse.hono.config.quarkus.ServiceOptions;
 import org.eclipse.hono.service.auth.delegating.AuthenticationServerClientConfigProperties;
 import org.eclipse.hono.service.auth.delegating.AuthenticationServerClientOptions;
 import org.junit.jupiter.api.Test;
