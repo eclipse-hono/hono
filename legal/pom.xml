@@ -24,19 +24,8 @@
   <description>The set of documents required to fulfill the attributions of Hono's dependencies.</description>
 
   <properties>
-    <!-- 
-      this property prevents the Nexus Staging Maven Plugin to
-      deploy this module's artifacts to Maven Central' staging repo
-     -->
-    <skipNexusStagingDeployMojo>true</skipNexusStagingDeployMojo>
-    <!-- 
-      this property prevents the Nexus Staging Maven Plugin to
-      deploy this module's artifacts to the configured project repository
-     -->
-    <skipStaging>true</skipStaging>
     <maven.source.skip>true</maven.source.skip>
     <maven.javadoc.skip>true</maven.javadoc.skip>
-    <gpg.skip>true</gpg.skip>
   </properties>
 
   <build>
