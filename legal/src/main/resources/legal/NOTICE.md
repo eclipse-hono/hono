@@ -44,7 +44,7 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/apache/commons-cli/).
 
-### Apache Commons Logging 1.2
+### Apache Commons Collections
 
 This product includes software developed by the [Apache Software Foundation](http://www.apache.org/).
 
@@ -52,9 +52,19 @@ Your use of *Apache Commons Logging* is subject to the terms and conditions of t
 A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=commons-logging/commons-logging/1.2/commons-logging-1.2-sources.jar).
+The source code is available from [GitHub](https://github.com/apache/commons-collections).
 
-### Apache Log4j 2
+### Apache Commons Logging
+
+This product includes software developed by the [Apache Software Foundation](http://www.apache.org/).
+
+Your use of *Apache Commons Logging* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/apache/commons-logging).
+
+### Apache Log4j2
 
 This product includes software developed by the [Apache Software Foundation](http://www.apache.org/).
 
@@ -84,6 +94,15 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/apache/thrift).
 
+### Automaton
+
+This product includes software developed by Anders Moeller.
+
+Your use of *Apache Thrift* is subject to the terms and conditions defined in
+[COPYING](dk.brics.automaton/COPYING).
+
+The source code is available from [GitHub](https://github.com/cs-au-dk/dk.brics.automaton).
+
 ### Google Guava ${guava.version}
 
 This product includes software developed by the [Guava project](https://github.com/google/guava).
@@ -92,7 +111,7 @@ Your use of *Guava* is subject to the terms and conditions of the Apache Softwar
 A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=com/google/guava/guava/${guava.version}/guava-${guava.version}-sources.jar).
+The source code is available from [GitHub](https://github.com/google/guava).
 
 ### Google Gson ${gson.version}
 
@@ -104,18 +123,17 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/google/gson/tree/gson-parent-${guava.version}).
 
-### c3p0 ${c3p0.version}
+### c3p0
 
 This product includes software developed by the [c3p0 project](https://www.mchange.com/projects/c3p0/).
 
-Your use of *c3p0* is subject to the terms and conditions of the
-Eclipse Public License 1.0.
+Your use of *c3p0* is subject to the terms and conditions of the Eclipse Public License 1.0.
 A copy of the license is contained in the file [EPL-1.0.txt](EPL-1.0.txt) and is also available at
 https://www.eclipse.org/legal/.
 
-The source code is available from [GitHub](https://github.com/swaldman/c3p0/tree/c3p0-${c3p0.version})
+The source code is available from [GitHub](https://github.com/swaldman/c3p0)
 
-### Caffeine ${caffeine.version}
+### Caffeine
 
 This product includes software developed by the [Caffeine project](https://github.com/ben-manes/caffeine).
 
@@ -123,7 +141,27 @@ Your use of *Caffeine* is subject to the terms and conditions of the Apache Soft
 A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=com/github/ben-manes/caffeine/caffeine/${caffeine.version}/caffeine-${caffeine.version}-sources.jar).
+The source code is available from [GitHub](https://github.com/ben-manes/caffeine).
+
+### Cryptvault
+
+This product includes software developed by [bol.com](https://techlab.bol.com/).
+
+Your use of *Cryptvault* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/bolcom/cryptvault).
+
+### Generex
+
+This product includes software developed by the [Generex project](https://github.com/mifmif/Generex).
+
+Your use of *Cryptvault* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/mifmif/Generex).
 
 ### Graal SDK
 
@@ -144,18 +182,17 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/google/gson/tree/gson-parent-${gson.version}).
 
-### H2 Database ${h2.version}
+### H2 Database
 
-This product includes software developed by the [H2 Database project](https://github.com/h2database/h2database).
+This product includes software developed by the [H2 Database project](https://h2database.com).
 
-Your use of the *H2 Database* is subject to the terms and conditions of the
-Eclipse Public License 1.0.
+Your use of the *H2 Database* is subject to the terms and conditions of the Eclipse Public License 1.0.
 A copy of the license is contained in the file [EPL-1.0.txt](EPL-1.0.txt) and is also available at
 https://www.eclipse.org/legal/.
 
-The source code is available from [GitHub](https://github.com/h2database/h2database/tree/version-${h2.version})
+The source code is available from [GitHub](https://github.com/h2database/h2database)
 
-### Infinispan Hotrod Client ${infinispan.version}
+### Infinispan Hotrod Client
 
 This product includes software developed by the [Infinispan project](https://infinispan.org).
 
@@ -163,11 +200,7 @@ Your use of *Infinispan Hotrod Client* is subject to the terms and conditions of
 A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from Maven Central:
-
-* [infinispan-client-hotrod](http://search.maven.org/remotecontent?filepath=org/infinispan/infinispan-client-hotrod/${infinispan.version}/infinispan-client-hotrod-${infinispan.version}-sources.jar).
-* [infinispan-commons](http://search.maven.org/remotecontent?filepath=org/infinispan/infinispan-commons/${infinispan.version}/infinispan-commons-${infinispan.version}-sources.jar).
-* [infinispan-core](http://search.maven.org/remotecontent?filepath=org/infinispan/infinispan-core/${infinispan.version}/infinispan-core-${infinispan.version}-sources.jar).
+The source code is available from [GitHub](https://github.com/infinispan/infinispan).
 
 ### Jackson ${jackson.version}
 
@@ -194,7 +227,8 @@ The source code is available from [GitHub](https://github.com/jaegertracing/jaeg
 This product includes software developed by Oracle and its affiliates.
 
 The Hono project elects to include the *Java Transaction API* in this distribution under the CDDL 1.0 license.
-Your use of the *Java Transaction API* is thus subject to the terms and conditions of the COMMON DEVELOPMENT AND DISTRIBUTION LICENSE (CDDL) Version 1.0.
+Your use of the *Java Transaction API* is thus subject to the terms and conditions of the
+COMMON DEVELOPMENT AND DISTRIBUTION LICENSE (CDDL) Version 1.0.
 A copy of the license is contained in the file [CDDL-1.0.txt](CDDL-1.0.txt).
 
 The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=org/jboss/spec/javax/transaction/jboss-transaction-api_1.2_spec/1.1.1.Final/jboss-transaction-api_1.2_spec-1.1.1.Final-sources.jar).
@@ -209,7 +243,7 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHubl](https://github.com/jboss-javassist/javassist).
 
-### JBoss Logging ${jboss-logging.version}
+### JBoss Logging
 
 This product includes software developed by the [JBoss Logging project](https://github.com/jboss-logging).
 
@@ -217,7 +251,7 @@ Your use of *JBoss Logging* is subject to the terms and conditions of the Apache
 A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [GitHub](https://github.com/jboss-logging/jboss-logging/tree/${jboss-logging.version}).
+The source code is available from [GitHub](https://github.com/jboss-logging/jboss-logging).
 
 ### JBoss Threads
 
@@ -237,7 +271,7 @@ Your use of *JCL-over-SLF4J* is subject to the terms and conditions of the Apach
 A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=org/slf4j/jcl-over-slf4j/${slf4j.version}/jcl-over-slf4j-${slf4j.version}-sources.jar).
+The source code is available from [GitHub](https://github.com/qos-ch/slf4j).
 
 ### JGroups
 
@@ -256,7 +290,7 @@ This product includes software developed by [Quality Open Software](http://www.q
 Your use of *JUL-to-SLF4J* is subject to the terms and conditions of the MIT License.
 A copy of the license is contained in the file [LICENSE.JUL-to-SLF4J.txt](LICENSE.JUL-to-SLF4J.txt).
 
-The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=org/slf4j/jul-to-slf4j/${slf4j.version}/jul-to-slf4j-${slf4j.version}-sources.jar).
+The source code is available from [GitHub](https://github.com/qos-ch/slf4j).
 
 ### JJWT ${jjwt.version}
 
@@ -266,7 +300,7 @@ Your use of *JJWT* is subject to the terms and conditions of the Apache Software
 A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/jsonwebtoken/jjwt/${jjwt.version}/jjwt-${jjwt.version}-sources.jar).
+The source code is available from [GitHub](https://github.com/jwtk/jjwt).
 
 ### Kafka Clients ${kafka-clients.version}
 
@@ -288,6 +322,16 @@ whose terms and conditions apply.
 
 The source code is available from [GitHub](https://github.com/JetBrains/kotlin).
 
+### Kubernetes Client
+
+This product includes software developed by the [fabric8 project](https://fabric8.io/).
+
+Your use of *Kubernetes Client* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/fabric8io/kubernetes-client).
+
 ### LOG4J-over-SLF4J ${slf4j.version}
 
 This product includes software developed by the [Apache Software Foundation](http://www.apache.org/).
@@ -296,16 +340,17 @@ Your use of *LOG4J-over-SLF4J* is subject to the terms and conditions of the Apa
 A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=org/slf4j/log4j-over-slf4j/${slf4j.version}/log4j-over-slf4j-${slf4j.version}-sources.jar).
+The source code is available from [GitHub](https://github.com/qos-ch/slf4j).
 
 ### Logback ${logback.version}
 
 This product includes software developed by [Quality Open Software](http://www.qos.ch/).
 
 Your use of *Logback* is subject to the terms and conditions of the Eclipse Public License 1.0.
-A copy of the license is contained in the file [LICENSE](LICENSE) and is also available at https://eclipse.org/legal/epl-v10.html.
+A copy of the license is contained in the file [EPL-1.0.txt](EPL-1.0.txt) and is also available at
+https://eclipse.org/legal/epl-v10.html.
 
-The source code is available from [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22ch.qos.logback%22%20AND%20v%3A%22${logback.version}%22).
+The source code is available from [GitHub](https://github.com/qos-ch/logback).
 
 ### lz4-java
 
@@ -318,16 +363,15 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/lz4/lz4-java).
 
-### MChange Commons ${mchange-commons.version}
+### MChange Commons
 
 This product includes software developed by the [mchange-commons project](https://www.mchange.com/projects/mchange-commons-java/).
 
-Your use of *mchange-commons-java* is subject to the terms and conditions of the
-Eclipse Public License 1.0.
+Your use of *mchange-commons-java* is subject to the terms and conditions of the Eclipse Public License 1.0.
 A copy of the license is contained in the file [EPL-1.0.txt](EPL-1.0.txt) and is also available at
 https://www.eclipse.org/legal/.
 
-The source code is available from [GitHub](https://github.com/swaldman/mchange-commons-java/tree/mchange-commons-java-${mchange-commons.version})
+The source code is available from [GitHub](https://github.com/swaldman/mchange-commons-java)
 
 ### Micrometer ${micrometer.version}
 
@@ -338,7 +382,7 @@ Your use of *Micrometer* is subject to the terms and conditions of the Apache So
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22io.micrometer%22%20AND%20v%3A%22${micrometer.version}%22).
+The source code is available from [GitHub](https://github.com/micrometer-metrics/micrometer).
 
 ### Mongo Java Driver
 
@@ -362,7 +406,7 @@ whose terms and conditions apply.
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22io.netty%22%20AND%20v%3A%22${netty.version}%22).
+The source code is available from [GitHub](https://github.com/netty/netty).
 
 ### okhttp & okio
 
@@ -375,15 +419,15 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 The source code is available from [GitHub](https://github.com/square/okhttp) and
 [GitHub](https://github.com/square/okio).
 
-### OpenTracing API for Java ${opentracing.version}
+### OpenTracing for Java ${opentracing.version}
 
 This product includes software developed by the [OpenTracing project](http://opentracing.io/).
 
-Your use of *OpenTracing API for Java* is subject to the terms and conditions of the Apache Software License 2.0.
+Your use of *OpenTracing for Java* is subject to the terms and conditions of the Apache Software License 2.0.
 A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22io.opentracing%22%20AND%20v%3A%22${opentracing.version}%22).
+The source code is available from [GitHub](https://github.com/opentracing/opentracing-java).
 
 ### OpenTracing Java Tracer Resolver ${opentracing-resolver.version}
 
@@ -393,7 +437,7 @@ Your use of *OpenTracing Java Tracer Resolver* is subject to the terms and condi
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/opentracing/contrib/opentracing-tracerresolver/${opentracing-resolver.version}/opentracing-tracerresolver-${opentracing-resolver.version}-sources.jar).
+The source code is available from [GitHub](https://github.com/opentracing-contrib/java-tracerresolver).
 
 ### OpenTracing Vert.x Web Instrumentation 0.1.0
 
@@ -403,16 +447,16 @@ Your use of *OpenTracing Vert.x Web Instrumentation* is subject to the terms and
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/opentracing/contrib/opentracing-vertx-web/${opentracing-vertx-web.version}/opentracing-vertx-web-${opentracing-vertx-web.version}-sources.jar).
+The source code is available from [GitHub](https://github.com/opentracing-contrib/java-vertx-web/tree/0.1.0).
 
-### PostgreSQL JDBC Driver ${postgresql-jdbc.version}
+### PostgreSQL JDBC Driver
 
-This product includes software developed by the PostgreSQL Global Development Group.
+This product includes software developed by the [PostgreSQL Global Development Group](https://jdbc.postgresql.org/).
 
 Your use of the *PostgreSQL JDBC Driver* is subject to the terms and conditions defined in the file
 [LICENSE.postgresql-jdbc.txt](LICENSE.postgresql-jdbc.txt).
 
-The source code is available from [GitHub](https://github.com/pgjdbc/pgjdbc/tree/REL${postgresql-jdbc.version}).
+The source code is available from [GitHub](https://github.com/pgjdbc/pgjdbc).
 
 ### Protobuf
 
@@ -431,7 +475,7 @@ Your use of *Proton-j* is subject to the terms and conditions of the Apache Soft
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=org/apache/qpid/proton-j/${proton.version}/proton-j-${proton.version}-sources.jar).
+The source code is available from [GitHub](https://github.com/apache/qpid-proton-j).
 
 ### Protoparser
 
@@ -491,7 +535,7 @@ Your use of *SLF4J API* is subject to the terms and conditions of the MIT Licens
 A copy of the license is contained in the file [LICENSE.slf4j.txt](LICENSE.slf4j.txt)
 and is also available at http://slf4j.org/license.html
 
-The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=org/slf4j/slf4j-api/${slf4j.version}/slf4j-api-${slf4j.version}-sources.jar).
+The source code is available from [GitHub](https://github.com/qos-ch/slf4j).
 
 ### SmallRye
 
@@ -503,9 +547,7 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/smallrye).
 
-
-
-### SnakeYAML ${snakeyaml.version}
+### SnakeYAML
 
 This product includes software developed by the [SnakeYAML project](http://www.snakeyaml.org).
 
@@ -513,7 +555,7 @@ Your use of *SnakeYAML* is subject to the terms and conditions of the Apache Sof
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=org/yaml/snakeyaml/${snakeyaml.version}/snakeyaml-${snakeyaml.version}-sources.jar).
+The source code is available from [GitHub](https://github.com/asomov/snakeyaml).
 
 ### snappy-java
 
@@ -564,7 +606,17 @@ Your use of *vert.x Auth Common* is subject to the terms and conditions of the A
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/vertx/vertx-auth-common/${vertx.version}/vertx-auth-common-${vertx.version}-sources.jar).
+The source code is available from [GitHub](https://github.com/vert-x3/vertx-auth).
+
+### vert.x Auth JDBC ${vertx.version}
+
+This product includes software developed by the [vert.x project](http://vertx.io).
+
+Your use of *vert.x Auth JDBC* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
+is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/vert-x3/vertx-auth).
 
 ### vert.x Auth Mongo ${vertx.version}
 
@@ -574,7 +626,7 @@ Your use of *vert.x Auth Mongo* is subject to the terms and conditions of the Ap
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [GitHub](https://github.com/vert-x3/vertx-auth/tree/${vertx.version}/vertx-auth-mongo).
+The source code is available from [GitHub](https://github.com/vert-x3/vertx-auth).
 
 ### vert.x Bridge Common ${vertx.version}
 
@@ -584,7 +636,7 @@ Your use of *vert.x Bridge Common* is subject to the terms and conditions of the
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/vertx/vertx-bridge-common/${vertx.version}/vertx-bridge-common-${vertx.version}-sources.jar).
+The source code is available from [GitHub](https://github.com/vert-x3/vertx-bridge-common).
 
 ### vert.x Micrometer Metrics ${vertx.version}
 
@@ -594,7 +646,7 @@ Your use of *vert.x Micrometer Metrics* is subject to the terms and conditions o
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/vertx/vertx-micrometer-metrics/${vertx.version}/vertx-micrometer-metrics-${vertx.version}-sources.jar).
+The source code is available from [GitHub](https://github.com/vert-x3/vertx-micrometer-metrics).
 
 ### vert.x Health Check ${vertx.version}
 
@@ -604,7 +656,7 @@ Your use of *vert.x Health Check* is subject to the terms and conditions of the 
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/vertx/vertx-health-check/${vertx.version}/vertx-health-check-${vertx.version}-sources.jar).
+The source code is available from [GitHub](https://github.com/vert-x3/vertx-health-check).
 
 ### vert.x JDBC client ${vertx.version}
 
@@ -614,7 +666,7 @@ Your use of *vert.x JDBC client* is subject to the terms and conditions of the A
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/vertx/vertx-jdbc-client/${vertx.version}/vertx-jdbc-client-${vertx.version}-sources.jar).
+The source code is available from [GitHub](https://github.com/vert-x3/vertx-jdbc-client).
 
 ### vert.x Kafka Client ${vertx.version}
 
@@ -624,7 +676,7 @@ Your use of *vert.x Kafka Client* is subject to the terms and conditions of the 
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [GitHub](https://github.com/vert-x3/vertx-kafka-client/tree/${vertx.version}).
+The source code is available from [GitHub](https://github.com/vert-x3/vertx-kafka-client).
 
 ### vert.x Mongo Client ${vertx.version}
 
@@ -634,7 +686,7 @@ Your use of *vert.x Mongo Client* is subject to the terms and conditions of the 
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [GitHub](https://github.com/vert-x3/vertx-mongo-client/tree/${vertx.version}).
+The source code is available from [GitHub](https://github.com/vert-x3/vertx-mongo-client).
 
 ### vert.x MQTT ${vertx.version}
 
@@ -644,7 +696,7 @@ Your use of *vert.x MQTT* is subject to the terms and conditions of the Apache S
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/vertx/vertx-mqtt/${vertx.version}/vertx-mqtt-${vertx.version}-sources.jar).
+The source code is available from [GitHub](https://github.com/vert-x3/vertx-mqtt).
 
 ### vert.x Proton ${vertx.version}
 
@@ -654,7 +706,7 @@ Your use of *vert.x Proton* is subject to the terms and conditions of the Apache
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/vertx/vertx-proton/${vertx.version}/vertx-proton-${vertx.version}-sources.jar).
+The source code is available from [GitHub](https://github.com/vert-x3/vertx-proton).
 
 ### vert.x SQL Common ${vertx.version}
 
@@ -664,7 +716,7 @@ Your use of *vert.x SQL Common* is subject to the terms and conditions of the Ap
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/vertx/vertx-sql-common/${vertx.version}/vertx-sql-common-${vertx.version}-sources.jar).
+The source code is available from [GitHub](https://github.com/vert-x3/vertx-sql-common).
 
 ### vert.x Web ${vertx.version}
 
@@ -674,17 +726,7 @@ Your use of *vert.x Web* is subject to the terms and conditions of the Apache So
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/vertx/vertx-web/${vertx.version}/vertx-web-${vertx.version}-sources.jar).
-
-### vert.x Web Client ${vertx.version}
-
-This product includes software developed by the [vert.x project](http://vertx.io).
-
-Your use of *vert.x Web* is subject to the terms and conditions of the Apache Software License 2.0.
-A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
-is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
-
-The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=io/vertx/vertx-web-client/${vertx.version}/vertx-web-client-${vertx.version}-sources.jar).
+The source code is available from [GitHub](https://github.com/vert-x3/vertx-web).
 
 ### WildFly Common
 
@@ -707,6 +749,16 @@ A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/wildfly-security/wildfly-elytron/).
+
+### zjsonpatch
+
+This product includes software developed by the [fabric8 project](https://fabric8.io/).
+
+Your use of *Kubernetes Client* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/fabric8io/zjsonpatch).
 
 ### Zstd-jni
 
