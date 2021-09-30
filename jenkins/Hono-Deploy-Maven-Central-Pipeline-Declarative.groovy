@@ -27,7 +27,7 @@ kind: Pod
 spec:
   containers:
   - name: maven
-    image: "maven:3.6-openjdk-11"
+    image: "maven:3.8-openjdk-11"
     tty: true
     command:
     - cat
@@ -125,7 +125,9 @@ spec:
       steps {
         container('maven') {
           withCredentials([file(credentialsId: 'secret-subkeys.asc', variable: 'KEYRING')]) {
+            sh 'gpg --version'
             sh 'gpg --batch --import-options restore --import "${KEYRING}"'
+            sh 'gpg --list-secret-keys'
           }
           sh "mvn deploy -pl :hono-service-auth,:hono-service-auth-quarkus,:hono-service-device-registry-file,:hono-service-device-registry-jdbc,:hono-service-device-registry-mongodb,:hono-service-command-router,:hono-service-command-router-quarkus,:hono-service-device-connection,:hono-adapter-http-vertx,:hono-adapter-http-vertx-quarkus,:hono-adapter-mqtt-vertx,:hono-adapter-mqtt-vertx-quarkus,:hono-adapter-kura,:hono-adapter-amqp-vertx,:hono-adapter-amqp-vertx-quarkus,:hono-adapter-lora-vertx,:hono-adapter-lora-vertx-quarkus,:hono-adapter-sigfox-vertx,:hono-adapter-coap-vertx,:hono-adapter-coap-vertx-quarkus,:hono-example,:hono-cli -am -DskipTests=true -DnoDocker -DcreateGPGSignature=true -DcreateJavadoc=true -DenableEclipseJarSigner=true"
         }
