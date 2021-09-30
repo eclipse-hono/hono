@@ -28,12 +28,9 @@ import org.eclipse.hono.util.RegistryManagementConstants;
  */
 public class DeviceServiceProperties {
 
-    private static final int DEFAULT_TASK_EXECUTOR_QUEUE_SIZE = 1024;
     private static final Duration DEFAULT_CREDENTIALS_TTL = Duration.ofMinutes(1);
     private static final Duration DEFAULT_REGISTRATION_TTL = Duration.ofMinutes(1);
     private static final int DEFAULT_MAX_BCRYPT_COSTFACTOR = 10;
-
-    private int taskExecutorQueueSize = DEFAULT_TASK_EXECUTOR_QUEUE_SIZE;
 
     private Duration credentialsTtl = DEFAULT_CREDENTIALS_TTL;
     private Duration registrationTtl = DEFAULT_REGISTRATION_TTL;
@@ -42,20 +39,21 @@ public class DeviceServiceProperties {
 
     private final Set<String> hashAlgorithmsAllowList = new HashSet<>();
 
-    public final int getTaskExecutorQueueSize() {
-        return this.taskExecutorQueueSize;
-    }
-
-    public final void setTaskExecutorQueueSize(final int taskExecutorQueueSize) {
-        this.taskExecutorQueueSize = taskExecutorQueueSize;
-    }
-
+    /**
+     * Gets the duration after which retrieved credentials information must be considered stale.
+     * <p>
+     * The default value of this property is one minute.
+     *
+     * @return The duration.
+     */
     public final Duration getCredentialsTtl() {
         return this.credentialsTtl;
     }
 
     /**
-     * Set TTL for credential responses, defaults to {@link #DEFAULT_CREDENTIALS_TTL}.
+     * Sets the duration after which retrieved credentials information must be considered stale.
+     * <p>
+     * The default value of this property is one minute.
      *
      * @param credentialsTtl The TTL.
      * @throws NullPointerException if ttl is {@code null}.
@@ -69,15 +67,24 @@ public class DeviceServiceProperties {
         this.credentialsTtl = credentialsTtl;
     }
 
+    /**
+     * Gets the duration after which retrieved device registration information must be considered stale.
+     * <p>
+     * The default value of this property is one minute.
+     *
+     * @return The duration.
+     */
     public final Duration getRegistrationTtl() {
         return this.registrationTtl;
     }
 
     /**
-     * Set TTL for registration responses, defaults to {@link #DEFAULT_REGISTRATION_TTL}.
+     * Sets the duration after which retrieved device registration information must be considered stale.
+     * <p>
+     * The default value of this property is one minute.
      *
-     * @param registrationTtl The TTL.
-     * @throws IllegalArgumentException if the TTL value is less than one second.
+     * @param registrationTtl The duration.
+     * @throws IllegalArgumentException if the duration is less than one second.
      */
 
     public final void setRegistrationTtl(final Duration registrationTtl) {

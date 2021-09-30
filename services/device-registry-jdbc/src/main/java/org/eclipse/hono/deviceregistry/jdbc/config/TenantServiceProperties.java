@@ -25,12 +25,21 @@ public class TenantServiceProperties {
 
     private Duration tenantTtl = DEFAULT_TENANT_TTL;
 
+    /**
+     * Gets the duration after which retrieved tenant information must be considered stale.
+     * <p>
+     * The default value of this property is one minute.
+     *
+     * @return The duration.
+     */
     public final Duration getTenantTtl() {
         return this.tenantTtl;
     }
 
     /**
      * Sets the duration after which retrieved tenant information must be considered stale.
+     * <p>
+     * The default value of this property is one minute.
      *
      * @param tenantTtl The tenant TTL.
      * @throws NullPointerException if ttl is {@code null}.

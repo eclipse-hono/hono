@@ -50,19 +50,25 @@ import io.vertx.ext.mongo.UpdateOptions;
  */
 public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements CredentialsDao, HealthCheckProvider {
 
-    public static final String KEY_AUTH_ID = String.format("%s.%s", CredentialsDto.FIELD_CREDENTIALS,
-            RegistryManagementConstants.FIELD_AUTH_ID);
-    public static final String KEY_CREDENTIALS_TYPE = String.format("%s.%s", CredentialsDto.FIELD_CREDENTIALS,
-            RegistryManagementConstants.FIELD_TYPE);
-    public static final String CREDENTIALS_FILTERED_POSITIONAL_OPERATOR = String.format("%s.$",
-            CredentialsDto.FIELD_CREDENTIALS);
+    /**
+     * The name of the index on the Credentials type and authentication identifier.
+     */
+    public static final String IDX_CREDENTIALS_TYPE_AND_AUTH_ID = "credentials_type_and_auth_id";
+    /**
+     * The projection document used for querying credentials by type and authentication identifier.
+     */
     public static final JsonObject PROJECTION_CREDS_BY_TYPE_AND_AUTH_ID = new JsonObject()
             .put(RegistryManagementConstants.FIELD_PAYLOAD_DEVICE_ID, 1)
-            .put(CREDENTIALS_FILTERED_POSITIONAL_OPERATOR, 1)
+            .put(String.format("%s.$", CredentialsDto.FIELD_CREDENTIALS), 1)
             .put("_id", 0);
-    public static final String IDX_CREDENTIALS_TYPE_AND_AUTH_ID = "credentials_type_and_auth_id";
 
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedCredentialsDao.class);
+    private static final String KEY_AUTH_ID = String.format(
+            "%s.%s",
+            CredentialsDto.FIELD_CREDENTIALS, RegistryManagementConstants.FIELD_AUTH_ID);
+    private static final String KEY_CREDENTIALS_TYPE = String.format(
+            "%s.%s",
+            CredentialsDto.FIELD_CREDENTIALS, RegistryManagementConstants.FIELD_TYPE);
 
     private final AtomicBoolean creatingIndices = new AtomicBoolean(false);
     private final AtomicBoolean indicesCreated = new AtomicBoolean(false);
