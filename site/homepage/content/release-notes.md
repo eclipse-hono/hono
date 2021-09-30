@@ -21,6 +21,10 @@ description = "Information about changes in recent Hono releases. Includes new f
   can now be configured using environment variables. Please refer to the registry's Admin Guide for details.
 * The Registry Management API has been extended with an operation to delete all devices (including credentials) of a
   tenant. Both the Mongo DB and the JDBC based registry implementations support this operation.
+* The protocol adapters and the Command Router component now by default report a set of metrics concerning the clients
+  used for sending and receiving messages via Kafka. Please refer to the 
+  [Hono Kafka Client Configuration Guide]({{% doclink "/admin-guide/hono-kafka-client-configuration/#kafka-client-metrics-configuration" %}})
+  for additional information.
 
 ### Fixes & Enhancements
 
