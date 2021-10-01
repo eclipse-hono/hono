@@ -62,7 +62,7 @@
     <protostream.version>4.4.1.Final</protostream.version>
     <proton.version>0.33.9</proton.version>
     <qpid-jms.version>1.2.0</qpid-jms.version>
-    <quarkus.platform.version>2.2.2.Final</quarkus.platform.version>
+    <quarkus.platform.version>2.2.3.Final</quarkus.platform.version>
     <slf4j.version>1.7.28</slf4j.version>
     <spring.version>5.3.10</spring.version>
     <spring-boot.version>2.5.5</spring-boot.version>
