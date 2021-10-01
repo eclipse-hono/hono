@@ -98,10 +98,13 @@ public final class MongoDBBasedDeviceManagementSearchDevicesTest implements Abst
      */
     @AfterAll
     public void closeDao(final VertxTestContext testContext) {
+
+        final Promise<Void> devicesCloseHandler = Promise.promise();
+        dao.close(devicesCloseHandler);
         final Promise<Void> credentialsCloseHandler = Promise.promise();
         credentialsDao.close(credentialsCloseHandler);
 
-        credentialsCloseHandler.future()
+        CompositeFuture.all(credentialsCloseHandler.future(), devicesCloseHandler.future())
             .compose(ok -> {
                 final Promise<Void> vertxCloseHandler = Promise.promise();
                 vertx.close(vertxCloseHandler);

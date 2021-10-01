@@ -94,6 +94,11 @@
           <systemProperties>
             <mongoDbImageName>${mongodb-image.name}</mongoDbImageName>
           </systemProperties>
+          <properties>
+            <configurationParameters>
+              junit.jupiter.execution.parallel.enabled = false
+            </configurationParameters>
+          </properties>
         </configuration>
       </plugin>
     </plugins>

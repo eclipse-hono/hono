@@ -52,7 +52,7 @@
     <logback.version>1.2.3</logback.version>
     <micrometer.version>1.7.4</micrometer.version>
     <mockito.version>3.7.7</mockito.version>
-    <mongodb-image.name>mongo:4.2.13</mongodb-image.name>
+    <mongodb-image.name>mongo:4.2.15</mongodb-image.name>
     <mongodb-driver.version>4.3.1</mongodb-driver.version>
     <native.image.name>registry.access.redhat.com/ubi8/ubi-minimal:8.4</native.image.name>
     <netty.version>4.1.67.Final</netty.version>

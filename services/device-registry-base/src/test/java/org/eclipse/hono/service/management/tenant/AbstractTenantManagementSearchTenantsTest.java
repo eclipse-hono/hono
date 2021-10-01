@@ -65,6 +65,7 @@ public interface AbstractTenantManagementSearchTenantsTest {
         final Filter filter = new Filter("/enabled", false);
 
         createTenants(Map.of(tenantId, new Tenant().setEnabled(true)))
+            .onFailure(ctx::failNow)
             .compose(ok -> getTenantManagementService().searchTenants(
                     pageSize,
                     pageOffset,
@@ -95,8 +96,13 @@ public interface AbstractTenantManagementSearchTenantsTest {
         createTenants(Map.of(
                 tenantId1, new Tenant().setEnabled(true),
                 tenantId2, new Tenant().setEnabled(false)))
-            .compose(ok -> getTenantManagementService()
-                    .searchTenants(pageSize, pageOffset, List.of(filter), List.of(), NoopSpan.INSTANCE))
+            .onFailure(ctx::failNow)
+            .compose(ok -> getTenantManagementService().searchTenants(
+                    pageSize,
+                    pageOffset,
+                    List.of(filter),
+                    List.of(),
+                    NoopSpan.INSTANCE))
             .onComplete(ctx.succeeding(s -> {
                 ctx.verify(() -> {
                     assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
@@ -128,9 +134,13 @@ public interface AbstractTenantManagementSearchTenantsTest {
                 tenantId1, new Tenant().setEnabled(true).setExtensions(Map.of("group", "A")),
                 tenantId2, new Tenant().setEnabled(true).addAdapterConfig(new Adapter("MQTT"))
                         .setExtensions(Map.of("group", "A"))))
-            .compose(ok -> getTenantManagementService()
-                    .searchTenants(pageSize, pageOffset, List.of(filter1, filter2, filter3),
-                            List.of(), NoopSpan.INSTANCE))
+            .onFailure(ctx::failNow)
+            .compose(ok -> getTenantManagementService().searchTenants(
+                    pageSize,
+                    pageOffset,
+                    List.of(filter1, filter2, filter3),
+                    List.of(),
+                    NoopSpan.INSTANCE))
             .onComplete(ctx.succeeding(s -> {
                 ctx.verify(() -> {
                     assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
@@ -161,8 +171,13 @@ public interface AbstractTenantManagementSearchTenantsTest {
         createTenants(Map.of(
                 tenantId1, new Tenant().setEnabled(true),
                 tenantId2, new Tenant().setEnabled(true)))
-            .compose(ok -> getTenantManagementService()
-                    .searchTenants(pageSize, pageOffset, List.of(filter), List.of(), NoopSpan.INSTANCE))
+            .onFailure(ctx::failNow)
+            .compose(ok -> getTenantManagementService().searchTenants(
+                    pageSize,
+                    pageOffset,
+                    List.of(filter),
+                    List.of(),
+                    NoopSpan.INSTANCE))
             .onComplete(ctx.succeeding(s -> {
                 ctx.verify(() -> {
                     assertThat(s.getStatus()).isEqualTo(HttpURLConnection.HTTP_OK);
@@ -193,6 +208,7 @@ public interface AbstractTenantManagementSearchTenantsTest {
         createTenants(Map.of(
                 tenantId1, new Tenant().setEnabled(true).setExtensions(Map.of("id", "1")),
                 tenantId2, new Tenant().setEnabled(true).setExtensions(Map.of("id", "2"))))
+            .onFailure(ctx::failNow)
             .compose(ok -> getTenantManagementService().searchTenants(
                     pageSize,
                     pageOffset,
@@ -234,6 +250,7 @@ public interface AbstractTenantManagementSearchTenantsTest {
                 tenantId1, new Tenant().setEnabled(false).setExtensions(Map.of("id", "1", "group", "B")),
                 tenantId2, new Tenant().setEnabled(true).setExtensions(Map.of("id", "2", "group", "B")),
                 tenantId3, new Tenant().setEnabled(true).setExtensions(Map.of("id", "3", "group", "B"))))
+            .onFailure(ctx::failNow)
             .compose(ok -> getTenantManagementService().searchTenants(
                     pageSize,
                     pageOffset,
@@ -276,6 +293,7 @@ public interface AbstractTenantManagementSearchTenantsTest {
                         Map.of("id", "tenant2-id", "value", "test$2Value")),
                 tenantId3, new Tenant().setEnabled(true).setExtensions(
                         Map.of("id", "tenant3-id", "value", "test$3Value"))))
+            .onFailure(ctx::failNow)
             .compose(ok -> getTenantManagementService().searchTenants(
                     pageSize,
                     pageOffset,
@@ -319,6 +337,7 @@ public interface AbstractTenantManagementSearchTenantsTest {
                         Map.of("id", "testTenant-2", "value", "test$2Value")),
                 tenantId3, new Tenant().setEnabled(true).setExtensions(
                         Map.of("id", "testTenant-3", "value", "test$3Value"))))
+            .onFailure(ctx::failNow)
             .compose(ok -> getTenantManagementService().searchTenants(
                     pageSize,
                     pageOffset,
