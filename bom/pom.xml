@@ -45,10 +45,7 @@
     <javax.annotation.api.version>1.3.2</javax.annotation.api.version>
     <jjwt.version>0.11.2</jjwt.version>
     <junit.jupiter.version>5.7.2</junit.jupiter.version>
-    <!-- when updating the Kafka clients, update the documentation in
-    site/documentation/content/admin-guide/hono-kafka-client-configuration.md as well -->
-    <kafka-clients.version>2.6.0</kafka-clients.version>
-    <kafka.image.name>confluentinc/cp-kafka:6.1.1</kafka.image.name>
+    <kafka.image.name>confluentinc/cp-kafka:6.2.1</kafka.image.name>
     <logback.version>1.2.3</logback.version>
     <micrometer.version>1.7.4</micrometer.version>
     <mockito.version>3.7.7</mockito.version>
@@ -71,9 +68,8 @@
     <spring-boot.version>2.5.5</spring-boot.version>
     <spring-security-crypto.version>5.5.2</spring-security-crypto.version>
     <truth.version>1.1.3</truth.version>
-    <!-- when updating Vert.x, check if the Kafka clients need to be updated as well -->
     <vertx.version>4.1.3</vertx.version>
-    <zookeeper.image.name>confluentinc/cp-zookeeper:6.1.1</zookeeper.image.name>
+    <zookeeper.image.name>confluentinc/cp-zookeeper:6.2.1</zookeeper.image.name>
 
     <!-- The port at which the Prometheus scraping endpoint is exposed -->
     <prometheus.scraping.port>8088</prometheus.scraping.port>
@@ -498,11 +494,6 @@
         <groupId>io.vertx</groupId>
         <artifactId>vertx-kafka-client</artifactId>
         <version>${vertx.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.kafka</groupId>
-        <artifactId>kafka-clients</artifactId>
-        <version>${kafka-clients.version}</version>
       </dependency>
       <dependency>
         <groupId>io.vertx</groupId>

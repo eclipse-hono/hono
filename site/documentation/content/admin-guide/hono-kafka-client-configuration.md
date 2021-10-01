@@ -155,9 +155,9 @@ The metrics support can be configured using the following environment variables 
 | `HONO_KAFKA_METRICS_METRICSPREFIXES`<br>`hono.kafka.metrics.metricsPrefixes`| no | - | A comma separated list of prefixes of the metrics to be reported for the Kafka clients (in addition to the default metrics if these are used). The complete list of metrics can be viewed in the [Kafka documentation](https://kafka.apache.org/documentation.html#selector_monitoring). The metric names to be used here have the form `kafka.[metric group].[metric name]`. The metric group can be obtained from the *type* value in the *MBean name*, omitting the `-metrics` suffix. E.g. for an MBean name containing `kafka.consumer:type=consumer-fetch-manager-metrics`, the group is `consumer.fetch.manager` (all dashes are to be replaced by dots in metric group and name). An example of a corresponding metric name would be `kafka.consumer.fetch.manager.bytes.consumed.total` <br>To include all metrics, the property value can be set to the `kafka` prefix. |
 
 
-## Required Kafka Version
+## Kafka Client Version
 
-Hono's protocol adapters (and other components) use the Kafka clients in version 2.6. It is recommended to provide a 
-Kafka cluster with a version number equal or higher to this. While you _might_ get Hono to work with older Kafka brokers,
-this has not been tested. If you experience any issues using Hono with an older Kafka version, please try to connect it
-to a recent Kafka cluster instead before raising an issue.
+Hono components include a recent version of the Kafka client as defined by the Quarkus framework. In general, the
+included client should work with recent versions of Kafka brokers. However, no cross version testing is being done
+as part of the Hono build process. If you experience any issues using Hono with an older Kafka version, please try
+to connect it to a recent Kafka cluster instead before raising an issue.
