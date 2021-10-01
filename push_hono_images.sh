@@ -15,40 +15,40 @@
 TAG=$1
 CR=$2
 IMAGES="hono-adapter-amqp-vertx \
+        hono-adapter-amqp-vertx-quarkus \
         hono-adapter-coap-vertx \
+        hono-adapter-coap-vertx-quarkus \
         hono-adapter-http-vertx \
+        hono-adapter-http-vertx-quarkus \
         hono-adapter-kura \
         hono-adapter-lora-vertx \
+        hono-adapter-lora-vertx-quarkus \
         hono-adapter-mqtt-vertx \
+        hono-adapter-mqtt-vertx-quarkus \
         hono-adapter-sigfox-vertx \
         hono-service-auth \
+        hono-service-auth-quarkus \
         hono-service-command-router \
+        hono-service-command-router-quarkus \
         hono-service-device-connection \
         hono-service-device-registry-file \
         hono-service-device-registry-jdbc \
         hono-service-device-registry-mongodb"
 
-QUARKUS_IMAGES="hono-adapter-amqp-vertx-quarkus \
-        hono-adapter-amqp-vertx-quarkus-native \
-        hono-adapter-coap-vertx-quarkus \
+NATIVE_IMAGES="hono-adapter-amqp-vertx-quarkus-native \
         hono-adapter-coap-vertx-quarkus-native \
-        hono-adapter-http-vertx-quarkus \
         hono-adapter-http-vertx-quarkus-native \
-        hono-adapter-lora-vertx-quarkus \
         hono-adapter-lora-vertx-quarkus-native \
-        hono-adapter-mqtt-vertx-quarkus \
         hono-adapter-mqtt-vertx-quarkus-native \
-        hono-service-auth-quarkus \
         hono-service-auth-quarkus-native \
-        hono-service-command-router-quarkus \
         hono-service-command-router-quarkus-native"
 
 ME=`basename "$0"`
 echo "called as $ME"
 
-if [ "push_hono_images_quarkus.sh" == "$ME" ]
+if [ "push_hono_native_images.sh" == "$ME" ]
 then
-  IMAGES=${QUARKUS_IMAGES}
+  IMAGES=${NATIVE_IMAGES}
 fi
 
 if [ -n "$TAG" ]
