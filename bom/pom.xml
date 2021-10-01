@@ -63,8 +63,8 @@
     <postgresql-image.name>postgres:12-alpine</postgresql-image.name>
     <protoparser.version>4.0.3</protoparser.version>
     <protostream.version>4.4.1.Final</protostream.version>
-    <proton.version>0.33.8</proton.version>
-    <qpid-jms.version>1.0.0</qpid-jms.version>
+    <proton.version>0.33.9</proton.version>
+    <qpid-jms.version>1.2.0</qpid-jms.version>
     <quarkus.platform.version>2.2.2.Final</quarkus.platform.version>
     <slf4j.version>1.7.28</slf4j.version>
     <spring.version>5.3.8</spring.version>
@@ -402,6 +402,11 @@
         <groupId>io.vertx</groupId>
         <artifactId>vertx-proton</artifactId>
         <version>${vertx.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.qpid</groupId>
+        <artifactId>proton-j</artifactId>
+        <version>${proton.version}</version>
       </dependency>
       <dependency>
         <groupId>io.vertx</groupId>

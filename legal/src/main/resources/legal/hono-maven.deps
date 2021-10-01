@@ -156,7 +156,7 @@ org.apache.kafka:kafka-clients:jar:2.6.0
 org.apache.logging.log4j:log4j-api:jar:2.13.3
 org.apache.logging.log4j:log4j-api:jar:2.14.0
 org.apache.logging.log4j:log4j-to-slf4j:jar:2.13.3
-org.apache.qpid:proton-j:jar:0.33.8
+org.apache.qpid:proton-j:jar:0.33.9
 org.apache.thrift:libthrift:jar:0.14.1
 org.apiguardian:apiguardian-api:jar:1.1.0
 org.assertj:assertj-core:jar:3.20.2
