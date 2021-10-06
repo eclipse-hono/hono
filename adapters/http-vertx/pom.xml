@@ -21,9 +21,9 @@
     <version>1.11.0-SNAPSHOT</version>
   </parent>
   <artifactId>hono-adapter-http-vertx</artifactId>
-  <name>Hono HTTP Adapter</name>
+  <name>Hono HTTP Adapter (Spring)</name>
 
-  <description>A protocol adapter exposing Hono's Telemetry &amp; Event APIs via HTTP.</description>
+  <description>A Spring Boot based protocol adapter exposing Hono's Telemetry &amp; Event APIs via HTTP.</description>
   <url>https://www.eclipse.org/hono</url>
 
   <dependencies>

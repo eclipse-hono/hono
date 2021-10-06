@@ -20,8 +20,8 @@
     <relativePath>../base-spring</relativePath>
   </parent>
   <artifactId>hono-service-auth</artifactId>
-  <name>Hono Auth</name>
-  <description>A default identity provider for authenticating Hono components and consumers.</description>
+  <name>Hono Auth Server (Spring)</name>
+  <description>A Spring Boot based implementation of Hono's Authentication API.</description>
 
   <dependencies>
     <dependency>

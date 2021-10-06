@@ -20,8 +20,8 @@
     <relativePath>../base-quarkus</relativePath>
   </parent>
   <artifactId>hono-service-auth-quarkus</artifactId>
-  <name>Hono Auth (Quarkus)</name>
-  <description>A default identity provider for authenticating Hono components and consumers based on Quarkus.</description>
+  <name>Hono Auth Server (Quarkus)</name>
+  <description>A Quarkus based implementation of Hono's Authentication API.</description>
 
   <properties>
     <!-- do not delegate verification of credentials to Authentication server -->

@@ -23,7 +23,7 @@
   <artifactId>hono-adapter-lora-vertx-quarkus</artifactId>
   <name>Hono Lora Adapter (Quarkus)</name>
 
-  <description>A protocol adapter for connecting LoRa Backend Services like Kerlink or TTN.</description>
+  <description>A Quarkus based protocol adapter for connecting LoRa Backend Services like Kerlink or TTN.</description>
   <url>https://www.eclipse.org/hono</url>
 
   <dependencies>

@@ -21,7 +21,9 @@
     <version>1.11.0-SNAPSHOT</version>
   </parent>
   <artifactId>hono-adapter-amqp-vertx</artifactId>
-  <name>Hono AMQP Adapter</name>
+  <name>Hono AMQP Adapter (Spring)</name>
+
+  <description>A Spring Boot based protocol adapter exposing Hono's Telemetry &amp; Event APIs via AMQP.</description>
   <url>https://www.eclipse.org/hono</url>
 
   <dependencies>
