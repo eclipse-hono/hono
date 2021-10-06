@@ -14,6 +14,8 @@
 package org.eclipse.hono.authentication.spring;
 
 import org.eclipse.hono.authentication.AuthenticationEndpoint;
+import org.eclipse.hono.authentication.AuthenticationServerMetrics;
+import org.eclipse.hono.authentication.MicrometerBasedAuthenticationServerMetrics;
 import org.eclipse.hono.authentication.SimpleAuthenticationServer;
 import org.eclipse.hono.authentication.file.FileBasedAuthenticationService;
 import org.eclipse.hono.authentication.file.FileBasedAuthenticationServiceConfigProperties;
@@ -26,11 +28,13 @@ import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.service.auth.AuthTokenHelper;
 import org.eclipse.hono.service.auth.AuthTokenHelperImpl;
+import org.eclipse.hono.service.auth.EventBusAuthenticationService;
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.spring.PrometheusSupport;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.Constants;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
@@ -54,6 +58,9 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
 public class ApplicationConfig {
 
     private static final String BEAN_NAME_SIMPLE_AUTHENTICATION_SERVER = "simpleAuthenticationServer";
+
+    @Autowired
+    MeterRegistry meterRegistry;
 
     /**
      * Exposes a Vert.x instance as a Spring bean.
@@ -91,6 +98,7 @@ public class ApplicationConfig {
         final var server = new SimpleAuthenticationServer();
         server.setConfig(amqpProperties());
         server.setSaslAuthenticatorFactory(authenticatorFactory());
+        server.setMetrics(metrics());
         return server;
     }
 
@@ -202,10 +210,16 @@ public class ApplicationConfig {
      */
     @Bean
     public ProtonSaslAuthenticatorFactory authenticatorFactory() {
-        return new HonoSaslAuthenticatorFactory(
+
+        final var eventBusAuthService = new EventBusAuthenticationService(
                 vertx(),
                 tokenValidator(),
-                authenticationService());
+                authenticationService().getSupportedSaslMechanisms());
+        final var metrics = metrics();
+
+        return new HonoSaslAuthenticatorFactory(
+                eventBusAuthService,
+                metrics::reportConnectionAttempt);
     }
 
     /**
@@ -217,6 +231,11 @@ public class ApplicationConfig {
     public MeterRegistryCustomizer<MeterRegistry> commonTags() {
 
         return r -> r.config().commonTags(MetricsTags.forService(Constants.SERVICE_NAME_AUTH));
+    }
+
+    @Bean
+    AuthenticationServerMetrics metrics() {
+        return new MicrometerBasedAuthenticationServerMetrics(meterRegistry);
     }
 
     /**

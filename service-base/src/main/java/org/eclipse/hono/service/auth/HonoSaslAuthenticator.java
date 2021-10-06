@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,11 +12,12 @@
  *******************************************************************************/
 package org.eclipse.hono.service.auth;
 
-import java.net.HttpURLConnection;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Consumer;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.security.auth.x500.X500Principal;
@@ -25,7 +26,8 @@ import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Sasl.SaslOutcome;
 import org.apache.qpid.proton.engine.Transport;
 import org.eclipse.hono.auth.HonoUser;
-import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.service.auth.AuthenticationService.AuthenticationAttemptOutcome;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
@@ -57,6 +59,7 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
     private static final Logger   LOG = LoggerFactory.getLogger(HonoSaslAuthenticator.class);
 
     private final AuthenticationService authenticationService;
+    private final Consumer<AuthenticationAttemptOutcome> authenticationAttemptMeter;
 
     private Sasl                  sasl;
     private boolean               succeeded;
@@ -66,11 +69,26 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
     /**
      * Creates a new authenticator.
      *
-     * @param authService The service to use for authenticating client.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @param authService The service to use for verifying the credentials provided by clients.
+     * @throws NullPointerException if authentication service is {@code null}.
      */
     public HonoSaslAuthenticator(final AuthenticationService authService) {
+        this(authService, null);
+    }
+
+    /**
+     * Creates a new authenticator.
+     *
+     * @param authService The service to use for authenticating client.
+     * @param authenticationAttemptMeter A consumer for reporting the outcome of authentication attempts
+     *                               or {@code null}, if authentication attempts should not be metered.
+     * @throws NullPointerException if authentication service is {@code null}.
+     */
+    public HonoSaslAuthenticator(
+            final AuthenticationService authService,
+            final Consumer<AuthenticationAttemptOutcome> authenticationAttemptMeter) {
         this.authenticationService = Objects.requireNonNull(authService);
+        this.authenticationAttemptMeter = Optional.ofNullable(authenticationAttemptMeter).orElse(outcome -> {});
     }
 
     @Override
@@ -110,65 +128,42 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
             LOG.debug("client wants to authenticate using SASL [mechanism: {}, host: {}, state: {}]",
                     chosenMechanism, sasl.getHostname(), sasl.getState().name());
 
+            final byte[] saslResponse = new byte[sasl.pending()];
+            sasl.recv(saslResponse, 0, saslResponse.length);
             final Promise<HonoUser> authTracker = Promise.promise();
-            authTracker.future().onComplete(s -> {
-                final SaslOutcome saslOutcome;
-                if (s.succeeded()) {
+            verify(chosenMechanism, saslResponse, authTracker);
 
-                    final HonoUser user = s.result();
+            authTracker.future()
+                .map(user -> {
                     LOG.debug("authentication of client [authorization ID: {}] succeeded", user.getName());
                     Constants.setClientPrincipal(protonConnection, user);
                     succeeded = true;
-                    saslOutcome = SaslOutcome.PN_SASL_OK;
-
-                } else {
-
-                    if (s.cause() instanceof ServiceInvocationException) {
-                        final int status = ((ServiceInvocationException) s.cause()).getErrorCode();
-                        LOG.debug("authentication check failed: {} (status {})", s.cause().getMessage(), status);
-                        saslOutcome = getSaslOutcomeForErrorStatus(status);
+                    // reporting a successful connection attempt is left to the component using this
+                    // authenticator in order to also capture context information about the attempt
+                    return SaslOutcome.PN_SASL_OK;
+                })
+                .otherwise(error -> {
+                    if (error instanceof ClientErrorException) {
+                        final int status = ((ClientErrorException) error).getErrorCode();
+                        LOG.debug("authentication check failed: {} (status {})", error.getMessage(), status);
+                        authenticationAttemptMeter.accept(AuthenticationAttemptOutcome.UNAUTHORIZED);
+                        return SaslOutcome.PN_SASL_AUTH;
                     } else {
-                        LOG.debug("authentication check failed (no status code given in exception)", s.cause());
-                        saslOutcome = SaslOutcome.PN_SASL_TEMP;
+                        LOG.debug("authentication check failed (no status code given in exception)", error);
+                        authenticationAttemptMeter.accept(AuthenticationAttemptOutcome.UNAVAILABLE);
+                        return SaslOutcome.PN_SASL_TEMP;
                     }
-
-                }
-                sasl.done(saslOutcome);
-                completionHandler.handle(Boolean.TRUE);
-            });
-
-            final byte[] saslResponse = new byte[sasl.pending()];
-            sasl.recv(saslResponse, 0, saslResponse.length);
-
-            verify(chosenMechanism, saslResponse, authTracker);
+                })
+                .onSuccess(saslOutcome -> {
+                    LOG.debug("finishing SASL handshake with outcome {}", saslOutcome);
+                    sasl.done(saslOutcome);
+                })
+                .onFailure(error -> {
+                    LOG.error("failed to perform STEP of SASL handshake", error);
+                    sasl.done(SaslOutcome.PN_SASL_SYS);
+                })
+                .onComplete(r -> completionHandler.handle(Boolean.TRUE));
         }
-    }
-
-    private SaslOutcome getSaslOutcomeForErrorStatus(final int status) {
-        final SaslOutcome saslOutcome;
-        switch (status) {
-            case HttpURLConnection.HTTP_BAD_REQUEST:
-            case HttpURLConnection.HTTP_UNAUTHORIZED:
-                // failed due to an authentication error
-                saslOutcome = SaslOutcome.PN_SASL_AUTH;
-                break;
-            case HttpURLConnection.HTTP_INTERNAL_ERROR:
-                // failed due to a system error
-                saslOutcome = SaslOutcome.PN_SASL_SYS;
-                break;
-            case HttpURLConnection.HTTP_UNAVAILABLE:
-                // failed due to a transient error
-                saslOutcome = SaslOutcome.PN_SASL_TEMP;
-                break;
-            default:
-                if (status >= 400 && status < 500) {
-                    // client error
-                    saslOutcome = SaslOutcome.PN_SASL_PERM;
-                } else {
-                    saslOutcome = SaslOutcome.PN_SASL_TEMP;
-                }
-        }
-        return saslOutcome;
     }
 
     @Override

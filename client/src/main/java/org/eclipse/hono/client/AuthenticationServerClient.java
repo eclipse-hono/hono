@@ -117,6 +117,7 @@ public final class AuthenticationServerClient {
     }
 
     private ServiceInvocationException mapConnectionFailureToServiceInvocationException(final Throwable connectionFailureCause) {
+
         final ServiceInvocationException exception;
         if (connectionFailureCause == null) {
             exception = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "failed to connect to Authentication service");
@@ -128,6 +129,9 @@ public final class AuthenticationServerClient {
             exception = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "failed to connect to Authentication service",
                     connectionFailureCause);
         }
+        LOG.debug("mapped exception [{}] thrown during SASL handshake to [{}]",
+                connectionFailureCause.getClass().getName(),
+                exception.getClass().getName());
         return exception;
     }
 

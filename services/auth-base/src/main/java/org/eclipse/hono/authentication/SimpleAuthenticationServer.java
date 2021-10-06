@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.authentication;
 
+import java.util.Objects;
+
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.Source;
 import org.eclipse.hono.auth.HonoUser;
@@ -20,6 +22,7 @@ import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
 import org.eclipse.hono.service.auth.AddressAuthzHelper;
+import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
@@ -40,10 +43,21 @@ import io.vertx.proton.ProtonSender;
 public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceConfigProperties> {
 
     private static final Logger LOG = LoggerFactory.getLogger(SimpleAuthenticationServer.class);
+    private AuthenticationServerMetrics metrics = NoopAuthenticationServerMetrics.INSTANCE;
 
     @Override
     public void setConfig(final ServiceConfigProperties configuration) {
         setSpecificConfig(configuration);
+    }
+
+    /**
+     * Sets the object to use for reporting metrics.
+     *
+     * @param metrics The metrics.
+     * @throws NullPointerException if metrics is {@code null}.
+     */
+    public void setMetrics(final AuthenticationServerMetrics metrics) {
+        this.metrics = Objects.requireNonNull(metrics);
     }
 
     @Override
@@ -84,12 +98,17 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
      */
     @Override
     protected void processRemoteOpen(final ProtonConnection connection) {
+        final AuthenticationServerMetrics.ClientType clientType;
         if (AddressAuthzHelper.isAddressAuthzCapabilitySet(connection)) {
+            clientType = AuthenticationServerMetrics.ClientType.DISPATCH_ROUTER;
             LOG.debug("client [container: {}] requests transfer of authenticated user's authorities in open frame",
                     connection.getRemoteContainer());
             AddressAuthzHelper.processAddressAuthzCapability(connection);
+        } else {
+            clientType = AuthenticationServerMetrics.ClientType.AUTH_SERVICE;
         }
         connection.open();
+        metrics.reportConnectionAttempt(AuthenticationService.AuthenticationAttemptOutcome.SUCCEEDED, clientType);
         vertx.setTimer(5000, closeCon -> {
             if (!connection.isDisconnected()) {
                 LOG.debug("connection with client [{}] timed out after 5 seconds, closing connection", connection.getRemoteContainer());

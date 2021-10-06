@@ -18,6 +18,8 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
 import org.eclipse.hono.authentication.AuthenticationEndpoint;
+import org.eclipse.hono.authentication.AuthenticationServerMetrics;
+import org.eclipse.hono.authentication.MicrometerBasedAuthenticationServerMetrics;
 import org.eclipse.hono.authentication.SimpleAuthenticationServer;
 import org.eclipse.hono.authentication.file.FileBasedAuthenticationService;
 import org.eclipse.hono.authentication.file.FileBasedAuthenticationServiceConfigProperties;
@@ -29,6 +31,7 @@ import org.eclipse.hono.config.quarkus.ServiceOptions;
 import org.eclipse.hono.service.auth.AuthTokenHelper;
 import org.eclipse.hono.service.auth.AuthTokenHelperImpl;
 import org.eclipse.hono.service.auth.AuthenticationService;
+import org.eclipse.hono.service.auth.EventBusAuthenticationService;
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.quarkus.AbstractServiceApplication;
@@ -136,21 +139,29 @@ public class Application extends AbstractServiceApplication {
      *
      * @return The factory.
      */
-    ProtonSaslAuthenticatorFactory authenticatorFactory(final AuthenticationService authService) {
-        return new HonoSaslAuthenticatorFactory(
+    ProtonSaslAuthenticatorFactory authenticatorFactory(
+            final AuthenticationService authService,
+            final AuthenticationServerMetrics metrics) {
+
+        final var eventBusAuthService = new EventBusAuthenticationService(
                 vertx,
                 tokenValidator(),
-                authService);
+                authService.getSupportedSaslMechanisms());
+
+        return new HonoSaslAuthenticatorFactory(
+                eventBusAuthService,
+                metrics::reportConnectionAttempt);
     }
 
     SimpleAuthenticationServer simpleAuthenticationServer(final AuthenticationService authService) {
 
         LOG.info("creating {} instance", SimpleAuthenticationServer.class.getName());
-
+        final var metrics = new MicrometerBasedAuthenticationServerMetrics(meterRegistry);
         final var server = new SimpleAuthenticationServer();
         server.setConfig(amqpProps);
-        server.setSaslAuthenticatorFactory(authenticatorFactory(authService));
+        server.setSaslAuthenticatorFactory(authenticatorFactory(authService, metrics));
         server.addEndpoint(new AuthenticationEndpoint(vertx));
+        server.setMetrics(metrics);
         return server;
     }
 }

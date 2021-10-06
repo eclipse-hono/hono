@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,7 +13,9 @@
 package org.eclipse.hono.service.auth;
 
 import java.util.Objects;
+import java.util.function.Consumer;
 
+import org.eclipse.hono.service.auth.AuthenticationService.AuthenticationAttemptOutcome;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -30,6 +32,7 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
 public final class HonoSaslAuthenticatorFactory implements ProtonSaslAuthenticatorFactory {
 
     private final AuthenticationService authenticationService;
+    private Consumer<AuthenticationAttemptOutcome> authenticationAttemptMeter;
 
     /**
      * Creates a new factory for a Vertx environment.
@@ -45,8 +48,10 @@ public final class HonoSaslAuthenticatorFactory implements ProtonSaslAuthenticat
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     @Autowired
-    public HonoSaslAuthenticatorFactory(final Vertx vertx,
-            @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION) final AuthTokenHelper validator,
+    public HonoSaslAuthenticatorFactory(
+            final Vertx vertx,
+            @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION)
+            final AuthTokenHelper validator,
             final AuthenticationService actualAuthenticationService) {
         this(new EventBusAuthenticationService(vertx, validator,
                 actualAuthenticationService.getSupportedSaslMechanisms()));
@@ -74,12 +79,26 @@ public final class HonoSaslAuthenticatorFactory implements ProtonSaslAuthenticat
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public HonoSaslAuthenticatorFactory(final AuthenticationService authService) {
+        this(authService, null);
+    }
+
+    /**
+     * Creates a new factory using a specific authentication service instance.
+     *
+     * @param authService The object to return on invocations of {@link #create()}.
+     * @param authenticationAttemptMeter A consumer for reporting the outcome of authentication attempts
+     *                               or {@code null}, if authentication attempts should not be metered.
+     * @throws NullPointerException if authentication service is {@code null}.
+     */
+    public HonoSaslAuthenticatorFactory(
+            final AuthenticationService authService,
+            final Consumer<AuthenticationAttemptOutcome> authenticationAttemptMeter) {
         this.authenticationService = Objects.requireNonNull(authService);
+        this.authenticationAttemptMeter = authenticationAttemptMeter;
     }
 
     @Override
     public ProtonSaslAuthenticator create() {
-        return new HonoSaslAuthenticator(authenticationService);
+        return new HonoSaslAuthenticator(authenticationService, authenticationAttemptMeter);
     }
-
 }

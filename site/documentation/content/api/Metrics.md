@@ -56,7 +56,7 @@ The names of Hono's standard components are as follows:
 
 ### Protocol Adapter Metrics
 
-Additional tags for protocol adapters are:
+Additional tags used for metrics reported by protocol adapters are:
 
 | Name        | Value                                              | Description |
 | ----------- | -------------------------------------------------- | ----------- |
@@ -109,4 +109,15 @@ For an incoming message of size 10KB, it is reported as 12KB.
 
 ### Service Metrics
 
-Hono's service components do not report own metrics at the moment. The Command Router service component reports the *hono.commands.received* and *hono.commands.payload* metrics for command messages that could not be forwarded to a protocol adapter.
+#### Authentication Server
+
+| Metric                             | Type                | Tags                                                                 | Description |
+| ---------------------------------- | ------------------- | -------------------------------------------------------------------- | ----------- |
+| *hono.authentication.attempts*     | Counter             | *host*, *component-type*, *component-name*, *outcome*, *client-type* | The number of attempts made by clients to authenticate to the server.<br/><br/>The *outcome* tag's value determines if the attempt was successful or not:<br/>`succeeded` indicates that the client has been authenticated successfully,<br/>`unauthorized` indicates that the client failed to authenticate, e.g. because of wrong credentials and<br/>`unavailable` indicates that some of the services required for verifying the client's credentials are (temporarily) not available.<br/><br/>The *client-type* tag indicates what type of client has attempted to authenticate:<br/>`auth-service` indicates that the client tried to use the server as an implementation of the [Hono Authentication Service]({{< relref "/api/authentication" >}}),<br/>`dispatch-router` indicates that the client tried to use the server as an implementation of the [Qpid Dispatch Router AuthService](https://qpid.apache.org/releases/qpid-dispatch-1.17.0/man/qdrouterd.conf.html#_authserviceplugin).<br/>`unknown` indicates that the type of client is unknown. |
+
+#### Command Router
+
+| Metric                             | Type                | Tags                                                     | Description |
+| ---------------------------------- | ------------------- | -------------------------------------------------------- | ----------- |
+| *hono.commands.received*           | Timer               | *host*, *component-type*, *component-name*, *tenant*, *type*, *status*, *direction* | The time it took to process a message conveying a command that could not be forwarded to a protocol adapter. |
+| *hono.commands.payload*            | DistributionSummary | *host*, *component-type*, *component-name*, *tenant*, *type*, *status*, *direction* | The number of bytes conveyed in the payload of a command message that could not be forwarded to a protocol adapter. |
