@@ -9,7 +9,7 @@ maven/mavencentral/com.fasterxml.jackson.datatype/jackson-datatype-jdk8/2.12.4, 
 maven/mavencentral/com.fasterxml.jackson.datatype/jackson-datatype-jsr310/2.12.4, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.fasterxml.jackson.module/jackson-module-parameter-names/2.12.4, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.github.ben-manes.caffeine/caffeine/2.9.2, Apache-2.0, approved, clearlydefined
-maven/mavencentral/com.github.luben/zstd-jni/1.4.4-7, BSD-2-Clause, approved, CQ22420
+maven/mavencentral/com.github.luben/zstd-jni/1.4.9-1, BSD-2-Clause, approved, CQ22420
 maven/mavencentral/com.github.mifmif/generex/1.0.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.google.auto.value/auto-value-annotations/1.8.1, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.google.code.gson/gson/2.8.6, Apache-2.0, approved, CQ23102
@@ -152,10 +152,10 @@ maven/mavencentral/net.bytebuddy/byte-buddy-agent/1.10.19, Apache-2.0, approved,
 maven/mavencentral/net.i2p.crypto/eddsa/0.3.0, CC0-1.0, approved, CQ22537
 maven/mavencentral/org.apache.commons/commons-collections4/4.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.apache.commons/commons-compress/1.21, Apache-2.0 AND BSD-3-Clause AND bzip2-1.0.6 AND LicenseRef-Public-Domain, approved, CQ23710
-maven/mavencentral/org.apache.kafka/kafka-clients/2.6.0, Apache-2.0 AND BSD-2-Clause AND BSD-3-Clause AND EPL-2.0, approved, clearlydefined
-maven/mavencentral/org.apache.logging.log4j/log4j-api/2.13.3, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.apache.kafka/kafka-clients/2.8.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.apache.logging.log4j/log4j-api/2.14.0, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.apache.logging.log4j/log4j-to-slf4j/2.13.3, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.apache.logging.log4j/log4j-api/2.14.1, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.apache.logging.log4j/log4j-to-slf4j/2.14.1, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.apache.qpid/proton-j/0.33.9, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.apache.thrift/libthrift/0.14.1, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.apiguardian/apiguardian-api/1.1.0, Apache-2.0, approved, clearlydefined
@@ -165,7 +165,7 @@ maven/mavencentral/org.graalvm.sdk/graal-sdk/21.2.0, UPL-1.0, approved, clearlyd
 maven/mavencentral/org.hdrhistogram/HdrHistogram/2.1.12, , approved, CQ13192
 maven/mavencentral/org.infinispan/infinispan-client-hotrod/12.1.7.Final, Apache-2.0, approved, CQ23718
 maven/mavencentral/org.infinispan/infinispan-commons/12.1.7.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.infinispan/infinispan-core/12.1.7.Final, Apache-2.0, restricted, clearlydefined
+maven/mavencentral/org.infinispan/infinispan-core/12.1.7.Final, Apache-2.0, approved, #1178
 maven/mavencentral/org.infinispan.protostream/protostream/4.4.1.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.infinispan.protostream/protostream-types/4.4.1.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.jboss.logging/commons-logging-jboss-logging/1.0.0.Final, Apache-2.0, approved, clearlydefined
@@ -190,18 +190,18 @@ maven/mavencentral/org.postgresql/postgresql/42.2.23, BSD-2-Clause, approved, cl
 maven/mavencentral/org.reactivestreams/reactive-streams/1.0.3, CC0-1.0, approved, CQ16332
 maven/mavencentral/org.slf4j/jul-to-slf4j/1.7.28, MIT, approved, CQ12842
 maven/mavencentral/org.slf4j/slf4j-api/1.7.28, MIT, approved, CQ13368
-maven/mavencentral/org.springframework.boot/spring-boot/2.4.8, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.springframework.boot/spring-boot-actuator/2.4.8, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.springframework.boot/spring-boot-actuator-autoconfigure/2.4.8, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.springframework.boot/spring-boot-autoconfigure/2.4.8, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.springframework.boot/spring-boot-starter-logging/2.4.8, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.springframework.security/spring-security-crypto/5.4.7, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.springframework/spring-aop/5.3.8, Apache-2.0, approved, CQ23152
-maven/mavencentral/org.springframework/spring-beans/5.3.8, Apache-2.0, approved, CQ23153
-maven/mavencentral/org.springframework/spring-context/5.3.8, Apache-2.0, approved, CQ23051
-maven/mavencentral/org.springframework/spring-core/5.3.8, Apache-2.0 AND BSD-3-Clause, approved, CQ23154
-maven/mavencentral/org.springframework/spring-expression/5.3.8, Apache-2.0, approved, CQ23155
-maven/mavencentral/org.springframework/spring-jcl/5.3.8, Apache-2.0, approved, CQ23156
+maven/mavencentral/org.springframework.boot/spring-boot/2.5.5, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.springframework.boot/spring-boot-actuator/2.5.5, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.springframework.boot/spring-boot-actuator-autoconfigure/2.5.5, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.springframework.boot/spring-boot-autoconfigure/2.5.5, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.springframework.boot/spring-boot-starter-logging/2.5.5, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.springframework.security/spring-security-crypto/5.5.2, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.springframework/spring-aop/5.3.10, Apache-2.0, approved, CQ23152
+maven/mavencentral/org.springframework/spring-beans/5.3.10, Apache-2.0, approved, CQ23153
+maven/mavencentral/org.springframework/spring-context/5.3.10, Apache-2.0, approved, CQ23051
+maven/mavencentral/org.springframework/spring-core/5.3.10, Apache-2.0 AND BSD-3-Clause, approved, CQ23154
+maven/mavencentral/org.springframework/spring-expression/5.3.10, Apache-2.0, approved, CQ23155
+maven/mavencentral/org.springframework/spring-jcl/5.3.10, Apache-2.0, approved, CQ23156
 maven/mavencentral/org.wildfly.common/wildfly-common/1.5.4.Final-format-001, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.wildfly.security/wildfly-elytron-asn1/1.16.1.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.wildfly.security/wildfly-elytron-auth/1.16.1.Final, Apache-2.0, approved, clearlydefined
@@ -230,5 +230,5 @@ maven/mavencentral/org.wildfly.security/wildfly-elytron-security-manager-action/
 maven/mavencentral/org.wildfly.security/wildfly-elytron-ssl/1.16.1.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.wildfly.security/wildfly-elytron-util/1.16.1.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.wildfly.security/wildfly-elytron-x500/1.16.1.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.xerial.snappy/snappy-java/1.1.7.3, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.xerial.snappy/snappy-java/1.1.8.1, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.yaml/snakeyaml/1.29, Apache-2.0, approved, clearlydefined
