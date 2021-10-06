@@ -748,7 +748,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </log>
                     <wait>
                       <time>${service.startup.timeout}</time>
-                      <log>.*(waiting for connections on port).*</log>
+                      <log>.*(Waiting for connections).*</log>
                     </wait>
                   </run>
                 </image>
