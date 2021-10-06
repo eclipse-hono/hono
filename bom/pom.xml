@@ -50,7 +50,6 @@
     <micrometer.version>1.7.4</micrometer.version>
     <mockito.version>3.7.7</mockito.version>
     <mongodb-image.name>mongo:4.2.15</mongodb-image.name>
-    <mongodb-driver.version>4.3.1</mongodb-driver.version>
     <native.image.name>registry.access.redhat.com/ubi8/ubi-minimal:8.4</native.image.name>
     <netty.version>4.1.67.Final</netty.version>
     <netty.tcnative.version>2.0.40.Final</netty.tcnative.version>
@@ -469,26 +468,6 @@
         <groupId>io.vertx</groupId>
         <artifactId>vertx-mongo-client</artifactId>
         <version>${vertx.version}</version>
-      </dependency>
-      <!-- 
-        Explicitly set version of Mongo DB client to the
-        version used by vertx-mongo-client in order to
-        override the version defined by Quarkus BOM.
-       -->
-      <dependency>
-        <groupId>org.mongodb</groupId>
-        <artifactId>mongodb-driver-reactivestreams</artifactId>
-        <version>${mongodb-driver.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.mongodb</groupId>
-        <artifactId>mongodb-driver-core</artifactId>
-        <version>${mongodb-driver.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.mongodb</groupId>
-        <artifactId>bson</artifactId>
-        <version>${mongodb-driver.version}</version>
       </dependency>
       <dependency>
         <groupId>io.vertx</groupId>
