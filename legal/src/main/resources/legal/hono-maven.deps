@@ -180,9 +180,9 @@ org.jgroups:jgroups:jar:4.2.12.Final
 org.latencyutils:LatencyUtils:jar:2.0.3
 org.lz4:lz4-java:jar:1.7.1
 org.mockito:mockito-core:jar:3.7.7
-org.mongodb:bson:jar:4.3.1
-org.mongodb:mongodb-driver-core:jar:4.3.1
-org.mongodb:mongodb-driver-reactivestreams:jar:4.3.1
+org.mongodb:bson:jar:4.3.3
+org.mongodb:mongodb-driver-core:jar:4.3.3
+org.mongodb:mongodb-driver-reactivestreams:jar:4.3.3
 org.objenesis:objenesis:jar:3.1
 org.opentest4j:opentest4j:jar:1.2.0
 org.ow2.asm:asm:jar:9.1
