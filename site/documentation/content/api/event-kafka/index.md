@@ -38,7 +38,7 @@ The protocol adapter writes messages to the tenant-specific topic `hono.event.${
 
 **Message Flow**
 
-Hono supports *AT LEAST ONCE* delivery of *Event* messages only, as defined in [Telemetry API for Kafka]({{< relref "/api/kafka-api#at-least-once-producers" >}}).
+Hono supports *AT LEAST ONCE* delivery of *Event* messages only, as defined in [Kafka-based APIs]({{< relref "/api/kafka-api#at-least-once-producers" >}}).
 
 The following sequence diagram illustrates the flow of messages involved in the *MQTT Adapter* producing an event to the Kafka cluster.
 
@@ -93,56 +93,9 @@ See [Telemetry API for Kafka]({{< relref "/api/telemetry-kafka#produce-telemetry
 
 ## Well-known Event Message Types
 
-Hono defines several *well-known* event types which have specific semantics. Events of these types are identified by means of the message's *content-type* header.
+The well-known event message types are defined in the [Event API for AMQP]({{< relref "/api/event#well-known-event-message-types" >}}) with the following
+differences:
 
-### Empty Notification
-
-A Kafka message containing this type of event does not have any payload so the value of the message MUST be empty.
-
-The headers an event sender needs to set for an *empty notification* event are defined in the [Telemetry API for Kafka]({{< relref "/api/telemetry-kafka#produce-telemetry-data" >}}).
-
-The relevant headers are listed again in the following table:
-
-| Name            | Mandatory       | Type        | Description |
-| :-------------- | :-------------: | :---------- | :---------- |
-| *content-type*  | yes             | *string*    | MUST be set to *application/vnd.eclipse-hono-empty-notification* |
-| *ttd*           | no              | *int*       | The *time 'til disconnect* as described in the [Telemetry API for Kafka]({{< relref "/api/telemetry-kafka#produce-telemetry-data" >}}). |
-
-**NB** An empty notification can be used to indicate to a *Business Application* that a device is currently ready to receive an upstream message by setting the *ttd* property. 
-*Backend Applications* may use this information to determine the time window during which the device will be able to receive a command.
-
-### Connection Event
-
-Protocol Adapters may send this type of event to indicate that a connection with a device has
-been established or has ended. Note that such events can only be sent for authenticated devices,
-though, because an event is always scoped to a tenant and the tenant of a device is
-established as part of the authentication process.
-
-The Kafka message for a connection event MUST contain the following headers in addition to the standard event headers:
-
-| Name            | Mandatory       | Type        | Description |
-| :-------------- | :-------------: | :---------- | :---------- |
-| *content-type*  | yes             | *string*    | MUST be set to  *application/vnd.eclipse-hono-dc-notification+json*. |
-| *device_id*    | yes              | *string*    | The ID of the authenticated device. |
-
-Each connection event's message value MUST contain a UTF-8 encoded string representation of a single JSON object with the following fields:
-
-| Name        | Mandatory | Type      | Description |
-| :---------- | :-------: | :-------- | :---------- |
-| *cause*     | yes       | *string*  | The cause of the connection event. MUST be set to either `connected` or `disconnected`. |
-| *remote-id* | yes       | *string*  | An identifier of the device that is the subject of this event, e.g. an IP address:port, client id etc. The format and semantics of this identifier is specific to the protocol adapter and the transport protocol it supports. |
-| *source*    | yes       | *string*  | The type name of the protocol adapter reporting the event, e.g. `hono-mqtt`. |
-| *data*      | no        | *object*  | An arbitrary JSON object which may contain additional information about the occurrence of the event. |
-
-The example below might be used by the MQTT adapter to indicate that a connection with a device using client identifier `mqtt-client-id-1` has been established:
-
-~~~json
-{
-  "cause": "connected",
-  "remote-id": "mqtt-client-id-1",
-  "source": "hono-mqtt",
-  "data": {
-    "foo": "bar"
-  }
-}
-~~~
+* The _properties_ and _application-properties_ are set es Kafka headers.
+* The _body_ of the AMQP message corresponds to the *value* of the Kafka message.
+* The *content-type* header is of type *string*.
