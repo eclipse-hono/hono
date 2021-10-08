@@ -88,7 +88,7 @@ The following table provides an overview of the headers the *Business Applicatio
 | *response-required* | yes       | *boolean* | MUST be set with a value of `true`, meaning that the device is required to send a response for the command. |
 | *subject*           | yes       | *string*  | The name of the command to be executed by the device. |
 | *content-type*      | no        | *string*  | If present, MUST contain a *Media Type* as defined by [RFC 2046](https://tools.ietf.org/html/rfc2046) which describes the semantics and format of the command's input data contained in the message payload. However, not all protocol adapters will support this property as not all transport protocols provide means to convey this information, e.g. MQTT 3.1.1 has no notion of message headers. |
-| *delivery-failure-notification-metadata[*]* | no | *string* | Headers with the *delivery-failure-notification-metadata* prefix are adopted for the error command response that is sent in case delivering the command to the device failed. In case of a successful command delivery, these headers are ignored. |
+| *delivery-failure-notification-metadata[\*]* | no | *string* | Headers with the *delivery-failure-notification-metadata* prefix are adopted for the error command response that is sent in case delivering the command to the device failed. In case of a successful command delivery, these headers are ignored. |
 
 The command message MAY contain arbitrary payload, set as message value, to be sent to the device. The value of the message's *subject* header may provide a hint to the device regarding the format, encoding and semantics of the payload data.
 
@@ -107,7 +107,7 @@ The following table provides an overview of the headers set on a message sent in
 | *device_id*        | yes       | *string*  | The identifier of the device that sent the response. |
 | *status*           | yes       | *integer* | MUST indicate the status of the execution. See table below for possible values. |
 | *content-type*     | no        | *string*  | If present, MUST contain a *Media Type* as defined by [RFC 2046](https://tools.ietf.org/html/rfc2046) which describes the semantics and format of the command's input data contained in the message payload. However, not all protocol adapters will support this property as not all transport protocols provide means to convey this information, e.g. MQTT 3.1.1 has no notion of message headers.<br>If the response is an error message sent by the Hono protocol adapter or Command Router component, the content type MUST be *application/vnd.eclipse-hono-delivery-failure-notification+json*. |
-| *delivery-failure-notification-metadata[*]* | no | *string* | MUST be adopted from the command message headers with the same names *if* the response is an error message sent by the Hono protocol adapter or Command Router component. |
+| *delivery-failure-notification-metadata[\*]* | no | *string* | MUST be adopted from the command message headers with the same names *if* the response is an error message sent by the Hono protocol adapter or Command Router component. |
 
 The *status* header must contain an [HTTP 1.1 response status code](https://tools.ietf.org/html/rfc7231#section-6). 
 
