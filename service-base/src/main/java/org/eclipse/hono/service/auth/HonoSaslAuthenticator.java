@@ -12,6 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.service.auth;
 
+import java.net.HttpURLConnection;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
@@ -26,7 +27,7 @@ import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Sasl.SaslOutcome;
 import org.apache.qpid.proton.engine.Transport;
 import org.eclipse.hono.auth.HonoUser;
-import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.auth.AuthenticationService.AuthenticationAttemptOutcome;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.Constants;
@@ -143,16 +144,13 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
                     return SaslOutcome.PN_SASL_OK;
                 })
                 .otherwise(error -> {
-                    if (error instanceof ClientErrorException) {
-                        final int status = ((ClientErrorException) error).getErrorCode();
-                        LOG.debug("authentication check failed: {} (status {})", error.getMessage(), status);
-                        authenticationAttemptMeter.accept(AuthenticationAttemptOutcome.UNAUTHORIZED);
-                        return SaslOutcome.PN_SASL_AUTH;
+                    final int statusCode = ServiceInvocationException.extractStatusCode(error);
+                    if (error instanceof ServiceInvocationException) {
+                        LOG.debug("authentication check failed: {} (status {})", error.getMessage(), statusCode);
                     } else {
                         LOG.debug("authentication check failed (no status code given in exception)", error);
-                        authenticationAttemptMeter.accept(AuthenticationAttemptOutcome.UNAVAILABLE);
-                        return SaslOutcome.PN_SASL_TEMP;
                     }
+                    return handleError(statusCode);
                 })
                 .onSuccess(saslOutcome -> {
                     LOG.debug("finishing SASL handshake with outcome {}", saslOutcome);
@@ -164,6 +162,38 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
                 })
                 .onComplete(r -> completionHandler.handle(Boolean.TRUE));
         }
+    }
+
+    private SaslOutcome handleError(final int status) {
+        final SaslOutcome saslOutcome;
+        switch (status) {
+            case HttpURLConnection.HTTP_BAD_REQUEST:
+            case HttpURLConnection.HTTP_UNAUTHORIZED:
+                // failed due to an authentication error
+                authenticationAttemptMeter.accept(AuthenticationAttemptOutcome.UNAUTHORIZED);
+                saslOutcome = SaslOutcome.PN_SASL_AUTH;
+                break;
+            case HttpURLConnection.HTTP_INTERNAL_ERROR:
+                // failed due to a system error
+                authenticationAttemptMeter.accept(AuthenticationAttemptOutcome.UNAVAILABLE);
+                saslOutcome = SaslOutcome.PN_SASL_SYS;
+                break;
+            case HttpURLConnection.HTTP_UNAVAILABLE:
+                // failed due to a transient error
+                authenticationAttemptMeter.accept(AuthenticationAttemptOutcome.UNAVAILABLE);
+                saslOutcome = SaslOutcome.PN_SASL_TEMP;
+                break;
+            default:
+                if (status >= 400 && status < 500) {
+                    // client error
+                    authenticationAttemptMeter.accept(AuthenticationAttemptOutcome.UNAUTHORIZED);
+                    saslOutcome = SaslOutcome.PN_SASL_PERM;
+                } else {
+                    authenticationAttemptMeter.accept(AuthenticationAttemptOutcome.UNAVAILABLE);
+                    saslOutcome = SaslOutcome.PN_SASL_TEMP;
+                }
+        }
+        return saslOutcome;
     }
 
     @Override
