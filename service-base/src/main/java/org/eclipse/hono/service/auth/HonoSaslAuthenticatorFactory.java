@@ -32,7 +32,7 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
 public final class HonoSaslAuthenticatorFactory implements ProtonSaslAuthenticatorFactory {
 
     private final AuthenticationService authenticationService;
-    private Consumer<AuthenticationAttemptOutcome> authenticationAttemptMeter;
+    private final Consumer<AuthenticationAttemptOutcome> authenticationAttemptMeter;
 
     /**
      * Creates a new factory for a Vertx environment.

@@ -28,7 +28,7 @@ public interface AuthenticationService {
     /**
      * The outcome of an attempt to authenticate a client.
      * <p>
-     * These values may be used when reporting the outcome of authentication attemps to a metrics back end.
+     * These values may be used when reporting the outcome of authentication attempts to a metrics back end.
      */
     enum AuthenticationAttemptOutcome {
         SUCCEEDED("succeeded"),

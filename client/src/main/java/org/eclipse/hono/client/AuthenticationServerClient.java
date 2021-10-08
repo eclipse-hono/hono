@@ -119,9 +119,7 @@ public final class AuthenticationServerClient {
     private ServiceInvocationException mapConnectionFailureToServiceInvocationException(final Throwable connectionFailureCause) {
 
         final ServiceInvocationException exception;
-        if (connectionFailureCause == null) {
-            exception = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "failed to connect to Authentication service");
-        } else if (connectionFailureCause instanceof AuthenticationException) {
+        if (connectionFailureCause instanceof AuthenticationException) {
             exception = new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "failed to authenticate with Authentication service");
         } else if (connectionFailureCause instanceof MechanismMismatchException) {
             exception = new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "Authentication service does not support SASL mechanism");
