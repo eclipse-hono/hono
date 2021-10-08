@@ -41,9 +41,6 @@ It is up to the discretion of the protocol adapter whether it wants to use *AT L
 according to [AT LEAST ONCE Producers]({{< relref "/api/kafka-api#at-least-once-producers" >}}) 
 respectively [AT MOST ONCE Producers]({{< relref "/api/kafka-api#at-most-once-producers" >}}). 
 
-The recommended Kafka producer properties for *AT LEAST ONCE* delivery are: `enable.idempotence=true`, `acks=all`, `max.in.flight.requests.per.connection=5`, 
-leaving *retries* unset, and setting *delivery.timeout.ms* to a reasonable value (supported from Kafka version 1.0.0 on). 
-
 The following sequence diagram illustrates the flow of messages involved in the *HTTP Adapter* producing a telemetry data message to the Kafka cluster implementing *AT MOST ONCE* delivery semantics.
 
 {{< figure src="produce_kafka_qos0.svg" title="Produce telemetry data flow (AT MOST ONCE)" >}}
@@ -83,7 +80,7 @@ The following table provides an overview of the headers a client needs to set on
 | :-------------- | :-------------: | :---------- | :---------- |
 | *content-type*  | yes             | *string*    | A content type indicating the type and characteristics of the data contained in the message value as a valid MIME type, e.g. `text/plain; charset="utf-8"` for a text message or `application/json` etc. The value may be set to `application/octet-stream` if the message message value is to be considered *opaque* binary data. See [RFC 2046](https://www.ietf.org/rfc/rfc2046.txt) for details. |
 | *content-encoding* | no           | *string*    | The content encoding as defined in section 3.5 of [RFC 2616](https://www.ietf.org/rfc/rfc2616.txt). |
-| *creation-time* | no              | *long*      | The instant in time (milliseconds since the Unix epoch) when the message has been created. This header is mandatory if *ttd* or *ttl* is set, otherwise, it is optional. |
+| *creation-time* | no              | *long*      | The instant in time (UTC, milliseconds since the Unix epoch) when the message has been created. This header is mandatory if *ttd* or *ttl* is set, otherwise, it is optional. |
 | *device_id*     | yes             | *string*    | The identifier of the device that the data in the message value is originating from. |
 | *qos*           | no              | *int*       | The quality of service level of the message. Supported values are `0` for AT MOST ONCE and `1` for AT LEAST ONCE. |
 | *ttd*           | no              | *int*       | The *time 'til disconnect* indicates the number of seconds that the device will remain connected to the protocol adapter. The value of this header must be interpreted relative to the message's *creation-time*. A value of `-1` is used to indicate that the device will remain connected until further notice, i.e. until another message indicates a *ttd* value of `0`. In absence of this property, the connection status of the device is to be considered indeterminate. *Backend Applications* might use this information to determine a time window during which the device will be able to receive a command. |
