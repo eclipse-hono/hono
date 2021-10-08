@@ -18,7 +18,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -82,7 +81,7 @@ abstract class AbstractBasicCacheTest {
      */
     @Test
     void testGetSucceeds(final VertxTestContext ctx) {
-        final org.infinispan.commons.api.BasicCache<Object, Object> grid = givenAConnectedInfinispanCache();
+        final var grid = givenAConnectedInfinispanCache();
         when(grid.getAsync(anyString())).thenReturn(CompletableFuture.completedFuture("value"));
         getCache().start()
             .compose(ok -> getCache().get("key"))
@@ -103,7 +102,7 @@ abstract class AbstractBasicCacheTest {
      */
     @Test
     void testGetFails(final VertxTestContext ctx) {
-        final org.infinispan.commons.api.BasicCache<Object, Object> grid = givenAConnectedInfinispanCache();
+        final var grid = givenAConnectedInfinispanCache();
         when(grid.getAsync(anyString())).thenThrow(new IllegalStateException());
         getCache().start()
             .compose(ok -> getCache().get("key"))
@@ -124,7 +123,7 @@ abstract class AbstractBasicCacheTest {
      */
     @Test
     void testPutSucceeds(final VertxTestContext ctx) {
-        final org.infinispan.commons.api.BasicCache<Object, Object> grid = givenAConnectedInfinispanCache();
+        final var grid = givenAConnectedInfinispanCache();
         when(grid.putAsync(anyString(), anyString())).thenReturn(CompletableFuture.completedFuture("oldValue"));
         getCache().start()
             .compose(ok -> getCache().put("key", "value"))
@@ -145,7 +144,7 @@ abstract class AbstractBasicCacheTest {
      */
     @Test
     void testPutWithLifespanSucceeds(final VertxTestContext ctx) {
-        final org.infinispan.commons.api.BasicCache<Object, Object> grid = givenAConnectedInfinispanCache();
+        final var grid = givenAConnectedInfinispanCache();
         when(grid.putAsync(anyString(), anyString(), anyLong(), any(TimeUnit.class)))
                 .thenReturn(CompletableFuture.completedFuture("oldValue"));
         getCache().start()
@@ -167,7 +166,7 @@ abstract class AbstractBasicCacheTest {
      */
     @Test
     void testPutFails(final VertxTestContext ctx) {
-        final org.infinispan.commons.api.BasicCache<Object, Object> grid = givenAConnectedInfinispanCache();
+        final var grid = givenAConnectedInfinispanCache();
         when(grid.putAsync(anyString(), anyString())).thenThrow(new IllegalStateException());
         getCache().start()
             .compose(ok -> getCache().put("key", "value"))
@@ -188,8 +187,8 @@ abstract class AbstractBasicCacheTest {
      */
     @Test
     void testRemoveWithValueSucceeds(final VertxTestContext ctx) {
-        final org.infinispan.commons.api.BasicCache<Object, Object> grid = givenAConnectedInfinispanCache();
-        when(grid.removeAsync(eq("key"), eq((Object) "value")))
+        final var grid = givenAConnectedInfinispanCache();
+        when(grid.removeAsync("key", "value"))
                 .thenReturn(CompletableFuture.completedFuture(true));
         getCache().start()
                 .compose(ok -> getCache().remove("key", "value"))
@@ -210,8 +209,8 @@ abstract class AbstractBasicCacheTest {
      */
     @Test
     void testRemoveWithValueFails(final VertxTestContext ctx) {
-        final org.infinispan.commons.api.BasicCache<Object, Object> grid = givenAConnectedInfinispanCache();
-        when(grid.removeAsync(eq("key"), eq((Object) "value")))
+        final var grid = givenAConnectedInfinispanCache();
+        when(grid.removeAsync("key", "value"))
                 .thenReturn(CompletableFuture.completedFuture(false));
         getCache().start()
                 .compose(ok -> getCache().remove("key", "value"))
@@ -232,7 +231,7 @@ abstract class AbstractBasicCacheTest {
      */
     @Test
     void testGetAllSucceeds(final VertxTestContext ctx) {
-        final org.infinispan.commons.api.BasicCache<Object, Object> grid = givenAConnectedInfinispanCache();
+        final var grid = givenAConnectedInfinispanCache();
         final Map<Object, Object> mapValue = new HashMap<>();
         when(grid.getAllAsync(anySet())).thenReturn(CompletableFuture.completedFuture(mapValue));
         final Set<String> keys = Set.of("key");
@@ -255,7 +254,7 @@ abstract class AbstractBasicCacheTest {
      */
     @Test
     void testGetAllFails(final VertxTestContext ctx) {
-        final org.infinispan.commons.api.BasicCache<Object, Object> grid = givenAConnectedInfinispanCache();
+        final var grid = givenAConnectedInfinispanCache();
         when(grid.getAllAsync(anySet())).thenThrow(new IllegalStateException());
         final Set<String> keys = Set.of("key");
         getCache().start()
@@ -268,5 +267,4 @@ abstract class AbstractBasicCacheTest {
                     ctx.completeNow();
                 }));
     }
-
 }

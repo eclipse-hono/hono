@@ -305,7 +305,7 @@ class ProtonBasedCredentialsClientTest {
             .onComplete(ctx.succeeding(result -> {
                 ctx.verify(() -> {
                     // THEN same credentials are read from the cache using the same key as before
-                    verify(cache, times(2)).getIfPresent(eq(cacheKey.getValue()));
+                    verify(cache, times(2)).getIfPresent(cacheKey.getValue());
                     assertThat(result).isEqualTo(credentialsResult.getPayload());
                     verify(sender, never()).send(any(Message.class), VertxMockSupport.anyHandler());
                     // and the span is finished

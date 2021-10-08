@@ -390,10 +390,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             .onComplete(stopPromise);
     }
 
-    private boolean stopCalled() {
-        return stopResultPromiseRef.get() != null;
-    }
-
     /**
      * Invoked when a client sends its <em>CONNECT</em> packet.
      * <p>
@@ -1711,6 +1707,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             final Span sendEventSpan = newChildSpan(span.context(), "send Disconnected Event");
             return AbstractVertxBasedMqttProtocolAdapter.this.sendDisconnectedTtdEvent(tenant, device, authenticatedDevice, sendEventSpan.context())
                     .onComplete(r -> sendEventSpan.finish()).mapEmpty();
+        }
+
+        private boolean stopCalled() {
+            return stopResultPromiseRef.get() != null;
         }
 
         /**

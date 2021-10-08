@@ -324,7 +324,7 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
 
         return this.tenantInformationService
                 .tenantExists(tenantId, span)
-                .otherwise(t -> OperationResult.from(ServiceInvocationException.extractStatusCode(t)))
+                .otherwise(t -> Result.from(ServiceInvocationException.extractStatusCode(t)))
                 .compose(result -> {
                     switch (result.getStatus()) {
                     case HttpURLConnection.HTTP_OK:
@@ -354,7 +354,7 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
 
         return this.tenantInformationService
                 .tenantExists(tenantId, span)
-                .otherwise(t -> OperationResult.from(ServiceInvocationException.extractStatusCode(t)))
+                .otherwise(t -> Result.from(ServiceInvocationException.extractStatusCode(t)))
                 .compose(result -> {
                     switch (result.getStatus()) {
                     case HttpURLConnection.HTTP_OK:

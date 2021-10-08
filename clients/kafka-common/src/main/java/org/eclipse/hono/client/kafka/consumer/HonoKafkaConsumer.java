@@ -568,9 +568,9 @@ public class HonoKafkaConsumer implements Lifecycle {
         }
         final Promise<Void> consumerClosePromise = Promise.promise();
         kafkaConsumer.close(consumerClosePromise);
-        return consumerClosePromise.future().onComplete(ar -> {
-            Optional.ofNullable(metricsSupport).ifPresent(ms -> ms.unregisterKafkaConsumer(kafkaConsumer.unwrap()));
-        });
+        return consumerClosePromise.future()
+                .onComplete(ar -> Optional.ofNullable(metricsSupport)
+                        .ifPresent(ms -> ms.unregisterKafkaConsumer(kafkaConsumer.unwrap())));
     }
 
     /**

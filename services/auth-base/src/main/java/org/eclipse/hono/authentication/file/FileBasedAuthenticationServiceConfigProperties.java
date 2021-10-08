@@ -65,7 +65,7 @@ public class FileBasedAuthenticationServiceConfigProperties {
      * @return The properties.
      */
     public final SignatureSupportingConfigProperties getValidation() {
-        return signingProps;
+        return getSigning();
     }
 
     /**

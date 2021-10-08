@@ -155,12 +155,12 @@ public final class MicrometerKafkaClientMetricsSupport implements KafkaClientMet
     @Override
     public void unregisterKafkaProducer(final Producer<?, ?> producer) {
         Objects.requireNonNull(producer);
-        Optional.ofNullable(producerMetricsMap.remove(producer)).ifPresent(metrics -> metrics.close());
+        Optional.ofNullable(producerMetricsMap.remove(producer)).ifPresent(KafkaClientMetrics::close);
     }
 
     @Override
     public void unregisterKafkaConsumer(final Consumer<?, ?> consumer) {
         Objects.requireNonNull(consumer);
-        Optional.ofNullable(consumerMetricsMap.remove(consumer)).ifPresent(metrics -> metrics.close());
+        Optional.ofNullable(consumerMetricsMap.remove(consumer)).ifPresent(KafkaClientMetrics::close);
     }
 }

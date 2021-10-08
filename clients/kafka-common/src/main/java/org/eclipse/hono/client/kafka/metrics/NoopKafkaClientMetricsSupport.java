@@ -21,24 +21,29 @@ import org.apache.kafka.clients.producer.Producer;
  */
 public class NoopKafkaClientMetricsSupport implements KafkaClientMetricsSupport {
 
-    public static NoopKafkaClientMetricsSupport INSTANCE = new NoopKafkaClientMetricsSupport();
+    public static final NoopKafkaClientMetricsSupport INSTANCE = new NoopKafkaClientMetricsSupport();
 
     private NoopKafkaClientMetricsSupport() {
+        // prevent instantiation
     }
 
     @Override
     public void registerKafkaProducer(final Producer<?, ?> producer) {
+        // do nothing
     }
 
     @Override
     public void registerKafkaConsumer(final Consumer<?, ?> consumer) {
+        // do nothing
     }
 
     @Override
     public void unregisterKafkaProducer(final Producer<?, ?> producer) {
+        // do nothing
     }
 
     @Override
     public void unregisterKafkaConsumer(final Consumer<?, ?> consumer) {
+        // do nothing
     }
 }

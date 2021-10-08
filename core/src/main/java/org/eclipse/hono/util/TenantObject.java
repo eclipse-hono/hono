@@ -221,10 +221,10 @@ public final class TenantObject extends JsonBackedValueObject {
         if (keyProps == null) {
             return null;
         } else {
-            final String subjectDn = getProperty(keyProps, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class);
+            final String subjectDn = getProperty(keyProps, RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class);
             if (subjectDn == null) {
                 LOG.debug("trust anchor definition does not contain required property {}",
-                        TenantConstants.FIELD_PAYLOAD_SUBJECT_DN);
+                        RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN);
                 return null;
             }
             final byte[] encodedKey = getProperty(keyProps, TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, byte[].class);

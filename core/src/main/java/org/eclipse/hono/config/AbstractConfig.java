@@ -74,7 +74,7 @@ public abstract class AbstractConfig {
     /**
      * Creates a new empty instance.
      */
-    public AbstractConfig() {
+    protected AbstractConfig() {
         final List<String> initialProtocols = new ArrayList<>();
         initialProtocols.add("TLSv1.3");
         initialProtocols.add("TLSv1.2");
@@ -89,7 +89,7 @@ public abstract class AbstractConfig {
      * @param other The other instance. All of the other instance's properties
      *              are copied to the newly created instance.
      */
-    public AbstractConfig(final AbstractConfig other) {
+    protected AbstractConfig(final AbstractConfig other) {
         this();
         this.certPath = other.certPath;
         this.keyFormat = other.keyFormat;
@@ -110,7 +110,7 @@ public abstract class AbstractConfig {
      *
      * @param other The options. All of the options are copied to the newly created instance.
      */
-    public AbstractConfig(final GenericOptions other) {
+    protected AbstractConfig(final GenericOptions other) {
         this();
         this.certPath = other.certPath().orElse(null);
         this.keyFormat = other.keyFormat().orElse(null);

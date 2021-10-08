@@ -410,7 +410,7 @@ public abstract class AbstractRegistrationService implements RegistrationService
         } else {
             array = new JsonArray();
             if (object instanceof String) {
-                array.add((String) object);
+                array.add(object);
             }
         }
         return array;

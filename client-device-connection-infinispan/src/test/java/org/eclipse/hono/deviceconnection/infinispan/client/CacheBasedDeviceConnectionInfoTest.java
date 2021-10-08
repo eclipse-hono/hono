@@ -65,7 +65,7 @@ import io.vertx.junit5.VertxTestContext;
  */
 @ExtendWith(VertxExtension.class)
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
-class CacheBasedDeviceConnectionInfoTest {
+public class CacheBasedDeviceConnectionInfoTest {
 
     private static final String PARAMETERIZED_TEST_NAME_PATTERN = "{displayName} [{index}]; parameters: {argumentsWithNames}";
 
@@ -94,7 +94,7 @@ class CacheBasedDeviceConnectionInfoTest {
      */
     @SuppressWarnings("unchecked")
     @BeforeEach
-    void setUp() {
+    public void setUp() {
 
         span = TracingMockSupport.mockSpan();
         tracer = TracingMockSupport.mockTracer(span);
@@ -108,7 +108,7 @@ class CacheBasedDeviceConnectionInfoTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    void testSetLastKnownGatewaySucceedsForSingleEntry(final VertxTestContext ctx) {
+    public void testSetLastKnownGatewaySucceedsForSingleEntry(final VertxTestContext ctx) {
 
         when(cache.put(anyString(), anyString(), anyLong(), any(TimeUnit.class))).thenReturn(Future.succeededFuture("oldValue"));
 
@@ -131,7 +131,7 @@ class CacheBasedDeviceConnectionInfoTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    void testSetLastKnownGatewaySucceedsForMultipleEntries(final VertxTestContext ctx) {
+    public void testSetLastKnownGatewaySucceedsForMultipleEntries(final VertxTestContext ctx) {
 
         when(cache.putAll(anyMap(), anyLong(), any(TimeUnit.class))).thenReturn(Future.succeededFuture());
 
@@ -159,7 +159,7 @@ class CacheBasedDeviceConnectionInfoTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    void testSetLastKnownGatewayFails(final VertxTestContext ctx) {
+    public void testSetLastKnownGatewayFails(final VertxTestContext ctx) {
 
         when(cache.put(anyString(), anyString(), anyLong(), any())).thenReturn(Future.failedFuture(new IOException("not available")));
 
@@ -185,7 +185,7 @@ class CacheBasedDeviceConnectionInfoTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    void testGetLastKnownGatewaySucceeds(final VertxTestContext ctx) {
+    public void testGetLastKnownGatewaySucceeds(final VertxTestContext ctx) {
 
         when(cache.get(anyString())).thenReturn(Future.succeededFuture("gw-id"));
 
@@ -206,7 +206,7 @@ class CacheBasedDeviceConnectionInfoTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    void testGetLastKnownGatewayFailsForCacheAccessException(final VertxTestContext ctx) {
+    public void testGetLastKnownGatewayFailsForCacheAccessException(final VertxTestContext ctx) {
 
         when(cache.get(anyString())).thenReturn(Future.failedFuture(new IOException("not available")));
 
@@ -229,7 +229,7 @@ class CacheBasedDeviceConnectionInfoTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    void testGetLastKnownGatewayFailsForNonExistingEntry(final VertxTestContext ctx) {
+    public void testGetLastKnownGatewayFailsForNonExistingEntry(final VertxTestContext ctx) {
 
         when(cache.get(anyString())).thenReturn(Future.succeededFuture(null));
 
@@ -407,15 +407,16 @@ class CacheBasedDeviceConnectionInfoTest {
         info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, Set.of(), span)
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
-                        verify(cache).get(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT,
-                                deviceId)));
+                        verify(cache).get(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(
+                                Constants.DEFAULT_TENANT,
+                                deviceId));
                         assertThat(t).isInstanceOf(ClientErrorException.class);
                         assertThat(((ClientErrorException) t).getErrorCode())
                                 .isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
                         // verify mapping entry for terminated adapter instance has been removed
                         verify(cache).remove(
-                                eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, deviceId)),
-                                eq(adapterInstance));
+                                CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, deviceId),
+                                adapterInstance);
                     });
                     ctx.completeNow();
                 }));
@@ -443,15 +444,16 @@ class CacheBasedDeviceConnectionInfoTest {
         info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, Set.of(), span)
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
-                        verify(cache).get(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT,
-                                deviceId)));
+                        verify(cache).get(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(
+                                Constants.DEFAULT_TENANT,
+                                deviceId));
                         assertThat(t).isInstanceOf(ClientErrorException.class);
                         assertThat(((ClientErrorException) t).getErrorCode())
                                 .isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
                         // verify mapping entry for terminated adapter instance has not been removed
                         verify(cache, never()).remove(
-                                eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, deviceId)),
-                                eq(adapterInstance));
+                                CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, deviceId),
+                                adapterInstance);
                     });
                     ctx.completeNow();
                 }));
@@ -477,17 +479,17 @@ class CacheBasedDeviceConnectionInfoTest {
         viaGateways.addAll(extraUnusedViaGateways);
 
         // GIVEN testDevice's last known gateway is set to gw-1
-        when(cache.get(eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId))))
+        when(cache.get(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId)))
             .thenReturn(Future.succeededFuture(gatewayId));
 
         // and command handling adapter instances being set for both gateways
-        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways))))
+        when(cache.getAll(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways)))
             .thenReturn(Future.succeededFuture(Map.of(
                 CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, gatewayId), adapterInstance,
                 CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, otherGatewayId), otherAdapterInstance)));
 
         // but no command handling adapter instance registered for testDevice
-        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, gatewayId))))
+        when(cache.getAll(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, gatewayId)))
             .thenReturn(Future.succeededFuture(Map.of(
                 CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, gatewayId), adapterInstance)));
 
@@ -529,17 +531,17 @@ class CacheBasedDeviceConnectionInfoTest {
         viaGateways.addAll(extraUnusedViaGateways);
 
         // GIVEN testDevice's last known gateway is set to gw-old
-        when(cache.get(eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId))))
+        when(cache.get(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId)))
             .thenReturn(Future.succeededFuture(gatewayIdNotInVia));
 
         // and command handling adapter instances being set for both gateways
-        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways))))
+        when(cache.getAll(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways)))
             .thenReturn(Future.succeededFuture(Map.of(
                 CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, gatewayId), adapterInstance,
                 CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, otherGatewayId), otherAdapterInstance)));
 
         // but no command handling adapter instance registered for testDevice nor gw-old
-        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, gatewayIdNotInVia))))
+        when(cache.getAll(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, gatewayIdNotInVia)))
             .thenReturn(Future.succeededFuture(Map.of()));
 
         info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span)
@@ -577,17 +579,17 @@ class CacheBasedDeviceConnectionInfoTest {
         viaGateways.addAll(extraUnusedViaGateways);
 
         // GIVEN testDevice's last known gateway is set to gw-other
-        when(cache.get(eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId))))
+        when(cache.get(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId)))
             .thenReturn(Future.succeededFuture(gatewayWithNoAdapterInstance));
 
         // and command handling adapter instances are set for gw-1 and gw-2
-        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways))))
+        when(cache.getAll(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways)))
             .thenReturn(Future.succeededFuture(Map.of(
                 CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, gatewayId), adapterInstance,
                 CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, otherGatewayId), otherAdapterInstance)));
 
         // but no command handling adapter instance is registered for testDevice nor gw-other
-        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, gatewayWithNoAdapterInstance))))
+        when(cache.getAll(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, gatewayWithNoAdapterInstance)))
             .thenReturn(Future.succeededFuture(Map.of()));
 
         // WHEN retrieving command handling adapter instances for testDevice
@@ -623,18 +625,18 @@ class CacheBasedDeviceConnectionInfoTest {
         viaGateways.addAll(extraUnusedViaGateways);
 
         // GIVEN testDevice's last known gateway is set to gw-1
-        when(cache.get(eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId))))
+        when(cache.get(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId)))
             .thenReturn(Future.succeededFuture(gatewayId));
 
         // and a command handling adapter instance is set for gw-1 only
-        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, gatewayId))))
+        when(cache.getAll(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, gatewayId)))
             .thenReturn(Future.succeededFuture(Map.of(
                     CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, gatewayId), adapterInstance)));
         // but not for the gateways in the via list
-        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways))))
+        when(cache.getAll(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways)))
             .thenReturn(Future.succeededFuture(Map.of()));
 
-        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, gatewayId))))
+        when(cache.getAll(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, gatewayId)))
             .thenReturn(Future.succeededFuture(Map.of(
                     CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, gatewayId), adapterInstance)));
 
@@ -668,17 +670,17 @@ class CacheBasedDeviceConnectionInfoTest {
         viaGateways.addAll(extraUnusedViaGateways);
 
         // GIVEN testDevice's last known gateway is set to gw-1
-        when(cache.get(eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId))))
+        when(cache.get(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId)))
             .thenReturn(Future.succeededFuture(gatewayId));
 
         // and testDevice's and gw-1's command handling adapter instances are set to
         // adapterInstance and otherAdapterInstance respectively
-        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, gatewayId))))
+        when(cache.getAll(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, gatewayId)))
             .thenReturn(Future.succeededFuture(Map.of(
                     CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, deviceId), adapterInstance,
                     CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, gatewayId), otherAdapterInstance)));
 
-        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways))))
+        when(cache.getAll(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways)))
             .thenReturn(Future.succeededFuture(Map.of(
                     CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, deviceId), adapterInstance,
                     CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, gatewayId), otherAdapterInstance)));
@@ -715,12 +717,12 @@ class CacheBasedDeviceConnectionInfoTest {
         viaGateways.addAll(extraUnusedViaGateways);
 
         // GIVEN testDevice has no last known gateway registered
-        when(cache.get(eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId))))
+        when(cache.get(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId)))
             .thenReturn(Future.succeededFuture());
 
         // and testDevice's and gw-1's command handling adapter instances are set to
         // adapterInstance and otherAdapterInstance respectively
-        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways))))
+        when(cache.getAll(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways)))
             .thenReturn(Future.succeededFuture(Map.of(
                     CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, deviceId), adapterInstance,
                     CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, gatewayId), otherAdapterInstance)));
@@ -760,12 +762,12 @@ class CacheBasedDeviceConnectionInfoTest {
         viaGateways.addAll(extraUnusedViaGateways);
 
         // GIVEN testDevice has no last known gateway registered
-        when(cache.get(eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId))))
+        when(cache.get(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId)))
                 .thenReturn(Future.succeededFuture());
 
         // and testDevice's and gw-1's command handling adapter instances are set to
         // adapterInstance and otherAdapterInstance respectively
-        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways))))
+        when(cache.getAll(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways)))
                 .thenReturn(Future.succeededFuture(Map.of(
                         CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, deviceId), adapterInstance,
                         CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, gatewayId), otherAdapterInstance)));
@@ -782,8 +784,8 @@ class CacheBasedDeviceConnectionInfoTest {
                         assertGetInstancesResultSize(result, 1);
                         // verify mapping entry for terminated adapter instance has been removed
                         verify(cache).remove(
-                                eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, deviceId)),
-                                eq(adapterInstance));
+                                CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, deviceId),
+                                adapterInstance);
                     });
                     ctx.completeNow();
                 }));
@@ -812,12 +814,12 @@ class CacheBasedDeviceConnectionInfoTest {
         viaGateways.addAll(extraUnusedViaGateways);
 
         // GIVEN testDevice has no last known gateway registered
-        when(cache.get(eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId))))
+        when(cache.get(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId)))
                 .thenReturn(Future.succeededFuture());
 
         // and testDevice's and gw-1's command handling adapter instances are set to
         // adapterInstance and otherAdapterInstance respectively
-        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways))))
+        when(cache.getAll(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways)))
                 .thenReturn(Future.succeededFuture(Map.of(
                         CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, deviceId), adapterInstance,
                         CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, gatewayId), otherAdapterInstance)));
@@ -834,8 +836,8 @@ class CacheBasedDeviceConnectionInfoTest {
                         assertGetInstancesResultSize(result, 1);
                         // verify mapping entry for terminated adapter instance has not been removed
                         verify(cache, never()).remove(
-                                eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, deviceId)),
-                                eq(adapterInstance));
+                                CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, deviceId),
+                                adapterInstance);
                     });
                     ctx.completeNow();
                 }));
@@ -860,11 +862,11 @@ class CacheBasedDeviceConnectionInfoTest {
         viaGateways.addAll(extraUnusedViaGateways);
 
         // GIVEN testDevice has no last known gateway registered
-        when(cache.get(eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId))))
+        when(cache.get(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId)))
             .thenReturn(Future.succeededFuture());
 
         // and gw-1's command handling adapter instance is set to adapterInstance
-        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways))))
+        when(cache.getAll(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways)))
             .thenReturn(Future.succeededFuture(Map.of(
                     CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, gatewayId), adapterInstance)));
 
@@ -899,12 +901,12 @@ class CacheBasedDeviceConnectionInfoTest {
         viaGateways.addAll(extraUnusedViaGateways);
 
         // GIVEN testDevice has no last known gateway registered
-        when(cache.get(eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId))))
+        when(cache.get(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId)))
             .thenReturn(Future.succeededFuture());
 
         // and gw-1's and gw-2's command handling adapter instance are set to
         // adapterInstance and otherAdapterInstance respectively
-        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways))))
+        when(cache.getAll(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways)))
             .thenReturn(Future.succeededFuture(Map.of(
                     CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, gatewayId), adapterInstance,
                     CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKey(Constants.DEFAULT_TENANT, otherGatewayId), otherAdapterInstance)));
@@ -938,11 +940,11 @@ class CacheBasedDeviceConnectionInfoTest {
         viaGateways.addAll(extraUnusedViaGateways);
 
         // GIVEN testDevice has no last known gateway registered
-        when(cache.get(eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId))))
+        when(cache.get(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId)))
             .thenReturn(Future.succeededFuture());
 
         // and gw-1 has no command handling adapter instance registered
-        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways))))
+        when(cache.getAll(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways)))
             .thenReturn(Future.succeededFuture(Map.of()));
 
         info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span)
@@ -973,11 +975,11 @@ class CacheBasedDeviceConnectionInfoTest {
         viaGateways.addAll(extraUnusedViaGateways);
 
         // GIVEN testDevice has no last known gateway registered
-        when(cache.get(eq(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId))))
+        when(cache.get(CacheBasedDeviceConnectionInfo.getGatewayEntryKey(Constants.DEFAULT_TENANT, deviceId)))
             .thenReturn(Future.succeededFuture());
 
         // and gw-2's command handling adapter instance is set to adapterInstance
-        when(cache.getAll(eq(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways))))
+        when(cache.getAll(CacheBasedDeviceConnectionInfo.getAdapterInstanceEntryKeys(Constants.DEFAULT_TENANT, deviceId, viaGateways)))
             .thenReturn(Future.succeededFuture(Map.of()));
 
         info.getCommandHandlingAdapterInstances(Constants.DEFAULT_TENANT, deviceId, viaGateways, span)

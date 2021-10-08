@@ -249,8 +249,10 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
 
     void handleProviderRoute(final HttpContext ctx, final LoraProvider provider) {
 
-        LOG.debug("processing request from provider [name: {}, URI: {}]", provider.getProviderName(),
-                ctx.getRoutingContext().normalizedPath());
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("processing request from provider [name: {}, URI: {}]",
+                    provider.getProviderName(), ctx.getRoutingContext().normalizedPath());
+        }
         final Span currentSpan = TracingHelper.buildServerChildSpan(
                 tracer,
                 TracingHandler.serverSpanContext(ctx.getRoutingContext()),

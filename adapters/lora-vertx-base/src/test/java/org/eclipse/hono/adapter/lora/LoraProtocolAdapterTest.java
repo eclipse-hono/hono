@@ -270,7 +270,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
         verify(webClient, times(1)).postAbs("https://my-server.com/commands/deviceId/send");
         verify(httpClientRequest, times(1)).putHeader("my-header", "my-header-value");
         verify(httpClientRequest, times(1)).putHeader("my-provider-header", "my-provider-header-value");
-        verify(httpClientRequest, times(1)).sendJson(eq(json));
+        verify(httpClientRequest, times(1)).sendJson(json);
     }
 
     /**

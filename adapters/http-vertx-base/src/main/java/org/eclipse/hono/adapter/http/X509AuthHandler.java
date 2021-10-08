@@ -106,8 +106,7 @@ public class X509AuthHandler extends AuthenticationHandlerImpl<DeviceCredentials
             try {
                 final Certificate[] path = context.request().sslSession().getPeerCertificates();
                 auth.validateClientCertificate(path, TracingHandler.serverSpanContext(context))
-                    .onFailure(t -> handler.handle(Future.failedFuture(t)))
-                    .onSuccess(credentialsJson -> {
+                    .compose(credentialsJson -> {
                         final ExecutionContextAuthHandler<HttpContext> authHandler = new ExecutionContextAuthHandler<>(
                                 (DeviceCredentialsAuthProvider<?>) authProvider,
                                 preCredentialsValidationHandler) {
@@ -117,10 +116,10 @@ public class X509AuthHandler extends AuthenticationHandlerImpl<DeviceCredentials
                                 return Future.succeededFuture(credentialsJson);
                             }
                         };
-                        authHandler.authenticateDevice(HttpContext.from(context))
-                            .map(deviceUser -> (User) deviceUser)
-                            .onComplete(handler);
-                    });
+                        return authHandler.authenticateDevice(HttpContext.from(context))
+                            .map(User.class::cast);
+                    })
+                    .onComplete(handler);
             } catch (SSLPeerUnverifiedException e) {
                 // client certificate has not been validated
                 LOG.debug("could not retrieve client certificate from request: {}", e.getMessage());
