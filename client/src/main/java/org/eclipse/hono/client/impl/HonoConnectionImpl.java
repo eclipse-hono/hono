@@ -544,20 +544,20 @@ public class HonoConnectionImpl implements HonoConnection {
                     connectionFactory.getHost(),
                     connectionFactory.getPort(),
                     connectionFactory.getServerRole());
-            final ProtonSession session = connection.createSession();
-            session.closeHandler(remoteClose -> {
+            final ProtonSession newSession = connection.createSession();
+            newSession.closeHandler(remoteClose -> {
                 final StringBuilder msgBuilder = new StringBuilder("the connection's session closed unexpectedly");
-                Optional.ofNullable(session.getRemoteCondition())
+                Optional.ofNullable(newSession.getRemoteCondition())
                     .ifPresent(error -> {
                         msgBuilder.append(String.format(" [condition: %s, description: %s]",
                                 error.getCondition(), error.getDescription()));
                     });
-                session.close();
+                newSession.close();
                 onRemoteClose(Future.failedFuture(msgBuilder.toString()));
             });
-            session.setIncomingCapacity(clientConfigProperties.getMaxSessionWindowSize());
-            session.open();
-            return session;
+            newSession.setIncomingCapacity(clientConfigProperties.getMaxSessionWindowSize());
+            newSession.open();
+            return newSession;
         }
     }
 
@@ -1120,8 +1120,8 @@ public class HonoConnectionImpl implements HonoConnection {
                                         connectionFactory.getPort(),
                                         connectionFactory.getServerRole(),
                                         newConnection.getRemoteContainer());
-                                final ProtonSession session = createDefaultSession(newConnection);
-                                setConnection(newConnection, session);
+                                final ProtonSession defaultSession = createDefaultSession(newConnection);
+                                setConnection(newConnection, defaultSession);
                                 connectionHandler.handle(Future.succeededFuture(HonoConnectionImpl.this));
                             }
                         }

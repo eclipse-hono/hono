@@ -64,7 +64,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      * @param resourceName The resource name.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public TracingSupportingHonoResource(
+    protected TracingSupportingHonoResource(
             final CoapProtocolAdapter adapter,
             final Tracer tracer,
             final String resourceName) {

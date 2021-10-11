@@ -283,7 +283,7 @@ public class ConfigBasedCoapEndpointFactory implements CoapEndpointFactory {
                 result.fail("secure and insecure ports configured to bind to same port number");
             } else {
                 getSecureNetworkConfig()
-                    .compose(config -> createSecureEndpoint(securePort, config))
+                    .compose(secureNetworkConfig -> createSecureEndpoint(securePort, secureNetworkConfig))
                     .onComplete(result);
             }
         } else if (!config.isInsecurePortEnabled()) {
@@ -314,8 +314,7 @@ public class ConfigBasedCoapEndpointFactory implements CoapEndpointFactory {
         dtlsConfig.setServerOnly(true);
         dtlsConfig.setRecommendedCipherSuitesOnly(true);
         dtlsConfig.setClientAuthenticationRequired(true);
-        dtlsConfig.setAddress(
-                new InetSocketAddress(config.getBindAddress(), config.getPort(CoAP.DEFAULT_COAP_SECURE_PORT)));
+        dtlsConfig.setAddress(new InetSocketAddress(config.getBindAddress(), port));
         dtlsConfig.setApplicationLevelInfoSupplier(deviceResolver);
         dtlsConfig.setAdvancedPskStore(pskStore);
         dtlsConfig.setRetransmissionTimeout(config.getDtlsRetransmissionTimeout());

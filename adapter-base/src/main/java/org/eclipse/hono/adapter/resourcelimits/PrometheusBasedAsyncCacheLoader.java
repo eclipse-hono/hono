@@ -73,7 +73,7 @@ public abstract class PrometheusBasedAsyncCacheLoader<K, V> implements AsyncCach
      * @param tracer The tracer instance.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public PrometheusBasedAsyncCacheLoader(
+    protected PrometheusBasedAsyncCacheLoader(
             final WebClient webClient,
             final PrometheusBasedResourceLimitChecksConfig config,
             final Tracer tracer) {

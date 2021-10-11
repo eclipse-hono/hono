@@ -227,12 +227,13 @@ public class DeviceRegistryBasedCertificateVerifier implements NewAdvancedCertif
             }
             if (clientUsage != null) {
                 final Certificate certificate = list.get(0);
-                if (certificate instanceof X509Certificate) {
-                    if (!CertPathUtil.canBeUsedForAuthentication((X509Certificate) certificate, clientUsage)) {
-                        final AlertMessage alert = new AlertMessage(AlertLevel.FATAL,
-                                AlertDescription.BAD_CERTIFICATE, session.getPeer());
-                        throw new HandshakeException("certificate cannot be used for client authentication", alert);
-                    }
+                if (certificate instanceof X509Certificate &&
+                        !CertPathUtil.canBeUsedForAuthentication((X509Certificate) certificate, clientUsage)) {
+                    final AlertMessage alert = new AlertMessage(
+                            AlertLevel.FATAL,
+                            AlertDescription.BAD_CERTIFICATE,
+                            session.getPeer());
+                    throw new HandshakeException("certificate cannot be used for client authentication", alert);
                 }
             }
             adapter.runOnContext((v) -> validateCertificateAndLoadDevice(cid, certChain, session));

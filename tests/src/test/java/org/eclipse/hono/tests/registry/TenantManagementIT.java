@@ -200,6 +200,8 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
     public void testAddTenantSucceedsForEmptyBody(final VertxTestContext context) {
 
         getHelper().registry.addTenant(tenantId)
+            .onFailure(context::failNow)
+            .compose(ok -> getHelper().registry.getTenant(tenantId, HttpURLConnection.HTTP_OK))
             .onComplete(context.succeedingThenComplete());
     }
 

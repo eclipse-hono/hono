@@ -94,8 +94,10 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
         final Device device = new Device();
         device.putExtension("test", "test");
 
-        registry.registerDevice(tenantId, deviceId, device)
-                .onComplete(ctx.succeedingThenComplete());
+        registry.registerDevice(tenantId, deviceId, device, HttpURLConnection.HTTP_CREATED)
+            .onFailure(ctx::failNow)
+            .compose(ok -> registry.getRegistrationInfo(tenantId, deviceId, HttpURLConnection.HTTP_OK))
+            .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -275,6 +277,8 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
     public void testAddDeviceSucceedsForEmptyBody(final VertxTestContext ctx) {
 
         registry.registerDevice(tenantId, deviceId, null, HttpURLConnection.HTTP_CREATED)
+            .onFailure(ctx::failNow)
+            .compose(ok -> registry.getRegistrationInfo(tenantId, deviceId, HttpURLConnection.HTTP_OK))
             .onComplete(ctx.succeedingThenComplete());
     }
 
@@ -288,6 +292,8 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
     public void testAddDeviceSucceedsForEmptyBodyAndContentType(final VertxTestContext ctx) {
 
         registry.registerDevice(tenantId, deviceId, (Device) null, null, HttpURLConnection.HTTP_CREATED)
+            .onFailure(ctx::failNow)
+            .compose(ok -> registry.getRegistrationInfo(tenantId, deviceId, HttpURLConnection.HTTP_OK))
             .onComplete(ctx.succeedingThenComplete());
     }
 
@@ -564,7 +570,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
         registry.addDeviceToTenant(tenantId, deviceId, "secret")
             .compose(ok -> registry.removeTenant(tenantId))
             .compose(ok -> registry.deregisterDevice(tenantId, deviceId, HttpURLConnection.HTTP_NO_CONTENT))
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -586,7 +592,7 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             .compose(ok -> registry.getCredentials(tenantId, deviceId, HttpURLConnection.HTTP_NOT_FOUND))
             .compose(ok -> registry.getRegistrationInfo(tenantId, otherDeviceId, HttpURLConnection.HTTP_NOT_FOUND))
             .compose(ok -> registry.getCredentials(tenantId, otherDeviceId, HttpURLConnection.HTTP_NOT_FOUND))
-            .onComplete(ctx.completing());
+            .onComplete(ctx.succeedingThenComplete());
     }
 
     /**

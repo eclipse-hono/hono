@@ -1010,21 +1010,29 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                         Commands.getDeviceFacingReplyToId(command.getReplyToId(), command.getDeviceId(), command.getMessagingType())));
             }
 
-            final Long timerId = getConfig().getSendMessageToDeviceTimeout() < 1 ? null
-                    : vertx.setTimer(getConfig().getSendMessageToDeviceTimeout(), tid -> {
-                final String linkOrConnectionClosedInfo = HonoProtonHelper.isLinkOpenAndConnected(sender)
-                        ? "" : " (link or connection already closed)";
-                log.debug("waiting for delivery update timed out after {}ms{} [{}]",
-                        getConfig().getSendMessageToDeviceTimeout(), linkOrConnectionClosedInfo, command);
-                if (isCommandSettled.compareAndSet(false, true)) {
-                    // timeout reached -> release command
-                    commandContext.release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
-                            "timeout waiting for delivery update from device"));
-                    reportSentCommand(tenantObject, commandContext, ProcessingOutcome.UNDELIVERABLE);
-                } else {
-                    log.trace("command is already settled and downstream application was already notified [{}]", command);
-                }
-            });
+            final Long timerId;
+            if (getConfig().getSendMessageToDeviceTimeout() < 1) {
+                timerId = null;
+            } else {
+                timerId = vertx.setTimer(getConfig().getSendMessageToDeviceTimeout(), tid -> {
+
+                    if (log.isDebugEnabled()) {
+                        final String linkOrConnectionClosedInfo = HonoProtonHelper.isLinkOpenAndConnected(sender)
+                                ? "" : " (link or connection already closed)";
+                        log.debug("waiting for delivery update timed out after {}ms{} [{}]",
+                                getConfig().getSendMessageToDeviceTimeout(), linkOrConnectionClosedInfo, command);
+                    }
+
+                    if (isCommandSettled.compareAndSet(false, true)) {
+                        // timeout reached -> release command
+                        commandContext.release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                                "timeout waiting for delivery update from device"));
+                        reportSentCommand(tenantObject, commandContext, ProcessingOutcome.UNDELIVERABLE);
+                    } else if (log.isTraceEnabled()) {
+                        log.trace("command is already settled and downstream application was already notified [{}]", command);
+                    }
+                });
+            }
 
             sender.send(msg, delivery -> {
 

@@ -62,7 +62,7 @@ public abstract class CredentialsApiAuthProvider<T extends AbstractDeviceCredent
      * @param tracer The tracer instance.
      * @throws NullPointerException if the client or the tracer are {@code null}
      */
-    public CredentialsApiAuthProvider(final CredentialsClient credentialsClient, final Tracer tracer) {
+    protected CredentialsApiAuthProvider(final CredentialsClient credentialsClient, final Tracer tracer) {
         this.credentialsClient = Objects.requireNonNull(credentialsClient);
         this.tracer = Objects.requireNonNull(tracer);
     }

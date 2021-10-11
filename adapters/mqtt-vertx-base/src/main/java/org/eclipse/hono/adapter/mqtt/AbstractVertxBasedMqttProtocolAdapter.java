@@ -300,8 +300,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     .setPort(determineInsecurePort())
                     .setMaxMessageSize(getConfig().getMaxPayloadSize());
 
-            return bindMqttServer(options, insecureServer).map(server -> {
-                insecureServer = server;
+            return bindMqttServer(options, insecureServer).map(createdServer -> {
+                insecureServer = createdServer;
                 return (Void) null;
             });
         } else {

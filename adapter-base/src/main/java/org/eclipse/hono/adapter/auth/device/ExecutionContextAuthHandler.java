@@ -84,13 +84,9 @@ public abstract class ExecutionContextAuthHandler<T extends ExecutionContext> im
         Objects.requireNonNull(context);
 
         return parseCredentials(context)
-                .compose(authInfo -> {
-                    final DeviceCredentialsAuthProvider<?> authProvider = getAuthProvider(context);
-                    if (authProvider == null) {
-                        return Future.failedFuture(new IllegalStateException("no auth provider found"));
-                    }
-                    return authenticateDevice(context, authInfo, authProvider);
-                });
+                .compose(authInfo -> Optional.ofNullable(getAuthProvider(context))
+                            .map(provider -> authenticateDevice(context, authInfo, provider))
+                            .orElse(Future.failedFuture(new IllegalStateException("no auth provider found"))));
     }
 
     private  <C extends AbstractDeviceCredentials> Future<DeviceUser> authenticateDevice(

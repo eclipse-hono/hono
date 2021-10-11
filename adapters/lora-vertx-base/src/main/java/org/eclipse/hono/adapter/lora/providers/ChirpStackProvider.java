@@ -26,8 +26,6 @@ import org.eclipse.hono.adapter.lora.LoraMetaData;
 import org.eclipse.hono.util.MessageHelper;
 import org.springframework.stereotype.Component;
 
-import com.google.common.io.BaseEncoding;
-
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonArray;
@@ -178,7 +176,7 @@ public class ChirpStackProvider extends JsonBasedLoraProvider {
     protected JsonObject getCommandPayload(final Buffer payload, final String deviceId) {
         final JsonObject deviceQueueItem = new JsonObject();
         deviceQueueItem.put(COMMAND_FIELD_CHIRPSTACK_CONFIRMED, false);
-        deviceQueueItem.put(COMMAND_FIELD_CHIRPSTACK_DATA, BaseEncoding.base64().encode(payload.getBytes()));
+        deviceQueueItem.put(COMMAND_FIELD_CHIRPSTACK_DATA, payload.getBytes());
 
         final JsonObject json = new JsonObject();
         json.put(COMMAND_FIELD_CHIRPSTACK_DEVICE_QUEUE_ITEM, deviceQueueItem);

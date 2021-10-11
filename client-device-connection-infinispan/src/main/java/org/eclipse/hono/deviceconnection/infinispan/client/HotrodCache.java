@@ -138,7 +138,7 @@ public final class HotrodCache<K, V> extends BasicCache<K, V> {
                         setCache(cache);
                         r.complete(cache);
                     }
-                } catch (final Throwable t) {
+                } catch (final Exception t) {
                     r.fail(t);
                 }
             }, attempt -> {

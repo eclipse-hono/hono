@@ -81,7 +81,7 @@ public class ReceiverTest {
                 context.succeeding(result -> {
                    context.verify(() -> {
                        assertNotNull(result.list());
-                       assertEquals(result.size(), 1);
+                       assertEquals(1, result.size());
                    });
                     context.completeNow();
                 }));
@@ -103,7 +103,7 @@ public class ReceiverTest {
                 context.succeeding(result -> {
                     context.verify(() -> {
                         assertNotNull(result.list());
-                        assertEquals(result.size(), 1);
+                        assertEquals(1, result.size());
                     });
                     context.completeNow();
                 }));
@@ -126,7 +126,7 @@ public class ReceiverTest {
                 context.succeeding(result -> {
                     context.verify(() -> {
                         assertNotNull(result.list());
-                        assertEquals(result.size(), 2);
+                        assertEquals(2, result.size());
                     });
                     context.completeNow();
                 }));

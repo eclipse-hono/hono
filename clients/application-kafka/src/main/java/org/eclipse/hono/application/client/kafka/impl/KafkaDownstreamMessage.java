@@ -26,19 +26,15 @@ import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
 
 /**
- * A downstream message of Hono's Kafka-based northbound APIs.
+ * A downstream message of Hono's Kafka-based north bound APIs.
  */
 public class KafkaDownstreamMessage implements DownstreamMessage<KafkaMessageContext> {
-
-    private final Logger log = LoggerFactory.getLogger(KafkaDownstreamMessage.class);
 
     private final String tenantId;
     private final String deviceId;
@@ -60,40 +56,40 @@ public class KafkaDownstreamMessage implements DownstreamMessage<KafkaMessageCon
     public KafkaDownstreamMessage(final KafkaConsumerRecord<String, Buffer> record) {
         Objects.requireNonNull(record);
 
-        tenantId = getTenantId(record);
+        tenantId = getTenantIdFromTopic(record);
         deviceId = record.key();
         properties = new KafkaMessageProperties(record);
-        contentType = getContentType(record.headers());
+        contentType = getContentTypeHeaderValue(record.headers());
         messageContext = new KafkaMessageContext(record);
-        qos = getQoS(record.headers());
+        qos = getQosHeaderValue(record.headers());
         payload = record.value();
-        creationTime = getCreationTime(record.headers());
-        timeTillDisconnect = getTimeTillDisconnect(record.headers());
+        creationTime = getCreationTimeHeaderValue(record.headers());
+        timeTillDisconnect = getTimeTillDisconnectHeaderValue(record.headers());
     }
 
-    private String getTenantId(final KafkaConsumerRecord<String, Buffer> record) {
+    private String getTenantIdFromTopic(final KafkaConsumerRecord<String, Buffer> record) {
         return Optional.ofNullable(HonoTopic.fromString(record.topic()))
                 .map(HonoTopic::getTenantId)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid topic name"));
     }
 
-    private String getContentType(final List<KafkaHeader> headers) {
+    private String getContentTypeHeaderValue(final List<KafkaHeader> headers) {
         return KafkaRecordHelper.getContentType(headers)
                 .orElse(MessageHelper.CONTENT_TYPE_OCTET_STREAM);
     }
 
-    private QoS getQoS(final List<KafkaHeader> headers) {
+    private QoS getQosHeaderValue(final List<KafkaHeader> headers) {
         return KafkaRecordHelper.getQoS(headers)
                 .orElse(QoS.AT_LEAST_ONCE);
     }
 
-    private Instant getCreationTime(final List<KafkaHeader> headers) {
+    private Instant getCreationTimeHeaderValue(final List<KafkaHeader> headers) {
         return KafkaRecordHelper.getHeaderValue(headers, MessageHelper.SYS_PROPERTY_CREATION_TIME, Long.class)
                 .map(Instant::ofEpochMilli)
                 .orElse(null);
     }
 
-    private Integer getTimeTillDisconnect(final List<KafkaHeader> headers) {
+    private Integer getTimeTillDisconnectHeaderValue(final List<KafkaHeader> headers) {
         return KafkaRecordHelper.getHeaderValue(headers, MessageHelper.APP_PROPERTY_DEVICE_TTD, Integer.class)
                 .orElse(null);
     }

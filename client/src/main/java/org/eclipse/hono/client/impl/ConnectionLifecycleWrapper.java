@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -36,7 +36,7 @@ public abstract class ConnectionLifecycleWrapper<T> implements ConnectionLifecyc
      *
      * @param delegate The object to invoke the ConnectionLifecycle methods on.
      */
-    public ConnectionLifecycleWrapper(final ConnectionLifecycle<T> delegate) {
+    protected ConnectionLifecycleWrapper(final ConnectionLifecycle<T> delegate) {
         this.delegate = delegate;
     }
 

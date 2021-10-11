@@ -187,8 +187,12 @@ public final class CommandSubscription extends AbstractSubscription {
         Objects.requireNonNull(command);
 
         final String topicTenantId = containsTenantId() ? getTenant() : "";
-        final String topicDeviceId = command.isTargetedAtGateway() ? command.getDeviceId()
-                : containsDeviceId() ? getDeviceId() : "";
+        final String topicDeviceId;
+        if (command.isTargetedAtGateway()) {
+            topicDeviceId = command.getDeviceId();
+        } else {
+            topicDeviceId = containsDeviceId() ? getDeviceId() : "";
+        }
         final String topicCommandRequestId = command.isOneWay() ? "" : command.getRequestId();
 
         return String.format(

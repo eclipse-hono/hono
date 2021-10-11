@@ -56,7 +56,7 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
      * @param vertx The vert.x instance to run on.
      * @param cacheManager The cache manager.
      */
-    public BasicCache(final Vertx vertx, final BasicCacheContainer cacheManager) {
+    protected BasicCache(final Vertx vertx, final BasicCacheContainer cacheManager) {
         this.vertx = Objects.requireNonNull(vertx);
         this.cacheManager = Objects.requireNonNull(cacheManager);
     }
@@ -89,7 +89,7 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
             try {
                 cacheManager.stop();
                 r.complete();
-            } catch (final Throwable t) {
+            } catch (final Exception t) {
                 r.fail(t);
             }
         }, (AsyncResult<Void> stopAttempt) -> {
@@ -124,9 +124,9 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
      * @param futureSupplier The supplier, providing the operation which should be invoked.
      * @return The future, tracking the result of the operation.
      */
-    protected final <T> Future<T> withCache(final Function<org.infinispan.commons.api.BasicCache<K, V>, CompletionStage<T>> futureSupplier) {
+    protected final <T> Future<T> withCache(
+            final Function<org.infinispan.commons.api.BasicCache<K, V>, CompletionStage<T>> futureSupplier) {
 
-        final var cache = this.cache;
         return Optional.ofNullable(cache)
                 .map(c -> Futures.create(() -> futureSupplier.apply(cache)))
                 .orElseGet(BasicCache::noConnectionFailure)
@@ -152,7 +152,7 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
         Objects.requireNonNull(key);
         Objects.requireNonNull(value);
 
-        return withCache(cache -> cache.putAsync(key, value));
+        return withCache(aCache -> aCache.putAsync(key, value));
     }
 
     @Override
@@ -161,14 +161,14 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
         Objects.requireNonNull(value);
         Objects.requireNonNull(lifespanUnit);
 
-        return withCache(cache -> cache.putAsync(key, value, lifespan, lifespanUnit));
+        return withCache(aCache -> aCache.putAsync(key, value, lifespan, lifespanUnit));
     }
 
     @Override
     public Future<Void> putAll(final Map<? extends K, ? extends V> data) {
         Objects.requireNonNull(data);
 
-        return withCache(cache -> cache.putAllAsync(data));
+        return withCache(aCache -> aCache.putAllAsync(data));
     }
 
     @Override
@@ -176,7 +176,7 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
         Objects.requireNonNull(data);
         Objects.requireNonNull(lifespanUnit);
 
-        return withCache(cache -> cache.putAllAsync(data, lifespan, lifespanUnit));
+        return withCache(aCache -> aCache.putAllAsync(data, lifespan, lifespanUnit));
     }
 
     @Override
@@ -184,21 +184,21 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
         Objects.requireNonNull(key);
         Objects.requireNonNull(value);
 
-        return withCache(cache -> cache.removeAsync(key, value));
+        return withCache(aCache -> aCache.removeAsync(key, value));
     }
 
     @Override
     public Future<V> get(final K key) {
         Objects.requireNonNull(key);
 
-        return withCache(cache -> cache.getAsync(key));
+        return withCache(aCache -> aCache.getAsync(key));
     }
 
     @Override
     public Future<Map<K, V>> getAll(final Set<? extends K> keys) {
         Objects.requireNonNull(keys);
 
-        return withCache(cache -> cache.getAllAsync(keys));
+        return withCache(aCache -> aCache.getAllAsync(keys));
     }
 
     /**

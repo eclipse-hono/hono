@@ -165,7 +165,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     try {
                         onStartupSuccess();
                         return Future.succeededFuture((Void) null);
-                    } catch (final Throwable t) {
+                    } catch (final Exception t) {
                         log.error("error executing onStartupSuccess", t);
                         return Future.failedFuture(t);
                     }
@@ -182,14 +182,14 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
 
         log.info("creating new CoAP server");
         final CoapServer newServer = new CoapServer(NetworkConfig.createStandardWithoutFile());
-        final Future<Endpoint> secureEndpoint = endpointFactory.getSecureEndpoint()
+        final Future<Endpoint> secureEndpointFuture = endpointFactory.getSecureEndpoint()
                 .onFailure(t -> log.info("not creating secure endpoint: {}", t.getMessage()))
                 .map(ep -> {
                     newServer.addEndpoint(ep);
                     this.secureEndpoint = ep;
                     return ep;
                 });
-        final Future<Endpoint> insecureEndpoint = endpointFactory.getInsecureEndpoint()
+        final Future<Endpoint> insecureEndpointFuture = endpointFactory.getInsecureEndpoint()
                 .onFailure(t -> log.info("not creating insecure endpoint: {}", t.getMessage()))
                 .map(ep -> {
                     newServer.addEndpoint(ep);
@@ -197,7 +197,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                     return ep;
                 });
 
-        return CompositeFuture.any(insecureEndpoint, secureEndpoint)
+        return CompositeFuture.any(insecureEndpointFuture, secureEndpointFuture)
                 .map(ok -> {
                     this.server = newServer;
                     return newServer;

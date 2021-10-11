@@ -63,7 +63,7 @@ public class SubjectDnCredentialsTest {
     public void testCreateDoesNotAllowNullClientContext() {
 
         assertThatThrownBy(() -> SubjectDnCredentials.create("tenant", "CN=eclipse.org", null))
-        .isInstanceOf(NullPointerException.class);
+            .isInstanceOf(NullPointerException.class);
     }
 
     /**
@@ -73,8 +73,9 @@ public class SubjectDnCredentialsTest {
     @Test
     public void testCreateDoesNotAllowNullClientContextWithPrincipal() {
 
-        assertThatThrownBy(() -> SubjectDnCredentials.create("tenant", new X500Principal("CN=eclipse.org"), null))
-        .isInstanceOf(NullPointerException.class);
+        final var subjectDn = new X500Principal("CN=eclipse.org");
+        assertThatThrownBy(() -> SubjectDnCredentials.create("tenant", subjectDn, null))
+            .isInstanceOf(NullPointerException.class);
     }
 
 }

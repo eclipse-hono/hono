@@ -118,8 +118,11 @@ public final class DeferredConnectionCheckHandler {
             return false;
         }
         // promise added to list, now use a timer to ensure that we wait no more than the given timeout
-        promiseToAdd.startExpirationTimer(waitForCurrentConnectAttemptTimeout,
-                (v) -> removeFromConnectionCheckPromises(promiseToAdd)); // cleanup after expiration; not strictly necessary but keeps the list from growing if (re)connection attempts don't get finished for a long time
+        promiseToAdd.startExpirationTimer(
+                waitForCurrentConnectAttemptTimeout,
+                // cleanup after expiration; not strictly necessary but keeps the list from growing
+                // if (re)connection attempts don't get finished for a long time
+                (v) -> removeFromConnectionCheckPromises(promiseToAdd));
         return true;
     }
 

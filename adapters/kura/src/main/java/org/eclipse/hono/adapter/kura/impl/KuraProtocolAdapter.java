@@ -85,8 +85,10 @@ public final class KuraProtocolAdapter extends AbstractVertxBasedMqttProtocolAda
             // topic does not contain account_name and client_id
             result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "topic does not comply with Kura format"));
         } else {
-            log.debug("mapped Kura message [topic: {}, QoS: {}] to Hono message [to: {}, device_id: {}, content-type: {}]",
-                    topic, ctx.message().qosLevel(), mappedTopic.getBasePath(), mappedTopic.getResourceId(), ctx.contentType());
+            if (log.isDebugEnabled()) {
+                log.debug("mapped Kura message [topic: {}, QoS: {}] to Hono message [to: {}, device_id: {}, content-type: {}]",
+                        topic, ctx.message().qosLevel(), mappedTopic.getBasePath(), mappedTopic.getResourceId(), ctx.contentType());
+            }
             result.complete(mappedTopic);
         }
         return result.future();

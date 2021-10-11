@@ -89,8 +89,13 @@ public class MqttConnectionIT extends MqttTestBase {
 
         helper.registry
                 .addDeviceForTenant(tenantId, tenant, deviceId, password)
-                .compose(ok -> connectToAdapter(tlsVersion, IntegrationTestSupport.getUsername(deviceId, tenantId), password))
-                .onComplete(ctx.succeedingThenComplete());
+                .compose(ok -> connectToAdapter(
+                        tlsVersion,
+                        IntegrationTestSupport.getUsername(deviceId, tenantId), password))
+                .onComplete(ctx.succeeding(conAckMsg -> {
+                    ctx.verify(() -> assertThat(conAckMsg.code()).isEqualTo(MqttConnectReturnCode.CONNECTION_ACCEPTED));
+                    ctx.completeNow();
+                }));
     }
 
     /**
@@ -107,7 +112,10 @@ public class MqttConnectionIT extends MqttTestBase {
                     return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
                 })
                 .compose(ok -> connectToAdapter(deviceCert))
-                .onComplete(ctx.succeedingThenComplete());
+                .onComplete(ctx.succeeding(conAckMsg -> {
+                    ctx.verify(() -> assertThat(conAckMsg.code()).isEqualTo(MqttConnectReturnCode.CONNECTION_ACCEPTED));
+                    ctx.completeNow();
+                }));
     }
 
     /**

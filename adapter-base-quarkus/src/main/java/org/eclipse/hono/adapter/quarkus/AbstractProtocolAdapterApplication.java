@@ -273,7 +273,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             LOG.info("Kafka Producer is configured, adding Kafka messaging clients");
 
             Optional.ofNullable(getComponentName()).ifPresent(kafkaProducerConfig::setDefaultClientIdPrefix);
-            LOG.debug("KafkaProducerConfig: " + kafkaProducerConfig.getProducerConfig("log"));
+            LOG.debug("KafkaProducerConfig: {}", kafkaProducerConfig.getProducerConfig("log"));
 
             final KafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory.sharedFactory(vertx);
             factory.setMetricsSupport(kafkaClientMetricsSupport);

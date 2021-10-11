@@ -69,7 +69,10 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
         helper.registry
                 .addDeviceForTenant(tenantId, tenant, deviceId, password)
         .compose(ok -> connectToAdapter(tlsVersion, null, IntegrationTestSupport.getUsername(deviceId, tenantId), password))
-        .onComplete(ctx.succeedingThenComplete());
+        .onComplete(ctx.succeeding(con -> {
+            ctx.verify(() -> assertThat(con.isDisconnected()).isFalse());
+            ctx.completeNow();
+        }));
     }
 
     /**

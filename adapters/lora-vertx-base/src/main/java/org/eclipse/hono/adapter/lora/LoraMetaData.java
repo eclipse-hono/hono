@@ -212,10 +212,8 @@ public final class LoraMetaData {
      */
     public LoraMetaData setSpreadingFactor(final Integer spreadingFactor) {
 
-        if (spreadingFactor != null) {
-            if (spreadingFactor < 7 || spreadingFactor > 12) {
-                throw new IllegalArgumentException("spreading factor must be > 6 and < 13");
-            }
+        if (spreadingFactor != null && (spreadingFactor < 7 || spreadingFactor > 12)) {
+            throw new IllegalArgumentException("spreading factor must be > 6 and < 13");
         }
         this.spreadingFactor = spreadingFactor;
         return this;

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -34,7 +34,7 @@ public abstract class AbstractConsumer extends AbstractHonoClient implements Mes
      * @param connection The connection to use.
      * @param receiver The proton receiver link.
      */
-    public AbstractConsumer(final HonoConnection connection, final ProtonReceiver receiver) {
+    protected AbstractConsumer(final HonoConnection connection, final ProtonReceiver receiver) {
 
         super(connection);
         this.receiver = receiver;

@@ -23,8 +23,6 @@ import javax.enterprise.context.ApplicationScoped;
 import org.eclipse.hono.adapter.lora.GatewayInfo;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.eclipse.hono.adapter.lora.LoraMetaData;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import io.vertx.core.buffer.Buffer;
@@ -37,8 +35,6 @@ import io.vertx.core.json.JsonObject;
 @Component
 @ApplicationScoped
 public class TheThingsStackProvider extends JsonBasedLoraProvider {
-
-    private static final Logger LOG = LoggerFactory.getLogger(TheThingsStackProvider.class);
 
     private static final String FIELD_THE_THINGS_STACK_ALTITUDE = "altitude";
     private static final String FIELD_THE_THINGS_STACK_BANDWIDTH = "bandwidth";
@@ -65,9 +61,6 @@ public class TheThingsStackProvider extends JsonBasedLoraProvider {
     private static final String FIELD_THE_THINGS_STACK_SPREADING_FACTOR = "spreading_factor";
     private static final String FIELD_THE_THINGS_STACK_UPLINK = "uplink_message";
     private static final String FIELD_THE_THINGS_STACK_USER = "user";
-
-    private static final String OBJECT_GATEWAYS = "gateways";
-    private static final String OBJECT_META_DATA = "metadata";
 
     @Override
     public String getProviderName() {

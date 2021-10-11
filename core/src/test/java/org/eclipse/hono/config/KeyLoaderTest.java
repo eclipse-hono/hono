@@ -123,6 +123,8 @@ public class KeyLoaderTest {
      */
     @Test
     public void testLoaderPkcs1PrivateKey() {
-        KeyLoader.fromFiles(vertx, PREFIX_KEY_PATH_2 + "pkcs1-private-key.pem", null);
+        final KeyLoader loader = KeyLoader.fromFiles(vertx, PREFIX_KEY_PATH_2 + "pkcs1-private-key.pem", null);
+        assertNotNull(loader.getPrivateKey());
+        assertNull(loader.getPublicKey());
     }
 }

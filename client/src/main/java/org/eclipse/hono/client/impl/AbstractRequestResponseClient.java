@@ -1080,10 +1080,8 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
                         }
                     });
 
-            if (cacheDirective.isCachingAllowed()) {
-                if (cacheDirective.getMaxAge() > 0) {
-                    responseCache.put(key, response, Duration.ofSeconds(cacheDirective.getMaxAge()));
-                }
+            if (cacheDirective.isCachingAllowed() && cacheDirective.getMaxAge() > 0) {
+                responseCache.put(key, response, Duration.ofSeconds(cacheDirective.getMaxAge()));
             }
         }
     }
