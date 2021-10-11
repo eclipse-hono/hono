@@ -135,9 +135,10 @@ public final class MicrometerKafkaClientMetricsSupport implements KafkaClientMet
         Objects.requireNonNull(producer);
         if (producerMetricsEnabled && !producerMetricsMap.containsKey(producer)) {
             final KafkaClientMetrics kafkaClientMetrics = new KafkaClientMetrics(producer);
-            producerMetricsMap.put(producer, kafkaClientMetrics);
-            kafkaClientMetrics.bindTo(meterRegistry);
-            LOG.debug("registered producer ({} producers total)", producerMetricsMap.size());
+            if (producerMetricsMap.putIfAbsent(producer, kafkaClientMetrics) == null) {
+                kafkaClientMetrics.bindTo(meterRegistry);
+                LOG.debug("registered producer ({} producers total)", producerMetricsMap.size());
+            }
         }
     }
 
@@ -146,9 +147,10 @@ public final class MicrometerKafkaClientMetricsSupport implements KafkaClientMet
         Objects.requireNonNull(consumer);
         if (consumerMetricsEnabled && !consumerMetricsMap.containsKey(consumer)) {
             final KafkaClientMetrics kafkaClientMetrics = new KafkaClientMetrics(consumer);
-            consumerMetricsMap.put(consumer, kafkaClientMetrics);
-            kafkaClientMetrics.bindTo(meterRegistry);
-            LOG.debug("registered consumer ({} consumers total)", consumerMetricsMap.size());
+            if (consumerMetricsMap.putIfAbsent(consumer, kafkaClientMetrics) == null) {
+                kafkaClientMetrics.bindTo(meterRegistry);
+                LOG.debug("registered consumer ({} consumers total)", consumerMetricsMap.size());
+            }
         }
     }
 

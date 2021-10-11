@@ -13,9 +13,10 @@
 
 package org.eclipse.hono.client.kafka.producer;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -54,7 +55,7 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
 
     private static final Logger LOG = LoggerFactory.getLogger(CachingKafkaProducerFactory.class);
 
-    private final Map<String, KafkaProducer<K, V>> activeProducers = new HashMap<>();
+    private final Map<String, KafkaProducer<K, V>> activeProducers = new ConcurrentHashMap<>();
     private final BiFunction<String, Map<String, String>, KafkaProducer<K, V>> producerInstanceSupplier;
 
     private KafkaClientMetricsSupport metricsSupport;
@@ -153,15 +154,20 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
     @Override
     public KafkaProducer<K, V> getOrCreateProducer(final String producerName, final KafkaProducerConfigProperties config) {
 
-        activeProducers.computeIfAbsent(producerName, (name) -> {
+        final AtomicReference<KafkaProducer<K, V>> createdProducer = new AtomicReference<>();
+        final KafkaProducer<K, V> kafkaProducer = activeProducers.computeIfAbsent(producerName, (name) -> {
             final Map<String, String> producerConfig = config.getProducerConfig(producerName);
             final String clientId = producerConfig.get(ProducerConfig.CLIENT_ID_CONFIG);
             final KafkaProducer<K, V> producer = producerInstanceSupplier.apply(producerName, producerConfig);
-            Optional.ofNullable(metricsSupport).ifPresent(ms -> ms.registerKafkaProducer(producer.unwrap()));
+            createdProducer.set(producer);
             return producer.exceptionHandler(getExceptionHandler(producerName, producer, clientId));
         });
+        if (metricsSupport != null && kafkaProducer == createdProducer.get()) {
+            // metrics registration is somewhat expensive therefore doing it here to keep computation in computeIfAbsent() short
+            metricsSupport.registerKafkaProducer(kafkaProducer.unwrap());
+        }
 
-        return activeProducers.get(producerName);
+        return kafkaProducer;
     }
 
     private Handler<Throwable> getExceptionHandler(final String producerName, final KafkaProducer<K, V> producer, final String clientId) {
