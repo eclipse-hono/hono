@@ -194,7 +194,7 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
             log.debug("error creating tenant", e);
             TracingHelper.logError(span, e);
             tenantCheck.fail(new ClientErrorException(
-                    tenantId.get(),
+                    tenantId.orElse("N/A"),
                     HttpURLConnection.HTTP_BAD_REQUEST,
                     e.getMessage()));
         }
