@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,6 +24,33 @@ import io.vertx.core.json.JsonObject;
  *
  */
 public interface AuthenticationService {
+
+    /**
+     * The outcome of an attempt to authenticate a client.
+     * <p>
+     * These values may be used when reporting the outcome of authentication attempts to a metrics back end.
+     */
+    enum AuthenticationAttemptOutcome {
+        SUCCEEDED("succeeded"),
+        UNAUTHORIZED("unauthorized"),
+        UNAVAILABLE("unavailable");
+
+        private final String value;
+
+        AuthenticationAttemptOutcome(final String value) {
+            this.value = value;
+        }
+
+        /**
+         * {@inheritDoc}
+         *
+         * @return The enum's value.
+         */
+        @Override
+        public String toString() {
+            return value;
+        }
+    }
 
     /**
      * Authenticates a user based on information provided in a SASL exchange.

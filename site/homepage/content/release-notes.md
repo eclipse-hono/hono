@@ -4,6 +4,13 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
+## 1.11.0 (not yet released)
+
+### New Features
+
+* The Authentication Server now also reports the `hono.connections.attempts` metric which counts the number of authentication
+  attempts made by clients.
+
 ## 1.10.0
 
 ### New Features

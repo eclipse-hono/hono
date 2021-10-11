@@ -26,7 +26,10 @@ import org.eclipse.hono.connection.impl.ConnectionFactoryImpl;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
@@ -40,15 +43,19 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 public class AuthServerAmqpIT {
 
+    private static final Logger LOG = LoggerFactory.getLogger(AuthServerAmqpIT.class);
     private static Vertx vertx = Vertx.vertx();
     private AuthenticationServerClient client;
 
     /**
      * Creates the authentication server client.
+     *
+     * @param testInfo Meta information about the test case being run.
      */
     @BeforeEach
-    public void prepareClient() {
+    public void prepareClient(final TestInfo testInfo) {
 
+        LOG.info("running {}", testInfo.getDisplayName());
         client = getClient();
     }
 
