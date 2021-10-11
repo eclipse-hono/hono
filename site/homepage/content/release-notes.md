@@ -11,6 +11,13 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The Authentication Server now also reports the `hono.connections.attempts` metric which counts the number of authentication
   attempts made by clients.
 
+### Fixes & Enhancements
+
+* The number of credits that the Mongo DB based registry would flow to a newly connected client could not be set using
+  the documented environment variable `HONO_CREDENTIALS_SVC_RECEIVERLINKCREDIT`. Instead, the initial link credit can be
+  configured using environment variable `HONO_REGISTRY_AMQP_RECEIVERLINKCREDIT`. The Mongo DB based registry's admin guide
+  has been updated accordingly.
+
 ## 1.10.0
 
 ### New Features
