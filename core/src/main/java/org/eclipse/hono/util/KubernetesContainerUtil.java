@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
  * This class has been copied from <em>org.apache.logging.log4j.kubernetes.ContainerUtil</em> from the
  * <em>log4j-kubernetes</em> module of the <a href="https://github.com/apache/logging-log4j2">Apache Log4j 2</a>
  * project (commit a50abb9). Adaptations have been done concerning the used logger and the Hono code style.
+ * Also a fix regarding cri-containerd container ids has been applied.
  */
 public class KubernetesContainerUtil {
     private static final int MAXLENGTH = 65;
@@ -71,7 +72,7 @@ public class KubernetesContainerUtil {
         return null;
     }
 
-    private static String getContainerId(final String cgroupLine) {
+    static String getContainerId(final String cgroupLine) {
         String line = cgroupLine;
         // Every control group in Kubernetes will use
         if (line.contains("/kubepods")) {
@@ -86,11 +87,10 @@ public class KubernetesContainerUtil {
             if (i > 0) {
                 line = line.substring(0, i);
             }
-            // Everything ending with a '/' has already been stripped but the remainder might start with "docker-"
-            if (line.contains("docker-")) {
-                // 8:cpuset:/kubepods.slice/kubepods-pod9c26dfb6_b9c9_11e7_bfb9_02c6c1fc4861.slice/docker-3dd988081e7149463c043b5d9c57d7309e079c5e9290f91feba1cc45a04d6a5b.scope
-                i = line.lastIndexOf("docker-");
-                line = line.substring(i + 7);
+            // Everything ending with a '/' has already been stripped but the remainder might start with "docker-", "cri-containerd-" or "cri-o-"
+            i = line.lastIndexOf("-");
+            if (i > -1) {
+                line = line.substring(i + 1);
             }
             return line.length() <= MAXLENGTH ? line : line.substring(0, MAXLENGTH);
         }
