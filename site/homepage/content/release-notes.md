@@ -17,6 +17,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   the documented environment variable `HONO_CREDENTIALS_SVC_RECEIVERLINKCREDIT`. Instead, the initial link credit can be
   configured using environment variable `HONO_REGISTRY_AMQP_RECEIVERLINKCREDIT`. The Mongo DB based registry's admin guide
   has been updated accordingly.
+* When using Kafka messaging, there could possibly be an exception during startup of the Command Router component, 
+  meaning the component was potentially only available after a number of startup attempts. This has been fixed.
 
 ## 1.10.0
 
