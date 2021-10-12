@@ -301,8 +301,10 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             final CommandRouterClient commandRouterClient = commandRouterClient();
             adapter.setCommandRouterClient(commandRouterClient);
             final CommandRouterCommandConsumerFactory commandConsumerFactory = commandConsumerFactory(commandRouterClient);
-            commandConsumerFactory.registerInternalCommandConsumer(
-                    (id, handlers) -> new ProtonBasedInternalCommandConsumer(commandConsumerConnection(), id, handlers));
+            if (commandConsumerConfig.isHostConfigured()) {
+                commandConsumerFactory.registerInternalCommandConsumer(
+                        (id, handlers) -> new ProtonBasedInternalCommandConsumer(commandConsumerConnection(), id, handlers));
+            }
 
             final CommandResponseSender kafkaCommandResponseSender = messagingClientProviders
                     .getCommandResponseSenderProvider().getClient(MessagingType.kafka);
