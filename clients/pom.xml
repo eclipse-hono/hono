@@ -42,6 +42,7 @@
     <module>telemetry</module>
     <module>telemetry-amqp</module>
     <module>telemetry-kafka</module>
+    <module>notification</module>
   </modules>
 
   <dependencies>
