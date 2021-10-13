@@ -14,6 +14,9 @@ description = "Information about changes in recent Hono releases. Includes new f
   has been updated accordingly.
 * When using Kafka messaging, there could possibly be an exception during startup of the Command Router component,
   meaning the component was potentially only available after a number of startup attempts. This has been fixed.
+* The Quarkus based variant of the Lora protocol adapter did not start up unless the `HONO_LORA_COMMANDENABLEDTENANTS`
+  environment variable had been set. This has been fixed by removing this (unused) variable from the Lora adapter
+  altogether.
 
 ## 1.10.0
 
