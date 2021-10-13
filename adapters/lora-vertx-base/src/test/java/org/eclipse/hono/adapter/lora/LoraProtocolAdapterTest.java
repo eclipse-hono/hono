@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.eclipse.hono.adapter.http.HttpAdapterMetrics;
+import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.adapter.lora.providers.LoraProvider;
 import org.eclipse.hono.adapter.lora.providers.LoraProviderMalformedPayloadException;
 import org.eclipse.hono.adapter.test.ProtocolAdapterTestSupport;
@@ -74,7 +75,7 @@ import io.vertx.ext.web.client.WebClient;
 /**
  * Verifies behavior of {@link LoraProtocolAdapter}.
  */
-public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProtocolAdapterProperties, LoraProtocolAdapter> {
+public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<HttpProtocolAdapterProperties, LoraProtocolAdapter> {
 
     private static final int TEST_FUNCTION_PORT = 2;
     private static final String TEST_TENANT_ID = "myTenant";
@@ -130,8 +131,8 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<LoraProt
      * {@inheritDoc}
      */
     @Override
-    protected LoraProtocolAdapterProperties givenDefaultConfigurationProperties() {
-        return new LoraProtocolAdapterProperties();
+    protected HttpProtocolAdapterProperties givenDefaultConfigurationProperties() {
+        return new HttpProtocolAdapterProperties();
     }
 
     /**

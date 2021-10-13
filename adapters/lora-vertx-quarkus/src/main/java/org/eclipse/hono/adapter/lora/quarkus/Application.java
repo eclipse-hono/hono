@@ -20,8 +20,8 @@ import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
 import org.eclipse.hono.adapter.http.HttpAdapterMetrics;
+import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.adapter.lora.LoraProtocolAdapter;
-import org.eclipse.hono.adapter.lora.LoraProtocolAdapterProperties;
 import org.eclipse.hono.adapter.lora.providers.LoraProvider;
 import org.eclipse.hono.adapter.quarkus.AbstractProtocolAdapterApplication;
 
@@ -31,7 +31,7 @@ import io.vertx.ext.web.client.WebClient;
  * The Hono Lora adapter main application class.
  */
 @ApplicationScoped
-public class Application extends AbstractProtocolAdapterApplication<LoraProtocolAdapterProperties> {
+public class Application extends AbstractProtocolAdapterApplication<HttpProtocolAdapterProperties> {
 
     private static final String CONTAINER_ID = "Hono Lora Adapter";
 
