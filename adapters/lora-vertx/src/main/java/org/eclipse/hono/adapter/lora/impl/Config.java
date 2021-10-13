@@ -21,7 +21,6 @@ import org.eclipse.hono.adapter.http.HttpAdapterMetrics;
 import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.adapter.http.MicrometerBasedHttpAdapterMetrics;
 import org.eclipse.hono.adapter.lora.LoraProtocolAdapter;
-import org.eclipse.hono.adapter.lora.LoraProtocolAdapterProperties;
 import org.eclipse.hono.adapter.lora.providers.LoraProvider;
 import org.eclipse.hono.adapter.spring.AbstractAdapterConfig;
 import org.eclipse.hono.client.SendMessageSampler;
@@ -100,8 +99,8 @@ public class Config extends AbstractAdapterConfig {
      */
     @Bean
     @ConfigurationProperties(prefix = "hono.lora")
-    public LoraProtocolAdapterProperties adapterProperties() {
-        return new LoraProtocolAdapterProperties();
+    public HttpProtocolAdapterProperties adapterProperties() {
+        return new HttpProtocolAdapterProperties();
     }
 
     /**
