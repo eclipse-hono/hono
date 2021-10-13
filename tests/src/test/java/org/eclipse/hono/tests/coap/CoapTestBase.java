@@ -923,6 +923,7 @@ public abstract class CoapTestBase {
                                             assertThat(response.getContentType()).isEqualTo("text/plain");
                                             assertThat(response.getDeviceId()).isEqualTo(commandTargetDeviceId);
                                             assertThat(response.getTenantId()).isEqualTo(tenantId);
+                                            assertThat(response.getCreationTime()).isNotNull();
                                         });
                                         return response;
                                     });

@@ -53,6 +53,11 @@ public class TelemetryMqttQoS1IT extends MqttPublishTestBase {
     private static final String TOPIC_TEMPLATE = "%s/%s/%s";
 
     @Override
+    protected void assertAdditionalMessageProperties(final DownstreamMessage<? extends MessageContext> msg) {
+        assertThat(msg.getCreationTime()).isNotNull();
+    }
+
+    @Override
     protected MqttQoS getQos() {
         return MqttQoS.AT_LEAST_ONCE;
     }

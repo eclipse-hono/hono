@@ -75,6 +75,11 @@ public class TelemetryHttpIT extends HttpTestBase {
                 .createTelemetryConsumer(tenantId, (Handler) messageConsumer, remoteClose -> {});
     }
 
+    @Override
+    protected void assertAdditionalMessageProperties(final DownstreamMessage<? extends MessageContext> msg) {
+        assertThat(msg.getCreationTime()).isNotNull();
+    }
+
     /**
      * Verifies that a number of telemetry messages uploaded to Hono's HTTP adapter
      * using QoS 1 can be successfully consumed via the AMQP Messaging Network.

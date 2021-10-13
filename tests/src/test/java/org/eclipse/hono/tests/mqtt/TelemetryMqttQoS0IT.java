@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.tests.mqtt;
 
+import static com.google.common.truth.Truth.assertThat;
+
 import java.util.Map;
 
 import org.eclipse.hono.application.client.DownstreamMessage;
@@ -39,6 +41,11 @@ import io.vertx.junit5.VertxTestContext;
 public class TelemetryMqttQoS0IT extends MqttPublishTestBase {
 
     private static final String TOPIC_TEMPLATE = "%s/%s/%s";
+
+    @Override
+    protected void assertAdditionalMessageProperties(final DownstreamMessage<? extends MessageContext> msg) {
+        assertThat(msg.getCreationTime()).isNotNull();
+    }
 
     @Override
     protected MqttQoS getQos() {

@@ -119,6 +119,13 @@ public class KafkaBasedCommandResponseSenderTest {
                         assertThat(headers).contains(
                                 new RecordHeader(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, contentType.getBytes()));
 
+                        final var creationTimeHeader = headers.headers(MessageHelper.SYS_PROPERTY_CREATION_TIME);
+                        assertThat(creationTimeHeader).hasSize(1);
+                        final Long creationTimeMillis = Json.decodeValue(
+                                Buffer.buffer(creationTimeHeader.iterator().next().value()),
+                                Long.class);
+                        assertThat(creationTimeMillis).isGreaterThan(0L);
+
                         assertThat(headers.headers(additionalHeader1Name)).hasSize(1);
                         assertThat(headers).contains(
                                 new RecordHeader(additionalHeader1Name, additionalHeader1Value.getBytes()));

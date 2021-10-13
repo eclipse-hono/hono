@@ -178,4 +178,37 @@ public class ProtonBasedDownstreamSenderTest {
         // THEN the TTL at the message is correctly set in milliseconds
         verify(protonSender).send(argThat(message -> message.getTtl() == 2000), VertxMockSupport.anyHandler());
     }
+
+    /**
+     * Verifies that a downstream telemetry message always contains a creation-time.
+     */
+    @Test
+    public void testDownstreamTelemetryMessageHasCreationTime() {
+
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
+        final RegistrationAssertion device = new RegistrationAssertion("4711");
+
+        // WHEN sending a message without specifying any properties
+        sender.sendTelemetry(tenant, device, QoS.AT_MOST_ONCE, "text/plain", Buffer.buffer("hello"), null, span.context());
+
+        // THEN the message contains a creation-time
+        verify(protonSender).send(argThat(message -> message.getCreationTime() > 0), VertxMockSupport.anyHandler());
+    }
+
+    /**
+     * Verifies that a downstream event always contains a creation-time.
+     */
+    @Test
+    public void testDownstreamEventHasCreationTime() {
+
+        final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
+        final RegistrationAssertion device = new RegistrationAssertion("4711");
+
+        // WHEN sending a message without specifying any properties
+        sender.sendEvent(tenant, device, "text/plain", Buffer.buffer("hello"), null, span.context());
+
+        // THEN the message contains a creation-time
+        verify(protonSender).send(argThat(message -> message.getCreationTime() > 0), VertxMockSupport.anyHandler());
+    }
+
 }

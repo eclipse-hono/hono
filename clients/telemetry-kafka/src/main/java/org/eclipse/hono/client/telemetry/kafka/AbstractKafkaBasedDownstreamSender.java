@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.client.telemetry.kafka;
 
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -96,9 +95,16 @@ public abstract class AbstractKafkaBasedDownstreamSender extends AbstractKafkaBa
      *         not be sent. The error code contained in the exception indicates the cause of the failure.
      * @throws NullPointerException if topic, tenant, device, or qos are {@code null}.
      */
-    protected Future<Void> send(final HonoTopic topic, final TenantObject tenant, final RegistrationAssertion device,
-            final QoS qos, final String contentType, final Buffer payload, final Map<String, Object> properties,
-            final String spanOperationName, final SpanContext context) {
+    protected Future<Void> send(
+            final HonoTopic topic,
+            final TenantObject tenant,
+            final RegistrationAssertion device,
+            final QoS qos,
+            final String contentType,
+            final Buffer payload,
+            final Map<String, Object> properties,
+            final String spanOperationName,
+            final SpanContext context) {
 
         Objects.requireNonNull(topic);
         Objects.requireNonNull(tenant);
@@ -141,20 +147,6 @@ public abstract class AbstractKafkaBasedDownstreamSender extends AbstractKafkaBa
 
         // (5) if still no content type present, set the default content type
         headerProperties.putIfAbsent(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, MessageHelper.CONTENT_TYPE_OCTET_STREAM);
-
-        // ensure that creation-time is present if TTD or TTL are set
-        if (headerProperties.containsKey(MessageHelper.APP_PROPERTY_DEVICE_TTD)
-                || headerProperties.containsKey(MessageHelper.SYS_HEADER_PROPERTY_TTL)) {
-
-            if (!headerProperties.containsKey(MessageHelper.SYS_PROPERTY_CREATION_TIME)) {
-                // TODO set this as creation time in the KafkaRecord?
-
-                // must match http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-types-v1.0-os.html#type-timestamp
-                // as defined in https://www.eclipse.org/hono/docs/api/telemetry/#forward-telemetry-data
-                final long timestamp = Instant.now().toEpochMilli();
-                headerProperties.put(MessageHelper.SYS_PROPERTY_CREATION_TIME, timestamp);
-            }
-        }
 
         // make sure that device provided TTL is capped at max TTL (if set)
         headerProperties.compute(MessageHelper.SYS_HEADER_PROPERTY_TTL, (k, v) -> {
