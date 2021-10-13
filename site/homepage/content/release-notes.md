@@ -22,6 +22,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The Quarkus based variant of the Lora protocol adapter did not start up unless the `HONO_LORA_COMMANDENABLEDTENANTS`
   environment variable had been set. This has been fixed by removing this (unused) variable from the Lora adapter
   altogether.
+* All downstream messages that can be consumed via Hono's north bound APIs now include a `creation-time` header
+  which indicates the point in time at which the message has been created.
 
 ## 1.10.0
 

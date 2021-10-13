@@ -13,6 +13,7 @@
 package org.eclipse.hono.client.kafka.producer;
 
 import java.net.HttpURLConnection;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +25,7 @@ import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Lifecycle;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingClient;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.Strings;
@@ -39,6 +41,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.EncodeException;
+import io.vertx.core.json.Json;
 import io.vertx.kafka.client.producer.KafkaHeader;
 import io.vertx.kafka.client.producer.KafkaProducer;
 import io.vertx.kafka.client.producer.KafkaProducerRecord;
@@ -297,14 +300,22 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
     protected final List<KafkaHeader> encodePropertiesAsKafkaHeaders(final Map<String, Object> properties, final Span span) {
         final List<KafkaHeader> headers = new ArrayList<>();
 
-            properties.forEach((k, v) -> {
-                try {
-                    headers.add(KafkaRecordHelper.createKafkaHeader(k, v));
-                } catch (final EncodeException e) {
-                    log.info("failed to serialize property with key [{}] to Kafka header", k);
-                    span.log("failed to create Kafka header from property: " + k);
-                }
-            });
+        properties.forEach((k, v) -> {
+            try {
+                headers.add(KafkaRecordHelper.createKafkaHeader(k, v));
+            } catch (final EncodeException e) {
+                log.info("failed to serialize property with key [{}] to Kafka header", k);
+                span.log("failed to create Kafka header from property: " + k);
+            }
+        });
+
+        if (!properties.containsKey(MessageHelper.SYS_PROPERTY_CREATION_TIME)) {
+            // must match http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-types-v1.0-os.html#type-timestamp
+            // as defined in https://www.eclipse.org/hono/docs/api/telemetry/#forward-telemetry-data
+            headers.add(KafkaRecordHelper.createKafkaHeader(
+                    MessageHelper.SYS_PROPERTY_CREATION_TIME,
+                    Json.encode(Instant.now().toEpochMilli())));
+        }
 
         return headers;
     }

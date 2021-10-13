@@ -61,6 +61,7 @@ public class EventCoapIT extends CoapTestBase {
     @Override
     protected void assertAdditionalMessageProperties(final DownstreamMessage<? extends MessageContext> msg) {
         AmqpMessageContextConditionalVerifier.assertMessageIsDurable(msg);
+        assertThat(msg.getCreationTime()).isNotNull();
     }
 
     @Override

@@ -39,5 +39,4 @@ public final class AmqpMessageContextConditionalVerifier {
             assertThat(amqpMessageContext.getRawMessage().isDurable()).isTrue();
         }
     }
-
 }

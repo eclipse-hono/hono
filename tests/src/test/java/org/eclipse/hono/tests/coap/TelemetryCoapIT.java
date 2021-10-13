@@ -63,6 +63,11 @@ public class TelemetryCoapIT extends CoapTestBase {
     }
 
     @Override
+    protected void assertAdditionalMessageProperties(final DownstreamMessage<? extends MessageContext> msg) {
+        assertThat(msg.getCreationTime()).isNotNull();
+    }
+
+    @Override
     protected String getPutResource(final String tenant, final String deviceId) {
         return String.format(PUT_URI_TEMPLATE, tenant, deviceId);
     }

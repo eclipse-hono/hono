@@ -90,7 +90,10 @@ public class KafkaBasedEventSenderTest {
                         assertThat(actual.value().toString()).isEqualTo(payload);
 
                         // ...AND contains the standard headers
-                        KafkaClientUnitTestHelper.assertStandardHeaders(actual, device.getDeviceId(), contentType,
+                        KafkaClientUnitTestHelper.assertStandardHeaders(
+                                actual,
+                                device.getDeviceId(),
+                                contentType,
                                 QoS.AT_LEAST_ONCE.ordinal());
                     });
                     ctx.completeNow();

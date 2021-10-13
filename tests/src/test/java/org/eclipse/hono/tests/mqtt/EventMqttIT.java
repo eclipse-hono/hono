@@ -101,6 +101,7 @@ public class EventMqttIT extends MqttPublishTestBase {
     @Override
     protected void assertAdditionalMessageProperties(final DownstreamMessage<? extends MessageContext> msg) {
         AmqpMessageContextConditionalVerifier.assertMessageIsDurable(msg);
+        assertThat(msg.getCreationTime()).isNotNull();
     }
 
     /**

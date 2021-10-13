@@ -73,6 +73,7 @@ public class KafkaBasedTelemetrySenderTest {
         // GIVEN a telemetry sender
         final QoS qos = QoS.AT_MOST_ONCE;
         final String payload = "the-payload";
+        final String contentType = "the-content-type";
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         final CachingKafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory
                 .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
@@ -80,7 +81,7 @@ public class KafkaBasedTelemetrySenderTest {
                 true, tracer);
 
         // WHEN sending telemetry data with QoS 0
-        sender.sendTelemetry(tenant, device, qos, "the-content-type", Buffer.buffer(payload), null, null)
+        sender.sendTelemetry(tenant, device, qos, contentType, Buffer.buffer(payload), null, null)
                 .onComplete(ctx.succeeding(t -> {
                     ctx.verify(() -> {
                         // THEN the producer record is created from the given values...
@@ -92,8 +93,11 @@ public class KafkaBasedTelemetrySenderTest {
                         assertThat(actual.value().toString()).isEqualTo(payload);
 
                         // ...AND contains the standard headers
-                        KafkaClientUnitTestHelper
-                                .assertStandardHeaders(actual, device.getDeviceId(), "the-content-type", qos.ordinal());
+                        KafkaClientUnitTestHelper.assertStandardHeaders(
+                                actual,
+                                device.getDeviceId(),
+                                contentType,
+                                qos.ordinal());
                     });
                     ctx.completeNow();
                 }));
@@ -131,7 +135,11 @@ public class KafkaBasedTelemetrySenderTest {
                         assertThat(actual.value().toString()).isEqualTo(payload);
 
                         // ...AND contains the standard headers
-                        KafkaClientUnitTestHelper.assertStandardHeaders(actual, device.getDeviceId(), contentType, qos.ordinal());
+                        KafkaClientUnitTestHelper.assertStandardHeaders(
+                                actual,
+                                device.getDeviceId(),
+                                contentType,
+                                qos.ordinal());
                     });
                     ctx.completeNow();
                 }));

@@ -83,6 +83,7 @@ public class KafkaClientUnitTestHelper {
      * The following headers are expected:
      * <ul>
      * <li><em>content-type</em></li>
+     * <li><em>creation-time</em></li>
      * <li><em>device_id</em></li>
      * <li><em>qos</em></li>
      * </ul>
@@ -92,11 +93,21 @@ public class KafkaClientUnitTestHelper {
      * @param contentType The expected content type.
      * @param qos The expected QoS level.
      */
-    public static void assertStandardHeaders(final ProducerRecord<String, Buffer> actual, final String deviceId,
-            final String contentType, final int qos) {
+    public static void assertStandardHeaders(
+            final ProducerRecord<String, Buffer> actual,
+            final String deviceId,
+            final String contentType,
+            final int qos) {
 
         assertThat(actual.headers().headers("content-type")).hasSize(1);
         assertThat(actual.headers()).contains(new RecordHeader("content-type", contentType.getBytes()));
+
+        final var creationTimeHeader = actual.headers().headers("creation-time");
+        assertThat(creationTimeHeader).hasSize(1);
+        final Long creationTimeMillis = Json.decodeValue(
+                Buffer.buffer(creationTimeHeader.iterator().next().value()),
+                Long.class);
+        assertThat(creationTimeMillis).isGreaterThan(0L);
 
         assertThat(actual.headers().headers("device_id")).hasSize(1);
         assertThat(actual.headers()).contains(new RecordHeader("device_id", deviceId.getBytes()));

@@ -12,6 +12,8 @@
  *******************************************************************************/
 package org.eclipse.hono.tests.amqp;
 
+import static com.google.common.truth.Truth.assertThat;
+
 import java.util.stream.Stream;
 
 import org.eclipse.hono.application.client.DownstreamMessage;
@@ -46,5 +48,10 @@ public class TelemetryAmqpIT extends AmqpUploadTestBase {
     @Override
     protected String getEndpointName() {
         return TELEMETRY_ENDPOINT;
+    }
+
+    @Override
+    protected void assertAdditionalMessageProperties(final DownstreamMessage<? extends MessageContext> msg) {
+        assertThat(msg.getCreationTime()).isNotNull();
     }
 }

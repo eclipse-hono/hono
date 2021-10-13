@@ -16,12 +16,16 @@ package org.eclipse.hono.client.command.amqp;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
+import java.util.concurrent.TimeUnit;
 
+import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
@@ -31,6 +35,7 @@ import org.eclipse.hono.client.command.CommandResponse;
 import org.eclipse.hono.client.command.Commands;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.test.TracingMockSupport;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.MessagingType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,8 +46,10 @@ import io.opentracing.Tracer;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
+import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonSender;
 
 /**
@@ -50,6 +57,7 @@ import io.vertx.proton.ProtonSender;
  *
  */
 @ExtendWith(VertxExtension.class)
+@Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class ProtonBasedCommandResponseSenderTest {
 
     private static final String CORRELATION_ID = "the-correlation-id";
@@ -75,10 +83,10 @@ public class ProtonBasedCommandResponseSenderTest {
         when(vertx.eventBus()).thenReturn(mock(EventBus.class));
 
         final ClientConfigProperties clientConfigProperties = new ClientConfigProperties();
+        protonSender = AmqpClientUnitTestHelper.mockProtonSender();
         connection = AmqpClientUnitTestHelper.mockHonoConnection(vertx, clientConfigProperties, tracer);
         when(connection.isConnected()).thenReturn(Future.succeededFuture());
         when(connection.isConnected(anyLong())).thenReturn(Future.succeededFuture());
-        protonSender = AmqpClientUnitTestHelper.mockProtonSender();
         when(connection.createSender(anyString(), any(), any())).thenReturn(Future.succeededFuture(protonSender));
 
         sender = new ProtonBasedCommandResponseSender(connection, SendMessageSampler.Factory.noop(), false);
@@ -117,4 +125,26 @@ public class ProtonBasedCommandResponseSenderTest {
                 }));
     }
 
+    /**
+     * Verifies that command response messages being sent downstream contain a creation-time.
+     */
+    @Test
+    public void testCommandResponseMessageHasCreationTime() {
+
+        when(protonSender.sendQueueFull()).thenReturn(Boolean.FALSE);
+        when(protonSender.send(any(Message.class), VertxMockSupport.anyHandler())).thenReturn(mock(ProtonDelivery.class));
+
+        // WHEN sending a command response message
+        final CommandResponse commandResponse = CommandResponse.fromRequestId(
+                Commands.encodeRequestIdParameters(CORRELATION_ID, REPLY_TO_ID, DEVICE_ID, MessagingType.amqp),
+                TENANT_ID,
+                DEVICE_ID,
+                null,
+                null,
+                HttpURLConnection.HTTP_OK);
+        sender.sendCommandResponse(commandResponse, span.context());
+
+        // THEN the message being sent contains a creation-time
+        verify(protonSender).send(argThat(msg -> msg.getCreationTime() > 0), VertxMockSupport.anyHandler());
+    }
 }
