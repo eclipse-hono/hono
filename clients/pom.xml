@@ -37,12 +37,13 @@
     <module>command-amqp</module>
     <module>command-kafka</module>
     <module>kafka-common</module>
+    <module>notification</module>
+    <module>notification-registry</module>
     <module>registry</module>
     <module>registry-amqp</module>
     <module>telemetry</module>
     <module>telemetry-amqp</module>
     <module>telemetry-kafka</module>
-    <module>notification</module>
   </modules>
 
   <dependencies>
