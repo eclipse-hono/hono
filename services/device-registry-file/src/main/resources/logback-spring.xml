@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+    Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -27,6 +27,19 @@
   <root level="INFO">
     <appender-ref ref="STDOUT" />
   </root>
+
+  <springProfile name="trace">
+    <logger name="org.eclipse.hono.client" level="TRACE"/>
+    <logger name="org.eclipse.hono.connection" level="TRACE"/>
+    <logger name="org.eclipse.hono.deviceregistry" level="TRACE"/>
+    <logger name="org.eclipse.hono.service" level="TRACE"/>
+
+    <logger name="io.netty.handler.logging.LoggingHandler" level="DEBUG"/>
+    <logger name="io.netty.resolver.dns" level="INFO"/>
+
+    <logger name="io.vertx.proton.impl" level="INFO"/>
+    <logger name="io.vertx.core.net.impl" level="INFO"/>
+  </springProfile>
 
   <springProfile name="dev">
     <logger name="org.eclipse.hono.client" level="DEBUG"/>
