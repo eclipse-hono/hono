@@ -42,10 +42,8 @@ import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.commandrouter.impl.CommandRouterServiceImpl;
 import org.eclipse.hono.commandrouter.impl.amqp.ProtonBasedCommandConsumerFactoryImpl;
 import org.eclipse.hono.commandrouter.impl.kafka.KafkaBasedCommandConsumerFactoryImpl;
-import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.config.quarkus.ApplicationOptions;
 import org.eclipse.hono.config.quarkus.ClientOptions;
 import org.eclipse.hono.config.quarkus.RequestResponseClientOptions;
 import org.eclipse.hono.config.quarkus.ServiceOptions;
@@ -123,7 +121,6 @@ public class Application extends AbstractServiceApplication {
     @Inject
     CommandRouterMetrics metrics;
 
-    private ApplicationConfigProperties appConfig;
     private ServiceConfigProperties amqpServerProperties;
     private ClientConfigProperties commandConsumerFactoryConfig;
     private RequestResponseClientConfigProperties deviceRegistrationClientConfig;
@@ -132,11 +129,6 @@ public class Application extends AbstractServiceApplication {
 
     private Cache<Object, RegistrationResult> registrationResponseCache;
     private Cache<Object, TenantResult<TenantObject>> tenantResponseCache;
-
-    @Inject
-    void setApplicationOptions(final ApplicationOptions options) {
-        this.appConfig = new ApplicationConfigProperties(options);
-    }
 
     @Inject
     void setAmqpServerOptions(

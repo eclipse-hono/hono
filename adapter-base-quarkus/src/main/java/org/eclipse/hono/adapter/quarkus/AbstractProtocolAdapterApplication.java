@@ -71,10 +71,8 @@ import org.eclipse.hono.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.client.telemetry.kafka.KafkaBasedEventSender;
 import org.eclipse.hono.client.telemetry.kafka.KafkaBasedTelemetrySender;
 import org.eclipse.hono.client.util.MessagingClientProvider;
-import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
-import org.eclipse.hono.config.quarkus.ApplicationOptions;
 import org.eclipse.hono.config.quarkus.ClientOptions;
 import org.eclipse.hono.config.quarkus.RequestResponseClientOptions;
 import org.eclipse.hono.service.cache.Caches;
@@ -132,7 +130,6 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     @Inject
     protected KafkaMetricsOptions kafkaMetricsOptions;
 
-    private ApplicationConfigProperties appConfig;
     private ClientConfigProperties commandConsumerConfig;
     private ClientConfigProperties downstreamSenderConfig;
     private RequestResponseClientConfigProperties tenantClientConfig;
@@ -152,11 +149,6 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
      * @return The adapter instance.
      */
     protected abstract AbstractProtocolAdapterBase<C> adapter();
-
-    @Inject
-    void setApplicationOptions(final ApplicationOptions options) {
-        this.appConfig = new ApplicationConfigProperties(options);
-    }
 
     @Inject
     void setCommandConsumerClientOptions(

@@ -15,12 +15,15 @@
 package org.eclipse.hono.service.quarkus;
 
 import java.util.Base64;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 
+import org.eclipse.hono.config.ApplicationConfigProperties;
+import org.eclipse.hono.config.quarkus.ApplicationOptions;
 import org.eclipse.hono.service.ComponentNameProvider;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.slf4j.Logger;
@@ -55,7 +58,22 @@ public abstract class AbstractServiceApplication implements ComponentNameProvide
     @Inject
     protected HealthCheckServer healthCheckServer;
 
+    protected ApplicationConfigProperties appConfig;
+
     private JvmGcMetrics jvmGcMetrics;
+
+
+    /**
+     * Sets the application level configuration.
+     *
+     * @param options The configuration options.
+     * @throws NullPointerException if options is {@code null}.
+     */
+    @Inject
+    public final void setApplicationOptions(final ApplicationOptions options) {
+        Objects.requireNonNull(options);
+        this.appConfig = new ApplicationConfigProperties(options);
+    }
 
     /**
      * Logs information about the JVM.

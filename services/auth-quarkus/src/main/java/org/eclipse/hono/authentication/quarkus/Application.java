@@ -24,9 +24,7 @@ import org.eclipse.hono.authentication.SimpleAuthenticationServer;
 import org.eclipse.hono.authentication.file.FileBasedAuthenticationService;
 import org.eclipse.hono.authentication.file.FileBasedAuthenticationServiceConfigProperties;
 import org.eclipse.hono.authentication.file.FileBasedAuthenticationServiceOptions;
-import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.config.quarkus.ApplicationOptions;
 import org.eclipse.hono.config.quarkus.ServiceOptions;
 import org.eclipse.hono.service.auth.AuthTokenHelper;
 import org.eclipse.hono.service.auth.AuthTokenHelperImpl;
@@ -54,18 +52,12 @@ public class Application extends AbstractServiceApplication {
     private static final String COMPONENT_NAME = "Hono Authentication Server";
     private static final Logger LOG = LoggerFactory.getLogger(Application.class);
 
-    private ApplicationConfigProperties appConfig;
     private ServiceConfigProperties amqpProps;
     private FileBasedAuthenticationServiceConfigProperties serviceConfig;
 
     @Override
     public String getComponentName() {
         return COMPONENT_NAME;
-    }
-
-    @Inject
-    void setApplicationOptions(final ApplicationOptions options) {
-        this.appConfig = new ApplicationConfigProperties(options);
     }
 
     @Inject
