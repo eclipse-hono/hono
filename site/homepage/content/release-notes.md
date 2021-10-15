@@ -24,6 +24,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   altogether.
 * All downstream messages that can be consumed via Hono's north bound APIs now include a `creation-time` header
   which indicates the point in time at which the message has been created.
+* The error messages returned by protocol adapters when sending commands received via Kafka now include a reasonable
+  error description.
 
 ## 1.10.0
 
