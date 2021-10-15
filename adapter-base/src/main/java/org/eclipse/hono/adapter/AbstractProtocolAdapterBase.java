@@ -441,7 +441,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             log.debug("protocol adapter [{}] is disabled for tenant [{}]",
                     getTypeName(), tenantConfig.getTenantId());
             return Future.failedFuture(
-                    new AdapterDisabledException(tenantConfig.getTenantId(), HttpURLConnection.HTTP_FORBIDDEN));
+                    new AdapterDisabledException(tenantConfig.getTenantId()));
         }
     }
 
@@ -473,17 +473,22 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 .recover(t -> Future.succeededFuture(Boolean.FALSE))
                 .compose(isExceeded -> {
                     if (isExceeded) {
-                        return Future.failedFuture(new TenantConnectionsExceededException(tenantConfig.getTenantId(), null, null));
+                        return Future.failedFuture(new TenantConnectionsExceededException(
+                                tenantConfig.getTenantId(),
+                                null));
                     } else {
                         return Future.succeededFuture();
                     }
                 });
         final Future<Void> messageLimitCheckResult = checkMessageLimit(tenantConfig, 1, spanContext)
                 .recover(t -> {
-                    if (t instanceof ClientErrorException) {
-                        return Future.failedFuture(new DataVolumeExceededException(tenantConfig.getTenantId(), null, null));
+                    if (ServiceInvocationException.extractStatusCode(t) ==  HttpResponseStatus.TOO_MANY_REQUESTS.code()) {
+                        return Future.failedFuture(new DataVolumeExceededException(
+                                tenantConfig.getTenantId(),
+                                t.getCause()));
+                    } else {
+                        return Future.failedFuture(t);
                     }
-                    return Future.failedFuture(t);
                 });
 
         return CompositeFuture.all(
@@ -505,8 +510,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 .recover(t -> Future.succeededFuture(Boolean.FALSE))
                 .compose(isExceeded -> {
                     if (isExceeded) {
-                        return Future.failedFuture(
-                                new ClientErrorException(HttpResponseStatus.TOO_MANY_REQUESTS.code()));
+                        return Future.failedFuture(new ClientErrorException(
+                                tenantConfig.getTenantId(),
+                                HttpResponseStatus.TOO_MANY_REQUESTS.code(),
+                                "tenant's accumulated message data volume exceeds configured maximum value"));
                     } else {
                         return Future.succeededFuture();
                     }
@@ -540,7 +547,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 .recover(t -> Future.succeededFuture(Boolean.FALSE))
                 .compose(isExceeded -> {
                     if (isExceeded) {
-                        return Future.failedFuture(new ConnectionDurationExceededException(tenantConfig.getTenantId(), null, null));
+                        return Future.failedFuture(new ConnectionDurationExceededException(
+                                tenantConfig.getTenantId(),
+                                null));
                     } else {
                         return Future.succeededFuture();
                     }

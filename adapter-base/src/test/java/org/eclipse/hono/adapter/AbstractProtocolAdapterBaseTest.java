@@ -13,9 +13,6 @@
 
 package org.eclipse.hono.adapter;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -28,6 +25,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
 import java.util.HashMap;
@@ -252,7 +250,7 @@ public class AbstractProtocolAdapterBaseTest {
         when(context.getDownstreamMessageProperties()).thenReturn(new HashMap<>());
 
         final Map<String, Object> props = adapter.getDownstreamMessageProperties(context);
-        assertThat(props.get(MessageHelper.APP_PROPERTY_ORIG_ADAPTER), is(ADAPTER_NAME));
+        assertThat(props.get(MessageHelper.APP_PROPERTY_ORIG_ADAPTER)).isEqualTo(ADAPTER_NAME);
     }
 
     /**
@@ -275,7 +273,7 @@ public class AbstractProtocolAdapterBaseTest {
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
                         // THEN the result contains the registration assertion
-                        assertThat(result.getDeviceId(), is("device"));
+                        assertThat(result.getDeviceId()).isEqualTo("device");
                         // and the last known gateway has been updated
                         verify(commandRouterClient).setLastKnownGatewayForDevice(
                                 eq("tenant"),
@@ -480,7 +478,11 @@ public class AbstractProtocolAdapterBaseTest {
         // WHEN a device tries to connect
         adapter.checkConnectionLimit(tenant, mock(SpanContext.class)).onComplete(ctx.failing(t -> {
             // THEN the connection limit check fails
-            ctx.verify(() -> assertThat(t, instanceOf(TenantConnectionsExceededException.class)));
+            ctx.verify(() -> {
+                assertThat(t).isInstanceOf(TenantConnectionsExceededException.class);
+                assertThat(t).hasMessageThat().isEqualTo(ServiceInvocationException.getLocalizedMessage(
+                        TenantConnectionsExceededException.MESSAGE_KEY));
+            });
             ctx.completeNow();
         }));
     }
@@ -516,8 +518,8 @@ public class AbstractProtocolAdapterBaseTest {
             // In this case it should be 8kb
             assertEquals(8 * 1024, payloadSizeCaptor.getValue());
             // THEN the message limit check fails
-            ctx.verify(
-                    () -> assertThat(((ClientErrorException) t).getErrorCode(), is(HttpUtils.HTTP_TOO_MANY_REQUESTS)));
+            ctx.verify(() -> assertThat(ServiceInvocationException.extractStatusCode(t))
+                    .isEqualTo(HttpUtils.HTTP_TOO_MANY_REQUESTS));
             ctx.completeNow();
         }));
     }
@@ -544,7 +546,11 @@ public class AbstractProtocolAdapterBaseTest {
         // WHEN a device tries to connect
         adapter.checkConnectionLimit(tenant, mock(SpanContext.class)).onComplete(ctx.failing(t -> {
             // THEN the connection limit check fails
-            ctx.verify(() -> assertThat(t, instanceOf(DataVolumeExceededException.class)));
+            ctx.verify(() -> {
+                assertThat(t).isInstanceOf(DataVolumeExceededException.class);
+                assertThat(t).hasMessageThat().isEqualTo(ServiceInvocationException.getLocalizedMessage(
+                        DataVolumeExceededException.MESSAGE_KEY));
+            });
             ctx.completeNow();
         }));
     }
@@ -571,8 +577,11 @@ public class AbstractProtocolAdapterBaseTest {
         // WHEN a device tries to connect
         adapter.checkConnectionLimit(tenant, mock(SpanContext.class)).onComplete(ctx.failing(t -> {
             // THEN the connection limit check fails
-            ctx.verify(
-                    () -> assertThat(t, instanceOf(ConnectionDurationExceededException.class)));
+            ctx.verify(() -> {
+                assertThat(t).isInstanceOf(ConnectionDurationExceededException.class);
+                assertThat(t).hasMessageThat().isEqualTo(ServiceInvocationException.getLocalizedMessage(
+                        ConnectionDurationExceededException.MESSAGE_KEY));
+            });
             ctx.completeNow();
         }));
     }
@@ -597,7 +606,11 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.checkConnectionDurationLimit(tenant, mock(SpanContext.class))
                 .onComplete(ctx.failing(t -> {
                     //Then the connection duration limit check fails
-                    ctx.verify(() -> assertThat(t, instanceOf(ConnectionDurationExceededException.class)));
+                    ctx.verify(() -> {
+                        assertThat(t).isInstanceOf(ConnectionDurationExceededException.class);
+                        assertThat(t).hasMessageThat().isEqualTo(ServiceInvocationException.getLocalizedMessage(
+                                ConnectionDurationExceededException.MESSAGE_KEY));
+                    });
                     ctx.completeNow();
                 }));
     }

@@ -12,6 +12,8 @@
  */
 package org.eclipse.hono.adapter;
 
+import java.net.HttpURLConnection;
+
 import org.eclipse.hono.client.ClientErrorException;
 
 /**
@@ -27,12 +29,11 @@ public class AdapterDisabledException extends ClientErrorException {
     private static final long serialVersionUID = 1L;
 
     /**
-     * Creates a new exception for a tenant and an error code.
+     * Creates a new exception for a tenant using status code 403.
      *
      * @param tenant The tenant that the device belongs to or {@code null} if unknown.
-     * @param errorCode The code representing the erroneous outcome.
      */
-    public AdapterDisabledException(final String tenant, final int errorCode) {
-        super(tenant, errorCode, getLocalizedMessage(MESSAGE_KEY));
+    public AdapterDisabledException(final String tenant) {
+        super(tenant, HttpURLConnection.HTTP_FORBIDDEN, getLocalizedMessage(MESSAGE_KEY));
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,16 +21,20 @@ package org.eclipse.hono.adapter;
  */
 public class TenantConnectionsExceededException extends AuthorizationException {
 
+    /**
+     * Resource key for the error message.
+     */
+    public static final String MESSAGE_KEY = "CLIENT_ERROR_TENANT_CONNECTIONS_EXCEEDED";
+
     private static final long serialVersionUID = 1L;
 
     /**
-     * Creates a new exception for a tenant, a detail message and a root cause.
+     * Creates a new exception for a tenant and a root cause using a default detail message.
      *
      * @param tenant The tenant that the device belongs to or {@code null} if unknown.
-     * @param msg The detail message or {@code null}.
      * @param cause The root cause or {@code null}.
      */
-    public TenantConnectionsExceededException(final String tenant, final String msg, final Throwable cause) {
-        super(tenant, msg, cause);
+    public TenantConnectionsExceededException(final String tenant, final Throwable cause) {
+        super(tenant, getLocalizedMessage(MESSAGE_KEY), cause);
     }
 }

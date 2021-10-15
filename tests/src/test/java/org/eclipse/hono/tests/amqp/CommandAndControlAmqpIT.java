@@ -614,23 +614,24 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 response -> expectedCommandResponses.countDown(),
                 null);
 
-        connectToAdapter(tenantId, deviceId, password, () -> createEventConsumer(tenantId, msg -> {
-            // expect empty notification with TTD -1
-            setup.verify(() -> assertThat(msg.getContentType())
-                    .isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
-            final TimeUntilDisconnectNotification notification = msg.getTimeUntilDisconnectNotification().orElse(null);
-            log.debug("received notification [{}]", notification);
-            setup.verify(() -> assertThat(notification).isNotNull());
-            if (notification.getTtd() == -1) {
-                ttdReceivedPrecondition.flag();
-            }
-        }))
+        connectToAdapter(
+                tenantId,
+                deviceId,
+                password,
+                () -> createEventConsumer(tenantId, msg -> {
+                    // expect empty notification with TTD -1
+                    setup.verify(() -> assertThat(msg.getContentType())
+                            .isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
+                    final TimeUntilDisconnectNotification notification = msg.getTimeUntilDisconnectNotification().orElse(null);
+                    log.debug("received notification [{}]", notification);
+                    setup.verify(() -> assertThat(notification).isNotNull());
+                    if (notification.getTtd() == -1) {
+                        ttdReceivedPrecondition.flag();
+                    }
+                }))
                 .compose(con -> subscribeToCommands(endpointConfig, tenantId, commandTargetDeviceId)
-                        .map(recv -> {
-                            recv.handler((delivery, msg) -> ctx
-                                    .failNow(new IllegalStateException("should not have received command")));
-                            return null;
-                        }))
+                        .onSuccess(recv -> recv.handler((delivery, msg) -> ctx.failNow(
+                                new IllegalStateException("should not have received command")))))
                 .compose(ok -> helper.createGenericKafkaSender().onSuccess(kafkaSenderRef::set).mapEmpty())
                 .compose(v -> kafkaAsyncErrorResponseConsumer)
                 .onComplete(setup.succeeding(v -> setupDone.flag()));
