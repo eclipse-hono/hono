@@ -234,8 +234,8 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
             final Function<KafkaConsumerRecord<String, Buffer>, Future<Void>> recordHandler) {
         // check whether consumer needs to be paused
         if (recordsInProcessingCounter.incrementAndGet() >= maxRecordsInProcessing && pause()) {
-            log.info("paused consumer record polling; max no. of records in processing exceeded (current: {}, max: {})",
-                    recordsInProcessingCounter.get(), maxRecordsInProcessing);
+            log.info("paused consumer record polling; max no. of records in processing exceeded (current: {}, max: {}) [client-id: {}]",
+                    recordsInProcessingCounter.get(), maxRecordsInProcessing, getClientId());
             pauseStartTime = Instant.now();
         }
         final TopicPartition topicPartition = new TopicPartition(record.topic(), record.partition());
@@ -244,8 +244,8 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
             recordHandler.apply(record)
                     .onComplete(ar -> setRecordHandlingComplete(offsetsQueueEntry, topicPartition));
         } catch (final Exception e) {
-            log.warn("error handling record [topic: {}, partition: {}, offset: {}, headers: {}]",
-                    record.topic(), record.partition(), record.offset(), record.headers(), e);
+            log.warn("error handling record [topic: {}, partition: {}, offset: {}, headers: {}] [client-id: {}]",
+                    record.topic(), record.partition(), record.offset(), record.headers(), getClientId(), e);
             setRecordHandlingComplete(offsetsQueueEntry, topicPartition);
         }
     }
@@ -258,9 +258,9 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
         }
         if (recordsInProcessingCounter
                 .decrementAndGet() < (maxRecordsInProcessing - maxRecordsInProcessingResumeThreshold) && resume()) {
-            log.info("resumed consumer record polling after {}ms; current no. of records in processing ({}) dropped below threshold ({})",
+            log.info("resumed consumer record polling after {}ms; current no. of records in processing ({}) dropped below threshold ({}) [client-id: {}]",
                     Duration.between(pauseStartTime, Instant.now()).toMillis(), recordsInProcessingCounter.get(),
-                    maxRecordsInProcessing - maxRecordsInProcessingResumeThreshold);
+                    maxRecordsInProcessing - maxRecordsInProcessingResumeThreshold, getClientId());
         }
     }
 
@@ -354,7 +354,8 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
                         offsetsMap.put(partition,
                                 new TopicPartitionOffsets(partition, position, positionCommitted));
                     } catch (final Exception ex) {
-                        log.warn("error fetching position for newly assigned partition [{}]", partition, ex);
+                        log.warn("error fetching position for newly assigned partition [{}] [client-id: {}]", partition,
+                                getClientId(), ex);
                     }
                 });
         if (log.isDebugEnabled() && !partitionsForNextCommit.isEmpty()) {
@@ -371,10 +372,11 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
             synchronized (uncompletedRecordsCompletionLatchRef) {
                 final var uncompletedRecordsPartitions = getUncompletedRecordsPartitions(Helper.to(partitionsSet));
                 if (!uncompletedRecordsPartitions.isEmpty()) {
-                    log.info("init latch to wait up to {}ms for the completion of record handling concerning {}",
+                    log.info("init latch to wait up to {}ms for the completion of record handling concerning {} [client-id: {}]",
                             offsetsCommitRecordCompletionTimeoutMillis,
                             uncompletedRecordsPartitions.size() <= 10 ? uncompletedRecordsPartitions.keySet()
-                                    : (uncompletedRecordsPartitions.size() + " partitions"));
+                                    : (uncompletedRecordsPartitions.size() + " partitions"),
+                            getClientId());
                     latch = new UncompletedRecordsCompletionLatch(uncompletedRecordsPartitions);
                     uncompletedRecordsCompletionLatchRef.set(latch);
                 }
@@ -384,7 +386,8 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
                     if (latch.await(offsetsCommitRecordCompletionTimeoutMillis, TimeUnit.MILLISECONDS)) {
                         log.trace("latch to wait for the completion of record handling was released in time");
                     } else {
-                        log.info("timed out waiting for record handling to finish after {}ms", offsetsCommitRecordCompletionTimeoutMillis);
+                        log.info("timed out waiting for record handling to finish after {}ms [client-id: {}]",
+                                offsetsCommitRecordCompletionTimeoutMillis, getClientId());
                     }
                 } catch (final InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -415,7 +418,7 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
                 setCommittedOffsets(offsets);
                 log.trace("commitSync succeeded");
             } catch (final Exception e) {
-                log.warn("commit failed: {}", e.toString());
+                log.warn("commit failed: {} [client-id: {}]", e, getClientId());
             }
         } else {
             log.trace("skip commitSync - no offsets to commit");
@@ -438,14 +441,14 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
                     try {
                         getUnderlyingConsumer().commitAsync(offsets, (committedOffsets, error) -> {
                             if (error != null) {
-                                log.info("periodic commit failed: {}", error.toString());
+                                log.info("periodic commit failed: {} [client-id: {}]", error, getClientId());
                             } else {
                                 log.trace("periodic commit succeeded");
                                 setCommittedOffsets(committedOffsets);
                             }
                         });
                     } catch (final Exception ex) {
-                        log.error("error doing periodic commit", ex);
+                        log.error("error doing periodic commit [client-id: {}]", getClientId(), ex);
                     }
                 } else {
                     log.trace("skip periodic commit - no offsets to commit");
@@ -476,11 +479,11 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
             final var topicPartitionOffsetsEntry = partitionOffsetsIterator.next();
             if (!currentlyAssignedPartitions.contains(topicPartitionOffsetsEntry.getKey())) {
                 if (topicPartitionOffsetsEntry.getValue().needsCommit()) {
-                    log.warn("partition [{}] not assigned to consumer anymore but latest handled record offset hasn't been committed yet! {}",
-                            topicPartitionOffsetsEntry.getKey(), topicPartitionOffsetsEntry.getValue().getStateInfo());
+                    log.warn("partition [{}] not assigned to consumer [{}] anymore but latest handled record offset hasn't been committed yet! {}",
+                            topicPartitionOffsetsEntry.getKey(), getClientId(), topicPartitionOffsetsEntry.getValue().getStateInfo());
                 } else if (!topicPartitionOffsetsEntry.getValue().allCompleted()) {
-                    log.debug("partition [{}] not assigned to consumer anymore but not all read records have been fully processed yet! {}",
-                            topicPartitionOffsetsEntry.getKey(), topicPartitionOffsetsEntry.getValue().getStateInfo());
+                    log.debug("partition [{}] not assigned to consumer [{}] anymore but not all read records have been fully processed yet! {}",
+                            topicPartitionOffsetsEntry.getKey(), getClientId(), topicPartitionOffsetsEntry.getValue().getStateInfo());
                 } else {
                     log.trace("partition [{}] not assigned to consumer anymore; no still outstanding offset commits there",
                             topicPartitionOffsetsEntry.getKey());

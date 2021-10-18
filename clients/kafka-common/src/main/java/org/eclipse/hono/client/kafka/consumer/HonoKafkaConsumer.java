@@ -311,6 +311,15 @@ public class HonoKafkaConsumer implements Lifecycle {
         return kafkaConsumer.asStream().unwrap();
     }
 
+    /**
+     * Gets the client identifier of this consumer.
+     *
+     * @return The client identifier.
+     */
+    protected final String getClientId() {
+        return consumerConfig.get(ConsumerConfig.CLIENT_ID_CONFIG);
+    }
+
     @Override
     public Future<Void> start() {
         context = vertx.getOrCreateContext();
@@ -339,8 +348,8 @@ public class HonoKafkaConsumer implements Lifecycle {
                     }
                 });
             });
-            kafkaConsumer.exceptionHandler(error -> log.error("consumer error occurred [client.id: {}]",
-                    consumerConfig.get(ConsumerConfig.CLIENT_ID_CONFIG), error));
+            kafkaConsumer.exceptionHandler(error -> log.error("consumer error occurred [client-id: {}]",
+                    getClientId(), error));
             installRebalanceListeners();
             // subscribe and wait for rebalance to make sure that when start() completes,
             // the consumer is actually ready to receive records already
@@ -450,8 +459,8 @@ public class HonoKafkaConsumer implements Lifecycle {
                     newPartitions.forEach(partition -> getUnderlyingConsumer().position(Helper.to(partition)));
                     log.trace("done fetching positions for {} out of {} newly assigned partitions", newPartitions.size(), assignedPartitions.size());
                 } catch (final Exception e) {
-                    log.error("error fetching positions for {} out of {} newly assigned partitions", newPartitions.size(),
-                            assignedPartitions.size(), e);
+                    log.error("error fetching positions for {} out of {} newly assigned partitions [client-id: {}]", newPartitions.size(),
+                            assignedPartitions.size(), getClientId(), e);
                 }
             }
         }
@@ -609,7 +618,7 @@ public class HonoKafkaConsumer implements Lifecycle {
                     try {
                         handler.handle(null);
                     } catch (final Exception ex) {
-                        log.error("error running task on Kafka worker thread", ex);
+                        log.error("error running task on Kafka worker thread [client-id: {}]", getClientId(), ex);
                     }
                 }
             });
