@@ -1,4 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Copyright (c) 2021 Contributors to the Eclipse Foundation
+   
+    See the NOTICE file(s) distributed with this work for additional
+    information regarding copyright ownership.
+   
+    This program and the accompanying materials are made available under the
+    terms of the Eclipse Public License 2.0 which is available at
+    http://www.eclipse.org/legal/epl-2.0
+   
+    SPDX-License-Identifier: EPL-2.0
+ -->
 <!DOCTYPE xml>
 
 <configuration>
@@ -17,19 +29,26 @@
 
   <springProfile name="trace">
     <logger name="org.eclipse.hono.adapter" level="TRACE"/>
+    <logger name="org.eclipse.hono.auth" level="TRACE"/>
     <logger name="org.eclipse.hono.client" level="TRACE"/>
     <logger name="org.eclipse.hono.connection" level="TRACE"/>
+    <logger name="org.eclipse.hono.config" level="TRACE"/>
     <logger name="org.eclipse.hono.deviceconnection.infinispan.client" level="TRACE"/>
     <logger name="org.eclipse.hono.service" level="TRACE"/>
+    <logger name="org.eclipse.hono.tracing" level="TRACE"/>
+    <logger name="org.eclipse.hono.util" level="TRACE"/>
   </springProfile>
 
   <springProfile name="dev">
     <logger name="org.eclipse.hono.adapter" level="DEBUG"/>
+    <logger name="org.eclipse.hono.auth" level="DEBUG"/>
     <logger name="org.eclipse.hono.client" level="DEBUG"/>
-    <logger name="org.eclipse.hono.client.impl.AbstractRequestResponseClient" level="DEBUG"/>
     <logger name="org.eclipse.hono.connection" level="DEBUG"/>
+    <logger name="org.eclipse.hono.config" level="DEBUG"/>
     <logger name="org.eclipse.hono.deviceconnection.infinispan.client" level="DEBUG"/>
     <logger name="org.eclipse.hono.service" level="DEBUG"/>
+    <logger name="org.eclipse.hono.tracing" level="DEBUG"/>
+    <logger name="org.eclipse.hono.util" level="DEBUG"/>
   </springProfile>
 
   <springProfile name="prod">

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2019 Contributors to the Eclipse Foundation
+    Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -27,11 +27,34 @@
     <appender-ref ref="STDOUT" />
   </root>
 
+  <springProfile name="trace">
+    <logger name="org.eclipse.hono.auth" level="TRACE"/>
+    <logger name="org.eclipse.hono.client" level="TRACE"/>
+    <logger name="org.eclipse.hono.connection" level="TRACE"/>
+    <logger name="org.eclipse.hono.config" level="TRACE"/>
+    <logger name="org.eclipse.hono.deviceconnection" level="TRACE"/>
+    <logger name="org.eclipse.hono.service" level="TRACE"/>
+    <logger name="org.eclipse.hono.tracing" level="TRACE"/>
+    <logger name="org.eclipse.hono.util" level="TRACE"/>
+
+    <logger name="org.infinispan" level="DEBUG"/>
+
+    <logger name="io.netty.handler.logging.LoggingHandler" level="DEBUG"/>
+    <logger name="io.netty.resolver.dns" level="INFO"/>
+
+    <logger name="io.vertx.proton.impl" level="INFO"/>
+    <logger name="io.vertx.core.net.impl" level="INFO"/>
+  </springProfile>
+
   <springProfile name="dev">
+    <logger name="org.eclipse.hono.auth" level="DEBUG"/>
     <logger name="org.eclipse.hono.client" level="DEBUG"/>
     <logger name="org.eclipse.hono.connection" level="DEBUG"/>
+    <logger name="org.eclipse.hono.config" level="DEBUG"/>
     <logger name="org.eclipse.hono.deviceconnection" level="DEBUG"/>
     <logger name="org.eclipse.hono.service" level="DEBUG"/>
+    <logger name="org.eclipse.hono.tracing" level="DEBUG"/>
+    <logger name="org.eclipse.hono.util" level="DEBUG"/>
 
     <logger name="org.infinispan" level="DEBUG"/>
 
