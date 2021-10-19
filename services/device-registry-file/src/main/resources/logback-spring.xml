@@ -29,10 +29,14 @@
   </root>
 
   <springProfile name="trace">
+    <logger name="org.eclipse.hono.auth" level="TRACE"/>
     <logger name="org.eclipse.hono.client" level="TRACE"/>
     <logger name="org.eclipse.hono.connection" level="TRACE"/>
+    <logger name="org.eclipse.hono.config" level="TRACE"/>
     <logger name="org.eclipse.hono.deviceregistry" level="TRACE"/>
     <logger name="org.eclipse.hono.service" level="TRACE"/>
+    <logger name="org.eclipse.hono.tracing" level="TRACE"/>
+    <logger name="org.eclipse.hono.util" level="TRACE"/>
 
     <logger name="io.netty.handler.logging.LoggingHandler" level="DEBUG"/>
     <logger name="io.netty.resolver.dns" level="INFO"/>
@@ -42,10 +46,14 @@
   </springProfile>
 
   <springProfile name="dev">
+    <logger name="org.eclipse.hono.auth" level="DEBUG"/>
     <logger name="org.eclipse.hono.client" level="DEBUG"/>
     <logger name="org.eclipse.hono.connection" level="DEBUG"/>
+    <logger name="org.eclipse.hono.config" level="DEBUG"/>
     <logger name="org.eclipse.hono.deviceregistry" level="DEBUG"/>
     <logger name="org.eclipse.hono.service" level="DEBUG"/>
+    <logger name="org.eclipse.hono.tracing" level="DEBUG"/>
+    <logger name="org.eclipse.hono.util" level="DEBUG"/>
 
     <logger name="io.netty.handler.logging.LoggingHandler" level="DEBUG"/>
     <logger name="io.netty.resolver.dns" level="INFO"/>
