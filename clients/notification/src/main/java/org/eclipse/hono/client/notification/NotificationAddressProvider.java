@@ -13,17 +13,13 @@
 
 package org.eclipse.hono.client.notification;
 
-import io.vertx.core.Future;
+import java.util.function.Function;
 
 /**
- * A consumer of notifications.
+ * A function that returns the messaging address for a given class of notifications.
+ *
+ * @param <T> The class of the notification.
  */
-public interface NotificationConsumer {
+public interface NotificationAddressProvider<T extends Notification> extends Function<Class<T>, String> {
 
-    /**
-     * Closes the client.
-     *
-     * @return A future indicating the outcome of the operation.
-     */
-    Future<Void> close();
 }

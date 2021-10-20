@@ -19,10 +19,10 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 
+import org.eclipse.hono.notification.deviceregistry.CredentialsChangeNotification;
+import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
 import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
-import org.eclipse.hono.notification.deviceregistry.credentials.CredentialsChangeNotification;
-import org.eclipse.hono.notification.deviceregistry.device.DeviceChangeNotification;
-import org.eclipse.hono.notification.deviceregistry.tenant.TenantChangeNotification;
+import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 

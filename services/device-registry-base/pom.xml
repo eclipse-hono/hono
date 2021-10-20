@@ -37,7 +37,15 @@
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-notification</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client-notification-registry</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>notification-client-notification-kafka</artifactId>
     </dependency>
     <dependency>
       <groupId>org.springframework.security</groupId>

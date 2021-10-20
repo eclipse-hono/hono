@@ -33,6 +33,7 @@ public class AbstractDeviceRegistryNotificationTest {
     private static final String SOURCE = "the-component";
     private static final String TIMESTAMP = "2007-12-03T10:15:30Z";
     private static final String TYPE = "test-notification";
+    private static final String TOPIC = "test-topic";
 
     private AbstractDeviceRegistryNotification notification;
 
@@ -46,6 +47,11 @@ public class AbstractDeviceRegistryNotificationTest {
             @Override
             public String getType() {
                 return TYPE;
+            }
+
+            @Override
+            public String getAddress() {
+                return TOPIC;
             }
         };
     }

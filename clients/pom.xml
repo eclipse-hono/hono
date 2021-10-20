@@ -38,6 +38,7 @@
     <module>command-kafka</module>
     <module>kafka-common</module>
     <module>notification</module>
+    <module>notification-kafka</module>
     <module>notification-registry</module>
     <module>registry</module>
     <module>registry-amqp</module>

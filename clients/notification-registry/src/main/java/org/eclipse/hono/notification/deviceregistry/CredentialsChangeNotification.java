@@ -11,30 +11,30 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.notification.deviceregistry.device;
+package org.eclipse.hono.notification.deviceregistry;
 
 import java.time.Instant;
 import java.util.Objects;
 
 import org.eclipse.hono.annotation.HonoTimestamp;
-import org.eclipse.hono.notification.deviceregistry.AbstractDeviceRegistryNotification;
-import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
-import org.eclipse.hono.notification.deviceregistry.NotificationConstants;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * Notification that informs about changes on a device.
+ * Notification that informs about changes on credentials.
+ *
+ * The notification only informs that credentials for a device have been changed but not about details of the change.
+ * Components that consume this notification could either query the Device Registry to get more information, or assume
+ * that the used credentials have become invalid. For example a protocol adapter can simply disconnect the device to
+ * enforce re-authentication.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class DeviceChangeNotification extends AbstractDeviceRegistryNotification {
+public class CredentialsChangeNotification extends AbstractDeviceRegistryNotification {
 
-    public static final String TYPE = "device-change-v1";
-
-    @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_CHANGE, required = true)
-    private LifecycleChange change;
+    public static final String TYPE = "credentials-change-v1";
+    public static final String ADDRESS = DeviceChangeNotification.ADDRESS;
 
     @JsonProperty(value = NotificationConstants.JSON_FIELD_TENANT_ID, required = true)
     private String tenantId;
@@ -42,48 +42,29 @@ public class DeviceChangeNotification extends AbstractDeviceRegistryNotification
     @JsonProperty(value = NotificationConstants.JSON_FIELD_DEVICE_ID, required = true)
     private String deviceId;
 
-    @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_ENABLED, required = true)
-    private boolean enabled;
-
     @JsonCreator
-    DeviceChangeNotification(
+    CredentialsChangeNotification(
             @JsonProperty(value = FIELD_SOURCE, required = true) final String source,
             @JsonProperty(value = FIELD_TIMESTAMP, required = true) @HonoTimestamp final Instant timestamp,
-            @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_CHANGE, required = true) final LifecycleChange change,
             @JsonProperty(value = NotificationConstants.JSON_FIELD_TENANT_ID, required = true) final String tenantId,
-            @JsonProperty(value = NotificationConstants.JSON_FIELD_DEVICE_ID, required = true) final String deviceId,
-            @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_ENABLED, required = true) final boolean enabled) {
+            @JsonProperty(value = NotificationConstants.JSON_FIELD_DEVICE_ID, required = true) final String deviceId) {
 
         super(source, timestamp);
 
-        this.change = Objects.requireNonNull(change);
         this.tenantId = Objects.requireNonNull(tenantId);
         this.deviceId = Objects.requireNonNull(deviceId);
-        this.enabled = enabled;
     }
 
     /**
      * Creates an instance.
      *
-     * @param change The type of change to notify about.
      * @param tenantId The tenant ID of the device.
      * @param deviceId The ID of the device.
      * @param timestamp The timestamp of the event (Unix epoch, UTC, in milliseconds).
-     * @param enabled {@code true} if the device is enabled.
      * @throws NullPointerException If any of the parameters are {@code null}.
      */
-    public DeviceChangeNotification(final LifecycleChange change, final String tenantId, final String deviceId,
-            final Instant timestamp, final boolean enabled) {
-        this(NotificationConstants.SOURCE_DEVICE_REGISTRY, timestamp, change, tenantId, deviceId, enabled);
-    }
-
-    /**
-     * Gets the change that caused the notification.
-     *
-     * @return The change.
-     */
-    public LifecycleChange getChange() {
-        return change;
+    public CredentialsChangeNotification(final String tenantId, final String deviceId, final Instant timestamp) {
+        this(NotificationConstants.SOURCE_DEVICE_REGISTRY, timestamp, tenantId, deviceId);
     }
 
     /**
@@ -104,18 +85,14 @@ public class DeviceChangeNotification extends AbstractDeviceRegistryNotification
         return deviceId;
     }
 
-    /**
-     * Checks if the device is enabled.
-     *
-     * @return {@code true} if this device is enabled.
-     */
-    public boolean isEnabled() {
-        return enabled;
-    }
-
     @Override
     public final String getType() {
         return TYPE;
+    }
+
+    @Override
+    public String getAddress() {
+        return ADDRESS;
     }
 
 }

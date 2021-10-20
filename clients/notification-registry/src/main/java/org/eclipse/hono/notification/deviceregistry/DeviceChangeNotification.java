@@ -11,27 +11,25 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.notification.deviceregistry.tenant;
+package org.eclipse.hono.notification.deviceregistry;
 
 import java.time.Instant;
 import java.util.Objects;
 
 import org.eclipse.hono.annotation.HonoTimestamp;
-import org.eclipse.hono.notification.deviceregistry.AbstractDeviceRegistryNotification;
-import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
-import org.eclipse.hono.notification.deviceregistry.NotificationConstants;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * Notification that informs about changes on a tenant.
+ * Notification that informs about changes on a device.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class TenantChangeNotification extends AbstractDeviceRegistryNotification {
+public class DeviceChangeNotification extends AbstractDeviceRegistryNotification {
 
-    public static final String TYPE = "tenant-change-v1";
+    public static final String TYPE = "device-change-v1";
+    public static final String ADDRESS = "registry-device";
 
     @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_CHANGE, required = true)
     private LifecycleChange change;
@@ -39,21 +37,26 @@ public class TenantChangeNotification extends AbstractDeviceRegistryNotification
     @JsonProperty(value = NotificationConstants.JSON_FIELD_TENANT_ID, required = true)
     private String tenantId;
 
+    @JsonProperty(value = NotificationConstants.JSON_FIELD_DEVICE_ID, required = true)
+    private String deviceId;
+
     @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_ENABLED, required = true)
     private boolean enabled;
 
     @JsonCreator
-    TenantChangeNotification(
+    DeviceChangeNotification(
             @JsonProperty(value = FIELD_SOURCE, required = true) final String source,
             @JsonProperty(value = FIELD_TIMESTAMP, required = true) @HonoTimestamp final Instant timestamp,
             @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_CHANGE, required = true) final LifecycleChange change,
             @JsonProperty(value = NotificationConstants.JSON_FIELD_TENANT_ID, required = true) final String tenantId,
+            @JsonProperty(value = NotificationConstants.JSON_FIELD_DEVICE_ID, required = true) final String deviceId,
             @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_ENABLED, required = true) final boolean enabled) {
 
         super(source, timestamp);
 
         this.change = Objects.requireNonNull(change);
         this.tenantId = Objects.requireNonNull(tenantId);
+        this.deviceId = Objects.requireNonNull(deviceId);
         this.enabled = enabled;
     }
 
@@ -61,14 +64,15 @@ public class TenantChangeNotification extends AbstractDeviceRegistryNotification
      * Creates an instance.
      *
      * @param change The type of change to notify about.
-     * @param tenantId The ID of the tenant.
+     * @param tenantId The tenant ID of the device.
+     * @param deviceId The ID of the device.
      * @param timestamp The timestamp of the event (Unix epoch, UTC, in milliseconds).
      * @param enabled {@code true} if the device is enabled.
      * @throws NullPointerException If any of the parameters are {@code null}.
      */
-    public TenantChangeNotification(final LifecycleChange change, final String tenantId, final Instant timestamp,
-            final boolean enabled) {
-        this(NotificationConstants.SOURCE_DEVICE_REGISTRY, timestamp, change, tenantId, enabled);
+    public DeviceChangeNotification(final LifecycleChange change, final String tenantId, final String deviceId,
+            final Instant timestamp, final boolean enabled) {
+        this(NotificationConstants.SOURCE_DEVICE_REGISTRY, timestamp, change, tenantId, deviceId, enabled);
     }
 
     /**
@@ -81,7 +85,7 @@ public class TenantChangeNotification extends AbstractDeviceRegistryNotification
     }
 
     /**
-     * Gets the ID of the changed tenant.
+     * Gets the tenant ID of the changed device.
      *
      * @return The tenant ID.
      */
@@ -90,9 +94,18 @@ public class TenantChangeNotification extends AbstractDeviceRegistryNotification
     }
 
     /**
-     * Checks if the tenant is enabled.
+     * Gets the ID of the changed device.
      *
-     * @return {@code true} if this tenant is enabled.
+     * @return The device ID.
+     */
+    public String getDeviceId() {
+        return deviceId;
+    }
+
+    /**
+     * Checks if the device is enabled.
+     *
+     * @return {@code true} if this device is enabled.
      */
     public boolean isEnabled() {
         return enabled;
@@ -101,6 +114,11 @@ public class TenantChangeNotification extends AbstractDeviceRegistryNotification
     @Override
     public final String getType() {
         return TYPE;
+    }
+
+    @Override
+    public String getAddress() {
+        return ADDRESS;
     }
 
 }

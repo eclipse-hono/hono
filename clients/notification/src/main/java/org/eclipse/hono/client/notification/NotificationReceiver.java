@@ -11,13 +11,14 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.notification.deviceregistry.tenant;
+package org.eclipse.hono.client.notification;
 
-import org.eclipse.hono.client.notification.NotificationConsumerClient;
+import org.eclipse.hono.util.Lifecycle;
 
 /**
- * A client that supports receiving tenant change notifications.
+ * A client that supports receiving Hono's (internal) notifications.
+ *
  */
-public interface TenantNotificationConsumer extends NotificationConsumerClient<TenantChangeNotification> {
+public interface NotificationReceiver extends Lifecycle {
 
 }

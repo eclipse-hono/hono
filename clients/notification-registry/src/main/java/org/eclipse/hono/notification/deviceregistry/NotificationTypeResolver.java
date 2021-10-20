@@ -13,10 +13,6 @@
 
 package org.eclipse.hono.notification.deviceregistry;
 
-import org.eclipse.hono.notification.deviceregistry.credentials.CredentialsChangeNotification;
-import org.eclipse.hono.notification.deviceregistry.device.DeviceChangeNotification;
-import org.eclipse.hono.notification.deviceregistry.tenant.TenantChangeNotification;
-
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DatabindContext;
 import com.fasterxml.jackson.databind.JavaType;

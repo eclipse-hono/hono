@@ -21,8 +21,10 @@ import io.vertx.core.Future;
 
 /**
  * A client for publishing Hono internal notifications.
+ *
+ * @param <T> The implementation type of notification to be sent.
  */
-public interface NotificationSender extends MessagingClient, Lifecycle {
+public interface NotificationSender<T extends Notification> extends MessagingClient, Lifecycle {
 
     /**
      * Publish a notification that inform consuming components about an event in the publishing component.
@@ -38,5 +40,5 @@ public interface NotificationSender extends MessagingClient, Lifecycle {
      *         not be sent. The error code contained in the exception indicates the cause of the failure.
      * @throws NullPointerException if notification is {@code null}.
      */
-    Future<Void> publish(Notification notification, SpanContext context);
+    Future<Void> publish(T notification, SpanContext context);
 }

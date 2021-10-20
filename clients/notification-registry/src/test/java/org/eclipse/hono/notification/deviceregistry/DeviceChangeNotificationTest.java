@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.notification.deviceregistry.tenant;
+package org.eclipse.hono.notification.deviceregistry;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
@@ -20,6 +20,7 @@ import java.time.Instant;
 
 import org.eclipse.hono.client.notification.Notification;
 import org.eclipse.hono.notification.deviceregistry.AbstractDeviceRegistryNotification;
+import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
 import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
 import org.eclipse.hono.notification.deviceregistry.NotificationConstants;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,15 +30,16 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
 /**
- * Tests verifying the behavior of {@link TenantChangeNotification}.
+ * Tests verifying the behavior of {@link DeviceChangeNotification}.
  *
  */
-public class TenantChangeNotificationTest {
+public class DeviceChangeNotificationTest {
 
     private static final String TIMESTAMP = "2007-12-03T10:15:30Z";
     private static final String TENANT_ID = "my-tenant";
-    private static final boolean ENABLED = false;
+    private static final String DEVICE_ID = "my-device";
     private static final LifecycleChange CHANGE = LifecycleChange.CREATE;
+    private static final boolean ENABLED = false;
 
     private AbstractDeviceRegistryNotification notification;
 
@@ -46,7 +48,7 @@ public class TenantChangeNotificationTest {
      */
     @BeforeEach
     public void setUp() {
-        notification = new TenantChangeNotification(CHANGE, TENANT_ID, Instant.parse(TIMESTAMP), ENABLED);
+        notification = new DeviceChangeNotification(CHANGE, TENANT_ID, DEVICE_ID, Instant.parse(TIMESTAMP), ENABLED);
     }
 
     /**
@@ -60,10 +62,11 @@ public class TenantChangeNotificationTest {
         assertThat(json.getString(Notification.FIELD_SOURCE)).isEqualTo(NotificationConstants.SOURCE_DEVICE_REGISTRY);
         assertThat(json.getInstant(Notification.FIELD_TIMESTAMP).toString()).isEqualTo(TIMESTAMP);
 
-        assertThat(json.getString("type")).isEqualTo(TenantChangeNotification.TYPE);
-        assertThat(json.getString(NotificationConstants.JSON_FIELD_TENANT_ID)).isEqualTo(TENANT_ID);
-        assertThat(json.getBoolean(NotificationConstants.JSON_FIELD_DATA_ENABLED)).isEqualTo(ENABLED);
+        assertThat(json.getString("type")).isEqualTo(DeviceChangeNotification.TYPE);
         assertThat(json.getString(NotificationConstants.JSON_FIELD_DATA_CHANGE)).isEqualTo(CHANGE.toString());
+        assertThat(json.getString(NotificationConstants.JSON_FIELD_TENANT_ID)).isEqualTo(TENANT_ID);
+        assertThat(json.getString(NotificationConstants.JSON_FIELD_DEVICE_ID)).isEqualTo(DEVICE_ID);
+        assertThat(json.getBoolean(NotificationConstants.JSON_FIELD_DATA_ENABLED)).isEqualTo(ENABLED);
     }
 
     /**
@@ -77,15 +80,16 @@ public class TenantChangeNotificationTest {
 
         // When adding new properties to the data object, make sure not to break the existing API because messages might
         // be persisted. For breaking changes add a new object mapper class instead.
-        final int expectedPropertiesCount = 6;
+        final int expectedPropertiesCount = 7;
         assertWithMessage("JSON contains unknown fields").that(json.size()).isEqualTo(expectedPropertiesCount);
 
-        assertThat(json.getString("type")).isEqualTo("tenant-change-v1");
+        assertThat(json.getString("type")).isEqualTo("device-change-v1");
         assertThat(json.getString("source")).isEqualTo("device-registry");
         assertThat(json.getString("timestamp")).isEqualTo(TIMESTAMP);
 
         assertThat(json.getString("change")).isEqualTo("CREATE");
         assertThat(json.getString("tenant-id")).isNotNull();
+        assertThat(json.getString("device-id")).isNotNull();
         assertThat(json.getString("enabled")).isNotNull();
 
     }
@@ -100,14 +104,15 @@ public class TenantChangeNotificationTest {
                 .decodeValue(JsonObject.mapFrom(notification).toBuffer(), AbstractDeviceRegistryNotification.class);
 
         assertThat(abstractNotification).isNotNull();
-        assertThat(abstractNotification).isInstanceOf(TenantChangeNotification.class);
-        final TenantChangeNotification newNotification = (TenantChangeNotification) abstractNotification;
+        assertThat(abstractNotification).isInstanceOf(DeviceChangeNotification.class);
+        final DeviceChangeNotification newNotification = (DeviceChangeNotification) abstractNotification;
 
         assertThat(newNotification.getSource()).isEqualTo(NotificationConstants.SOURCE_DEVICE_REGISTRY);
         assertThat(newNotification.getTimestamp()).isEqualTo(Instant.parse(TIMESTAMP));
 
         assertThat(newNotification.getChange()).isEqualTo(CHANGE);
         assertThat(newNotification.getTenantId()).isEqualTo(TENANT_ID);
+        assertThat(newNotification.getDeviceId()).isEqualTo(DEVICE_ID);
         assertThat(newNotification.isEnabled()).isEqualTo(ENABLED);
     }
 
