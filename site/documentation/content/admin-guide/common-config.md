@@ -116,15 +116,14 @@ determine the overall number of responses that can be cached.
 <a name="device-connection-service-connection-configuration"></a>
 ### Device Connection Service Connection Configuration
 
-{{% note title="Deprecation" %}}
+{{% notice info %}}
 The Device Connection service is deprecated and will be removed from Hono completely in version 2.0.0.
 Protocol adapters use the [Command Router service]({{< relref "/admin-guide/command-router-config" >}}) by default and
 thus require a [Command Router Service Connection]({{< relref "#command-router-service-connection-configuration" >}})
 to be configured.
-
 For backwards compatibility, adapters can still be configured to use the Device Connection service as described in this
 section.
-{{% /note %}}
+{{% /notice %}}
 
 Protocol adapters connect to an implementation of Hono's [Device Connection API]({{< relref "/api/device-connection" >}})
 in order to determine the gateway that a device is connected via to a protocol adapter. This information is required in order to
@@ -161,11 +160,11 @@ using `hono.deviceConnection` instead of the `infinispan.client.hotrod` prefix.
 <a name="command-router-service-connection-configuration"></a>
 ### Command Router Service Connection Configuration
 
-{{% note %}}
+{{% notice tip %}}
 The Command Router service is the successor to the deprecated Device Connection service.
-However, for backwards compatibility, adapters can still be configured to use the Device Connection service instead as described
-[above]({{< relref "#device-connection-service-connection-configuration" >}}).
-{{% /note %}}
+However, for backwards compatibility, adapters can still be configured to use the Device Connection service instead as
+described [above]({{< relref "#device-connection-service-connection-configuration" >}}).
+{{% /notice %}}
 
 Protocol adapters connect to an implementation of Hono's [Command Router API]({{< relref "/api/command-router" >}})
 in order to supply information with which a Command Router service component can route command & control messages to

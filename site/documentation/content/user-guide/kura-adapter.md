@@ -6,9 +6,9 @@ weight = 250
 The Kura protocol adapter exposes an MQTT topic hierarchy allowing Eclipse Kura&trade; based gateways to publish *control* and *data* messages to Eclipse Hono&trade;'s Telemetry and Event endpoints.
 <!--more-->
 
-{{% note %}}
+{{% notice tip %}}
 The Kura adapter is supposed to be used with gateways running Kura version 3.x. Gateways running Kura version 4 and later should connect to the MQTT adapter instead.
-{{% /note %}}
+{{% /notice %}}
 
 ## Authentication
 

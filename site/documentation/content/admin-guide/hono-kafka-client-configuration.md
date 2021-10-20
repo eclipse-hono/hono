@@ -6,10 +6,10 @@ weight = 342
 Protocol adapters can be configured to use Kafka for the messaging. The Kafka client used there can be configured with 
 operating system environment variables and/or Java system properties.
 
-{{% note title="Tech preview" %}}
+{{% notice info %}}
 The support of Kafka as a messaging system is currently a preview and not yet ready for production.
-The implementation as well as its APIs may change with the next version. 
-{{% /note %}}
+The implementation as well as its APIs may change with the next version.
+{{% /notice %}}
 
 ## Configure for Kafka based Messaging
 
@@ -53,10 +53,10 @@ in order to implement the message delivery semantics defined by Hono's Telemetry
 | `value.serializer` | `io.vertx.kafka.client.serialization.BufferSerializer` |
 | `enable.idempotence` | `true` |
 
-{{% note title="Enable Kafka based Messaging" %}}
-The Kafka client requires the property `bootstrap.servers` to be provided. This variable is the minimal configuration 
+{{% notice tip %}}
+The Kafka client requires the property `bootstrap.servers` to be provided. This variable is the minimal configuration
 required to enable Kafka based messaging.
-{{% /note %}}
+{{% /notice %}}
 
 ### Using TLS
 
@@ -86,10 +86,10 @@ The following properties can _not_ be set using this mechanism because the proto
 | `key.deserializer` | `org.apache.kafka.common.serialization.StringDeserializer` |
 | `value.deserializer` | `io.vertx.kafka.client.serialization.BufferDeserializer` |
 
-{{% note title="Enable Kafka based Messaging" %}}
+{{% notice tip %}}
 The Kafka client requires the property `bootstrap.servers` to be provided. This variable is the minimal configuration
 required to enable Kafka based messaging.
-{{% /note %}}
+{{% /notice %}}
 
 ### Using TLS
 
@@ -113,10 +113,10 @@ as a Java system property in the form `hono.kafka.adminClientConfig.${property}`
 `${property}` is any of the Kafka client's [admin client properties](https://kafka.apache.org/documentation/#adminclientconfigs).
 The provided configuration is passed directly to the Kafka admin client without Hono parsing or validating it.
 
-{{% note title="Enable Kafka based Messaging" %}}
+{{% notice tip %}}
 The Kafka client requires the property `bootstrap.servers` to be provided. This variable is the minimal configuration
 required to enable Kafka based messaging.
-{{% /note %}}
+{{% /notice %}}
 
 ### Using TLS
 

@@ -22,9 +22,9 @@ You may want to change the level of detail that should be logged to the console 
 
 Please refer to the javadoc of the classes for details.
  
-{{% note %}}
-Note that production ready code likely has to think more about error handling and logging than this simple blueprint. 
-{{% /note %}}
+{{% notice info %}}
+Note that production ready code likely has to think more about error handling and logging than this simple blueprint.
+{{% /notice %}}
 
 ## Configure the example
 

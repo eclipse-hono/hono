@@ -11,39 +11,39 @@ The Device Registry component provides exemplary implementations of Hono's [Tena
 As such it exposes AMQP 1.0 based endpoints for retrieving the relevant information and persists data to the local file
 system.
 
-{{% note title="Deprecation" %}}
+{{% notice info %}}
 The file based device registry has been deprecated and will be removed in Hono 2.0.0.
 Please use the [Mongo DB]({{< relref "mongodb-device-registry-config" >}}) or
 [JDBC based registry]({{< relref "jdbc-device-registry-config" >}}) implementations instead.
-{{% /note %}}
+{{% /notice %}}
 
 In addition, the Device Registry also exposes HTTP resources for managing the contents of the registry according to the
 [Device Registry Management API]({{< relref "/api/management" >}}).
 
-{{% warning %}}
+{{% notice warning %}}
 The Device Registry is not intended to be used in production environments. In particular, access to the HTTP resources
 described below is not restricted to authorized clients only.
-{{% /warning %}}
+{{% /notice %}}
 
 ## Managing Tenants
 
 Please refer to the [Device Registry Management API]({{< relref "/api/management#tenants" >}}) for information about
 managing tenants.
 
-{{% note %}}
+{{% notice info %}}
 The file based device registry does not support the Device Registry Management API's
 [search tenants]({{< relref "/api/management#tenants/searchTenants" >}}) operation.
-{{% /note %}}
+{{% /notice %}}
 
 ## Managing Devices
 
 Please refer to the [Device Registry Management API]({{< relref "/api/management#devices" >}}) for information about
 managing devices.
 
-{{% note %}}
+{{% notice info %}}
 The file based device registry does not support the Device Registry Management API's
 [search devices]({{< relref "/api/management#devices/searchDevicesForTenant" >}}) operation.
-{{% /note %}}
+{{% /notice %}}
 
 ## Managing Credentials
 

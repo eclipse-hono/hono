@@ -62,6 +62,55 @@ a:hover {
     color: var(--MAIN-LINK-HOVER-color);
 }
 
+/* adjustments to the styling of notice tags */
+pre {
+    margin: 1rem 0;
+}
+
+div.notices p {
+    padding: 7px 15px;
+}
+div.notices.info {
+    background: #FFF2DB;
+}
+div.notices.info p {
+    border-top: inherit;
+    background: inherit;
+}
+div.notices.info p:first-child {
+    border-top: 30px solid #F0B37E;
+}
+div.notices.warning {
+    background: #FAE2E2;
+}
+div.notices.warning p {
+    border-top: inherit;
+    background: inherit;
+}
+div.notices.warning p:first-child {
+    border-top: 30px solid rgba(217, 83, 79, 0.8);
+}
+div.notices.note {
+    background: #E7F2FA;
+}
+div.notices.note p {
+    border-top: inherit;
+    background: inherit;
+}
+div.notices.note p:first-child {
+    border-top: 30px solid #6AB0DE;
+}
+div.notices.tip {
+    background: #E6F9E6;
+}
+div.notices.tip p {
+    border-top: inherit;
+    background: inherit;
+}
+div.notices.tip p:first-child {
+    border-top: 30px solid rgba(92, 184, 92, 0.8);
+}
+
 #sidebar ul li.visited > a .read-icon {
     color: #f08712;
     color: var(--MENU-VISITED-color);

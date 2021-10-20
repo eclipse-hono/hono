@@ -44,9 +44,9 @@ the following command can be used to tag the locally built images and push them 
 ./push_hono_images.sh 1.0.3-CUSTOM my.registry.io
 ~~~
 
-{{% note %}}
+{{% notice tip %}}
 You may need to log in to the (private) container registry before pushing the images.
-{{% /note %}}
+{{% /notice %}}
 
 The image names that Hono should use for starting up containers can be configured in a YAML file:
 

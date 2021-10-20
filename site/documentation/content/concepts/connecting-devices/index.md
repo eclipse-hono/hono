@@ -101,9 +101,9 @@ device, has no notion of gateway groups. Thus, the response message of the Devic
 not** contain the IDs of gateway groups in its *via* property but instead contains the IDs of all (gateway) devices
 that are a member of any of the authorized gateway groups.
 
-{{% note %}}
+{{% notice info %}}
 Hono's example device registry does not support nested gateway groups.
-{{% /note %}}
+{{% /notice %}}
 
 ## Connecting via a Protocol Gateway
 

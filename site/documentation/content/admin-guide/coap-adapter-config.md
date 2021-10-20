@@ -94,10 +94,11 @@ the local network, while still requiring encrypted communication when accessed f
 
 Setting this variable to `0.0.0.0` will let the port being bound to **all** network interfaces (be careful not to expose the port unintentionally to the outside world).
 
-{{% note %}}
-The insecure port will only be bound if the `HONO_COAP_AUTHENTICATIONREQUIRED` variable is set to `false` because CoAP authenticates clients (devices) as
-part of the DTLS handshake. Thus, requiring devices to authenticate effectively rules out setting up a non-DTLS secured port.
-{{% /note %}}
+{{% notice tip %}}
+The insecure port will only be bound if the `HONO_COAP_AUTHENTICATIONREQUIRED` variable is set to `false` because the CoAP
+adapter authenticates clients (devices) as part of the DTLS handshake. Thus, requiring devices to authenticate
+effectively rules out setting up a non-DTLS secured port.
+{{% /notice %}}
 
 
 ### Dual Port

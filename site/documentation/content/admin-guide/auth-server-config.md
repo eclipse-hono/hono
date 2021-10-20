@@ -15,11 +15,11 @@ are no remote service APIs for managing the identities and their authorities.
 The Auth Server is implemented as a Quarkus application. It can be run either directly from the command line or by
 means of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-service-auth-quarkus/) created from it.
 
-{{% note title="Deprecation" %}}
+{{% notice info %}}
 The Auth Server had originally been implemented as a Spring Boot application. That variant has been deprecated with Hono
 1.10.0 and will be completely removed in Hono 2.0.0.
 The [Spring Boot based Docker image](https://hub.docker.com/r/eclipse/hono-service-auth/) will be available until then.
-{{% /note %}}
+{{% /notice %}}
 
 ## Service Configuration
 

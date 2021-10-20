@@ -15,13 +15,13 @@ The factory provides methods to get a receiver for receiving commands and a send
  * send a response to a previously received command
  
 
-{{% note title="Do not re-use sender instances" %}}
-The senders manage the underlying AMQP sender links, which are restored after temporary interruption of the connection 
-(`HonoConnection` manages the automatic reconnection). To achieve this, a caching mechanism is used, so that 
+{{% notice tip %}}
+The senders manage the underlying AMQP sender links, which are restored after temporary interruption of the connection
+(`HonoConnection` manages the automatic reconnection). To achieve this, a caching mechanism is used, so that
 defective links are replaced by new ones. The sender must be always retrieved from the factory when sending
-because otherwise the link might no longer exist. 
+because otherwise the link might no longer exist.
 So, do not hold references to sender objects and re-use them for subsequent send operations!
-{{% /note %}}
+{{% /notice %}}
 
 
 For examples of how to use the client, see the example implementation in the `AmqpExampleDevice` class.

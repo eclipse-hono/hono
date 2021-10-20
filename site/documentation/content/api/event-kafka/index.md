@@ -16,9 +16,9 @@ With this API, clients publish event messages to an Apache Kafka&reg; cluster in
 See [Kafka-based APIs]({{< relref "/api/kafka-api" >}}) for fundamental information about Hono's Kafka-based APIs.
 The statements there apply to this specification.
 
-{{% note title="Tech preview" %}}
+{{% notice info %}}
 The support of Kafka as a messaging system is currently a preview and not yet ready for production. The APIs are subject to change without prior notice. 
-{{% /note %}}
+{{% /notice %}}
 
 
 ## Southbound Operations

@@ -51,10 +51,10 @@ The following sequence diagram illustrates the flow of messages involved in the 
    1. *HTTP Adapter* acknowledges the reception of the data to the *Device*.
 1. *AMQP 1.0 Messaging Network* acknowledges reception of the message which is ignored by the *HTTP Adapter*.
 
-{{% note %}}
+{{% notice info %}}
 In the example above the HTTP adapter does not wait for the outcome of the transfer of the message to the AMQP Messaging Network before sending back the HTTP response to the device.
 If the messaging network had sent a disposition frame with the *rejected* instead of the *accepted* outcome, the HTTP adapter would still have signaled a 202 status code back to the device. In this case the data would have been lost without the device noticing.
-{{% /note %}}
+{{% /notice %}}
 
 The following sequence diagram illustrates the flow of messages involved in the *HTTP Adapter* forwarding an *unsettled* telemetry data message to the downstream AMQP Messaging Network implementing *AT LEAST ONCE* delivery semantics.
 
@@ -111,9 +111,9 @@ The following sequence diagram illustrates the flow of messages involved in a *B
 1. *AMQP 1.0 Messaging Network* delivers telemetry message to *Business Application*.
    1. *Business Application* acknowledges reception of message.
 
-{{% note %}}
+{{% notice info %}}
 The *Business Application* can only consume telemetry messages that have been uploaded to Hono *after* the *Business Application* has established the link with the *AMQP 1.0 Messaging Network*. This is because telemetry messages are not *durable*, i.e. they are not persisted in Hono in order to be forwarded at a later time.
-{{% /note %}}
+{{% /notice %}}
 
 **Message Format**
 
