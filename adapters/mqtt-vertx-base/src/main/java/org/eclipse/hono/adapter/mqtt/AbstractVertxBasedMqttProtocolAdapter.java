@@ -57,6 +57,13 @@ import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandResponse;
+import org.eclipse.hono.client.notification.KafkaBasedNotificationReceiver;
+import org.eclipse.hono.client.notification.NotificationReceiver;
+import org.eclipse.hono.notification.deviceregistry.CredentialsChangeNotification;
+import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
+import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
+import org.eclipse.hono.notification.deviceregistry.RegistryNotificationAddressProvider;
+import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;
@@ -341,6 +348,35 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         final ConnectionLimitManager connectionLimitManager = Optional.ofNullable(
                 getConnectionLimitManager()).orElseGet(this::createConnectionLimitManager);
         setConnectionLimitManager(connectionLimitManager);
+
+        // The following is only prototyped to see how to use the NotificationReceiver and how a protocol
+        // adapter could use it to monitor changes in the device registry.
+
+        final Map<String, String> kafkaConsumerConfig = Map.of("bootstrap.servers", "example.com:9092");
+        final NotificationReceiver tenantNotificationReceiver = new KafkaBasedNotificationReceiver<>(vertx,
+                kafkaConsumerConfig, new RegistryNotificationAddressProvider<>(), notification -> {
+                    if (notification.getChange().equals(LifecycleChange.DELETE)
+                            || !notification.isEnabled()) {
+                        // TODO disconnect device
+                    }
+                }, TenantChangeNotification.class);
+        // tenantNotificationReceiver.start();
+
+        final NotificationReceiver deviceNotificationReceiver = new KafkaBasedNotificationReceiver<>(vertx,
+                kafkaConsumerConfig, new RegistryNotificationAddressProvider<>(), notification -> {
+                    if (notification.getChange().equals(LifecycleChange.DELETE)
+                            || !notification.isEnabled()) {
+                        // TODO disconnect device
+                    }
+                }, DeviceChangeNotification.class);
+        // deviceNotificationReceiver.start();
+
+        final NotificationReceiver credentialsNotificationReceiver = new KafkaBasedNotificationReceiver<>(
+                vertx, kafkaConsumerConfig, new RegistryNotificationAddressProvider<>(), notification -> {
+                    // always disconnect when credentials are changed
+                    // TODO disconnect device
+                }, CredentialsChangeNotification.class);
+        // credentialsNotificationReceiver.start();
 
         checkPortConfiguration()
             .compose(ok -> CompositeFuture.all(bindSecureMqttServer(), bindInsecureMqttServer()))

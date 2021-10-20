@@ -22,6 +22,14 @@
   <name>Hono MQTT Adapter base</name>
   <dependencies>
     <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-notification-registry</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>notification-client-notification-kafka</artifactId>
+    </dependency>
+    <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-mqtt</artifactId>
     </dependency>

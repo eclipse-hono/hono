@@ -16,7 +16,8 @@ package org.eclipse.hono.client.notification;
 import java.util.function.Function;
 
 /**
- * A function that returns the messaging address for a given class of notifications.
+ * A function that returns the messaging address to be used by a {@link NotificationReceiver} for a given class of
+ * notifications.
  *
  * @param <T> The class of the notification.
  */
