@@ -127,7 +127,8 @@ public class HonoKafkaConsumerTest {
 
         consumer = new HonoKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
-        mockConsumer.updateEndOffsets(Map.of(topicPartition, ((long) 0)));
+        mockConsumer.updateBeginningOffsets(Map.of(topicPartition, 0L));
+        mockConsumer.updateEndOffsets(Map.of(topicPartition, 0L));
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(topicPartition));
         consumer.start().onComplete(ctx.succeedingThenComplete());
     }
@@ -145,7 +146,8 @@ public class HonoKafkaConsumerTest {
 
         consumer = new HonoKafkaConsumer(vertx, TOPIC_PATTERN, handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
-        mockConsumer.updateEndOffsets(Map.of(topicPartition, (long) 0, topic2Partition, (long) 0));
+        mockConsumer.updateBeginningOffsets(Map.of(topicPartition, 0L, topic2Partition, 0L));
+        mockConsumer.updateEndOffsets(Map.of(topicPartition, 0L, topic2Partition, 0L));
         mockConsumer.updatePartitions(topicPartition, KafkaMockConsumer.DEFAULT_NODE);
         mockConsumer.updatePartitions(topic2Partition, KafkaMockConsumer.DEFAULT_NODE);
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(topicPartition, topic2Partition));
@@ -175,7 +177,8 @@ public class HonoKafkaConsumerTest {
 
         consumer = new HonoKafkaConsumer(vertx, TOPIC_PATTERN, handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
-        mockConsumer.updateEndOffsets(Map.of(topicPartition, (long) 0, topic2Partition, (long) 0));
+        mockConsumer.updateBeginningOffsets(Map.of(topicPartition, 0L, topic2Partition, 0L));
+        mockConsumer.updateEndOffsets(Map.of(topicPartition, 0L, topic2Partition, 0L));
         mockConsumer.updatePartitions(topicPartition, KafkaMockConsumer.DEFAULT_NODE);
         mockConsumer.updatePartitions(topic2Partition, KafkaMockConsumer.DEFAULT_NODE);
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(topicPartition, topic2Partition));
@@ -186,7 +189,8 @@ public class HonoKafkaConsumerTest {
             // now update partitions with the one for topic3
             mockConsumer.updatePartitions(topic3Partition, KafkaMockConsumer.DEFAULT_NODE);
             mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(topicPartition, topic2Partition, topic3Partition));
-            mockConsumer.updateEndOffsets(Map.of(topic3Partition, (long) 0));
+            mockConsumer.updateBeginningOffsets(Map.of(topic3Partition, 0L));
+            mockConsumer.updateEndOffsets(Map.of(topic3Partition, 0L));
 
             consumer.ensureTopicIsAmongSubscribedTopicPatternTopics(TOPIC3).onComplete(ctx.succeeding(v3 -> {
                 ctx.verify(() -> {
@@ -214,7 +218,8 @@ public class HonoKafkaConsumerTest {
 
         consumer = new HonoKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
-        mockConsumer.updateEndOffsets(Map.of(topicPartition, ((long) 0)));
+        mockConsumer.updateBeginningOffsets(Map.of(topicPartition, 0L));
+        mockConsumer.updateEndOffsets(Map.of(topicPartition, 0L));
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(topicPartition));
         consumer.start().onComplete(ctx.succeeding(v2 -> {
             mockConsumer.schedulePollTask(() -> {
@@ -248,7 +253,8 @@ public class HonoKafkaConsumerTest {
             }
         };
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
-        mockConsumer.updateEndOffsets(Map.of(topicPartition, ((long) 0)));
+        mockConsumer.updateBeginningOffsets(Map.of(topicPartition, 0L));
+        mockConsumer.updateEndOffsets(Map.of(topicPartition, 0L));
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(topicPartition));
         consumer.start().onComplete(ctx.succeeding(v2 -> {
             mockConsumer.schedulePollTask(() -> {

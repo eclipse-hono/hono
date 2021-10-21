@@ -140,7 +140,8 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
 
         consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
-        mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, ((long) 0)));
+        mockConsumer.updateBeginningOffsets(Map.of(TOPIC_PARTITION, 0L));
+        mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, 0L));
         mockConsumer.updatePartitions(TOPIC_PARTITION, KafkaMockConsumer.DEFAULT_NODE);
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(TOPIC_PARTITION));
         consumer.start().onComplete(ctx.succeedingThenComplete());
@@ -159,7 +160,8 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
 
         consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, TOPIC_PATTERN, handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
-        mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, ((long) 0)));
+        mockConsumer.updateBeginningOffsets(Map.of(TOPIC_PARTITION, 0L));
+        mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, 0L));
         mockConsumer.updatePartitions(TOPIC_PARTITION, KafkaMockConsumer.DEFAULT_NODE);
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(TOPIC_PARTITION));
         consumer.start().onComplete(ctx.succeedingThenComplete());
@@ -205,7 +207,8 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
 
         consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), recordHandler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
-        mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, ((long) 0)));
+        mockConsumer.updateBeginningOffsets(Map.of(TOPIC_PARTITION, 0L));
+        mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, 0L));
         mockConsumer.updatePartitions(TOPIC_PARTITION, KafkaMockConsumer.DEFAULT_NODE);
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(TOPIC_PARTITION));
         consumer.start().onComplete(ctx.succeeding(v2 -> {
@@ -262,7 +265,8 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
 
         consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
-        mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, ((long) 0)));
+        mockConsumer.updateBeginningOffsets(Map.of(TOPIC_PARTITION, 0L));
+        mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, 0L));
         mockConsumer.updatePartitions(TOPIC_PARTITION, KafkaMockConsumer.DEFAULT_NODE);
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(TOPIC_PARTITION));
         consumer.start().onComplete(ctx.succeeding(v2 -> {
@@ -378,7 +382,8 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
             }
         };
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
-        mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, ((long) 0)));
+        mockConsumer.updateBeginningOffsets(Map.of(TOPIC_PARTITION, 0L));
+        mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, 0L));
         mockConsumer.updatePartitions(TOPIC_PARTITION, KafkaMockConsumer.DEFAULT_NODE);
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(TOPIC_PARTITION));
         final Context consumerVertxContext = vertx.getOrCreateContext();
@@ -427,7 +432,8 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
             });
         });
         mockConsumer.setRevokeAllOnRebalance(true);
-        mockConsumer.updateEndOffsets(Map.of(TOPIC2_PARTITION, ((long) 0)));
+        mockConsumer.updateBeginningOffsets(Map.of(TOPIC2_PARTITION, 0L));
+        mockConsumer.updateEndOffsets(Map.of(TOPIC2_PARTITION, 0L));
         mockConsumer.setNextPollRebalancePartitionAssignment(List.of(TOPIC_PARTITION, TOPIC2_PARTITION));
     }
 
@@ -458,7 +464,8 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
 
         consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
-        mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, ((long) 0)));
+        mockConsumer.updateBeginningOffsets(Map.of(TOPIC_PARTITION, 0L));
+        mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, 0L));
         mockConsumer.updatePartitions(TOPIC_PARTITION, KafkaMockConsumer.DEFAULT_NODE);
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(TOPIC_PARTITION));
         consumer.start().onComplete(ctx.succeeding(v2 -> {
@@ -516,7 +523,8 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
 
         consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
-        mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, ((long) 0)));
+        mockConsumer.updateBeginningOffsets(Map.of(TOPIC_PARTITION, 0L));
+        mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, 0L));
         mockConsumer.updatePartitions(TOPIC_PARTITION, KafkaMockConsumer.DEFAULT_NODE);
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(TOPIC_PARTITION));
 
@@ -573,7 +581,8 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
 
         consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
-        mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, ((long) 0)));
+        mockConsumer.updateBeginningOffsets(Map.of(TOPIC_PARTITION, 0L));
+        mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, 0L));
         mockConsumer.updatePartitions(TOPIC_PARTITION, KafkaMockConsumer.DEFAULT_NODE);
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(TOPIC_PARTITION));
 
@@ -602,7 +611,8 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
             rebalance1Done.countDown();
         });
         // now force a rebalance which should trigger the above onPartitionsAssignedHandler
-        mockConsumer.updateEndOffsets(Map.of(TOPIC2_PARTITION, ((long) 0)));
+        mockConsumer.updateBeginningOffsets(Map.of(TOPIC2_PARTITION, 0L));
+        mockConsumer.updateEndOffsets(Map.of(TOPIC2_PARTITION, 0L));
         mockConsumer.rebalance(List.of(TOPIC2_PARTITION));
         if (!rebalance1Done.await(5, TimeUnit.SECONDS)) {
             ctx.failNow(new IllegalStateException("partitionsAssigned handler not invoked"));
@@ -623,7 +633,8 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         });
         // now again force a rebalance which should trigger the above onPartitionsAssignedHandler
         // - this time again with the first partition
-        mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, ((long) 0)));
+        mockConsumer.updateBeginningOffsets(Map.of(TOPIC_PARTITION, 0L));
+        mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, 0L));
         mockConsumer.rebalance(List.of(TOPIC_PARTITION));
         if (!rebalance2Done.await(5, TimeUnit.SECONDS)) {
             ctx.failNow(new IllegalStateException("partitionsAssigned handler not invoked"));
@@ -668,7 +679,8 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
 
         consumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
-        mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, ((long) 0)));
+        mockConsumer.updateBeginningOffsets(Map.of(TOPIC_PARTITION, 0L));
+        mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, 0L));
         mockConsumer.updatePartitions(TOPIC_PARTITION, KafkaMockConsumer.DEFAULT_NODE);
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(TOPIC_PARTITION));
         consumer.start().onComplete(ctx.succeeding(v2 -> {
@@ -688,7 +700,8 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         }
         // records received, but their handling isn't completed yet
         // do a rebalance with the currently assigned partition not being assigned anymore after it
-        mockConsumer.updateEndOffsets(Map.of(TOPIC2_PARTITION, ((long) 0)));
+        mockConsumer.updateBeginningOffsets(Map.of(TOPIC2_PARTITION, 0L));
+        mockConsumer.updateEndOffsets(Map.of(TOPIC2_PARTITION, 0L));
         mockConsumer.rebalance(List.of(TOPIC2_PARTITION));
         // mark the handling of some records as completed
         recordsHandlingPromiseMap.get(0L).complete();
@@ -740,7 +753,8 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
             }
         };
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
-        mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, ((long) 0)));
+        mockConsumer.updateBeginningOffsets(Map.of(TOPIC_PARTITION, 0L));
+        mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, 0L));
         mockConsumer.updatePartitions(TOPIC_PARTITION, KafkaMockConsumer.DEFAULT_NODE);
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(TOPIC_PARTITION));
         final Context consumerVertxContext = vertx.getOrCreateContext();

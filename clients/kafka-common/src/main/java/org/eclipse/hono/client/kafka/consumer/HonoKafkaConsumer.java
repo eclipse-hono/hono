@@ -17,6 +17,7 @@ import java.net.HttpURLConnection;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -29,7 +30,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -61,6 +61,9 @@ import io.vertx.kafka.client.consumer.impl.KafkaReadStreamImpl;
  * Wraps a vert.x Kafka consumer while implementing the Hono {@link Lifecycle} interface,
  * letting records be consumed by a given handler after the {@link #start()} method has been
  * called.
+ * <p>
+ * Includes adapted partition assignment handling concerning partition position resets,
+ * see {@link #ensurePositionsHaveBeenSetIfNeeded(Set)}.
  */
 public class HonoKafkaConsumer implements Lifecycle {
 
@@ -400,7 +403,7 @@ public class HonoKafkaConsumer implements Lifecycle {
                 if (log.isDebugEnabled()) {
                     log.debug("partitions assigned: [{}]", HonoKafkaConsumerHelper.getPartitionsDebugString(partitions));
                 }
-                ensurePositionsHaveBeenSetIfNeeded(partitionsSet, subscribedTopicPatternTopics);
+                ensurePositionsHaveBeenSetIfNeeded(partitionsSet);
                 updateSubscribedTopicPatternTopics();
                 onPartitionsAssignedBlocking(partitionsSet);
                 final Set<TopicPartition> allAssignedPartitions = Optional.ofNullable(onRebalanceDoneHandler)
@@ -429,7 +432,8 @@ public class HonoKafkaConsumer implements Lifecycle {
                 // invoked on the Kafka polling thread, not the event loop thread!
                 final Set<TopicPartition> partitionsSet = Helper.from(partitions);
                 if (log.isInfoEnabled()) {
-                    log.info("partitions lost: [{}]", HonoKafkaConsumerHelper.getPartitionsDebugString(partitions));
+                    log.info("partitions lost: [{}] [client-id: {}]",
+                            HonoKafkaConsumerHelper.getPartitionsDebugString(partitions), getClientId());
                 }
                 onPartitionsRevokedBlocking(partitionsSet);
                 context.runOnContext(v -> HonoKafkaConsumer.this.onPartitionsRevoked(partitionsSet));
@@ -443,27 +447,57 @@ public class HonoKafkaConsumer implements Lifecycle {
      * <p>
      * This makes sure records published after this method returns are actually received by the consumer.
      * <p>
+     * If auto offset reset config is set to "latest" and there already is a committed offset, but the record
+     * corresponding to that committed offset has already been deleted, the partition offset position is reset to the
+     * <em>beginning</em> offset here. The standard Kafka consumer behaviour would be resetting it to the <em>latest</em>
+     * offset, but that would mean that rebalance operations (when this method is invoked) may cause records to be
+     * skipped.
+     * <p>
      * To be invoked on the Kafka polling thread on partition assignment.
      */
-    private void ensurePositionsHaveBeenSetIfNeeded(final Set<TopicPartition> assignedPartitions,
-            final Set<String> knownTopicsFromBeforeRebalance) {
+    private void ensurePositionsHaveBeenSetIfNeeded(final Set<TopicPartition> assignedPartitions) {
         // not needed if offset reset config set to "earliest", no need to wait for the retrieval of fetch positions in that case since consumer will receive all records anyway
-        if (!"earliest".equals(consumerConfig.get(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG))) {
-            // fetch partition positions of newly created topics
-            final Set<TopicPartition> newPartitions = assignedPartitions.stream()
-                    .filter(tp -> !knownTopicsFromBeforeRebalance.contains(tp.getTopic())).collect(Collectors.toSet());
-            if (!newPartitions.isEmpty()) {
-                // handle an exception across all position() invocations - the underlying server fetch that may trigger an exception is done for multiple partitions anyway
-                try {
-                    log.trace("fetching positions for {} out of {} newly assigned partitions...", newPartitions.size(), assignedPartitions.size());
-                    newPartitions.forEach(partition -> getUnderlyingConsumer().position(Helper.to(partition)));
-                    log.trace("done fetching positions for {} out of {} newly assigned partitions", newPartitions.size(), assignedPartitions.size());
-                } catch (final Exception e) {
-                    log.error("error fetching positions for {} out of {} newly assigned partitions [client-id: {}]", newPartitions.size(),
-                            assignedPartitions.size(), getClientId(), e);
+        if (!assignedPartitions.isEmpty() && isAutoOffsetResetConfigLatest()) {
+            log.trace("checking positions for {} newly assigned partitions...", assignedPartitions.size());
+            final var partitions = Helper.to(assignedPartitions);
+            // handle an exception across all position() invocations - the underlying server fetch that may trigger an exception is done for multiple partitions anyway
+            try {
+                final List<org.apache.kafka.common.TopicPartition> outOfRangeOffsetPartitions = new LinkedList<>();
+                final var beginningOffsets = getUnderlyingConsumer().beginningOffsets(partitions);
+                partitions.forEach(partition -> {
+                    final long position = getUnderlyingConsumer().position(partition);
+                    final Long beginningOffset = beginningOffsets.get(partition);
+                    // check if position is valid
+                    // (a check if position is larger than endOffset isn't done here, skipping the extra endOffset() invocation for this uncommon scenario and letting the KafkaConsumer consumer itself apply the latest offset later on)
+                    if (beginningOffset != null && position < beginningOffset) {
+                        log.debug("committed offset {} for [{}] is smaller than beginning offset, resetting it to the beginning offset {}",
+                                position, partition, beginningOffset);
+                        getUnderlyingConsumer().seek(partition, beginningOffset);
+                        outOfRangeOffsetPartitions.add(partition);
+                    }
+                });
+                if (!outOfRangeOffsetPartitions.isEmpty()) {
+                    log.info("found out-of-range committed offsets, corresponding records having already been deleted; "
+                                    + "positions were reset to beginning offsets; partitions: [{}] [client-id: {}]",
+                            HonoKafkaConsumerHelper.getPartitionsDebugString(outOfRangeOffsetPartitions), getClientId());
                 }
+            } catch (final Exception e) {
+                log.error("error checking positions for {} newly assigned partitions [client-id: {}]",
+                        assignedPartitions.size(), getClientId(), e);
             }
+            log.trace("done checking positions for {} newly assigned partitions", assignedPartitions.size());
         }
+    }
+
+    /**
+     * Checks if the auto offset reset policy is set to "latest".
+     *
+     * @return {@code true} if "latest" offset reset policy is used.
+     */
+    protected final boolean isAutoOffsetResetConfigLatest() {
+        return Optional.ofNullable(consumerConfig.get(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG))
+                .map(value -> value.equals("latest"))
+                .orElse(true);
     }
 
     /**
@@ -498,7 +532,8 @@ public class HonoKafkaConsumer implements Lifecycle {
                 partitionsForFuture.future()
                         .onSuccess(partitions -> {
                             if (partitions.isEmpty()) {
-                                log.info("subscription topic doesn't exist and didn't get auto-created: {}", topic);
+                                log.info("subscription topic doesn't exist and didn't get auto-created: {} [client-id: {}]",
+                                        topic, getClientId());
                             }
                         });
                 HonoKafkaConsumerHelper.partitionsFor(kafkaConsumer, topic, partitionsForFuture);
