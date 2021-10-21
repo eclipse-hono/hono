@@ -58,11 +58,11 @@ import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandResponse;
 import org.eclipse.hono.client.notification.KafkaBasedNotificationReceiver;
+import org.eclipse.hono.client.notification.NotificationConsumer;
 import org.eclipse.hono.client.notification.NotificationReceiver;
 import org.eclipse.hono.notification.deviceregistry.CredentialsChangeNotification;
 import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
 import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
-import org.eclipse.hono.notification.deviceregistry.RegistryNotificationAddressProvider;
 import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -92,6 +92,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.mqtt.MqttConnectionException;
 import io.vertx.mqtt.MqttEndpoint;
@@ -352,31 +353,42 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         // The following is only prototyped to see how to use the NotificationReceiver and how a protocol
         // adapter could use it to monitor changes in the device registry.
 
-        final Map<String, String> kafkaConsumerConfig = Map.of("bootstrap.servers", "example.com:9092");
-        final NotificationReceiver tenantNotificationReceiver = new KafkaBasedNotificationReceiver<>(vertx,
-                kafkaConsumerConfig, new RegistryNotificationAddressProvider<>(), notification -> {
+        final NotificationConsumer tenantChangeConsumer = new NotificationConsumer(TenantChangeNotification.TYPE,
+                TenantChangeNotification.ADDRESS,
+                json -> {
+                    final TenantChangeNotification notification = Json.decodeValue(json,
+                            TenantChangeNotification.class);
                     if (notification.getChange().equals(LifecycleChange.DELETE)
                             || !notification.isEnabled()) {
                         // TODO disconnect device
                     }
-                }, TenantChangeNotification.class);
-        // tenantNotificationReceiver.start();
+                });
 
-        final NotificationReceiver deviceNotificationReceiver = new KafkaBasedNotificationReceiver<>(vertx,
-                kafkaConsumerConfig, new RegistryNotificationAddressProvider<>(), notification -> {
+        final NotificationConsumer deviceChangeConsumer = new NotificationConsumer(DeviceChangeNotification.TYPE,
+                DeviceChangeNotification.ADDRESS,
+                json -> {
+                    final DeviceChangeNotification notification = Json.decodeValue(json,
+                            DeviceChangeNotification.class);
                     if (notification.getChange().equals(LifecycleChange.DELETE)
                             || !notification.isEnabled()) {
                         // TODO disconnect device
                     }
-                }, DeviceChangeNotification.class);
-        // deviceNotificationReceiver.start();
+                });
 
-        final NotificationReceiver credentialsNotificationReceiver = new KafkaBasedNotificationReceiver<>(
-                vertx, kafkaConsumerConfig, new RegistryNotificationAddressProvider<>(), notification -> {
+        final NotificationConsumer credentialsChangeConsumer = new NotificationConsumer(
+                CredentialsChangeNotification.TYPE, CredentialsChangeNotification.ADDRESS,
+                json -> {
                     // always disconnect when credentials are changed
                     // TODO disconnect device
-                }, CredentialsChangeNotification.class);
-        // credentialsNotificationReceiver.start();
+                });
+
+        final Map<String, String> kafkaConsumerConfig = Map.of("bootstrap.servers", "example.com:9092");
+        final NotificationReceiver notificationReceiver = new KafkaBasedNotificationReceiver(vertx,
+                kafkaConsumerConfig);
+
+        notificationReceiver.addConsumer(tenantChangeConsumer);
+        notificationReceiver.addConsumer(deviceChangeConsumer);
+        notificationReceiver.addConsumer(credentialsChangeConsumer);
 
         checkPortConfiguration()
             .compose(ok -> CompositeFuture.all(bindSecureMqttServer(), bindInsecureMqttServer()))
@@ -386,6 +398,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 }
                 return Future.succeededFuture((Void) null);
             })
+// .onComplete(ok -> notificationReceiver.start())
             .onComplete(startPromise);
     }
 

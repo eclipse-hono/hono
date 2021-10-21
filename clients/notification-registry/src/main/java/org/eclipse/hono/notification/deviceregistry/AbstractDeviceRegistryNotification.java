@@ -18,7 +18,6 @@ import java.util.Objects;
 
 import org.eclipse.hono.client.notification.Notification;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
 
 /**
@@ -42,13 +41,6 @@ public abstract class AbstractDeviceRegistryNotification implements Notification
         this.timestamp = Objects.requireNonNull(timestamp);
     }
 
-    /**
-     * Gets the address to be used for messaging.
-     *
-     * @return The address.
-     */
-    @JsonIgnore
-    public abstract String getAddress();
 
     @Override
     public abstract String getType();

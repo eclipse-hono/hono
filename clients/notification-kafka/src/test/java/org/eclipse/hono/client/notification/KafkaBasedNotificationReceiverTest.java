@@ -32,6 +32,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.Json;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -65,17 +67,22 @@ public class KafkaBasedNotificationReceiverTest {
     }
 
     /**
-     * Verifies that the message consumer is successfully created by the application client.
+     * Verifies that the consumer is successfully created by the receiver.
      *
      * @param ctx The vert.x test context.
      */
     @Test
     public void testCreateConsumer(final VertxTestContext ctx) {
 
-        // Verify that the consumer for the given tenant and the message type is successfully created
-        final var receiver = createConsumer(m -> {
-        });
-        assertThat(receiver).isNotNull();
+        final var receiver = createReceiver();
+
+        final Handler<Buffer> notificationHandler = json -> {
+            final TestNotification testNotification = Json.decodeValue(json, TestNotification.class);
+            // TODO add test that verifies the notification
+        };
+        final NotificationConsumer consumer = new NotificationConsumer(TestNotification.TYPE, TestNotification.ADDRESS,
+                notificationHandler);
+        receiver.addConsumer(consumer);
 
         receiver.start()
                 .onComplete(ctx.succeeding(v -> ctx.verify(() -> {
@@ -96,12 +103,13 @@ public class KafkaBasedNotificationReceiverTest {
     @Test
     public void testStopClosesConsumer(final VertxTestContext ctx) {
 
-        // Verify that the consumer for the given tenant and the message type is successfully created
-        final var receiver = createConsumer(m -> {
-        });
-        assertThat(receiver).isNotNull();
+        final var receiver = createReceiver();
 
-        // stop the application client
+        final NotificationConsumer consumer = new NotificationConsumer(TestNotification.TYPE, TestNotification.ADDRESS,
+                json -> {
+                });
+        receiver.addConsumer(consumer);
+
         receiver.start()
                 .compose(v -> receiver.stop())
                 .onComplete(ctx.succeeding(v -> ctx.verify(() -> {
@@ -110,17 +118,15 @@ public class KafkaBasedNotificationReceiverTest {
                 })));
     }
 
-    private KafkaBasedNotificationReceiver<TestNotification> createConsumer(
-            final Handler<TestNotification> msgHandler) {
+    private KafkaBasedNotificationReceiver createReceiver() {
 
-        final String topic = "test-topic";
+        final String topic = new HonoTopic(HonoTopic.Type.NOTIFICATION, TestNotification.ADDRESS).toString();
         final TopicPartition topicPartition = new TopicPartition(topic, 0);
         mockConsumer.updateBeginningOffsets(Map.of(topicPartition, ((long) 0)));
         mockConsumer.updatePartitions(topicPartition, KafkaMockConsumer.DEFAULT_NODE);
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(topicPartition));
 
-        final KafkaBasedNotificationReceiver<TestNotification> client = new KafkaBasedNotificationReceiver<>(vertx,
-                consumerConfig, n -> TestNotification.ADDRESS, msgHandler, TestNotification.class);
+        final KafkaBasedNotificationReceiver client = new KafkaBasedNotificationReceiver(vertx, consumerConfig);
         client.setKafkaConsumerFactory(() -> mockConsumer);
 
         return client;
@@ -137,6 +143,11 @@ public class KafkaBasedNotificationReceiverTest {
         @Override
         public String getType() {
             return TYPE;
+        }
+
+        @Override
+        public String getAddress() {
+            return ADDRESS;
         }
 
         @Override

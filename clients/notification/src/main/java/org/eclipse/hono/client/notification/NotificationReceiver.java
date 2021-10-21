@@ -21,4 +21,14 @@ import org.eclipse.hono.util.Lifecycle;
  */
 public interface NotificationReceiver extends Lifecycle {
 
+    /**
+     * Registers a notification consumer for aa specific type of notifications.
+     * <p>
+     * Implementations are expected to return the method quickly. Long-running operations should be executed at the
+     * subsequent start of the consumer in {@link #start()}.
+     *
+     * @param consumer The consumer to be registered.
+     * @throws IllegalStateException if this method is invoked after the receiver has been started.
+     */
+    void addConsumer(NotificationConsumer consumer);
 }

@@ -43,6 +43,14 @@ public interface Notification {
     String getType();
 
     /**
+     * Gets the address to be used for messaging.
+     *
+     * @return The address.
+     */
+    @JsonIgnore
+    String getAddress();
+
+    /**
      * Gets the canonical name of the component that publishes the notification.
      *
      * @return The name of the component.
