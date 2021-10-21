@@ -17,6 +17,7 @@ import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.notification.AbstractKafkaBasedNotificationSender;
+import org.eclipse.hono.client.notification.Notification;
 import org.eclipse.hono.notification.deviceregistry.AbstractDeviceRegistryNotification;
 import org.eclipse.hono.notification.deviceregistry.CredentialsChangeNotification;
 import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
@@ -27,8 +28,7 @@ import io.vertx.core.json.JsonObject;
 /**
  * A client for publishing notifications from Hono's device registry with Kafka.
  */
-public class KafkaBasedRegistryNotificationSender
-        extends AbstractKafkaBasedNotificationSender<AbstractDeviceRegistryNotification> {
+public class KafkaBasedRegistryNotificationSender extends AbstractKafkaBasedNotificationSender {
 
     /**
      * Creates an instance.
@@ -43,7 +43,7 @@ public class KafkaBasedRegistryNotificationSender
     }
 
     @Override
-    protected String getKey(final AbstractDeviceRegistryNotification notification) {
+    protected String getKey(final Notification notification) {
         if (notification instanceof TenantChangeNotification) {
             return ((TenantChangeNotification) notification).getTenantId();
         } else if (notification instanceof DeviceChangeNotification) {
@@ -56,7 +56,13 @@ public class KafkaBasedRegistryNotificationSender
     }
 
     @Override
-    protected String getTopic(final AbstractDeviceRegistryNotification notification) {
-        return new HonoTopic(HonoTopic.Type.NOTIFICATION, notification.getAddress()).toString();
+    protected String getTopic(final Notification notification) {
+
+        if (notification instanceof AbstractDeviceRegistryNotification) {
+            final AbstractDeviceRegistryNotification registryNotification = (AbstractDeviceRegistryNotification) notification;
+            return new HonoTopic(HonoTopic.Type.NOTIFICATION, registryNotification.getAddress()).toString();
+        } else {
+            throw new IllegalArgumentException("unknown notification type");
+        }
     }
 }

@@ -31,9 +31,8 @@ import io.vertx.kafka.client.producer.RecordMetadata;
 /**
  * A client for publishing Hono internal notifications with Kafka.
  *
- * @param <T> The implementation type of notification to be sent.
  */
-public abstract class AbstractKafkaBasedNotificationSender<T extends Notification> implements NotificationSender<T> {
+public abstract class AbstractKafkaBasedNotificationSender implements NotificationSender {
 
     private static final String PRODUCER_NAME = "notification";
 
@@ -60,7 +59,7 @@ public abstract class AbstractKafkaBasedNotificationSender<T extends Notificatio
     }
 
     @Override
-    public Future<Void> publish(final T notification, final SpanContext context) {
+    public Future<Void> publish(final Notification notification, final SpanContext context) {
 
         Objects.requireNonNull(notification);
 
@@ -83,7 +82,7 @@ public abstract class AbstractKafkaBasedNotificationSender<T extends Notificatio
                     .recover(t -> Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, t)))
                     .mapEmpty();
         } catch (RuntimeException ex) {
-            return Future.failedFuture(ex);
+            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, ex));
         }
     }
 
@@ -93,7 +92,7 @@ public abstract class AbstractKafkaBasedNotificationSender<T extends Notificatio
      * @param notification The notification to determine the key for.
      * @return The record key.
      */
-    protected abstract String getKey(T notification);
+    protected abstract String getKey(Notification notification);
 
     /**
      * Gets the topic to be used for a given notification.
@@ -101,7 +100,7 @@ public abstract class AbstractKafkaBasedNotificationSender<T extends Notificatio
      * @param notification The notification to determine the topic for.
      * @return The topic.
      */
-    protected abstract String getTopic(T notification);
+    protected abstract String getTopic(Notification notification);
 
     /**
      * {@inheritDoc}
