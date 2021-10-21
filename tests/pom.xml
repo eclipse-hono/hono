@@ -1087,6 +1087,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <KAFKA_TRANSACTION_STATE_LOG_MIN_ISR>1</KAFKA_TRANSACTION_STATE_LOG_MIN_ISR>
                       <KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR>1</KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR>
                       <KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS>0</KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS>
+                      <!-- increase log cleaner check frequency (default is 5min) for test where records shall be removed -->
+                      <KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS>1100</KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS>
                       <!-- log level for kafka.server.KafkaServer needs to stay on INFO so that docker-maven-plugin can wait for container startup -->
                       <KAFKA_LOG4J_LOGGERS>kafka.cluster=${hono.kafka.log-level},kafka.controller=${hono.kafka.log-level},kafka.coordinator=${hono.kafka.log-level},kafka.log=${hono.kafka.log-level},kafka.authorizer=${hono.kafka.log-level},kafka.zk=${hono.kafka.log-level},state.change.logger=${hono.kafka.log-level},kafka.server=${hono.kafka.log-level},kafka.server.KafkaServer=INFO</KAFKA_LOG4J_LOGGERS>
                     </env>

@@ -328,7 +328,7 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
             lastKnownCommittedOffsets.entrySet()
                     .removeIf(entry -> !subscribedTopicPatternTopics.contains(entry.getKey().topic()));
         }
-        if (!"earliest".equals(consumerConfig.get(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG)) && !partitionsSet.isEmpty()) {
+        if (!partitionsSet.isEmpty() && isAutoOffsetResetConfigLatest()) {
             // for each partition ensure an offset gets committed on the next commit if there possibly has never been a commit before;
             // otherwise records published during an upcoming rebalance might be skipped if the partition gets assigned
             // to another consumer which then just begins reading on the latest offset, not the offset from before the rebalance
