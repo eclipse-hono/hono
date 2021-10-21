@@ -66,10 +66,14 @@ quarkus:
         level: INFO
       "org.eclipse.hono.authentication.impl":
         level: INFO
+      "org.eclipse.hono.client":
+        level: INFO
       "org.eclipse.hono.commandrouter":
         level: INFO
       "org.eclipse.hono.commandrouter.impl.amqp":
         level: DEBUG
+      "org.eclipse.hono.connection":
+        level: INFO
       "org.eclipse.hono.deviceconnection.infinispan.client":
         level: INFO
       "org.infinispan":
