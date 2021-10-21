@@ -7,7 +7,7 @@
 
   ["authServicePlugin", {
     "name": "Hono Auth",
-    "host": "hono-service-auth.hono",
+    "host": "${hono.auth.host}",
     "port": 5671,
     "sslProfile": "external"
   }],
@@ -65,7 +65,7 @@
   ["connector", {
     "sslProfile": "external",
     "name": "broker",
-    "host": "hono-artemis.hono",
+    "host": "${hono.amqp-broker.host}",
     "port": 5671,
     "role": "route-container",
     "saslUsername": "artemis",

@@ -37,11 +37,12 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <!--
       Hono service names
     -->
-    <hono.amqp-network.host>hono-dispatch-router.hono</hono.amqp-network.host>
-    <hono.device-connection.host>hono-service-device-connection.hono</hono.device-connection.host>
-    <hono.commandrouter.host>hono-service-command-router.hono</hono.commandrouter.host>
-    <hono.registration.host>hono-service-device-registry.hono</hono.registration.host>
-    <hono.auth.host>hono-service-auth.hono</hono.auth.host>
+    <hono.amqp-network.host>hono-dispatch-router</hono.amqp-network.host>
+    <hono.amqp-broker.host>hono-artemis</hono.amqp-broker.host>
+    <hono.device-connection.host>hono-service-device-connection</hono.device-connection.host>
+    <hono.commandrouter.host>hono-service-command-router</hono.commandrouter.host>
+    <hono.registration.host>hono-service-device-registry</hono.registration.host>
+    <hono.auth.host>hono-service-auth</hono.auth.host>
 
     <!-- duration before vert.x complains about blocking the event loop -->
     <max.event-loop.execute-time>PT5S</max.event-loop.execute-time>
@@ -89,7 +90,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <hono.device-connection.disabled>true</hono.device-connection.disabled>
 
     <hono.infinispan.disabled>false</hono.infinispan.disabled>
-    <hono.infinispan.host>hono-infinispan.hono</hono.infinispan.host>
+    <hono.infinispan.host>hono-infinispan</hono.infinispan.host>
     <hono.infinispan.port>11222</hono.infinispan.port>
     <hono.infinispan.username>hono</hono.infinispan.username>
     <hono.infinispan.password>hono-secret</hono.infinispan.password>
@@ -132,7 +133,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     </hono.deviceregistry.http.authConfig.passwordHash>
 
     <hono.mongodb.disabled>false</hono.mongodb.disabled>
-    <hono.mongodb.host>hono-mongodb.hono</hono.mongodb.host>
+    <hono.mongodb.host>hono-mongodb</hono.mongodb.host>
     <hono.mongodb.port>27017</hono.mongodb.port>
     <hono.mongodb.username>device-registry@HONO</hono.mongodb.username>
     <hono.mongodb.password>device-registry-secret</hono.mongodb.password>
@@ -173,7 +174,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
 
     <trace.frames>0</trace.frames>
     <jaeger.disabled>true</jaeger.disabled>
-    <jaeger.host>hono-jaeger.hono</jaeger.host>
+    <jaeger.host>hono-jaeger</jaeger.host>
     <jaeger.query.port>18080</jaeger.query.port>
   </properties>
 
@@ -320,6 +321,15 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
         <targetPath>${project.build.directory}/resources</targetPath>
       </resource>
     </resources>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>build-helper-maven-plugin</artifactId>
+          <version>3.0.0</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -387,7 +397,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
       </activation>
       <properties>
         <hono.kafka.disabled>false</hono.kafka.disabled>
-        <hono.kafka.bootstrap.servers>kafka.hono:9092</hono.kafka.bootstrap.servers>
+        <hono.kafka.bootstrap.servers>kafka:9092</hono.kafka.bootstrap.servers>
         <request.timeout>4000</request.timeout>
         <!--The max memory command router is increased to 500 MB-->
         <hono.command-router.max-mem>524288000</hono.command-router.max-mem>
@@ -397,7 +407,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
           <plugin>
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>build-helper-maven-plugin</artifactId>
-            <version>3.0.0</version>
             <executions>
               <execution>
                 <id>reserve-network-port</id>
@@ -500,7 +509,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
         <hono.deviceregistry.spring.profiles>registry-adapter,registry-management,tenant-service,create-schema,${logging.profile}</hono.deviceregistry.spring.profiles>
         <hono.deviceregistry.supportsSearchDevices>false</hono.deviceregistry.supportsSearchDevices>
         <hono.deviceregistry.supportsSearchTenants>false</hono.deviceregistry.supportsSearchTenants>
-        <hono.jdbc.db.url>jdbc:postgresql://hono-jdbc-db.hono:5432/</hono.jdbc.db.url>
+        <hono.jdbc.db.url>jdbc:postgresql://hono-jdbc-db:5432/</hono.jdbc.db.url>
         <hono.jdbc.db.admin.username>postgres</hono.jdbc.db.admin.username>
         <hono.jdbc.db.admin.password>change-me</hono.jdbc.db.admin.password>
         <hono.jdbc.db.registry.username>${hono.jdbc.db.admin.username}</hono.jdbc.db.registry.username>
@@ -748,7 +757,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </log>
                     <wait>
                       <time>${service.startup.timeout}</time>
-                      <log>.*(Waiting for connections).*</log>
+                      <log>.*("Listening on").*("0.0.0.0").*</log>
                     </wait>
                   </run>
                 </image>
@@ -762,7 +771,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
-                      <alias>hono-jdbc-db.hono</alias>
+                      <alias>hono-jdbc-db</alias>
                     </network>
                     <memorySwap>134217728</memorySwap>
                     <memory>134217728</memory>
@@ -794,7 +803,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
-                      <alias>hono-jaeger.hono</alias>
+                      <alias>${jaeger.host}</alias>
                     </network>
                     <!--
                       Setting the swap property to the same value as the memory property effectively
@@ -863,7 +872,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
-                      <alias>hono-service-auth.hono</alias>
+                      <alias>${hono.auth.host}</alias>
                     </network>
                     <!-- 
                       Setting the swap property to the same value as the memory property effectively
@@ -942,7 +951,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
-                      <alias>hono-artemis.hono</alias>
+                      <alias>${hono.amqp-broker.host}</alias>
                     </network>
                     <memorySwap>419430400</memorySwap>
                     <memory>419430400</memory>
@@ -1013,7 +1022,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
-                      <alias>hono-dispatch-router.hono</alias>
+                      <alias>${hono.amqp-network.host}</alias>
                     </network>
                     <memorySwap>268435456</memorySwap>
                     <memory>268435456</memory>
@@ -1039,7 +1048,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
-                      <alias>zookeeper.hono</alias>
+                      <alias>zookeeper</alias>
                     </network>
                     <log>
                       <prefix>Zookeeper</prefix>
@@ -1067,7 +1076,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
-                      <alias>kafka.hono</alias>
+                      <alias>kafka</alias>
                     </network>
                     <log>
                       <prefix>Kafka</prefix>
@@ -1079,10 +1088,10 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </wait>
                     <env>
                       <KAFKA_BROKER_ID>1</KAFKA_BROKER_ID>
-                      <KAFKA_ZOOKEEPER_CONNECT>zookeeper.hono:2181</KAFKA_ZOOKEEPER_CONNECT>
+                      <KAFKA_ZOOKEEPER_CONNECT>zookeeper:2181</KAFKA_ZOOKEEPER_CONNECT>
                       <!-- setting the default listener, "PLAINTEXT", as this is the default value of KAFKA_INTER_BROKER_LISTENER_NAME -->
                       <KAFKA_LISTENER_SECURITY_PROTOCOL_MAP>PLAINTEXT:PLAINTEXT,LISTENER_EXTERNAL:PLAINTEXT</KAFKA_LISTENER_SECURITY_PROTOCOL_MAP>
-                      <KAFKA_ADVERTISED_LISTENERS>PLAINTEXT://kafka.hono:9092,LISTENER_EXTERNAL://${docker.host.address}:${kafka.port}</KAFKA_ADVERTISED_LISTENERS>
+                      <KAFKA_ADVERTISED_LISTENERS>PLAINTEXT://kafka:9092,LISTENER_EXTERNAL://${docker.host.address}:${kafka.port}</KAFKA_ADVERTISED_LISTENERS>
                       <KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR>1</KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR>
                       <KAFKA_TRANSACTION_STATE_LOG_MIN_ISR>1</KAFKA_TRANSACTION_STATE_LOG_MIN_ISR>
                       <KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR>1</KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR>
@@ -1134,7 +1143,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
-                      <alias>hono-service-device-registry.hono</alias>
+                      <alias>${hono.registration.host}</alias>
                     </network>
                     <memorySwap>${hono.deviceregistry.containerMemoryLimit}</memorySwap>
                     <memory>${hono.deviceregistry.containerMemoryLimit}</memory>
@@ -1207,7 +1216,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
-                      <alias>hono-service-device-connection.hono</alias>
+                      <alias>${hono.device-connection.host}</alias>
                     </network>
                     <memorySwap>314572800</memorySwap>
                     <memory>314572800</memory>
@@ -1287,7 +1296,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
-                      <alias>hono-service-command-router.hono</alias>
+                      <alias>${hono.commandrouter.host}</alias>
                     </network>
                     <memorySwap>${hono.command-router.max-mem}</memorySwap>
                     <memory>${hono.command-router.max-mem}</memory>
@@ -1368,7 +1377,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
-                      <alias>hono-adapter-http-vertx.hono</alias>
+                      <alias>hono-adapter-http-vertx</alias>
                     </network>
                     <memorySwap>${hono.http-adapter.max-mem}</memorySwap>
                     <memory>${hono.http-adapter.max-mem}</memory>
@@ -1439,7 +1448,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
-                      <alias>hono-adapter-mqtt-vertx.hono</alias>
+                      <alias>hono-adapter-mqtt-vertx</alias>
                     </network>
                     <memorySwap>${hono.mqtt-adapter.max-mem}</memorySwap>
                     <memory>${hono.mqtt-adapter.max-mem}</memory>
@@ -1515,7 +1524,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
-                      <alias>hono-adapter-amqp-vertx.hono</alias>
+                      <alias>hono-adapter-amqp-vertx</alias>
                     </network>
                     <memorySwap>${hono.amqp-adapter.max-mem}</memorySwap>
                     <memory>${hono.amqp-adapter.max-mem}</memory>
@@ -1586,7 +1595,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <network>
                       <mode>custom</mode>
                       <name>hono</name>
-                      <alias>hono-adapter-coap-vertx.hono</alias>
+                      <alias>hono-adapter-coap-vertx</alias>
                     </network>
                     <memorySwap>${hono.coap-adapter.max-mem}</memorySwap>
                     <memory>${hono.coap-adapter.max-mem}</memory>
