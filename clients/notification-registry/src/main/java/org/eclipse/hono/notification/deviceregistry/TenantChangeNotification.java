@@ -31,22 +31,22 @@ public class TenantChangeNotification extends AbstractDeviceRegistryNotification
     public static final String TYPE = "tenant-change-v1";
     public static final String ADDRESS = "registry-tenant";
 
-    @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_CHANGE, required = true)
+    @JsonProperty(value = RegistryNotificationConstants.JSON_FIELD_DATA_CHANGE, required = true)
     private LifecycleChange change;
 
-    @JsonProperty(value = NotificationConstants.JSON_FIELD_TENANT_ID, required = true)
+    @JsonProperty(value = RegistryNotificationConstants.JSON_FIELD_TENANT_ID, required = true)
     private String tenantId;
 
-    @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_ENABLED, required = true)
+    @JsonProperty(value = RegistryNotificationConstants.JSON_FIELD_DATA_ENABLED, required = true)
     private boolean enabled;
 
     @JsonCreator
     TenantChangeNotification(
             @JsonProperty(value = FIELD_SOURCE, required = true) final String source,
             @JsonProperty(value = FIELD_TIMESTAMP, required = true) @HonoTimestamp final Instant timestamp,
-            @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_CHANGE, required = true) final LifecycleChange change,
-            @JsonProperty(value = NotificationConstants.JSON_FIELD_TENANT_ID, required = true) final String tenantId,
-            @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_ENABLED, required = true) final boolean enabled) {
+            @JsonProperty(value = RegistryNotificationConstants.JSON_FIELD_DATA_CHANGE, required = true) final LifecycleChange change,
+            @JsonProperty(value = RegistryNotificationConstants.JSON_FIELD_TENANT_ID, required = true) final String tenantId,
+            @JsonProperty(value = RegistryNotificationConstants.JSON_FIELD_DATA_ENABLED, required = true) final boolean enabled) {
 
         super(source, timestamp);
 
@@ -66,7 +66,7 @@ public class TenantChangeNotification extends AbstractDeviceRegistryNotification
      */
     public TenantChangeNotification(final LifecycleChange change, final String tenantId, final Instant timestamp,
             final boolean enabled) {
-        this(NotificationConstants.SOURCE_DEVICE_REGISTRY, timestamp, change, tenantId, enabled);
+        this(RegistryNotificationConstants.SOURCE_DEVICE_REGISTRY, timestamp, change, tenantId, enabled);
     }
 
     /**

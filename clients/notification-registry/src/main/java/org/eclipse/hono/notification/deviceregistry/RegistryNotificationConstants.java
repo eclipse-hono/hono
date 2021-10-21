@@ -18,7 +18,7 @@ import org.eclipse.hono.util.Constants;
 /**
  * Constants used for notifications of the Device Registry.
  */
-public final class NotificationConstants {
+public final class RegistryNotificationConstants {
 
     /**
      * The canonical name of the Device Registry to indicate the component that publishes a notification.
@@ -42,7 +42,7 @@ public final class NotificationConstants {
      */
     public static final String JSON_FIELD_DEVICE_ID = Constants.JSON_FIELD_DEVICE_ID;
 
-    private NotificationConstants() {
+    private RegistryNotificationConstants() {
         // prevent instantiation
     }
 

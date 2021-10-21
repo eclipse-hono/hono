@@ -19,10 +19,6 @@ import static com.google.common.truth.Truth.assertWithMessage;
 import java.time.Instant;
 
 import org.eclipse.hono.client.notification.Notification;
-import org.eclipse.hono.notification.deviceregistry.AbstractDeviceRegistryNotification;
-import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
-import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
-import org.eclipse.hono.notification.deviceregistry.NotificationConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -59,14 +55,15 @@ public class DeviceChangeNotificationTest {
 
         final JsonObject json = JsonObject.mapFrom(notification);
 
-        assertThat(json.getString(Notification.FIELD_SOURCE)).isEqualTo(NotificationConstants.SOURCE_DEVICE_REGISTRY);
+        assertThat(json.getString(Notification.FIELD_SOURCE))
+                .isEqualTo(RegistryNotificationConstants.SOURCE_DEVICE_REGISTRY);
         assertThat(json.getInstant(Notification.FIELD_TIMESTAMP).toString()).isEqualTo(TIMESTAMP);
 
         assertThat(json.getString("type")).isEqualTo(DeviceChangeNotification.TYPE);
-        assertThat(json.getString(NotificationConstants.JSON_FIELD_DATA_CHANGE)).isEqualTo(CHANGE.toString());
-        assertThat(json.getString(NotificationConstants.JSON_FIELD_TENANT_ID)).isEqualTo(TENANT_ID);
-        assertThat(json.getString(NotificationConstants.JSON_FIELD_DEVICE_ID)).isEqualTo(DEVICE_ID);
-        assertThat(json.getBoolean(NotificationConstants.JSON_FIELD_DATA_ENABLED)).isEqualTo(ENABLED);
+        assertThat(json.getString(RegistryNotificationConstants.JSON_FIELD_DATA_CHANGE)).isEqualTo(CHANGE.toString());
+        assertThat(json.getString(RegistryNotificationConstants.JSON_FIELD_TENANT_ID)).isEqualTo(TENANT_ID);
+        assertThat(json.getString(RegistryNotificationConstants.JSON_FIELD_DEVICE_ID)).isEqualTo(DEVICE_ID);
+        assertThat(json.getBoolean(RegistryNotificationConstants.JSON_FIELD_DATA_ENABLED)).isEqualTo(ENABLED);
     }
 
     /**
@@ -107,7 +104,7 @@ public class DeviceChangeNotificationTest {
         assertThat(abstractNotification).isInstanceOf(DeviceChangeNotification.class);
         final DeviceChangeNotification newNotification = (DeviceChangeNotification) abstractNotification;
 
-        assertThat(newNotification.getSource()).isEqualTo(NotificationConstants.SOURCE_DEVICE_REGISTRY);
+        assertThat(newNotification.getSource()).isEqualTo(RegistryNotificationConstants.SOURCE_DEVICE_REGISTRY);
         assertThat(newNotification.getTimestamp()).isEqualTo(Instant.parse(TIMESTAMP));
 
         assertThat(newNotification.getChange()).isEqualTo(CHANGE);

@@ -36,18 +36,18 @@ public class CredentialsChangeNotification extends AbstractDeviceRegistryNotific
     public static final String TYPE = "credentials-change-v1";
     public static final String ADDRESS = DeviceChangeNotification.ADDRESS;
 
-    @JsonProperty(value = NotificationConstants.JSON_FIELD_TENANT_ID, required = true)
+    @JsonProperty(value = RegistryNotificationConstants.JSON_FIELD_TENANT_ID, required = true)
     private String tenantId;
 
-    @JsonProperty(value = NotificationConstants.JSON_FIELD_DEVICE_ID, required = true)
+    @JsonProperty(value = RegistryNotificationConstants.JSON_FIELD_DEVICE_ID, required = true)
     private String deviceId;
 
     @JsonCreator
     CredentialsChangeNotification(
             @JsonProperty(value = FIELD_SOURCE, required = true) final String source,
             @JsonProperty(value = FIELD_TIMESTAMP, required = true) @HonoTimestamp final Instant timestamp,
-            @JsonProperty(value = NotificationConstants.JSON_FIELD_TENANT_ID, required = true) final String tenantId,
-            @JsonProperty(value = NotificationConstants.JSON_FIELD_DEVICE_ID, required = true) final String deviceId) {
+            @JsonProperty(value = RegistryNotificationConstants.JSON_FIELD_TENANT_ID, required = true) final String tenantId,
+            @JsonProperty(value = RegistryNotificationConstants.JSON_FIELD_DEVICE_ID, required = true) final String deviceId) {
 
         super(source, timestamp);
 
@@ -64,7 +64,7 @@ public class CredentialsChangeNotification extends AbstractDeviceRegistryNotific
      * @throws NullPointerException If any of the parameters are {@code null}.
      */
     public CredentialsChangeNotification(final String tenantId, final String deviceId, final Instant timestamp) {
-        this(NotificationConstants.SOURCE_DEVICE_REGISTRY, timestamp, tenantId, deviceId);
+        this(RegistryNotificationConstants.SOURCE_DEVICE_REGISTRY, timestamp, tenantId, deviceId);
     }
 
     /**
