@@ -18,7 +18,7 @@ import static com.google.common.truth.Truth.assertWithMessage;
 
 import java.time.Instant;
 
-import org.eclipse.hono.client.notification.Notification;
+import org.eclipse.hono.client.notification.NotificationConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -53,11 +53,11 @@ public class CredentialsChangeNotificationTest {
 
         final JsonObject json = JsonObject.mapFrom(notification);
 
-        assertThat(json.getString(Notification.FIELD_SOURCE))
+        assertThat(json.getString(NotificationConstants.JSON_FIELD_SOURCE))
                 .isEqualTo(RegistryNotificationConstants.SOURCE_DEVICE_REGISTRY);
-        assertThat(json.getInstant(Notification.FIELD_TIMESTAMP).toString()).isEqualTo(TIMESTAMP);
+        assertThat(json.getInstant(NotificationConstants.JSON_FIELD_TIMESTAMP).toString()).isEqualTo(TIMESTAMP);
 
-        assertThat(json.getString("type")).isEqualTo(CredentialsChangeNotification.TYPE);
+        assertThat(json.getString(NotificationConstants.JSON_FIELD_TYPE)).isEqualTo(CredentialsChangeNotification.TYPE);
         assertThat(json.getString(RegistryNotificationConstants.JSON_FIELD_TENANT_ID)).isEqualTo(TENANT_ID);
         assertThat(json.getString(RegistryNotificationConstants.JSON_FIELD_DEVICE_ID)).isEqualTo(DEVICE_ID);
     }
@@ -76,7 +76,7 @@ public class CredentialsChangeNotificationTest {
         final int expectedPropertiesCount = 5;
         assertWithMessage("JSON contains unknown fields").that(json.size()).isEqualTo(expectedPropertiesCount);
 
-        assertThat(json.getString("type")).isEqualTo("credentials-change-v1");
+        assertThat(json.getString(NotificationConstants.JSON_FIELD_TYPE)).isEqualTo("credentials-change-v1");
         assertThat(json.getString("source")).isEqualTo("device-registry");
         assertThat(json.getString("timestamp")).isEqualTo(TIMESTAMP);
 

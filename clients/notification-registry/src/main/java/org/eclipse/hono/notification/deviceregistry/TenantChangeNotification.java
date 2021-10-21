@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.util.Objects;
 
 import org.eclipse.hono.annotation.HonoTimestamp;
+import org.eclipse.hono.client.notification.NotificationConstants;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -42,8 +43,8 @@ public class TenantChangeNotification extends AbstractDeviceRegistryNotification
 
     @JsonCreator
     TenantChangeNotification(
-            @JsonProperty(value = FIELD_SOURCE, required = true) final String source,
-            @JsonProperty(value = FIELD_TIMESTAMP, required = true) @HonoTimestamp final Instant timestamp,
+            @JsonProperty(value = NotificationConstants.JSON_FIELD_SOURCE, required = true) final String source,
+            @JsonProperty(value = NotificationConstants.JSON_FIELD_TIMESTAMP, required = true) @HonoTimestamp final Instant timestamp,
             @JsonProperty(value = RegistryNotificationConstants.JSON_FIELD_DATA_CHANGE, required = true) final LifecycleChange change,
             @JsonProperty(value = RegistryNotificationConstants.JSON_FIELD_TENANT_ID, required = true) final String tenantId,
             @JsonProperty(value = RegistryNotificationConstants.JSON_FIELD_DATA_ENABLED, required = true) final boolean enabled) {

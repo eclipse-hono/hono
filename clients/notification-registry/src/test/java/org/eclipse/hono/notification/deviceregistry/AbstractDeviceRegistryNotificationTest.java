@@ -18,7 +18,7 @@ import static com.google.common.truth.Truth.assertWithMessage;
 
 import java.time.Instant;
 
-import org.eclipse.hono.client.notification.Notification;
+import org.eclipse.hono.client.notification.NotificationConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -64,9 +64,9 @@ public class AbstractDeviceRegistryNotificationTest {
 
         final JsonObject json = JsonObject.mapFrom(notification);
 
-        assertThat(json.getString(Notification.FIELD_SOURCE)).isEqualTo(SOURCE);
-        assertThat(json.getInstant(Notification.FIELD_TIMESTAMP).toString()).isEqualTo(TIMESTAMP);
-        assertThat(json.getString("type")).isEqualTo(TYPE);
+        assertThat(json.getString(NotificationConstants.JSON_FIELD_SOURCE)).isEqualTo(SOURCE);
+        assertThat(json.getInstant(NotificationConstants.JSON_FIELD_TIMESTAMP).toString()).isEqualTo(TIMESTAMP);
+        assertThat(json.getString(NotificationConstants.JSON_FIELD_TYPE)).isEqualTo(TYPE);
 
     }
 
@@ -84,7 +84,7 @@ public class AbstractDeviceRegistryNotificationTest {
         final int expectedPropertiesCount = 3;
         assertWithMessage("JSON contains unknown fields").that(json.size()).isEqualTo(expectedPropertiesCount);
 
-        assertThat(json.getString("type")).isNotNull();
+        assertThat(json.getString(NotificationConstants.JSON_FIELD_TYPE)).isNotNull();
         assertThat(json.getString("source")).isNotNull();
         assertThat(json.getInstant("timestamp")).isNotNull();
 

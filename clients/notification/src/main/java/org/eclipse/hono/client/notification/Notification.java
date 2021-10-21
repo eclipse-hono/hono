@@ -31,12 +31,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
  * handling of the type by Jackson.
  */
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type", visible = true)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = NotificationConstants.JSON_FIELD_TYPE, visible = true)
 public interface Notification {
-
-    String CONTENT_TYPE = "application/json";
-    String FIELD_SOURCE = "source";
-    String FIELD_TIMESTAMP = "timestamp";
 
     /**
      * Gets the type of the notification.
@@ -51,7 +47,7 @@ public interface Notification {
      *
      * @return The name of the component.
      */
-    @JsonGetter(FIELD_SOURCE)
+    @JsonGetter(NotificationConstants.JSON_FIELD_SOURCE)
     String getSource();
 
     /**
@@ -59,7 +55,7 @@ public interface Notification {
      *
      * @return The point in time.
      */
-    @JsonGetter(FIELD_TIMESTAMP)
+    @JsonGetter(NotificationConstants.JSON_FIELD_TIMESTAMP)
     @HonoTimestamp
     Instant getTimestamp();
 
