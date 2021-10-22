@@ -889,7 +889,17 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>authentication-impl,${logging.profile}</SPRING_PROFILES_ACTIVE>
-                      <JDK_JAVA_OPTIONS>${default.java.options}</JDK_JAVA_OPTIONS>
+                      <!--
+                        We disable the consumption of the "server_name" TLS extension which clients use to
+                        indicate the name of the host they want to connect to. The Qpid Dispatch Router sets
+                        a value which includes the port that the client wants to connect to. This is clearly not
+                        allowed by RFC 6066 and OpenJDK 17 will fail the TLS handshake with the Dispatch Router if
+                        the "server_name" extension is not disabled altogether.
+                        See https://docs.oracle.com/en/java/javase/17/security/java-secure-socket-extension-jsse-reference-guide.html#GUID-527BAE97-3B78-4390-A479-623BD998C4EE
+                       -->
+                      <JDK_JAVA_OPTIONS>
+                        ${default.java.options} -Djdk.tls.server.disableExtensions=server_name
+                      </JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                     </env>
                     <log>
