@@ -13,6 +13,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The JDBC DB based registry now also supports enforcement of registration limits configured at the tenant level.
   In particular, the maximum number of devices and the maximum number of credentials per device can be set in
   a tenant's registration-limits property. Please refer to the User Guide for details.
+* The container images published by the Hono project are now built on top of Java 17 base images provided by the
+  [Eclipse Temurin project](https://adoptium.net/).
 
 ### Fixes & Enhancements
 
