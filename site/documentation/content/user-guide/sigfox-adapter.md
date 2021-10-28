@@ -7,10 +7,10 @@ The Sigfox protocol adapter exposes an HTTP endpoint for connecting up with
 the Sigfox backend for publishing telemetry, events and use command & control.
 <!--more-->
 
-{{% note title="Tech preview" %}}
+{{% notice info %}}
 This protocol adapter is not considered production ready. Its APIs might still
 be subject to change without warning.
-{{% /note %}}
+{{% /notice %}}
 
 ## Pre-requisites
 
@@ -87,7 +87,7 @@ Create a new "Custom" callback, with the following settings
   * `Authorization` – `Basic …` (see note below)
 * **Send SNI**: ☑ (Enabled)
 
-{{% note title="Credentials" %}}
+{{% notice tip %}}
 At the moment you need to manually put in the `Authorization` header,
 you cannot put the credentials into the URL, as there is a bug in the
 Sigfox backend, which cannot be fixed by Hono. The backend does not
@@ -107,8 +107,7 @@ To get the full value, including the `Basic` you may use:
 ~~~sh
 echo "Basic $(echo -n "sigfox@tenant:password" | base64)"
 ~~~
-
-{{% /note %}}
+{{% /notice %}}
 
 ### Enabling command & control
 
@@ -117,10 +116,10 @@ It is possible to enable command & control as well. For this you need to:
 * Switch the **Type** of the `DATA` callback from `UPLINK` to `BIDIR`
 * Add the `ack` query parameter to the **Url pattern**, e.g. `https://iot-sigfox-adapter.my.hono/data/telemetry/<TENANT>?device={device}&data={data}&ack={ack}`
 
-{{% note title="Command requirements" %}}
+{{% notice tip %}}
 Sigfox allows only a very specific payload in command messages. You must send
 exactly 8 bytes of data. It only supports *one way commands*.
-{{% /note %}}
+{{% /notice %}}
 
 ## Events
 

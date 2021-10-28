@@ -62,10 +62,10 @@ mvn clean install -Pbuild-docker-image,metrics-prometheus,jaeger
 
 This will build all libraries, Docker images and example code.
 
-{{% note title="Be patient" %}}
+{{% notice tip %}}
 The first build might take several minutes because Docker will need to download all the base images that Hono is relying on.
 However, most of these will be cached by Docker so that subsequent builds will be running much faster.
-{{% /note %}}
+{{% /notice %}}
 
 #### Gathering Code Coverage Information for Unit Tests
 
@@ -105,10 +105,10 @@ In order to do so, the `build-native-image` Maven profile needs to be activated:
 mvn clean install -Pbuild-native-image,metrics-prometheus,jaeger
 ```
 
-{{% note title="Experimental" %}}
+{{% notice info %}}
 Support for *native* images is an experimental feature. The `build-native-image` and the `build-docker-image` profiles are mutually exclusive.
 However, they can be built one after the other.
-{{% /note %}}
+{{% /notice %}}
 
 #### Pushing Images
 

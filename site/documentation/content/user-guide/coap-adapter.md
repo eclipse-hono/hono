@@ -124,9 +124,9 @@ Publish some JSON data for device `4711` using default message type `CON` (*at l
 coap-client -u sensor1@DEFAULT_TENANT -k hono-secret -m POST coaps://hono.eclipseprojects.io/telemetry -t application/json -e '{"temp": 5}'
 ~~~
 
-{{% note %}}
+{{% notice tip %}}
 *coap-client* only reports error response-codes, so the expected 2.04 response code will not be printed to the terminal.
-{{% /note %}}
+{{% /notice %}}
 
 Publish some JSON data for device `4711` using message type `NON` (*at most once*):
 
@@ -144,11 +144,11 @@ coap-client -u sensor1@DEFAULT_TENANT -k hono-secret -m POST coaps://hono.eclips
 }
 ~~~
 
-{{% note %}}
-In the example above the response actually contains payload that should be used as input to a command to be executed by the device.
-This is just for illustrative purposes. You will usually get an empty response because there is no downstream application attached which could
-send any commands to the device.
-{{% /note %}}
+{{% notice info %}}
+In the example above the response actually contains payload that should be used as input to a command to be executed
+by the device. This is just for illustrative purposes. You will usually get an empty response because there is no
+downstream application attached which could send any commands to the device.
+{{% /notice %}}
 
 ## Publish Telemetry Data (unauthenticated Device)
 
@@ -372,9 +372,9 @@ Publish some JSON data for device `4711` using default message type `CON` (*at l
 coap-client -u sensor1@DEFAULT_TENANT -k hono-secret -m POST coaps://hono.eclipseprojects.io/event -t application/json -e '{"temp": 5}'
 ~~~
 
-{{% note %}}
+{{% notice tip %}}
 *coap-client* only reports error response-codes, so the expected 2.04 response code will not be printed to the terminal.
-{{% /note %}}
+{{% /notice %}}
 
 Publish some JSON data for device `4711`, indicating that the device will wait for 10 seconds to receive the response:
 
@@ -386,11 +386,11 @@ coap-client -u sensor1@DEFAULT_TENANT -k hono-secret -m POST coaps://hono.eclips
 }
 ~~~
 
-{{% note %}}
-In the example above the response actually contains payload that should be used as input to a command to be executed by the device.
-This is just for illustrative purposes. You will usually get an empty response because there is no downstream application attached which could
-send any commands to the device.
-{{% /note %}}
+{{% notice info %}}
+In the example above the response actually contains payload that should be used as input to a command to be executed
+by the device. This is just for illustrative purposes. You will usually get an empty response because there is no
+downstream application attached which could send any commands to the device.
+{{% /notice %}}
 
 ## Publish an Event (unauthenticated Device)
 

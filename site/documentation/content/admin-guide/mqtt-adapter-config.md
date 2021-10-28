@@ -99,10 +99,10 @@ This protocol adapter supports transformation of messages that have been uploade
  to downstream consumers. This message mapping can be used to overwrite the deviceID, add additional properties and
   change the payload.
 
-{{% note title="Experimental" %}}
+{{% notice info %}}
 This is an experimental feature. The names of the configuration properties, potential values and the overall
 functionality are therefore subject to change without prior notice.
-{{% /note %}}
+{{% /notice %}}
 
 The following table provides an overview of the configuration variables and corresponding system properties for
 configuring the external service endpoint(s) for transforming messages:

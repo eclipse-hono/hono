@@ -95,9 +95,9 @@ The health check server can be configured by means of the following environment 
 | `HONO_HEALTHCHECK_KEYSTOREPATH`<br>`hono.healthCheck.keyStorePath` | - | The absolute path to the Java key store containing the private key and certificate that the secure server should use for authenticating to clients. Either this option or the `HONO_HEALTHCHECK_KEYPATH` and `HONO_HEALTHCHECK_CERTPATH` options need to be set in order to enable TLS secured connections with clients. The key store format can be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix respectively. The `HONO_HEALTHCHECK_KEYSTOREPASSWORD` variable can be used to set the password required for reading the key store. |
 
 
-{{% warning title="Failure to start" %}}
+{{% notice warning %}}
 The component/service will fail to start if neither the secure not the insecure server have been configured properly.
-{{% /warning %}}
+{{% /notice %}}
 
 ## Tracing
 
@@ -137,10 +137,10 @@ its class path in the container's `/opt/hono/extensions` folder. Thus, using a s
 just a matter of configuring the container to mount a volume or binding a host folder at that location and putting the
 implementation's jar files and resources into the corresponding volume or host folder.
 
-{{% note %}}
+{{% notice info %}}
 This also means that (currently) only Tracer implementations can be used with Hono that also implement the Tracer
 Resolver mechanism.
-{{% /note %}}
+{{% /notice %}}
 
 ## Configuring usage of Jaeger tracing (included in Docker images)
 

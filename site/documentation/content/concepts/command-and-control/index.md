@@ -20,10 +20,10 @@ resources:
  
 <!--more-->
 
-{{% note %}}
+{{% notice info %}}
 The description below shows the command & control handling using the Device Connection service. That service is now deprecated and will be replaced by the service implementing the [Command Router API]({{< relref "/api/command-router" >}}).
 See the [last chapter](./#command-router-service) for an overview of how commands are routed if protocol adapters are configured to use the [Command Router service]({{< relref "/admin-guide/command-router-config" >}}) instead of the Device Connection service. 
-{{% /note %}}
+{{% /notice %}}
 
 Commands can be sent following a *request/response* or a *one-way* pattern. For *Request/Response* commands, there is always a response expected from the device.
 

@@ -22,14 +22,14 @@ The Device Registry is implemented as a Spring Boot application. It can be run e
 by means of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-service-device-registry-file/)
 created from it.
 
-{{% note title="Deprecation" %}}
+{{% notice info %}}
 The file based device registry has been deprecated and will be removed in a future version of Hono.
 Please use the [Mongo DB]({{< relref "mongodb-device-registry-config" >}}) or
 [JDBC based registry]({{< relref "jdbc-device-registry-config" >}}) implementations instead. The JDBC based registry
 can be configured to use an H2 database in either *embedded* or *in-memory* mode. The former can be used to persist
 data to the local file system while the latter keeps all data in memory only.
 Please refer to the [H2 documentation](http://www.h2database.com/html/features.html#database_url) for details.
-{{% /note %}}
+{{% /notice %}}
 
 ## Service Configuration
 

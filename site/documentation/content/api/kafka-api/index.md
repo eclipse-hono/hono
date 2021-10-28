@@ -8,9 +8,9 @@ With these APIs, clients publish data to as well as consume data from an Apache 
 
 <!--more-->
 
-{{% note title="Tech preview" %}}
+{{% notice info %}}
 The support of Kafka as a messaging system is currently a preview and not yet ready for production. The APIs are subject to change without prior notice. 
-{{% /note %}}
+{{% /notice %}}
 
 
 ## Kafka-based Messaging

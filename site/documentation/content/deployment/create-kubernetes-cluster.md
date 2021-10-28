@@ -32,13 +32,13 @@ minikube start --cpus 2 --memory 8192
 
 After the Minikube VM has started successfully, the `minikube tunnel` command should be run in order to support Hono's services being deployed using the *LoadBalancer* type. Please refer to the [Minikube Loadbalancer docs](https://minikube.sigs.k8s.io/docs/tasks/loadbalancer/) for details.
 
-{{% note title="Setting Kubernetes Version" %}}
+{{% notice info %}}
 Minikube will use the most recent Kubernetes version that was available when it has been compiled by default.
 Hono *should* run on any version of Kubernetes starting with 1.13.6. However, it has been tested with several
 specific versions only. The most recent version known to work is 1.15.4 so if you experience any issues with
 running Hono on another version, please try to deploy to 1.15.4 before raising an issue.
 You can use Minikube's `--kubernetes-version` command line switch to set a particular version.
-{{% /note %}}
+{{% /notice %}}
 
 ## Setting up a Production Environment
 
@@ -58,9 +58,9 @@ This chapter describes how Hono can be deployed on Microsoft Azure. It includes:
 - [Virtual Network (VNet) service endpoints](https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-service-endpoints-overview)
   ensure protected communication between AKS and Azure Service Bus.
 
-{{% warning title="Use for demos only" %}}
+{{% notice warning %}}
 This deployment model is not meant for productive use but rather for evaluation as well as demonstration purposes or as a baseline to evolve a production grade [Application architecture](https://docs.microsoft.com/en-us/azure/architecture/guide/) out of it which includes Hono.
-{{% /warning %}}
+{{% /notice %}}
 
 ### Prerequisites
 

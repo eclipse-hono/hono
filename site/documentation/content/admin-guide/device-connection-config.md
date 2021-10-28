@@ -12,12 +12,12 @@ instance that the gateway used by the device is connected to.
 
 <!--more-->
 
-{{% note title="Deprecation" %}}
+{{% notice info %}}
 The Device Connection service is deprecated and will be removed from Hono completely in version 2.0.0.
 Protocol adapters use the [Command Router service]({{< relref "/admin-guide/command-router-config" >}}) by default.
 For backwards compatibility, adapters can still be configured to use the Device Connection service as described in
 the [Protocol Adapter Options Guide]({{< relref "common-config.md/#device-connection-service-connection-configuration" >}}).
-{{% /note %}}
+{{% /notice %}}
 
 The Device Connection component provides a production grade implementation of the Device Connection API which uses a
 remote *data grid* for storing information about device connections. The data grid can be scaled out independently

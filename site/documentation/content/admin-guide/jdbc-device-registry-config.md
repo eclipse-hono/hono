@@ -115,10 +115,10 @@ connections on:
 See [Port Configuration]({{< relref "file-based-device-registry-config#port-configuration" >}}) for
 more information.
 
-{{% note %}}
+{{% notice tip %}}
 The environment variables to use for configuring the REST endpoint are the same as the ones for the AMQP endpoint,
 substituting `_AMQP_` with `_HTTP_`.
-{{% /note %}}
+{{% /notice %}}
 
 ## Authentication Service Connection Configuration
 

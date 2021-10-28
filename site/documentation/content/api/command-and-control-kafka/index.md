@@ -19,9 +19,10 @@ With this API, clients send command messages to an Apache Kafka&reg; cluster ins
 See [Kafka-based APIs]({{< relref "/api/kafka-api" >}}) for fundamental information about Hono's Kafka-based APIs.
 The statements there apply to this specification.
 
-{{% note title="Tech preview" %}}
-The support of Kafka as a messaging system is currently a preview and not yet ready for production. The APIs are subject to change without prior notice.
-{{% /note %}}
+{{% notice info %}}
+The support of Kafka as a messaging system is currently a preview and not yet ready for production. The APIs are
+subject to change without prior notice.
+{{% /notice %}}
 
 ## Send a One-Way Command
 

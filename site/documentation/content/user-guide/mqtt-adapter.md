@@ -281,11 +281,11 @@ The following variables are used:
 * `${req-id}` (only for *Request/Response* commands) : The unique identifier of the command execution request. The identifier is passed to the device as part of the name of the topic that the command is published to. The device needs to publish its response to the command to a topic which includes this identifier, thus allowing the adapter to correlate the response with the request.
 * `${status}` : The HTTP status code indicating the outcome of executing the command. This status code is passed on to the application in the AMQP message's *status* application property.
 
-{{% note title="Wild card characters in topic filters" %}}
+{{% notice info %}}
 The topic filters defined below make use of MQTT's wild card characters in certain places of topic filters.
 However, the MQTT adapter does **not** support the general usage of wild card characters in topic filters in any
 other way than defined below.
-{{% /note %}}
+{{% /notice %}}
 
 ### Receiving Commands (authenticated Device)
 
@@ -304,10 +304,10 @@ The protocol adapter will publish commands for the device to the following topic
 The *tenant-id* and/or *device-id* will be included in the topic name if the tenant and/or device ID had been included
 in the topic filter used for subscribing to commands.
 
-{{% note title="Deprecation" %}}
+{{% notice info %}}
 Previous versions of Hono required authenticated devices to use `command/+/+/req/#` for subscribing to commands.
 This old topic filter is deprecated. Devices MAY still use it until support for it will be removed in a future Hono version.
-{{% /note %}}
+{{% /notice %}}
 
 **Examples**
 
@@ -423,10 +423,10 @@ The protocol adapter will publish commands for devices to the following topic na
 
 The `${tenant-id}` will be included in the topic name if the tenant ID had been included in the topic filter used for subscribing to commands.
 
-{{% note title="Deprecation" %}}
+{{% notice info %}}
 Previous versions of Hono required authenticated gateways to use `command/+/+/req/#` for subscribing to commands.
 This old topic filter is deprecated. Gateways MAY still use it until support for it will be removed in a future Hono version.
-{{% /note %}}
+{{% /notice %}}
 
 When processing an incoming command message, the protocol adapter will give precedence to a device-specific command subscription matching the command target device, whether the subscription comes from a gateway or the device itself. If there are multiple such subscriptions from multiple gateways and/or from the device itself, the subscription initiated last will get the command messages.
 
@@ -528,9 +528,9 @@ The following variables are used:
 * `${correlation-id}`: The identifier that may be used to correlate the error message with the device message that caused the error. The identifier is either the value of a *correlation-id* property bag value contained in the device message topic, or the identifier is the *packet-id* of the device message if it was sent with QoS 1. Otherwise, a value of `-1` is used.
 * `${error-status}`: The HTTP status code of the error that was caused by the device message.
 
-{{% note title="Examples" %}}
+{{% notice tip %}}
 Since the subscription on the error topic needs to be done on the same MQTT connection that is also used for publishing the telemetry, event or command response messages, the Mosquitto MQTT Command Line Client cannot be used. The [MQTT CLI](https://hivemq.github.io/mqtt-cli/) tool with its [shell mode](https://hivemq.github.io/mqtt-cli/docs/shell.html) is an alternative that supports using one MQTT connection for both subscribing and publishing.
-{{% /note %}}
+{{% /notice %}}
 
 ### Receiving Error Messages (authenticated Device)
 
@@ -635,9 +635,9 @@ MQTT connection open unless a terminal error happens. The errors that are classi
 * The authenticated device or gateway is disabled or not registered.
 * The tenant is disabled or does not exist.
 
-{{% note %}}
+{{% notice info %}}
 When a terminal error occurs, the connection will always be closed irrespective of any *on-error* parameter or error subscription.
-{{% /note %}}
+{{% /notice %}}
 
 The following table lists the different behaviours based on the value of the *on-error* property bag parameter and the existence of an error subscription:
 
@@ -662,10 +662,10 @@ An authenticated device wanting to have errors always be ignored can for example
 
 This protocol adapter supports transformation of messages that have been uploaded by devices before they get forwarded to downstream consumers.
 
-{{% note title="Experimental" %}}
+{{% notice info %}}
 This is an experimental feature. The names of the configuration properties, potential values and the overall functionality are therefore
 subject to change without prior notice.
-{{% /note %}}
+{{% /notice %}}
 
 This feature is useful in scenarios where devices are connected to the adapter via a gateway but the gateway is not able to include
 the device ID in the topic that the gateway publishes data to. The gateway will use the plain `telemetry` or `event` topics in this case.

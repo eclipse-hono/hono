@@ -29,13 +29,13 @@ Hono comes with two registry implementations out of the box:
 
 Please refer to the corresponding Admin Guides for details regarding the configuration of the registries.
 
-{{% note %}}
+{{% notice tip %}}
 During runtime, the protocol adapters require access to *any* implementation of the Tenant, Device Registration
 and Credentials APIs. However, they do not require these implementations to be the Mongo DB or the JDBC based
 registry coming with Hono. This means that the protocol adapters can also be configured to access custom implementations
 of these APIs which, for example, serve as a facade for an existing application or service that contains the relevant
 device data.
-{{% /note %}}
+{{% /notice %}}
 
 ## Device Registry Management API
 
@@ -55,11 +55,11 @@ to the registry's corresponding Admin Guide.
 The tenants in the registry can be managed using the Device Registry Management API's
 [tenant related resources]({{< relref "/api/management#tenants" >}}).
 
-{{% note title="JDBC Registry Specifics" %}}
+{{% notice info %}}
 The JDBC based registry implementation does not support the [search tenants]({{< relref "/api/management#tenants/searchTenants" >}})
 operation defined by the Device Registry Management API. Invoking this operation will yield a `501 Not Implemented`
 response.
-{{% /note %}}
+{{% /notice %}}
 
 #### Registration Limits
 
@@ -95,11 +95,11 @@ The maximum number of devices allowed for a particular tenant is then determined
 The devices in the registry can be managed using the Device Registry Management API's
 [device related resources]({{< relref "/api/management#devices" >}}).
 
-{{% note title="JDBC Registry Specifics" %}}
+{{% notice info %}}
 The JDBC based device registry does not support the [search devices]({{< relref "/api/management#devices/searchDevicesForTenant" >}})
 operation defined by the Device Registry Management API. Invoking this operation will yield a `501 Not Implemented`
 response.
-{{% /note %}}
+{{% /notice %}}
 
 ### Managing Credentials
 
