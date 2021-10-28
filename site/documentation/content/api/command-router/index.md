@@ -13,7 +13,7 @@ resources:
 *Protocol Adapters* use the *Command Router API* to supply information with which a Command Router service component can route command & control messages to the protocol adapters that the target devices are connected to.
 <!--more-->
 
-{{% notice tip %}}
+{{% notice info %}}
 The Command Router API will replace the now deprecated [Device Connection API]({{< relref "/api/device-connection" >}}).
 {{% /notice %}}
 
