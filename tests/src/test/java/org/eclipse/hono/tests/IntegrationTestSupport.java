@@ -993,7 +993,7 @@ public final class IntegrationTestSupport {
             final Promise<Void> adminClientClosedPromise = Promise.promise();
             LOGGER.debug("deleting topics for temporary tenants {}", tenantsToDeleteTopicsForNow);
             final List<String> topicNames = tenantsToDeleteTopicsForNow.stream()
-                    .flatMap(tenant -> HonoTopic.Type.TENANT_RELATED_TYPES.stream()
+                    .flatMap(tenant -> HonoTopic.Type.MESSAGING_API_TYPES.stream()
                             .map(type -> new HonoTopic(type, tenant).toString()))
                     .collect(Collectors.toList());
             adminClient.deleteTopics(topicNames, ar -> {

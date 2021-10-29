@@ -33,8 +33,8 @@ public final class HonoTopic {
      * Creates a new topic from the given topic type and tenant ID.
      *
      * @param type The type of the topic.
-     * @param suffix The suffix after the type specific topic part. For types other than {@link Type#COMMAND_INTERNAL}
-     *              this is the internal ID of the tenant that the topic belongs to.
+     * @param suffix The suffix after the type specific topic part. For messaging API types this is the internal ID of
+     *            the tenant that the topic belongs to.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public HonoTopic(final Type type, final String suffix) {
@@ -67,6 +67,8 @@ public final class HonoTopic {
             type = Type.COMMAND_RESPONSE;
         } else if (topicString.startsWith(Type.COMMAND_INTERNAL.prefix)) {
             type = Type.COMMAND_INTERNAL;
+        } else if (topicString.startsWith(Type.NOTIFICATION.prefix)) {
+            type = Type.NOTIFICATION;
         }
         if (type != null) {
             final String suffix = topicString.substring(type.prefix.length());
@@ -79,17 +81,16 @@ public final class HonoTopic {
     /**
      * Gets the tenantId from the topic.
      *
-     * @return The tenantId or {@code null} in case of a {@link Type#COMMAND_INTERNAL} topic.
+     * @return The tenantId for a messaging API type or {@code null} in case of an internal topic.
      */
     public String getTenantId() {
-        return type == Type.COMMAND_INTERNAL ? null : suffix;
+        return Type.MESSAGING_API_TYPES.contains(type) ? suffix : null;
     }
 
     /**
      * Gets the suffix after the type specific topic part.
      * <p>
-     * For types other than {@link Type#COMMAND_INTERNAL} this is the internal ID
-     * of the tenant that the topic belongs to.
+     * For messaging API types this is the internal ID of the tenant that the topic belongs to.
      *
      * @return The suffix.
      */
@@ -142,13 +143,14 @@ public final class HonoTopic {
         EVENT(EventConstants.EVENT_ENDPOINT),
         COMMAND(CommandConstants.COMMAND_ENDPOINT),
         COMMAND_RESPONSE(CommandConstants.COMMAND_RESPONSE_ENDPOINT),
-        COMMAND_INTERNAL(CommandConstants.INTERNAL_COMMAND_ENDPOINT);
+        COMMAND_INTERNAL(CommandConstants.INTERNAL_COMMAND_ENDPOINT),
+        NOTIFICATION("notification");
 
         /**
          * A list of the types of topics that include a tenant identifier.
          */
-        public static final List<Type> TENANT_RELATED_TYPES = List.of(TELEMETRY, EVENT, COMMAND, COMMAND_RESPONSE);
-        private static final String SEPARATOR = ".";
+        public static final List<Type> MESSAGING_API_TYPES = List.of(TELEMETRY, EVENT, COMMAND, COMMAND_RESPONSE);
+        public static final String SEPARATOR = ".";
         private static final String NAMESPACE = "hono";
 
         /**

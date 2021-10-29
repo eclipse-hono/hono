@@ -1,0 +1,193 @@
+/*
+ * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ */
+
+package org.eclipse.hono.client.notification;
+
+import static com.google.common.truth.Truth.assertThat;
+
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.OffsetResetStrategy;
+import org.apache.kafka.common.TopicPartition;
+import org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties;
+import org.eclipse.hono.kafka.test.KafkaMockConsumer;
+import org.eclipse.hono.notification.AbstractNotification;
+import org.eclipse.hono.notification.deviceregistry.CredentialsChangeNotification;
+import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
+import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
+import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+
+import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonObject;
+import io.vertx.junit5.Checkpoint;
+import io.vertx.junit5.Timeout;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
+
+/**
+ * Verifies behavior of {@link KafkaBasedNotificationReceiver}.
+ */
+@ExtendWith(VertxExtension.class)
+@Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
+public class KafkaBasedNotificationReceiverTest {
+
+    private final Map<String, String> consumerConfig = new HashMap<>();
+
+    private Vertx vertx;
+    private KafkaMockConsumer mockConsumer;
+
+    /**
+     *
+     * Sets up fixture.
+     *
+     * @param vertx The vert.x instance to use.
+     */
+    @BeforeEach
+    void setUp(final Vertx vertx) {
+        this.vertx = vertx;
+
+        mockConsumer = new KafkaMockConsumer(OffsetResetStrategy.EARLIEST);
+
+        consumerConfig.put(AbstractKafkaConfigProperties.PROPERTY_BOOTSTRAP_SERVERS, "kafka");
+        consumerConfig.put("client.id", "application-test-consumer");
+
+    }
+
+    /**
+     * Verifies that the consumer is successfully created by the receiver.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCreateConsumer(final VertxTestContext ctx) {
+
+        final var receiver = createReceiver();
+
+        receiver.registerConsumer(TenantChangeNotification.class, notification -> {
+                });
+
+        receiver.start()
+                .onComplete(ctx.succeeding(v -> ctx.verify(() -> {
+                    final Set<String> subscription = mockConsumer.subscription();
+                    assertThat(subscription).isNotNull();
+                    assertThat(subscription)
+                            .contains(NotificationTopicHelper.getTopicName(TenantChangeNotification.class));
+                    assertThat(mockConsumer.closed()).isFalse();
+                    ctx.completeNow();
+                })));
+    }
+
+    /**
+     * Verifies that the underlying Kafka consumer is closed when the receiver is stopped.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testStopClosesConsumer(final VertxTestContext ctx) {
+
+        final var receiver = createReceiver();
+
+        receiver.registerConsumer(TenantChangeNotification.class, notification -> {
+        });
+
+        receiver.start()
+                .compose(v -> receiver.stop())
+                .onComplete(ctx.succeeding(v -> ctx.verify(() -> {
+                    assertThat(mockConsumer.closed()).isTrue();
+                    ctx.completeNow();
+                })));
+    }
+
+    /**
+     * Verifies that the receiver decodes the notifications it receives and invokes the correct handler.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testThatCorrectHandlerIsInvoked(final VertxTestContext ctx) {
+
+        final String tenantId = "my-tenant";
+        final String deviceId = "my-device";
+        final Instant creationTime = Instant.parse("2007-12-03T10:15:30Z");
+
+        mockConsumer.schedulePollTask(() -> {
+            mockConsumer.addRecord(createKafkaRecord(
+                    new TenantChangeNotification(LifecycleChange.CREATE, tenantId, creationTime, false), 0L));
+
+            mockConsumer.addRecord(createKafkaRecord(
+                    new DeviceChangeNotification(LifecycleChange.CREATE, tenantId, deviceId, creationTime, false), 0L));
+
+            mockConsumer.addRecord(createKafkaRecord(
+                    new CredentialsChangeNotification(tenantId, deviceId, creationTime), 1L));
+        });
+
+        final var receiver = createReceiver();
+
+        final Checkpoint handlerInvokedCheckpoint = ctx.checkpoint(3);
+
+        receiver.registerConsumer(TenantChangeNotification.class,
+                notification -> ctx.verify(() -> {
+                    assertThat(notification).isInstanceOf(TenantChangeNotification.class);
+                    handlerInvokedCheckpoint.flag();
+                }));
+
+        receiver.registerConsumer(DeviceChangeNotification.class,
+                notification -> ctx.verify(() -> {
+                    assertThat(notification).isInstanceOf(DeviceChangeNotification.class);
+                    handlerInvokedCheckpoint.flag();
+                }));
+
+        receiver.registerConsumer(CredentialsChangeNotification.class,
+                notification -> ctx.verify(() -> {
+                    assertThat(notification).isInstanceOf(CredentialsChangeNotification.class);
+                    handlerInvokedCheckpoint.flag();
+                }));
+
+        receiver.start();
+
+    }
+
+    private KafkaBasedNotificationReceiver createReceiver() {
+
+        final TopicPartition tenantTopicPartition = new TopicPartition(
+                NotificationTopicHelper.getTopicName(TenantChangeNotification.class), 0);
+        final TopicPartition deviceTopicPartition = new TopicPartition(
+                NotificationTopicHelper.getTopicName(DeviceChangeNotification.class), 0);
+
+        mockConsumer.updateBeginningOffsets(Map.of(tenantTopicPartition, 0L, deviceTopicPartition, 0L));
+        mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(tenantTopicPartition, deviceTopicPartition));
+
+        final KafkaBasedNotificationReceiver client = new KafkaBasedNotificationReceiver(vertx, consumerConfig);
+        client.setKafkaConsumerFactory(() -> mockConsumer);
+
+        return client;
+    }
+
+    private ConsumerRecord<String, Buffer> createKafkaRecord(final AbstractNotification notification,
+            final long offset) {
+        final Buffer json = JsonObject.mapFrom(notification).toBuffer();
+        final String topicName = NotificationTopicHelper.getTopicName(notification.getClass());
+        return new ConsumerRecord<>(topicName, 0, offset, null, json);
+    }
+
+}

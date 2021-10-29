@@ -92,9 +92,4 @@ public class CredentialsChangeNotification extends AbstractNotification {
         return TYPE;
     }
 
-    @Override
-    public String getAddress() {
-        return ADDRESS;
-    }
-
 }
