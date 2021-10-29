@@ -80,11 +80,4 @@ public abstract class AbstractNotification {
         return creationTime;
     }
 
-    /**
-     * Gets the address to be used for messaging.
-     *
-     * @return The address.
-     */
-    @JsonIgnore
-    public abstract String getAddress();
 }

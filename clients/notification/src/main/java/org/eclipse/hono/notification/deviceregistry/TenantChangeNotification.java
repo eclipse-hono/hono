@@ -103,9 +103,4 @@ public class TenantChangeNotification extends AbstractNotification {
         return TYPE;
     }
 
-    @Override
-    public String getAddress() {
-        return ADDRESS;
-    }
-
 }

@@ -45,15 +45,16 @@ public class KafkaClientUnitTestHelper {
      * Returns a new {@link KafkaProducer}.
      *
      * @param producer The mock producer to wrap.
+     * @param <K> The type of the key.
+     * @param <V> The type of the value.
      * @return The new Kafka producer.
      */
-    public static KafkaProducer<String, Buffer> newKafkaProducer(final MockProducer<String, Buffer> producer) {
+    public static <K, V> KafkaProducer<K, V> newKafkaProducer(final MockProducer<K, V> producer) {
 
         final VertxInternal vertxMock = mock(VertxInternal.class);
         final ContextInternal context = VertxMockSupport.mockContextInternal(vertxMock);
-        doAnswer(invocation -> {
-            return Promise.promise();
-        }).when(context).promise();
+        doAnswer(invocation -> Promise.promise())
+                .when(context).promise();
 
         doAnswer(invocation -> {
             final Promise<RecordMetadata> result = Promise.promise();
@@ -70,7 +71,7 @@ public class KafkaClientUnitTestHelper {
      * Returns a new {@link MockProducer}.
      *
      * @param autoComplete If true, the producer automatically completes all requests successfully and executes the
-     *            callback. Otherwise the {@link MockProducer#completeNext()} or
+     *            callback. Otherwise, the {@link MockProducer#completeNext()} or
      *            {@link MockProducer#errorNext(RuntimeException)} must be invoked after sending a message.
      * @return The new mock producer.
      */

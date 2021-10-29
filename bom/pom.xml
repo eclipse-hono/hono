@@ -250,6 +250,11 @@
         <artifactId>hono-client-notification</artifactId>
         <version>${project.version}</version>
       </dependency>
+      <dependency>
+        <groupId>org.eclipse.hono</groupId>
+        <artifactId>hono-client-notification-kafka</artifactId>
+        <version>${project.version}</version>
+      </dependency>
 
       <!-- Californium -->
       <dependency>
