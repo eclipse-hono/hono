@@ -1,0 +1,4 @@
+<div class="alert alert-notice">
+    <h4 class="alert-heading"><i class="fas fa-info-circle"></i> {{ .Get "title" | default "Note" }}</h4>
+    <div>{{ .Inner | markdownify }}</div>
+</div>

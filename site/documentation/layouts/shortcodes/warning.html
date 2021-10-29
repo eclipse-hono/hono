@@ -1,0 +1,4 @@
+<div class="alert alert-warning">
+    <h4 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> {{ .Get "title" | default "Warning" }}</h4>
+    <div>{{ .Inner | markdownify }}</div>
+</div>
