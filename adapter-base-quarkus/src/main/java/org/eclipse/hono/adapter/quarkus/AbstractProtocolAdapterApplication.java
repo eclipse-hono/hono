@@ -51,6 +51,7 @@ import org.eclipse.hono.client.command.amqp.ProtonBasedInternalCommandConsumer;
 import org.eclipse.hono.client.command.kafka.KafkaBasedCommandResponseSender;
 import org.eclipse.hono.client.command.kafka.KafkaBasedInternalCommandConsumer;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
+import org.eclipse.hono.client.kafka.KafkaClientOptions;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.metrics.KafkaMetricsOptions;
@@ -119,15 +120,6 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     protected C protocolAdapterProperties;
 
     @Inject
-    protected KafkaProducerConfigProperties kafkaProducerConfig;
-
-    @Inject
-    protected KafkaConsumerConfigProperties kafkaConsumerConfig;
-
-    @Inject
-    protected KafkaAdminClientConfigProperties kafkaAdminClientConfig;
-
-    @Inject
     protected KafkaMetricsOptions kafkaMetricsOptions;
 
     private ClientConfigProperties commandConsumerConfig;
@@ -138,6 +130,10 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     private RequestResponseClientConfigProperties commandRouterConfig;
     private PrometheusBasedResourceLimitChecksConfig resourceLimitChecksConfig;
     private ConnectionEventProducerConfig connectionEventsConfig;
+
+    private KafkaProducerConfigProperties kafkaProducerConfig;
+    private KafkaConsumerConfigProperties kafkaConsumerConfig;
+    private KafkaAdminClientConfigProperties kafkaAdminClientConfig;
 
     private Cache<Object, TenantResult<TenantObject>> tenantResponseCache;
     private Cache<Object, RegistrationResult> registrationResponseCache;
@@ -222,6 +218,21 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     @Inject
     void setConnectionEventProducerConfig(final ConnectionEventProducerOptions options) {
         this.connectionEventsConfig = new ConnectionEventProducerConfig(options);
+    }
+
+    @Inject
+    void setKafkaClientOptions(final KafkaClientOptions options) {
+        this.kafkaProducerConfig = new KafkaProducerConfigProperties();
+        this.kafkaProducerConfig.setCommonClientConfig(options.commonClientConfig());
+        this.kafkaProducerConfig.setProducerConfig(options.producerConfig());
+
+        this.kafkaConsumerConfig = new KafkaConsumerConfigProperties();
+        this.kafkaConsumerConfig.setCommonClientConfig(options.commonClientConfig());
+        this.kafkaConsumerConfig.setConsumerConfig(options.consumerConfig());
+
+        this.kafkaAdminClientConfig = new KafkaAdminClientConfigProperties();
+        this.kafkaAdminClientConfig.setCommonClientConfig(options.commonClientConfig());
+        this.kafkaAdminClientConfig.setAdminClientConfig(options.adminClientConfig());
     }
 
     @Override

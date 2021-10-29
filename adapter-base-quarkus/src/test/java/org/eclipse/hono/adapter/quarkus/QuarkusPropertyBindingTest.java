@@ -17,9 +17,7 @@ import static com.google.common.truth.Truth.assertThat;
 
 import javax.inject.Inject;
 
-import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
-import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
-import org.eclipse.hono.client.kafka.producer.KafkaProducerConfigProperties;
+import org.eclipse.hono.client.kafka.KafkaClientOptions;
 import org.eclipse.hono.config.MapperEndpoint;
 import org.eclipse.hono.config.ProtocolAdapterOptions;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
@@ -34,13 +32,7 @@ import io.quarkus.test.junit.QuarkusTest;
 public class QuarkusPropertyBindingTest {
 
     @Inject
-    KafkaProducerConfigProperties kafkaProducerConfig;
-
-    @Inject
-    KafkaConsumerConfigProperties kafkaConsumerConfig;
-
-    @Inject
-    KafkaAdminClientConfigProperties kafkaAdminClientConfig;
+    KafkaClientOptions kafkaClientOptions;
 
     @Inject
     ProtocolAdapterOptions protocolAdapterOptions;
@@ -49,10 +41,8 @@ public class QuarkusPropertyBindingTest {
      * Asserts that the Kafka configuration is exposed as a beans.
      */
     @Test
-    public void testThatBeansAreProvided() {
-        assertThat(kafkaProducerConfig).isNotNull();
-        assertThat(kafkaConsumerConfig).isNotNull();
-        assertThat(kafkaAdminClientConfig).isNotNull();
+    public void testThatClientOptionsExist() {
+        assertThat(kafkaClientOptions).isNotNull();
     }
 
     /**
@@ -60,7 +50,7 @@ public class QuarkusPropertyBindingTest {
      */
     @Test
     public void testThatCommonConfigIsPresent() {
-        assertThat(kafkaProducerConfig.getProducerConfig("test").get("common.property")).isEqualTo("present");
+        assertThat(kafkaClientOptions.commonClientConfig().get("common.property")).isEqualTo("present");
     }
 
     /**
@@ -68,7 +58,7 @@ public class QuarkusPropertyBindingTest {
      */
     @Test
     public void testThatConsumerConfigIsPresent() {
-        assertThat(kafkaConsumerConfig.getConsumerConfig("test").get("consumer.property")).isEqualTo("consumer");
+        assertThat(kafkaClientOptions.consumerConfig().get("consumer.property")).isEqualTo("consumer");
     }
 
     /**
@@ -76,7 +66,7 @@ public class QuarkusPropertyBindingTest {
      */
     @Test
     public void testThatAdminClientConfigIsPresent() {
-        assertThat(kafkaAdminClientConfig.getAdminClientConfig("test").get("admin.property")).isEqualTo("admin");
+        assertThat(kafkaClientOptions.adminClientConfig().get("admin.property")).isEqualTo("admin");
     }
 
     /**
@@ -84,15 +74,7 @@ public class QuarkusPropertyBindingTest {
      */
     @Test
     public void testThatProducerConfigIsPresent() {
-        assertThat(kafkaProducerConfig.getProducerConfig("test").get("producer.property")).isEqualTo("producer");
-    }
-
-    /**
-     * Asserts that the properties' keys are converted to lowercase.
-     */
-    @Test
-    public void testThatKeysAreLowercase() {
-        assertThat(kafkaProducerConfig.getProducerConfig("test").get("foo")).isEqualTo("bar");
+        assertThat(kafkaClientOptions.producerConfig().get("producer.property")).isEqualTo("producer");
     }
 
     /**
@@ -100,16 +82,15 @@ public class QuarkusPropertyBindingTest {
      */
     @Test
     public void testThatKeysWithDotsAreAllowed() {
-        assertThat(kafkaProducerConfig.getProducerConfig("test").get("bootstrap.servers"))
-                .isEqualTo("example.com:9999");
+        assertThat(kafkaClientOptions.commonClientConfig().get("bootstrap.servers")).isEqualTo("example.com:9999");
     }
 
     /**
      * Asserts that properties with a numeric value added as strings.
      */
     @Test
-    public void testThatNumberArePresentAsStrings() {
-        assertThat(kafkaProducerConfig.getProducerConfig("test").get("number")).isEqualTo("123");
+    public void testThatNumbersArePresentAsStrings() {
+        assertThat(kafkaClientOptions.commonClientConfig().get("number")).isEqualTo("123");
     }
 
     /**

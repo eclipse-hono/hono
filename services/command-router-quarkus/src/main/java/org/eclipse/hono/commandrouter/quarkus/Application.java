@@ -21,6 +21,7 @@ import javax.inject.Inject;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.kafka.KafkaClientOptions;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.metrics.KafkaMetricsOptions;
@@ -82,6 +83,8 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
 @ApplicationScoped
 public class Application extends AbstractServiceApplication {
 
+    private static final String DEFAULT_CLIENT_ID_PREFIX = "cmd-router";
+
     // workaround so that the Quarkus KubernetesClientProcessor finds a Pod watcher and registers corresponding model classes
     static {
         new Watcher<Pod>() {
@@ -99,12 +102,6 @@ public class Application extends AbstractServiceApplication {
 
     @Inject
     Tracer tracer;
-
-    @Inject
-    KafkaProducerConfigProperties kafkaProducerConfig;
-
-    @Inject
-    KafkaConsumerConfigProperties kafkaConsumerConfig;
 
     @Inject
     DeviceConnectionInfo deviceConnectionInfo;
@@ -126,6 +123,8 @@ public class Application extends AbstractServiceApplication {
     private RequestResponseClientConfigProperties deviceRegistrationClientConfig;
     private RequestResponseClientConfigProperties tenantClientConfig;
     private KafkaClientMetricsSupport kafkaClientMetricsSupport;
+    private KafkaProducerConfigProperties kafkaProducerConfig;
+    private KafkaConsumerConfigProperties kafkaConsumerConfig;
 
     private Cache<Object, RegistrationResult> registrationResponseCache;
     private Cache<Object, TenantResult<TenantObject>> tenantResponseCache;
@@ -174,6 +173,19 @@ public class Application extends AbstractServiceApplication {
                 ? new MicrometerKafkaClientMetricsSupport(meterRegistry, options.useDefaultMetrics(),
                         options.metricsPrefixes().orElse(List.of()))
                 : NoopKafkaClientMetricsSupport.INSTANCE;
+    }
+
+    @Inject
+    void setKafkaClientOptions(final KafkaClientOptions options) {
+        this.kafkaProducerConfig = new KafkaProducerConfigProperties();
+        this.kafkaProducerConfig.setCommonClientConfig(options.commonClientConfig());
+        this.kafkaProducerConfig.setProducerConfig(options.producerConfig());
+        this.kafkaProducerConfig.setDefaultClientIdPrefix(DEFAULT_CLIENT_ID_PREFIX);
+
+        this.kafkaConsumerConfig = new KafkaConsumerConfigProperties();
+        this.kafkaConsumerConfig.setCommonClientConfig(options.commonClientConfig());
+        this.kafkaConsumerConfig.setConsumerConfig(options.consumerConfig());
+        this.kafkaConsumerConfig.setDefaultClientIdPrefix(DEFAULT_CLIENT_ID_PREFIX);
     }
 
     @Override
