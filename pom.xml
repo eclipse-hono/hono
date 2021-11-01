@@ -572,6 +572,24 @@
 
   <profiles>
     <profile>
+      <id>java_15_and_later</id>
+      <activation>
+        <jdk>[15,)</jdk>
+      </activation>
+      <dependencies>
+        <!--
+          use BC for creating self-signed certs instead of sun.security.x509
+          which has been removed in OpenJDK 15
+        -->
+        <dependency>
+          <groupId>org.bouncycastle</groupId>
+          <artifactId>bcpkix-jdk15on</artifactId>
+          <version>1.69</version>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
       <id>no_docker</id>
       <activation>
         <property>
