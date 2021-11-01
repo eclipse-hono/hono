@@ -1013,7 +1013,9 @@ import io.vertx.junit5.VertxTestContext;
                     return httpResponse;
                 });
         logger.info("sent first request");
-        firstMessageReceived.await();
+        if (!firstMessageReceived.await(5, TimeUnit.SECONDS)) {
+            ctx.failNow(new IllegalStateException("first message not received in time"));
+        }
 
         // followed by a second request
         requestHeaders = MultiMap.caseInsensitiveMultiMap()
@@ -1032,7 +1034,9 @@ import io.vertx.junit5.VertxTestContext;
                 });
         logger.info("sent second request");
         // wait for messages having been received
-        secondMessageReceived.await();
+        if (!secondMessageReceived.await(5, TimeUnit.SECONDS)) {
+            ctx.failNow(new IllegalStateException("second message not received in time"));
+        }
         // send command
         final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
         final Future<Void> commandSent = helper.sendOneWayCommand(tenantId, deviceId, COMMAND_TO_SEND,
