@@ -578,7 +578,11 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(TOPIC_PARTITION));
 
         final VertxTestContext consumerStartedCtx = new VertxTestContext();
-        consumer.start().onComplete(consumerStartedCtx.succeedingThenComplete());
+        final Checkpoint consumerStartedCheckpoint = consumerStartedCtx.checkpoint(2);
+        consumer.setOnRebalanceDoneHandler(s -> consumerStartedCheckpoint.flag());
+        vertx.getOrCreateContext().runOnContext(v -> {
+            consumer.start().onSuccess(v2 -> consumerStartedCheckpoint.flag());
+        });
         assertWithMessage("consumer started in 5s")
                 .that(consumerStartedCtx.awaitCompletion(5, TimeUnit.SECONDS))
                 .isTrue();
@@ -599,8 +603,8 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
                 assertThat(offsetAndMetadata).isNotNull();
                 assertThat(offsetAndMetadata.offset()).isEqualTo(0);
             });
-            rebalance1Done.countDown();
         });
+        consumer.setOnRebalanceDoneHandler(s -> rebalance1Done.countDown());
         // now force a rebalance which should trigger the above onPartitionsAssignedHandler
         mockConsumer.updateEndOffsets(Map.of(TOPIC2_PARTITION, ((long) 0)));
         mockConsumer.rebalance(List.of(TOPIC2_PARTITION));
@@ -619,8 +623,8 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
                 assertThat(offsetAndMetadata).isNotNull();
                 assertThat(offsetAndMetadata.offset()).isEqualTo(0);
             });
-            rebalance2Done.countDown();
         });
+        consumer.setOnRebalanceDoneHandler(s -> rebalance2Done.countDown());
         // now again force a rebalance which should trigger the above onPartitionsAssignedHandler
         // - this time again with the first partition
         mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, ((long) 0)));
