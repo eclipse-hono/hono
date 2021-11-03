@@ -28,8 +28,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.CooperativeStickyAssignor;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.config.TopicConfig;
 import org.eclipse.hono.client.kafka.consumer.HonoKafkaConsumer;
@@ -41,6 +43,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,6 +88,10 @@ public class HonoKafkaConsumerIT {
     private static List<String> topicsToDeleteAfterTests;
 
     private HonoKafkaConsumer kafkaConsumer;
+
+    private static Stream<String> partitionAssignmentStrategies() {
+        return Stream.of(null, CooperativeStickyAssignor.class.getName());
+    }
 
     /**
      * Sets up fixture.
@@ -149,12 +157,15 @@ public class HonoKafkaConsumerIT {
      * Verifies that a HonoKafkaConsumer configured with "latest" as offset reset strategy only receives
      * records published after the consumer <em>start()</em> method has completed.
      *
+     * @param partitionAssignmentStrategy The partition assignment strategy to use for the consumer.
      * @param ctx The vert.x test context.
      * @throws InterruptedException if test execution gets interrupted.
      */
-    @Test
+    @ParameterizedTest
+    @MethodSource("partitionAssignmentStrategies")
     @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
-    public void testConsumerReadsLatestRecordsPublishedAfterStart(final VertxTestContext ctx) throws InterruptedException {
+    public void testConsumerReadsLatestRecordsPublishedAfterStart(final String partitionAssignmentStrategy,
+            final VertxTestContext ctx) throws InterruptedException {
         final int numTopics = 2;
         final int numPartitions = 5;
         final int numTestRecordsPerTopic = 20;
@@ -178,6 +189,7 @@ public class HonoKafkaConsumerIT {
 
         // prepare consumer
         final Map<String, String> consumerConfig = IntegrationTestSupport.getKafkaConsumerConfig().getConsumerConfig("test");
+        applyPartitionAssignmentStrategy(consumerConfig, partitionAssignmentStrategy);
         consumerConfig.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
 
         final String publishedAfterStartRecordKey = "publishedAfterStartKey";
@@ -347,12 +359,15 @@ public class HonoKafkaConsumerIT {
      * method has completed are received by the consumer, also if the topic was only created after the consumer
      * <em>start</em> method has completed.
      *
+     * @param partitionAssignmentStrategy The partition assignment strategy to use for the consumer.
      * @param ctx The vert.x test context.
      * @throws InterruptedException if test execution gets interrupted.
      */
-    @Test
+    @ParameterizedTest
+    @MethodSource("partitionAssignmentStrategies")
     @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
-    public void testConsumerReadsLatestRecordsPublishedAfterTopicSubscriptionConfirmed(final VertxTestContext ctx) throws InterruptedException {
+    public void testConsumerReadsLatestRecordsPublishedAfterTopicSubscriptionConfirmed(
+            final String partitionAssignmentStrategy, final VertxTestContext ctx) throws InterruptedException {
         final String patternPrefix = "test_" + UUID.randomUUID() + "_";
         final int numTopics = 2;
         final Pattern topicPattern = Pattern.compile(Pattern.quote(patternPrefix) + ".*");
@@ -377,6 +392,7 @@ public class HonoKafkaConsumerIT {
 
         // prepare consumer
         final Map<String, String> consumerConfig = IntegrationTestSupport.getKafkaConsumerConfig().getConsumerConfig("test");
+        applyPartitionAssignmentStrategy(consumerConfig, partitionAssignmentStrategy);
         consumerConfig.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
 
         final AtomicReference<Promise<Void>> nextRecordReceivedPromiseRef = new AtomicReference<>();
@@ -412,6 +428,69 @@ public class HonoKafkaConsumerIT {
                 ctx.completeNow();
             });
         }));
+    }
+
+    /**
+     * Verifies that a HonoKafkaConsumer configured with "latest" as offset reset strategy and a topic pattern
+     * subscription receives records published after multiple <em>ensureTopicIsAmongSubscribedTopicPatternTopics()</em>
+     * invocations have been completed.
+     *
+     * @param partitionAssignmentStrategy The partition assignment strategy to use for the consumer.
+     * @param ctx The vert.x test context.
+     * @throws InterruptedException if test execution gets interrupted.
+     */
+    @ParameterizedTest
+    @MethodSource("partitionAssignmentStrategies")
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testConsumerReadsAllRecordsForDynamicallyCreatedTopics(
+            final String partitionAssignmentStrategy, final VertxTestContext ctx) throws InterruptedException {
+        final String patternPrefix = "test_" + UUID.randomUUID() + "_";
+        final int numTopicsAndRecords = 3;
+        final Pattern topicPattern = Pattern.compile(Pattern.quote(patternPrefix) + ".*");
+
+        // prepare consumer
+        final Map<String, String> consumerConfig = IntegrationTestSupport.getKafkaConsumerConfig().getConsumerConfig("test");
+        applyPartitionAssignmentStrategy(consumerConfig, partitionAssignmentStrategy);
+        consumerConfig.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
+
+        final Promise<Void> allRecordsReceivedPromise = Promise.promise();
+        final List<KafkaConsumerRecord<String, Buffer>> receivedRecords = new ArrayList<>();
+        final Handler<KafkaConsumerRecord<String, Buffer>> recordHandler = record -> {
+            receivedRecords.add(record);
+            if (receivedRecords.size() == numTopicsAndRecords) {
+                allRecordsReceivedPromise.complete();
+            }
+        };
+
+        kafkaConsumer = new HonoKafkaConsumer(vertx, topicPattern, recordHandler, consumerConfig);
+        // start consumer
+        kafkaConsumer.start().onComplete(ctx.succeeding(v -> {
+            ctx.verify(() -> {
+                assertThat(receivedRecords.size()).isEqualTo(0);
+            });
+            LOG.debug("consumer started, create new topics implicitly by invoking ensureTopicIsAmongSubscribedTopicPatternTopics()");
+            final String recordKey = "addedAfterStartKey";
+            for (int i = 0; i < numTopicsAndRecords; i++) {
+                final String topic = patternPrefix + i;
+                kafkaConsumer.ensureTopicIsAmongSubscribedTopicPatternTopics(topic)
+                        .onComplete(ctx.succeeding(v2 -> {
+                            LOG.debug("publish record to be received by the consumer");
+                            publish(topic, recordKey, Buffer.buffer("testPayload"));
+                        }));
+            }
+            allRecordsReceivedPromise.future().onComplete(ar -> {
+                ctx.verify(() -> {
+                    assertThat(receivedRecords.size()).isEqualTo(numTopicsAndRecords);
+                    receivedRecords.forEach(record -> assertThat(record.key()).isEqualTo(recordKey));
+                });
+                ctx.completeNow();
+            });
+        }));
+        if (!ctx.awaitCompletion(9, TimeUnit.SECONDS)) {
+            ctx.failNow(new IllegalStateException(String.format(
+                    "timeout waiting for expected number of records (%d) to be received; received records: %d",
+                    numTopicsAndRecords, receivedRecords.size())));
+        }
     }
 
     /**
@@ -477,14 +556,18 @@ public class HonoKafkaConsumerIT {
      * "latest" as offset reset strategy, only receives records on the auto-created topic published after the consumer
      * <em>start()</em> method has completed.
      *
+     * @param partitionAssignmentStrategy The partition assignment strategy to use for the consumer.
      * @param ctx The vert.x test context.
      */
-    @Test
+    @ParameterizedTest
+    @MethodSource("partitionAssignmentStrategies")
     @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
-    public void testConsumerAutoCreatesTopicAndReadsLatestRecordsPublishedAfterStart(final VertxTestContext ctx) {
+    public void testConsumerAutoCreatesTopicAndReadsLatestRecordsPublishedAfterStart(
+            final String partitionAssignmentStrategy, final VertxTestContext ctx) {
 
         // prepare consumer
         final Map<String, String> consumerConfig = IntegrationTestSupport.getKafkaConsumerConfig().getConsumerConfig("test");
+        applyPartitionAssignmentStrategy(consumerConfig, partitionAssignmentStrategy);
         consumerConfig.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
 
         final AtomicReference<Promise<Void>> nextRecordReceivedPromiseRef = new AtomicReference<>();
@@ -559,5 +642,10 @@ public class HonoKafkaConsumerIT {
         return resultPromise.future();
     }
 
+    private void applyPartitionAssignmentStrategy(final Map<String, String> consumerConfig,
+            final String partitionAssignmentStrategy) {
+        Optional.ofNullable(partitionAssignmentStrategy)
+                .ifPresent(s -> consumerConfig.put(ConsumerConfig.PARTITION_ASSIGNMENT_STRATEGY_CONFIG, s));
+    }
 }
 
