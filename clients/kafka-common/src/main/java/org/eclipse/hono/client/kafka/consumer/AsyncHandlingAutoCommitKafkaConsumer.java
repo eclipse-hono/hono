@@ -36,6 +36,7 @@ import java.util.stream.Collectors;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.errors.RebalanceInProgressException;
 import org.eclipse.hono.util.Pair;
 import org.eclipse.hono.util.Strings;
 
@@ -159,6 +160,7 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
      */
     private final Map<TopicPartition, Long> lastKnownCommittedOffsets = new HashMap<>();
     private final AtomicBoolean periodicCommitInvocationInProgress = new AtomicBoolean();
+    private final AtomicBoolean periodicCommitRetryAfterRebalanceNeeded = new AtomicBoolean();
     private final AtomicInteger recordsInProcessingCounter = new AtomicInteger();
     private final AtomicReference<UncompletedRecordsCompletionLatch> uncompletedRecordsCompletionLatchRef = new AtomicReference<>();
 
@@ -306,7 +308,9 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
 
     @Override
     public Future<Void> start() {
-        return super.start().onComplete(v -> startPeriodicCommitTimer());
+        return super.start().onComplete(v -> {
+            periodicCommitTimerId = vertx.setPeriodic(commitIntervalMillis, tid -> doPeriodicCommit());
+        });
     }
 
     @Override
@@ -333,6 +337,13 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
             // otherwise records published during an upcoming rebalance might be skipped if the partition gets assigned
             // to another consumer which then just begins reading on the latest offset, not the offset from before the rebalance
             ensureOffsetCommitsExistForNewlyAssignedPartitions(partitionsSet);
+        }
+        if (periodicCommitRetryAfterRebalanceNeeded.get()) {
+            runOnContext(v -> {
+                if (periodicCommitRetryAfterRebalanceNeeded.compareAndSet(true, false)) {
+                    doPeriodicCommit();
+                }
+            });
         }
     }
 
@@ -425,36 +436,41 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
         }
     }
 
-    private void startPeriodicCommitTimer() {
-        periodicCommitTimerId = vertx.setPeriodic(commitIntervalMillis, tid -> {
-            if (!periodicCommitInvocationInProgress.compareAndSet(false, true)) {
-                log.trace("periodic commit already triggered, skipping invocation");
-                return;
-            }
-            // run periodic commit on the kafka polling thread, to be able to call commitAsync (not provided by the vert.x KafkaConsumer)
-            runOnKafkaWorkerThread(v -> {
-                final var offsets = getOffsetsToCommit();
-                if (!offsets.isEmpty()) {
-                    if (log.isTraceEnabled()) {
-                        log.trace("do periodic commit; offsets: [{}]", HonoKafkaConsumerHelper.getOffsetsDebugString(offsets));
-                    }
-                    try {
-                        getUnderlyingConsumer().commitAsync(offsets, (committedOffsets, error) -> {
-                            if (error != null) {
-                                log.info("periodic commit failed: {} [client-id: {}]", error, getClientId());
-                            } else {
-                                log.trace("periodic commit succeeded");
-                                setCommittedOffsets(committedOffsets);
-                            }
-                        });
-                    } catch (final Exception ex) {
-                        log.error("error doing periodic commit [client-id: {}]", getClientId(), ex);
-                    }
-                } else {
-                    log.trace("skip periodic commit - no offsets to commit");
+    private void doPeriodicCommit() {
+        periodicCommitRetryAfterRebalanceNeeded.set(false);
+        if (!periodicCommitInvocationInProgress.compareAndSet(false, true)) {
+            log.trace("periodic commit already triggered, skipping invocation");
+            return;
+        }
+        // run periodic commit on the kafka polling thread, to be able to call commitAsync (not provided by the vert.x KafkaConsumer)
+        runOnKafkaWorkerThread(v -> {
+            final var offsets = getOffsetsToCommit();
+            if (!offsets.isEmpty()) {
+                if (log.isTraceEnabled()) {
+                    log.trace("do periodic commit; offsets: [{}]", HonoKafkaConsumerHelper.getOffsetsDebugString(offsets));
                 }
-                periodicCommitInvocationInProgress.set(false);
-            });
+                try {
+                    getUnderlyingConsumer().commitAsync(offsets, (committedOffsets, error) -> {
+                        if (error != null) {
+                            log.info("periodic commit failed: {} [client-id: {}]", error, getClientId());
+                        } else {
+                            log.trace("periodic commit succeeded");
+                            setCommittedOffsets(committedOffsets);
+                        }
+                    });
+                } catch (final RebalanceInProgressException ex) {
+                    log.debug("could not do periodic commit [client-id: {}]", getClientId(), ex);
+                    if (isCooperativeRebalancingConfigured()) {
+                        // with cooperative rebalancing, there isn't necessarily an offset commit during the rebalance, so retry the offset commit after the rebalance
+                        periodicCommitRetryAfterRebalanceNeeded.set(true);
+                    }
+                } catch (final Exception ex) {
+                    log.error("error doing periodic commit [client-id: {}]", getClientId(), ex);
+                }
+            } else {
+                log.trace("skip periodic commit - no offsets to commit");
+            }
+            periodicCommitInvocationInProgress.set(false);
         });
     }
 

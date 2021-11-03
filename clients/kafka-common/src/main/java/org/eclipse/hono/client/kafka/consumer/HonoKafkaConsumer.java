@@ -34,6 +34,7 @@ import java.util.regex.Pattern;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
+import org.apache.kafka.clients.consumer.CooperativeStickyAssignor;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
@@ -487,6 +488,18 @@ public class HonoKafkaConsumer implements Lifecycle {
             }
             log.trace("done checking positions for {} newly assigned partitions", assignedPartitions.size());
         }
+    }
+
+    /**
+     * Checks if a partition assignment strategy using cooperative rebalancing is used.
+     *
+     * @return {@code true} if cooperative rebalancing is used.
+     */
+    protected final boolean isCooperativeRebalancingConfigured() {
+        // check if CooperativeStickyAssignor is configured (custom cooperative assignor not supported for now)
+        return Optional.ofNullable(consumerConfig.get(ConsumerConfig.PARTITION_ASSIGNMENT_STRATEGY_CONFIG))
+                .map(value -> value.equals(CooperativeStickyAssignor.class.getName()))
+                .orElse(false);
     }
 
     /**
