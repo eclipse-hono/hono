@@ -34,6 +34,7 @@ import javax.security.auth.x500.X500Principal;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
+import org.eclipse.hono.client.kafka.consumer.AsyncHandlingAutoCommitKafkaConsumer;
 import org.eclipse.hono.client.kafka.consumer.HonoKafkaConsumer;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.metrics.NoopKafkaClientMetricsSupport;
@@ -95,8 +96,8 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
     private static Vertx vertx;
     private static KafkaAdminClient adminClient;
     private static KafkaProducer<String, Buffer> kafkaProducer;
+    private static final Set<String> topicsToDeleteAfterTest = new HashSet<>();
 
-    private final Set<String> topicsToDeleteAfterTest = new HashSet<>();
     private final List<Lifecycle> componentsToStopAfterTest = new ArrayList<>();
     private final String adapterInstanceId = "myAdapterInstanceId_" + UUID.randomUUID();
     private final String commandRouterGroupId = "cmdRouter_" + UUID.randomUUID();
@@ -123,9 +124,26 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
      */
     @AfterAll
     public static void shutDown(final VertxTestContext ctx) {
+
+        final Promise<Void> topicsDeletedPromise = Promise.promise();
+        // delete topics with a delay - overall test run might include command router tests,
+        // in which case the command router kafka consumer will try to commit offsets for these topics once,
+        // and the topic must still exist then, otherwise there will be errors and delays. So wait until the commits have happened.
+        vertx.setTimer(AsyncHandlingAutoCommitKafkaConsumer.DEFAULT_COMMIT_INTERVAL.toMillis(), tid -> {
+            final Set<String> topicsToDelete = new HashSet<>(topicsToDeleteAfterTest);
+            topicsToDeleteAfterTest.clear();
+            final Promise<Void> resultPromise = Promise.promise();
+            adminClient.deleteTopics(new ArrayList<>(topicsToDelete), resultPromise);
+            resultPromise.future()
+                    .onFailure(thr -> LOG.info("error deleting test topics", thr))
+                    .onSuccess(v -> LOG.debug("done deleting test topics (with {}s delay)",
+                            AsyncHandlingAutoCommitKafkaConsumer.DEFAULT_COMMIT_INTERVAL.toSeconds()))
+                    .onComplete(topicsDeletedPromise);
+        });
+
         final Promise<Void> producerClosePromise = Promise.promise();
         kafkaProducer.close(producerClosePromise);
-        producerClosePromise.future()
+        CompositeFuture.all(producerClosePromise.future(), topicsDeletedPromise.future())
                 .onComplete(ar -> {
                     adminClient.close();
                     adminClient = null;
@@ -147,19 +165,8 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
         final List<Future> stopFutures = new ArrayList<>();
         componentsToStopAfterTest.forEach(component -> stopFutures.add(component.stop()));
         componentsToStopAfterTest.clear();
-        CompositeFuture.join(stopFutures)
-                .onComplete(f -> {
-                    final Promise<Void> topicsDeletedPromise = Promise.promise();
-                    adminClient.deleteTopics(new ArrayList<>(topicsToDeleteAfterTest), topicsDeletedPromise);
-                    topicsDeletedPromise.future()
-                            .recover(thr -> {
-                                LOG.info("error deleting topics", thr);
-                                return Future.succeededFuture();
-                            }).onComplete(ar -> {
-                                topicsToDeleteAfterTest.clear();
-                                ctx.completeNow();
-                            });
-                });
+        CompositeFuture.all(stopFutures)
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
