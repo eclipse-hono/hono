@@ -19,6 +19,7 @@ import static com.google.common.truth.Truth.assertWithMessage;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -169,32 +170,45 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
 
     /**
      * Verifies that the maximum number of records in processing by the consumer does not exceed
-     * the configured limit.
+     * the limit of 1.5 times the <em>max.poll.records</em> config value.
      *
      * @param ctx The vert.x test context.
      */
     @Test
     public void testConsumerRespectsMaxRecordsInProcessingLimit(final VertxTestContext ctx) {
-        final AtomicInteger offsetCounter = new AtomicInteger();
-        final int numTestBatches = 5;
         final int maxPollRecords = 10;
-        final int maxRecordsInProcessing = maxPollRecords + 1;
-        final int numRecords = numTestBatches * maxPollRecords;
+        final int throttlingThreshold = maxPollRecords
+                * AsyncHandlingAutoCommitKafkaConsumer.THROTTLING_THRESHOLD_PERCENTAGE_OF_MAX_POLL_RECORDS / 100;
+        final int maxRecordsInProcessing = maxPollRecords + Math.max(throttlingThreshold, 1);
+
+        final int numTestBatches = 5;
+        final int numRecordsPerBatch = maxPollRecords;
+        final int numRecords = numTestBatches * numRecordsPerBatch;
+        final AtomicInteger offsetCounter = new AtomicInteger();
         final Promise<Void> allRecordsReceivedPromise = Promise.promise();
         final List<Promise<Void>> uncompletedRecordHandlingPromises = new ArrayList<>();
         final List<KafkaConsumerRecord<String, Buffer>> receivedRecords = new ArrayList<>();
         final AtomicInteger observedMaxRecordsInProcessing = new AtomicInteger();
+        final AtomicInteger testBatchesToAdd = new AtomicInteger(numTestBatches);
+
+        // let the consumer record handler only complete the record processing when consumer record fetching is already paused (or if all records have been received)
         final Function<KafkaConsumerRecord<String, Buffer>, Future<Void>> recordHandler = record -> {
             receivedRecords.add(record);
 
             final Promise<Void> recordHandlingCompleted = Promise.promise();
             uncompletedRecordHandlingPromises.add(recordHandlingCompleted);
-            if (consumer.isPaused() || receivedRecords.size() == numRecords) {
+            if (consumer.isRecordFetchingPaused() || receivedRecords.size() == numRecords) {
                 if (uncompletedRecordHandlingPromises.size() > observedMaxRecordsInProcessing.get()) {
                     observedMaxRecordsInProcessing.set(uncompletedRecordHandlingPromises.size());
                 }
-                uncompletedRecordHandlingPromises.forEach(Promise::tryComplete);
-                uncompletedRecordHandlingPromises.clear();
+                if (receivedRecords.size() == numRecords) {
+                    LOG.trace("complete all remaining {} record handling promises", uncompletedRecordHandlingPromises.size());
+                    uncompletedRecordHandlingPromises.forEach(Promise::tryComplete);
+                    uncompletedRecordHandlingPromises.clear();
+                } else {
+                    // complete record handling promises until consumer record fetching isn't paused anymore
+                    completeUntilConsumerRecordFetchingResumed(uncompletedRecordHandlingPromises.iterator());
+                }
             }
             if (receivedRecords.size() == numRecords) {
                 vertx.runOnContext(v -> allRecordsReceivedPromise.tryComplete());
@@ -213,14 +227,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(TOPIC_PARTITION));
         consumer.start().onComplete(ctx.succeeding(v2 -> {
             // schedule the poll tasks
-            for (int i = 0; i < numTestBatches; i++) {
-                mockConsumer.schedulePollTask(() -> {
-                    for (int j = 0; j < maxPollRecords; j++) {
-                        final int offset = offsetCounter.getAndIncrement();
-                        mockConsumer.addRecord(new ConsumerRecord<>(TOPIC, PARTITION, offset, "key_" + offset, Buffer.buffer()));
-                    }
-                });
-            }
+            schedulePollTasksWithConsumerPausedCheck(offsetCounter, numRecordsPerBatch, testBatchesToAdd);
             final long timerId = vertx.setTimer(8000, tid -> {
                 LOG.info("received records:\n{}",
                         receivedRecords.stream().map(Object::toString).collect(Collectors.joining(",\n")));
@@ -236,6 +243,40 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
                 ctx.completeNow();
             }));
         }));
+    }
+
+    /**
+     * Schedules poll tasks providing each a batch of records, if consumer record fetching isn't paused at that time.
+     * This is needed because the MockConsumer doesn't take the <em>max.poll.records</em> config value into account
+     * and records added while a consumer is paused would just be returned on the next poll, leading to the batch size
+     * not having the expected value.
+     */
+    private void schedulePollTasksWithConsumerPausedCheck(final AtomicInteger offsetCounter, final int numRecordsPerBatch,
+            final AtomicInteger numBatchesToAdd) {
+        mockConsumer.schedulePollTask(() -> {
+            // only add records if consumer record fetching isn't paused
+            if (mockConsumer.paused().isEmpty()) {
+                for (int j = 0; j < numRecordsPerBatch; j++) {
+                    final int offset = offsetCounter.getAndIncrement();
+                    mockConsumer.addRecord(new ConsumerRecord<>(TOPIC, PARTITION, offset, "key_" + offset, Buffer.buffer()));
+                }
+                numBatchesToAdd.decrementAndGet();
+            }
+            if (numBatchesToAdd.get() > 0) {
+                schedulePollTasksWithConsumerPausedCheck(offsetCounter, numRecordsPerBatch, numBatchesToAdd);
+            }
+        });
+    }
+
+    private void completeUntilConsumerRecordFetchingResumed(final Iterator<Promise<Void>> iterator) {
+        if (consumer.isRecordFetchingPaused() && iterator.hasNext()) {
+            vertx.runOnContext(v -> {
+                LOG.trace("complete record handling promise");
+                iterator.next().tryComplete();
+                iterator.remove();
+                completeUntilConsumerRecordFetchingResumed(iterator);
+            });
+        }
     }
 
     /**
