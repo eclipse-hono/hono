@@ -39,6 +39,7 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.eclipse.hono.util.Lifecycle;
+import org.eclipse.hono.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,7 +83,7 @@ public class HonoKafkaConsumer implements Lifecycle {
     protected final Set<String> topics;
     protected final Pattern topicPattern;
 
-    private final AtomicReference<Promise<Void>> subscribeDonePromiseRef = new AtomicReference<>();
+    private final AtomicReference<Pair<Promise<Void>, Promise<Void>>> subscriptionUpdatedAndPartitionsAssignedPromiseRef = new AtomicReference<>();
     private final Handler<KafkaConsumerRecord<String, Buffer>> recordHandler;
     private final AtomicBoolean paused = new AtomicBoolean();
 
@@ -541,11 +542,18 @@ public class HonoKafkaConsumer implements Lifecycle {
         if (stopCalled.get()) {
             return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "already stopped"));
         }
-        final Promise<Void> subscribeDonePromise = subscribeDonePromiseRef
-                .updateAndGet(promise -> promise == null ? Promise.promise() : promise);
-        final Promise<Void> subscriptionPromise = Promise.promise();
+        final Promise<Void> partitionAssignmentDone = Promise.promise();
+        final Promise<Void> subscriptionUpdated = Promise.promise();
+        final Pair<Promise<Void>, Promise<Void>> newPromisePair = Pair.of(subscriptionUpdated, partitionAssignmentDone);
+
+        final var promisePair = subscriptionUpdatedAndPartitionsAssignedPromiseRef
+                .updateAndGet(promise -> promise == null ? newPromisePair : promise);
+        if (!promisePair.equals(newPromisePair)) {
+            log.debug("subscribeAndWaitForRebalance: will wait for ongoing invocation to complete");
+            return CompositeFuture.all(promisePair.one().future(), promisePair.two().future()).mapEmpty();
+        }
         if (topicPattern != null) {
-            kafkaConsumer.subscribe(topicPattern, subscriptionPromise);
+            kafkaConsumer.subscribe(topicPattern, subscriptionUpdated);
         } else {
             // Trigger retrieval of metadata for each of the subscription topics if not already available locally;
             // this will also trigger topic auto-creation if the topic doesn't exist yet.
@@ -562,21 +570,24 @@ public class HonoKafkaConsumer implements Lifecycle {
                         });
                 HonoKafkaConsumerHelper.partitionsFor(kafkaConsumer, topic, partitionsForFuture);
             });
-
-            kafkaConsumer.subscribe(topics, subscriptionPromise);
+            kafkaConsumer.subscribe(topics, subscriptionUpdated);
         }
         // kafkaConsumerWorker has to be retrieved after the first "subscribe" invocation
         if (kafkaConsumerWorker == null) {
             kafkaConsumerWorker = getKafkaConsumerWorker(kafkaConsumer);
         }
         vertx.setTimer(WAIT_FOR_REBALANCE_TIMEOUT, ar -> {
-            if (!subscribeDonePromise.future().isComplete()) {
+            if (!partitionAssignmentDone.future().isComplete()) {
+                subscriptionUpdatedAndPartitionsAssignedPromiseRef.compareAndSet(promisePair, null);
                 final String errorMsg = "timed out waiting for rebalance and update of subscribed topics";
                 log.warn(errorMsg);
-                subscribeDonePromise.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, errorMsg));
+                partitionAssignmentDone.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, errorMsg));
             }
         });
-        return CompositeFuture.all(subscriptionPromise.future(), subscribeDonePromise.future()).mapEmpty();
+        subscriptionUpdated.future().onFailure(thr -> {
+            subscriptionUpdatedAndPartitionsAssignedPromiseRef.compareAndSet(promisePair, null);
+        });
+        return CompositeFuture.all(subscriptionUpdated.future(), partitionAssignmentDone.future()).mapEmpty();
     }
 
     /**
@@ -597,8 +608,8 @@ public class HonoKafkaConsumer implements Lifecycle {
     }
 
     private void onPartitionsAssigned(final Set<TopicPartition> partitionsSet) {
-        Optional.ofNullable(subscribeDonePromiseRef.getAndSet(null))
-                .ifPresent(Promise::tryComplete);
+        Optional.ofNullable(subscriptionUpdatedAndPartitionsAssignedPromiseRef.getAndSet(null))
+                .ifPresent(promisePair -> promisePair.two().tryComplete());
         if (onPartitionsAssignedHandler != null) {
             onPartitionsAssignedHandler.handle(partitionsSet);
         }
@@ -746,6 +757,8 @@ public class HonoKafkaConsumer implements Lifecycle {
      * The successful completion of the returned Future means that the topic exists and is among the subscribed topics.
      * It also means that if partitions of this topic have been assigned to this consumer, the positions for these
      * partitions have already been fetched and the consumer will receive records published thereafter.
+     * If all topic partition are assigned to other consumers, a best-effort approach is taken to let the result
+     * Future be completed after this assignment has been done.
      * <p>
      * Note that this method is only applicable if a topic pattern subscription is used, otherwise an
      * {@link IllegalStateException} is thrown.
@@ -781,6 +794,7 @@ public class HonoKafkaConsumer implements Lifecycle {
             log.debug("ensureTopicIsAmongSubscribedTopics: topic is already subscribed [{}]", topic);
             return Future.succeededFuture();
         }
+        final Set<String> subscribedTopicPatternTopicsBefore = new HashSet<>(subscribedTopicPatternTopics);
         final Promise<List<PartitionInfo>> topicCheckFuture = Promise.promise();
         // check whether topic has been created since the last rebalance
         // and if not, potentially create it here implicitly
@@ -796,13 +810,32 @@ public class HonoKafkaConsumer implements Lifecycle {
         // the topic list of a wildcard subscription only gets refreshed periodically by default (interval is defined by "metadata.max.age.ms");
         // therefore enforce a refresh here by again subscribing to the topic pattern
         log.debug("ensureTopicIsAmongSubscribedTopics: wait for subscription update and rebalance [{}]", topic);
+        // not composed with the topicCheckFuture outcome in order for both operations to be invoked directly after one another, with no poll() in between
         return subscribeAndWaitForRebalance()
                 .compose(v -> {
+                    final boolean someTopicDeleted = subscribedTopicPatternTopicsBefore.stream().anyMatch(t -> !subscribedTopicPatternTopics.contains(t));
                     if (!subscribedTopicPatternTopics.contains(topic)) {
                         // first metadata refresh could have failed with a LEADER_NOT_AVAILABLE error for the new topic;
                         // seems to happen when some other topics have just been deleted for example
                         log.debug("ensureTopicIsAmongSubscribedTopics: subscription not updated with topic after rebalance; try again [topic: {}]", topic);
                         return subscribeAndWaitForRebalance();
+                    } else if (isCooperativeRebalancingConfigured() && someTopicDeleted && isAutoOffsetResetConfigLatest()) {
+                        // subscribedTopicPatternTopics has the new topic here, but in rare cases (observed only with cooperative rebalancing) we should wait for
+                        // another rebalance to ensure the partitions of the new topic got indeed assigned and its offset positions got reset to latest
+                        // (most probable case here is that the rebalance was triggered by a recent deletion of topics, other cases aren't handled here)
+                        return kafkaConsumer.assignment().compose(partitions -> {
+                            if (partitions.stream().anyMatch(p -> p.getTopic().equals(topic))) {
+                                return Future.succeededFuture(v);
+                            } else {
+                                log.debug("ensureTopicIsAmongSubscribedTopics: wait for another rebalance before considering update of topic subscription [{}] as done", topic);
+                                final Promise<Void> resultPromise = Promise.promise();
+                                runOnKafkaWorkerThread(v2 -> {
+                                    getUnderlyingConsumer().enforceRebalance();
+                                    runOnContext(v3 -> subscribeAndWaitForRebalance().onComplete(resultPromise));
+                                });
+                                return resultPromise.future();
+                            }
+                        });
                     }
                     return Future.succeededFuture(v);
                 })
