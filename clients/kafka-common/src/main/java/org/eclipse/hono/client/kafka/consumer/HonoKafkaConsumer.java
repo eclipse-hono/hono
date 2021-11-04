@@ -55,6 +55,7 @@ import io.vertx.kafka.client.common.TopicPartition;
 import io.vertx.kafka.client.common.impl.Helper;
 import io.vertx.kafka.client.consumer.KafkaConsumer;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
+import io.vertx.kafka.client.consumer.KafkaConsumerRecords;
 import io.vertx.kafka.client.consumer.impl.KafkaReadStreamImpl;
 
 /**
@@ -85,7 +86,8 @@ public class HonoKafkaConsumer implements Lifecycle {
 
     private final AtomicReference<Pair<Promise<Void>, Promise<Void>>> subscriptionUpdatedAndPartitionsAssignedPromiseRef = new AtomicReference<>();
     private final Handler<KafkaConsumerRecord<String, Buffer>> recordHandler;
-    private final AtomicBoolean paused = new AtomicBoolean();
+    private final AtomicBoolean pollingPaused = new AtomicBoolean();
+    private final AtomicBoolean recordFetchingPaused = new AtomicBoolean();
 
     private KafkaConsumer<String, Buffer> kafkaConsumer;
     /**
@@ -109,6 +111,7 @@ public class HonoKafkaConsumer implements Lifecycle {
     private boolean respectTtl = true;
     private Supplier<Consumer<String, Buffer>> kafkaConsumerSupplier;
     private KafkaClientMetricsSupport metricsSupport;
+    private Long pollPauseTimeoutTimerId;
 
     /**
      * Creates a consumer to receive records on the given topics.
@@ -265,14 +268,72 @@ public class HonoKafkaConsumer implements Lifecycle {
     }
 
     /**
-     * Pauses the consumer polling operation (if not already paused).
+     * Suspends fetching records from all partitions assigned to this consumer (if not already suspended).
+     * That means the next poll invocations won't return any records.
+     * For already fetched records, the record handler will still be invoked.
      *
-     * @return {@code true} if the consumer polling operation was active before and is now paused.
+     * @return {@code true} if the record fetching was active before and is now getting paused.
      */
-    public final boolean pause() {
-        if (!paused.compareAndSet(false, true)) {
+    public final boolean pauseRecordFetching() {
+        if (!recordFetchingPaused.compareAndSet(false, true)) {
             return false;
         }
+        runOnKafkaWorkerThread(v -> {
+            // note that some partitions could already have been paused here if a rebalance happened just after the paused field was updated above
+            final var partitions = getUnderlyingConsumer().assignment();
+            if (!partitions.isEmpty()) {
+                getUnderlyingConsumer().pause(partitions);
+            }
+        });
+        return true;
+    }
+
+    /**
+     * Resumes the fetching of records for this consumer (if paused).
+     *
+     * @return {@code true} if record fetching was paused and is now getting resumed.
+     */
+    public final boolean resumeRecordFetching() {
+        if (!recordFetchingPaused.compareAndSet(true, false)) {
+            return false;
+        }
+        runOnKafkaWorkerThread(v -> {
+            final var partitions = getUnderlyingConsumer().assignment();
+            if (!partitions.isEmpty()) {
+                getUnderlyingConsumer().resume(partitions);
+            }
+        });
+        return true;
+    }
+
+    /**
+     * Checks if fetching of records for this consumer is currently paused.
+     *
+     * @return {@code true} if record fetching is paused.
+     */
+    public final boolean isRecordFetchingPaused() {
+        return recordFetchingPaused.get();
+    }
+
+    /**
+     * Pauses the consumer polling operation (if not already paused).
+     * <p>
+     * Note that the polling operation mustn't be paused for too long (longer than <em>max.poll.interval.ms</em>),
+     * otherwise the consumer will leave the active consumer group.
+     *
+     * @param timeout The timeout after which to resume polling.
+     * @return {@code true} if the consumer polling operation was active before and is now paused.
+     */
+    public final boolean pauseRecordHandlingAndPolling(final Duration timeout) {
+        if (!pollingPaused.compareAndSet(false, true)) {
+            return false;
+        }
+        pollPauseTimeoutTimerId = vertx.setTimer(timeout.toMillis(), tid -> {
+            pollPauseTimeoutTimerId = null;
+            if (resumeRecordHandlingAndPolling()) {
+                log.debug("resumed consumer record polling - timeout of {}ms was reached [client-id: {}]", timeout.toMillis(), getClientId());
+            }
+        });
         getKafkaConsumer().pause();
         return true;
     }
@@ -282,9 +343,13 @@ public class HonoKafkaConsumer implements Lifecycle {
      *
      * @return {@code true} if the consumer polling operation was paused and is now resumed.
      */
-    public final boolean resume() {
-        if (!paused.compareAndSet(true, false)) {
+    public final boolean resumeRecordHandlingAndPolling() {
+        if (!pollingPaused.compareAndSet(true, false)) {
             return false;
+        }
+        if (pollPauseTimeoutTimerId != null) {
+            vertx.cancelTimer(pollPauseTimeoutTimerId);
+            pollPauseTimeoutTimerId = null;
         }
         getKafkaConsumer().resume();
         return true;
@@ -295,8 +360,8 @@ public class HonoKafkaConsumer implements Lifecycle {
      *
      * @return {@code true} if the consumer polling operation is paused.
      */
-    public final boolean isPaused() {
-        return paused.get();
+    public final boolean isRecordHandlingAndPollingPaused() {
+        return pollingPaused.get();
     }
 
     /**
@@ -364,6 +429,7 @@ public class HonoKafkaConsumer implements Lifecycle {
                     }
                 });
             });
+            kafkaConsumer.batchHandler(this::onBatchOfRecordsReceived);
             kafkaConsumer.exceptionHandler(error -> log.error("consumer error occurred [client-id: {}]",
                     getClientId(), error));
             installRebalanceListeners();
@@ -395,6 +461,20 @@ public class HonoKafkaConsumer implements Lifecycle {
     }
 
     /**
+     * Invoked when a new batch of records has been fetched as part of a poll() invocation.
+     * <p>
+     * This default implementation does nothing. Subclasses may override this method to implement specific handling.
+     * <p>
+     * Note that the usual record handling shouldn't be done here, but instead via the record handler
+     * given in the constructor.
+     *
+     * @param records The fetched records.
+     */
+    protected void onBatchOfRecordsReceived(final KafkaConsumerRecords<String, Buffer> records) {
+        // do nothing by default
+    }
+
+    /**
      * Invoked when <em>respectTtl</em> is {@code true} and an expired record was received (meaning the
      * <em>recordHandler</em> isn't getting invoked for the record).
      * <p>
@@ -418,6 +498,9 @@ public class HonoKafkaConsumer implements Lifecycle {
                 }
                 ensurePositionsHaveBeenSetIfNeeded(partitionsSet);
                 updateSubscribedTopicPatternTopics();
+                if (recordFetchingPaused.get()) {
+                    getUnderlyingConsumer().pause(partitions);
+                }
                 onPartitionsAssignedBlocking(partitionsSet);
                 final Set<TopicPartition> allAssignedPartitions = Optional.ofNullable(onRebalanceDoneHandler)
                         .map(h -> Helper.from(getKafkaConsumer().asStream().unwrap().assignment()))
@@ -660,6 +743,10 @@ public class HonoKafkaConsumer implements Lifecycle {
 
     @Override
     public Future<Void> stop() {
+        if (pollPauseTimeoutTimerId != null) {
+            vertx.cancelTimer(pollPauseTimeoutTimerId);
+            pollPauseTimeoutTimerId = null;
+        }
         if (kafkaConsumer == null) {
             return Future.failedFuture("not started");
         } else if (!stopCalled.compareAndSet(false, true)) {

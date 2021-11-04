@@ -45,6 +45,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.kafka.client.common.impl.Helper;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
+import io.vertx.kafka.client.consumer.KafkaConsumerRecords;
 
 /**
  * A Kafka consumer that automatically commits partition offsets corresponding to the latest record per
@@ -79,10 +80,15 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
  * <b>Rate limiting of record handling</b>
  * <p>
  * This consumer limits the number of records being currently in processing to prevent memory issues and reduce the
- * load on dependent services. That means there is a maximum number of incomplete result futures of the provided
- * record handler return value. When the limit is reached, the consumer will be paused until enough of the result futures
- * are completed. The limit value is adopted from the configured <em>max.poll.records</em> config value, adding 1 so that
- * there is already a new batch of records available for processing when resuming the polling operation.
+ * load on dependent services.
+ * When the number of records for which handling is still incomplete has reached the throttling threshold of
+ * {@value THROTTLING_THRESHOLD_PERCENTAGE_OF_MAX_POLL_RECORDS} percent of the configured maximum number of records per
+ * poll operation (<em>max.poll.records</em> config value), then polling is paused for a short time. If the number of
+ * unprocessed records still isn't getting less, the poll operation is resumed (so that associated management task are
+ * still done) but record fetching from all assigned topic partitions is suspended until the throttling threshold is
+ * reached again.
+ * The overall limit, i.e. the maximum number of incomplete record handler result futures at a given point in time, is
+ * calculated from the above mentioned throttling threshold plus the maximum number of records per poll operation.
  */
 public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
 
@@ -122,31 +128,18 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
      */
     public static final Duration DEFAULT_OFFSETS_COMMIT_RECORD_COMPLETION_TIMEOUT = Duration.ofMillis(300);
     /**
-     * The default maximum number of records to be currently in processing at a given point in time.
-     * If that number is exceeded by records being polled faster than records being processed, the polling
-     * operation will be paused until the number is below the maximum again.
-     * <p>
-     * The value here corresponds to the default <em>max.poll.records</em> config value plus 1.
+     * The maximum amount of time to pause record polling because the current number of records in processing
+     * has exceeded the throttling threshold.
      */
-    public static final Integer DEFAULT_MAX_RECORDS_IN_PROCESSING = 501;
+    public static final Duration MAX_POLL_PAUSE = Duration.ofMillis(200);
     /**
-     * Percentage of the {@link #maxRecordsInProcessing} value used as the threshold under which the number of records
-     * currently being processed must drop for the polling operation to be resumed.
+     * Percentage of the <em>max.poll.records</em> config value to use as the threshold for throttling record
+     * processing.
      */
-    public static final Integer MAX_RECORDS_IN_PROCESSING_RESUME_THRESHOLD_PERCENT = 5;
+    public static final int THROTTLING_THRESHOLD_PERCENTAGE_OF_MAX_POLL_RECORDS = 50;
 
-    /**
-     * The maximum number of records to be currently in processing at a given point in time.
-     */
-    private final int maxRecordsInProcessing;
-    /**
-     * If polling is currently paused because <em>maxRecordsInProcessing</em> has been exceeded, the number of records
-     * currently being processed must drop below <em>maxRecordsInProcessing</em> minus this value for the polling
-     * operation to be resumed. This is to prevent frequent switching between pause and resume invocations.
-     * By default this value is {@value #MAX_RECORDS_IN_PROCESSING_RESUME_THRESHOLD_PERCENT} % of
-     * <em>maxRecordsInProcessing</em>.
-     */
-    private final int maxRecordsInProcessingResumeThreshold;
+    private final int throttlingThreshold;
+    private final int throttlingResumeDelta;
     private final long commitIntervalMillis;
     private final long skipOffsetRecommitPeriodSeconds;
     private final long offsetsCommitRecordCompletionTimeoutMillis;
@@ -162,10 +155,12 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
     private final AtomicBoolean periodicCommitInvocationInProgress = new AtomicBoolean();
     private final AtomicBoolean periodicCommitRetryAfterRebalanceNeeded = new AtomicBoolean();
     private final AtomicInteger recordsInProcessingCounter = new AtomicInteger();
+    private final AtomicInteger recordsLeftInBatchCounter = new AtomicInteger();
     private final AtomicReference<UncompletedRecordsCompletionLatch> uncompletedRecordsCompletionLatchRef = new AtomicReference<>();
 
-    private Instant pauseStartTime = Instant.MAX;
+    private Instant fetchingPauseStartTime = Instant.MAX;
     private Long periodicCommitTimerId;
+    private Instant lastPollInstant = Instant.EPOCH;
 
     /**
      * Creates a consumer to receive records on the given topics.
@@ -224,21 +219,39 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
                 validateAndAdaptConsumerConfig(consumerConfig));
         selfRef.setPlain(this);
 
-        this.maxRecordsInProcessing = getMaxRecordsInProcessing(consumerConfig);
-        this.maxRecordsInProcessingResumeThreshold = maxRecordsInProcessing
-                * MAX_RECORDS_IN_PROCESSING_RESUME_THRESHOLD_PERCENT / 100;
+        final int maxPollRecords = getMaxPollRecordsConfig(consumerConfig); // default 500, in which case the overall maxRecordsInProcessing limit is 750
+        this.throttlingThreshold = Math.max(maxPollRecords * THROTTLING_THRESHOLD_PERCENTAGE_OF_MAX_POLL_RECORDS / 100, 1); // default 250
+        this.throttlingResumeDelta = throttlingThreshold * 5 / 100;
+
         this.commitIntervalMillis = getCommitInterval(consumerConfig);
         this.skipOffsetRecommitPeriodSeconds = getSkipOffsetRecommitPeriodSeconds(consumerConfig);
         this.offsetsCommitRecordCompletionTimeoutMillis = getOffsetsCommitRecordCompletionTimeoutMillis(consumerConfig);
     }
 
+    @Override
+    protected final void onBatchOfRecordsReceived(final KafkaConsumerRecords<String, Buffer> records) {
+        recordsLeftInBatchCounter.set(records.size());
+        lastPollInstant = Instant.now();
+    }
+
     private void handleRecord(final KafkaConsumerRecord<String, Buffer> record,
             final Function<KafkaConsumerRecord<String, Buffer>, Future<Void>> recordHandler) {
         // check whether consumer needs to be paused
-        if (recordsInProcessingCounter.incrementAndGet() >= maxRecordsInProcessing && pause()) {
-            log.info("paused consumer record polling; max no. of records in processing exceeded (current: {}, max: {}) [client-id: {}]",
-                    recordsInProcessingCounter.get(), maxRecordsInProcessing, getClientId());
-            pauseStartTime = Instant.now();
+        final int recordsLeftInBatch = recordsLeftInBatchCounter.decrementAndGet();
+        final int recordsInProcessing = recordsInProcessingCounter.incrementAndGet();
+        if (recordsInProcessing >= throttlingThreshold) {
+            if (lastPollInstant.plus(MAX_POLL_PAUSE).isAfter(Instant.now()) && (recordsLeftInBatch > 0 || recordsInProcessing == throttlingThreshold)
+                    && pauseRecordHandlingAndPolling(MAX_POLL_PAUSE)) {
+                // short-term measure: pausing on a per-record basis (short-term because polling mustn't be paused for too long)
+                log.debug("paused consumer record handling/polling; no. of records in processing: {}, throttling threshold: {} [client-id: {}]",
+                        recordsInProcessing, throttlingThreshold, getClientId());
+            } else if (recordsLeftInBatch == 0 && pauseRecordFetching()) {
+                // last poll too long ago, don't pause polling any more but instead let each poll from now on return an empty batch;
+                // this will keep "recordsInProcessing" from exceeding "throttlingThreshold + maxPollRecords" (i.e. 750 by default)
+                log.info("suspending record fetching; no. of records in processing: {}, throttling threshold: {} [client-id: {}]",
+                        recordsInProcessing, throttlingThreshold, getClientId());
+                fetchingPauseStartTime = Instant.now();
+            } // else: we have already paused polling for too long, so, until we've reached the last of the batch, we can only let the already fetched records be handled here
         }
         final TopicPartition topicPartition = new TopicPartition(record.topic(), record.partition());
         final OffsetsQueueEntry offsetsQueueEntry = setRecordReceived(record.offset(), topicPartition);
@@ -258,11 +271,13 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
             Optional.ofNullable(uncompletedRecordsCompletionLatchRef.get())
                     .ifPresent(latch -> latch.onRecordHandlingCompleted(topicPartition));
         }
-        if (recordsInProcessingCounter
-                .decrementAndGet() < (maxRecordsInProcessing - maxRecordsInProcessingResumeThreshold) && resume()) {
-            log.info("resumed consumer record polling after {}ms; current no. of records in processing ({}) dropped below threshold ({}) [client-id: {}]",
-                    Duration.between(pauseStartTime, Instant.now()).toMillis(), recordsInProcessingCounter.get(),
-                    maxRecordsInProcessing - maxRecordsInProcessingResumeThreshold, getClientId());
+        final int recordsInProcessing = recordsInProcessingCounter.decrementAndGet();
+        if (recordsInProcessing <= throttlingThreshold && resumeRecordFetching()) {
+            log.info("resumed consumer record fetching after {}ms; current no. of records in processing: {} [client-id: {}]",
+                    Duration.between(fetchingPauseStartTime, Instant.now()).toMillis(), recordsInProcessing, getClientId());
+        } else if (recordsInProcessing <= (throttlingThreshold - throttlingResumeDelta) && resumeRecordHandlingAndPolling()) {
+            log.debug("resumed consumer record polling; current no. of records in processing: {} [client-id: {}]",
+                    recordsInProcessing, getClientId());
         }
     }
 
@@ -274,11 +289,10 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
         return consumerConfig;
     }
 
-    private int getMaxRecordsInProcessing(final Map<String, String> consumerConfig) {
-        // adopt from "max.poll.records" config value
+    private int getMaxPollRecordsConfig(final Map<String, String> consumerConfig) {
         return Optional.ofNullable(consumerConfig.get(ConsumerConfig.MAX_POLL_RECORDS_CONFIG))
-                .map(s -> Integer.parseInt(s) + 1)
-                .orElse(DEFAULT_MAX_RECORDS_IN_PROCESSING);
+                .map(Integer::parseInt)
+                .orElse(500);
     }
 
     private static long getCommitInterval(final Map<String, String> consumerConfig) {
