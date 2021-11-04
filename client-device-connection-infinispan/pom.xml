@@ -49,6 +49,10 @@
       </exclusions>
     </dependency>
     <dependency>
+      <groupId>org.infinispan</groupId>
+      <artifactId>infinispan-query-dsl</artifactId>
+    </dependency>
+    <dependency>
       <groupId>jakarta.transaction</groupId>
       <artifactId>jakarta.transaction-api</artifactId>
     </dependency>
@@ -109,12 +113,6 @@
     </dependency>
 
     <!-- testing -->
-    <dependency>
-      <groupId>org.infinispan</groupId>
-      <artifactId>infinispan-query-dsl</artifactId>
-      <!--  This is currently only needed to mock a RemoteCache instance in a test. -->
-      <scope>test</scope>
-    </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-engine</artifactId>
