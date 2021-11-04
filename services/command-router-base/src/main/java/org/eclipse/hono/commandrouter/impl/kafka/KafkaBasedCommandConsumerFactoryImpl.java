@@ -161,6 +161,8 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
         kafkaConsumer.setMetricsSupport(kafkaClientMetricsSupport);
         kafkaConsumer.setOnRebalanceDoneHandler(
                 partitions -> commandQueue.setCurrentlyHandledPartitions(Helper.to(partitions)));
+        kafkaConsumer.setOnPartitionsLostHandler(
+                partitions -> commandQueue.setRevokedPartitions(Helper.to(partitions)));
 
         return CompositeFuture.all(commandHandler.start(), kafkaConsumer.start())
                 .mapEmpty();

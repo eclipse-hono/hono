@@ -20,6 +20,7 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import org.apache.kafka.common.TopicPartition;
@@ -130,10 +131,24 @@ public class KafkaCommandProcessingQueue {
      */
     public void setCurrentlyHandledPartitions(final Collection<TopicPartition> partitions) {
         Objects.requireNonNull(partitions);
+        removeCommandQueueEntries(commandQueueEntry -> !partitions.contains(commandQueueEntry.getKey()));
+    }
+
+    /**
+     * Informs this queue about the partitions that the command consumer is not receiving records from any more.
+     * @param partitions The revoked partitions.
+     * @throws NullPointerException if partitions is {@code null}.
+     */
+    public void setRevokedPartitions(final Collection<TopicPartition> partitions) {
+        Objects.requireNonNull(partitions);
+        removeCommandQueueEntries(commandQueueEntry -> partitions.contains(commandQueueEntry.getKey()));
+    }
+
+    private void removeCommandQueueEntries(final Predicate<Map.Entry<TopicPartition, TopicPartitionCommandQueue>> filter) {
         final var commandQueuesIterator = commandQueues.entrySet().iterator();
         while (commandQueuesIterator.hasNext()) {
             final var commandQueueEntry = commandQueuesIterator.next();
-            if (!partitions.contains(commandQueueEntry.getKey())) {
+            if (filter.test(commandQueueEntry)) {
                 if (commandQueueEntry.getValue().isEmpty()) {
                     LOG.debug("partition [{}] isn't being handled anymore; command queue is empty", commandQueueEntry.getKey());
                 } else {

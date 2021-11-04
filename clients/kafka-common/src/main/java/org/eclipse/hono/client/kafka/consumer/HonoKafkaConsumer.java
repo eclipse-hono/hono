@@ -104,6 +104,7 @@ public class HonoKafkaConsumer implements Lifecycle {
     private Handler<Set<TopicPartition>> onPartitionsAssignedHandler;
     private Handler<Set<TopicPartition>> onRebalanceDoneHandler;
     private Handler<Set<TopicPartition>> onPartitionsRevokedHandler;
+    private Handler<Set<TopicPartition>> onPartitionsLostHandler;
     private boolean respectTtl = true;
     private Supplier<Consumer<String, Buffer>> kafkaConsumerSupplier;
     private KafkaClientMetricsSupport metricsSupport;
@@ -221,6 +222,16 @@ public class HonoKafkaConsumer implements Lifecycle {
      */
     public final void setOnPartitionsRevokedHandler(final Handler<Set<TopicPartition>> onPartitionsRevokedHandler) {
         this.onPartitionsRevokedHandler = Objects.requireNonNull(onPartitionsRevokedHandler);
+    }
+
+    /**
+     * Sets a handler to be invoked on the vert.x event loop thread
+     * when the consumer realized that it does not own the given partitions any longer.
+     *
+     * @param onPartitionsLostHandler The handler to be invoked.
+     */
+    public final void setOnPartitionsLostHandler(final Handler<Set<TopicPartition>> onPartitionsLostHandler) {
+        this.onPartitionsLostHandler = Objects.requireNonNull(onPartitionsLostHandler);
     }
 
     /**
@@ -428,7 +439,7 @@ public class HonoKafkaConsumer implements Lifecycle {
                 context.runOnContext(v -> HonoKafkaConsumer.this.onPartitionsRevoked(partitionsSet));
             }
 
-            @Override // override default implementation (which just calls onPartitionsRevoked()) to log this situation specifically
+            @Override
             public void onPartitionsLost(final Collection<org.apache.kafka.common.TopicPartition> partitions) {
                 // invoked on the Kafka polling thread, not the event loop thread!
                 final Set<TopicPartition> partitionsSet = Helper.from(partitions);
@@ -436,8 +447,8 @@ public class HonoKafkaConsumer implements Lifecycle {
                     log.info("partitions lost: [{}] [client-id: {}]",
                             HonoKafkaConsumerHelper.getPartitionsDebugString(partitions), getClientId());
                 }
-                onPartitionsRevokedBlocking(partitionsSet);
-                context.runOnContext(v -> HonoKafkaConsumer.this.onPartitionsRevoked(partitionsSet));
+                onPartitionsLostBlocking(partitionsSet);
+                context.runOnContext(v -> HonoKafkaConsumer.this.onPartitionsLost(partitionsSet));
             }
         });
     }
@@ -609,9 +620,30 @@ public class HonoKafkaConsumer implements Lifecycle {
         // do nothing by default
     }
 
+    /**
+     * A callback method that can be used to clean up resources for partitions that have already been reassigned to other
+     * consumers. This method is only called in exceptional scenarios when the consumer realized that it does not own these
+     * partitions any longer.
+     * <p>
+     * NOTE: this method will be invoked on the Kafka polling thread, not the vert.x event loop thread!
+     * <p>
+     * This default implementation does nothing. Subclasses may override this method.
+     *
+     * @param partitionsSet The list of partitions that are not assigned to this consumer any more.
+     */
+    protected void onPartitionsLostBlocking(final Set<TopicPartition> partitionsSet) {
+        // do nothing by default
+    }
+
     private void onPartitionsRevoked(final Set<TopicPartition> partitionsSet) {
         if (onPartitionsRevokedHandler != null) {
             onPartitionsRevokedHandler.handle(partitionsSet);
+        }
+    }
+
+    private void onPartitionsLost(final Set<TopicPartition> partitionsSet) {
+        if (onPartitionsLostHandler != null) {
+            onPartitionsLostHandler.handle(partitionsSet);
         }
     }
 
