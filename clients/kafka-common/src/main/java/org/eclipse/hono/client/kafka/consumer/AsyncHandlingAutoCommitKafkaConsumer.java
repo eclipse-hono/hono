@@ -351,6 +351,12 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
     private synchronized void ensureOffsetCommitsExistForNewlyAssignedPartitions(
             final Set<io.vertx.kafka.client.common.TopicPartition> partitionsSet) {
         final List<TopicPartition> partitionsForNextCommit = new LinkedList<>();
+
+        final Set<TopicPartition> partitionsToCheckCommittedOffsetsFor = partitionsSet.stream().map(Helper::to)
+                .filter(partition -> !offsetsMap.containsKey(partition) && lastKnownCommittedOffsets.get(partition) == null)
+                .collect(Collectors.toSet());
+        // fetch committed offsets so that we only add to partitionsForNextCommit if really needed
+        fetchCommittedOffsetsOnPartitionsAssigned(partitionsToCheckCommittedOffsetsFor);
         partitionsSet.stream().map(Helper::to)
                 .filter(partition -> !offsetsMap.containsKey(partition))
                 .forEach(partition -> {
@@ -372,6 +378,27 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
         if (log.isDebugEnabled() && !partitionsForNextCommit.isEmpty()) {
             log.debug("onPartitionsAssigned: partitions to be part of next offset commit: [{}]",
                     HonoKafkaConsumerHelper.getPartitionsDebugString(partitionsForNextCommit));
+        }
+    }
+
+    private void fetchCommittedOffsetsOnPartitionsAssigned(final Set<TopicPartition> partitions) {
+        if (!partitions.isEmpty()) {
+            if (log.isDebugEnabled()) {
+                log.debug("onPartitionsAssigned: fetching committed offsets for [{}]", HonoKafkaConsumerHelper.getPartitionsDebugString(partitions));
+            }
+            try {
+                getUnderlyingConsumer().committed(partitions).forEach((partition, position) -> {
+                    if (position != null) {
+                        lastKnownCommittedOffsets.put(partition, position.offset());
+                    } else {
+                        lastKnownCommittedOffsets.remove(partition);
+                    }
+                });
+            } catch (final Exception ex) {
+                log.warn("error fetching committed offsets for newly assigned partitions [{}] [client-id: {}]",
+                        HonoKafkaConsumerHelper.getPartitionsDebugString(partitions),
+                        getClientId(), ex);
+            }
         }
     }
 
