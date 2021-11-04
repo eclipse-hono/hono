@@ -26,11 +26,11 @@ import org.eclipse.hono.client.amqp.AbstractServiceClient;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandHandlerWrapper;
 import org.eclipse.hono.client.command.CommandHandlers;
+import org.eclipse.hono.client.command.InternalCommandConsumer;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.HonoProtonHelper;
-import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.MessageHelper;
 
 import io.opentracing.Span;
@@ -44,7 +44,7 @@ import io.vertx.proton.ProtonReceiver;
 /**
  * A vertx-proton based consumer to receive commands forwarded by the Command Router on the internal command endpoint.
  */
-public class ProtonBasedInternalCommandConsumer extends AbstractServiceClient implements Lifecycle {
+public class ProtonBasedInternalCommandConsumer extends AbstractServiceClient implements InternalCommandConsumer {
 
     private static final int RECREATE_CONSUMER_DELAY = 20;
 
