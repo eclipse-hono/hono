@@ -11,11 +11,9 @@ maven/mavencentral/com.fasterxml.jackson.module/jackson-module-parameter-names/2
 maven/mavencentral/com.github.ben-manes.caffeine/caffeine/2.9.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.github.luben/zstd-jni/1.4.9-1, BSD-2-Clause, approved, CQ22420
 maven/mavencentral/com.github.mifmif/generex/1.0.2, Apache-2.0, approved, clearlydefined
-maven/mavencentral/com.google.auto.value/auto-value-annotations/1.8.1, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.google.code.gson/gson/2.8.6, Apache-2.0, approved, CQ23102
 maven/mavencentral/com.google.errorprone/error_prone_annotations/2.2.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.google.guava/guava/30.1-jre, Apache-2.0 AND CC0-1.0 AND LicenseRef-Public-Domain, approved, CQ23244
-maven/mavencentral/com.google.truth/truth/1.1.3, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.h2database/h2/1.4.197, EPL-1.0, approved, CQ11693
 maven/mavencentral/com.mchange/c3p0/0.9.5.4, LGPL-2.1-only OR EPL-1.0, approved, clearlydefined
 maven/mavencentral/com.mchange/mchange-commons-java/0.2.15, LGPL-2.1-only OR EPL-1.0, approved, clearlydefined
@@ -128,7 +126,6 @@ maven/mavencentral/io.vertx/vertx-codegen/4.1.3, , approved, eclipse
 maven/mavencentral/io.vertx/vertx-core/4.1.3, , approved, eclipse
 maven/mavencentral/io.vertx/vertx-health-check/4.1.3, , approved, eclipse
 maven/mavencentral/io.vertx/vertx-jdbc-client/4.1.3, , approved, eclipse
-maven/mavencentral/io.vertx/vertx-junit5/4.1.3, , approved, eclipse
 maven/mavencentral/io.vertx/vertx-kafka-client/4.1.3, , approved, eclipse
 maven/mavencentral/io.vertx/vertx-micrometer-metrics/4.1.3, , approved, eclipse
 maven/mavencentral/io.vertx/vertx-mongo-client/4.1.3, , approved, eclipse
@@ -147,8 +144,6 @@ maven/mavencentral/jakarta.json/jakarta.json-api/1.1.6, , approved, eclipse
 maven/mavencentral/jakarta.transaction/jakarta.transaction-api/1.3.3, , approved, eclipse
 maven/mavencentral/javax.annotation/javax.annotation-api/1.3.2, CDDL-1.1 OR GPL-2.0, approved, CQ16910
 maven/mavencentral/javax.xml.bind/jaxb-api/2.2.12, CDDL-1.0, approved, CQ8374
-maven/mavencentral/net.bytebuddy/byte-buddy/1.10.19, , approved, CQ22491
-maven/mavencentral/net.bytebuddy/byte-buddy-agent/1.10.19, Apache-2.0, approved, clearlydefined
 maven/mavencentral/net.i2p.crypto/eddsa/0.3.0, CC0-1.0, approved, CQ22537
 maven/mavencentral/org.apache.commons/commons-collections4/4.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.apache.commons/commons-compress/1.21, Apache-2.0 AND BSD-3-Clause AND bzip2-1.0.6 AND LicenseRef-Public-Domain, approved, CQ23710
@@ -158,9 +153,6 @@ maven/mavencentral/org.apache.logging.log4j/log4j-api/2.14.1, Apache-2.0, approv
 maven/mavencentral/org.apache.logging.log4j/log4j-to-slf4j/2.14.1, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.apache.qpid/proton-j/0.33.9, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.apache.thrift/libthrift/0.14.1, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.apiguardian/apiguardian-api/1.1.0, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.assertj/assertj-core/3.20.2, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.checkerframework/checker-qual/2.5.2, MIT, approved, clearlydefined
 maven/mavencentral/org.graalvm.sdk/graal-sdk/21.2.0, UPL-1.0, approved, clearlydefined
 maven/mavencentral/org.hdrhistogram/HdrHistogram/2.1.12, , approved, CQ13192
 maven/mavencentral/org.infinispan/infinispan-client-hotrod/12.1.7.Final, Apache-2.0, approved, CQ23718
@@ -179,13 +171,9 @@ maven/mavencentral/org.jboss.threads/jboss-threads/3.4.2.Final, Apache-2.0, appr
 maven/mavencentral/org.jgroups/jgroups/4.2.12.Final, Apache-2.0 AND CC-BY-2.5 AND LicenseRef-Public-Domain, approved, CQ23049
 maven/mavencentral/org.latencyutils/LatencyUtils/2.0.3, BSD-2-Clause, approved, CQ17408
 maven/mavencentral/org.lz4/lz4-java/1.7.1, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.mockito/mockito-core/3.7.7, MIT, approved, clearlydefined
 maven/mavencentral/org.mongodb/bson/4.3.3, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.mongodb/mongodb-driver-core/4.3.3, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.mongodb/mongodb-driver-reactivestreams/4.3.3, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.objenesis/objenesis/3.1, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.opentest4j/opentest4j/1.2.0, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.ow2.asm/asm/9.1, BSD-3-Clause, approved, CQ23029
 maven/mavencentral/org.postgresql/postgresql/42.2.23, BSD-2-Clause, approved, clearlydefined
 maven/mavencentral/org.reactivestreams/reactive-streams/1.0.3, CC0-1.0, approved, CQ16332
 maven/mavencentral/org.slf4j/jul-to-slf4j/1.7.28, MIT, approved, CQ12842

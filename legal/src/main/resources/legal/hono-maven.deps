@@ -11,11 +11,9 @@ com.fasterxml.jackson.module:jackson-module-parameter-names:jar:2.12.4
 com.github.ben-manes.caffeine:caffeine:jar:2.9.2
 com.github.luben:zstd-jni:jar:1.4.9-1
 com.github.mifmif:generex:jar:1.0.2
-com.google.auto.value:auto-value-annotations:jar:1.8.1
 com.google.code.gson:gson:jar:2.8.6
 com.google.errorprone:error_prone_annotations:jar:2.2.0
 com.google.guava:guava:jar:30.1-jre
-com.google.truth:truth:jar:1.1.3
 com.h2database:h2:jar:1.4.197
 com.mchange:c3p0:jar:0.9.5.4
 com.mchange:mchange-commons-java:jar:0.2.15
@@ -128,7 +126,6 @@ io.vertx:vertx-codegen:jar:4.1.3
 io.vertx:vertx-core:jar:4.1.3
 io.vertx:vertx-health-check:jar:4.1.3
 io.vertx:vertx-jdbc-client:jar:4.1.3
-io.vertx:vertx-junit5:jar:4.1.3
 io.vertx:vertx-kafka-client:jar:4.1.3
 io.vertx:vertx-micrometer-metrics:jar:4.1.3
 io.vertx:vertx-mongo-client:jar:4.1.3
@@ -147,8 +144,6 @@ jakarta.json:jakarta.json-api:jar:1.1.6
 jakarta.transaction:jakarta.transaction-api:jar:1.3.3
 javax.annotation:javax.annotation-api:jar:1.3.2
 javax.xml.bind:jaxb-api:jar:2.2.12
-net.bytebuddy:byte-buddy-agent:jar:1.10.19
-net.bytebuddy:byte-buddy:jar:1.10.19
 net.i2p.crypto:eddsa:jar:0.3.0
 org.apache.commons:commons-collections4:jar:4.2
 org.apache.commons:commons-compress:jar:1.21
@@ -158,9 +153,6 @@ org.apache.logging.log4j:log4j-api:jar:2.14.1
 org.apache.logging.log4j:log4j-to-slf4j:jar:2.14.1
 org.apache.qpid:proton-j:jar:0.33.9
 org.apache.thrift:libthrift:jar:0.14.1
-org.apiguardian:apiguardian-api:jar:1.1.0
-org.assertj:assertj-core:jar:3.20.2
-org.checkerframework:checker-qual:jar:2.5.2
 org.graalvm.sdk:graal-sdk:jar:21.2.0
 org.hdrhistogram:HdrHistogram:jar:2.1.12
 org.infinispan:infinispan-client-hotrod:jar:12.1.7.Final
@@ -179,13 +171,9 @@ org.jboss.threads:jboss-threads:jar:3.4.2.Final
 org.jgroups:jgroups:jar:4.2.12.Final
 org.latencyutils:LatencyUtils:jar:2.0.3
 org.lz4:lz4-java:jar:1.7.1
-org.mockito:mockito-core:jar:3.7.7
 org.mongodb:bson:jar:4.3.3
 org.mongodb:mongodb-driver-core:jar:4.3.3
 org.mongodb:mongodb-driver-reactivestreams:jar:4.3.3
-org.objenesis:objenesis:jar:3.1
-org.opentest4j:opentest4j:jar:1.2.0
-org.ow2.asm:asm:jar:9.1
 org.postgresql:postgresql:jar:42.2.23
 org.reactivestreams:reactive-streams:jar:1.0.3
 org.slf4j:jul-to-slf4j:jar:1.7.28
