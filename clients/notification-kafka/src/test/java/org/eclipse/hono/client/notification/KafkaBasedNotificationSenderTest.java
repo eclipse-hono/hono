@@ -24,8 +24,8 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
-import org.eclipse.hono.client.kafka.producer.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
 import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationConstants;
@@ -54,7 +54,7 @@ public class KafkaBasedNotificationSenderTest {
     private static final String DEVICE_ID = "my-device";
     private static final boolean ENABLED = false;
 
-    private final KafkaProducerConfigProperties config = new KafkaProducerConfigProperties();
+    private final MessagingKafkaProducerConfigProperties config = new MessagingKafkaProducerConfigProperties();
 
     /**
      * Sets up the fixture.

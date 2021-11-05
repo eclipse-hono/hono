@@ -68,7 +68,7 @@ public class HonoKafkaConsumerTest {
     private static final TopicPartition topic2Partition = new TopicPartition(TOPIC2, PARTITION);
     private static final TopicPartition topic3Partition = new TopicPartition(TOPIC3, PARTITION);
 
-    private KafkaConsumerConfigProperties consumerConfigProperties;
+    private MessagingKafkaConsumerConfigProperties consumerConfigProperties;
     private Vertx vertx;
     private HonoKafkaConsumer consumer;
     private KafkaMockConsumer mockConsumer;
@@ -85,7 +85,7 @@ public class HonoKafkaConsumerTest {
         mockConsumer = new KafkaMockConsumer(OffsetResetStrategy.LATEST);
 
         final Map<String, String> commonProperties = Map.of(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "servers");
-        consumerConfigProperties = new KafkaConsumerConfigProperties();
+        consumerConfigProperties = new MessagingKafkaConsumerConfigProperties();
         consumerConfigProperties.setCommonClientConfig(commonProperties);
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,29 +13,41 @@
 
 package org.eclipse.hono.client.kafka.producer;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.serialization.Serializer;
 import org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties;
 
 /**
  * Configuration properties for Kafka producers.
  * <p>
  * This class is intended to be as agnostic to the provided properties as possible in order to be forward-compatible
- * with changes in new versions of the Kafka client. It only sets a couple of properties that are important for Hono to
- * provide the expected quality of service.
- *
- * @see <a href="https://kafka.apache.org/documentation/#producerconfigs">Kafka Producer Configs</a>
- * @see <a href="https://www.eclipse.org/hono/docs/api/telemetry-kafka">Telemetry API for Kafka Specification</a>
- * @see <a href="https://www.eclipse.org/hono/docs/api/event-kafka">Event API for Kafka Specification</a>
- * @see <a href="https://www.eclipse.org/hono/docs/api/command-and-control-kafka/">Command &amp; Control API for Kafka Specification</a>
+ * with changes in new versions of the Kafka client.
  */
 public class KafkaProducerConfigProperties extends AbstractKafkaConfigProperties {
 
+    private final Class<? extends Serializer<?>> keySerializerClass;
+    private final Class<? extends Serializer<?>> valueSerializerClass;
+
     private Map<String, String> producerConfig;
+
+    /**
+     * Creates an instance.
+     *
+     * @param keySerializerClass The class to be used for serializing the record keys, if {@code null} the serializer
+     *            needs to be provided in the configuration at runtime.
+     * @param valueSerializerClass The class to be used for serializing the record values, if {@code null} the
+     */
+    protected KafkaProducerConfigProperties(final Class<? extends Serializer<?>> keySerializerClass,
+            final Class<? extends Serializer<?>> valueSerializerClass) {
+
+        this.keySerializerClass = keySerializerClass;
+        this.valueSerializerClass = valueSerializerClass;
+    }
 
     /**
      * Sets the Kafka producer config properties to be used.
@@ -50,44 +62,35 @@ public class KafkaProducerConfigProperties extends AbstractKafkaConfigProperties
     /**
      * Checks if a configuration has been set.
      *
-     * @return {@code true} if the {@value #PROPERTY_BOOTSTRAP_SERVERS} property has been configured with a non-null value.
+     * @return {@code true} if the {@value #PROPERTY_BOOTSTRAP_SERVERS} property has been configured with a non-null
+     *         value.
      */
     public final boolean isConfigured() {
         return containsMinimalConfiguration(commonClientConfig) || containsMinimalConfiguration(producerConfig);
     }
 
     /**
-     * Gets the Kafka producer configuration to which additional properties were applied. The following properties are
-     * set here to the given configuration:
-     * <ul>
-     * <li>{@code enable.idempotence=true}: enables idempotent producer behavior</li>
-     * <li>{@code key.serializer=org.apache.kafka.common.serialization.StringSerializer}: defines how message keys are
-     * serialized</li>
-     * <li>{@code value.serializer=io.vertx.kafka.client.serialization.BufferSerializer}: defines how message values are
-     * serialized</li>
+     * Gets the Kafka producer configuration. This includes changes made in {@link #adaptConfiguration(Map)}. The
+     * returned map will contain a property {@code client.id} which will be set to a unique value containing the already
+     * set client id or alternatively the value set via {@link #setDefaultClientIdPrefix(String)}, the given
+     * producerName and a newly created UUID.
      *
-     * <li>{@code client.id}=${unique client id}: the client id will be set to a unique value containing the already set
-     * client id or alternatively the value set via {@link #setDefaultClientIdPrefix(String)}, the given producerName
-     * and a newly created UUID.</li>
-     * </ul>
      * Note: This method should be called for each new producer, ensuring that a unique client id is used.
      *
      * @param producerName A name for the producer to include in the added {@code client.id} property.
      * @return a copy of the producer configuration with the applied properties or an empty map if neither a producer
-     *         client configuration was set with {@link #setProducerConfig(Map)} nor common configuration properties were
-     *         set with {@link #setCommonClientConfig(Map)}.
+     *         client configuration was set with {@link #setProducerConfig(Map)} nor common configuration properties
+     *         were set with {@link #setCommonClientConfig(Map)}.
      * @throws NullPointerException if producerName is {@code null}.
-     * @see <a href="https://kafka.apache.org/documentation/#enable.idempotence">The Kafka documentation -
-     *      "Producer Configs" - enable.idempotence</a>
      */
     public final Map<String, String> getProducerConfig(final String producerName) {
         Objects.requireNonNull(producerName);
 
+        final Map<String, String> newConfig = new HashMap<>();
         if (commonClientConfig == null && producerConfig == null) {
-            return Collections.emptyMap();
+            return newConfig;
         }
 
-        final Map<String, String> newConfig = new HashMap<>();
         if (commonClientConfig != null) {
             newConfig.putAll(commonClientConfig);
         }
@@ -95,16 +98,29 @@ public class KafkaProducerConfigProperties extends AbstractKafkaConfigProperties
             newConfig.putAll(producerConfig);
         }
 
-        overrideConfigProperty(newConfig, ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
-                "org.apache.kafka.common.serialization.StringSerializer");
+        adaptConfiguration(newConfig);
 
-        overrideConfigProperty(newConfig, ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
-                "io.vertx.kafka.client.serialization.BufferSerializer");
+        Optional.ofNullable(keySerializerClass).ifPresent(serializerClass -> overrideConfigProperty(newConfig,
+                ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, serializerClass.getName()));
 
-        overrideConfigProperty(newConfig, ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
+        Optional.ofNullable(valueSerializerClass).ifPresent(serializerClass -> overrideConfigProperty(newConfig,
+                ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, serializerClass.getName()));
 
         setUniqueClientId(newConfig, producerName, ProducerConfig.CLIENT_ID_CONFIG);
         return newConfig;
+    }
+
+    /**
+     * Adapt the properties. It is invoked by {@link #getProducerConfig(String)} on the result of applying the consumer
+     * configuration on the common configuration.
+     * <p>
+     * Subclasses may overwrite this method to set expected configuration values. The default implementation does
+     * nothing.
+     *
+     * @param config The producer configuration to be adapted.
+     */
+    protected void adaptConfiguration(final Map<String, String> config) {
+
     }
 
 }

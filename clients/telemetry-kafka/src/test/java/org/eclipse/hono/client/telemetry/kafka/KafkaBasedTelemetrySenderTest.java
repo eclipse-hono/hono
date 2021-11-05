@@ -23,7 +23,7 @@ import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
-import org.eclipse.hono.client.kafka.producer.KafkaProducerConfigProperties;
+import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
@@ -49,7 +49,7 @@ public class KafkaBasedTelemetrySenderTest {
     private final RegistrationAssertion device = new RegistrationAssertion("the-device");
     private final Tracer tracer = NoopTracerFactory.create();
 
-    private KafkaProducerConfigProperties kafkaProducerConfig;
+    private MessagingKafkaProducerConfigProperties kafkaProducerConfig;
 
     /**
      * Sets up the fixture.
@@ -57,7 +57,7 @@ public class KafkaBasedTelemetrySenderTest {
     @BeforeEach
     public void setUp() {
 
-        kafkaProducerConfig = new KafkaProducerConfigProperties();
+        kafkaProducerConfig = new MessagingKafkaProducerConfigProperties();
         kafkaProducerConfig.setProducerConfig(new HashMap<>());
 
     }

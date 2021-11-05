@@ -16,10 +16,11 @@ package org.eclipse.hono.client.kafka.producer;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static com.google.common.truth.Truth.assertThat;
 
-import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -27,12 +28,19 @@ import org.junit.jupiter.api.Test;
  */
 public class KafkaProducerConfigPropertiesTest {
 
+    private KafkaProducerConfigProperties config;
+
+    @BeforeEach
+    void setUp() {
+        config = new KafkaProducerConfigProperties(StringSerializer.class, StringSerializer.class);
+    }
+
     /**
      * Verifies that trying to set a {@code null} config throws a {@link NullPointerException}.
      */
     @Test
     public void testThatConfigCanNotBeSetToNull() {
-        assertThrows(NullPointerException.class, () -> new KafkaProducerConfigProperties().setProducerConfig(null));
+        assertThrows(NullPointerException.class, () -> config.setProducerConfig(null));
     }
 
     /**
@@ -40,7 +48,7 @@ public class KafkaProducerConfigPropertiesTest {
      */
     @Test
     public void testThatClientIdCanNotBeSetToNull() {
-        assertThrows(NullPointerException.class, () -> new KafkaProducerConfigProperties().setDefaultClientIdPrefix(null));
+        assertThrows(NullPointerException.class, () -> config.setDefaultClientIdPrefix(null));
     }
 
     /**
@@ -49,7 +57,6 @@ public class KafkaProducerConfigPropertiesTest {
      */
     @Test
     public void testThatGetProducerConfigReturnsGivenProperties() {
-        final KafkaProducerConfigProperties config = new KafkaProducerConfigProperties();
         config.setProducerConfig(Map.of("foo", "bar"));
 
         final Map<String, String> producerConfig = config.getProducerConfig("producerName");
@@ -58,13 +65,12 @@ public class KafkaProducerConfigPropertiesTest {
 
     /**
      * Verifies that properties provided with {@link KafkaProducerConfigProperties#setProducerConfig(Map)} and
-     * {@link org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties#setCommonClientConfig(Map)} are returned
-     * in {@link KafkaProducerConfigProperties#getProducerConfig(String)}, with the producer config properties having
+     * {@link AbstractKafkaConfigProperties#setCommonClientConfig(Map)} are returned in
+     * {@link KafkaProducerConfigProperties#getProducerConfig(String)}, with the producer config properties having
      * precedence.
      */
     @Test
     public void testThatGetProducerConfigReturnsGivenPropertiesWithCommonProperties() {
-        final KafkaProducerConfigProperties config = new KafkaProducerConfigProperties();
         config.setCommonClientConfig(Map.of("foo", "toBeOverridden", "common", "commonValue"));
         config.setProducerConfig(Map.of("foo", "bar"));
 
@@ -80,46 +86,20 @@ public class KafkaProducerConfigPropertiesTest {
     @Test
     public void testIsConfiguredMethod() {
 
-        assertThat(new KafkaProducerConfigProperties().isConfigured()).isFalse();
+        assertThat(config.isConfigured()).isFalse();
 
-        final KafkaProducerConfigProperties config = new KafkaProducerConfigProperties();
         config.setProducerConfig(Map.of(AbstractKafkaConfigProperties.PROPERTY_BOOTSTRAP_SERVERS, "kafka"));
         assertThat(config.isConfigured()).isTrue();
     }
 
     /**
-     * Verifies that properties returned in {@link KafkaProducerConfigProperties#getProducerConfig(String)} contain
-     * the predefined entries, overriding any corresponding properties given in {@link KafkaProducerConfigProperties#setProducerConfig(Map)}.
-     */
-    @Test
-    public void testThatGetProducerConfigReturnsAdaptedConfig() {
-
-        final Map<String, String> properties = new HashMap<>();
-        properties.put("key.serializer", "foo");
-        properties.put("value.serializer", "bar");
-        properties.put("enable.idempotence", "baz");
-
-        final KafkaProducerConfigProperties config = new KafkaProducerConfigProperties();
-        config.setProducerConfig(properties);
-
-        final Map<String, String> producerConfig = config.getProducerConfig("producerName");
-
-        assertThat(producerConfig.get("key.serializer"))
-                .isEqualTo("org.apache.kafka.common.serialization.StringSerializer");
-        assertThat(producerConfig.get("value.serializer"))
-                .isEqualTo("io.vertx.kafka.client.serialization.BufferSerializer");
-        assertThat(producerConfig.get("enable.idempotence")).isEqualTo("true");
-    }
-
-    /**
-     * Verifies that the client ID set with {@link KafkaProducerConfigProperties#setDefaultClientIdPrefix(String)} is applied when it
-     * is NOT present in the configuration.
+     * Verifies that the client ID set with {@link KafkaProducerConfigProperties#setDefaultClientIdPrefix(String)} is
+     * applied when it is NOT present in the configuration.
      */
     @Test
     public void testThatClientIdIsApplied() {
         final String clientId = "the-client";
 
-        final KafkaProducerConfigProperties config = new KafkaProducerConfigProperties();
         config.setProducerConfig(Map.of());
         config.setDefaultClientIdPrefix(clientId);
 
@@ -128,14 +108,13 @@ public class KafkaProducerConfigPropertiesTest {
     }
 
     /**
-     * Verifies that the client ID set with {@link KafkaProducerConfigProperties#setDefaultClientIdPrefix(String)} is NOT applied
-     * when it is present in the configuration.
+     * Verifies that the client ID set with {@link KafkaProducerConfigProperties#setDefaultClientIdPrefix(String)} is
+     * NOT applied when it is present in the configuration.
      */
     @Test
     public void testThatClientIdIsNotAppliedIfAlreadyPresent() {
         final String userProvidedClientId = "custom-client";
 
-        final KafkaProducerConfigProperties config = new KafkaProducerConfigProperties();
         config.setProducerConfig(Map.of("client.id", userProvidedClientId));
         config.setDefaultClientIdPrefix("other-client");
 

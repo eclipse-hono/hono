@@ -40,9 +40,9 @@ import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
 import org.eclipse.hono.client.SendMessageTimeoutException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.kafka.HonoTopic;
-import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
+import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
-import org.eclipse.hono.client.kafka.producer.KafkaProducerConfigProperties;
+import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
 import org.eclipse.hono.kafka.test.KafkaMockConsumer;
 import org.eclipse.hono.util.MessageHelper;
@@ -76,8 +76,8 @@ public class KafkaBasedCommandSenderTest {
     private static final Logger LOG = LoggerFactory.getLogger(KafkaBasedCommandSenderTest.class);
 
     private KafkaBasedCommandSender commandSender;
-    private KafkaConsumerConfigProperties consumerConfig;
-    private KafkaProducerConfigProperties producerConfig;
+    private MessagingKafkaConsumerConfigProperties consumerConfig;
+    private MessagingKafkaProducerConfigProperties producerConfig;
     private MockProducer<String, Buffer> mockProducer;
     private KafkaMockConsumer mockConsumer;
     private String tenantId;
@@ -93,9 +93,9 @@ public class KafkaBasedCommandSenderTest {
     @BeforeEach
     void setUp(final Vertx vertx) {
         this.vertx = vertx;
-        consumerConfig = new KafkaConsumerConfigProperties();
+        consumerConfig = new MessagingKafkaConsumerConfigProperties();
         mockConsumer = new KafkaMockConsumer(OffsetResetStrategy.LATEST);
-        producerConfig = new KafkaProducerConfigProperties();
+        producerConfig = new MessagingKafkaProducerConfigProperties();
         producerConfig.setProducerConfig(Map.of("client.id", "application-test-sender"));
 
         mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);

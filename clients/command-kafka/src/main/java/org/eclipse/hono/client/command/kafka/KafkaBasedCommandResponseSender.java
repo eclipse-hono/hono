@@ -21,8 +21,8 @@ import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
-import org.eclipse.hono.client.kafka.producer.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
 
@@ -50,7 +50,7 @@ public class KafkaBasedCommandResponseSender extends AbstractKafkaBasedMessageSe
      */
     public KafkaBasedCommandResponseSender(
             final KafkaProducerFactory<String, Buffer> producerFactory,
-            final KafkaProducerConfigProperties producerConfig,
+            final MessagingKafkaProducerConfigProperties producerConfig,
             final Tracer tracer) {
         super(producerFactory, CommandConstants.COMMAND_RESPONSE_ENDPOINT, producerConfig, tracer);
     }

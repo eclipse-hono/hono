@@ -81,7 +81,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
     private static final TopicPartition TOPIC_PARTITION = new TopicPartition(TOPIC, PARTITION);
     private static final TopicPartition TOPIC2_PARTITION = new TopicPartition(TOPIC2, PARTITION);
 
-    private KafkaConsumerConfigProperties consumerConfigProperties;
+    private MessagingKafkaConsumerConfigProperties consumerConfigProperties;
     private Vertx vertx;
     private KafkaMockConsumer mockConsumer;
     private AsyncHandlingAutoCommitKafkaConsumer consumer;
@@ -98,7 +98,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         mockConsumer = new KafkaMockConsumer(OffsetResetStrategy.LATEST);
 
         final Map<String, String> commonProperties = Map.of(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "servers");
-        consumerConfigProperties = new KafkaConsumerConfigProperties();
+        consumerConfigProperties = new MessagingKafkaConsumerConfigProperties();
         consumerConfigProperties.setCommonClientConfig(commonProperties);
     }
 

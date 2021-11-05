@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.client.kafka;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -73,11 +72,11 @@ public class KafkaAdminClientConfigProperties extends AbstractKafkaConfigPropert
     public final Map<String, String> getAdminClientConfig(final String adminClientName) {
         Objects.requireNonNull(adminClientName);
 
+        final Map<String, String> newConfig = new HashMap<>();
         if (commonClientConfig == null && adminClientConfig == null) {
-            return Collections.emptyMap();
+            return newConfig;
         }
 
-        final Map<String, String> newConfig = new HashMap<>();
         if (commonClientConfig != null) {
             newConfig.putAll(commonClientConfig);
         }

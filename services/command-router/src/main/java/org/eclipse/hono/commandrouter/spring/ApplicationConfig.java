@@ -18,14 +18,14 @@ import java.util.Optional;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
-import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
+import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.metrics.KafkaMetricsConfig;
 import org.eclipse.hono.client.kafka.metrics.MicrometerKafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.metrics.NoopKafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
-import org.eclipse.hono.client.kafka.producer.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
@@ -252,7 +252,7 @@ public class ApplicationConfig {
 
         final CommandTargetMapper commandTargetMapper = CommandTargetMapper.create(registrationClient, deviceConnectionInfo, getTracer());
         final MessagingClientProvider<CommandConsumerFactory> commandConsumerFactoryProvider = new MessagingClientProvider<>();
-        if (kafkaProducerConfig().isConfigured() && kafkaConsumerConfig().isConfigured()) {
+        if (messagingKafkaProducerConfig().isConfigured() && messagingKafkaConsumerConfig().isConfigured()) {
             final KafkaClientMetricsSupport kafkaClientMetricsSupport = kafkaClientMetricsSupport(meterRegistry, kafkaMetricsConfig());
             final KafkaProducerFactory<String, Buffer> kafkaProducerFactory = kafkaProducerFactory(kafkaClientMetricsSupport);
             commandConsumerFactoryProvider.setClient(new KafkaBasedCommandConsumerFactoryImpl(
@@ -260,8 +260,8 @@ public class ApplicationConfig {
                     tenantClient,
                     commandTargetMapper,
                     kafkaProducerFactory,
-                    kafkaProducerConfig(),
-                    kafkaConsumerConfig(),
+                    messagingKafkaProducerConfig(),
+                    messagingKafkaConsumerConfig(),
                     metrics,
                     kafkaClientMetricsSupport,
                     getTracer()));
@@ -431,8 +431,8 @@ public class ApplicationConfig {
      */
     @ConfigurationProperties(prefix = "hono.kafka")
     @Bean
-    public KafkaConsumerConfigProperties kafkaConsumerConfig() {
-        final KafkaConsumerConfigProperties kafkaConsumerConfigProperties = new KafkaConsumerConfigProperties();
+    public MessagingKafkaConsumerConfigProperties messagingKafkaConsumerConfig() {
+        final MessagingKafkaConsumerConfigProperties kafkaConsumerConfigProperties = new MessagingKafkaConsumerConfigProperties();
         kafkaConsumerConfigProperties.setDefaultClientIdPrefix("cmd-router");
         return kafkaConsumerConfigProperties;
     }
@@ -444,8 +444,8 @@ public class ApplicationConfig {
      */
     @ConfigurationProperties(prefix = "hono.kafka")
     @Bean
-    public KafkaProducerConfigProperties kafkaProducerConfig() {
-        final KafkaProducerConfigProperties configProperties = new KafkaProducerConfigProperties();
+    public MessagingKafkaProducerConfigProperties messagingKafkaProducerConfig() {
+        final MessagingKafkaProducerConfigProperties configProperties = new MessagingKafkaProducerConfigProperties();
         configProperties.setDefaultClientIdPrefix("cmd-router");
         return configProperties;
     }

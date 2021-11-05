@@ -28,9 +28,9 @@ import org.eclipse.hono.application.client.kafka.KafkaApplicationClient;
 import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.consumer.HonoKafkaConsumer;
-import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
-import org.eclipse.hono.client.kafka.producer.KafkaProducerConfigProperties;
+import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
@@ -48,7 +48,7 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 public class KafkaApplicationClientImpl extends KafkaBasedCommandSender implements KafkaApplicationClient {
 
     private final Vertx vertx;
-    private final KafkaConsumerConfigProperties consumerConfig;
+    private final MessagingKafkaConsumerConfigProperties consumerConfig;
     private final List<MessageConsumer> consumersToCloseOnStop = new LinkedList<>();
     private Supplier<Consumer<String, Buffer>> kafkaConsumerSupplier;
 
@@ -65,9 +65,9 @@ public class KafkaApplicationClientImpl extends KafkaBasedCommandSender implemen
      */
     public KafkaApplicationClientImpl(
             final Vertx vertx,
-            final KafkaConsumerConfigProperties consumerConfig,
+            final MessagingKafkaConsumerConfigProperties consumerConfig,
             final KafkaProducerFactory<String, Buffer> producerFactory,
-            final KafkaProducerConfigProperties producerConfig) {
+            final MessagingKafkaProducerConfigProperties producerConfig) {
         this(vertx, consumerConfig, producerFactory, producerConfig, NoopTracerFactory.create());
     }
 
@@ -85,9 +85,9 @@ public class KafkaApplicationClientImpl extends KafkaBasedCommandSender implemen
      */
     public KafkaApplicationClientImpl(
             final Vertx vertx,
-            final KafkaConsumerConfigProperties consumerConfig,
+            final MessagingKafkaConsumerConfigProperties consumerConfig,
             final KafkaProducerFactory<String, Buffer> producerFactory,
-            final KafkaProducerConfigProperties producerConfig,
+            final MessagingKafkaProducerConfigProperties producerConfig,
             final Tracer tracer) {
         super(vertx, consumerConfig, producerFactory, producerConfig, tracer);
 
