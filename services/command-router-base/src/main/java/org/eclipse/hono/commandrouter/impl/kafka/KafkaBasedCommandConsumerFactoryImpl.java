@@ -22,10 +22,10 @@ import org.eclipse.hono.client.command.kafka.KafkaBasedCommandResponseSender;
 import org.eclipse.hono.client.command.kafka.KafkaBasedInternalCommandSender;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.consumer.AsyncHandlingAutoCommitKafkaConsumer;
-import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
+import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
-import org.eclipse.hono.client.kafka.producer.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterMetrics;
@@ -66,7 +66,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
     private final Vertx vertx;
     private final TenantClient tenantClient;
     private final CommandTargetMapper commandTargetMapper;
-    private final KafkaConsumerConfigProperties kafkaConsumerConfig;
+    private final MessagingKafkaConsumerConfigProperties kafkaConsumerConfig;
     private final Tracer tracer;
     private final CommandRouterMetrics metrics;
     private final KafkaBasedInternalCommandSender internalCommandSender;
@@ -98,8 +98,8 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
             final TenantClient tenantClient,
             final CommandTargetMapper commandTargetMapper,
             final KafkaProducerFactory<String, Buffer> kafkaProducerFactory,
-            final KafkaProducerConfigProperties kafkaProducerConfig,
-            final KafkaConsumerConfigProperties kafkaConsumerConfig,
+            final MessagingKafkaProducerConfigProperties kafkaProducerConfig,
+            final MessagingKafkaConsumerConfigProperties kafkaConsumerConfig,
             final CommandRouterMetrics metrics,
             final KafkaClientMetricsSupport kafkaClientMetricsSupport,
             final Tracer tracer) {

@@ -17,8 +17,8 @@ import java.util.Map;
 
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
-import org.eclipse.hono.client.kafka.producer.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 
 import io.opentracing.SpanContext;
 import io.opentracing.noop.NoopTracerFactory;
@@ -39,7 +39,7 @@ public class GenericKafkaSender extends AbstractKafkaBasedMessageSender {
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public GenericKafkaSender(final KafkaProducerFactory<String, Buffer> producerFactory,
-            final KafkaProducerConfigProperties producerConfig) {
+            final MessagingKafkaProducerConfigProperties producerConfig) {
         super(producerFactory, "generic-sender", producerConfig, NoopTracerFactory.create());
     }
 

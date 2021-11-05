@@ -36,10 +36,10 @@ import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.consumer.HonoKafkaConsumer;
-import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
+import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
-import org.eclipse.hono.client.kafka.producer.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
@@ -70,7 +70,7 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
     private static final long DEFAULT_COMMAND_TIMEOUT_IN_MS = 10000;
 
     private final Vertx vertx;
-    private final KafkaConsumerConfigProperties consumerConfig;
+    private final MessagingKafkaConsumerConfigProperties consumerConfig;
     /**
      * Key is the tenant identifier, value the corresponding consumer for receiving the command responses.
      */
@@ -97,9 +97,9 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
      */
     public KafkaBasedCommandSender(
             final Vertx vertx,
-            final KafkaConsumerConfigProperties consumerConfig,
+            final MessagingKafkaConsumerConfigProperties consumerConfig,
             final KafkaProducerFactory<String, Buffer> producerFactory,
-            final KafkaProducerConfigProperties producerConfig,
+            final MessagingKafkaProducerConfigProperties producerConfig,
             final Tracer tracer) {
         super(producerFactory, "command-sender", producerConfig, tracer);
         this.vertx = Objects.requireNonNull(vertx);

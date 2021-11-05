@@ -17,8 +17,8 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.kafka.producer.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationSender;
 import org.eclipse.hono.notification.deviceregistry.CredentialsChangeNotification;
@@ -37,7 +37,7 @@ import io.vertx.kafka.client.producer.RecordMetadata;
 public class KafkaBasedNotificationSender implements NotificationSender {
 
     public static final String PRODUCER_NAME = "notification";
-    private final KafkaProducerConfigProperties config;
+    private final MessagingKafkaProducerConfigProperties config;
     private final KafkaProducerFactory<String, JsonObject> producerFactory;
     private boolean stopped = false;
 
@@ -49,7 +49,7 @@ public class KafkaBasedNotificationSender implements NotificationSender {
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public KafkaBasedNotificationSender(final KafkaProducerFactory<String, JsonObject> producerFactory,
-            final KafkaProducerConfigProperties kafkaProducerConfig) {
+            final MessagingKafkaProducerConfigProperties kafkaProducerConfig) {
         Objects.requireNonNull(producerFactory);
         Objects.requireNonNull(kafkaProducerConfig);
 

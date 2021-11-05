@@ -29,9 +29,9 @@ import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
 import org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.HonoTopic.Type;
-import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
+import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
-import org.eclipse.hono.client.kafka.producer.KafkaProducerConfigProperties;
+import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
 import org.eclipse.hono.kafka.test.KafkaMockConsumer;
 import org.junit.jupiter.api.AfterEach;
@@ -83,10 +83,10 @@ public class KafkaApplicationClientImplTest {
 
         mockConsumer = new KafkaMockConsumer(OffsetResetStrategy.EARLIEST);
 
-        final KafkaConsumerConfigProperties consumerConfig = new KafkaConsumerConfigProperties();
+        final MessagingKafkaConsumerConfigProperties consumerConfig = new MessagingKafkaConsumerConfigProperties();
         consumerConfig.setCommonClientConfig(Map.of(AbstractKafkaConfigProperties.PROPERTY_BOOTSTRAP_SERVERS, "kafka"));
         consumerConfig.setConsumerConfig(Map.of("client.id", "application-test-consumer"));
-        final KafkaProducerConfigProperties producerConfig = new KafkaProducerConfigProperties();
+        final MessagingKafkaProducerConfigProperties producerConfig = new MessagingKafkaProducerConfigProperties();
         producerConfig.setCommonClientConfig(Map.of(AbstractKafkaConfigProperties.PROPERTY_BOOTSTRAP_SERVERS, "kafka"));
         producerConfig.setProducerConfig(Map.of("client.id", "application-test-sender"));
 

@@ -16,10 +16,11 @@ package org.eclipse.hono.client.kafka.consumer;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static com.google.common.truth.Truth.assertThat;
 
-import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -27,12 +28,20 @@ import org.junit.jupiter.api.Test;
  */
 public class KafkaConsumerConfigPropertiesTest {
 
+    private KafkaConsumerConfigProperties config;
+
+    @BeforeEach
+    void setUp() {
+        config = new KafkaConsumerConfigProperties(StringDeserializer.class, StringDeserializer.class);
+    }
+
     /**
      * Verifies that trying to set a {@code null} config throws a {@link NullPointerException}.
      */
     @Test
     public void testThatConfigCanNotBeSetToNull() {
-        assertThrows(NullPointerException.class, () -> new KafkaConsumerConfigProperties().setConsumerConfig(null));
+        assertThrows(NullPointerException.class,
+                () -> config.setConsumerConfig(null));
     }
 
     /**
@@ -40,7 +49,8 @@ public class KafkaConsumerConfigPropertiesTest {
      */
     @Test
     public void testThatClientIdCanNotBeSetToNull() {
-        assertThrows(NullPointerException.class, () -> new KafkaConsumerConfigProperties().setDefaultClientIdPrefix(null));
+        assertThrows(NullPointerException.class,
+                () -> config.setDefaultClientIdPrefix(null));
     }
 
     /**
@@ -48,7 +58,8 @@ public class KafkaConsumerConfigPropertiesTest {
      */
     @Test
     public void testThatPollTimeoutCanNotBeSetToNull() {
-        assertThrows(IllegalArgumentException.class, () -> new KafkaConsumerConfigProperties().setPollTimeout(-1L));
+        assertThrows(IllegalArgumentException.class,
+                () -> config.setPollTimeout(-1L));
     }
 
     /**
@@ -57,7 +68,6 @@ public class KafkaConsumerConfigPropertiesTest {
      */
     @Test
     public void testThatGetConsumerConfigReturnsGivenProperties() {
-        final KafkaConsumerConfigProperties config = new KafkaConsumerConfigProperties();
         config.setConsumerConfig(Map.of("foo", "bar"));
 
         final Map<String, String> consumerConfig = config.getConsumerConfig("consumerName");
@@ -66,13 +76,12 @@ public class KafkaConsumerConfigPropertiesTest {
 
     /**
      * Verifies that properties provided with {@link KafkaConsumerConfigProperties#setConsumerConfig(Map)} and
-     * {@link org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties#setCommonClientConfig(Map)} are returned
-     * in {@link KafkaConsumerConfigProperties#getConsumerConfig(String)}, with the consumer config properties having
+     * {@link AbstractKafkaConfigProperties#setCommonClientConfig(Map)} are returned in
+     * {@link KafkaConsumerConfigProperties#getConsumerConfig(String)}, with the consumer config properties having
      * precedence.
      */
     @Test
     public void testThatGetConsumerConfigReturnsGivenPropertiesWithCommonProperties() {
-        final KafkaConsumerConfigProperties config = new KafkaConsumerConfigProperties();
         config.setCommonClientConfig(Map.of("foo", "toBeOverridden", "common", "commonValue"));
         config.setConsumerConfig(Map.of("foo", "bar"));
 
@@ -88,45 +97,20 @@ public class KafkaConsumerConfigPropertiesTest {
     @Test
     public void testIsConfiguredMethod() {
 
-        assertThat(new KafkaConsumerConfigProperties().isConfigured()).isFalse();
+        assertThat(config.isConfigured()).isFalse();
 
-        final KafkaConsumerConfigProperties config = new KafkaConsumerConfigProperties();
         config.setConsumerConfig(Map.of(AbstractKafkaConfigProperties.PROPERTY_BOOTSTRAP_SERVERS, "kafka"));
         assertThat(config.isConfigured()).isTrue();
     }
 
     /**
-     * Verifies that properties returned in {@link KafkaConsumerConfigProperties#getConsumerConfig(String)} ()} contain
-     * the predefined entries, overriding any corresponding properties given in {@link KafkaConsumerConfigProperties#setConsumerConfig(Map)}.
-     */
-    @Test
-    public void testThatGetConsumerConfigReturnsAdaptedConfig() {
-
-        final Map<String, String> properties = new HashMap<>();
-        properties.put("key.deserializer", "foo");
-        properties.put("value.deserializer", "bar");
-        properties.put("enable.idempotence", "baz");
-
-        final KafkaConsumerConfigProperties config = new KafkaConsumerConfigProperties();
-        config.setConsumerConfig(properties);
-
-        final Map<String, String> consumerConfig = config.getConsumerConfig("consumerName");
-
-        assertThat(consumerConfig.get("key.deserializer"))
-                .isEqualTo("org.apache.kafka.common.serialization.StringDeserializer");
-        assertThat(consumerConfig.get("value.deserializer"))
-                .isEqualTo("io.vertx.kafka.client.serialization.BufferDeserializer");
-    }
-
-    /**
-     * Verifies that the client ID set with {@link KafkaConsumerConfigProperties#setDefaultClientIdPrefix(String)} is applied when it
-     * is NOT present in the configuration.
+     * Verifies that the client ID set with {@link KafkaConsumerConfigProperties#setDefaultClientIdPrefix(String)} is
+     * applied when it is NOT present in the configuration.
      */
     @Test
     public void testThatClientIdIsApplied() {
         final String clientId = "the-client";
 
-        final KafkaConsumerConfigProperties config = new KafkaConsumerConfigProperties();
         config.setConsumerConfig(Map.of());
         config.setDefaultClientIdPrefix(clientId);
 
@@ -135,14 +119,13 @@ public class KafkaConsumerConfigPropertiesTest {
     }
 
     /**
-     * Verifies that the client ID set with {@link KafkaConsumerConfigProperties#setDefaultClientIdPrefix(String)} is NOT applied
-     * when it is present in the configuration.
+     * Verifies that the client ID set with {@link KafkaConsumerConfigProperties#setDefaultClientIdPrefix(String)} is
+     * NOT applied when it is present in the configuration.
      */
     @Test
     public void testThatClientIdIsNotAppliedIfAlreadyPresent() {
         final String userProvidedClientId = "custom-client";
 
-        final KafkaConsumerConfigProperties config = new KafkaConsumerConfigProperties();
         config.setConsumerConfig(Map.of("client.id", userProvidedClientId));
         config.setDefaultClientIdPrefix("other-client");
 

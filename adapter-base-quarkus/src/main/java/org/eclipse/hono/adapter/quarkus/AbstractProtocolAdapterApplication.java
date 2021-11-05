@@ -52,14 +52,14 @@ import org.eclipse.hono.client.command.kafka.KafkaBasedCommandResponseSender;
 import org.eclipse.hono.client.command.kafka.KafkaBasedInternalCommandConsumer;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaClientOptions;
-import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
+import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.metrics.KafkaMetricsOptions;
 import org.eclipse.hono.client.kafka.metrics.MicrometerKafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.metrics.NoopKafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
-import org.eclipse.hono.client.kafka.producer.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
@@ -131,8 +131,8 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     private PrometheusBasedResourceLimitChecksConfig resourceLimitChecksConfig;
     private ConnectionEventProducerConfig connectionEventsConfig;
 
-    private KafkaProducerConfigProperties kafkaProducerConfig;
-    private KafkaConsumerConfigProperties kafkaConsumerConfig;
+    private MessagingKafkaProducerConfigProperties kafkaProducerConfig;
+    private MessagingKafkaConsumerConfigProperties kafkaConsumerConfig;
     private KafkaAdminClientConfigProperties kafkaAdminClientConfig;
 
     private Cache<Object, TenantResult<TenantObject>> tenantResponseCache;
@@ -222,11 +222,11 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
     @Inject
     void setKafkaClientOptions(final KafkaClientOptions options) {
-        this.kafkaProducerConfig = new KafkaProducerConfigProperties();
+        this.kafkaProducerConfig = new MessagingKafkaProducerConfigProperties();
         this.kafkaProducerConfig.setCommonClientConfig(options.commonClientConfig());
         this.kafkaProducerConfig.setProducerConfig(options.producerConfig());
 
-        this.kafkaConsumerConfig = new KafkaConsumerConfigProperties();
+        this.kafkaConsumerConfig = new MessagingKafkaConsumerConfigProperties();
         this.kafkaConsumerConfig.setCommonClientConfig(options.commonClientConfig());
         this.kafkaConsumerConfig.setConsumerConfig(options.consumerConfig());
 

@@ -20,8 +20,8 @@ import java.util.Optional;
 
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
-import org.eclipse.hono.client.kafka.producer.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
@@ -54,7 +54,7 @@ public abstract class AbstractKafkaBasedDownstreamSender extends AbstractKafkaBa
     public AbstractKafkaBasedDownstreamSender(
             final KafkaProducerFactory<String, Buffer> producerFactory,
             final String producerName,
-            final KafkaProducerConfigProperties config,
+            final MessagingKafkaProducerConfigProperties config,
             final boolean includeDefaults,
             final Tracer tracer) {
         super(producerFactory, producerName, config, tracer);

@@ -26,7 +26,7 @@ import org.eclipse.hono.client.command.CommandResponse;
 import org.eclipse.hono.client.command.Commands;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
-import org.eclipse.hono.client.kafka.producer.KafkaProducerConfigProperties;
+import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -49,14 +49,14 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 public class KafkaBasedCommandResponseSenderTest {
     private final Tracer tracer = NoopTracerFactory.create();
-    private KafkaProducerConfigProperties kafkaProducerConfig;
+    private MessagingKafkaProducerConfigProperties kafkaProducerConfig;
 
     /**
      * Sets up the fixture.
      */
     @BeforeEach
     public void setUp() {
-        kafkaProducerConfig = new KafkaProducerConfigProperties();
+        kafkaProducerConfig = new MessagingKafkaProducerConfigProperties();
         kafkaProducerConfig.setProducerConfig(new HashMap<>());
     }
 

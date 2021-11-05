@@ -19,10 +19,10 @@ import org.eclipse.hono.application.client.amqp.ProtonBasedApplicationClient;
 import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
 import org.eclipse.hono.application.client.kafka.impl.KafkaApplicationClientImpl;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
+import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
-import org.eclipse.hono.client.kafka.producer.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -85,8 +85,8 @@ public class AppConfiguration {
     @ConfigurationProperties(prefix = "hono.kafka")
     @Profile("kafka")
     @Bean
-    public KafkaConsumerConfigProperties honoKafkaClientConfig() {
-        return new KafkaConsumerConfigProperties();
+    public MessagingKafkaConsumerConfigProperties messagingKafkaClientConfig() {
+        return new MessagingKafkaConsumerConfigProperties();
     }
 
     /**
@@ -97,8 +97,8 @@ public class AppConfiguration {
     @ConfigurationProperties(prefix = "hono.kafka")
     @Profile("kafka")
     @Bean
-    public KafkaProducerConfigProperties kafkaProducerConfig() {
-        return new KafkaProducerConfigProperties();
+    public MessagingKafkaProducerConfigProperties messagingKafkaProducerConfig() {
+        return new MessagingKafkaProducerConfigProperties();
     }
 
     /**
@@ -139,9 +139,9 @@ public class AppConfiguration {
     @Bean
     public ApplicationClient<KafkaMessageContext> kafkaApplicationClient(
             final Vertx vertx,
-            final KafkaConsumerConfigProperties kafkaConsumerConfigProperties,
+            final MessagingKafkaConsumerConfigProperties kafkaConsumerConfigProperties,
             final KafkaProducerFactory<String, Buffer> producerFactory,
-            final KafkaProducerConfigProperties kafkaProducerConfigProperties) {
+            final MessagingKafkaProducerConfigProperties kafkaProducerConfigProperties) {
         return new KafkaApplicationClientImpl(vertx, kafkaConsumerConfigProperties, producerFactory,
                 kafkaProducerConfigProperties);
     }

@@ -17,8 +17,8 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.eclipse.hono.client.kafka.HonoTopic;
-import org.eclipse.hono.client.kafka.producer.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.client.telemetry.TelemetrySender;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
@@ -46,7 +46,7 @@ public class KafkaBasedTelemetrySender extends AbstractKafkaBasedDownstreamSende
      */
     public KafkaBasedTelemetrySender(
             final KafkaProducerFactory<String, Buffer> producerFactory,
-            final KafkaProducerConfigProperties kafkaProducerConfig,
+            final MessagingKafkaProducerConfigProperties kafkaProducerConfig,
             final boolean includeDefaults,
             final Tracer tracer) {
 

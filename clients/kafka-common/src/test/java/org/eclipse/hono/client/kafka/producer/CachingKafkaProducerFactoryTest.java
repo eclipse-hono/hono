@@ -52,7 +52,7 @@ public class CachingKafkaProducerFactoryTest {
 
     private static final String PRODUCER_NAME = "test-producer";
 
-    private final KafkaProducerConfigProperties configProperties = new KafkaProducerConfigProperties();
+    private final MessagingKafkaProducerConfigProperties configProperties = new MessagingKafkaProducerConfigProperties();
 
     private CachingKafkaProducerFactory<String, Buffer> factory;
 

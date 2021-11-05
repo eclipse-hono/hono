@@ -22,8 +22,8 @@ import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
-import org.eclipse.hono.client.kafka.producer.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.client.telemetry.kafka.KafkaBasedEventSender;
@@ -376,9 +376,9 @@ public class ApplicationConfig {
                     true));
         }
 
-        if (kafkaProducerConfig().isConfigured()) {
+        if (messagingKafkaProducerConfig().isConfigured()) {
             final KafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory.sharedFactory(vertx());
-            result.setClient(new KafkaBasedEventSender(factory, kafkaProducerConfig(), true, tracer()));
+            result.setClient(new KafkaBasedEventSender(factory, messagingKafkaProducerConfig(), true, tracer()));
         }
 
         healthCheckServer().registerHealthCheckResources(ServiceClientAdapter.forClient(result));
@@ -406,8 +406,8 @@ public class ApplicationConfig {
      */
     @ConfigurationProperties(prefix = "hono.kafka")
     @Bean
-    public KafkaProducerConfigProperties kafkaProducerConfig() {
-        final KafkaProducerConfigProperties configProperties = new KafkaProducerConfigProperties();
+    public MessagingKafkaProducerConfigProperties messagingKafkaProducerConfig() {
+        final MessagingKafkaProducerConfigProperties configProperties = new MessagingKafkaProducerConfigProperties();
         configProperties.setDefaultClientIdPrefix("device-registry");
         return configProperties;
     }

@@ -152,7 +152,8 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
      * @return an existing or new producer.
      */
     @Override
-    public KafkaProducer<K, V> getOrCreateProducer(final String producerName, final KafkaProducerConfigProperties config) {
+    public KafkaProducer<K, V> getOrCreateProducer(final String producerName,
+            final KafkaProducerConfigProperties config) {
 
         final AtomicReference<KafkaProducer<K, V>> createdProducer = new AtomicReference<>();
         final KafkaProducer<K, V> kafkaProducer = activeProducers.computeIfAbsent(producerName, (name) -> {

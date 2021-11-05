@@ -25,8 +25,8 @@ import org.eclipse.hono.client.command.InternalCommandSender;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
-import org.eclipse.hono.client.kafka.producer.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.util.MessageHelper;
 
 import io.opentracing.Tracer;
@@ -50,7 +50,7 @@ public class KafkaBasedInternalCommandSender extends AbstractKafkaBasedMessageSe
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public KafkaBasedInternalCommandSender(final KafkaProducerFactory<String, Buffer> producerFactory,
-            final KafkaProducerConfigProperties producerConfig, final Tracer tracer) {
+            final MessagingKafkaProducerConfigProperties producerConfig, final Tracer tracer) {
         super(producerFactory, "internal-cmd-sender", producerConfig, tracer);
     }
 

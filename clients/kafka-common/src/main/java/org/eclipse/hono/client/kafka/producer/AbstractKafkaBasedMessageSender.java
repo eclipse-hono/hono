@@ -59,7 +59,7 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
     protected final Logger log = LoggerFactory.getLogger(getClass());
     protected final Tracer tracer;
 
-    private final KafkaProducerConfigProperties config;
+    private final MessagingKafkaProducerConfigProperties config;
     private final KafkaProducerFactory<String, Buffer> producerFactory;
     private final String producerName;
 
@@ -77,7 +77,7 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
     public AbstractKafkaBasedMessageSender(
             final KafkaProducerFactory<String, Buffer> producerFactory,
             final String producerName,
-            final KafkaProducerConfigProperties config,
+            final MessagingKafkaProducerConfigProperties config,
             final Tracer tracer) {
         Objects.requireNonNull(producerFactory);
         Objects.requireNonNull(producerName);

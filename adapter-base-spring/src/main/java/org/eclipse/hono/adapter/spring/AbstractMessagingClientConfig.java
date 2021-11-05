@@ -21,11 +21,11 @@ import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.command.amqp.ProtonBasedCommandResponseSender;
 import org.eclipse.hono.client.command.kafka.KafkaBasedCommandResponseSender;
-import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
+import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
-import org.eclipse.hono.client.kafka.producer.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.TelemetrySender;
 import org.eclipse.hono.client.telemetry.amqp.ProtonBasedDownstreamSender;
@@ -78,9 +78,9 @@ public abstract class AbstractMessagingClientConfig implements ComponentNameProv
         final MessagingClientProvider<EventSender> eventSenderProvider = new MessagingClientProvider<>();
         final MessagingClientProvider<CommandResponseSender> commandResponseSenderProvider = new MessagingClientProvider<>();
 
-        if (kafkaProducerConfig().isConfigured()) {
+        if (messagingKafkaProducerConfig().isConfigured()) {
             log.info("Kafka Producer is configured, adding Kafka messaging clients");
-            final KafkaProducerConfigProperties producerConfig = kafkaProducerConfig();
+            final MessagingKafkaProducerConfigProperties producerConfig = messagingKafkaProducerConfig();
             final KafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory.sharedFactory(vertx);
             factory.setMetricsSupport(kafkaClientMetricsSupport);
 
@@ -122,8 +122,8 @@ public abstract class AbstractMessagingClientConfig implements ComponentNameProv
      */
     @ConfigurationProperties(prefix = "hono.kafka")
     @Bean
-    public KafkaProducerConfigProperties kafkaProducerConfig() {
-        final KafkaProducerConfigProperties configProperties = new KafkaProducerConfigProperties();
+    public MessagingKafkaProducerConfigProperties messagingKafkaProducerConfig() {
+        final MessagingKafkaProducerConfigProperties configProperties = new MessagingKafkaProducerConfigProperties();
         if (getComponentName() != null) {
             configProperties.setDefaultClientIdPrefix(getComponentName());
         }
@@ -137,8 +137,8 @@ public abstract class AbstractMessagingClientConfig implements ComponentNameProv
      */
     @ConfigurationProperties(prefix = "hono.kafka")
     @Bean
-    public KafkaConsumerConfigProperties kafkaConsumerConfig() {
-        final KafkaConsumerConfigProperties configProperties = new KafkaConsumerConfigProperties();
+    public MessagingKafkaConsumerConfigProperties messagingKafkaConsumerConfig() {
+        final MessagingKafkaConsumerConfigProperties configProperties = new MessagingKafkaConsumerConfigProperties();
         if (getComponentName() != null) {
             configProperties.setDefaultClientIdPrefix(getComponentName());
         }

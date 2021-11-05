@@ -45,7 +45,7 @@ import org.eclipse.hono.client.command.amqp.ProtonBasedDeviceConnectionClient;
 import org.eclipse.hono.client.command.amqp.ProtonBasedInternalCommandConsumer;
 import org.eclipse.hono.client.command.kafka.KafkaBasedInternalCommandConsumer;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
-import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
+import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.metrics.KafkaMetricsConfig;
 import org.eclipse.hono.client.kafka.metrics.MicrometerKafkaClientMetricsSupport;
@@ -130,7 +130,7 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
         Objects.requireNonNull(samplerFactory);
 
         final KafkaAdminClientConfigProperties kafkaAdminClientConfig = kafkaAdminClientConfig();
-        final KafkaConsumerConfigProperties kafkaConsumerConfig = kafkaConsumerConfig();
+        final MessagingKafkaConsumerConfigProperties kafkaConsumerConfig = messagingKafkaConsumerConfig();
         final KafkaClientMetricsSupport kafkaClientMetricsSupport = kafkaClientMetricsSupport(kafkaMetricsConfig());
         final MessagingClientProviders messagingClientProviders = messagingClientProviders(samplerFactory, getTracer(),
                 vertx(), adapterProperties, kafkaClientMetricsSupport);

@@ -33,7 +33,7 @@ import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
-import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
+import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -97,7 +97,7 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
     public KafkaBasedInternalCommandConsumer(
             final Vertx vertx,
             final KafkaAdminClientConfigProperties adminClientConfigProperties,
-            final KafkaConsumerConfigProperties consumerConfigProperties,
+            final MessagingKafkaConsumerConfigProperties consumerConfigProperties,
             final CommandResponseSender commandResponseSender,
             final String adapterInstanceId,
             final CommandHandlers commandHandlers,

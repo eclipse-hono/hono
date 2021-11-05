@@ -62,10 +62,10 @@ import org.eclipse.hono.client.amqp.GenericSenderLink;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
 import org.eclipse.hono.client.kafka.consumer.AsyncHandlingAutoCommitKafkaConsumer;
-import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
+import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
-import org.eclipse.hono.client.kafka.producer.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.management.credentials.Credentials;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
@@ -624,9 +624,9 @@ public final class IntegrationTestSupport {
      *
      * @return The properties.
      */
-    public static KafkaConsumerConfigProperties getKafkaConsumerConfig() {
+    public static MessagingKafkaConsumerConfigProperties getKafkaConsumerConfig() {
         LOGGER.info("Configured to connect to Kafka on {}", IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS);
-        final KafkaConsumerConfigProperties consumerConfig = new KafkaConsumerConfigProperties();
+        final MessagingKafkaConsumerConfigProperties consumerConfig = new MessagingKafkaConsumerConfigProperties();
         consumerConfig.setConsumerConfig(Map.of(
                 ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS,
                 ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest",
@@ -639,9 +639,9 @@ public final class IntegrationTestSupport {
      *
      * @return The properties.
      */
-    public static KafkaProducerConfigProperties getKafkaProducerConfig() {
+    public static MessagingKafkaProducerConfigProperties getKafkaProducerConfig() {
         LOGGER.info("Configured to connect to Kafka on {}", IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS);
-        final KafkaProducerConfigProperties consumerConfig = new KafkaProducerConfigProperties();
+        final MessagingKafkaProducerConfigProperties consumerConfig = new MessagingKafkaProducerConfigProperties();
         consumerConfig.setProducerConfig(Map.of(
                 ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS));
         return consumerConfig;
@@ -843,7 +843,7 @@ public final class IntegrationTestSupport {
      *
      * @return A future indicating the outcome of the operation.
      */
-    public Future<Void> init(final KafkaConsumerConfigProperties kafkaDownstreamProps) {
+    public Future<Void> init(final MessagingKafkaConsumerConfigProperties kafkaDownstreamProps) {
 
         initRegistryClient();
 

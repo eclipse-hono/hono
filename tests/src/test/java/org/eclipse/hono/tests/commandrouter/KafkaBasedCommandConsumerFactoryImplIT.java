@@ -36,7 +36,7 @@ import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.consumer.AsyncHandlingAutoCommitKafkaConsumer;
 import org.eclipse.hono.client.kafka.consumer.HonoKafkaConsumer;
-import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
+import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.metrics.NoopKafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
@@ -426,7 +426,7 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
         final Span span = TracingMockSupport.mockSpan();
         final Tracer tracer = TracingMockSupport.mockTracer(span);
 
-        final KafkaConsumerConfigProperties kafkaConsumerConfig = new KafkaConsumerConfigProperties();
+        final MessagingKafkaConsumerConfigProperties kafkaConsumerConfig = new MessagingKafkaConsumerConfigProperties();
         kafkaConsumerConfig.setConsumerConfig(Map.of(
                 ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS));
         final CommandRouterMetrics metrics = mock(CommandRouterMetrics.class);
