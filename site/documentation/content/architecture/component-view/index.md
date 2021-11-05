@@ -31,13 +31,16 @@ All interactions between the components are based on AMQP 1.0 message exchanges 
 
 ## Device Registry
 
-The diagram below provides an overview of the *Device Registry* component's internal structure.
+The diagram below provides an overview of the Mongo DB based *Device Registry* component's internal structure.
 
-{{< figure src="device-registry.png" width="100%" >}}
+{{< figure src="mongodb-device-registry.png" width="100%" >}}
 
-The *Device Registry* component implements the [Credentials API]({{< relref "/api/credentials" >}}), [Tenant API]({{< relref "/api/tenant" >}})
-and [Device Registration API]({{< relref "/api/device-registration" >}}).
-Clients opening a connection to the *DeviceRegistryServer* are authenticated by means of an external service accessed via the *Auth* port.
+The Mongo DB based *Device Registry* component implements the AMQP 1.0 based [Credentials]({{< relref "/api/credentials" >}}),
+[Tenant]({{< relref "/api/tenant" >}}) and [Device Registration]({{< relref "/api/device-registration" >}}) APIs
+which are used by Hono's protocol adapters to authenticate devices. It also implements the HTTP based
+[Device Registry Management API]({{< relref "/api/management" >}}) which is used by administrators to provision and
+manage device data. Clients opening a connection to the *Device Registry AMQP Server* are authenticated by means of
+an external service accessed via the *Authentication* port.
 
 Please refer to the [Device Registry]({{< relref "device-registry" >}}) user guide for details.
 
