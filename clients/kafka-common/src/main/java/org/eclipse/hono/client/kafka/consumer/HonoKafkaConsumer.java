@@ -842,17 +842,18 @@ public class HonoKafkaConsumer implements Lifecycle {
      * Tries to ensure that the given topic is part of the list of topics this consumer is subscribed to.
      * <p>
      * The successful completion of the returned Future means that the topic exists and is among the subscribed topics.
-     * It also means that if partitions of this topic have been assigned to this consumer, the positions for these
-     * partitions have already been fetched and the consumer will receive records published thereafter.
+     * It also means that if partitions of this topic have been assigned to this consumer and if the offset reset config
+     * is set to "latest", the positions for these partitions have already been fetched and the consumer will receive
+     * records published thereafter.
      * If all topic partition are assigned to other consumers, a best-effort approach is taken to let the result
      * Future be completed after this assignment has been done.
      * <p>
      * Note that this method is only applicable if a topic pattern subscription is used, otherwise an
      * {@link IllegalStateException} is thrown.
      * <p>
-     * This is relevant if the topic either has just been created and this consumer doesn't know about it yet or
-     * the topic doesn't exist yet. In the latter case, this method will try to trigger creation of the topic,
-     * which may succeed if "auto.create.topics.enable" is true, and wait for the following rebalance to check
+     * This method is needed for scenarios where the given topic either has just been created and this consumer doesn't
+     * know about it yet or the topic doesn't exist yet. In the latter case, this method will try to trigger creation of
+     * the topic, which may succeed if topic auto-creation is enabled, and wait for the following rebalance to check
      * if the topic is part of the subscribed topics then.
      *
      * @param topic The topic to use.
