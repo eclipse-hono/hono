@@ -46,7 +46,7 @@ public class QuarkusPropertyBindingTest {
     }
 
     /**
-     * Asserts that properties with prefix {@link KafkaRuntimeConfigProducer#COMMON_CONFIG_PREFIX} are present.
+     * Asserts that common client properties are present.
      */
     @Test
     public void testThatCommonConfigIsPresent() {
@@ -54,7 +54,7 @@ public class QuarkusPropertyBindingTest {
     }
 
     /**
-     * Asserts that properties with prefix {@link KafkaRuntimeConfigProducer#CONSUMER_CONFIG_PREFIX} are present.
+     * Asserts that consumer properties are present.
      */
     @Test
     public void testThatConsumerConfigIsPresent() {
@@ -62,7 +62,7 @@ public class QuarkusPropertyBindingTest {
     }
 
     /**
-     * Asserts that properties with prefix {@link KafkaRuntimeConfigProducer#ADMIN_CLIENT_CONFIG_PREFIX} are present.
+     * Asserts that admin client properties are present.
      */
     @Test
     public void testThatAdminClientConfigIsPresent() {
@@ -70,7 +70,7 @@ public class QuarkusPropertyBindingTest {
     }
 
     /**
-     * Asserts that properties with prefix {@link KafkaRuntimeConfigProducer#PRODUCER_CONFIG_PREFIX} are present.
+     * Asserts that producer properties are present.
      */
     @Test
     public void testThatProducerConfigIsPresent() {

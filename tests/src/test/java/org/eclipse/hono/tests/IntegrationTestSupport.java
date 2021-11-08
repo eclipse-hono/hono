@@ -699,8 +699,8 @@ public final class IntegrationTestSupport {
     /**
      * Gets the value for the HTTP *Authentication* header to use in requests to the Device Registry's HTTP endpoint.
      * <p>
-     * The user name and password are read from system properties {@value #HONO_DEVICEREGISTRY_AUTHCONFIG_USERNAME} and
-     * {@value #HONO_DEVICEREGISTRY_AUTHCONFIG_PASSWORD} respectively.
+     * The user name and password are read from system properties {@link #HONO_DEVICEREGISTRY_AUTHCONFIG_USERNAME} and
+     * {@link #HONO_DEVICEREGISTRY_AUTHCONFIG_PASSWORD} respectively.
      *
      * @return The header value or {@code null} if no credentials have been set.
      */
@@ -1111,7 +1111,7 @@ public final class IntegrationTestSupport {
      * @param gatewayId The gateway identifier.
      * @return A future indicating the outcome of the operation.
      *         The future will be completed with the device identifier of the newly
-     *         registered device or will be failed with a {@link ServiceInvocationException}.
+     *         registered device or will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      */
     public Future<String> setupGatewayDevice(final String tenantId, final String gatewayId) {
 
@@ -1131,7 +1131,7 @@ public final class IntegrationTestSupport {
      * @param payload The command's input data to send to the device.
      * @param properties The headers to include in the command message as AMQP application properties.
      * @return A future that is either succeeded with the response payload from the device or
-     *         failed with a {@link ServiceInvocationException}.
+     *         failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      */
     public Future<DownstreamMessage<?>> sendCommand(
             final TimeUntilDisconnectNotification notification,
@@ -1161,7 +1161,7 @@ public final class IntegrationTestSupport {
      * @param properties The headers to include in the command message as AMQP application properties.
      * @param requestTimeout The number of milliseconds to wait for a response from the device.
      * @return A future that is either succeeded with the response payload from the device or
-     *         failed with a {@link ServiceInvocationException}.
+     *         failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      */
     public Future<DownstreamMessage<? extends MessageContext>> sendCommand(
             final String tenantId,
@@ -1207,7 +1207,7 @@ public final class IntegrationTestSupport {
      * @param payload The command's input data to send to the device.
      * @param properties The headers to include in the command message as AMQP application properties.
      * @return A future that is either succeeded if the command has been sent to the device or
-     *         failed with a {@link ServiceInvocationException}.
+     *         failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      */
     public Future<Void> sendOneWayCommand(
             final TimeUntilDisconnectNotification notification,
@@ -1237,7 +1237,7 @@ public final class IntegrationTestSupport {
      * @param properties The headers to include in the command message as AMQP application properties.
      * @param requestTimeout The number of milliseconds to wait for the command being sent to the device.
      * @return A future that is either succeeded if the command has been sent to the device or
-     *         failed with a {@link ServiceInvocationException}.
+     *         failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      */
     public Future<Void> sendOneWayCommand(
             final String tenantId,
