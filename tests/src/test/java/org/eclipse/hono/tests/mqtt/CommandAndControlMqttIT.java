@@ -520,7 +520,7 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         kafkaSenderRef.get().sendAndWaitForOutcome(commandTopic, tenantId, deviceId, Buffer.buffer(), properties2)
                 .onComplete(ctx.succeeding(ok -> {}));
 
-        final long timeToWait = 500;
+        final long timeToWait = 1500;
         if (!expectedCommandResponses.await(timeToWait, TimeUnit.MILLISECONDS)) {
             LOGGER.info("Timeout of {} milliseconds reached, stop waiting for command response", timeToWait);
         }

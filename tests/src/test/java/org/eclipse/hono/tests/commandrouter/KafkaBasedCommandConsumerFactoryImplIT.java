@@ -214,7 +214,7 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
         vertxContext.runOnContext(v0 -> {
             final HonoKafkaConsumer internalConsumer = getInternalCommandConsumer(recordHandler);
             final KafkaBasedCommandConsumerFactoryImpl consumerFactory = getKafkaBasedCommandConsumerFactory(
-                    targetAdapterInstanceGetterCompletionFutureSupplier);
+                    targetAdapterInstanceGetterCompletionFutureSupplier, tenantId);
             CompositeFuture.join(internalConsumer.start(), consumerFactory.start())
                     .compose(f -> createCommandConsumer(tenantId, consumerFactory))
                     .onComplete(setup.succeedingThenComplete());
@@ -317,7 +317,7 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
         vertxContext.runOnContext(v0 -> {
             final HonoKafkaConsumer internalConsumer = getInternalCommandConsumer(recordHandler);
             final KafkaBasedCommandConsumerFactoryImpl consumerFactory1 = getKafkaBasedCommandConsumerFactory(
-                    firstConsumerGetAdapterInstanceSupplier);
+                    firstConsumerGetAdapterInstanceSupplier, tenantId);
             consumerFactory1Ref.set(consumerFactory1);
             CompositeFuture.join(internalConsumer.start(), consumerFactory1.start())
                     .compose(f -> createCommandConsumer(tenantId, consumerFactory1))
@@ -356,7 +356,7 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
                         final KafkaBasedCommandConsumerFactoryImpl consumerFactory2 = getKafkaBasedCommandConsumerFactory(() -> {
                             secondConsumerGetAdapterInstanceInvocations.incrementAndGet();
                             return Future.succeededFuture();
-                        });
+                        }, tenantId);
                         consumerFactory2.start()
                             .onComplete(ctx.succeeding(ar2 -> {
                                 LOG.info("creating command consumer in new consumer factory");
@@ -406,7 +406,8 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
     }
 
     private KafkaBasedCommandConsumerFactoryImpl getKafkaBasedCommandConsumerFactory(
-            final Supplier<Future<Void>> targetAdapterInstanceGetterCompletionFutureSupplier) {
+            final Supplier<Future<Void>> targetAdapterInstanceGetterCompletionFutureSupplier,
+            final String tenantToHandleCommandsFor) {
         final KafkaProducerFactory<String, Buffer> producerFactory = CachingKafkaProducerFactory.sharedFactory(vertx);
         final TenantClient tenantClient = getTenantClient();
         final CommandTargetMapper commandTargetMapper = new CommandTargetMapper() {
@@ -417,6 +418,9 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
                 final JsonObject jsonObject = new JsonObject();
                 jsonObject.put(DeviceConnectionConstants.FIELD_ADAPTER_INSTANCE_ID, adapterInstanceId);
                 jsonObject.put(DeviceConnectionConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
+                if (!tenantId.equals(tenantToHandleCommandsFor)) {
+                    return Future.failedFuture("ignoring command for other tenant " + tenantId);
+                }
                 if (targetAdapterInstanceGetterCompletionFutureSupplier == null) {
                     return Future.succeededFuture(jsonObject);
                 }
