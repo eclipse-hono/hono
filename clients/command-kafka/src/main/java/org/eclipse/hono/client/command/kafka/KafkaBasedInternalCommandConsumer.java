@@ -193,7 +193,8 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
         consumer = consumerCreator.get();
         Optional.ofNullable(metricsSupport).ifPresent(ms -> ms.registerKafkaConsumer(consumer.unwrap()));
         // trigger creation of adapter specific topic and consumer
-        return createTopicWithRetries()
+        return createTopic()
+                .recover(e -> retryCreateTopic())
                 .compose(v -> {
                     isTopicCreated.set(true);
                     return subscribeToTopic();
@@ -238,7 +239,7 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
                 .onFailure(thr -> LOG.error("error creating topic [{}]", topicName, thr));
     }
 
-    private Future<Void> createTopicWithRetries() {
+    private Future<Void> retryCreateTopic() {
         final Promise<Void> createTopicRetryPromise = Promise.promise();
         // Retry at specified interval until the internal command topic is successfully created
         vertx.setPeriodic(CREATE_TOPIC_RETRY_INTERVAL, id -> {
@@ -293,21 +294,6 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
         if (consumer == null) {
             return Future.failedFuture("not started");
         }
-        final String topicName = getTopicName();
-        final Promise<Void> adminClientClosePromise = Promise.promise();
-        LOG.debug("stop: delete topic [{}]", topicName);
-        adminClient.deleteTopics(List.of(topicName))
-                .all()
-                .whenComplete((v, ex) -> {
-                    if (ex != null) {
-                        LOG.warn("error deleting topic [{}]", topicName, ex);
-                    }
-                    context.executeBlocking(future -> {
-                        adminClient.close();
-                        future.complete();
-                    }, adminClientClosePromise);
-                });
-        adminClientClosePromise.future().onComplete(ar -> LOG.debug("admin client closed"));
 
         final Promise<Void> consumerClosePromise = Promise.promise();
         LOG.debug("stop: close consumer");
@@ -316,8 +302,31 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
             LOG.debug("consumer closed");
             Optional.ofNullable(metricsSupport).ifPresent(ms -> ms.unregisterKafkaConsumer(consumer.unwrap()));
         });
-        return CompositeFuture.all(adminClientClosePromise.future(), consumerClosePromise.future())
+
+        return CompositeFuture.all(deleteTopicIfExists(), consumerClosePromise.future())
                 .mapEmpty();
+    }
+
+    private Future<Void> deleteTopicIfExists() {
+        if (isTopicCreated.get()) {
+            final String topicName = getTopicName();
+            final Promise<Void> adminClientClosePromise = Promise.promise();
+            LOG.debug("stop: delete topic [{}]", topicName);
+            adminClient.deleteTopics(List.of(topicName))
+                    .all()
+                    .whenComplete((v, ex) -> {
+                        if (ex != null) {
+                            LOG.warn("error deleting topic [{}]", topicName, ex);
+                        }
+                        context.executeBlocking(future -> {
+                            adminClient.close();
+                            future.complete();
+                        }, adminClientClosePromise);
+                    });
+            return adminClientClosePromise.future().onComplete(ar -> LOG.debug("admin client closed"));
+        } else {
+            return Future.succeededFuture();
+        }
     }
 
     void handleCommandMessage(final KafkaConsumerRecord<String, Buffer> record) {
