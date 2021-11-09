@@ -13,11 +13,13 @@
 
 package org.eclipse.hono.client.kafka;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.apache.kafka.clients.CommonClientConfigs;
 import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,23 +37,32 @@ public abstract class AbstractKafkaConfigProperties {
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
     /**
-     * Common client config properties.
-     */
-    protected Map<String, String> commonClientConfig;
-    /**
      * Client id prefix to be applied if no {@code client.id} property is set in the common
      * or specific client config properties.
      */
     protected String defaultClientIdPrefix;
 
+    private Map<String, String> commonClientConfig;
+    private Map<String, String> specificClientConfig;
+
     /**
-     * Sets the common Kafka client config properties to be used.
+     * Sets the common Kafka client config to be used.
      *
-     * @param commonClientConfig The config properties.
+     * @param commonConfig The config.
      * @throws NullPointerException if the config is {@code null}.
      */
-    public final void setCommonClientConfig(final Map<String, String> commonClientConfig) {
-        this.commonClientConfig = Objects.requireNonNull(commonClientConfig);
+    public final void setCommonClientConfig(final Map<String, String> commonConfig) {
+        this.commonClientConfig = Objects.requireNonNull(commonConfig);
+    }
+
+    /**
+     * Sets the Kafka client config properties to be used for a specific client.
+     *
+     * @param specificConfig The config properties.
+     * @throws NullPointerException if the config is {@code null}.
+     */
+    protected final void setSpecificClientConfig(final Map<String, String> specificConfig) {
+        this.specificClientConfig = Objects.requireNonNull(specificConfig);
     }
 
     /**
@@ -66,6 +77,46 @@ public abstract class AbstractKafkaConfigProperties {
      */
     public final void setDefaultClientIdPrefix(final String clientId) {
         this.defaultClientIdPrefix = Objects.requireNonNull(clientId);
+    }
+
+    /**
+     * Checks if a configuration has been set.
+     *
+     * @return {@code true} if the {@value #PROPERTY_BOOTSTRAP_SERVERS} property has been configured with a non-null
+     *         value.
+     */
+    public final boolean isConfigured() {
+        return containsMinimalConfiguration(commonClientConfig) || containsMinimalConfiguration(specificClientConfig);
+    }
+
+    /**
+     * Gets the Kafka client configuration. This is the common configuration on which the client specific configuration
+     * has been applied.
+     *
+     * An already set client id property or alternatively the value set via {@link #setDefaultClientIdPrefix(String)}
+     * will be used as a prefix, to which the given clientName and a UUID will be added.
+     *
+     * @param clientName A name for the client to include in the added {@code client.id} property.
+     * @return a copy of the client configuration with the applied properties.
+     * @throws NullPointerException if clientName is {@code null}.
+     */
+    protected final Map<String, String> getConfig(final String clientName) {
+        Objects.requireNonNull(clientName);
+
+        final Map<String, String> newConfig = new HashMap<>();
+
+        if (commonClientConfig != null) {
+            newConfig.putAll(commonClientConfig);
+        }
+
+        // the client specific configuration may overwrite common properties
+        if (specificClientConfig != null) {
+            newConfig.putAll(specificClientConfig);
+        }
+
+        setUniqueClientId(newConfig, clientName);
+
+        return newConfig;
     }
 
     /**
@@ -89,31 +140,16 @@ public abstract class AbstractKafkaConfigProperties {
         }
     }
 
-    /**
-     * Sets a client id property with a unique value in the given map.
-     * <p>
-     * An already set client id property or alternatively the value set via
-     * {@link #setDefaultClientIdPrefix(String)} will be used as a prefix, to which
-     * the given clientName and a UUID will be added.
-     *
-     * @param config The map to set the client id in.
-     * @param clientName The client name to include in the client id.
-     * @param clientIdPropertyName The name of the client id property.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
-    protected final void setUniqueClientId(final Map<String, String> config, final String clientName,
-            final String clientIdPropertyName) {
-        Objects.requireNonNull(config);
-        Objects.requireNonNull(clientName);
-        Objects.requireNonNull(clientIdPropertyName);
+    private void setUniqueClientId(final Map<String, String> config, final String clientName) {
 
         final UUID uuid = UUID.randomUUID();
-        final String clientIdPrefix = Optional.ofNullable(config.get(clientIdPropertyName))
+        final String clientIdPrefix = Optional.ofNullable(config.get(CommonClientConfigs.CLIENT_ID_CONFIG))
                 .orElse(defaultClientIdPrefix);
         if (clientIdPrefix == null) {
-            config.put(clientIdPropertyName, String.format("%s-%s", clientName, uuid));
+            config.put(CommonClientConfigs.CLIENT_ID_CONFIG, String.format("%s-%s", clientName, uuid));
         } else {
-            config.put(clientIdPropertyName, String.format("%s-%s-%s", clientIdPrefix, clientName, uuid));
+            config.put(CommonClientConfigs.CLIENT_ID_CONFIG,
+                    String.format("%s-%s-%s", clientIdPrefix, clientName, uuid));
         }
     }
 

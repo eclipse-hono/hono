@@ -13,9 +13,7 @@
 
 package org.eclipse.hono.client.kafka.consumer;
 
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -38,7 +36,6 @@ public class KafkaConsumerConfigProperties extends AbstractKafkaConfigProperties
     private final Class<? extends Deserializer<?>> keyDeserializerClass;
     private final Class<? extends Deserializer<?>> valueDeserializerClass;
 
-    private Map<String, String> consumerConfig;
     private long pollTimeout = DEFAULT_POLL_TIMEOUT;
 
     /**
@@ -63,58 +60,35 @@ public class KafkaConsumerConfigProperties extends AbstractKafkaConfigProperties
      * @throws NullPointerException if the config is {@code null}.
      */
     public final void setConsumerConfig(final Map<String, String> consumerConfig) {
-        this.consumerConfig = Objects.requireNonNull(consumerConfig);
+        setSpecificClientConfig(consumerConfig);
     }
 
     /**
-     * Checks if a configuration has been set.
-     *
-     * @return {@code true} if the {@value #PROPERTY_BOOTSTRAP_SERVERS} property has been configured with a non-null
-     *         value.
-     */
-    public final boolean isConfigured() {
-        return containsMinimalConfiguration(commonClientConfig) || containsMinimalConfiguration(consumerConfig);
-    }
-
-    /**
-     * Gets the Kafka consumer configuration. This includes changes made in {@link #adaptConfiguration(Map)}. The
-     * returned map will contain a property {@code client.id} which will be set to a unique value containing the already
-     * set client id or alternatively the value set via {@link #setDefaultClientIdPrefix(String)}, the given
-     * consumerName and a newly created UUID.
+     * Gets the Kafka consumer configuration. This is the result of applying the consumer configuration on the common
+     * configuration. It includes changes made in {@link #adaptConfiguration(Map)}. The returned map will contain a
+     * property {@code client.id} which will be set to a unique value containing the already set client id or
+     * alternatively the value set via {@link #setDefaultClientIdPrefix(String)}, the given consumerName and a newly
+     * created UUID.
      *
      * Note: This method should be called for each new consumer, ensuring that a unique client id is used.
      *
      * @param consumerName A name for the consumer to include in the added {@code client.id} property.
-     * @return a copy of the consumer configuration with the applied properties or an empty map if neither a consumer
-     *         client configuration was set with {@link #setConsumerConfig(Map)} nor common configuration properties
-     *         were set with {@link #setCommonClientConfig(Map)}.
+     * @return a copy of the consumer configuration with the applied properties.
      * @throws NullPointerException if consumerName is {@code null}.
      */
     public final Map<String, String> getConsumerConfig(final String consumerName) {
-        Objects.requireNonNull(consumerName);
 
-        final Map<String, String> newConfig = new HashMap<>();
-        if (commonClientConfig == null && consumerConfig == null) {
-            return newConfig;
-        }
+        final Map<String, String> config = getConfig(consumerName);
 
-        if (commonClientConfig != null) {
-            newConfig.putAll(commonClientConfig);
-        }
-        if (consumerConfig != null) {
-            newConfig.putAll(consumerConfig);
-        }
+        adaptConfiguration(config);
 
-        adaptConfiguration(newConfig);
-
-        Optional.ofNullable(keyDeserializerClass).ifPresent(serializerClass -> overrideConfigProperty(newConfig,
+        Optional.ofNullable(keyDeserializerClass).ifPresent(serializerClass -> overrideConfigProperty(config,
                 ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, serializerClass.getName()));
 
-        Optional.ofNullable(valueDeserializerClass).ifPresent(serializerClass -> overrideConfigProperty(newConfig,
+        Optional.ofNullable(valueDeserializerClass).ifPresent(serializerClass -> overrideConfigProperty(config,
                 ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, serializerClass.getName()));
 
-        setUniqueClientId(newConfig, consumerName, ConsumerConfig.CLIENT_ID_CONFIG);
-        return newConfig;
+        return config;
     }
 
     /**
