@@ -89,6 +89,7 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
     private Context context;
     private KafkaClientMetricsSupport metricsSupport;
     private final Vertx vertx;
+    private long retryCreateTopicTimerId;
 
     /**
      * Creates a consumer.
@@ -242,7 +243,7 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
     private Future<Void> retryCreateTopic() {
         final Promise<Void> createTopicRetryPromise = Promise.promise();
         // Retry at specified interval until the internal command topic is successfully created
-        vertx.setPeriodic(CREATE_TOPIC_RETRY_INTERVAL, id -> {
+        retryCreateTopicTimerId = vertx.setPeriodic(CREATE_TOPIC_RETRY_INTERVAL, id -> {
             if (retryCreateTopic.compareAndSet(true, false)) {
                 createTopic()
                         .onSuccess(ok -> {
@@ -291,26 +292,22 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
 
     @Override
     public Future<Void> stop() {
+        retryCreateTopic.set(false);
+        vertx.cancelTimer(retryCreateTopicTimerId);
+
         if (consumer == null) {
             return Future.failedFuture("not started");
         }
 
-        final Promise<Void> consumerClosePromise = Promise.promise();
-        LOG.debug("stop: close consumer");
-        consumer.close(consumerClosePromise);
-        consumerClosePromise.future().onComplete(ar -> {
-            LOG.debug("consumer closed");
-            Optional.ofNullable(metricsSupport).ifPresent(ms -> ms.unregisterKafkaConsumer(consumer.unwrap()));
-        });
-
-        return CompositeFuture.all(deleteTopicIfExists(), consumerClosePromise.future())
+        return deleteTopicIfExists()
+                .map(ok -> CompositeFuture.all(closeAdminClient(), closeConsumer()))
                 .mapEmpty();
     }
 
     private Future<Void> deleteTopicIfExists() {
         if (isTopicCreated.get()) {
             final String topicName = getTopicName();
-            final Promise<Void> adminClientClosePromise = Promise.promise();
+            final Promise<Void> deleteTopicPromise = Promise.promise();
             LOG.debug("stop: delete topic [{}]", topicName);
             adminClient.deleteTopics(List.of(topicName))
                     .all()
@@ -318,15 +315,34 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
                         if (ex != null) {
                             LOG.warn("error deleting topic [{}]", topicName, ex);
                         }
-                        context.executeBlocking(future -> {
-                            adminClient.close();
-                            future.complete();
-                        }, adminClientClosePromise);
+                        context.runOnContext(deleteTopicPromise::complete);
                     });
-            return adminClientClosePromise.future().onComplete(ar -> LOG.debug("admin client closed"));
+            return deleteTopicPromise.future();
         } else {
             return Future.succeededFuture();
         }
+    }
+
+    private Future<Void> closeAdminClient() {
+        final Promise<Void> adminClientClosePromise = Promise.promise();
+        LOG.debug("stop: close admin client");
+        context.runOnContext(x -> {
+            adminClient.close();
+            LOG.debug("admin client closed");
+            adminClientClosePromise.complete();
+        });
+        return adminClientClosePromise.future();
+    }
+
+    private Future<Void> closeConsumer() {
+        final Promise<Void> consumerClosePromise = Promise.promise();
+        LOG.debug("stop: close consumer");
+        consumer.close(consumerClosePromise);
+        consumerClosePromise.future().onComplete(ar -> {
+            LOG.debug("consumer closed");
+            Optional.ofNullable(metricsSupport).ifPresent(ms -> ms.unregisterKafkaConsumer(consumer.unwrap()));
+        });
+        return consumerClosePromise.future();
     }
 
     void handleCommandMessage(final KafkaConsumerRecord<String, Buffer> record) {
