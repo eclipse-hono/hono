@@ -19,17 +19,20 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.common.errors.TopicExistsException;
 import org.eclipse.hono.client.NoConsumerException;
 import org.eclipse.hono.client.command.CommandAlreadyProcessedException;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandHandlerWrapper;
 import org.eclipse.hono.client.command.CommandHandlers;
 import org.eclipse.hono.client.command.CommandResponseSender;
+import org.eclipse.hono.client.command.InternalCommandConsumer;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
@@ -37,7 +40,6 @@ import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
-import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +53,8 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.ext.healthchecks.HealthCheckHandler;
+import io.vertx.ext.healthchecks.Status;
 import io.vertx.kafka.client.common.TopicPartition;
 import io.vertx.kafka.client.consumer.KafkaConsumer;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
@@ -59,12 +63,13 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
  * A Kafka based consumer to receive commands forwarded by the Command Router on the internal command topic.
  *
  */
-public class KafkaBasedInternalCommandConsumer implements Lifecycle {
+public class KafkaBasedInternalCommandConsumer implements InternalCommandConsumer {
 
     private static final Logger LOG = LoggerFactory.getLogger(KafkaBasedInternalCommandConsumer.class);
 
     private static final int NUM_PARTITIONS = 1;
     private static final String CLIENT_NAME = "internal-cmd";
+    private static final long CREATE_TOPIC_RETRY_INTERVAL = 1000L;
 
     private final Supplier<KafkaConsumer<String, Buffer>> consumerCreator;
     private final String adapterInstanceId;
@@ -73,6 +78,8 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
     private final Tracer tracer;
     private final CommandResponseSender commandResponseSender;
     private final Admin adminClient;
+    private final AtomicBoolean isTopicCreated = new AtomicBoolean(false);
+    private final AtomicBoolean retryCreateTopic = new AtomicBoolean(true);
     /**
      * Key is the tenant id, value is a Map with partition index as key and offset as value.
      */
@@ -81,6 +88,8 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
     private KafkaConsumer<String, Buffer> consumer;
     private Context context;
     private KafkaClientMetricsSupport metricsSupport;
+    private final Vertx vertx;
+    private long retryCreateTopicTimerId;
 
     /**
      * Creates a consumer.
@@ -102,13 +111,13 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
             final String adapterInstanceId,
             final CommandHandlers commandHandlers,
             final Tracer tracer) {
-        Objects.requireNonNull(vertx);
         Objects.requireNonNull(adminClientConfigProperties);
         Objects.requireNonNull(consumerConfigProperties);
         this.commandResponseSender = Objects.requireNonNull(commandResponseSender);
         this.adapterInstanceId = Objects.requireNonNull(adapterInstanceId);
         this.commandHandlers = Objects.requireNonNull(commandHandlers);
         this.tracer = Objects.requireNonNull(tracer);
+        this.vertx = Objects.requireNonNull(vertx);
 
         final Map<String, String> adminClientConfig = adminClientConfigProperties.getAdminClientConfig(CLIENT_NAME);
         // Vert.x KafkaAdminClient doesn't support creating topics using the broker default replication factor,
@@ -158,6 +167,7 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
         this.adapterInstanceId = Objects.requireNonNull(adapterInstanceId);
         this.commandHandlers = Objects.requireNonNull(commandHandlers);
         this.tracer = Objects.requireNonNull(tracer);
+        this.vertx = context.owner();
         consumerCreator = () -> kafkaConsumer;
     }
 
@@ -184,7 +194,32 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
         consumer = consumerCreator.get();
         Optional.ofNullable(metricsSupport).ifPresent(ms -> ms.registerKafkaConsumer(consumer.unwrap()));
         // trigger creation of adapter specific topic and consumer
-        return createTopic().compose(v -> subscribeToTopic());
+        return createTopic()
+                .recover(e -> retryCreateTopic())
+                .compose(v -> {
+                    isTopicCreated.set(true);
+                    return subscribeToTopic();
+                });
+    }
+
+    @Override
+    public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
+        LOG.trace("registering readiness check using kafka based internal command consumer [adapter instance id: {}]",
+                adapterInstanceId);
+        readinessHandler.register(String.format("internal-command-consumer[%s]-readiness", adapterInstanceId),
+                status -> {
+                    if (isTopicCreated.get()) {
+                        status.tryComplete(Status.OK());
+                    } else {
+                        LOG.debug("readiness check failed [internal command topic is not created]");
+                        status.tryComplete(Status.KO());
+                    }
+                });
+    }
+
+    @Override
+    public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
+        // no liveness checks to be added
     }
 
     private Future<Void> createTopic() {
@@ -196,11 +231,29 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
         adminClient.createTopics(List.of(newTopic))
                 .all()
                 .whenComplete((v, ex) -> {
-                    context.runOnContext(v1 -> Optional.ofNullable(ex).ifPresentOrElse(promise::fail, promise::complete));
+                    context.runOnContext(v1 -> Optional.ofNullable(ex)
+                            .filter(e -> !(e instanceof TopicExistsException))
+                            .ifPresentOrElse(promise::fail, promise::complete));
                 });
         return promise.future()
                 .onSuccess(v -> LOG.debug("created topic [{}]", topicName))
                 .onFailure(thr -> LOG.error("error creating topic [{}]", topicName, thr));
+    }
+
+    private Future<Void> retryCreateTopic() {
+        final Promise<Void> createTopicRetryPromise = Promise.promise();
+        // Retry at specified interval until the internal command topic is successfully created
+        retryCreateTopicTimerId = vertx.setPeriodic(CREATE_TOPIC_RETRY_INTERVAL, id -> {
+            if (retryCreateTopic.compareAndSet(true, false)) {
+                createTopic()
+                        .onSuccess(ok -> {
+                            vertx.cancelTimer(id);
+                            createTopicRetryPromise.complete();
+                        })
+                        .onFailure(e -> retryCreateTopic.set(true));
+            }
+        });
+        return createTopicRetryPromise.future();
     }
 
     private Future<Void> subscribeToTopic() {
@@ -239,25 +292,49 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
 
     @Override
     public Future<Void> stop() {
+        retryCreateTopic.set(false);
+        vertx.cancelTimer(retryCreateTopicTimerId);
+
         if (consumer == null) {
             return Future.failedFuture("not started");
         }
-        final String topicName = getTopicName();
-        final Promise<Void> adminClientClosePromise = Promise.promise();
-        LOG.debug("stop: delete topic [{}]", topicName);
-        adminClient.deleteTopics(List.of(topicName))
-                .all()
-                .whenComplete((v, ex) -> {
-                    if (ex != null) {
-                        LOG.warn("error deleting topic [{}]", topicName, ex);
-                    }
-                    context.executeBlocking(future -> {
-                        adminClient.close();
-                        future.complete();
-                    }, adminClientClosePromise);
-                });
-        adminClientClosePromise.future().onComplete(ar -> LOG.debug("admin client closed"));
 
+        return deleteTopicIfExists()
+                .map(ok -> CompositeFuture.all(closeAdminClient(), closeConsumer()))
+                .mapEmpty();
+    }
+
+    private Future<Void> deleteTopicIfExists() {
+        if (isTopicCreated.get()) {
+            final String topicName = getTopicName();
+            final Promise<Void> deleteTopicPromise = Promise.promise();
+            LOG.debug("stop: delete topic [{}]", topicName);
+            adminClient.deleteTopics(List.of(topicName))
+                    .all()
+                    .whenComplete((v, ex) -> {
+                        if (ex != null) {
+                            LOG.warn("error deleting topic [{}]", topicName, ex);
+                        }
+                        context.runOnContext(deleteTopicPromise::complete);
+                    });
+            return deleteTopicPromise.future();
+        } else {
+            return Future.succeededFuture();
+        }
+    }
+
+    private Future<Void> closeAdminClient() {
+        final Promise<Void> adminClientClosePromise = Promise.promise();
+        LOG.debug("stop: close admin client");
+        context.executeBlocking(future -> {
+            adminClient.close();
+            LOG.debug("admin client closed");
+            future.complete();
+        }, adminClientClosePromise);
+        return adminClientClosePromise.future();
+    }
+
+    private Future<Void> closeConsumer() {
         final Promise<Void> consumerClosePromise = Promise.promise();
         LOG.debug("stop: close consumer");
         consumer.close(consumerClosePromise);
@@ -265,8 +342,7 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
             LOG.debug("consumer closed");
             Optional.ofNullable(metricsSupport).ifPresent(ms -> ms.unregisterKafkaConsumer(consumer.unwrap()));
         });
-        return CompositeFuture.all(adminClientClosePromise.future(), consumerClosePromise.future())
-                .mapEmpty();
+        return consumerClosePromise.future();
     }
 
     void handleCommandMessage(final KafkaConsumerRecord<String, Buffer> record) {
@@ -336,5 +412,4 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
             commandContext.release(new NoConsumerException("no command handler found for command"));
         }
     }
-
 }

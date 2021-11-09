@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.util.KubernetesContainerUtil;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.Strings;
@@ -40,6 +41,7 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.ext.healthchecks.HealthCheckHandler;
 
 /**
  * A factory for creating consumers of command messages.
@@ -47,7 +49,7 @@ import io.vertx.core.Vertx;
  * This implementation uses the Command Router service and receives commands forwarded by the Command Router
  * on the internal command endpoint.
  */
-public class CommandRouterCommandConsumerFactory implements CommandConsumerFactory {
+public class CommandRouterCommandConsumerFactory implements CommandConsumerFactory, ServiceClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(CommandRouterCommandConsumerFactory.class);
 
@@ -61,7 +63,7 @@ public class CommandRouterCommandConsumerFactory implements CommandConsumerFacto
     private final String adapterInstanceId;
     private final CommandHandlers commandHandlers = new CommandHandlers();
     private final CommandRouterClient commandRouterClient;
-    private final List<Lifecycle> internalCommandConsumers = new ArrayList<>();
+    private final List<InternalCommandConsumer> internalCommandConsumers = new ArrayList<>();
 
     private int maxTenantIdsPerRequest = 100;
 
@@ -147,8 +149,9 @@ public class CommandRouterCommandConsumerFactory implements CommandConsumerFacto
      *            a received command.
      */
     public void registerInternalCommandConsumer(
-            final BiFunction<String, CommandHandlers, Lifecycle> internalCommandConsumerSupplier) {
-        final Lifecycle consumer = internalCommandConsumerSupplier.apply(adapterInstanceId, commandHandlers);
+            final BiFunction<String, CommandHandlers, InternalCommandConsumer> internalCommandConsumerSupplier) {
+        final InternalCommandConsumer consumer = internalCommandConsumerSupplier.apply(adapterInstanceId,
+                commandHandlers);
         LOG.info("register internal command consumer {}", consumer.getClass().getSimpleName());
         internalCommandConsumers.add(consumer);
     }
@@ -180,6 +183,15 @@ public class CommandRouterCommandConsumerFactory implements CommandConsumerFacto
                 .map(Lifecycle::stop)
                 .collect(Collectors.toList());
         return CompositeFuture.all(futures).mapEmpty();
+    }
+
+    @Override
+    public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
+        internalCommandConsumers.forEach(consumer -> consumer.registerReadinessChecks(readinessHandler));
+    }
+
+    @Override public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
+        // no liveness checks to be added
     }
 
     @Override
