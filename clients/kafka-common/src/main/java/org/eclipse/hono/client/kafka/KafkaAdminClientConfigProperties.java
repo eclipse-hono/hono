@@ -13,11 +13,7 @@
 
 package org.eclipse.hono.client.kafka;
 
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
-
-import org.apache.kafka.clients.admin.AdminClientConfig;
 
 /**
  * Configuration properties for Kafka admin clients.
@@ -32,8 +28,6 @@ import org.apache.kafka.clients.admin.AdminClientConfig;
  */
 public class KafkaAdminClientConfigProperties extends AbstractKafkaConfigProperties {
 
-    private Map<String, String> adminClientConfig;
-
     /**
      * Sets the Kafka admin client config properties to be used.
      *
@@ -41,51 +35,24 @@ public class KafkaAdminClientConfigProperties extends AbstractKafkaConfigPropert
      * @throws NullPointerException if the config is {@code null}.
      */
     public final void setAdminClientConfig(final Map<String, String> adminConfig) {
-        this.adminClientConfig = Objects.requireNonNull(adminConfig);
+        setSpecificClientConfig(adminConfig);
     }
 
     /**
-     * Checks if a configuration has been set.
+     * Gets the Kafka admin client configuration. This is the result of applying the admin client configuration on the
+     * common configuration. The returned map will contain a property {@code client.id} which will be set to a unique
+     * value containing the already set client id or alternatively the value set via
+     * {@link #setDefaultClientIdPrefix(String)}, the given adminClientName and a newly created UUID.
      *
-     * @return {@code true} if the {@value #PROPERTY_BOOTSTRAP_SERVERS} property has been configured with a non-null value.
-     */
-    public final boolean isConfigured() {
-        return containsMinimalConfiguration(commonClientConfig) || containsMinimalConfiguration(adminClientConfig);
-    }
-
-    /**
-     * Gets the Kafka admin client configuration to which additional properties were applied. The following properties are
-     * set here to the given configuration:
-     * <ul>
-     * <li>{@code client.id}=${unique client id}: the client id will be set to a unique value containing the already set
-     * client id or alternatively the value set via {@link #setDefaultClientIdPrefix(String)}, the given adminClientName
-     * and a newly created UUID.</li>
-     * </ul>
      * Note: This method should be called for each new admin client, ensuring that a unique client id is used.
      *
      * @param adminClientName A name for the admin client to include in the added {@code client.id} property.
-     * @return a copy of the admin client configuration with the applied properties or an empty map if neither an admin
-     *         client configuration was set with {@link #setAdminClientConfig(Map)} nor common configuration properties were
-     *         set with {@link #setCommonClientConfig(Map)}.
+     * @return a copy of the admin client configuration with the applied properties.
      * @throws NullPointerException if adminClientName is {@code null}.
      */
     public final Map<String, String> getAdminClientConfig(final String adminClientName) {
-        Objects.requireNonNull(adminClientName);
 
-        final Map<String, String> newConfig = new HashMap<>();
-        if (commonClientConfig == null && adminClientConfig == null) {
-            return newConfig;
-        }
-
-        if (commonClientConfig != null) {
-            newConfig.putAll(commonClientConfig);
-        }
-        if (adminClientConfig != null) {
-            newConfig.putAll(adminClientConfig);
-        }
-
-        setUniqueClientId(newConfig, adminClientName, AdminClientConfig.CLIENT_ID_CONFIG);
-        return newConfig;
+        return getConfig(adminClientName);
     }
 
 }
