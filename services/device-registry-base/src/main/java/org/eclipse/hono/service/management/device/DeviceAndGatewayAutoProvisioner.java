@@ -20,11 +20,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import javax.security.auth.x500.X500Principal;
 
-import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.util.MessagingClientProvider;
@@ -36,7 +34,6 @@ import org.eclipse.hono.service.management.credentials.X509CertificateCredential
 import org.eclipse.hono.service.management.credentials.X509CertificateSecret;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tracing.TracingHelper;
-import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.RegistryManagementConstants;
@@ -54,9 +51,6 @@ import io.vertx.core.json.JsonObject;
  *      Automatic Device/Gateway Provisioning</a>
  */
 public final class DeviceAndGatewayAutoProvisioner extends AbstractAutoProvisioningEventSender {
-    private static final String QUOTED_PLACEHOLDER_SUBJECT_DN = Pattern.quote(RegistryManagementConstants.PLACEHOLDER_SUBJECT_DN);
-    private static final String QUOTED_PLACEHOLDER_SUBJECT_CN = Pattern.quote(RegistryManagementConstants.PLACEHOLDER_SUBJECT_CN);
-
     private final CredentialsManagementService credentialsManagementService;
 
     /**
@@ -337,17 +331,6 @@ public final class DeviceAndGatewayAutoProvisioner extends AbstractAutoProvision
         final String deviceIdTemplate = tenant.getAutoProvisioningDeviceIdTemplate(issuerDN);
 
         return Optional.ofNullable(deviceIdTemplate)
-                .map(template -> template.replaceAll(QUOTED_PLACEHOLDER_SUBJECT_DN, subjectDN))
-                .map(template -> {
-                    if (template.contains(RegistryManagementConstants.PLACEHOLDER_SUBJECT_CN)) {
-                        return Optional.ofNullable(AuthenticationConstants.getCommonName(subjectDN))
-                                .map(cn -> template.replaceAll(QUOTED_PLACEHOLDER_SUBJECT_CN, cn))
-                                .orElseThrow(() -> new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                                        String.format(
-                                                "error generating device id from template [%s] as Common Name is missing in client certificate's Subject DN",
-                                                deviceIdTemplate)));
-                    }
-                    return template;
-                });
+                .map(template -> TemplateHelper.fill(template, subjectDN));
     }
 }

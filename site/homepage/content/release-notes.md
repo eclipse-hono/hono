@@ -31,6 +31,9 @@ description = "Information about changes in recent Hono releases. Includes new f
   which indicates the point in time at which the message has been created.
 * The error messages returned by protocol adapters when sending commands received via Kafka now include a reasonable
   error description.
+* The tenant's configuration property `auto-provisioning-device-id-template` is now extended to support one more
+  subjectDN's attribute namely *Organizational Unit Name (OU)*. For more information please refer to the
+  [Device Registry Management API]({{% doclink "/api/management#/tenants/createTenant" %}}).
 
 ## 1.10.0
 

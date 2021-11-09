@@ -404,7 +404,10 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      * The name of the place holder for subject DN's Common Name in the device-id template used during auto-provisioning.
      */
     public static final String PLACEHOLDER_SUBJECT_CN = "{{subject-cn}}";
-
+    /**
+     * The name of the placeholder for subject DN's attribute <em>Organizational Unit Name (OU)</em>.
+     */
+    public static final String PLACEHOLDER_SUBJECT_OU = "{{subject-ou}}";
 
     // DEFAULTS
 
