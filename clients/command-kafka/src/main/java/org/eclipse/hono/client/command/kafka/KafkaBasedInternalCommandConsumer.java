@@ -326,11 +326,11 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
     private Future<Void> closeAdminClient() {
         final Promise<Void> adminClientClosePromise = Promise.promise();
         LOG.debug("stop: close admin client");
-        context.runOnContext(x -> {
+        context.executeBlocking(future -> {
             adminClient.close();
             LOG.debug("admin client closed");
-            adminClientClosePromise.complete();
-        });
+            future.complete();
+        }, adminClientClosePromise);
         return adminClientClosePromise.future();
     }
 
