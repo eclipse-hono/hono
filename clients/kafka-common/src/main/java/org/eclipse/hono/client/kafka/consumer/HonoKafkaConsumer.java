@@ -880,18 +880,23 @@ public class HonoKafkaConsumer implements Lifecycle {
         final Set<String> subscribedTopicPatternTopicsBefore = new HashSet<>(subscribedTopicPatternTopics);
         // check whether topic has been created since the last rebalance and if not, potentially create it here implicitly
         // (partitionsFor() will create the topic if it doesn't exist, provided "auto.create.topics.enable" is true)
+        final Promise<Void> resultPromise = Promise.promise();
         HonoKafkaConsumerHelper.partitionsFor(kafkaConsumer, topic)
                 .onFailure(thr -> log.warn("ensureTopicIsAmongSubscribedTopics: error getting partitions for topic [{}]", topic, thr))
-                .onSuccess(partitions -> {
+                .compose(partitions -> {
                     if (partitions.isEmpty()) {
                         log.warn("ensureTopicIsAmongSubscribedTopics: topic doesn't exist and didn't get auto-created: {}", topic);
+                        return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                                "command topic doesn't exist and didn't get auto-created"));
                     }
-                });
+                    return Future.succeededFuture();
+                })
+                .onFailure(resultPromise::tryFail);
         // the topic list of a wildcard subscription only gets refreshed periodically by default (interval is defined by "metadata.max.age.ms");
         // therefore enforce a refresh here by again subscribing to the topic pattern
         log.debug("ensureTopicIsAmongSubscribedTopics: wait for subscription update and rebalance [{}]", topic);
         // not composed with the topicCheckFuture outcome in order for both operations to be invoked directly after one another, with no poll() in between
-        return subscribeAndWaitForRebalance()
+        subscribeAndWaitForRebalance()
                 .compose(v -> {
                     final boolean someTopicDeleted = subscribedTopicPatternTopicsBefore.stream().anyMatch(t -> !subscribedTopicPatternTopics.contains(t));
                     if (!subscribedTopicPatternTopics.contains(topic)) {
@@ -908,12 +913,12 @@ public class HonoKafkaConsumer implements Lifecycle {
                                 return Future.succeededFuture(v);
                             } else {
                                 log.debug("ensureTopicIsAmongSubscribedTopics: wait for another rebalance before considering update of topic subscription [{}] as done", topic);
-                                final Promise<Void> resultPromise = Promise.promise();
+                                final Promise<Void> rebalanceResultPromise = Promise.promise();
                                 runOnKafkaWorkerThread(v2 -> {
                                     getUnderlyingConsumer().enforceRebalance();
-                                    runOnContext(v3 -> subscribeAndWaitForRebalance().onComplete(resultPromise));
+                                    runOnContext(v3 -> subscribeAndWaitForRebalance().onComplete(rebalanceResultPromise));
                                 });
-                                return resultPromise.future();
+                                return rebalanceResultPromise.future();
                             }
                         });
                     }
@@ -927,7 +932,10 @@ public class HonoKafkaConsumer implements Lifecycle {
                     }
                     log.debug("ensureTopicIsAmongSubscribedTopics: done updating topic subscription [{}]", topic);
                     return Future.succeededFuture(v);
-                });
+                })
+                .onSuccess(resultPromise::tryComplete)
+                .onFailure(resultPromise::tryFail);
+        return resultPromise.future();
     }
 
     /**
