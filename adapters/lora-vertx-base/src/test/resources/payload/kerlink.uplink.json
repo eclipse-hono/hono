@@ -1,6 +1,53 @@
 {
-  "devEui": "0102030405060708",
-  "userdata": {
-    "payload": "YnVtbHV4"
-  }
+  "id": "618a4430d18899000117d132",
+  "endDevice": {
+    "devEui": "0102030405060708",
+    "devAddr": "02192FCF",
+    "latitude": 9.193430,
+    "longitude": 53.108805,
+    "cluster": {
+      "id": 694
+    }
+  },
+  "fPort": 2,
+  "fCntDown": 2602,
+  "fCntUp": 2602,
+  "adr": true,
+  "confirmed": true,
+  "encrypted": false,
+  "payload": "62756D6C7578",
+  "encodingType": "HEXA",
+  "recvTime": 1636451375791,
+  "gwRecvTime": 1636451375791,
+  "classB": false,
+  "delayed": false,
+  "ulFrequency": 868.3,
+  "modulation": "LORA",
+  "dataRate": "SF7BW125",
+  "codingRate": "4/5",
+  "gwCnt": 1,
+  "gwInfo": [
+    {
+      "gwEui": "0101010101010101",
+      "rfRegion": "EU868",
+      "rssi": -84,
+      "snr": 9.8,
+      "channel": 3,
+      "radioId": 3,
+      "antenna": 0,
+      "latitude": 9.193431,
+      "longitude": 53.108804
+    },
+    {
+      "gwEui": "0202020202020202",
+      "rfRegion": "EU868",
+      "rssi": -116,
+      "snr": -3.2,
+      "channel": 4,
+      "radioId": 3,
+      "antenna": 0,
+      "latitude": 9.193429,
+      "longitude": 53.108806
+    }
+  ]
 }
