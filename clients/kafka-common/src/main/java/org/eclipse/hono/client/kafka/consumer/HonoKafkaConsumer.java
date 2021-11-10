@@ -881,7 +881,7 @@ public class HonoKafkaConsumer implements Lifecycle {
         // check whether topic has been created since the last rebalance and if not, potentially create it here implicitly
         // (partitionsFor() will create the topic if it doesn't exist, provided "auto.create.topics.enable" is true)
         final Promise<Void> resultPromise = Promise.promise();
-        HonoKafkaConsumerHelper.partitionsFor(kafkaConsumer, topic)
+        final Future<Void> topicCheckFuture = HonoKafkaConsumerHelper.partitionsFor(kafkaConsumer, topic)
                 .onFailure(thr -> log.warn("ensureTopicIsAmongSubscribedTopics: error getting partitions for topic [{}]", topic, thr))
                 .compose(partitions -> {
                     if (partitions.isEmpty()) {
@@ -891,7 +891,8 @@ public class HonoKafkaConsumer implements Lifecycle {
                     }
                     return Future.succeededFuture();
                 })
-                .onFailure(resultPromise::tryFail);
+                .onFailure(resultPromise::tryFail)
+                .mapEmpty();
         // the topic list of a wildcard subscription only gets refreshed periodically by default (interval is defined by "metadata.max.age.ms");
         // therefore enforce a refresh here by again subscribing to the topic pattern
         log.debug("ensureTopicIsAmongSubscribedTopics: wait for subscription update and rebalance [{}]", topic);
@@ -935,6 +936,12 @@ public class HonoKafkaConsumer implements Lifecycle {
                 })
                 .onSuccess(resultPromise::tryComplete)
                 .onFailure(resultPromise::tryFail);
+        if (!isAutoOffsetResetConfigLatest()) {
+            // offset reset policy is "earliest" - no need to wait for rebalance and offset reset before completing the result future
+            // BUT: the rebalance-triggering logic above still needs to be done in the background - otherwise it could take much longer for the earliest record to actually be received
+            // (note that topicCheckFuture isn't returned directly here because the subscribeAndWaitForRebalance() Future could still be completed sooner)
+            topicCheckFuture.onSuccess(v -> resultPromise.tryComplete());
+        }
         return resultPromise.future();
     }
 

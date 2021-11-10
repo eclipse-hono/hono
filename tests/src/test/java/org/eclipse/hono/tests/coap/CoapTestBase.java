@@ -909,14 +909,15 @@ public abstract class CoapTestBase {
                             });
                             // now ready to send a command
                             final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
+                            // let half the commands be rerouted via the AMQP network (relevant when using the device connection service instead of the command router)
+                            final boolean forceCommandRerouting = counter.incrementAndGet() > MESSAGES_TO_SEND / 2;
                             return helper.sendCommand(
                                     tenantId,
                                     commandTargetDeviceId,
                                     COMMAND_TO_SEND,
                                     "application/json",
                                     inputData.toBuffer(),
-                                    // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
-                                    IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= MESSAGES_TO_SEND / 2),
+                                    IntegrationTestSupport.newCommandMessageProperties(forceCommandRerouting),
                                     notification.getMillisecondsUntilExpiry())
                                     .map(response -> {
                                         ctx.verify(() -> {
@@ -1047,14 +1048,15 @@ public abstract class CoapTestBase {
                         });
                         logger.debug("send one-way-command");
                         final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
+                        // let half the commands be rerouted via the AMQP network (relevant when using the device connection service instead of the command router)
+                        final boolean forceCommandRerouting = counter.incrementAndGet() > MESSAGES_TO_SEND / 2;
                         helper.sendOneWayCommand(
                                 tenantId,
                                 commandTargetDeviceId,
                                 COMMAND_TO_SEND,
                                 "application/json",
                                 inputData.toBuffer(),
-                                // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
-                                IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= MESSAGES_TO_SEND / 2),
+                                IntegrationTestSupport.newCommandMessageProperties(forceCommandRerouting),
                                 notification.getMillisecondsUntilExpiry() / 2);
                     });
                 },

@@ -277,15 +277,16 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                     cmdReceiver.flow(1);
                     commandsReceived.flag();
                 }, payload -> {
+                    // let half the commands be rerouted via the AMQP network (relevant when using the device connection service instead of the command router)
+                    final boolean forceCommandRerouting = counter.incrementAndGet() > COMMANDS_TO_SEND / 2;
                     return helper.sendOneWayCommand(
                             tenantId,
                             commandTargetDeviceId,
                             "setValue",
                             "text/plain",
                             payload,
-                            // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
-                            IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= COMMANDS_TO_SEND / 2),
-                            IntegrationTestSupport.getSendCommandTimeout());
+                            IntegrationTestSupport.newCommandMessageProperties(forceCommandRerouting),
+                            helper.getSendCommandTimeout(counter.get() == 1));
                 }, COMMANDS_TO_SEND);
     }
 
@@ -415,15 +416,16 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 endpointConfig,
                 (cmdReceiver, cmdResponseSender) -> createCommandConsumer(ctx, cmdReceiver, cmdResponseSender),
                 payload -> {
+                    // let half the commands be rerouted via the AMQP network (relevant when using the device connection service instead of the command router)
+                    final boolean forceCommandRerouting = counter.incrementAndGet() > COMMANDS_TO_SEND / 2;
                     return helper.sendCommand(
                             tenantId,
                             commandTargetDeviceId,
                             "setValue",
                             "text/plain",
                             payload,
-                            // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
-                            IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= COMMANDS_TO_SEND / 2),
-                            IntegrationTestSupport.getSendCommandTimeout())
+                            IntegrationTestSupport.newCommandMessageProperties(forceCommandRerouting),
+                            helper.getSendCommandTimeout(counter.get() == 1))
                         .map(response -> {
                             ctx.verify(() -> {
                                 assertThat(response.getDeviceId()).isEqualTo(commandTargetDeviceId);
@@ -666,7 +668,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         kafkaSenderRef.get().sendAndWaitForOutcome(commandTopic, tenantId, deviceId, Buffer.buffer(), properties2)
                 .onComplete(ctx.succeeding(ok -> {}));
 
-        final long timeToWait = 1500;
+        final long timeToWait = 2500;
         if (!expectedCommandResponses.await(timeToWait, TimeUnit.MILLISECONDS)) {
             log.info("Timeout of {} milliseconds reached, stop waiting for command response", timeToWait);
         }
@@ -747,7 +749,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
         // send first command
         helper.sendOneWayCommand(tenantId, commandTargetDeviceId, firstCommandSubject, "text/plain",
-                Buffer.buffer("cmd"), null, IntegrationTestSupport.getSendCommandTimeout())
+                Buffer.buffer("cmd"), null, helper.getSendCommandTimeout(true))
         // first command shall succeed because there's one initial credit
         .onComplete(ctx.succeeding(v -> {
             expectedSteps.flag();
@@ -759,7 +761,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                     "text/plain",
                     Buffer.buffer("cmd"),
                     null,
-                    IntegrationTestSupport.getSendCommandTimeout())
+                    helper.getSendCommandTimeout(false))
                 // second command shall fail because there's no credit left
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
@@ -828,7 +830,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 "text/plain",
                 Buffer.buffer("cmd"),
                 null,
-                IntegrationTestSupport.getSendCommandTimeout())
+                helper.getSendCommandTimeout(true))
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         assertThat(t).isInstanceOf(ServerErrorException.class);

@@ -1041,7 +1041,7 @@ import io.vertx.junit5.VertxTestContext;
         final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
         final Future<Void> commandSent = helper.sendOneWayCommand(tenantId, deviceId, COMMAND_TO_SEND,
                 "application/json", inputData.toBuffer(),
-                IntegrationTestSupport.newCommandMessageProperties(() -> true), 3000);
+                IntegrationTestSupport.newCommandMessageProperties(true), 3000);
         logger.info("sent one-way command to device");
 
         // THEN both requests succeed
@@ -1182,14 +1182,15 @@ import io.vertx.junit5.VertxTestContext;
                                 });
                                 // now ready to send a command
                                 final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
+                                // let half the commands be rerouted via the AMQP network (relevant when using the device connection service instead of the command router)
+                                final boolean forceCommandRerouting = counter.incrementAndGet() > MESSAGES_TO_SEND / 2;
                                 return helper.sendCommand(
                                         tenantId,
                                         commandTargetDeviceId,
                                         COMMAND_TO_SEND,
                                         "application/json",
                                         inputData.toBuffer(),
-                                        // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
-                                        IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= MESSAGES_TO_SEND / 2),
+                                        IntegrationTestSupport.newCommandMessageProperties(forceCommandRerouting),
                                         notification.getMillisecondsUntilExpiry())
                                         .map(response -> {
                                             ctx.verify(() -> {
@@ -1201,7 +1202,7 @@ import io.vertx.junit5.VertxTestContext;
                                             return (Void) null;
                                         });
                             })
-                            .orElseGet(() -> Future.<Void>succeededFuture());
+                            .orElseGet(Future::succeededFuture);
                 },
                 count -> {
                     final Buffer buffer = Buffer.buffer("hello " + count);
@@ -1298,17 +1299,18 @@ import io.vertx.junit5.VertxTestContext;
                                 });
                                 // now ready to send a command
                                 final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
+                                // let half the commands be rerouted via the AMQP network (relevant when using the device connection service instead of the command router)
+                                final boolean forceCommandRerouting = counter.incrementAndGet() > MESSAGES_TO_SEND / 2;
                                 return helper.sendOneWayCommand(
                                         tenantId,
                                         commandTargetDeviceId,
                                         COMMAND_TO_SEND,
                                         "application/json",
                                         inputData.toBuffer(),
-                                        // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
-                                        IntegrationTestSupport.newCommandMessageProperties(() -> counter.getAndIncrement() >= MESSAGES_TO_SEND / 2),
+                                        IntegrationTestSupport.newCommandMessageProperties(forceCommandRerouting),
                                         notification.getMillisecondsUntilExpiry());
                             })
-                            .orElseGet(() -> Future.succeededFuture());
+                            .orElseGet(Future::succeededFuture);
                 },
                 count -> {
                     final Buffer payload = Buffer.buffer("hello " + count);
