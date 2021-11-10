@@ -154,6 +154,7 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
     private final Map<TopicPartition, Long> lastKnownCommittedOffsets = new HashMap<>();
     private final AtomicBoolean periodicCommitInvocationInProgress = new AtomicBoolean();
     private final AtomicBoolean periodicCommitRetryAfterRebalanceNeeded = new AtomicBoolean();
+    private final AtomicBoolean skipPeriodicCommit = new AtomicBoolean();
     private final AtomicInteger recordsInProcessingCounter = new AtomicInteger();
     private final AtomicInteger recordsLeftInBatchCounter = new AtomicInteger();
     private final AtomicReference<UncompletedRecordsCompletionLatch> uncompletedRecordsCompletionLatchRef = new AtomicReference<>();
@@ -352,6 +353,7 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
             // to another consumer which then just begins reading on the latest offset, not the offset from before the rebalance
             ensureOffsetCommitsExistForNewlyAssignedPartitions(partitionsSet);
         }
+        skipPeriodicCommit.set(false);
         if (periodicCommitRetryAfterRebalanceNeeded.get()) {
             runOnContext(v -> {
                 if (periodicCommitRetryAfterRebalanceNeeded.compareAndSet(true, false)) {
@@ -418,6 +420,7 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
 
     @Override
     protected void onPartitionsRevokedBlocking(final Set<io.vertx.kafka.client.common.TopicPartition> partitionsSet) {
+        skipPeriodicCommit.set(true);
         // potentially wait some time for record processing to finish before committing offsets
         if (!partitionsSet.isEmpty() && offsetsCommitRecordCompletionTimeoutMillis > 0) {
             UncompletedRecordsCompletionLatch latch = null;
@@ -478,6 +481,9 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
     }
 
     private void doPeriodicCommit() {
+        if (skipPeriodicCommit.get()) {
+            return;
+        }
         periodicCommitRetryAfterRebalanceNeeded.set(false);
         if (!periodicCommitInvocationInProgress.compareAndSet(false, true)) {
             log.trace("periodic commit already triggered, skipping invocation");
