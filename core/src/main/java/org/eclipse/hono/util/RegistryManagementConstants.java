@@ -408,6 +408,10 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      * The name of the placeholder for subject DN's attribute <em>Organizational Unit Name (OU)</em>.
      */
     public static final String PLACEHOLDER_SUBJECT_OU = "{{subject-ou}}";
+    /**
+     * The name of the placeholder for subject DN's attribute <em>Organization Name (O)</em>.
+     */
+    public static final String PLACEHOLDER_SUBJECT_O = "{{subject-o}}";
 
     // DEFAULTS
 

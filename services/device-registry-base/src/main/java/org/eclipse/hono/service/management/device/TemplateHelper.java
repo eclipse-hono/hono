@@ -40,7 +40,8 @@ public final class TemplateHelper {
     private enum Attribute {
 
         CN("Common Name", RegistryManagementConstants.PLACEHOLDER_SUBJECT_CN),
-        OU("Organizational Unit Name", RegistryManagementConstants.PLACEHOLDER_SUBJECT_OU);
+        OU("Organizational Unit Name", RegistryManagementConstants.PLACEHOLDER_SUBJECT_OU),
+        O("Organization Name", RegistryManagementConstants.PLACEHOLDER_SUBJECT_O);
 
         private final String name;
         private final String placeHolder;
@@ -102,6 +103,7 @@ public final class TemplateHelper {
      * <li>{@value RegistryManagementConstants#PLACEHOLDER_SUBJECT_DN} for <em>Subject Distinguished Name (DN)</em></li>
      * <li>{@value RegistryManagementConstants#PLACEHOLDER_SUBJECT_CN} for <em>Common Name (CN)</em></li>
      * <li>{@value RegistryManagementConstants#PLACEHOLDER_SUBJECT_OU} for <em>Organizational Unit Name (OU)</em></li>
+     * <li>{@value RegistryManagementConstants#PLACEHOLDER_SUBJECT_O} for <em>Organization Name (O)</em></li>
      * </ul>
      *
      * @param template The template to be filled.
@@ -119,7 +121,8 @@ public final class TemplateHelper {
             final List<Rdn> rdns = new LdapName(subjectDN).getRdns();
             String result = template.replaceAll(QUOTED_PLACEHOLDER_SUBJECT_DN, subjectDN);
             result = fillAttribute(Attribute.CN, result, rdns);
-            return fillAttribute(Attribute.OU, result, rdns);
+            result = fillAttribute(Attribute.OU, result, rdns);
+            return fillAttribute(Attribute.O, result, rdns);
         } catch (InvalidNameException e) {
             throw new IllegalArgumentException(String.format("subject DN [%s] is not valid", subjectDN));
         }

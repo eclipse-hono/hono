@@ -57,6 +57,22 @@ public class TemplateHelperTest {
     }
 
     @Test
+    void testForOrganizationNameSucceeds() {
+        final String result = TemplateHelper.fill(
+                String.format("device-%s", RegistryManagementConstants.PLACEHOLDER_SUBJECT_O),
+                "CN=121,OU=Hono,O=Eclipse");
+        assertThat(result).isEqualTo("device-Eclipse");
+    }
+
+    @Test
+    void testForOrganizationNameFails() {
+        assertThrows(IllegalArgumentException.class,
+                () -> TemplateHelper.fill(
+                        String.format("device-%s", RegistryManagementConstants.PLACEHOLDER_SUBJECT_O),
+                        "CN=121,OU=Hono"));
+    }
+
+    @Test
     void testForSubjectDNSucceeds() {
         final String result = TemplateHelper.fill(
                 String.format("device-%s", RegistryManagementConstants.PLACEHOLDER_SUBJECT_DN),
