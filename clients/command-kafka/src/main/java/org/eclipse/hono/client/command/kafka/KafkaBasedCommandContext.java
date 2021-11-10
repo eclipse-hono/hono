@@ -192,7 +192,7 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
                     TracingHelper.logError(span, "failed to publish command response message", thr);
                 })
                 .onSuccess(v -> {
-                    LOG.debug("published error command response [{}]", commandResponse);
+                    LOG.debug("published error command response [{}, error: {}]", commandResponse, error);
                     span.log("published error command response");
                 });
     }
