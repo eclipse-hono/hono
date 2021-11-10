@@ -50,7 +50,6 @@ import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.kafka.client.common.PartitionInfo;
 import io.vertx.kafka.client.common.TopicPartition;
 import io.vertx.kafka.client.common.impl.Helper;
 import io.vertx.kafka.client.consumer.KafkaConsumer;
@@ -642,20 +641,16 @@ public class HonoKafkaConsumer implements Lifecycle {
             // this will also trigger topic auto-creation if the topic doesn't exist yet.
             // Doing so before the "subscribe" invocation shall ensure that these partitions are considered for
             // partition assignment.
-            topics.forEach(topic -> {
-                final Promise<List<PartitionInfo>> partitionsForFuture = Promise.promise();
-                partitionsForFuture.future()
-                        .onSuccess(partitions -> {
-                            if (partitions.isEmpty()) {
-                                log.info("subscription topic doesn't exist and didn't get auto-created: {} [client-id: {}]",
-                                        topic, getClientId());
-                            }
-                        });
-                HonoKafkaConsumerHelper.partitionsFor(kafkaConsumer, topic, partitionsForFuture);
-            });
+            topics.forEach(topic -> HonoKafkaConsumerHelper.partitionsFor(kafkaConsumer, topic)
+                    .onSuccess(partitions -> {
+                        if (partitions.isEmpty()) {
+                            log.info("subscription topic doesn't exist and didn't get auto-created: {} [client-id: {}]",
+                                    topic, getClientId());
+                        }
+                    }));
             kafkaConsumer.subscribe(topics, subscriptionUpdated);
         }
-        // kafkaConsumerWorker has to be retrieved after the first "subscribe" invocation
+        // init kafkaConsumerWorker if needed; it has to be retrieved after the first "subscribe" invocation
         if (kafkaConsumerWorker == null) {
             kafkaConsumerWorker = getKafkaConsumerWorker(kafkaConsumer);
         }
@@ -883,12 +878,9 @@ public class HonoKafkaConsumer implements Lifecycle {
             return Future.succeededFuture();
         }
         final Set<String> subscribedTopicPatternTopicsBefore = new HashSet<>(subscribedTopicPatternTopics);
-        final Promise<List<PartitionInfo>> topicCheckFuture = Promise.promise();
-        // check whether topic has been created since the last rebalance
-        // and if not, potentially create it here implicitly
+        // check whether topic has been created since the last rebalance and if not, potentially create it here implicitly
         // (partitionsFor() will create the topic if it doesn't exist, provided "auto.create.topics.enable" is true)
-        HonoKafkaConsumerHelper.partitionsFor(kafkaConsumer, topic, topicCheckFuture);
-        topicCheckFuture.future()
+        HonoKafkaConsumerHelper.partitionsFor(kafkaConsumer, topic)
                 .onFailure(thr -> log.warn("ensureTopicIsAmongSubscribedTopics: error getting partitions for topic [{}]", topic, thr))
                 .onSuccess(partitions -> {
                     if (partitions.isEmpty()) {

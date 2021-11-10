@@ -24,9 +24,8 @@ import java.util.stream.Stream;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.kafka.client.common.PartitionInfo;
 import io.vertx.kafka.client.common.impl.Helper;
 import io.vertx.kafka.client.consumer.KafkaConsumer;
@@ -52,14 +51,13 @@ public abstract class HonoKafkaConsumerHelper {
      *
      * @param kafkaConsumer The KafkaConsumer to use.
      * @param topic The topic to get partitions info for.
-     * @param handler The handler to invoke with the result.
+     * @return The result Future.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public static void partitionsFor(final KafkaConsumer<?, ?> kafkaConsumer,
-            final String topic, final Handler<AsyncResult<List<PartitionInfo>>> handler) {
+    public static Future<List<PartitionInfo>> partitionsFor(final KafkaConsumer<?, ?> kafkaConsumer, final String topic) {
         Objects.requireNonNull(kafkaConsumer);
         Objects.requireNonNull(topic);
-        Objects.requireNonNull(handler);
+        final Promise<List<PartitionInfo>> handler = Promise.promise();
         kafkaConsumer.asStream().partitionsFor(topic, done -> {
 
             if (done.succeeded()) {
@@ -87,6 +85,7 @@ public abstract class HonoKafkaConsumerHelper {
                 handler.handle(Future.failedFuture(done.cause()));
             }
         });
+        return handler.future();
     }
 
     /**
