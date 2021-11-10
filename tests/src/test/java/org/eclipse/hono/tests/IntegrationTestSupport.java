@@ -43,7 +43,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -499,7 +498,7 @@ public final class IntegrationTestSupport {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(IntegrationTestSupport.class);
     private static final int TEST_ENVIRONMENT_TIMEOUT_MULTIPLICATOR = 2;
-    private static final int KAFKA_ADD_TO_TEST_SETUP_TIMEOUT = 2; // seconds to add
+    private static final int KAFKA_TOPIC_CREATION_ADD_TO_TIMEOUT = 2; // seconds to add
 
     private static final boolean testEnv = Optional.ofNullable(System.getenv("CI"))
             .map(s -> {
@@ -768,23 +767,45 @@ public final class IntegrationTestSupport {
      * @return The time out in seconds. The value will be
      *         {@value IntegrationTestSupport#DEFAULT_TEST_SETUP_TIMEOUT_SECONDS}
      *         multiplied by the value returned by {@link #getTimeoutMultiplicator()}.
-     *         If Kafka as messaging system is used, an extra {@value IntegrationTestSupport#KAFKA_ADD_TO_TEST_SETUP_TIMEOUT}
+     *         If Kafka as messaging system is used, an extra {@value IntegrationTestSupport#KAFKA_TOPIC_CREATION_ADD_TO_TIMEOUT}
      *         seconds are added (for creation/propagation of topics created during setup).
      */
     public static long getTestSetupTimeout() {
         return DEFAULT_TEST_SETUP_TIMEOUT_SECONDS * getTimeoutMultiplicator()
-                + (isUsingKafkaMessaging() ? KAFKA_ADD_TO_TEST_SETUP_TIMEOUT : 0);
+                + (isUsingKafkaMessaging() ? KAFKA_TOPIC_CREATION_ADD_TO_TIMEOUT : 0);
     }
 
     /**
      * Determines the time to wait before timing out a request to send
      * a command to a device.
+     * <p>
+     * Consider using {@link #getSendCommandTimeout(boolean)} instead to prevent timeouts in case Kafka is used and
+     * the first command gets sent directly after the command subscription result got completed.
      *
      * @return The time out in milliseconds. The value will be
      *         {@link #SEND_MESSAGE_TO_DEVICE_TIMEOUT} + ({@link #AMQP_TIMEOUT} * {@link #getTimeoutMultiplicator()} * 2).
      */
     public static long getSendCommandTimeout() {
-        return SEND_MESSAGE_TO_DEVICE_TIMEOUT + (AMQP_TIMEOUT * getTimeoutMultiplicator() * 2);
+        return SEND_MESSAGE_TO_DEVICE_TIMEOUT + (AMQP_TIMEOUT * getTimeoutMultiplicator() * 2L);
+    }
+
+    /**
+     * Determines the time to wait before timing out a request to send
+     * a command to a device.
+     * <p>
+     * Supports specifying whether this is about the first command to be
+     * sent after the command subscription result got completed.
+     *
+     * @param isFirstCommand {@code true} if the timeout for the first command after a command subscription shall be
+     *            returned.
+     * @return The time out in milliseconds. The value will be
+     *         {@link #getSendCommandTimeout()}, plus an extra {@value IntegrationTestSupport#KAFKA_TOPIC_CREATION_ADD_TO_TIMEOUT}
+     *         seconds if Kafka is used and <code>isFirstCommand</code> is {@code true}, letting the Kafka consumer
+     *         be ready to receive commands.
+     */
+    public long getSendCommandTimeout(final boolean isFirstCommand) {
+        return getSendCommandTimeout() + (isFirstCommand && isUsingKafkaMessaging() ?
+                KAFKA_TOPIC_CREATION_ADD_TO_TIMEOUT : 0L);
     }
 
     /**
@@ -1273,7 +1294,7 @@ public final class IntegrationTestSupport {
     /**
      * Gets the properties to be set on a command message.
      *
-     * @param forceCommandRerouting Supplies the value for the "force-command-rerouting" property. A {@code true}
+     * @param forceCommandRerouting Value for the "force-command-rerouting" property. A {@code true}
      *                              value of this property causes the command message to be rerouted to the
      *                              AMQP messaging network, mimicking the behaviour when the command message
      *                              has reached a protocol adapter instance that the command target device is
@@ -1281,9 +1302,9 @@ public final class IntegrationTestSupport {
      *                              protocol adapter instance. See the <em>CommandConsumerFactoryImpl</em> class.
      * @return The properties map.
      */
-    public static Map<String, Object> newCommandMessageProperties(final Supplier<Boolean> forceCommandRerouting) {
+    public static Map<String, Object> newCommandMessageProperties(final boolean forceCommandRerouting) {
         final HashMap<String, Object> properties = new HashMap<>();
-        properties.put("force-command-rerouting", forceCommandRerouting.get());
+        properties.put("force-command-rerouting", forceCommandRerouting);
         return properties;
     }
 
