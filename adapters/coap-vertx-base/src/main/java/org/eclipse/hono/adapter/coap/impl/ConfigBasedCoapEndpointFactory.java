@@ -169,21 +169,26 @@ public class ConfigBasedCoapEndpointFactory implements CoapEndpointFactory {
      * @return The updated configuration.
      */
     protected Future<NetworkConfig> loadNetworkConfig(final String fileName, final NetworkConfig networkConfig) {
-
+        final Promise<NetworkConfig> result = Promise.promise();
         if (!Strings.isNullOrEmpty(fileName)) {
             vertx.fileSystem().readFile(fileName, readAttempt -> {
                 if (readAttempt.succeeded()) {
                     try (InputStream is = new ByteArrayInputStream(readAttempt.result().getBytes())) {
                         networkConfig.load(is);
+                        result.complete(networkConfig);
                     } catch (final IOException e) {
-                        LOG.warn("skipping malformed NetworkConfig properties [{}]", fileName);
+                        LOG.warn("error malformed NetworkConfig properties [{}]", fileName);
+                        result.fail(e);
                     }
                 } else {
                     LOG.warn("error reading NetworkConfig file [{}]", fileName, readAttempt.cause());
+                    result.fail(readAttempt.cause());
                 }
             });
+        } else {
+            result.complete(networkConfig);
         }
-        return Future.succeededFuture(networkConfig);
+        return result.future();
     }
 
     /**
