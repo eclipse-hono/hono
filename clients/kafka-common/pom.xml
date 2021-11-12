@@ -70,6 +70,11 @@
       <artifactId>smallrye-config</artifactId>
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>jakarta.enterprise</groupId>
+      <artifactId>jakarta.enterprise.cdi-api</artifactId>
+      <optional>true</optional>
+    </dependency>
 
     <!-- Testing -->
     <dependency>

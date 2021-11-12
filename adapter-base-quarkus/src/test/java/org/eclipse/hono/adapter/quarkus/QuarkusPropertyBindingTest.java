@@ -51,6 +51,7 @@ public class QuarkusPropertyBindingTest {
     @Test
     public void testThatCommonConfigIsPresent() {
         assertThat(kafkaClientOptions.commonClientConfig().get("common.property")).isEqualTo("present");
+        assertThat(kafkaClientOptions.commonClientConfig().get("empty")).isEqualTo("");
     }
 
     /**
