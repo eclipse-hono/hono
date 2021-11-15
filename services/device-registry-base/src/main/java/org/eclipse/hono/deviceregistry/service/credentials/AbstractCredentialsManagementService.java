@@ -14,6 +14,7 @@
 package org.eclipse.hono.deviceregistry.service.credentials;
 
 import java.net.HttpURLConnection;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -27,11 +28,15 @@ import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
+import org.eclipse.hono.notification.NoOpNotificationSender;
+import org.eclipse.hono.notification.NotificationSender;
+import org.eclipse.hono.notification.deviceregistry.CredentialsChangeNotification;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.util.Futures;
+import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -44,11 +49,12 @@ import io.vertx.core.Vertx;
  * <p>
  * It checks the parameters, validate tenant using {@link TenantInformationService} and creates {@link DeviceKey} for looking up the credentials.
  */
-public abstract class AbstractCredentialsManagementService implements CredentialsManagementService {
+public abstract class AbstractCredentialsManagementService implements CredentialsManagementService, Lifecycle {
 
     protected TenantInformationService tenantInformationService = new NoopTenantInformationService();
 
     protected final Vertx vertx;
+    protected NotificationSender notificationSender = new NoOpNotificationSender();
 
     private final HonoPasswordEncoder passwordEncoder;
     private final int maxBcryptCostFactor;
@@ -87,6 +93,26 @@ public abstract class AbstractCredentialsManagementService implements Credential
     @Autowired(required = false)
     public void setTenantInformationService(final TenantInformationService tenantInformationService) {
         this.tenantInformationService = Objects.requireNonNull(tenantInformationService);
+    }
+
+    /**
+     * Sets the client to publish notifications about changes on credentials.
+     *
+     * @param notificationSender The client.
+     * @throws NullPointerException if notificationSender is {@code null}.
+     */
+    public void setNotificationSender(final NotificationSender notificationSender) {
+        this.notificationSender = Objects.requireNonNull(notificationSender);
+    }
+
+    @Override
+    public Future<Void> start() {
+        return notificationSender.start();
+    }
+
+    @Override
+    public Future<Void> stop() {
+        return notificationSender.stop();
     }
 
     /**
@@ -160,6 +186,8 @@ public abstract class AbstractCredentialsManagementService implements Credential
                         encodedCredentials,
                         resourceVersion,
                         span))
+                .onSuccess(result -> notificationSender
+                        .publish(new CredentialsChangeNotification(tenantId, deviceId, Instant.now())))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 
