@@ -181,17 +181,17 @@ public final class TracingHelper {
      * @throws NullPointerException if error is {@code null}.
      */
     public static void logError(final Span span, final Throwable error) {
-        logUnexpectedError(error);
+        logUnexpectedError(error, span);
         if (span != null) {
             logError(span, getErrorLogItems(error));
         }
     }
 
-    private static void logUnexpectedError(final Throwable error) {
+    private static void logUnexpectedError(final Throwable error, final Span span) {
         if (error instanceof NullPointerException
             || error instanceof IllegalArgumentException
             || error instanceof IllegalStateException) {
-            LOG.warn("An unexpected error occurred!", error);
+            LOG.warn("An unexpected error occurred! [logged on span [{}]]", span, error);
         }
     }
 
@@ -243,7 +243,7 @@ public final class TracingHelper {
      * @throws NullPointerException if message and error are {@code null}.
      */
     public static void logError(final Span span, final String message, final Throwable error) {
-        logUnexpectedError(error);
+        logUnexpectedError(error, span);
         if (span != null) {
             if (message == null && error == null) {
                 throw new NullPointerException("Either message or error must not be null");
