@@ -24,6 +24,8 @@ import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
+import org.eclipse.hono.client.notification.KafkaBasedNotificationSender;
+import org.eclipse.hono.client.notification.NotificationKafkaProducerConfigProperties;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.client.telemetry.kafka.KafkaBasedEventSender;
@@ -59,6 +61,8 @@ import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.util.CryptVaultBasedFieldLevelEncryption;
 import org.eclipse.hono.deviceregistry.util.FieldLevelEncryption;
 import org.eclipse.hono.deviceregistry.util.ServiceClientAdapter;
+import org.eclipse.hono.notification.NoOpNotificationSender;
+import org.eclipse.hono.notification.NotificationSender;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
@@ -103,6 +107,7 @@ import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.mongo.MongoAuthenticationOptions;
 import io.vertx.ext.auth.mongo.impl.DefaultHashStrategy;
 import io.vertx.ext.auth.mongo.impl.MongoAuthenticationImpl;
@@ -461,7 +466,10 @@ public class ApplicationConfig {
      */
     @Bean
     public DeviceManagementService deviceManagementService() {
-        return new MongoDbBasedDeviceManagementService(deviceDao(), credentialsDao(), registrationServiceProperties());
+        final MongoDbBasedDeviceManagementService service = new MongoDbBasedDeviceManagementService(deviceDao(),
+                credentialsDao(), registrationServiceProperties());
+        service.setNotificationSender(notificationSender());
+        return service;
     }
 
     /**
@@ -521,11 +529,13 @@ public class ApplicationConfig {
      */
     @Bean
     public CredentialsManagementService credentialsManagementService() {
-        return new MongoDbBasedCredentialsManagementService(
+        final MongoDbBasedCredentialsManagementService service = new MongoDbBasedCredentialsManagementService(
                 vertx(),
                 credentialsDao(),
                 credentialsServiceProperties(),
                 passwordEncoder());
+        service.setNotificationSender(notificationSender());
+        return service;
     }
 
     /**
@@ -561,9 +571,11 @@ public class ApplicationConfig {
      */
     @Bean
     public TenantManagementService tenantManagementService() {
-        return new MongoDbBasedTenantManagementService(
+        final MongoDbBasedTenantManagementService service = new MongoDbBasedTenantManagementService(
                 tenantDao(),
                 tenantServiceProperties());
+        service.setNotificationSender(notificationSender());
+        return service;
     }
 
     /**
@@ -736,4 +748,38 @@ public class ApplicationConfig {
                 vertx(),
                 tenantManagementService());
     }
+
+    /**
+     * Exposes Kafka client configuration properties for publishing notifications as a Spring bean.
+     *
+     * @return The properties.
+     */
+    // TODO: [#2904] use dedicated configuration for notifications
+    @ConfigurationProperties(prefix = "hono.kafka")
+    @Bean
+    public NotificationKafkaProducerConfigProperties notificationKafkaProducerConfig() {
+        final var configProperties = new NotificationKafkaProducerConfigProperties();
+        configProperties.setDefaultClientIdPrefix("device-registry");
+        return configProperties;
+    }
+
+    /**
+     * Exposes a notification sender.
+     *
+     * @return The bean instance.
+     */
+    @Bean
+    @Scope("prototype")
+    public NotificationSender notificationSender() {
+        final var kafkaProducerConfig = notificationKafkaProducerConfig();
+        if (kafkaProducerConfig.isConfigured()) {
+            final KafkaProducerFactory<String, JsonObject> factory = CachingKafkaProducerFactory.sharedFactory(vertx());
+            return new KafkaBasedNotificationSender(factory, kafkaProducerConfig);
+        } else {
+            // TODO create AMQP based notification sender
+            // TODO register health check for AMQP based notification sender
+            return new NoOpNotificationSender();
+        }
+    }
+
 }

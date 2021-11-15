@@ -13,6 +13,7 @@
 package org.eclipse.hono.deviceregistry.service.device;
 
 import java.net.HttpURLConnection;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -24,6 +25,10 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
+import org.eclipse.hono.notification.NoOpNotificationSender;
+import org.eclipse.hono.notification.NotificationSender;
+import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
+import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
 import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
@@ -33,6 +38,7 @@ import org.eclipse.hono.service.management.Sort;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.device.DeviceWithId;
+import org.eclipse.hono.util.Lifecycle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,11 +53,12 @@ import io.vertx.core.Future;
  * <p>
  * It checks the parameters, validate tenant using {@link TenantInformationService} and creates {@link DeviceKey} for device operations.
  */
-public abstract class AbstractDeviceManagementService implements DeviceManagementService {
+public abstract class AbstractDeviceManagementService implements DeviceManagementService, Lifecycle {
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractDeviceManagementService.class);
 
     protected TenantInformationService tenantInformationService = new NoopTenantInformationService();
+    protected NotificationSender notificationSender = new NoOpNotificationSender();
 
     /**
      * Sets the service to use for checking existence of tenants.
@@ -63,6 +70,26 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
     @Autowired(required = false)
     public void setTenantInformationService(final TenantInformationService tenantInformationService) {
         this.tenantInformationService = Objects.requireNonNull(tenantInformationService);
+    }
+
+    /**
+     * Sets the client to publish notifications about changes on devices.
+     *
+     * @param notificationSender The client.
+     * @throws NullPointerException if notificationSender is {@code null}.
+     */
+    public void setNotificationSender(final NotificationSender notificationSender) {
+        this.notificationSender = Objects.requireNonNull(notificationSender);
+    }
+
+    @Override
+    public Future<Void> start() {
+        return notificationSender.start();
+    }
+
+    @Override
+    public Future<Void> stop() {
+        return notificationSender.stop();
     }
 
     /**
@@ -262,6 +289,9 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
                                 "tenant does not exist",
                                 null))
                         : processCreateDevice(DeviceKey.from(result.getPayload(), deviceIdValue), device, span))
+                .onSuccess(result -> notificationSender
+                        .publish(new DeviceChangeNotification(LifecycleChange.CREATE, tenantId, deviceIdValue,
+                                Instant.now(), device.isEnabled())))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 
@@ -307,6 +337,8 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
                                 "tenant does not exist",
                                 null))
                         : processUpdateDevice(DeviceKey.from(result.getPayload(), deviceId), device, resourceVersion, span))
+                .onSuccess(result -> notificationSender.publish(new DeviceChangeNotification(LifecycleChange.UPDATE,
+                        tenantId, deviceId, Instant.now(), device.isEnabled())))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 
@@ -343,6 +375,8 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
                     }
                     return processDeleteDevice(DeviceKey.from(tenantId, deviceId), resourceVersion, span);
                 })
+                .onSuccess(result -> notificationSender.publish(
+                        new DeviceChangeNotification(LifecycleChange.DELETE, tenantId, deviceId, Instant.now(), false)))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 
@@ -372,6 +406,7 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
                     }
                     return processDeleteDevicesOfTenant(tenantId, span);
                 })
+                // TODO send notification
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 

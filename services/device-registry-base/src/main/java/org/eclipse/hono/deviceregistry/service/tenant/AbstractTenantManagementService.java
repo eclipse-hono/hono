@@ -14,6 +14,7 @@
 package org.eclipse.hono.deviceregistry.service.tenant;
 
 import java.net.HttpURLConnection;
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -21,6 +22,10 @@ import java.util.Optional;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
+import org.eclipse.hono.notification.NoOpNotificationSender;
+import org.eclipse.hono.notification.NotificationSender;
+import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
+import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.Id;
 import org.eclipse.hono.service.management.OperationResult;
@@ -31,6 +36,7 @@ import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.service.management.tenant.TenantWithId;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.Lifecycle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,9 +47,30 @@ import io.vertx.core.Promise;
 /**
  * An abstract base class implementation for {@link TenantManagementService}.
  */
-public abstract class AbstractTenantManagementService implements TenantManagementService {
+public abstract class AbstractTenantManagementService implements TenantManagementService, Lifecycle {
 
+    protected NotificationSender notificationSender = new NoOpNotificationSender();
     private final Logger log = LoggerFactory.getLogger(getClass());
+
+    /**
+     * Sets the client to publish notifications about changes on tenants.
+     *
+     * @param notificationSender The client.
+     * @throws NullPointerException if notificationSender is {@code null}.
+     */
+    public void setNotificationSender(final NotificationSender notificationSender) {
+        this.notificationSender = Objects.requireNonNull(notificationSender);
+    }
+
+    @Override
+    public Future<Void> start() {
+        return notificationSender.start();
+    }
+
+    @Override
+    public Future<Void> stop() {
+        return notificationSender.stop();
+    }
 
     /**
      * Creates a new Tenant.
@@ -199,8 +226,11 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
                     e.getMessage()));
         }
 
+        final String tenantIdValue = tenantId.orElseGet(this::createId);
         return tenantCheck.future()
-                .compose(ok -> processCreateTenant(tenantId.orElseGet(this::createId), tenantObj, span))
+                .compose(ok -> processCreateTenant(tenantIdValue, tenantObj, span))
+                .onSuccess(result -> notificationSender.publish(new TenantChangeNotification(LifecycleChange.CREATE,
+                        tenantIdValue, Instant.now(), tenantObj.isEnabled())))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId.get()));
     }
 
@@ -243,6 +273,8 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
         }
         return tenantCheck.future()
                 .compose(ok -> processUpdateTenant(tenantId, tenantObj, resourceVersion, span))
+                .onSuccess(result -> notificationSender.publish(new TenantChangeNotification(LifecycleChange.UPDATE,
+                        tenantId, Instant.now(), tenantObj.isEnabled())))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 
@@ -260,6 +292,8 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
         Objects.requireNonNull(span);
 
         return processDeleteTenant(tenantId, resourceVersion, span)
+                .onSuccess(result -> notificationSender
+                        .publish(new TenantChangeNotification(LifecycleChange.DELETE, tenantId, Instant.now(), false)))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 
