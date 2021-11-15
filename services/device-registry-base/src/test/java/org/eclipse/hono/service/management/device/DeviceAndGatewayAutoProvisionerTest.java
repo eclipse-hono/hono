@@ -77,7 +77,7 @@ public class DeviceAndGatewayAutoProvisionerTest {
     private CredentialsManagementService credentialsManagementService;
     private DeviceAndGatewayAutoProvisioner deviceAndGatewayAutoProvisioner;
     private EventSender sender;
-    private String fqdn;
+    private String commonName;
     private X509Certificate cert;
     private String subjectDn;
     private String deviceId;
@@ -95,8 +95,9 @@ public class DeviceAndGatewayAutoProvisionerTest {
     public void init() throws GeneralSecurityException, IOException {
         tenantId = UUID.randomUUID().toString();
         deviceId = UUID.randomUUID().toString();
-        fqdn = UUID.randomUUID().toString();
-        final SelfSignedCertificate ssc = SelfSignedCertificate.create(fqdn);
+        commonName = UUID.randomUUID().toString();
+        final SelfSignedCertificate ssc = SelfSignedCertificate.create(
+                String.format("%s,OU=Hono,O=Eclipse", commonName));
         cert = (X509Certificate) CertificateFactory.getInstance("X.509")
                 .generateCertificate(new FileInputStream(ssc.certificatePath()));
         subjectDn = cert.getSubjectX500Principal().getName(X500Principal.RFC2253);
@@ -145,9 +146,10 @@ public class DeviceAndGatewayAutoProvisionerTest {
      * @throws CertificateEncodingException if the certificate cannot be encoded.
      */
     @Test
-    public void testProvisionDeviceWithDeviceIdTemplateSucceeds(final VertxTestContext ctx) throws CertificateEncodingException {
-        deviceId = "device-" + fqdn;
-        testProvisionSucceeds(ctx, false, "device-{{subject-cn}}", "device-" + fqdn);
+    public void testProvisionDeviceWithDeviceIdTemplateSucceeds(final VertxTestContext ctx)
+            throws CertificateEncodingException {
+        final String expectedDeviceId = String.format("device-%s-Hono", commonName);
+        testProvisionSucceeds(ctx, false, "device-{{subject-cn}}-{{subject-ou}}", expectedDeviceId);
     }
 
     /**
