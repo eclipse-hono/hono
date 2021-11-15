@@ -331,6 +331,6 @@ public final class DeviceAndGatewayAutoProvisioner extends AbstractAutoProvision
         final String deviceIdTemplate = tenant.getAutoProvisioningDeviceIdTemplate(issuerDN);
 
         return Optional.ofNullable(deviceIdTemplate)
-                .map(template -> TemplateHelper.fill(template, subjectDN));
+                .map(template -> new IdentityTemplate(template).apply(subjectDN));
     }
 }

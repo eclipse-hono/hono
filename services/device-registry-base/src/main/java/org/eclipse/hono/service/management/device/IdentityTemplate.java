@@ -26,12 +26,20 @@ import org.eclipse.hono.util.Strings;
 /**
  * A utility class for handling template used for generating device identifier during auto-provisioning.
  */
-public final class TemplateHelper {
+public final class IdentityTemplate {
 
     private static final String QUOTED_PLACEHOLDER_SUBJECT_DN = Pattern
             .quote(RegistryManagementConstants.PLACEHOLDER_SUBJECT_DN);
+    private final String template;
 
-    private TemplateHelper() {
+    /**
+     * Creates a new identity template.
+     *
+     * @param template The identity template.
+     * @throws NullPointerException if template is {@code null}.
+     */
+    public IdentityTemplate(final String template) {
+        this.template = Objects.requireNonNull(template, "template must not be null");
     }
 
     /**
@@ -96,7 +104,7 @@ public final class TemplateHelper {
     }
 
     /**
-     * Fills placeholders in template with corresponding attribute values from the given subject DN.
+     * Applies attribute values from the given subject DN to the template.
      * <p>
      * The following placeholders are supported.
      * <ul>
@@ -106,29 +114,28 @@ public final class TemplateHelper {
      * <li>{@value RegistryManagementConstants#PLACEHOLDER_SUBJECT_O} for <em>Organization Name (O)</em></li>
      * </ul>
      *
-     * @param template The template to be filled.
      * @param subjectDN The subject DN.
      * @return The filled template.
      * @throws IllegalArgumentException if the subject DN is not valid or any of the attributes
      *                                  configured in the template are not present in the subject DN.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public static String fill(final String template, final String subjectDN) {
-        Objects.requireNonNull(template, "template must not be null");
+    public String apply(final String subjectDN) {
         Objects.requireNonNull(subjectDN, "subjectDN must not be null");
 
         try {
             final List<Rdn> rdns = new LdapName(subjectDN).getRdns();
             String result = template.replaceAll(QUOTED_PLACEHOLDER_SUBJECT_DN, subjectDN);
-            result = fillAttribute(Attribute.CN, result, rdns);
-            result = fillAttribute(Attribute.OU, result, rdns);
-            return fillAttribute(Attribute.O, result, rdns);
-        } catch (InvalidNameException e) {
+            for (final Attribute attribute : Attribute.values()) {
+                result = applyAttribute(attribute, result, rdns);
+            }
+            return result;
+        } catch (final InvalidNameException e) {
             throw new IllegalArgumentException(String.format("subject DN [%s] is not valid", subjectDN));
         }
     }
 
-    private static String fillAttribute(final Attribute attribute, final String template,
+    private static String applyAttribute(final Attribute attribute, final String template,
             final List<Rdn> rdns) {
         if (template.contains(attribute.getPlaceHolder())) {
             final String attributeValue = attribute.getValue(rdns);
