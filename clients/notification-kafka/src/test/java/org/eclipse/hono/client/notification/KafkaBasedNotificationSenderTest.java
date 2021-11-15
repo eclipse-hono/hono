@@ -1,5 +1,5 @@
-/*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+/*
+ * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -9,7 +9,7 @@
  * http://www.eclipse.org/legal/epl-2.0
  *
  * SPDX-License-Identifier: EPL-2.0
- *******************************************************************************/
+ */
 
 package org.eclipse.hono.client.notification;
 
@@ -25,7 +25,6 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
-import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
 import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationConstants;
@@ -54,7 +53,7 @@ public class KafkaBasedNotificationSenderTest {
     private static final String DEVICE_ID = "my-device";
     private static final boolean ENABLED = false;
 
-    private final MessagingKafkaProducerConfigProperties config = new MessagingKafkaProducerConfigProperties();
+    private final NotificationKafkaProducerConfigProperties config = new NotificationKafkaProducerConfigProperties();
 
     /**
      * Sets up the fixture.
