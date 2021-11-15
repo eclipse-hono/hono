@@ -22,11 +22,9 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 import org.apache.kafka.clients.consumer.Consumer;
-import org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties;
 import org.eclipse.hono.client.kafka.consumer.HonoKafkaConsumer;
 import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationReceiver;
-import org.eclipse.hono.util.Strings;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -40,8 +38,10 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
  */
 public class KafkaBasedNotificationReceiver implements NotificationReceiver {
 
+    private static final String NAME = "notification";
+
     private final Vertx vertx;
-    private final Map<String, String> consumerConfig = new HashMap<>();
+    private final NotificationKafkaConsumerConfigProperties consumerConfig;
     private final Map<Class<? extends AbstractNotification>, Handler<? extends AbstractNotification>> handlerPerType = new HashMap<>();
     private final Set<String> topics = new HashSet<>();
 
@@ -59,17 +59,19 @@ public class KafkaBasedNotificationReceiver implements NotificationReceiver {
      * @throws IllegalArgumentException if consumerConfig does not contain a valid configuration (at least a bootstrap
      *             server).
      */
-    public KafkaBasedNotificationReceiver(final Vertx vertx, final Map<String, String> consumerConfig) {
+    public KafkaBasedNotificationReceiver(final Vertx vertx,
+            final NotificationKafkaConsumerConfigProperties consumerConfig) {
 
         Objects.requireNonNull(vertx);
         Objects.requireNonNull(consumerConfig);
 
-        if (Strings.isNullOrEmpty(consumerConfig.get(AbstractKafkaConfigProperties.PROPERTY_BOOTSTRAP_SERVERS))) {
+        if (!consumerConfig.isConfigured()) {
             throw new IllegalArgumentException("No Kafka configuration found!");
         }
 
         this.vertx = vertx;
-        this.consumerConfig.putAll(consumerConfig);
+        this.consumerConfig = consumerConfig;
+
     }
 
     // visible for testing
@@ -79,7 +81,7 @@ public class KafkaBasedNotificationReceiver implements NotificationReceiver {
 
     @Override
     public Future<Void> start() {
-        honoKafkaConsumer = new HonoKafkaConsumer(vertx, topics, getRecordHandler(), consumerConfig);
+        honoKafkaConsumer = new HonoKafkaConsumer(vertx, topics, getRecordHandler(), consumerConfig.getConsumerConfig(NAME));
         Optional.ofNullable(kafkaConsumerSupplier).ifPresent(honoKafkaConsumer::setKafkaConsumerSupplier);
         return honoKafkaConsumer
                 .start()

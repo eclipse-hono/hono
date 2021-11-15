@@ -18,7 +18,6 @@ import java.util.Objects;
 
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
-import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationSender;
 import org.eclipse.hono.notification.deviceregistry.CredentialsChangeNotification;
@@ -37,7 +36,7 @@ import io.vertx.kafka.client.producer.RecordMetadata;
 public class KafkaBasedNotificationSender implements NotificationSender {
 
     public static final String PRODUCER_NAME = "notification";
-    private final MessagingKafkaProducerConfigProperties config;
+    private final NotificationKafkaProducerConfigProperties config;
     private final KafkaProducerFactory<String, JsonObject> producerFactory;
     private boolean stopped = false;
 
@@ -45,16 +44,16 @@ public class KafkaBasedNotificationSender implements NotificationSender {
      * Creates an instance.
      *
      * @param producerFactory The factory to use for creating Kafka producers.
-     * @param kafkaProducerConfig The Kafka producer configuration properties to use.
+     * @param config The Kafka producer configuration properties to use.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public KafkaBasedNotificationSender(final KafkaProducerFactory<String, JsonObject> producerFactory,
-            final MessagingKafkaProducerConfigProperties kafkaProducerConfig) {
+            final NotificationKafkaProducerConfigProperties config) {
         Objects.requireNonNull(producerFactory);
-        Objects.requireNonNull(kafkaProducerConfig);
+        Objects.requireNonNull(config);
 
         this.producerFactory = producerFactory;
-        this.config = kafkaProducerConfig;
+        this.config = config;
     }
 
     @Override

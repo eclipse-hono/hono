@@ -16,7 +16,6 @@ package org.eclipse.hono.client.notification;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -51,7 +50,7 @@ import io.vertx.junit5.VertxTestContext;
 @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class KafkaBasedNotificationReceiverTest {
 
-    private final Map<String, String> consumerConfig = new HashMap<>();
+    private NotificationKafkaConsumerConfigProperties consumerConfig;
 
     private Vertx vertx;
     private KafkaMockConsumer mockConsumer;
@@ -68,8 +67,8 @@ public class KafkaBasedNotificationReceiverTest {
 
         mockConsumer = new KafkaMockConsumer(OffsetResetStrategy.EARLIEST);
 
-        consumerConfig.put(AbstractKafkaConfigProperties.PROPERTY_BOOTSTRAP_SERVERS, "kafka");
-        consumerConfig.put("client.id", "application-test-consumer");
+        consumerConfig = new NotificationKafkaConsumerConfigProperties();
+        consumerConfig.setConsumerConfig(Map.of(AbstractKafkaConfigProperties.PROPERTY_BOOTSTRAP_SERVERS, "dummy"));
 
     }
 
