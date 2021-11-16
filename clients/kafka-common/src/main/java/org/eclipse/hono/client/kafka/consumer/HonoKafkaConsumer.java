@@ -38,6 +38,7 @@ import org.apache.kafka.clients.consumer.CooperativeStickyAssignor;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
+import org.eclipse.hono.util.Futures;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.Pair;
 import org.slf4j.Logger;
@@ -934,8 +935,7 @@ public class HonoKafkaConsumer implements Lifecycle {
                     log.debug("ensureTopicIsAmongSubscribedTopics: done updating topic subscription [{}]", topic);
                     return Future.succeededFuture(v);
                 })
-                .onSuccess(resultPromise::tryComplete)
-                .onFailure(resultPromise::tryFail);
+                .onComplete(ar -> Futures.tryHandleResult(resultPromise, ar));
         if (!isAutoOffsetResetConfigLatest()) {
             // offset reset policy is "earliest" - no need to wait for rebalance and offset reset before completing the result future
             // BUT: the rebalance-triggering logic above still needs to be done in the background - otherwise it could take much longer for the earliest record to actually be received

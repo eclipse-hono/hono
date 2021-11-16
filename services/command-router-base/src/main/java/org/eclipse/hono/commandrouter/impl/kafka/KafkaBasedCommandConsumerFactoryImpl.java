@@ -150,7 +150,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
             return Future.failedFuture(new IllegalStateException("factory must be started in a Vert.x context"));
         }
         final KafkaCommandProcessingQueue commandQueue = new KafkaCommandProcessingQueue(context);
-        commandHandler = new KafkaBasedMappingAndDelegatingCommandHandler(tenantClient, commandQueue,
+        commandHandler = new KafkaBasedMappingAndDelegatingCommandHandler(vertx, tenantClient, commandQueue,
                 commandTargetMapper, internalCommandSender, kafkaBasedCommandResponseSender, metrics, tracer);
 
         final Map<String, String> consumerConfig = kafkaConsumerConfig.getConsumerConfig("consumer");

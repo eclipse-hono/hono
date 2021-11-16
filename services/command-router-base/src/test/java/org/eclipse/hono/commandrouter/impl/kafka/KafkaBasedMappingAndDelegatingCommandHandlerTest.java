@@ -16,6 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -30,6 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.command.CommandContext;
@@ -54,6 +56,7 @@ import io.opentracing.Tracer;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -72,7 +75,7 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
     private CommandTargetMapper commandTargetMapper;
     private KafkaBasedMappingAndDelegatingCommandHandler cmdHandler;
     private KafkaBasedInternalCommandSender internalCommandSender;
-    private KafkaBasedCommandResponseSender kafkaBasedCommandResponseSender;
+    private Vertx vertx;
     private String tenantId;
     private String deviceId;
     private String adapterInstanceId;
@@ -96,13 +99,14 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
         internalCommandSender = mock(KafkaBasedInternalCommandSender.class);
         when(internalCommandSender.sendCommand(any(), any())).thenReturn(Future.succeededFuture());
 
-        kafkaBasedCommandResponseSender = mock(KafkaBasedCommandResponseSender.class);
+        final KafkaBasedCommandResponseSender kafkaBasedCommandResponseSender = mock(KafkaBasedCommandResponseSender.class);
 
-        final Context context = VertxMockSupport.mockContext(mock(Vertx.class));
+        vertx = mock(Vertx.class);
+        final Context context = VertxMockSupport.mockContext(vertx);
         final KafkaCommandProcessingQueue commandQueue = new KafkaCommandProcessingQueue(context);
         final CommandRouterMetrics metrics = mock(CommandRouterMetrics.class);
         final Tracer tracer = TracingMockSupport.mockTracer(TracingMockSupport.mockSpan());
-        cmdHandler = new KafkaBasedMappingAndDelegatingCommandHandler(tenantClient, commandQueue, commandTargetMapper,
+        cmdHandler = new KafkaBasedMappingAndDelegatingCommandHandler(vertx, tenantClient, commandQueue, commandTargetMapper,
                 internalCommandSender, kafkaBasedCommandResponseSender, metrics, tracer);
     }
 
@@ -148,6 +152,71 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
 
         // THEN the message is not delegated
         verify(internalCommandSender, never()).sendCommand(any(), any());
+    }
+
+    /**
+     * Verifies the behaviour of the
+     * {@link KafkaBasedMappingAndDelegatingCommandHandler#mapAndDelegateIncomingCommandMessage(KafkaConsumerRecord)}
+     * method in a scenario where mapping/delegation of a valid command record times out.
+     */
+    @Test
+    public void testCommandDelegationTimesOut() {
+        VertxMockSupport.runTimersImmediately(vertx);
+
+        // GIVEN a valid command record
+        final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(tenantId, deviceId, "cmd-subject", 0, 0);
+
+        // WHEN mapping and delegating the command, while vert.x timers are triggered immediately
+        final Future<Void> resultFuture = cmdHandler.mapAndDelegateIncomingCommandMessage(commandRecord);
+
+        // THEN the message is not delegated
+        verify(internalCommandSender, never()).sendCommand(any(), any());
+        // and the resultFuture is failed
+        assertThat(resultFuture.failed()).isTrue();
+    }
+
+    /**
+     * Verifies the behaviour of the
+     * {@link KafkaBasedMappingAndDelegatingCommandHandler#mapAndDelegateIncomingCommandMessage(KafkaConsumerRecord)}
+     * method in a scenario where mapping/delegation of a valid command record times out while the command gets sent.
+     */
+    @Test
+    public void testCommandDelegationTimesOutWhileCommandGetsSent() {
+        final AtomicReference<Handler<Long>> timerHandlerRef = new AtomicReference<>();
+        when(vertx.setTimer(anyLong(), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
+            final Handler<Long> handler = invocation.getArgument(1);
+            timerHandlerRef.set(handler);
+            return 1L;
+        });
+
+        // GIVEN a valid command record
+        final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(tenantId, deviceId, "cmd-subject", 0, 0);
+
+        final Promise<Void> sendCommandPromise = Promise.promise();
+        when(internalCommandSender.sendCommand(any(), any())).thenReturn(sendCommandPromise.future());
+
+        // WHEN mapping and delegating the command (with no timeout triggered yet)
+        final Future<Void> resultFuture = cmdHandler.mapAndDelegateIncomingCommandMessage(commandRecord);
+
+        final ArgumentCaptor<KafkaBasedCommandContext> commandContextArgumentCaptor = ArgumentCaptor
+                .forClass(KafkaBasedCommandContext.class);
+        // THEN the message is properly delegated
+        verify(internalCommandSender, times(1)).sendCommand(commandContextArgumentCaptor.capture(),
+                eq(adapterInstanceId));
+
+        final KafkaBasedCommandContext commandContext = commandContextArgumentCaptor.getValue();
+        assertNotNull(commandContext);
+        assertTrue(commandContext.getCommand().isValid());
+        assertEquals(tenantId, commandContext.getCommand().getTenant());
+        assertEquals(deviceId, commandContext.getCommand().getDeviceId());
+        assertEquals("cmd-subject", commandContext.getCommand().getName());
+        assertThat(resultFuture.isComplete()).isFalse();
+
+        // WHEN the timeout is triggered and then sending the command succeeds
+        timerHandlerRef.get().handle(1L);
+        sendCommandPromise.complete();
+        // THEN the result future is failed because the timeout came first
+        assertThat(resultFuture.failed()).isTrue();
     }
 
     /**
