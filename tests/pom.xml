@@ -34,6 +34,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <maven.install.skip>true</maven.install.skip>
     <gpg.skip>true</gpg.skip>
 
+    <custom.network.name>hono-test</custom.network.name>
+
     <!--
       Hono service names
     -->
@@ -689,7 +691,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </env>
                     <network>
                       <mode>custom</mode>
-                      <name>hono</name>
+                      <name>${custom.network.name}</name>
                       <alias>${hono.infinispan.host}</alias>
                     </network>
                     <cpus>1000000000</cpus>
@@ -746,7 +748,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </env>
                     <network>
                       <mode>custom</mode>
-                      <name>hono</name>
+                      <name>${custom.network.name}</name>
                       <alias>${hono.mongodb.host}</alias>
                     </network>
                     <cpus>1000000000</cpus>
@@ -771,7 +773,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <portPropertyFile>${project.build.directory}/docker/jdbc-db.port.properties</portPropertyFile>
                     <network>
                       <mode>custom</mode>
-                      <name>hono</name>
+                      <name>${custom.network.name}</name>
                       <alias>hono-jdbc-db</alias>
                     </network>
                     <cpus>1000000000</cpus>
@@ -804,7 +806,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <portPropertyFile>${project.build.directory}/docker/jaeger.port.properties</portPropertyFile>
                     <network>
                       <mode>custom</mode>
-                      <name>hono</name>
+                      <name>${custom.network.name}</name>
                       <alias>${jaeger.host}</alias>
                     </network>
                     <cpus>1000000000</cpus>
@@ -874,7 +876,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <portPropertyFile>${project.build.directory}/docker/auth.port.properties</portPropertyFile>
                     <network>
                       <mode>custom</mode>
-                      <name>hono</name>
+                      <name>${custom.network.name}</name>
                       <alias>${hono.auth.host}</alias>
                     </network>
                     <cpus>1000000000</cpus>
@@ -964,7 +966,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <portPropertyFile>${project.build.directory}/docker/broker.port.properties</portPropertyFile>
                     <network>
                       <mode>custom</mode>
-                      <name>hono</name>
+                      <name>${custom.network.name}</name>
                       <alias>${hono.amqp-broker.host}</alias>
                     </network>
                     <cpus>1000000000</cpus>
@@ -1036,7 +1038,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <portPropertyFile>${project.build.directory}/docker/qpid.port.properties</portPropertyFile>
                     <network>
                       <mode>custom</mode>
-                      <name>hono</name>
+                      <name>${custom.network.name}</name>
                       <alias>${hono.amqp-network.host}</alias>
                     </network>
                     <cpus>1000000000</cpus>
@@ -1063,7 +1065,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <skip>${hono.kafka.disabled}</skip>
                     <network>
                       <mode>custom</mode>
-                      <name>hono</name>
+                      <name>${custom.network.name}</name>
                       <alias>zookeeper</alias>
                     </network>
                     <log>
@@ -1091,7 +1093,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </ports>
                     <network>
                       <mode>custom</mode>
-                      <name>hono</name>
+                      <name>${custom.network.name}</name>
                       <alias>kafka</alias>
                     </network>
                     <log>
@@ -1160,7 +1162,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <portPropertyFile>${project.build.directory}/docker/deviceregistry.port.properties</portPropertyFile>
                     <network>
                       <mode>custom</mode>
-                      <name>hono</name>
+                      <name>${custom.network.name}</name>
                       <alias>${hono.registration.host}</alias>
                     </network>
                     <cpus>1000000000</cpus>
@@ -1234,7 +1236,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <portPropertyFile>${project.build.directory}/docker/deviceconnection.port.properties</portPropertyFile>
                     <network>
                       <mode>custom</mode>
-                      <name>hono</name>
+                      <name>${custom.network.name}</name>
                       <alias>${hono.device-connection.host}</alias>
                     </network>
                     <cpus>1000000000</cpus>
@@ -1315,7 +1317,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <portPropertyFile>${project.build.directory}/docker/commandrouter.port.properties</portPropertyFile>
                     <network>
                       <mode>custom</mode>
-                      <name>hono</name>
+                      <name>${custom.network.name}</name>
                       <alias>${hono.commandrouter.host}</alias>
                     </network>
                     <cpus>1000000000</cpus>
@@ -1397,7 +1399,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <portPropertyFile>${project.build.directory}/docker/adapter.http.port.properties</portPropertyFile>
                     <network>
                       <mode>custom</mode>
-                      <name>hono</name>
+                      <name>${custom.network.name}</name>
                       <alias>hono-adapter-http-vertx</alias>
                     </network>
                     <cpus>1000000000</cpus>
@@ -1469,7 +1471,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <portPropertyFile>${project.build.directory}/docker/adapter.mqtt.port.properties</portPropertyFile>
                     <network>
                       <mode>custom</mode>
-                      <name>hono</name>
+                      <name>${custom.network.name}</name>
                       <alias>hono-adapter-mqtt-vertx</alias>
                     </network>
                     <cpus>1000000000</cpus>
@@ -1546,7 +1548,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <portPropertyFile>${project.build.directory}/docker/adapter.amqp.port.properties</portPropertyFile>
                     <network>
                       <mode>custom</mode>
-                      <name>hono</name>
+                      <name>${custom.network.name}</name>
                       <alias>hono-adapter-amqp-vertx</alias>
                     </network>
                     <cpus>1000000000</cpus>
@@ -1618,7 +1620,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <portPropertyFile>${project.build.directory}/docker/adapter.coap.port.properties</portPropertyFile>
                     <network>
                       <mode>custom</mode>
-                      <name>hono</name>
+                      <name>${custom.network.name}</name>
                       <alias>hono-adapter-coap-vertx</alias>
                     </network>
                     <cpus>1000000000</cpus>
