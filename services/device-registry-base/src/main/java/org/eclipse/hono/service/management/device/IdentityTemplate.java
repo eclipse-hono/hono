@@ -12,6 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.service.management.device;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
@@ -34,12 +35,22 @@ public final class IdentityTemplate {
 
     /**
      * Creates a new identity template.
+     * <p>
+     * The following placeholders are supported.
+     * <ul>
+     * <li>{@value RegistryManagementConstants#PLACEHOLDER_SUBJECT_DN} for <em>Subject Distinguished Name (DN)</em></li>
+     * <li>{@value RegistryManagementConstants#PLACEHOLDER_SUBJECT_CN} for <em>Common Name (CN)</em></li>
+     * <li>{@value RegistryManagementConstants#PLACEHOLDER_SUBJECT_OU} for <em>Organizational Unit Name (OU)</em></li>
+     * <li>{@value RegistryManagementConstants#PLACEHOLDER_SUBJECT_O} for <em>Organization Name (O)</em></li>
+     * </ul>
      *
      * @param template The identity template.
      * @throws NullPointerException if template is {@code null}.
+     * @throws IllegalArgumentException if the template does not contain any placeholders.
      */
     public IdentityTemplate(final String template) {
-        this.template = Objects.requireNonNull(template, "template must not be null");
+        checkValidity(template);
+        this.template = template;
     }
 
     /**
@@ -105,14 +116,6 @@ public final class IdentityTemplate {
 
     /**
      * Applies attribute values from the given subject DN to the template.
-     * <p>
-     * The following placeholders are supported.
-     * <ul>
-     * <li>{@value RegistryManagementConstants#PLACEHOLDER_SUBJECT_DN} for <em>Subject Distinguished Name (DN)</em></li>
-     * <li>{@value RegistryManagementConstants#PLACEHOLDER_SUBJECT_CN} for <em>Common Name (CN)</em></li>
-     * <li>{@value RegistryManagementConstants#PLACEHOLDER_SUBJECT_OU} for <em>Organizational Unit Name (OU)</em></li>
-     * <li>{@value RegistryManagementConstants#PLACEHOLDER_SUBJECT_O} for <em>Organization Name (O)</em></li>
-     * </ul>
      *
      * @param subjectDN The subject DN.
      * @return The filled template.
@@ -133,6 +136,30 @@ public final class IdentityTemplate {
         } catch (final InvalidNameException e) {
             throw new IllegalArgumentException(String.format("subject DN [%s] is not valid", subjectDN));
         }
+    }
+
+    /**
+     * Checks if the template is valid.
+     *
+     * @param template The identity template.
+     * @throws NullPointerException if template is {@code null}.
+     * @throws IllegalArgumentException if the template does not contain any placeholders.
+     */
+    public static void checkValidity(final String template) {
+        Objects.requireNonNull(template, "template must not be null");
+
+        if (!template.contains(RegistryManagementConstants.PLACEHOLDER_SUBJECT_DN)) {
+            Arrays.stream(Attribute.values())
+                    .map(Attribute::getPlaceHolder)
+                    .filter(template::contains)
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("template must contain at least one placeholder"));
+        }
+    }
+
+    @Override
+    public String toString() {
+        return template;
     }
 
     private static String applyAttribute(final Attribute attribute, final String template,
