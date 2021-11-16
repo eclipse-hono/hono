@@ -55,6 +55,7 @@ public class DeviceRegistryUtilsTest {
                 .setPublicKey("NOT_A_PUBLIC_KEY".getBytes())
                 .setNotBefore(Instant.now().minus(1, ChronoUnit.DAYS))
                 .setNotAfter(Instant.now().plus(2, ChronoUnit.DAYS))
+                .setAuthIdTemplate("auth-{{subject-cn}}")
                 .setAutoProvisioningAsGatewayEnabled(true)
                 .setAutoProvisioningDeviceIdTemplate("device-{{subject-dn}}");
         final TrustedCertificateAuthority ca2 = new TrustedCertificateAuthority()
@@ -63,6 +64,7 @@ public class DeviceRegistryUtilsTest {
                 .setPublicKey("NOT_A_PUBLIC_KEY".getBytes())
                 .setNotBefore(Instant.now().plus(1, ChronoUnit.DAYS))
                 .setNotAfter(Instant.now().plus(20, ChronoUnit.DAYS))
+                .setAuthIdTemplate("auth-{{subject-cn}}")
                 .setAutoProvisioningAsGatewayEnabled(true)
                 .setAutoProvisioningDeviceIdTemplate("device-{{subject-dn}}");
 
@@ -85,6 +87,7 @@ public class DeviceRegistryUtilsTest {
                 .put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=test.org")
                 .put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, "NOT_A_PUBLIC_KEY".getBytes())
                 .put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, "EC")
+                .put(TenantConstants.FIELD_PAYLOAD_AUTH_ID_TEMPLATE, "auth-{{subject-cn}}")
                 .put(TenantConstants.FIELD_AUTO_PROVISIONING_ENABLED, false));
 
         final JsonObject target = DeviceRegistryUtils.convertTenant("4711", source, true);

@@ -36,6 +36,7 @@ import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsResult;
+import org.eclipse.hono.util.IdentityTemplate;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 import io.opentracing.Span;

@@ -28,8 +28,6 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import javax.security.auth.x500.X500Principal;
-
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
@@ -216,11 +214,6 @@ public final class DeviceRegistryUtils {
             final CertificateFactory factory = CertificateFactory.getInstance("X.509");
             final X509Certificate cert = (X509Certificate) factory.generateCertificate(new ByteArrayInputStream(bytes));
 
-            if (!cert.getSubjectX500Principal().getName(X500Principal.RFC2253).equals(authId)) {
-                throw new IllegalArgumentException(
-                        String.format("Subject DN of the client certificate does not match authId [%s] for tenant [%s]",
-                                authId, tenantId));
-            }
             return Future.succeededFuture(Optional.of(cert));
         } catch (final IllegalArgumentException error) {
             LOG.error("failed to decode certificate from client context with authId [%s] for tenant [%s]:{}{}",

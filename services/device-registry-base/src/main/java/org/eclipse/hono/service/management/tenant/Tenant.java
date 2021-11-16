@@ -552,6 +552,23 @@ public class Tenant {
                 .orElse(null);
     }
 
+    /**
+     * Gets the template corresponding to the given subject DN, which is used for generating
+     * the authentication identifier.
+     *
+     * @param subjectDn The subject DN of the tenant's CA.
+     * @return The template corresponding to the given trusted CA. If there is no template configured,
+     *         {@link Optional#empty()} is returned.
+     * @throws NullPointerException if the subjectDN is {@code null}.
+     */
+    @JsonIgnore
+    public final Optional<String> getAuthIdTemplate(final String subjectDn) {
+        Objects.requireNonNull(subjectDn, "Subject DN must not be null");
+
+        return getValidTrustedCA(subjectDn)
+                .map(TrustedCertificateAuthority::getAuthIdTemplate);
+    }
+
     private Optional<TrustedCertificateAuthority> getValidTrustedCA(final String subjectDn) {
         if (trustedCertificateAuthorities == null) {
             return Optional.empty();

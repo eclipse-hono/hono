@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.service.management.device;
+package org.eclipse.hono.util;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -23,12 +23,14 @@ import java.util.stream.Collectors;
 import javax.naming.InvalidNameException;
 import javax.naming.ldap.LdapName;
 import javax.naming.ldap.Rdn;
+import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.Strings;
 
 /**
- * A utility class for handling template used for generating device identifier during auto-provisioning.
+ * A utility class for handling template used for generating device and authentication identifiers during
+ * auto-provisioning.
  */
 public final class IdentityTemplate {
 
@@ -134,7 +136,8 @@ public final class IdentityTemplate {
 
         try {
             final List<Rdn> rdns = new LdapName(subjectDN).getRdns();
-            String result = template.replaceAll(QUOTED_PLACEHOLDER_SUBJECT_DN, subjectDN);
+            String result = template.replaceAll(QUOTED_PLACEHOLDER_SUBJECT_DN,
+                    new X500Principal(subjectDN).getName(X500Principal.RFC2253));
             for (final Attribute attribute : Attribute.values()) {
                 result = applyAttribute(attribute, result, rdns);
             }
