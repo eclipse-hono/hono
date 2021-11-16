@@ -804,8 +804,11 @@ public final class IntegrationTestSupport {
      *         be ready to receive commands.
      */
     public long getSendCommandTimeout(final boolean isFirstCommand) {
-        return getSendCommandTimeout() + (isFirstCommand && isUsingKafkaMessaging() ?
-                KAFKA_TOPIC_CREATION_ADD_TO_TIMEOUT : 0L);
+        long millis = getSendCommandTimeout();
+        if (isUsingKafkaMessaging() && isFirstCommand) {
+            millis += KAFKA_TOPIC_CREATION_ADD_TO_TIMEOUT * 1000L;
+        }
+        return millis;
     }
 
     /**
