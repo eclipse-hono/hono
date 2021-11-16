@@ -20,6 +20,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
 import org.eclipse.hono.client.ServerErrorException;
@@ -47,6 +48,7 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
 
     protected final Vertx vertx;
     private final BasicCacheContainer cacheManager;
+    private final AtomicBoolean stopCalled = new AtomicBoolean();
 
     private org.infinispan.commons.api.BasicCache<K, V> cache;
 
@@ -83,7 +85,11 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
 
     @Override
     public Future<Void> stop() {
+        if (!stopCalled.compareAndSet(false, true)) {
+            return Future.failedFuture("stop already called");
+        }
         LOG.info("stopping cache");
+        setCache(null);
         final Promise<Void> result = Promise.promise();
         vertx.executeBlocking(r -> {
             try {
@@ -117,8 +123,8 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
      * The method checks if the cache instance has been set. If that is the case, then the
      * supplier will be invoked, providing a <em>non-null</em> cache instance.
      * <p>
-     * If the cache has not been set (yet), the supplier will not be called and a failed
-     * future will be returned, provided by {@link #noConnectionFailure()}.
+     * If the cache has not been set (yet) or it has been stopped, the supplier will not be
+     * called and a failed future will be returned, provided by {@link #noConnectionFailure()}.
      *
      * @param <T> The type of the return value.
      * @param futureSupplier The supplier, providing the operation which should be invoked.
@@ -128,7 +134,7 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
             final Function<org.infinispan.commons.api.BasicCache<K, V>, CompletionStage<T>> futureSupplier) {
 
         return Optional.ofNullable(cache)
-                .map(c -> Futures.create(() -> futureSupplier.apply(cache)))
+                .map(c -> Futures.create(() -> futureSupplier.apply(c)))
                 .orElseGet(BasicCache::noConnectionFailure)
                 .onComplete(this::postCacheAccess);
     }
