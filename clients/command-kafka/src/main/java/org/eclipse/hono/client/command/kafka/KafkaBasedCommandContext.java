@@ -67,6 +67,15 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
         this.commandResponseSender = Objects.requireNonNull(commandResponseSender);
     }
 
+    /**
+     * Checks if the context has already been completed.
+     *
+     * @return {@code true} if the context has already been completed.
+     */
+    public boolean isCompleted() {
+        return completedOutcome != null;
+    }
+
     @Override
     public void logCommandToSpan(final Span span) {
         command.logToSpan(span);

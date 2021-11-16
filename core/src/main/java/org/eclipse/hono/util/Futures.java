@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.util;
 
+import java.util.Objects;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
 
@@ -40,8 +41,10 @@ public final class Futures {
      * @param <T> The result data type.
      * @param futureSupplier The supplier of the future.
      * @return A vert.x future, never returns {@code null}.
+     * @throws NullPointerException if futureSupplier is {@code null}.
      */
     public static <T> Future<T> create(final Supplier<CompletionStage<T>> futureSupplier) {
+        Objects.requireNonNull(futureSupplier);
 
         final Context originalContext = Vertx.currentContext();
         final CompletionStage<T> future;
@@ -89,8 +92,12 @@ public final class Futures {
      * @param vertx The vertx context.
      * @param blocking The blocking code.
      * @return The future, reporting the result.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public static <T> Future<T> executeBlocking(final Vertx vertx, final BlockingCode<T> blocking) {
+        Objects.requireNonNull(vertx);
+        Objects.requireNonNull(blocking);
+
         final Promise<T> result = Promise.promise();
 
         vertx.executeBlocking(promise -> {
@@ -102,6 +109,28 @@ public final class Futures {
         }, result);
 
         return result.future();
+    }
+
+    /**
+     * Applies the given result on the given promise using {@link Promise#tryComplete(Object)} or
+     * {@link Promise#tryFail(Throwable)}.
+     * <p>
+     * Similar to {@link Promise#handle(AsyncResult)} but does nothing if the promise is already complete.
+     *
+     * @param promise The promise to complete or fail.
+     * @param asyncResult The result to apply.
+     * @param <T> The promise and result type.
+     * @throws NullPointerException if any of the parameters is {@code null}.
+     */
+    public static <T> void tryHandleResult(final Promise<T> promise, final AsyncResult<T> asyncResult) {
+        Objects.requireNonNull(promise);
+        Objects.requireNonNull(asyncResult);
+
+        if (asyncResult.succeeded()) {
+            promise.tryComplete(asyncResult.result());
+        } else {
+            promise.tryFail(asyncResult.cause());
+        }
     }
 
 }

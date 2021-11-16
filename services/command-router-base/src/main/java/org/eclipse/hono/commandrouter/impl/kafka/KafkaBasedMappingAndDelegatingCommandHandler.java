@@ -12,9 +12,12 @@
  *******************************************************************************/
 package org.eclipse.hono.commandrouter.impl.kafka;
 
+import java.net.HttpURLConnection;
+import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 
+import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.kafka.KafkaBasedCommand;
 import org.eclipse.hono.client.command.kafka.KafkaBasedCommandContext;
@@ -26,6 +29,8 @@ import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.commandrouter.CommandRouterMetrics;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.commandrouter.impl.AbstractMappingAndDelegatingCommandHandler;
+import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.Futures;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.TenantObject;
 
@@ -34,6 +39,8 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 
@@ -42,6 +49,17 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
  */
 public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappingAndDelegatingCommandHandler {
 
+    /**
+     * Duration after which record processing is cancelled.
+     * <p>
+     * Usually, the timeout values configured for the service clients involved in command processing should define the
+     * overall time limit. The timeout mechanism associated with this value here serves as a safeguard against
+     * exceptional cases where the other timeouts didn't get applied. It thereby prevents command processing from
+     * getting stuck, so that the command consumer doesn't get blocked.
+     */
+    private static final Duration PROCESSING_TIMEOUT = Duration.ofSeconds(8);
+
+    private final Vertx vertx;
     private final KafkaBasedCommandResponseSender kafkaBasedCommandResponseSender;
     private final Tracer tracer;
     private final KafkaCommandProcessingQueue commandQueue;
@@ -49,6 +67,7 @@ public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappin
     /**
      * Creates a new KafkaBasedMappingAndDelegatingCommandHandler instance.
      *
+     * @param vertx The Vert.x instance to use.
      * @param tenantClient The Tenant service client.
      * @param commandQueue The command queue to use for keeping track of the command processing.
      * @param commandTargetMapper The mapper component to determine the command target.
@@ -59,6 +78,7 @@ public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappin
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public KafkaBasedMappingAndDelegatingCommandHandler(
+            final Vertx vertx,
             final TenantClient tenantClient,
             final KafkaCommandProcessingQueue commandQueue,
             final CommandTargetMapper commandTargetMapper,
@@ -67,6 +87,7 @@ public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappin
             final CommandRouterMetrics metrics,
             final Tracer tracer) {
         super(tenantClient, commandTargetMapper, internalCommandSender, metrics);
+        this.vertx = Objects.requireNonNull(vertx);
         this.commandQueue = Objects.requireNonNull(commandQueue);
         this.kafkaBasedCommandResponseSender = Objects.requireNonNull(kafkaBasedCommandResponseSender);
         this.tracer = Objects.requireNonNull(tracer);
@@ -123,8 +144,27 @@ public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappin
         log.trace("received valid command record [{}]", command);
         commandQueue.add(commandContext);
 
-        return mapAndDelegateIncomingCommand(commandContext, timer)
-                .onFailure(thr -> commandQueue.remove(commandContext));
+        final Promise<Void> resultPromise = Promise.promise();
+        final long timerId = vertx.setTimer(PROCESSING_TIMEOUT.toMillis(), tid -> {
+            if (commandQueue.remove(commandContext) || !commandContext.isCompleted()) {
+                log.info("command processing timed out after {}s [{}]", PROCESSING_TIMEOUT.toSeconds(), commandContext.getCommand());
+                TracingHelper.logError(commandContext.getTracingSpan(),
+                        String.format("command processing timed out after %ds", PROCESSING_TIMEOUT.toSeconds()));
+                final ServerErrorException error = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                        "command processing timed out");
+                commandContext.release(error);
+                resultPromise.tryFail(error);
+            }
+        });
+        mapAndDelegateIncomingCommand(commandContext, timer)
+                .onComplete(ar -> {
+                    vertx.cancelTimer(timerId);
+                    if (ar.failed()) {
+                        commandQueue.remove(commandContext);
+                    }
+                    Futures.tryHandleResult(resultPromise, ar);
+                });
+        return resultPromise.future();
     }
 
     /**

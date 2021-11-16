@@ -25,6 +25,7 @@ import java.util.function.Supplier;
 
 import org.apache.kafka.common.TopicPartition;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.command.CommandAlreadyProcessedException;
 import org.eclipse.hono.client.command.CommandToBeReprocessedException;
 import org.eclipse.hono.client.command.kafka.KafkaBasedCommandContext;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -85,14 +86,16 @@ public class KafkaCommandProcessingQueue {
      * and {@link #applySendCommandAction(KafkaBasedCommandContext, Supplier)}
      * will not be invoked.
      *
+     * @return {@code true} if the command was removed.
      * @param commandContext The context containing the command to remove.
      */
-    public void remove(final KafkaBasedCommandContext commandContext) {
+    public boolean remove(final KafkaBasedCommandContext commandContext) {
         Objects.requireNonNull(commandContext);
         final KafkaConsumerRecord<String, Buffer> record = commandContext.getCommand().getRecord();
         final TopicPartition topicPartition = new TopicPartition(record.topic(), record.partition());
-        Optional.ofNullable(commandQueues.get(topicPartition))
-                .ifPresent(commandQueue -> commandQueue.remove(commandContext));
+        return Optional.ofNullable(commandQueues.get(topicPartition))
+                .map(commandQueue -> commandQueue.remove(commandContext))
+                .orElse(false);
     }
 
     /**
@@ -192,13 +195,16 @@ public class KafkaCommandProcessingQueue {
          * will not be invoked.
          *
          * @param commandContext The context containing the command to add.
+         * @return {@code true} if the command was removed.
          * @throws NullPointerException if commandContext is {@code null}.
          */
-        public void remove(final KafkaBasedCommandContext commandContext) {
+        public boolean remove(final KafkaBasedCommandContext commandContext) {
             Objects.requireNonNull(commandContext);
             if (queue.remove(commandContext)) {
                 sendNextCommandInQueueIfPossible();
+                return true;
             }
+            return false;
         }
 
         /**
@@ -258,10 +264,17 @@ public class KafkaCommandProcessingQueue {
                 sendGivenCommandAndNextInQueueIfPossible(queue.remove(), sendActionSupplier, resultPromise, true);
             } else if (!queue.contains(commandContext)) {
                 // might happen if the invoking the sendAction takes place after the partition got unassigned and then reassigned again
-                LOG.info("command won't be sent - not in queue [{}]", commandContext.getCommand());
-                TracingHelper.logError(commandContext.getTracingSpan(), "command won't be sent - not in queue");
-                final ServerErrorException error = new CommandToBeReprocessedException();
-                commandContext.release(error);
+                // or if processing the command has timed out and it was removed from the queue
+                final ServerErrorException error;
+                if (commandContext.isCompleted()) {
+                    LOG.debug("command won't be sent - already processed and not in queue anymore [{}]", commandContext.getCommand());
+                    error = new CommandAlreadyProcessedException();
+                } else {
+                    LOG.info("command won't be sent - not in queue [{}]", commandContext.getCommand());
+                    TracingHelper.logError(commandContext.getTracingSpan(), "command won't be sent - not in queue");
+                    error = new CommandToBeReprocessedException();
+                    commandContext.release(error);
+                }
                 resultPromise.fail(error);
             } else {
                 // given command is not next-in-line;
