@@ -148,7 +148,7 @@
                         <JAVA_APP_NAME>${project.artifactId}</JAVA_APP_NAME>
                         <JAVA_LIB_DIR>/opt/hono/lib/*:/opt/hono/extensions/*</JAVA_LIB_DIR>
                         <!-- use Base64 encoder/decoder that is compatible with vert.x 3 -->
-                        <JAVA_OPTIONS>-Dvertx.cacheDirBase=/tmp -Dvertx.json.base64=legacy -Djava.util.logging.manager=org.jboss.logmanager.LogManager</JAVA_OPTIONS>
+                        <JAVA_OPTIONS>-Dvertx.json.base64=legacy -Djava.util.logging.manager=org.jboss.logmanager.LogManager</JAVA_OPTIONS>
                         <JAVA_APP_JAR>quarkus-run.jar</JAVA_APP_JAR>
                       </env>
                       <entryPoint>
@@ -233,7 +233,6 @@
                       <entryPoint>
                         <arg>/opt/hono/${project.artifactId}-${project.version}-runner</arg>
                         <!-- use Base64 encoder/decoder that is compatible with vert.x 3 -->
-                        <arg>-Dvertx.cacheDirBase=/tmp</arg>
                         <arg>-Dvertx.json.base64=legacy</arg>
                         <arg>-Djava.util.logging.manager=org.jboss.logmanager.LogManager</arg>
                       </entryPoint>
