@@ -104,7 +104,7 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
                 && !(error instanceof CommandToBeReprocessedException)) {
             final String errorMessage = Optional.ofNullable(ServiceInvocationException.getErrorMessageForExternalClient(mappedError))
                     .orElse("Temporarily unavailable");
-            sendDeliveryFailureCommandResponseMessage(status, errorMessage, span)
+            sendDeliveryFailureCommandResponseMessage(status, errorMessage, span, error)
                     .onComplete(v -> span.finish());
         } else {
             span.finish();
@@ -127,7 +127,7 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
             final String error = "command not processed"
                     + (deliveryFailed ? "; delivery failed" : "")
                     + (undeliverableHere ? "; undeliverable here" : "");
-            sendDeliveryFailureCommandResponseMessage(status, error, span)
+            sendDeliveryFailureCommandResponseMessage(status, error, span, null)
                     .onComplete(v -> span.finish());
         } else {
             span.finish();
@@ -157,7 +157,7 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
         Tags.HTTP_STATUS.set(span, status);
         if (isRequestResponseCommand()) {
             final String nonNullCause = Optional.ofNullable(cause).orElse("Command message rejected");
-            sendDeliveryFailureCommandResponseMessage(status, nonNullCause, span)
+            sendDeliveryFailureCommandResponseMessage(status, nonNullCause, span, null)
                     .onComplete(v -> span.finish());
         } else {
             span.finish();
@@ -168,7 +168,8 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
         return !command.isOneWay();
     }
 
-    private Future<Void> sendDeliveryFailureCommandResponseMessage(final int status, final String error, final Span span) {
+    private Future<Void> sendDeliveryFailureCommandResponseMessage(final int status, final String error,
+            final Span span, final Throwable cause) {
         final JsonObject payloadJson = new JsonObject();
         payloadJson.put("error", error != null ? error : "");
         final String correlationId = getCorrelationId();
@@ -192,7 +193,8 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
                     TracingHelper.logError(span, "failed to publish command response message", thr);
                 })
                 .onSuccess(v -> {
-                    LOG.debug("published error command response [{}, error: {}]", commandResponse, error);
+                    LOG.debug("published error command response [{}, cause: {}]", commandResponse,
+                            cause != null ? cause.getMessage() : error);
                     span.log("published error command response");
                 });
     }
