@@ -70,7 +70,7 @@ public class EmbeddedCache<K, V> extends BasicCache<K, V> {
 
             vertx.executeBlocking(r -> {
                 try {
-                    LOG.debug("trying to start cache manager, current state");
+                    LOG.debug("trying to start cache manager");
                     cacheManager.start();
                     LOG.info("started cache manager");
                     LOG.debug("trying to get cache");
