@@ -19,8 +19,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
@@ -29,9 +27,8 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.util.ServiceClient;
-import org.eclipse.hono.util.KubernetesContainerUtil;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Lifecycle;
-import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,7 +73,9 @@ public class CommandRouterCommandConsumerFactory implements CommandConsumerFacto
      */
     public CommandRouterCommandConsumerFactory(final CommandRouterClient commandRouterClient, final String adapterName) {
         this.commandRouterClient = Objects.requireNonNull(commandRouterClient);
-        this.adapterInstanceId = getNewAdapterInstanceId(Objects.requireNonNull(adapterName));
+        Objects.requireNonNull(adapterName);
+
+        this.adapterInstanceId = CommandConstants.getNewAdapterInstanceId(adapterName, ADAPTER_INSTANCE_ID_COUNTER.getAndIncrement());
         if (commandRouterClient instanceof ConnectionLifecycle<?>) {
             ((ConnectionLifecycle<?>) commandRouterClient).addReconnectListener(con -> reenableCommandRouting());
         }
@@ -101,40 +100,6 @@ public class CommandRouterCommandConsumerFactory implements CommandConsumerFacto
             commandRouterClient.enableCommandRouting(chunk, null);
             idx = to;
         }
-    }
-
-    /**
-     * Creates a new adapter instance identifier.
-     * <p>
-     * If this method is invoked from within a docker container in a Kubernetes cluster, the format is
-     * <em>[prefix]_[docker_container_id]_[counter]</em>, with prefix being the name of the Kubernetes pod.
-     * See also {@link org.eclipse.hono.util.CommandConstants#KUBERNETES_ADAPTER_INSTANCE_ID_PATTERN}.
-     * <p>
-     * If not running in a Kubernetes cluster, a random id with the given adapter name as prefix is used.
-     *
-     * @param adapterName The adapter name.
-     * @return the unique adapter instance identifier.
-     */
-    private static String getNewAdapterInstanceId(final String adapterName) {
-        final String k8sContainerId = KubernetesContainerUtil.getContainerId();
-        if (k8sContainerId == null || k8sContainerId.length() < 12) {
-            LOG.info("container id could not be identified, using random ID as adapterInstanceId");
-            final String prefix = Strings.isNullOrEmpty(adapterName) ? ""
-                    : adapterName.replaceAll("[^a-zA-Z0-9._-]", "") + "-";
-            return prefix + UUID.randomUUID();
-        }
-        // prefer HOSTNAME env var containing the pod name if running in Kubernetes
-        String adapterInstanceIdPrefix = System.getenv("HOSTNAME");
-        if (Strings.isNullOrEmpty(adapterInstanceIdPrefix)) {
-            adapterInstanceIdPrefix = adapterName;
-        }
-        // replace special characters so that the id can be used in a Kafka topic name
-        adapterInstanceIdPrefix = Optional.ofNullable(adapterInstanceIdPrefix)
-                .map(prefix -> prefix.replaceAll("[^a-zA-Z0-9._-]", "")).orElse("");
-        return String.format("%s_%s_%d",
-                adapterInstanceIdPrefix,
-                k8sContainerId.substring(0, 12),
-                ADAPTER_INSTANCE_ID_COUNTER.getAndIncrement());
     }
 
     /**

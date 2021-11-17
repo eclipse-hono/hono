@@ -21,6 +21,7 @@ import javax.inject.Inject;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaClientOptions;
 import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
@@ -42,6 +43,7 @@ import org.eclipse.hono.commandrouter.CommandRouterMetrics;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.commandrouter.impl.CommandRouterServiceImpl;
 import org.eclipse.hono.commandrouter.impl.amqp.ProtonBasedCommandConsumerFactoryImpl;
+import org.eclipse.hono.commandrouter.impl.kafka.InternalKafkaTopicCleanupService;
 import org.eclipse.hono.commandrouter.impl.kafka.KafkaBasedCommandConsumerFactoryImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
@@ -125,6 +127,8 @@ public class Application extends AbstractServiceApplication {
     private KafkaClientMetricsSupport kafkaClientMetricsSupport;
     private MessagingKafkaProducerConfigProperties kafkaProducerConfig;
     private MessagingKafkaConsumerConfigProperties kafkaConsumerConfig;
+    private KafkaAdminClientConfigProperties kafkaAdminClientConfig;
+    private InternalKafkaTopicCleanupService internalKafkaTopicCleanupService;
 
     private Cache<Object, RegistrationResult> registrationResponseCache;
     private Cache<Object, TenantResult<TenantObject>> tenantResponseCache;
@@ -187,6 +191,12 @@ public class Application extends AbstractServiceApplication {
         this.kafkaConsumerConfig.setCommonClientConfig(options.commonClientConfig());
         this.kafkaConsumerConfig.setConsumerConfig(options.consumerConfig());
         this.kafkaConsumerConfig.setDefaultClientIdPrefix(
+                options.defaultClientIdPrefix().orElse(DEFAULT_CLIENT_ID_PREFIX));
+
+        this.kafkaAdminClientConfig = new KafkaAdminClientConfigProperties();
+        this.kafkaAdminClientConfig.setCommonClientConfig(options.commonClientConfig());
+        this.kafkaAdminClientConfig.setAdminClientConfig(options.adminClientConfig());
+        this.kafkaAdminClientConfig.setDefaultClientIdPrefix(
                 options.defaultClientIdPrefix().orElse(DEFAULT_CLIENT_ID_PREFIX));
     }
 
@@ -282,6 +292,11 @@ public class Application extends AbstractServiceApplication {
         if (kafkaProducerConfig.isConfigured() && kafkaConsumerConfig.isConfigured()) {
             final KafkaProducerFactory<String, Buffer> kafkaProducerFactory = CachingKafkaProducerFactory.sharedFactory(vertx);
             kafkaProducerFactory.setMetricsSupport(kafkaClientMetricsSupport);
+            if (internalKafkaTopicCleanupService == null && kafkaProducerConfig.isConfigured()
+                    && kafkaConsumerConfig.isConfigured() && kafkaAdminClientConfig.isConfigured()
+                    && !(adapterInstanceStatusService instanceof AdapterInstanceStatusService.UnknownStatusProvidingService)) {
+                internalKafkaTopicCleanupService = new InternalKafkaTopicCleanupService(vertx, adapterInstanceStatusService, kafkaAdminClientConfig);
+            }
             commandConsumerFactoryProvider.setClient(new KafkaBasedCommandConsumerFactoryImpl(
                     vertx,
                     tenantClient,
@@ -291,7 +306,8 @@ public class Application extends AbstractServiceApplication {
                     kafkaConsumerConfig,
                     metrics,
                     kafkaClientMetricsSupport,
-                    tracer));
+                    tracer,
+                    internalKafkaTopicCleanupService));
         }
         if (commandConsumerFactoryConfig.isHostConfigured()) {
             commandConsumerFactoryProvider.setClient(new ProtonBasedCommandConsumerFactoryImpl(

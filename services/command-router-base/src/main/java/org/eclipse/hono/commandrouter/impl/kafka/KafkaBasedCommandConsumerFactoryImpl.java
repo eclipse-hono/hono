@@ -14,6 +14,7 @@ package org.eclipse.hono.commandrouter.impl.kafka;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -66,6 +67,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
     private final Vertx vertx;
     private final TenantClient tenantClient;
     private final CommandTargetMapper commandTargetMapper;
+    private final InternalKafkaTopicCleanupService internalKafkaTopicCleanupService;
     private final MessagingKafkaConsumerConfigProperties kafkaConsumerConfig;
     private final Tracer tracer;
     private final CommandRouterMetrics metrics;
@@ -91,7 +93,8 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
      * @param metrics The component to use for reporting metrics.
      * @param kafkaClientMetricsSupport The Kafka metrics support.
      * @param tracer The tracer instance.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @param internalKafkaTopicCleanupService The service to delete obsolete Hono Kafka topics (may be {@code null}).
+     * @throws NullPointerException if any of the parameters except internalKafkaTopicCleanupService is {@code null}.
      */
     public KafkaBasedCommandConsumerFactoryImpl(
             final Vertx vertx,
@@ -102,7 +105,8 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
             final MessagingKafkaConsumerConfigProperties kafkaConsumerConfig,
             final CommandRouterMetrics metrics,
             final KafkaClientMetricsSupport kafkaClientMetricsSupport,
-            final Tracer tracer) {
+            final Tracer tracer,
+            final InternalKafkaTopicCleanupService internalKafkaTopicCleanupService) {
 
         this.vertx = Objects.requireNonNull(vertx);
         this.tenantClient = Objects.requireNonNull(tenantClient);
@@ -113,6 +117,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
         this.metrics = Objects.requireNonNull(metrics);
         this.kafkaClientMetricsSupport = Objects.requireNonNull(kafkaClientMetricsSupport);
         this.tracer = Objects.requireNonNull(tracer);
+        this.internalKafkaTopicCleanupService = internalKafkaTopicCleanupService;
 
         internalCommandSender = new KafkaBasedInternalCommandSender(kafkaProducerFactory, kafkaProducerConfig, tracer);
         kafkaBasedCommandResponseSender = new KafkaBasedCommandResponseSender(kafkaProducerFactory, kafkaProducerConfig,
@@ -165,15 +170,19 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
         kafkaConsumer.setOnPartitionsLostHandler(
                 partitions -> commandQueue.setRevokedPartitions(Helper.to(partitions)));
 
-        return CompositeFuture.all(commandHandler.start(), kafkaConsumer.start())
+        final Future<Void> cleanupServiceStartFuture = Optional.ofNullable(internalKafkaTopicCleanupService)
+                .map(InternalKafkaTopicCleanupService::start).orElseGet(Future::succeededFuture);
+        return CompositeFuture.all(commandHandler.start(), kafkaConsumer.start(), cleanupServiceStartFuture)
                 .mapEmpty();
     }
 
     @Override
     public Future<Void> stop() {
+        final Future<Void> cleanupServiceStopFuture = Optional.ofNullable(internalKafkaTopicCleanupService)
+                .map(InternalKafkaTopicCleanupService::stop).orElseGet(Future::succeededFuture);
         return CompositeFuture
                 .join(kafkaConsumer.stop(), commandHandler.stop(), internalCommandSender.stop(),
-                        kafkaBasedCommandResponseSender.stop())
+                        kafkaBasedCommandResponseSender.stop(), cleanupServiceStopFuture)
                 .mapEmpty();
     }
 

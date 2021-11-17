@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.util;
 
+import java.util.Optional;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 /**
@@ -107,7 +109,7 @@ public class CommandConstants {
      * @param endpoint The endpoint as a string.
      * @return {@code true} if the endpoint is a command endpoint.
      */
-    public static final boolean isCommandEndpoint(final String endpoint) {
+    public static boolean isCommandEndpoint(final String endpoint) {
         return COMMAND_ENDPOINT.equals(endpoint) || COMMAND_ENDPOINT_SHORT.equals(endpoint);
     }
 
@@ -121,4 +123,64 @@ public class CommandConstants {
         return CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT.equals(endpoint);
     }
 
+    /**
+     * Creates a new adapter instance identifier.
+     * <p>
+     * If this method is invoked from within a docker container in a Kubernetes cluster, the format is
+     * <em>[prefix]_[docker_container_id]_[counter]</em>, with prefix being the name of the Kubernetes pod.
+     * See also {@link #KUBERNETES_ADAPTER_INSTANCE_ID_PATTERN}.
+     * <p>
+     * If not running in a Kubernetes cluster, a random id with the given adapter name as prefix is used.
+     *
+     * @param adapterName The adapter name.
+     * @param counter The counter value to use.
+     * @return The new adapter instance identifier.
+     */
+    public static String getNewAdapterInstanceId(final String adapterName, final int counter) {
+        final String k8sContainerId = KubernetesContainerUtil.getContainerId();
+        if (k8sContainerId == null || k8sContainerId.length() < 12) {
+            return getNewAdapterInstanceIdForNonK8sEnv(adapterName);
+        } else {
+            // running in Kubernetes: prefer HOSTNAME env var containing the pod name
+            String prefix = System.getenv("HOSTNAME");
+            if (Strings.isNullOrEmpty(prefix)) {
+                prefix = adapterName;
+            }
+            return getNewAdapterInstanceIdForK8sEnv(prefix, k8sContainerId, counter);
+        }
+    }
+
+    /**
+     * Creates a new adapter instance identifier for use in a non-Kubernetes environment.
+     * <p>
+     * The format is <em>[adapterName]_[uuid]</em>.
+     *
+     * @param adapterName The adapter name to use.
+     * @return The new adapter instance identifier.
+     */
+    public static String getNewAdapterInstanceIdForNonK8sEnv(final String adapterName) {
+        final String prefix = Strings.isNullOrEmpty(adapterName) ? ""
+                : adapterName.replaceAll("[^a-zA-Z0-9._-]", "") + "-";
+        return prefix + UUID.randomUUID();
+    }
+
+    /**
+     * Creates a new adapter instance identifier for use in a Kubernetes environment.
+     * <p>
+     * The format is <em>[pod_name]_[docker_container_id]_[counter]</em>.
+     *
+     * @param podName The pod name to use.
+     * @param containerId The container identifier to use.
+     * @param counter The counter value to use.
+     * @return The new adapter instance identifier.
+     */
+    public static String getNewAdapterInstanceIdForK8sEnv(final String podName, final String containerId, final int counter) {
+        // replace special characters so that the id can be used in a Kafka topic name
+        final String podNameToUse = Optional.ofNullable(podName)
+                .map(p -> p.replaceAll("[^a-zA-Z0-9._-]", "")).orElse("");
+        return String.format("%s_%s_%d",
+                podNameToUse,
+                containerId.substring(0, 12),
+                counter);
+    }
 }
