@@ -111,13 +111,13 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
             final String adapterInstanceId,
             final CommandHandlers commandHandlers,
             final Tracer tracer) {
+        this.vertx = Objects.requireNonNull(vertx);
         Objects.requireNonNull(adminClientConfigProperties);
         Objects.requireNonNull(consumerConfigProperties);
         this.commandResponseSender = Objects.requireNonNull(commandResponseSender);
         this.adapterInstanceId = Objects.requireNonNull(adapterInstanceId);
         this.commandHandlers = Objects.requireNonNull(commandHandlers);
         this.tracer = Objects.requireNonNull(tracer);
-        this.vertx = Objects.requireNonNull(vertx);
 
         final Map<String, String> adminClientConfig = adminClientConfigProperties.getAdminClientConfig(CLIENT_NAME);
         // Vert.x KafkaAdminClient doesn't support creating topics using the broker default replication factor,
@@ -299,28 +299,8 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
             return Future.failedFuture("not started");
         }
 
-        return deleteTopicIfExists()
-                .map(ok -> CompositeFuture.all(closeAdminClient(), closeConsumer()))
+        return CompositeFuture.all(closeAdminClient(), closeConsumer())
                 .mapEmpty();
-    }
-
-    private Future<Void> deleteTopicIfExists() {
-        if (isTopicCreated.get()) {
-            final String topicName = getTopicName();
-            final Promise<Void> deleteTopicPromise = Promise.promise();
-            LOG.debug("stop: delete topic [{}]", topicName);
-            adminClient.deleteTopics(List.of(topicName))
-                    .all()
-                    .whenComplete((v, ex) -> {
-                        if (ex != null) {
-                            LOG.warn("error deleting topic [{}]", topicName, ex);
-                        }
-                        context.runOnContext(deleteTopicPromise::complete);
-                    });
-            return deleteTopicPromise.future();
-        } else {
-            return Future.succeededFuture();
-        }
     }
 
     private Future<Void> closeAdminClient() {

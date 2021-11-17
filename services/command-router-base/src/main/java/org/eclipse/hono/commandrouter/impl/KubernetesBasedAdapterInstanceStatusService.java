@@ -13,10 +13,11 @@
 
 package org.eclipse.hono.commandrouter.impl;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -24,6 +25,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
+import java.util.stream.Collectors;
 
 import org.eclipse.hono.commandrouter.AdapterInstanceStatusService;
 import org.eclipse.hono.util.AdapterInstanceStatus;
@@ -40,6 +42,9 @@ import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 
 /**
  * A service for determining the status of adapter instances that run in a Kubernetes cluster along with the component
@@ -82,7 +87,7 @@ public class KubernetesBasedAdapterInstanceStatusService implements AdapterInsta
     KubernetesBasedAdapterInstanceStatusService(final KubernetesClient client) throws KubernetesClientException {
         this.client = Objects.requireNonNull(client);
         namespace = Optional.ofNullable(client.getNamespace()).orElse("default");
-        initAdaptersListAndWatch(namespace);
+        initAdaptersListAndWatch();
     }
 
     /**
@@ -106,26 +111,14 @@ public class KubernetesBasedAdapterInstanceStatusService implements AdapterInsta
         return System.getenv("KUBERNETES_SERVICE_HOST") != null;
     }
 
-    private void initAdaptersListAndWatch(final String namespace) throws KubernetesClientException {
+    private void initAdaptersListAndWatch() throws KubernetesClientException {
         if (active.get() == -1) {
             return; // already stopped
         }
-        containerIdToPodNameMap.clear();
-        podNameToContainerIdMap.clear();
+        final var podListResource = client.pods().inNamespace(namespace);
         // get full pod list synchronously here first - to know that after it we have seen all current pods
-        client.pods().inNamespace(namespace).list().getItems().forEach(pod -> {
-            LOG.trace("handle pod list result entry: {}", pod.getMetadata().getName());
-            applyPodStatus(Watcher.Action.ADDED, pod);
-        });
-        // now that we have the full pod list, use the created container list to evaluate the suspected containers
-        for (final Iterator<String> iter = suspectedContainerIds.iterator(); iter.hasNext();) {
-            final String suspectedContainerIdEntry = iter.next();
-            if (!containerIdToPodNameMap.containsKey(suspectedContainerIdEntry)) {
-                terminatedContainerIds.add(suspectedContainerIdEntry);
-            }
-            iter.remove();
-        }
-        watch = client.pods().inNamespace(namespace).watch(new Watcher<Pod>() {
+        refreshContainerLists(podListResource.list().getItems());
+        watch = podListResource.watch(new Watcher<>() {
             @Override
             public void eventReceived(final Action watchAction, final Pod pod) {
                 LOG.trace("event received: {}, pod: {}", watchAction, pod != null ? pod.getMetadata().getName() : null);
@@ -140,6 +133,21 @@ public class KubernetesBasedAdapterInstanceStatusService implements AdapterInsta
         active.compareAndExchange(0, 1);
         LOG.info("initialized list of active adapter containers: {}",
                 containerIdToPodNameMap.size() <= 20 ? containerIdToPodNameMap : containerIdToPodNameMap.size() + " containers");
+    }
+
+    private void refreshContainerLists(final List<Pod> podList) {
+        containerIdToPodNameMap.clear();
+        podNameToContainerIdMap.clear();
+        podList.forEach(pod -> {
+            LOG.trace("handle pod list result entry: {}", pod.getMetadata().getName());
+            applyPodStatus(Watcher.Action.ADDED, pod);
+        });
+        // now that we have the full pod list, use the created container list to evaluate the suspected containers
+        final Set<String> suspectedIds = new HashSet<>(suspectedContainerIds);
+        suspectedContainerIds.clear();
+        suspectedIds.stream()
+                .filter(id -> !containerIdToPodNameMap.containsKey(id))
+                .forEach(terminatedContainerIds::add);
     }
 
     private void applyPodStatus(final Watcher.Action watchAction, final Pod pod) {
@@ -235,7 +243,7 @@ public class KubernetesBasedAdapterInstanceStatusService implements AdapterInsta
             try {
                 Thread.sleep(WATCH_RECREATION_DELAY_MILLIS);
                 LOG.info("Recreating watch");
-                initAdaptersListAndWatch(namespace);
+                initAdaptersListAndWatch();
             } catch (final InterruptedException ex) {
                 Thread.currentThread().interrupt();
             } catch (final Exception ex) {
@@ -292,6 +300,47 @@ public class KubernetesBasedAdapterInstanceStatusService implements AdapterInsta
                 suspectedContainerIds.add(shortContainerId);
                 return AdapterInstanceStatus.SUSPECTED_DEAD;
             }
+        }
+    }
+
+    @Override
+    public Future<Set<String>> getDeadAdapterInstances(final Collection<String> adapterInstanceIds) {
+        Objects.requireNonNull(adapterInstanceIds);
+        if (active.get() != 1) {
+            return Future.failedFuture("service not active");
+        }
+        boolean needPodListRefresh = false;
+        final Set<String> resultSet = new HashSet<>();
+        for (final String adapterInstanceId : adapterInstanceIds) {
+            final AdapterInstanceStatus status = getStatus(adapterInstanceId);
+            if (status == AdapterInstanceStatus.DEAD) {
+                resultSet.add(adapterInstanceId);
+            } else if (status == AdapterInstanceStatus.SUSPECTED_DEAD) {
+                needPodListRefresh = true;
+                // don't break out of loop here - let getStatus() be invoked for all, filling suspectedContainerIds if needed
+            }
+        }
+        if (needPodListRefresh) {
+            final Promise<Set<String>> resultPromise = Promise.promise();
+            final Handler<Promise<Set<String>>> resultProvider = promise -> {
+                try {
+                    // get current pod list so that SUSPECTED_DEAD entries can be resolved
+                    refreshContainerLists(client.pods().inNamespace(namespace).list().getItems());
+                    final Set<String> deadAdapterInstances = adapterInstanceIds.stream()
+                            .filter(id -> getStatus(id) == AdapterInstanceStatus.DEAD)
+                            .collect(Collectors.toSet());
+                    promise.complete(deadAdapterInstances);
+                } catch (final Exception e) {
+                    promise.fail(e);
+                }
+            };
+            Optional.ofNullable(Vertx.currentContext()).ifPresentOrElse(
+                    ctx -> ctx.executeBlocking(resultProvider, false, resultPromise),
+                    () -> resultProvider.handle(resultPromise)
+            );
+            return resultPromise.future();
+        } else {
+            return Future.succeededFuture(resultSet);
         }
     }
 

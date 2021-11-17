@@ -13,6 +13,9 @@
 
 package org.eclipse.hono.commandrouter;
 
+import java.util.Collection;
+import java.util.Set;
+
 import org.eclipse.hono.deviceconnection.infinispan.client.AdapterInstanceStatusProvider;
 import org.eclipse.hono.util.AdapterInstanceStatus;
 import org.eclipse.hono.util.Lifecycle;
@@ -34,6 +37,12 @@ public interface AdapterInstanceStatusService extends AdapterInstanceStatusProvi
         @Override
         public AdapterInstanceStatus getStatus(final String adapterInstanceId) {
             return AdapterInstanceStatus.UNKNOWN;
+        }
+
+        @Override
+        public Future<Set<String>> getDeadAdapterInstances(
+                final Collection<String> adapterInstanceIds) {
+            return Future.succeededFuture(Set.of());
         }
 
         @Override

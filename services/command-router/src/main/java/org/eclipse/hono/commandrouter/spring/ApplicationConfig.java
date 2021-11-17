@@ -18,6 +18,7 @@ import java.util.Optional;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
 import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.metrics.KafkaMetricsConfig;
@@ -42,6 +43,7 @@ import org.eclipse.hono.commandrouter.MicrometerBasedCommandRouterMetrics;
 import org.eclipse.hono.commandrouter.impl.CommandRouterServiceImpl;
 import org.eclipse.hono.commandrouter.impl.KubernetesBasedAdapterInstanceStatusService;
 import org.eclipse.hono.commandrouter.impl.amqp.ProtonBasedCommandConsumerFactoryImpl;
+import org.eclipse.hono.commandrouter.impl.kafka.InternalKafkaTopicCleanupService;
 import org.eclipse.hono.commandrouter.impl.kafka.KafkaBasedCommandConsumerFactoryImpl;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -264,7 +266,8 @@ public class ApplicationConfig {
                     messagingKafkaConsumerConfig(),
                     metrics,
                     kafkaClientMetricsSupport,
-                    getTracer()));
+                    getTracer(),
+                    internalKafkaTopicCleanupService(adapterInstanceStatusService).orElse(null)));
         }
         if (commandConsumerFactoryConfig().isHostConfigured()) {
             commandConsumerFactoryProvider.setClient(new ProtonBasedCommandConsumerFactoryImpl(
@@ -282,6 +285,23 @@ public class ApplicationConfig {
                 commandConsumerFactoryProvider,
                 adapterInstanceStatusService,
                 getTracer());
+    }
+
+    /**
+     * Exposes a service to remove unused Hono Kafka topics as a Spring bean.
+     *
+     * @param adapterInstanceStatusService The service providing status information regarding an adapter instance.
+     * @return The service implementation.
+     */
+    @Bean
+    public Optional<InternalKafkaTopicCleanupService> internalKafkaTopicCleanupService(final AdapterInstanceStatusService adapterInstanceStatusService) {
+        if (messagingKafkaProducerConfig().isConfigured() && messagingKafkaConsumerConfig().isConfigured()
+                && kafkaAdminClientConfig().isConfigured()
+                && !(adapterInstanceStatusService instanceof AdapterInstanceStatusService.UnknownStatusProvidingService)) {
+            return Optional.of(new InternalKafkaTopicCleanupService(vertx(), adapterInstanceStatusService, kafkaAdminClientConfig()));
+        } else {
+            return Optional.empty();
+        }
     }
 
     /**
@@ -461,6 +481,19 @@ public class ApplicationConfig {
         final KafkaProducerFactory<String, Buffer> kafkaProducerFactory = CachingKafkaProducerFactory.sharedFactory(vertx());
         kafkaProducerFactory.setMetricsSupport(kafkaClientMetricsSupport);
         return kafkaProducerFactory;
+    }
+
+    /**
+     * Exposes configuration properties for an admin client accessing the Kafka cluster as a Spring bean.
+     *
+     * @return The properties.
+     */
+    @ConfigurationProperties(prefix = "hono.kafka")
+    @Bean
+    public KafkaAdminClientConfigProperties kafkaAdminClientConfig() {
+        final KafkaAdminClientConfigProperties configProperties = new KafkaAdminClientConfigProperties();
+        configProperties.setDefaultClientIdPrefix("cmd-router");
+        return configProperties;
     }
 
     /**
