@@ -136,7 +136,7 @@ The following table provides an overview of the properties set on a message sent
 | *correlation-id* | yes       | *properties*             | *string*     | MUST contain the correlation ID used to match the command message with the response message containing the result of execution on the device. |
 | *creation-time*  | yes       | *properties*             | *timestamp*  | The instant in time when the message has been created (see the [AMQP 1.0 specification](http://docs.oasis-open.org/amqp/core/v1.0/amqp-core-messaging-v1.0.html) for details). |
 | *device_id*      | yes       | *application-properties* | *string*     | The identifier of the device that sent the response. |
-| *status*         | yes       | *application-properties* | *integer*    | MUST indicate the status of the execution. See table below for possible values. |
+| *status*         | yes       | *application-properties* | *int*        | MUST indicate the status of the execution. See table below for possible values. |
 | *tenant_id*      | yes       | *application-properties* | *string*     | The identifier of the tenant that the device belongs to. |
 
 The *status* property must contain an [HTTP 1.1 response status code](https://tools.ietf.org/html/rfc7231#section-6):

@@ -398,8 +398,7 @@ Clients MUST settle command messages using one of the following outcomes:
 
 ### Sending a Response to a Command
 
-A device only needs to respond to commands that contain a *reply-to* address and a *correlation-id*.
-However, if the application expects a response, then devices must publish a response back to the application.
+Devices are required to publish a response to a command that contain a *reply-to* address and a *correlation-id*.
 Devices may use the same anonymous sender link for this purpose that they also use for sending telemetry data and events.
 
 The adapter supports *AT LEAST ONCE* delivery of command response messages only. A client therefore MUST set the
@@ -412,7 +411,7 @@ for uploading command responses. All other combinations are not supported by the
   * (required) `correlation-id`: MUST contain the value of the *correlation-id* property of the command request message.
   * (optional) `content-type`: The type of payload contained in the message body.
 * Message *application-properties*:
-  * (required) `status`: MUST contain an integer status code indicating the outcome of processing the command at the
+  * (required) `status`: MUST contain an AMQP 1.0 *int* typed status code indicating the outcome of processing the command at the
     device (see [Command & Control API]({{< relref "/api/command-and-control" >}}) for details).
 * Message Body:
   * (optional) Arbitrary payload contained in either a single AMQP *Data* or *AmqpValue* section. Note that the adapter
