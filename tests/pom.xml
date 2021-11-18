@@ -92,7 +92,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <hono.device-connection.disabled>true</hono.device-connection.disabled>
 
     <hono.infinispan.disabled>false</hono.infinispan.disabled>
-    <hono.infinispan.host>hono-infinispan</hono.infinispan.host>
+    <hono.infinispan.host>hono-data-grid</hono.infinispan.host>
     <hono.infinispan.port>11222</hono.infinispan.port>
     <hono.infinispan.username>hono</hono.infinispan.username>
     <hono.infinispan.password>hono-secret</hono.infinispan.password>
@@ -694,7 +694,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>${custom.network.name}</name>
                       <alias>${hono.infinispan.host}</alias>
                     </network>
-                    <cpus>1000000000</cpus>
                     <memorySwap>100000000</memorySwap>
                     <memory>100000000</memory>
                     <log>
@@ -751,7 +750,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>${custom.network.name}</name>
                       <alias>${hono.mongodb.host}</alias>
                     </network>
-                    <cpus>1000000000</cpus>
                     <memorySwap>524288000</memorySwap>
                     <memory>524288000</memory>
                     <log>
@@ -776,7 +774,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>${custom.network.name}</name>
                       <alias>hono-jdbc-db</alias>
                     </network>
-                    <cpus>1000000000</cpus>
                     <memorySwap>134217728</memorySwap>
                     <memory>134217728</memory>
                     <env>
@@ -809,7 +806,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>${custom.network.name}</name>
                       <alias>${jaeger.host}</alias>
                     </network>
-                    <cpus>1000000000</cpus>
                     <!--
                       Setting the swap property to the same value as the memory property effectively
                       prevents the container from swapping at all.
@@ -879,7 +875,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>${custom.network.name}</name>
                       <alias>${hono.auth.host}</alias>
                     </network>
-                    <cpus>1000000000</cpus>
                     <!-- 
                       Setting the swap property to the same value as the memory property effectively
                       prevents the container from swapping at all.
@@ -961,7 +956,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>${custom.network.name}</name>
                       <alias>${hono.amqp-broker.host}</alias>
                     </network>
-                    <cpus>1000000000</cpus>
                     <memorySwap>419430400</memorySwap>
                     <memory>419430400</memory>
                     <env>
@@ -1033,7 +1027,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>${custom.network.name}</name>
                       <alias>${hono.amqp-network.host}</alias>
                     </network>
-                    <cpus>1000000000</cpus>
                     <memorySwap>268435456</memorySwap>
                     <memory>268435456</memory>
                     <log>
@@ -1157,7 +1150,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>${custom.network.name}</name>
                       <alias>${hono.registration.host}</alias>
                     </network>
-                    <cpus>1000000000</cpus>
                     <memorySwap>${hono.deviceregistry.containerMemoryLimit}</memorySwap>
                     <memory>${hono.deviceregistry.containerMemoryLimit}</memory>
                     <env>
@@ -1231,7 +1223,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>${custom.network.name}</name>
                       <alias>${hono.device-connection.host}</alias>
                     </network>
-                    <cpus>1000000000</cpus>
                     <memorySwap>314572800</memorySwap>
                     <memory>314572800</memory>
                     <env>
@@ -1312,7 +1303,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>${custom.network.name}</name>
                       <alias>${hono.commandrouter.host}</alias>
                     </network>
-                    <cpus>1000000000</cpus>
                     <memorySwap>${hono.command-router.max-mem}</memorySwap>
                     <memory>${hono.command-router.max-mem}</memory>
                     <env>
@@ -1394,7 +1384,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>${custom.network.name}</name>
                       <alias>hono-adapter-http-vertx</alias>
                     </network>
-                    <cpus>1000000000</cpus>
                     <memorySwap>${hono.http-adapter.max-mem}</memorySwap>
                     <memory>${hono.http-adapter.max-mem}</memory>
                     <env>
@@ -1466,7 +1455,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>${custom.network.name}</name>
                       <alias>hono-adapter-mqtt-vertx</alias>
                     </network>
-                    <cpus>1000000000</cpus>
                     <memorySwap>${hono.mqtt-adapter.max-mem}</memorySwap>
                     <memory>${hono.mqtt-adapter.max-mem}</memory>
                     <env>
@@ -1543,7 +1531,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>${custom.network.name}</name>
                       <alias>hono-adapter-amqp-vertx</alias>
                     </network>
-                    <cpus>1000000000</cpus>
                     <memorySwap>${hono.amqp-adapter.max-mem}</memorySwap>
                     <memory>${hono.amqp-adapter.max-mem}</memory>
                     <env>
@@ -1615,7 +1602,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>${custom.network.name}</name>
                       <alias>hono-adapter-coap-vertx</alias>
                     </network>
-                    <cpus>1000000000</cpus>
                     <memorySwap>${hono.coap-adapter.max-mem}</memorySwap>
                     <memory>${hono.coap-adapter.max-mem}</memory>
                     <env>
