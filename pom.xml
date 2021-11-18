@@ -246,6 +246,20 @@
     <module>tests</module>
   </modules>
 
+  <pluginRepositories>
+    <pluginRepository>
+      <id>eclipse-cbi-releases</id>
+      <name>Eclipse CBI Repository</name>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+      <url>https://repo.eclipse.org/content/repositories/cbi-releases/</url>
+    </pluginRepository>
+  </pluginRepositories>
+
   <build>
     <pluginManagement>
       <plugins>
@@ -460,20 +474,20 @@
         <plugin>
           <groupId>org.jacoco</groupId>
           <artifactId>jacoco-maven-plugin</artifactId>
-          <version>0.8.6</version>
+          <version>0.8.7</version>
           <executions>
-          <execution>
-            <id>default-prepare-agent</id>
-            <goals>
-              <goal>prepare-agent</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>default-report</id>
-            <goals>
-              <goal>report</goal>
-            </goals>
-          </execution>
+            <execution>
+              <id>default-prepare-agent</id>
+              <goals>
+                <goal>prepare-agent</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>default-report</id>
+              <goals>
+                <goal>report</goal>
+              </goals>
+            </execution>
             <execution>
               <id>default_check</id>
               <goals>
@@ -492,6 +506,16 @@
               </configuration>
             </execution>
           </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.eclipse.cbi.maven.plugins</groupId>
+          <artifactId>eclipse-jarsigner-plugin</artifactId>
+          <version>1.3.2</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-gpg-plugin</artifactId>
+          <version>1.6</version>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -517,7 +541,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>3.0.0-M3</version>
+        <version>3.0.0</version>
         <executions>
           <execution>
             <!-- Make sure that only non-snapshot versions are used for the dependencies.
@@ -742,25 +766,11 @@
           <name>enableEclipseJarSigner</name>
         </property>
       </activation>
-      <pluginRepositories>
-        <pluginRepository>
-          <id>eclipse-repo</id>
-          <name>Eclipse CBI Repository</name>
-          <releases>
-            <enabled>true</enabled>
-          </releases>
-          <snapshots>
-            <enabled>false</enabled>
-          </snapshots>
-          <url>https://repo.eclipse.org/content/repositories/cbi-releases/</url>
-        </pluginRepository>
-      </pluginRepositories>
       <build>
         <plugins>
           <plugin>
             <groupId>org.eclipse.cbi.maven.plugins</groupId>
             <artifactId>eclipse-jarsigner-plugin</artifactId>
-            <version>1.3.2</version>
             <configuration>
               <excludeInnerJars>true</excludeInnerJars>
             </configuration>
@@ -791,7 +801,6 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-gpg-plugin</artifactId>
-            <version>1.6</version>
             <executions>
               <execution>
                 <id>sign-artifacts</id>
