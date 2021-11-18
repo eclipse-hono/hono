@@ -13,8 +13,6 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The JDBC DB based registry now also supports enforcement of registration limits configured at the tenant level.
   In particular, the maximum number of devices and the maximum number of credentials per device can be set in
   a tenant's registration-limits property. Please refer to the User Guide for details.
-* The container images published by the Hono project are now built on top of Java 17 base images provided by the
-  [Eclipse Temurin project](https://adoptium.net/).
 
 ### Fixes & Enhancements
 
@@ -34,6 +32,11 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The tenant's configuration property `auto-provisioning-device-id-template` is now extended to support more
   subjectDN's attributes namely *Organizational Unit Name (OU)* and *Organization Name (O)*. For more information
   please refer to the [Device Registry Management API]({{% doclink "/api/management#/tenants/createTenant" %}}).
+* The container images published by the Hono project are now built on top of Java 17 base images provided by the
+  [Eclipse Temurin project](https://adoptium.net/).
+* The Hono container images released with tag 1.10.0 failed to start up when not running as user `root` because the
+  Java process was lacking authority to create a temporary directory in the file system's root folder (`/`).
+  This has been fixed.
 
 ## 1.10.0
 
