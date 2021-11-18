@@ -47,6 +47,12 @@
       <artifactId>vertx-core</artifactId>
     </dependency>
     <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-web</artifactId>
+    </dependency>
+
+    <!-- testing -->
+    <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>kafka-test-utils</artifactId>
       <scope>test</scope>
