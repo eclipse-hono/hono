@@ -350,7 +350,7 @@ public class TrustedCertificateAuthority {
      *
      * @return the template for generating the authentication identifier.
      */
-    public String getAuthIdTemplate() {
+    public final String getAuthIdTemplate() {
         return this.authIdTemplate;
     }
 
@@ -364,7 +364,7 @@ public class TrustedCertificateAuthority {
      * @throws NullPointerException if the template is {@code null}.
      * @throws IllegalArgumentException if the template is not valid.
      */
-    public TrustedCertificateAuthority setAuthIdTemplate(final String template) {
+    public final TrustedCertificateAuthority setAuthIdTemplate(final String template) {
         IdentityTemplate.checkValidity(template);
         this.authIdTemplate = template;
         return this;

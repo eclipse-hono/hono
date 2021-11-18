@@ -28,6 +28,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
+import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -452,6 +453,22 @@ public class TenantTest {
     }
 
     /**
+     * Verifies that decoding of a tenant object fails, when a trusted ca entry has an invalid auth-id template.
+     *
+     * @throws CertificateEncodingException if the self-signed certificate cannot be encoded.
+     */
+    @Test
+    void testDecodeWithInvalidAuthIdTemplateFails() throws CertificateEncodingException {
+        final JsonObject trustedCa = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_PAYLOAD_CERT, certificate.getEncoded())
+                .put(RegistryManagementConstants.FIELD_AUTH_ID_TEMPLATE, "id-{{unsupported-placeholder}}");
+        final JsonObject tenantJson = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA, new JsonArray().add(trustedCa));
+
+        assertThrows(IllegalArgumentException.class, () -> tenantJson.mapTo(Tenant.class));
+    }
+
+    /**
      * Decode tenant with a "tracing" property set.
      */
     @Test
@@ -544,4 +561,5 @@ public class TenantTest {
         assertEquals(TracingSamplingMode.ALL.getFieldValue(), traceSamplingModePerAuthIdJson.getString("authId1"));
         assertEquals(TracingSamplingMode.DEFAULT.getFieldValue(), traceSamplingModePerAuthIdJson.getString("authId2"));
     }
+
 }
