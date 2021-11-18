@@ -97,4 +97,12 @@ public class IdentityTemplateTest {
                 "CN=121,OU=Hono,O=Eclipse");
         assertThat(result).isEqualTo("device-121-Hono");
     }
+
+    @Test
+    void testWithUnsupportedPlaceHoldersInTemplate() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new IdentityTemplate(
+                        String.format("device-{{subject-xyz}}-%s-{{unsupported}}",
+                                RegistryManagementConstants.PLACEHOLDER_SUBJECT_OU)));
+    }
 }
