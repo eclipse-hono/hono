@@ -27,6 +27,7 @@ import java.util.Optional;
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.annotation.HonoTimestamp;
+import org.eclipse.hono.service.management.device.IdentityTemplate;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantConstants;
 
@@ -331,26 +332,11 @@ public class TrustedCertificateAuthority {
      * @param template the template to use during auto-provisioning to generate device identifier.
      * @return A reference to this for fluent use.
      * @throws NullPointerException if the device id template is {@code null}.
-     * @throws IllegalArgumentException if the device id template does not contain
-     *             {@value RegistryManagementConstants#PLACEHOLDER_SUBJECT_DN} or
-     *             {@value RegistryManagementConstants#PLACEHOLDER_SUBJECT_CN}.
+     * @throws IllegalArgumentException if the template is not valid.
      */
     public final TrustedCertificateAuthority setAutoProvisioningDeviceIdTemplate(final String template) {
-        verifyDeviceIdTemplate(template);
-
+        IdentityTemplate.checkValidity(template);
         this.autoProvisioningDeviceIdTemplate = template;
         return this;
-    }
-
-    private static void verifyDeviceIdTemplate(final String template) {
-        Objects.requireNonNull(template);
-
-        if (!template.contains(RegistryManagementConstants.PLACEHOLDER_SUBJECT_DN) &&
-                !template.contains(RegistryManagementConstants.PLACEHOLDER_SUBJECT_CN)) {
-            throw new IllegalArgumentException(
-                    String.format("device-id template must contain at least one of these placeholders [%s, %s]",
-                            RegistryManagementConstants.PLACEHOLDER_SUBJECT_DN,
-                            RegistryManagementConstants.PLACEHOLDER_SUBJECT_CN));
-        }
     }
 }

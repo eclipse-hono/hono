@@ -12,9 +12,13 @@
  *******************************************************************************/
 package org.eclipse.hono.service.management.device;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.naming.InvalidNameException;
 import javax.naming.ldap.LdapName;
@@ -30,16 +34,29 @@ public final class IdentityTemplate {
 
     private static final String QUOTED_PLACEHOLDER_SUBJECT_DN = Pattern
             .quote(RegistryManagementConstants.PLACEHOLDER_SUBJECT_DN);
+    private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\{\\{(.*?)\\}\\}");
+    private static final List<String> SUPPORTED_PLACE_HOLDERS = new ArrayList<>();
     private final String template;
+
+    static {
+        SUPPORTED_PLACE_HOLDERS.add(RegistryManagementConstants.PLACEHOLDER_SUBJECT_DN);
+        Arrays.stream(Attribute.values())
+                .map(Attribute::getPlaceHolder)
+                .forEach(SUPPORTED_PLACE_HOLDERS::add);
+    }
 
     /**
      * Creates a new identity template.
+     * <p>
+     * The validity of the template is verified using {@link #checkValidity(String)}.
      *
      * @param template The identity template.
      * @throws NullPointerException if template is {@code null}.
+     * @throws IllegalArgumentException if the template is not valid.
      */
     public IdentityTemplate(final String template) {
-        this.template = Objects.requireNonNull(template, "template must not be null");
+        checkValidity(template);
+        this.template = template;
     }
 
     /**
@@ -105,14 +122,6 @@ public final class IdentityTemplate {
 
     /**
      * Applies attribute values from the given subject DN to the template.
-     * <p>
-     * The following placeholders are supported.
-     * <ul>
-     * <li>{@value RegistryManagementConstants#PLACEHOLDER_SUBJECT_DN} for <em>Subject Distinguished Name (DN)</em></li>
-     * <li>{@value RegistryManagementConstants#PLACEHOLDER_SUBJECT_CN} for <em>Common Name (CN)</em></li>
-     * <li>{@value RegistryManagementConstants#PLACEHOLDER_SUBJECT_OU} for <em>Organizational Unit Name (OU)</em></li>
-     * <li>{@value RegistryManagementConstants#PLACEHOLDER_SUBJECT_O} for <em>Organization Name (O)</em></li>
-     * </ul>
      *
      * @param subjectDN The subject DN.
      * @return The filled template.
@@ -133,6 +142,49 @@ public final class IdentityTemplate {
         } catch (final InvalidNameException e) {
             throw new IllegalArgumentException(String.format("subject DN [%s] is not valid", subjectDN));
         }
+    }
+
+    /**
+     * Checks if the template is valid.
+     * <p>
+     * The following placeholders are supported.
+     * <ul>
+     * <li>{@value RegistryManagementConstants#PLACEHOLDER_SUBJECT_DN} for <em>Subject Distinguished Name (DN)</em></li>
+     * <li>{@value RegistryManagementConstants#PLACEHOLDER_SUBJECT_CN} for <em>Common Name (CN)</em></li>
+     * <li>{@value RegistryManagementConstants#PLACEHOLDER_SUBJECT_OU} for <em>Organizational Unit Name (OU)</em></li>
+     * <li>{@value RegistryManagementConstants#PLACEHOLDER_SUBJECT_O} for <em>Organization Name (O)</em></li>
+     * </ul>
+     *
+     * @param template The identity template.
+     * @throws NullPointerException if template is {@code null}.
+     * @throws IllegalArgumentException if the template does not contain any placeholders 
+     *                                  or contains any unsupported placeholders.
+     */
+    public static void checkValidity(final String template) {
+        Objects.requireNonNull(template, "template must not be null");
+
+        final Matcher matcher = PLACEHOLDER_PATTERN.matcher(template);
+        final List<String> placeholders = matcher.results()
+                .map(res -> String.format("{{%s}}", res.group(1)))
+                .collect(Collectors.toUnmodifiableList());
+        if (placeholders.isEmpty()) {
+            throw new IllegalArgumentException(
+                    String.format("template [%s] must contain at least one placeholder", template));
+        }
+
+        final List<String> unsupportedPlaceHolders = placeholders.stream()
+                .filter(placeholder -> !SUPPORTED_PLACE_HOLDERS.contains(placeholder))
+                .collect(Collectors.toUnmodifiableList());
+        if (!unsupportedPlaceHolders.isEmpty()) {
+            throw new IllegalArgumentException(
+                    String.format("template [%s] contains unsupported placeholders %s", template,
+                            unsupportedPlaceHolders));
+        }
+    }
+
+    @Override
+    public String toString() {
+        return template;
     }
 
     private static String applyAttribute(final Attribute attribute, final String template,
