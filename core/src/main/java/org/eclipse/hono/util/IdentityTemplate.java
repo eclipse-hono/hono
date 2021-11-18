@@ -167,9 +167,11 @@ public final class IdentityTemplate {
         Objects.requireNonNull(template, "template must not be null");
 
         final Matcher matcher = PLACEHOLDER_PATTERN.matcher(template);
-        final List<String> placeholders = matcher.results()
-                .map(res -> String.format("{{%s}}", res.group(1)))
-                .collect(Collectors.toUnmodifiableList());
+        final List<String> placeholders = new ArrayList<>();
+        while (matcher.find()) {
+            placeholders.add(String.format("{{%s}}", matcher.group(1)));
+        }
+
         if (placeholders.isEmpty()) {
             throw new IllegalArgumentException(
                     String.format("template [%s] must contain at least one placeholder", template));
@@ -177,7 +179,7 @@ public final class IdentityTemplate {
 
         final List<String> unsupportedPlaceHolders = placeholders.stream()
                 .filter(placeholder -> !SUPPORTED_PLACE_HOLDERS.contains(placeholder))
-                .collect(Collectors.toUnmodifiableList());
+                .collect(Collectors.toList());
         if (!unsupportedPlaceHolders.isEmpty()) {
             throw new IllegalArgumentException(
                     String.format("template [%s] contains unsupported placeholders %s", template,
