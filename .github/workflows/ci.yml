@@ -26,24 +26,24 @@ jobs:
       matrix:
         device-registry: [file,jdbc,mongodb]
         include:
-          # Use quarkus-jvm images: file registry, kafka messaging, spring-boot-command-router with embedded cache
-          - device-registry: file
-            commandrouting-mode: spring-boot-command-router
-            commandrouting-cache: embedded
-            component-type: quarkus-jvm
-            messaging-type: kafka
-          # Use spring-boot images: jdbc registry, amqp messaging, dev-con-service with embedded cache
-          - device-registry: jdbc
-            commandrouting-mode: dev-con-service
-            commandrouting-cache: embedded
-            component-type: spring-boot
-            messaging-type: amqp
-          # Use quarkus-jvm images: mongodb registry, amqp messaging, command-router with server cache
-          - device-registry: mongodb
-            commandrouting-mode: command-router
-            commandrouting-cache: server
-            component-type: quarkus-jvm
-            messaging-type: amqp
+        # Use Quarkus JVM images: file registry, AMQP messaging, Command Router with embedded cache
+        - device-registry: file
+          commandrouting-mode: command-router
+          commandrouting-cache: embedded
+          component-type: quarkus-jvm
+          messaging-type: amqp
+        # Use Spring Boot images: jdbc registry, Kafka messaging, Command Router with embedded cache
+        - device-registry: jdbc
+          commandrouting-mode: command-router
+          commandrouting-cache: embedded
+          component-type: spring-boot
+          messaging-type: kafka
+        # Use Quarkus JVM images: mongodb registry, Kafka messaging, Command Router with data grid
+        - device-registry: mongodb
+          commandrouting-mode: command-router
+          commandrouting-cache: server
+          component-type: quarkus-jvm
+          messaging-type: kafka
 
     name: "Use ${{ matrix.component-type }} images: ${{ matrix.device-registry }} registry, ${{ matrix.messaging-type }} messaging, ${{ matrix.commandrouting-mode }} with ${{ matrix.commandrouting-cache }} cache"
     steps:
