@@ -3,20 +3,24 @@ title = "Hono Kafka Client Configuration"
 weight = 342
 +++
 
-Protocol adapters can be configured to use Kafka for the messaging. The Kafka client used there can be configured with 
-operating system environment variables and/or Java system properties.
+Several Hono components can be configured to support Kafka as the messaging infrastructure. The Kafka client used
+for this purpose can be configured by means of operating system environment variables and/or Java system properties.
 
 {{% notice info %}}
 The support of Kafka as a messaging system is currently a preview and not yet ready for production.
 The implementation as well as its APIs may change with the next version.
 {{% /notice %}}
 
-## Configure for Kafka based Messaging
+## Configuring Tenants to use Kafka based Messaging
 
-The selection of whether to use AMQP or Kafka for the messaging can be configured on the tenant. This requires that
-protocol adapters must have the configurations for both messaging networks. 
-To configure a tenant to use Kafka, the [tenant configuration]({{< relref "/api/tenant#tenant-information-format" >}})
-must contain a field `ext/messaging-type` with value `kafka` (to use AMQP, the value must be `amqp`).
+Hono's components by default support using AQMP 1.0 based messaging infrastructure to transmit messages hence and forth
+between devices and applications. Hono also supports using Kafka as the messaging infrastructure either as a replacement
+for or as an alternative in addition to the AMQP 1.0 based infrastructure.
+
+All tenants configured in Hono use the AMQP 1.0 based infrastructure by default. A tenant can also be configured
+to use Kafka instead of AMQP 1.0 by means of adding the property `ext/messaging-type` with value `kafka` to the
+[tenant's configuration]({{< relref "/api/tenant#tenant-information-format" >}}) in the registry.
+
 The following example shows a tenant that is configured to use Kafka for messaging:
 
 ~~~json
@@ -29,9 +33,14 @@ The following example shows a tenant that is configured to use Kafka for messagi
 }
 ~~~
 
-If the configuration of a protocol adapter contains only the connection to one messaging system, this will be used.
-**NB**: If only one messaging network is configured at protocol adapters, make sure that tenants are not configured
-to use another.
+If not explicitly set, the `ext/messaging-type` property's value is `amqp` which indicates that AMQP 1.0 is to be used
+for the tenant.
+
+{{% notice info %}}
+Protocol adapters need to be configured with connection information for both AMQP 1.0 and Kafka based messaging
+infrastructure in order to be able to do this kind of configuration at the tenant level. If an adapter is configured
+to connect to only one type of messaging infrastructure, the tenant specific messaging type configuration is ignored.
+{{% /notice %}}
 
 ## Producer Configuration Properties
 
@@ -47,14 +56,14 @@ The provided configuration is passed directly to the Kafka producer without Hono
 The following properties can _not_ be set using this mechanism because the protocol adapters use fixed values instead 
 in order to implement the message delivery semantics defined by Hono's Telemetry and Event APIs.
 
-| Kafka Producer Config Property | Fixed Value |
-| :----------------------------- | :---------- |
-| `key.serializer` | `org.apache.kafka.common.serialization.StringSerializer` |
-| `value.serializer` | `io.vertx.kafka.client.serialization.BufferSerializer` |
+| Property Name     | Fixed Value |
+| :---------------- | :---------- |
+| `key.serializer`    | `org.apache.kafka.common.serialization.StringSerializer` |
+| `value.serializer`   | `io.vertx.kafka.client.serialization.BufferSerializer` |
 | `enable.idempotence` | `true` |
 
 {{% notice tip %}}
-The Kafka client requires the property `bootstrap.servers` to be provided. This variable is the minimal configuration
+The Kafka client requires at least the `bootstrap.servers` property to be set. This is the minimal configuration
 required to enable Kafka based messaging.
 {{% /notice %}}
 
@@ -81,13 +90,13 @@ The provided configuration is passed directly to the Kafka consumer without Hono
 
 The following properties can _not_ be set using this mechanism because the protocol adapters use fixed values instead.
 
-| Kafka Consumer Config Property | Fixed Value |
-| :----------------------------- | :---------- |
-| `key.deserializer` | `org.apache.kafka.common.serialization.StringDeserializer` |
+| Property Name     | Fixed Value |
+| :---------------- | :---------- |
+| `key.deserializer`   | `org.apache.kafka.common.serialization.StringDeserializer` |
 | `value.deserializer` | `io.vertx.kafka.client.serialization.BufferDeserializer` |
 
 {{% notice tip %}}
-The Kafka client requires the property `bootstrap.servers` to be provided. This variable is the minimal configuration
+The Kafka client requires at least the `bootstrap.servers` property to be set. This variable is the minimal configuration
 required to enable Kafka based messaging.
 {{% /notice %}}
 
@@ -114,7 +123,7 @@ as a Java system property in the form `hono.kafka.adminClientConfig.${property}`
 The provided configuration is passed directly to the Kafka admin client without Hono parsing or validating it.
 
 {{% notice tip %}}
-The Kafka client requires the property `bootstrap.servers` to be provided. This variable is the minimal configuration
+The Kafka client requires at least the `bootstrap.servers` property to be set. This variable is the minimal configuration
 required to enable Kafka based messaging.
 {{% /notice %}}
 
@@ -139,7 +148,11 @@ Relevant properties are `bootstrap.servers` and the properties related to authen
 The properties must be prefixed with `HONO_KAFKA_COMMONCLIENTCONFIG_` and `hono.kafka.commonClientConfig.` respectively.
 
 A property with the same name defined in the configuration of one of the specific client types above will have precedence
-over the common property.
+over the common property. In addition, the following properties can be set:
+
+| OS Environment Variable<br>Java System Property | Mandatory | Default | Description                                    |
+| :---------------------------------------------- | :-------: | :-----: | :----------------------------------------------|
+| `HONO_KAFKA_DEFAULTCLIENTIDPREFIX`<br>`hono.kafka.defaultClientIdPrefix` | no | - | A prefix for the client ID that is passed to the Kafka server to allow application specific server-side request logging.<br>If the common or specific client configuration already contains a value for key `client.id`, that one will be used and this property will be ignored. |
 
 ## Kafka client metrics configuration
 
@@ -149,7 +162,7 @@ for sending and receiving messages.
 The metrics support can be configured using the following environment variables or corresponding system properties:
 
 | OS Environment Variable<br>Java System Property | Mandatory | Default | Description                                    |
-| :---------------------------------------------- | :-------: | :------ | :----------------------------------------------|
+| :---------------------------------------------- | :-------: | :-----: | :----------------------------------------------|
 | `HONO_KAFKA_METRICS_ENABLED`<br>`hono.kafka.metrics.enabled` | no | `true` | If set to `false`, no Kafka client metrics will be reported.  |
 | `HONO_KAFKA_METRICS_USEDEFAULTMETRICS`<br>`hono.kafka.metrics.useDefaultMetrics` | no | `true` | If set to `true`, a set of Kafka consumer and producer related default metrics will be reported. Additional metrics can be added via the `HONO_KAFKA_METRICS_METRICSPREFIXES` property described below. |
 | `HONO_KAFKA_METRICS_METRICSPREFIXES`<br>`hono.kafka.metrics.metricsPrefixes`| no | - | A comma separated list of prefixes of the metrics to be reported for the Kafka clients (in addition to the default metrics if these are used). The complete list of metrics can be viewed in the [Kafka documentation](https://kafka.apache.org/documentation.html#selector_monitoring). The metric names to be used here have the form `kafka.[metric group].[metric name]`. The metric group can be obtained from the *type* value in the *MBean name*, omitting the `-metrics` suffix. E.g. for an MBean name containing `kafka.consumer:type=consumer-fetch-manager-metrics`, the group is `consumer.fetch.manager` (all dashes are to be replaced by dots in metric group and name). An example of a corresponding metric name would be `kafka.consumer.fetch.manager.bytes.consumed.total` <br>To include all metrics, the property value can be set to the `kafka` prefix. |

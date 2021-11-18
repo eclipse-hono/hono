@@ -1,0 +1,22 @@
+hono:
+  kafka:
+    defaultClientIdPrefix: "prefix"
+    commonClientConfig:
+      common.property: "present"
+      number: 123
+      empty: ""
+      bootstrap.servers: "example.com:9999"
+      admin.property: "common"
+      consumer.property: "common"
+      producer.property: "common"
+    adminClientConfig:
+      admin.property: "admin"
+    consumerConfig:
+      consumer.property: "consumer"
+    producerConfig:
+      producer.property: "producer"
+    metrics:
+      enabled: false
+      metricsPrefixes:
+      - "metrics.one"
+      - "metrics.two"

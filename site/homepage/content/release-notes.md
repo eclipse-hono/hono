@@ -37,6 +37,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The Hono container images released with tag 1.10.0 failed to start up when not running as user `root` because the
   Java process was lacking authority to create a temporary directory in the file system's root folder (`/`).
   This has been fixed.
+* The Quarkus based variants of the Hono components did not pick up the `hono.kafka.defaultClientIdPrefix` configuration
+  property. This has been fixed.
 
 ## 1.10.0
 
