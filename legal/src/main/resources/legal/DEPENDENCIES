@@ -3,10 +3,10 @@ maven/mavencentral/ch.qos.logback/logback-core/1.2.3, EPL-1.0, approved, CQ13635
 maven/mavencentral/com.bol/cryptvault/1.0.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.fasterxml.jackson.core/jackson-annotations/2.12.5, Apache-2.0, approved, CQ23207
 maven/mavencentral/com.fasterxml.jackson.core/jackson-core/2.12.5, Apache-2.0, approved, CQ23202
-maven/mavencentral/com.fasterxml.jackson.core/jackson-databind/2.12.5, Apache-2.0, approved, CQ23206
-maven/mavencentral/com.fasterxml.jackson.dataformat/jackson-dataformat-yaml/2.12.5, Apache-2.0, approved, CQ23167
+maven/mavencentral/com.fasterxml.jackson.core/jackson-databind/2.12.5, Apache-2.0, approved, CQ23725
+maven/mavencentral/com.fasterxml.jackson.dataformat/jackson-dataformat-yaml/2.12.5, Apache-2.0, approved, CQ23726
 maven/mavencentral/com.fasterxml.jackson.datatype/jackson-datatype-jdk8/2.12.5, Apache-2.0, approved, CQ23208
-maven/mavencentral/com.fasterxml.jackson.datatype/jackson-datatype-jsr310/2.12.5, Apache-2.0, approved, clearlydefined
+maven/mavencentral/com.fasterxml.jackson.datatype/jackson-datatype-jsr310/2.12.5, Apache-2.0, approved, CQ23727
 maven/mavencentral/com.fasterxml.jackson.module/jackson-module-parameter-names/2.12.5, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.github.ben-manes.caffeine/caffeine/2.9.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.github.luben/zstd-jni/1.4.9-1, BSD-2-Clause, approved, CQ22420
