@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,9 +18,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
-import org.eclipse.hono.adapter.auth.device.SubjectDnCredentials;
-import org.eclipse.hono.adapter.auth.device.X509AuthProvider;
 import org.eclipse.hono.client.registry.CredentialsClient;
+import org.eclipse.hono.util.CredentialsConstants;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -35,7 +34,7 @@ class X509AuthProviderTest {
     private static X509AuthProvider provider;
 
     private final String tenantId = "test-tenant";
-    private final String subjectDN = "CN=test-dn";
+    private final String subjectDN = "CN=test-dn,OU=Hono,O=Eclipse";
     private final byte[] encoded = "bytes...".getBytes();
 
     @BeforeAll
@@ -75,5 +74,23 @@ class X509AuthProviderTest {
 
         assertTrue(credentials.getClientContext().containsKey("client-certificate"));
         assertArrayEquals(encoded, credentials.getClientContext().getBinary("client-certificate"));
+    }
+
+    /**
+     * Verifies that the returned credentials contains the auth-id generated based on the configured template.
+     */
+    @Test
+    void getCredentialsWithClientCertAndAuthIdTemplate() {
+        final String authIdTemplate = "auth-{{subject-cn}}-{{subject-ou}}";
+        final JsonObject authInfo = new JsonObject()
+                .put(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID, tenantId)
+                .put(CredentialsConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDN)
+                .put(CredentialsConstants.FIELD_PAYLOAD_AUTH_ID_TEMPLATE, authIdTemplate)
+                .put(CredentialsConstants.FIELD_CLIENT_CERT, encoded);
+
+        final SubjectDnCredentials credentials = provider.getCredentials(authInfo);
+        assertEquals(tenantId, credentials.getTenantId());
+        assertEquals("auth-test-dn-Hono", credentials.getAuthId());
+        assertTrue(credentials.getClientContext().containsKey("client-certificate"));
     }
 }

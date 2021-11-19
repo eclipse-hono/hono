@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -53,6 +53,11 @@ public abstract class RequestResponseApiConstants {
      * The name of the property that contains the identifier of a tenant.
      */
     public static final String FIELD_PAYLOAD_TENANT_ID = Constants.JSON_FIELD_TENANT_ID;
+    /**
+     * The name of the property that defines the template for generating authentication identifier
+     * to be used during authentication and auto-provisioning.
+     */
+    public static final String FIELD_PAYLOAD_AUTH_ID_TEMPLATE = "auth-id-template";
 
     /**
      * The name of the field that contains a boolean indicating the status of an entity.

@@ -10,13 +10,11 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.service.management.device;
-
+package org.eclipse.hono.util;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static com.google.common.truth.Truth.assertThat;
 
-import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.Test;
 
 /**

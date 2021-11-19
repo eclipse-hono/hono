@@ -227,6 +227,9 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
      * the subject DN from the certificate (<em>mandatory</em>)</li>
      * <li>{@link CredentialsConstants#FIELD_PAYLOAD_TENANT_ID} -
      * the identifier of the tenant that the device belongs to (<em>mandatory</em>)</li>
+     * <li>{@link CredentialsConstants#FIELD_PAYLOAD_AUTH_ID_TEMPLATE} -
+     * the template to generate the authentication identifier
+     * (<em>optional: only present if it is configured in the tenant's trust anchor</em>)</li>
      * <li>{@link CredentialsConstants#FIELD_CLIENT_CERT} -
      * the client certificate that the device used for authenticating as Base64  encoded
      * byte array as returned by {@link java.security.cert.X509Certificate#getEncoded()}
@@ -245,14 +248,16 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
 
         final X509Certificate deviceCert = clientCertPath.get(0);
         final String subjectDn = deviceCert.getSubjectX500Principal().getName(X500Principal.RFC2253);
-        log.debug("authenticating device of tenant [{}] using X509 certificate [subject DN: {}]",
-                tenant.getTenantId(), subjectDn);
+        final String issuerDn = deviceCert.getIssuerX500Principal().getName(X500Principal.RFC2253);
+        log.debug("authenticating device of tenant [{}] using X509 certificate [subject DN: {}, issuer DN: {}]",
+                tenant.getTenantId(), subjectDn, issuerDn);
 
         final JsonObject authInfo = new JsonObject()
                 .put(CredentialsConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn)
                 .put(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID, tenant.getTenantId());
+        tenant.getAuthIdTemplate(issuerDn)
+                .ifPresent(t -> authInfo.put(CredentialsConstants.FIELD_PAYLOAD_AUTH_ID_TEMPLATE, t));
 
-        final String issuerDn = deviceCert.getIssuerX500Principal().getName(X500Principal.RFC2253);
         if (tenant.isAutoProvisioningEnabled(issuerDn)) {
             try {
                 authInfo.put(CredentialsConstants.FIELD_CLIENT_CERT, deviceCert.getEncoded());

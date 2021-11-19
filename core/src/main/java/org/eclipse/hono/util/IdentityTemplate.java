@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.service.management.device;
+package org.eclipse.hono.util;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -23,12 +23,14 @@ import java.util.stream.Collectors;
 import javax.naming.InvalidNameException;
 import javax.naming.ldap.LdapName;
 import javax.naming.ldap.Rdn;
+import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.Strings;
 
 /**
- * A utility class for handling template used for generating device identifier during auto-provisioning.
+ * A utility class for handling template used for generating device and authentication identifiers during
+ * auto-provisioning.
  */
 public final class IdentityTemplate {
 
@@ -134,7 +136,8 @@ public final class IdentityTemplate {
 
         try {
             final List<Rdn> rdns = new LdapName(subjectDN).getRdns();
-            String result = template.replaceAll(QUOTED_PLACEHOLDER_SUBJECT_DN, subjectDN);
+            String result = template.replaceAll(QUOTED_PLACEHOLDER_SUBJECT_DN,
+                    new X500Principal(subjectDN).getName(X500Principal.RFC2253));
             for (final Attribute attribute : Attribute.values()) {
                 result = applyAttribute(attribute, result, rdns);
             }
@@ -164,9 +167,11 @@ public final class IdentityTemplate {
         Objects.requireNonNull(template, "template must not be null");
 
         final Matcher matcher = PLACEHOLDER_PATTERN.matcher(template);
-        final List<String> placeholders = matcher.results()
-                .map(res -> String.format("{{%s}}", res.group(1)))
-                .collect(Collectors.toUnmodifiableList());
+        final List<String> placeholders = new ArrayList<>();
+        while (matcher.find()) {
+            placeholders.add(String.format("{{%s}}", matcher.group(1)));
+        }
+
         if (placeholders.isEmpty()) {
             throw new IllegalArgumentException(
                     String.format("template [%s] must contain at least one placeholder", template));
@@ -174,7 +179,7 @@ public final class IdentityTemplate {
 
         final List<String> unsupportedPlaceHolders = placeholders.stream()
                 .filter(placeholder -> !SUPPORTED_PLACE_HOLDERS.contains(placeholder))
-                .collect(Collectors.toUnmodifiableList());
+                .collect(Collectors.toList());
         if (!unsupportedPlaceHolders.isEmpty()) {
             throw new IllegalArgumentException(
                     String.format("template [%s] contains unsupported placeholders %s", template,

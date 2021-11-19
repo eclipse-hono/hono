@@ -27,7 +27,7 @@ import java.util.Optional;
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.annotation.HonoTimestamp;
-import org.eclipse.hono.service.management.device.IdentityTemplate;
+import org.eclipse.hono.util.IdentityTemplate;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantConstants;
 
@@ -72,6 +72,9 @@ public class TrustedCertificateAuthority {
 
     @JsonProperty(RegistryManagementConstants.FIELD_AUTO_PROVISIONING_DEVICE_ID_TEMPLATE)
     private String autoProvisioningDeviceIdTemplate;
+
+    @JsonProperty(RegistryManagementConstants.FIELD_AUTH_ID_TEMPLATE)
+    private String authIdTemplate;
 
     /**
      * Checks if this object contains all required data.
@@ -328,6 +331,8 @@ public class TrustedCertificateAuthority {
 
     /**
      * Sets the template used for generating the device identifier of the device/gateway being auto-provisioned.
+     * <p>
+     * The validity of the template is verified using {@link IdentityTemplate#checkValidity(String)}.
      *
      * @param template the template to use during auto-provisioning to generate device identifier.
      * @return A reference to this for fluent use.
@@ -339,4 +344,30 @@ public class TrustedCertificateAuthority {
         this.autoProvisioningDeviceIdTemplate = template;
         return this;
     }
+
+    /**
+     * Gets the template for generating the authentication identifier.
+     *
+     * @return the template for generating the authentication identifier.
+     */
+    public final String getAuthIdTemplate() {
+        return this.authIdTemplate;
+    }
+
+    /**
+     * Sets the template for generating the authentication identifier.
+     * <p>
+     * The validity of the template is verified using {@link IdentityTemplate#checkValidity(String)}.
+     *
+     * @param template the template for generating the authentication identifier.
+     * @return A reference to this for fluent use.
+     * @throws NullPointerException if the template is {@code null}.
+     * @throws IllegalArgumentException if the template is not valid.
+     */
+    public final TrustedCertificateAuthority setAuthIdTemplate(final String template) {
+        IdentityTemplate.checkValidity(template);
+        this.authIdTemplate = template;
+        return this;
+    }
+
 }

@@ -281,6 +281,11 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String FIELD_AUTO_PROVISIONING_DEVICE_ID_TEMPLATE = "auto-provisioning-device-id-template";
     /**
+     * The name of the property that defines the template for generating authentication identifier to be used during
+     * authentication and auto-provisioning.
+     */
+    public static final String FIELD_AUTH_ID_TEMPLATE = "auth-id-template";
+    /**
      * The name of the property that indicates whether a CA cert can be used to
      * automatically provision new devices. 
      */

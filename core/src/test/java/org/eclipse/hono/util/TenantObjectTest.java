@@ -29,6 +29,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -464,5 +465,25 @@ public class TenantObjectTest {
 
         assertThat(tenantObject.isAutoProvisioningEnabled(caCert.getSubjectX500Principal().getName())).isFalse();
 
+    }
+
+    /**
+     * Verifies the auth-id template retrieved for the given subject DN.
+     *
+     * @throws Exception in case the certificate generation fails.
+     */
+    @Test
+    void testAuthIdTemplate() throws Exception {
+        final String authIdTemplate = "auth-{{subject-cn}}-{{subject-ou}}-{{subject-o}}";
+        final X509Certificate caCert = createCaCertificate("12345,OU=Hono,O=Eclipse");
+        final String subjectDN = caCert.getSubjectX500Principal().getName(X500Principal.RFC2253);
+        final TenantObject tenantObject = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE)
+                .addTrustAnchor(caCert.getPublicKey().getEncoded(), caCert.getPublicKey().getAlgorithm(),
+                        caCert.getSubjectX500Principal(), authIdTemplate, false)
+                .addTrustAnchor(trustedCaCert.getPublicKey(), trustedCaCert.getSubjectX500Principal(), false);
+        final Optional<String> result = tenantObject.getAuthIdTemplate(subjectDN);
+
+        assertThat(result.isPresent()).isTrue();
+        assertThat(result.get()).isEqualTo(authIdTemplate);
     }
 }

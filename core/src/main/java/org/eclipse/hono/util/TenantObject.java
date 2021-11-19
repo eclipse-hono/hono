@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -148,7 +148,8 @@ public final class TenantObject extends JsonBackedValueObject {
         Objects.requireNonNull(publicKey);
         Objects.requireNonNull(subjectDn);
 
-        return addTrustAnchor(publicKey.getEncoded(), publicKey.getAlgorithm(), subjectDn, autoProvisioningEnabled);
+        return addTrustAnchor(publicKey.getEncoded(), publicKey.getAlgorithm(), subjectDn, null,
+                autoProvisioningEnabled);
 
     }
 
@@ -158,6 +159,7 @@ public final class TenantObject extends JsonBackedValueObject {
      * @param publicKey The CA's public key in encoded form.
      * @param publicKeyAlgorithm The algorithm of the public key.
      * @param subjectDn The CA's subject DN.
+     * @param authIdTemplate The template to generate the authentication identifier.
      * @param autoProvisioningEnabled A flag indicating whether this CA may be used for automatic provisioning.
      * @return This tenant for command chaining.
      * @throws NullPointerException if the public key, algorithm or subjectDN parameters is {@code null}.
@@ -166,6 +168,7 @@ public final class TenantObject extends JsonBackedValueObject {
     public TenantObject addTrustAnchor(final byte[] publicKey,
                                        final String publicKeyAlgorithm,
                                        final X500Principal subjectDn,
+                                       final String authIdTemplate,
                                        final Boolean autoProvisioningEnabled) {
 
         Objects.requireNonNull(publicKey);
@@ -177,6 +180,8 @@ public final class TenantObject extends JsonBackedValueObject {
         trustedCa.put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, publicKey);
         trustedCa.put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, publicKeyAlgorithm);
         trustedCa.put(TenantConstants.FIELD_AUTO_PROVISIONING_ENABLED, autoProvisioningEnabled);
+        Optional.ofNullable(authIdTemplate)
+                .ifPresent(t -> trustedCa.put(TenantConstants.FIELD_PAYLOAD_AUTH_ID_TEMPLATE, t));
         final JsonArray cas = getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonArray.class, new JsonArray());
         trustAnchors = null;
         return setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, cas.add(trustedCa));
@@ -267,6 +272,29 @@ public final class TenantObject extends JsonBackedValueObject {
                 .filter(ca -> subjectDn.equals(getProperty(ca, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class)))
                 .map(caInUse -> getProperty(caInUse, TenantConstants.FIELD_AUTO_PROVISIONING_ENABLED, Boolean.class, false))
                 .findFirst().orElse(false);
+    }
+
+    /**
+     * Gets the template to generate authentication identifier for the given subject DN.
+     * <p>
+     * If no template is configured, {@link Optional#empty()} is returned.
+     *
+     * @param subjectDn The subject DN of the CA to check.
+     * @return The template to generate authentication identifier.
+     * @throws NullPointerException if the parameter subjectDN is {@code null}.
+     */
+    @JsonIgnore
+    public Optional<String> getAuthIdTemplate(final String subjectDn) {
+        Objects.requireNonNull(subjectDn, "Subject DN must not be null");
+
+        return getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonArray.class, new JsonArray())
+                .stream()
+                .filter(JsonObject.class::isInstance)
+                .map(JsonObject.class::cast)
+                .filter(ca -> subjectDn.equals(getProperty(ca, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class)))
+                .map(caInUse -> getProperty(caInUse, TenantConstants.FIELD_PAYLOAD_AUTH_ID_TEMPLATE, String.class))
+                .filter(Objects::nonNull)
+                .findFirst();
     }
 
     /**
