@@ -52,8 +52,10 @@ public class X509AuthProvider extends CredentialsApiAuthProvider<SubjectDnCreden
      * The JSON object passed in is required to contain a <em>subject-dn</em> and a
      * <em>tenant-id</em> property.
      * <p>
-     * The JSON property <em>auth-id-template</em> is available only if an auth-id template
-     * is configured in the tenant's trust anchor for the given subject DN.
+     * If the JSON object does not contain an <em>auth-id-template</em> property, the value of
+     * the <em>subject-dn</em> property is used as the authentication identifier of the returned
+     * credentials object. Otherwise, the authentication identifier is generated using
+     * the <em>auth-id-template</em>.
      * <p>
      * Any additional properties that might be present in the JSON object
      * are copied into the client context of the returned credentials.
