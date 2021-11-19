@@ -22,7 +22,7 @@ public class KafkaMetricsConfig {
 
     private boolean enabled = true;
     private boolean useDefaultMetrics = true;
-    private List<String> metricsPrefixes = MicrometerKafkaClientMetricsSupport.DEFAULT_METRICS_PREFIXES;
+    private List<String> metricsPrefixes = List.of();
 
     /**
      * Gets whether metrics support is enabled.
