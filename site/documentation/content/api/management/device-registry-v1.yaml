@@ -1362,6 +1362,9 @@ components:
                        The *subject DN* of the public key contained in the device's X.509 certificate.
                        The value MUST be formatted according to the rules defined in
                        [RFC 2253](https://tools.ietf.org/html/rfc2253#section-2).
+                       If the property *auth-id-template* is specified in the tenant's trusted anchor,
+                       the implementors of this API MUST generate *auth-id* by applying the template to
+                       the given *subject DN*. Otherwise the *Subject DN* is stored as the *auth-id*.
                  "secrets":
                     type: array
                     items:
@@ -1379,9 +1382,12 @@ components:
                        This property can be used as a convenient alternative to specifying the certificate's
                        meta data in the *auth-id* and *secrets* explicitly.
                        When provided in a request body, implementors of this API MUST extract the subject DN
-                       from the certificate's public key and store its value properly formatted to the *auth-id*
-                       property. The certificate's validity period MUST be stored in a single secret.
-                       The certificate itself must then be discarded.
+                       from the certificate's public key. The *subject DN* MUST be formatted according to the
+                       rules defined in [RFC 2253](https://tools.ietf.org/html/rfc2253#section-2).
+                       The extracted *subject DN* is used as the *auth-id* if there is no *auth-id-template*
+                       specified in the tenant's trusted anchor. Otherwise, the *auth-id* MUST be generated
+                       by applying the template to the extracted *subject DN*. The certificate's validity
+                       period MUST be stored in a single secret. The certificate itself must then be discarded.
 
       CommonSecret:
          type: object
