@@ -43,6 +43,16 @@ public final class Credentials {
     }
 
     /**
+     * Creates a X509 certificate based credential from the given subject DN.
+     *
+     * @param subjectDN The subject DN.
+     * @return The X509 certificate credential.
+     */
+    public static X509CertificateCredential createX509CertificateCredential(final String subjectDN) {
+        return X509CertificateCredential.fromSubjectDn(subjectDN, List.of(new X509CertificateSecret()));
+    }
+
+    /**
      * Creates a password type based credential containing a hashed password secret.
      *
      * @param authId The authentication to use.

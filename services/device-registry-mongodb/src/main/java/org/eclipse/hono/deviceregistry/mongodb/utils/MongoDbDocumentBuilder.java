@@ -28,6 +28,7 @@ import org.eclipse.hono.service.management.tenant.TenantDto;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.json.pointer.JsonPointer;
 
@@ -42,6 +43,7 @@ public final class MongoDbDocumentBuilder {
             RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA,
             AuthenticationConstants.FIELD_SUBJECT_DN);
     private static final String MONGODB_OPERATOR_ELEM_MATCH = "$elemMatch";
+    private static final String MONGODB_OPERATOR_OR = "$or";
 
     private final JsonObject document;
 
@@ -114,12 +116,29 @@ public final class MongoDbDocumentBuilder {
     }
 
     /**
+     * Sets the json object with the given credentials type and auth id.
+     *
+     * @param type The credentials type.
+     * @param authId The authentication identifier
+     * @return a reference to this for fluent use.
+     */
+    public MongoDbDocumentBuilder withTypeAndAuthId(final String type, final String authId) {
+        withType(type);
+        if (RegistryManagementConstants.SECRETS_TYPE_X509_CERT.equals(type)) {
+            withGeneratedAuthId(authId);
+        } else {
+            withAuthId(authId);
+        }
+        return this;
+    }
+
+    /**
      * Sets the json object with the given credentials type.
      *
      * @param type The credentials type.
      * @return a reference to this for fluent use.
      */
-    public MongoDbDocumentBuilder withType(final String type) {
+    private MongoDbDocumentBuilder withType(final String type) {
         return withCredentialsPredicate(RegistryManagementConstants.FIELD_TYPE, type);
     }
 
@@ -129,8 +148,55 @@ public final class MongoDbDocumentBuilder {
      * @param authId The auth id.
      * @return a reference to this for fluent use.
      */
-    public MongoDbDocumentBuilder withAuthId(final String authId) {
+    private MongoDbDocumentBuilder withAuthId(final String authId) {
         return withCredentialsPredicate(RegistryManagementConstants.FIELD_AUTH_ID, authId);
+    }
+
+    /**
+     * Sets the json object with the given auth id.
+     * <p>
+     * A MongoDB query is framed to match the given auth id to
+     * <ul>
+     * <li>the field <em>generated-auth-id</em>.</li>
+     * <li>If no match found and <em>generated-auth-id</em> is {@code null}, match with the field <em>auth-id</em>.
+     * </li>
+     * </ul>
+     * <p>
+     * Example query with auth id as "Device1-Hono-Eclipse":
+     * <pre>
+     * {
+     *     "credentials": {
+     *         "$elemMatch": {
+     *             "$or": [
+     *                 {
+     *                     "generated-auth-id": "Device1-Hono-Eclipse"
+     *                 },
+     *                 {
+     *                     "generated-auth-id": null,
+     *                     "auth-id": "Device1-Hono-Eclipse"
+     *                 }
+     *             ]
+     *         }
+     *     }
+     * }
+     * </pre>
+     *
+     * @param authId The auth id.
+     * @return a reference to this for fluent use.
+     */
+    private MongoDbDocumentBuilder withGeneratedAuthId(final String authId) {
+        final var credentialsArraySpec = document.getJsonObject(CredentialsDto.FIELD_CREDENTIALS, new JsonObject());
+        final var elementMatchSpec = credentialsArraySpec.getJsonObject(MONGODB_OPERATOR_ELEM_MATCH, new JsonObject());
+
+        elementMatchSpec.put(MONGODB_OPERATOR_OR, new JsonArray(List.of(
+                new JsonObject().put(RegistryManagementConstants.FIELD_GENERATED_AUTH_ID, authId),
+                new JsonObject()
+                        .put(RegistryManagementConstants.FIELD_GENERATED_AUTH_ID, null)
+                        .put(RegistryManagementConstants.FIELD_AUTH_ID, authId))));
+        credentialsArraySpec.put(MONGODB_OPERATOR_ELEM_MATCH, elementMatchSpec);
+        document.put(CredentialsDto.FIELD_CREDENTIALS, credentialsArraySpec);
+
+        return this;
     }
 
     private MongoDbDocumentBuilder withCredentialsPredicate(final String field, final String value) {

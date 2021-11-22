@@ -32,6 +32,7 @@ import org.eclipse.hono.service.base.jdbc.store.device.TableAdapterStore;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
+import org.eclipse.hono.util.Strings;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
@@ -152,11 +153,12 @@ public class CredentialsServiceImpl extends AbstractCredentialsService {
                 return false;
             }
 
-            if (!authId.equals(c.getString(CredentialsConstants.FIELD_AUTH_ID))) {
-                return false;
+            final String generatedAuthId = c.getString(CredentialsConstants.FIELD_GENERATED_AUTH_ID);
+            if (Strings.isNullOrEmpty(generatedAuthId)) {
+                return authId.equals(c.getString(CredentialsConstants.FIELD_AUTH_ID));
+            } else {
+                return authId.equals(generatedAuthId);
             }
-
-            return true;
         };
 
     }

@@ -193,6 +193,11 @@ public class MongoDbBasedCredentialServiceTest implements CredentialsServiceTest
         return this.deviceManagementService;
     }
 
+    @Override
+    public TenantInformationService getTenantInformationService() {
+        return this.tenantInformationService;
+    }
+
     /**
      * Verifies that a request to update credentials of a device fails with a 403 status code
      * if the number of credentials exceeds the tenant's configured limit.
@@ -264,46 +269,68 @@ public class MongoDbBasedCredentialServiceTest implements CredentialsServiceTest
                         Credentials.createPasswordCredential("device1a", "secret"),
                         Credentials.createPSKCredential("device1b", "shared-secret")),
                 UUID.randomUUID().toString());
+        final var dto5 = CredentialsDto.forCreation(
+                tenantId,
+                UUID.randomUUID().toString(),
+                List.of(Credentials.createX509CertificateCredential("CN=testDevice1,OU=Hono,O=Eclipse"),
+                        Credentials.createPSKCredential("device5b", "shared-secret")),
+                UUID.randomUUID().toString());
+        final var dto6 = CredentialsDto.forCreation(
+                tenantId,
+                UUID.randomUUID().toString(),
+                List.of(Credentials.createX509CertificateCredential("CN=Device1,OU=Hono,O=Eclipse"),
+                        Credentials.createPSKCredential("device6b", "shared-secret")),
+                UUID.randomUUID().toString());
 
         credentialsDao.create(dto1, NoopSpan.INSTANCE.context())
-            .compose(ok -> credentialsDao.create(dto2, NoopSpan.INSTANCE.context()))
-            .compose(ok -> credentialsDao.create(dto3, NoopSpan.INSTANCE.context()))
-            .compose(ok -> credentialsDao.create(dto4, NoopSpan.INSTANCE.context()))
-            .compose(ok -> {
-                final Promise<JsonObject> resultHandler = Promise.promise();
-                final var filter = MongoDbDocumentBuilder.builder()
-                        .withTenantId(tenantId)
-                        .withAuthId("device1a")
-                        .withType(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD)
-                        .document();
-                final var commandRight = new JsonObject()
-                        .put("find", "credentials")
-                        .put("batchSize", 1)
-                        .put("singleBatch", true)
-                        .put("filter", filter)
-                        .put("projection", MongoDbBasedCredentialsDao.PROJECTION_CREDS_BY_TYPE_AND_AUTH_ID);
-                final var explain = new JsonObject()
-                        .put("explain", commandRight)
-                        .put("verbosity", "executionStats");
-                mongoClient.runCommand("explain", explain, resultHandler);
-                return resultHandler.future();
-            })
-            .onComplete(ctx.succeeding(result -> {
-                if (LOG.isTraceEnabled()) {
-                    LOG.trace("result:{}{}", System.lineSeparator(), result.encodePrettily());
-                }
-                ctx.verify(() -> {
-                    final var indexScan = (JsonObject) JsonPointer.from("/queryPlanner/winningPlan/inputStage/inputStage")
-                            .queryJson(result);
-                    assertThat(indexScan.getString("indexName"))
-                        .isEqualTo(MongoDbBasedCredentialsDao.IDX_CREDENTIALS_TYPE_AND_AUTH_ID);
-                    final var executionStats = result.getJsonObject("executionStats", new JsonObject());
-                    // there are two credentials with auth-id "device1a" and type "hashed-password"
-                    assertThat(executionStats.getInteger("totalKeysExamined")).isEqualTo(2);
-                    assertThat(executionStats.getInteger("totalDocsExamined")).isEqualTo(2);
-                });
-                ctx.completeNow();
-            }));
+                .compose(ok -> credentialsDao.create(dto2, NoopSpan.INSTANCE.context()))
+                .compose(ok -> credentialsDao.create(dto3, NoopSpan.INSTANCE.context()))
+                .compose(ok -> credentialsDao.create(dto4, NoopSpan.INSTANCE.context()))
+                .compose(ok -> credentialsDao.create(dto5, NoopSpan.INSTANCE.context()))
+                .compose(ok -> credentialsDao.create(dto6, NoopSpan.INSTANCE.context()))
+                .compose(ok -> getExecutionStatistics(tenantId, CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD,
+                        "device1a", mongoClient))
+                .compose(result -> {
+                    verifyExecutionStatistics(result, 4, 2, ctx);
+                    return getExecutionStatistics(tenantId, CredentialsConstants.SECRETS_TYPE_X509_CERT,
+                            "CN=testDevice1,OU=Hono,O=Eclipse", mongoClient);
+                })
+                .onComplete(ctx.succeeding(result -> {
+                    verifyExecutionStatistics(result, 2, 2, ctx);
+                    ctx.completeNow();
+                }));
+    }
 
+    private Future<JsonObject> getExecutionStatistics(final String tenantId, final String type, final String authId,
+            final MongoClient mongoClient) {
+        final Promise<JsonObject> resultHandler = Promise.promise();
+        final var filter = MongoDbDocumentBuilder.builder()
+                .withTenantId(tenantId)
+                .withTypeAndAuthId(type, authId)
+                .document();
+        final var commandRight = new JsonObject()
+                .put("find", "credentials")
+                .put("batchSize", 1)
+                .put("singleBatch", true)
+                .put("filter", filter)
+                .put("projection", MongoDbBasedCredentialsDao.PROJECTION_CREDS_BY_TYPE_AND_AUTH_ID);
+        final var explain = new JsonObject()
+                .put("explain", commandRight)
+                .put("verbosity", "executionStats");
+        mongoClient.runCommand("explain", explain, resultHandler);
+        return resultHandler.future();
+    }
+
+    private void verifyExecutionStatistics(final JsonObject result, final int expectedTotalKeysExamined,
+            final int expectedTotalDocsExamined, final VertxTestContext ctx) {
+        ctx.verify(() -> {
+            final var indexScan = (JsonObject) JsonPointer.from("/queryPlanner/winningPlan/inputStage/inputStage")
+                    .queryJson(result);
+            assertThat(indexScan.getString("indexName"))
+                    .isEqualTo(MongoDbBasedCredentialsDao.IDX_CREDENTIALS_TYPE_AND_AUTH_ID_AND_GENERATED_AUTH_ID);
+            final var executionStats = result.getJsonObject("executionStats", new JsonObject());
+            assertThat(executionStats.getInteger("totalKeysExamined")).isEqualTo(expectedTotalKeysExamined);
+            assertThat(executionStats.getInteger("totalDocsExamined")).isEqualTo(expectedTotalDocsExamined);
+        });
     }
 }

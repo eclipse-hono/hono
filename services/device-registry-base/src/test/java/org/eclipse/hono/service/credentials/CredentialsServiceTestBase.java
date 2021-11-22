@@ -18,11 +18,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
 import java.net.HttpURLConnection;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -38,6 +41,7 @@ import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.util.Assertions;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
@@ -51,6 +55,8 @@ import org.eclipse.hono.service.management.credentials.X509CertificateCredential
 import org.eclipse.hono.service.management.credentials.X509CertificateSecret;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
+import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.service.management.tenant.TrustedCertificateAuthority;
 import org.eclipse.hono.test.VertxTools;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -62,6 +68,7 @@ import org.junit.jupiter.api.function.ThrowingConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -106,6 +113,16 @@ public interface CredentialsServiceTestBase {
      * @return The device management service.
      */
     DeviceManagementService getDeviceManagementService();
+
+    /**
+     * Gets the tenant information service.
+     * <p>
+     * Return this tenant information service which is needed in order to work in coordination with the credentials
+     * service.
+     *
+     * @return The tenant information service.
+     */
+    TenantInformationService getTenantInformationService();
 
     /**
      * Gets the cache directive that is supposed to be used for a given type of credentials.
@@ -476,7 +493,7 @@ public interface CredentialsServiceTestBase {
                                 tenantId,
                                 deviceId,
                                 List.of(pwdCredentials, otherPwdCredentials, pskCredentials, x509Credentials,
-                                        X509CertificateCredential.fromCertificate(clientCert.result())),
+                                        X509CertificateCredential.fromCertificate(clientCert.result(), null)),
                                 Optional.empty(),
                                 NoopSpan.INSTANCE);
                         })
@@ -1128,6 +1145,71 @@ public interface CredentialsServiceTestBase {
                         .isEqualTo(HttpURLConnection.HTTP_NOT_FOUND));
                 ctx.completeNow();
             }));
+    }
+
+    /**
+     * Verifies that {@link CredentialsManagementService#updateCredentials(String, String, List, Optional, Span)}
+     * applies the authId template to generate the authId.
+     * <p>
+     * Additionally, verifies that {@link CredentialsService#get(String, String, String, Span)} is able to find
+     * the credentials using the generated authId.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    default void testUpdateCredentialsAppliesAuthIdTemplate(final VertxTestContext ctx) {
+        final String tenantId = UUID.randomUUID().toString();
+        final String deviceId = UUID.randomUUID().toString();
+        final String commonName = UUID.randomUUID().toString();
+        final String issuerDN = "CN=testBase,OU=Hono,O=Eclipse";
+        final String subjectDN = String.format("CN=%s,OU=Hono,O=Eclipse", commonName);
+        final String authIdTemplate = "auth-{{subject-cn}}-{{subject-ou}}-{{subject-o}}";
+        final String expectedAuthIdByApplyingTemplate = String.format("auth-%s-Hono-Eclipse", commonName);
+
+        final var credential = X509CertificateCredential.fromSubjectDn(subjectDN, issuerDN, null,
+                List.of(new X509CertificateSecret()));
+        final var trustedCa = new TrustedCertificateAuthority()
+                .setSubjectDn(issuerDN)
+                .setPublicKey("NOTAKEY".getBytes(StandardCharsets.UTF_8))
+                .setAuthIdTemplate(authIdTemplate)
+                .setNotBefore(Instant.now().minus(1, ChronoUnit.DAYS))
+                .setNotAfter(Instant.now().plus(2, ChronoUnit.DAYS));
+        final var tenant = new Tenant().setTrustedCertificateAuthorities(List.of(trustedCa));
+        when(getTenantInformationService().getTenant(any(), any())).thenReturn(Future.succeededFuture(tenant));
+
+        getDeviceManagementService()
+                .createDevice(tenantId, Optional.of(deviceId), new Device(), NoopSpan.INSTANCE)
+                .compose(response -> {
+                    ctx.verify(() -> {
+                        assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_CREATED);
+                    });
+                    return getCredentialsManagementService().updateCredentials(
+                            tenantId,
+                            deviceId,
+                            List.of(credential),
+                            Optional.empty(),
+                            NoopSpan.INSTANCE);
+                })
+                .compose(response -> {
+                    ctx.verify(() -> {
+                        assertThat(response.getStatus()).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT);
+                        assertResourceVersion(response);
+                    });
+                    // WHEN retrieving the credentials via the Credentials API
+                    return getCredentialsService().get(tenantId, RegistryManagementConstants.SECRETS_TYPE_X509_CERT,
+                            expectedAuthIdByApplyingTemplate);
+                })
+                .onComplete(ctx.succeeding(response -> {
+                    ctx.verify(() -> {
+                        assertThat(response.isOk()).isTrue();
+                        final JsonObject credentialJson = response.getPayload();
+                        // VERIFY that the auth-id is set to the generated auth-id
+                        assertWithMessage("credentials auth-id")
+                                .that(credentialJson.getString(RegistryManagementConstants.FIELD_AUTH_ID))
+                                .isEqualTo(expectedAuthIdByApplyingTemplate);
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**

@@ -256,4 +256,13 @@ abstract class AbstractJdbcRegistryTest {
     public CredentialsManagementService getCredentialsManagementService() {
         return this.credentialsManagement;
     }
+
+    /**
+     * Gets the tenant information service.
+     *
+     * @return The tenant information service.
+     */
+    public TenantInformationService getTenantInformationService() {
+        return this.tenantInformationService;
+    }
 }

@@ -102,7 +102,7 @@ findCredentials: |
    WHERE
       tenant_id=:tenant_id
    AND
-      auth_id=:auth_id
+      COALESCE(generated_auth_id, auth_id)=:auth_id
    AND
       type=:type
 
@@ -112,12 +112,14 @@ insertCredentialEntry: |
       device_id,
       type,
       auth_id,
+      generated_auth_id,
       data
    ) VALUES (
       :tenant_id,
       :device_id,
       :type,
       :auth_id,
+      :generated_auth_id,
       :data
    )
 

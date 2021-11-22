@@ -35,6 +35,8 @@ import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
+import org.eclipse.hono.service.management.credentials.X509CertificateCredential;
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.util.Futures;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.Strings;
@@ -177,10 +179,11 @@ public abstract class AbstractCredentialsManagementService implements Credential
         Objects.requireNonNull(resourceVersion);
         Objects.requireNonNull(span);
 
-        return this.tenantInformationService
-                .getTenant(tenantId, span)
+        final Future<Tenant> tenantFuture = tenantInformationService.getTenant(tenantId, span);
+        return tenantFuture
                 .compose(tenant -> tenant.checkCredentialsLimitExceeded(tenantId, credentials))
-                .compose(ok -> verifyAndEncodePasswords(credentials))
+                .compose(ok -> applyAuthIdTemplateForX509CertificateCredentials(tenantFuture.result(), credentials))
+                .compose(this::verifyAndEncodePasswords)
                 .compose(encodedCredentials -> processUpdateCredentials(
                         DeviceKey.from(tenantId, deviceId),
                         encodedCredentials,
@@ -279,4 +282,13 @@ public abstract class AbstractCredentialsManagementService implements Credential
         return credentials;
     }
 
+    private static Future<List<CommonCredential>> applyAuthIdTemplateForX509CertificateCredentials(
+            final Tenant tenant,
+            final List<CommonCredential> credentials) {
+        credentials.stream()
+                .filter(X509CertificateCredential.class::isInstance)
+                .map(X509CertificateCredential.class::cast)
+                .forEach(c -> c.applyAuthIdTemplate(tenant));
+        return Future.succeededFuture(credentials);
+    }
 }

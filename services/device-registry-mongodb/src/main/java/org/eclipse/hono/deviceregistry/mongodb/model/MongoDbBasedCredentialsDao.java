@@ -53,7 +53,7 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
     /**
      * The name of the index on the Credentials type and authentication identifier.
      */
-    public static final String IDX_CREDENTIALS_TYPE_AND_AUTH_ID = "credentials_type_and_auth_id";
+    public static final String IDX_CREDENTIALS_TYPE_AND_AUTH_ID_AND_GENERATED_AUTH_ID = "credentials_type_and_auth_id_and_generated_id";
     /**
      * The projection document used for querying credentials by type and authentication identifier.
      */
@@ -66,6 +66,9 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
     private static final String KEY_AUTH_ID = String.format(
             "%s.%s",
             CredentialsDto.FIELD_CREDENTIALS, RegistryManagementConstants.FIELD_AUTH_ID);
+    private static final String KEY_GENERATED_AUTH_ID = String.format(
+            "%s.%s",
+            CredentialsDto.FIELD_CREDENTIALS, RegistryManagementConstants.FIELD_GENERATED_AUTH_ID);
     private static final String KEY_CREDENTIALS_TYPE = String.format(
             "%s.%s",
             CredentialsDto.FIELD_CREDENTIALS, RegistryManagementConstants.FIELD_TYPE);
@@ -122,9 +125,10 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
                                     .put(KEY_CREDENTIALS_TYPE, new JsonObject().put("$exists", true)))))
                 .compose(ok -> createIndex(
                         new JsonObject()
-                                .put(KEY_AUTH_ID, 1)
-                                .put(KEY_CREDENTIALS_TYPE, 1),
-                        new IndexOptions().name(IDX_CREDENTIALS_TYPE_AND_AUTH_ID)))
+                                .put(KEY_CREDENTIALS_TYPE, 1)
+                                .put(KEY_GENERATED_AUTH_ID, 1)
+                                .put(KEY_AUTH_ID, 1),
+                        new IndexOptions().name(IDX_CREDENTIALS_TYPE_AND_AUTH_ID_AND_GENERATED_AUTH_ID)))
                 .onSuccess(ok -> indicesCreated.set(true))
                 .onComplete(r -> {
                     creatingIndices.set(false);
@@ -284,8 +288,7 @@ public final class MongoDbBasedCredentialsDao extends MongoDbBasedDao implements
 
         final JsonObject filter = MongoDbDocumentBuilder.builder()
                 .withTenantId(tenantId)
-                .withAuthId(authId)
-                .withType(type)
+                .withTypeAndAuthId(type, authId)
                 .document();
 
         if (LOG.isTraceEnabled()) {
