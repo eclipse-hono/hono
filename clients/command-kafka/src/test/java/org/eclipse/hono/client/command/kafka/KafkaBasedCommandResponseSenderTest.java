@@ -103,6 +103,10 @@ public class KafkaBasedCommandResponseSenderTest {
 
                         //Verify if the record contains the necessary headers.
                         final Headers headers = record.headers();
+                        assertThat(headers.headers(MessageHelper.APP_PROPERTY_TENANT_ID)).hasSize(1);
+                        assertThat(headers).contains(
+                                new RecordHeader(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId.getBytes()));
+
                         assertThat(headers.headers(MessageHelper.APP_PROPERTY_DEVICE_ID)).hasSize(1);
                         assertThat(headers).contains(
                                 new RecordHeader(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId.getBytes()));

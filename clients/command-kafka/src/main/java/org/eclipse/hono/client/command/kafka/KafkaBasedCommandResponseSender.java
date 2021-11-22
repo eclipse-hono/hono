@@ -76,6 +76,7 @@ public class KafkaBasedCommandResponseSender extends AbstractKafkaBasedMessageSe
 
         final List<KafkaHeader> headers = new ArrayList<>(encodePropertiesAsKafkaHeaders(response.getAdditionalProperties(), span));
         headers.add(KafkaRecordHelper.createKafkaHeader(MessageHelper.SYS_PROPERTY_CORRELATION_ID, response.getCorrelationId()));
+        headers.add(KafkaRecordHelper.createKafkaHeader(MessageHelper.APP_PROPERTY_TENANT_ID, response.getTenantId()));
         headers.add(KafkaRecordHelper.createKafkaHeader(MessageHelper.APP_PROPERTY_DEVICE_ID, response.getDeviceId()));
         headers.add(KafkaRecordHelper.createKafkaHeader(MessageHelper.APP_PROPERTY_STATUS, response.getStatus()));
         headers.add(KafkaRecordHelper.createKafkaHeader(MessageHelper.SYS_PROPERTY_CONTENT_TYPE,
