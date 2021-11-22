@@ -108,6 +108,7 @@ The following table provides an overview of the headers set on a message sent in
 | *creation-time*    | yes       | *long*    | The instant in time (milliseconds since the Unix epoch) when the message has been created. |
 | *device_id*        | yes       | *string*  | The identifier of the device that sent the response. |
 | *status*           | yes       | *integer* | MUST indicate the status of the execution. See table below for possible values. |
+| *tenant_id*        | yes       | *string*  | The identifier of the tenant that the device belongs to. |
 | *content-type*     | no        | *string*  | If present, MUST contain a *Media Type* as defined by [RFC 2046](https://tools.ietf.org/html/rfc2046) which describes the semantics and format of the command's input data contained in the message payload. However, not all protocol adapters will support this property as not all transport protocols provide means to convey this information, e.g. MQTT 3.1.1 has no notion of message headers.<br>If the response is an error message sent by the Hono protocol adapter or Command Router component, the content type MUST be *application/vnd.eclipse-hono-delivery-failure-notification+json*. |
 | *delivery-failure-notification-metadata[\*]* | no | *string* | MUST be adopted from the command message headers with the same names *if* the response is an error message sent by the Hono protocol adapter or Command Router component. |
 

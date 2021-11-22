@@ -39,6 +39,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   This has been fixed.
 * The Quarkus based variants of the Hono components did not pick up the `hono.kafka.defaultClientIdPrefix` configuration
   property. This has been fixed.
+* Command response messages published via Kafka did not contain the `tenant_id` header. This has been fixed.
 
 ## 1.10.0
 
