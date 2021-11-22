@@ -20,6 +20,8 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.enterprise.context.ApplicationScoped;
+
 import org.eclipse.hono.adapter.lora.GatewayInfo;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.eclipse.hono.adapter.lora.LoraMetaData;
@@ -42,6 +44,7 @@ import io.vertx.core.json.JsonObject;
  * Gateway Information</a> messages.
  */
 @Component
+@ApplicationScoped
 public class LoriotProvider extends JsonBasedLoraProvider {
 
     private static final Logger LOG = LoggerFactory.getLogger(LoriotProvider.class);
