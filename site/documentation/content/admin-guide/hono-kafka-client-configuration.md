@@ -13,15 +13,17 @@ The implementation as well as its APIs may change with the next version.
 
 ## Configuring Tenants to use Kafka based Messaging
 
-Hono's components by default support using AQMP 1.0 based messaging infrastructure to transmit messages hence and forth
+Hono's components by default support using AMQP 1.0 based messaging infrastructure to transmit messages hence and forth
 between devices and applications. Hono also supports using Kafka as the messaging infrastructure either as a replacement
 for or as an alternative in addition to the AMQP 1.0 based infrastructure.
 
-All tenants configured in Hono use the AMQP 1.0 based infrastructure by default. A tenant can also be configured
-to use Kafka instead of AMQP 1.0 by means of adding the property `ext/messaging-type` with value `kafka` to the
-[tenant's configuration]({{< relref "/api/tenant#tenant-information-format" >}}) in the registry.
+In most cases Hono's components will be configured to use either AMQP 1.0 or Kafka based messaging infrastructure.
+However, in cases where both types of infrastructure are being used, Hono's components need to be able to determine,
+which infrastructure should be used for messages of a given tenant. For this purpose, the [configuration properties
+registered for a tenant]({{< relref "/api/tenant#tenant-information-format" >}}) support the `ext/messaging-type` property
+which can have a value of either `amqp` or `kafka`.
 
-The following example shows a tenant that is configured to use Kafka for messaging:
+The following example shows a tenant that is configured to use the Kafka messaging infrastructure:
 
 ~~~json
 {
@@ -37,9 +39,8 @@ If not explicitly set, the `ext/messaging-type` property's value is `amqp` which
 for the tenant.
 
 {{% notice info %}}
-Protocol adapters need to be configured with connection information for both AMQP 1.0 and Kafka based messaging
-infrastructure in order to be able to do this kind of configuration at the tenant level. If an adapter is configured
-to connect to only one type of messaging infrastructure, the tenant specific messaging type configuration is ignored.
+If an adapter is configured to connect to only one type of messaging infrastructure, the tenant specific messaging
+type configuration is ignored.
 {{% /notice %}}
 
 ## Producer Configuration Properties

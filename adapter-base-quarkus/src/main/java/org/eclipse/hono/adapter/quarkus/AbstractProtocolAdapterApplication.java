@@ -232,7 +232,6 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         this.kafkaProducerConfig.setProducerConfig(options.producerConfig());
 
         this.kafkaConsumerConfig = new MessagingKafkaConsumerConfigProperties();
-        this.kafkaConsumerConfig.setDefaultClientIdPrefix(options.defaultClientIdPrefix().orElse(getComponentName()));
         clientIdPrefix.ifPresent(this.kafkaConsumerConfig::setDefaultClientIdPrefix);
         this.kafkaConsumerConfig.setCommonClientConfig(options.commonClientConfig());
         this.kafkaConsumerConfig.setConsumerConfig(options.consumerConfig());
