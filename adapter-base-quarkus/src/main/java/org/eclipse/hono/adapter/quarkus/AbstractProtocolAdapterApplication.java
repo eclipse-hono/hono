@@ -222,15 +222,22 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
     @Inject
     void setKafkaClientOptions(final KafkaClientOptions options) {
+
+        final Optional<String> clientIdPrefix = Optional.ofNullable(
+                options.defaultClientIdPrefix().orElse(getComponentName()));
+
         this.kafkaProducerConfig = new MessagingKafkaProducerConfigProperties();
+        clientIdPrefix.ifPresent(this.kafkaProducerConfig::setDefaultClientIdPrefix);
         this.kafkaProducerConfig.setCommonClientConfig(options.commonClientConfig());
         this.kafkaProducerConfig.setProducerConfig(options.producerConfig());
 
         this.kafkaConsumerConfig = new MessagingKafkaConsumerConfigProperties();
+        clientIdPrefix.ifPresent(this.kafkaConsumerConfig::setDefaultClientIdPrefix);
         this.kafkaConsumerConfig.setCommonClientConfig(options.commonClientConfig());
         this.kafkaConsumerConfig.setConsumerConfig(options.consumerConfig());
 
         this.kafkaAdminClientConfig = new KafkaAdminClientConfigProperties();
+        clientIdPrefix.ifPresent(this.kafkaAdminClientConfig::setDefaultClientIdPrefix);
         this.kafkaAdminClientConfig.setCommonClientConfig(options.commonClientConfig());
         this.kafkaAdminClientConfig.setAdminClientConfig(options.adminClientConfig());
     }
@@ -548,9 +555,13 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
      * @return The Kafka metrics support.
      */
     public KafkaClientMetricsSupport kafkaClientMetricsSupport(final KafkaMetricsOptions options) {
-        return options.enabled()
-                ? new MicrometerKafkaClientMetricsSupport(meterRegistry, options.useDefaultMetrics(),
-                        options.metricsPrefixes().orElse(List.of()))
-                : NoopKafkaClientMetricsSupport.INSTANCE;
+        if (options.enabled()) {
+            return new MicrometerKafkaClientMetricsSupport(
+                    meterRegistry,
+                    options.useDefaultMetrics(),
+                    options.metricsPrefixes().orElse(List.of()));
+        } else {
+            return NoopKafkaClientMetricsSupport.INSTANCE;
+        }
     }
 }

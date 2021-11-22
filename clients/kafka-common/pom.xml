@@ -87,6 +87,48 @@
       <artifactId>kafka-test-utils</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-junit5</artifactId>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>io.quarkus</groupId>
+          <artifactId>quarkus-ide-launcher</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-config-yaml</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-vertx</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <properties>
+            <!-- 
+              do not run unit test classes in parallel as this seems to have
+              a negative effect on startup of Quarkus in tests annotated with
+              @QuarkusTest
+             -->
+            <configurationParameters>
+              junit.jupiter.execution.parallel.enabled = false
+            </configurationParameters>
+          </properties>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 
 </project>
