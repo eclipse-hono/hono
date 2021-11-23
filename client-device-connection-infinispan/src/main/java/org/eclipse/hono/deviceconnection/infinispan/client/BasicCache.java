@@ -86,7 +86,7 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
     @Override
     public Future<Void> stop() {
         if (!stopCalled.compareAndSet(false, true)) {
-            return Future.failedFuture("stop already called");
+            return Future.succeededFuture();
         }
         LOG.info("stopping cache");
         setCache(null);
