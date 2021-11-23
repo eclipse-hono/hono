@@ -79,7 +79,6 @@ hono:
     maxEventLoopExecuteTime: ${max.event-loop.execute-time}
     preferNative: true
   kafka:
-    defaultClientIdPrefix: "hono-http-adapter"
     commonClientConfig:
       bootstrap.servers: ${hono.kafka.bootstrap.servers}
 

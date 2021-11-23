@@ -39,15 +39,6 @@ public class KafkaClientOptionsTest {
     }
 
     /**
-     * Verifies that the configured default client ID prefix is picked up.
-     */
-    @Test
-    public void testThatDefaultClientIdPrefixIsSet() {
-        assertThat(kafkaClientOptions.defaultClientIdPrefix().isPresent()).isTrue();
-        assertThat(kafkaClientOptions.defaultClientIdPrefix().get()).isEqualTo("prefix");
-    }
-
-    /**
      * Asserts that common client properties are present.
      */
     @Test

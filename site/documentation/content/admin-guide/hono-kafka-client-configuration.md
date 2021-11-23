@@ -149,11 +149,7 @@ Relevant properties are `bootstrap.servers` and the properties related to authen
 The properties must be prefixed with `HONO_KAFKA_COMMONCLIENTCONFIG_` and `hono.kafka.commonClientConfig.` respectively.
 
 A property with the same name defined in the configuration of one of the specific client types above will have precedence
-over the common property. In addition, the following properties can be set:
-
-| OS Environment Variable<br>Java System Property | Mandatory | Default | Description                                    |
-| :---------------------------------------------- | :-------: | :-----: | :----------------------------------------------|
-| `HONO_KAFKA_DEFAULTCLIENTIDPREFIX`<br>`hono.kafka.defaultClientIdPrefix` | no | - | A prefix for the client ID that is passed to the Kafka server to allow application specific server-side request logging.<br>If the common or specific client configuration already contains a value for key `client.id`, that one will be used and this property will be ignored. |
+over the common property.
 
 ## Kafka client metrics configuration
 
