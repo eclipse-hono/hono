@@ -17,9 +17,12 @@ import static com.google.common.truth.Truth.assertThat;
 
 import javax.inject.Inject;
 
+import org.eclipse.hono.client.kafka.consumer.KafkaConsumerOptions;
+import org.eclipse.hono.client.kafka.producer.KafkaProducerOptions;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
+import io.smallrye.config.ConfigMapping;
 
 /**
  * Verifies that Quarkus binds properties from yaml files to configuration objects.
@@ -28,14 +31,30 @@ import io.quarkus.test.junit.QuarkusTest;
 public class KafkaClientOptionsTest {
 
     @Inject
-    KafkaClientOptions kafkaClientOptions;
+    @ConfigMapping(prefix = "hono.kafka")
+    CommonKafkaClientOptions commonOptions;
+
+    @Inject
+    @ConfigMapping(prefix = "hono.kafka.producerTest")
+    KafkaProducerOptions producerOptions;
+
+    @Inject
+    @ConfigMapping(prefix = "hono.kafka.consumerTest")
+    KafkaConsumerOptions consumerOptions;
+
+    @Inject
+    @ConfigMapping(prefix = "hono.kafka.adminClientTest")
+    KafkaAdminClientOptions adminClientOptions;
 
     /**
      * Asserts that the Kafka configuration is exposed as a beans.
      */
     @Test
     public void testThatClientOptionsExist() {
-        assertThat(kafkaClientOptions).isNotNull();
+        assertThat(commonOptions).isNotNull();
+        assertThat(producerOptions).isNotNull();
+        assertThat(consumerOptions).isNotNull();
+        assertThat(adminClientOptions).isNotNull();
     }
 
     /**
@@ -43,8 +62,7 @@ public class KafkaClientOptionsTest {
      */
     @Test
     public void testThatCommonConfigIsPresent() {
-        assertThat(kafkaClientOptions.commonClientConfig().get("common.property")).isEqualTo("present");
-        assertThat(kafkaClientOptions.commonClientConfig().get("empty")).isEqualTo("");
+        assertThat(commonOptions.commonClientConfig().get("common.property").getValue()).isEqualTo("present");
     }
 
     /**
@@ -52,7 +70,7 @@ public class KafkaClientOptionsTest {
      */
     @Test
     public void testThatConsumerConfigIsPresent() {
-        assertThat(kafkaClientOptions.consumerConfig().get("consumer.property")).isEqualTo("consumer");
+        assertThat(consumerOptions.consumerConfig().get("consumer.property").getValue()).isEqualTo("consumer");
     }
 
     /**
@@ -60,7 +78,7 @@ public class KafkaClientOptionsTest {
      */
     @Test
     public void testThatAdminClientConfigIsPresent() {
-        assertThat(kafkaClientOptions.adminClientConfig().get("admin.property")).isEqualTo("admin");
+        assertThat(adminClientOptions.adminClientConfig().get("admin.property").getValue()).isEqualTo("admin");
     }
 
     /**
@@ -68,7 +86,7 @@ public class KafkaClientOptionsTest {
      */
     @Test
     public void testThatProducerConfigIsPresent() {
-        assertThat(kafkaClientOptions.producerConfig().get("producer.property")).isEqualTo("producer");
+        assertThat(producerOptions.producerConfig().get("producer.property").getValue()).isEqualTo("producer");
     }
 
     /**
@@ -76,7 +94,8 @@ public class KafkaClientOptionsTest {
      */
     @Test
     public void testThatKeysWithDotsAreAllowed() {
-        assertThat(kafkaClientOptions.commonClientConfig().get("bootstrap.servers")).isEqualTo("example.com:9999");
+        assertThat(commonOptions.commonClientConfig().get("sasl.client.callback.handler.class").getValue())
+                .isEqualTo("Something.class");
     }
 
     /**
@@ -84,6 +103,21 @@ public class KafkaClientOptionsTest {
      */
     @Test
     public void testThatNumbersArePresentAsStrings() {
-        assertThat(kafkaClientOptions.commonClientConfig().get("number")).isEqualTo("123");
+        assertThat(commonOptions.commonClientConfig().get("number").getValue()).isEqualTo("123");
+        assertThat(producerOptions.producerConfig().get("number").getValue()).isEqualTo("123");
+        assertThat(consumerOptions.consumerConfig().get("number").getValue()).isEqualTo("123");
+        assertThat(adminClientOptions.adminClientConfig().get("number").getValue()).isEqualTo("123");
     }
+
+    /**
+     * Asserts that properties with an empty string as the value are added.
+     */
+    @Test
+    public void testThatEmptyValuesAreMaintained() {
+        assertThat(commonOptions.commonClientConfig().get("empty").getValue()).isEqualTo("");
+        assertThat(producerOptions.producerConfig().get("empty").getValue()).isEqualTo("");
+        assertThat(consumerOptions.consumerConfig().get("empty").getValue()).isEqualTo("");
+        assertThat(adminClientOptions.adminClientConfig().get("empty").getValue()).isEqualTo("");
+    }
+
 }

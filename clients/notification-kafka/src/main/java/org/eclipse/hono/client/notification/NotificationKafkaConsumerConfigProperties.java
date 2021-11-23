@@ -14,7 +14,9 @@
 package org.eclipse.hono.client.notification;
 
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.eclipse.hono.client.kafka.CommonKafkaClientOptions;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
+import org.eclipse.hono.client.kafka.consumer.KafkaConsumerOptions;
 
 import io.vertx.kafka.client.serialization.JsonObjectDeserializer;
 
@@ -32,4 +34,14 @@ public class NotificationKafkaConsumerConfigProperties extends KafkaConsumerConf
         super(StringDeserializer.class, JsonObjectDeserializer.class);
     }
 
+    /**
+     * Creates properties using existing options.
+     *
+     * @param commonOptions The common Kafka client options to use.
+     * @param options The producer options to use.
+     */
+    public NotificationKafkaConsumerConfigProperties(final CommonKafkaClientOptions commonOptions,
+            final KafkaConsumerOptions options) {
+        super(StringDeserializer.class, JsonObjectDeserializer.class, commonOptions, options);
+    }
 }

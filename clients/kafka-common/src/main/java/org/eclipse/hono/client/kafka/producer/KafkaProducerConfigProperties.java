@@ -19,6 +19,8 @@ import java.util.Optional;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.Serializer;
 import org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties;
+import org.eclipse.hono.client.kafka.CommonKafkaClientOptions;
+import org.eclipse.hono.client.kafka.ConfigOptionsHelper;
 
 /**
  * Configuration properties for Kafka producers.
@@ -44,6 +46,27 @@ public class KafkaProducerConfigProperties extends AbstractKafkaConfigProperties
 
         this.keySerializerClass = keySerializerClass;
         this.valueSerializerClass = valueSerializerClass;
+    }
+
+    /**
+     * Creates an instance using existing options.
+     *
+     * @param keySerializerClass The class to be used for serializing the record keys, if {@code null} the serializer
+     *            needs to be provided in the configuration at runtime.
+     * @param valueSerializerClass The class to be used for serializing the record values, if {@code null} the
+     *            serializer needs to be provided in the configuration at runtime.
+     * @param commonOptions The common Kafka client options to use.
+     * @param options The producer options to use.
+     */
+    protected KafkaProducerConfigProperties(final Class<? extends Serializer<?>> keySerializerClass,
+            final Class<? extends Serializer<?>> valueSerializerClass,
+            final CommonKafkaClientOptions commonOptions,
+            final KafkaProducerOptions options) {
+        this.keySerializerClass = keySerializerClass;
+        this.valueSerializerClass = valueSerializerClass;
+
+        setCommonClientConfig(ConfigOptionsHelper.toStringValueMap(commonOptions.commonClientConfig()));
+        setSpecificClientConfig(ConfigOptionsHelper.toStringValueMap(options.producerConfig()));
     }
 
     /**

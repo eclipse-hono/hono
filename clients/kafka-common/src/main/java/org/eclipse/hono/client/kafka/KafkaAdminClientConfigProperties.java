@@ -29,6 +29,25 @@ import java.util.Map;
 public class KafkaAdminClientConfigProperties extends AbstractKafkaConfigProperties {
 
     /**
+     * Creates an instance.
+     */
+    public KafkaAdminClientConfigProperties() {
+    }
+
+    /**
+     * Creates an instance using existing options.
+     *
+     * @param commonOptions The common Kafka client options to use.
+     * @param options The producer options to use.
+     */
+    public KafkaAdminClientConfigProperties(final CommonKafkaClientOptions commonOptions,
+            final KafkaAdminClientOptions options) {
+
+        setCommonClientConfig(ConfigOptionsHelper.toStringValueMap(commonOptions.commonClientConfig()));
+        setSpecificClientConfig(ConfigOptionsHelper.toStringValueMap(options.adminClientConfig()));
+    }
+
+    /**
      * Sets the Kafka admin client config properties to be used.
      *
      * @param adminConfig The config properties.

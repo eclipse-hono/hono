@@ -14,6 +14,7 @@
 package org.eclipse.hono.client.kafka.consumer;
 
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.eclipse.hono.client.kafka.CommonKafkaClientOptions;
 
 import io.vertx.kafka.client.serialization.BufferDeserializer;
 
@@ -34,6 +35,17 @@ public class MessagingKafkaConsumerConfigProperties extends KafkaConsumerConfigP
      */
     public MessagingKafkaConsumerConfigProperties() {
         super(StringDeserializer.class, BufferDeserializer.class);
+    }
+
+    /**
+     * Creates properties using existing options.
+     *
+     * @param commonOptions The common Kafka client options to use.
+     * @param options The producer options to use.
+     */
+    public MessagingKafkaConsumerConfigProperties(final CommonKafkaClientOptions commonOptions,
+            final KafkaConsumerOptions options) {
+        super(StringDeserializer.class, BufferDeserializer.class, commonOptions, options);
     }
 
 }

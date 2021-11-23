@@ -17,6 +17,7 @@ import java.util.Map;
 
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
+import org.eclipse.hono.client.kafka.CommonKafkaClientOptions;
 
 import io.vertx.kafka.client.serialization.BufferSerializer;
 
@@ -40,6 +41,17 @@ public class MessagingKafkaProducerConfigProperties extends KafkaProducerConfigP
      */
     public MessagingKafkaProducerConfigProperties() {
         super(StringSerializer.class, BufferSerializer.class);
+    }
+
+    /**
+     * Creates properties using existing options.
+     *
+     * @param commonOptions The common Kafka client options to use.
+     * @param options The producer options to use.
+     */
+    public MessagingKafkaProducerConfigProperties(final CommonKafkaClientOptions commonOptions,
+            final KafkaProducerOptions options) {
+        super(StringSerializer.class, BufferSerializer.class, commonOptions, options);
     }
 
     /**
