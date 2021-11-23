@@ -37,7 +37,6 @@ public class MessagingKafkaConsumerConfigPropertiesTest {
         final Map<String, String> properties = new HashMap<>();
         properties.put("key.deserializer", "foo");
         properties.put("value.deserializer", "bar");
-        properties.put("enable.idempotence", "baz");
 
         final MessagingKafkaConsumerConfigProperties config = new MessagingKafkaConsumerConfigProperties();
         config.setConsumerConfig(properties);

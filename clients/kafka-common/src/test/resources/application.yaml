@@ -4,16 +4,26 @@ hono:
       common.property: "present"
       number: 123
       empty: ""
-      bootstrap.servers: "example.com:9999"
+      sasl.client.callback.handler.class: Something.class
       admin.property: "common"
       consumer.property: "common"
       producer.property: "common"
-    adminClientConfig:
-      admin.property: "admin"
-    consumerConfig:
-      consumer.property: "consumer"
-    producerConfig:
-      producer.property: "producer"
+    adminClientTest:
+      adminClientConfig:
+        admin.property: "admin"
+        number: 123
+        empty: ""
+    consumerTest:
+      pollTimeout: 999
+      consumerConfig:
+        consumer.property: "consumer"
+        number: 123
+        empty: ""
+    producerTest:
+      producerConfig:
+        producer.property: "producer"
+        number: 123
+        empty: ""
     metrics:
       enabled: false
       metricsPrefixes:

@@ -19,6 +19,8 @@ import java.util.Optional;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties;
+import org.eclipse.hono.client.kafka.CommonKafkaClientOptions;
+import org.eclipse.hono.client.kafka.ConfigOptionsHelper;
 
 /**
  * Configuration properties for Kafka consumers.
@@ -51,6 +53,28 @@ public class KafkaConsumerConfigProperties extends AbstractKafkaConfigProperties
 
         this.keyDeserializerClass = keyDeserializerClass;
         this.valueDeserializerClass = valueDeserializerClass;
+    }
+
+    /**
+     * Creates an instance using existing options.
+     *
+     * @param keyDeserializerClass The class to be used for deserializing the record keys, if {@code null} the
+     *            deserializer needs to be provided in the configuration at runtime.
+     * @param valueDeserializerClass The class to be used for deserializing the record values, if {@code null} the
+     *            deserializer needs to be provided in the configuration at runtime.
+     * @param commonOptions The common Kafka client options to use.
+     * @param options The consumer options to use.
+     */
+    protected KafkaConsumerConfigProperties(final Class<? extends Deserializer<?>> keyDeserializerClass,
+            final Class<? extends Deserializer<?>> valueDeserializerClass,
+            final CommonKafkaClientOptions commonOptions,
+            final KafkaConsumerOptions options) {
+        this.keyDeserializerClass = keyDeserializerClass;
+        this.valueDeserializerClass = valueDeserializerClass;
+
+        setCommonClientConfig(ConfigOptionsHelper.toStringValueMap(commonOptions.commonClientConfig()));
+        setSpecificClientConfig(ConfigOptionsHelper.toStringValueMap(options.consumerConfig()));
+        options.pollTimeout().ifPresent(this::setPollTimeout);
     }
 
     /**
