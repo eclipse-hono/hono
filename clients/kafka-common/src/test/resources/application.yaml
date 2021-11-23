@@ -1,6 +1,5 @@
 hono:
   kafka:
-    defaultClientIdPrefix: "prefix"
     commonClientConfig:
       common.property: "present"
       number: 123

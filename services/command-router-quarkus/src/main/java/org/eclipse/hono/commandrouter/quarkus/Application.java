@@ -184,20 +184,17 @@ public class Application extends AbstractServiceApplication {
         this.kafkaProducerConfig = new MessagingKafkaProducerConfigProperties();
         this.kafkaProducerConfig.setCommonClientConfig(options.commonClientConfig());
         this.kafkaProducerConfig.setProducerConfig(options.producerConfig());
-        this.kafkaProducerConfig.setDefaultClientIdPrefix(
-                options.defaultClientIdPrefix().orElse(DEFAULT_CLIENT_ID_PREFIX));
+        this.kafkaProducerConfig.setDefaultClientIdPrefix(DEFAULT_CLIENT_ID_PREFIX);
 
         this.kafkaConsumerConfig = new MessagingKafkaConsumerConfigProperties();
         this.kafkaConsumerConfig.setCommonClientConfig(options.commonClientConfig());
         this.kafkaConsumerConfig.setConsumerConfig(options.consumerConfig());
-        this.kafkaConsumerConfig.setDefaultClientIdPrefix(
-                options.defaultClientIdPrefix().orElse(DEFAULT_CLIENT_ID_PREFIX));
+        this.kafkaConsumerConfig.setDefaultClientIdPrefix(DEFAULT_CLIENT_ID_PREFIX);
 
         this.kafkaAdminClientConfig = new KafkaAdminClientConfigProperties();
         this.kafkaAdminClientConfig.setCommonClientConfig(options.commonClientConfig());
         this.kafkaAdminClientConfig.setAdminClientConfig(options.adminClientConfig());
-        this.kafkaAdminClientConfig.setDefaultClientIdPrefix(
-                options.defaultClientIdPrefix().orElse(DEFAULT_CLIENT_ID_PREFIX));
+        this.kafkaAdminClientConfig.setDefaultClientIdPrefix(DEFAULT_CLIENT_ID_PREFIX);
     }
 
     @Override

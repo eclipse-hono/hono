@@ -117,7 +117,7 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <properties>
-            <!-- 
+            <!--
               do not run unit test classes in parallel as this seems to have
               a negative effect on startup of Quarkus in tests annotated with
               @QuarkusTest

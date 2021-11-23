@@ -14,7 +14,6 @@
 package org.eclipse.hono.client.kafka;
 
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -31,19 +30,6 @@ public class KafkaClientOptions {
 
     @Inject
     RawKafkaClientOptions rawKafkaClientOptions;
-
-    /**
-     * Gets the prefix for the client ID that is passed to the Kafka server to allow application
-     * specific server-side request logging.
-     * <p>
-     * If the common or specific client config already contains a value for key {@code client.id}, that one
-     * will be used and the parameter here will be ignored.
-     *
-     * @return The client ID prefix to use.
-     */
-    public Optional<String> defaultClientIdPrefix() {
-        return rawKafkaClientOptions.defaultClientIdPrefix();
-    }
 
     /**
      * The properties shared by all types of clients.
@@ -96,17 +82,6 @@ public class KafkaClientOptions {
      */
     @ConfigMapping(prefix = "hono.kafka", namingStrategy = ConfigMapping.NamingStrategy.VERBATIM)
     interface RawKafkaClientOptions {
-
-        /**
-         * Gets the prefix for the client ID that is passed to the Kafka server to allow application
-         * specific server-side request logging.
-         * <p>
-         * If the common or specific client config already contains a value for key {@code client.id}, that one
-         * will be used and the parameter here will be ignored.
-         *
-         * @return The client ID prefix to use.
-         */
-        Optional<String> defaultClientIdPrefix();
 
         /**
          * The properties shared by all types of clients.
