@@ -42,6 +42,7 @@ import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.tests.CommandEndpointConfiguration.SubscriberRole;
 import org.eclipse.hono.tests.CrudHttpClient;
+import org.eclipse.hono.tests.DownstreamMessageAssertions;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Adapter;
@@ -556,7 +557,7 @@ import io.vertx.junit5.VertxTestContext;
         createConsumer(tenantId, msg -> {
             logger.trace("received {}", msg);
             ctx.verify(() -> {
-                IntegrationTestSupport.assertTelemetryMessageProperties(msg, tenantId);
+                DownstreamMessageAssertions.assertTelemetryMessageProperties(msg, tenantId);
                 assertThat(msg.getQos()).isEqualTo(getExpectedQoS(expectedQos));
                 assertAdditionalMessageProperties(msg);
             });

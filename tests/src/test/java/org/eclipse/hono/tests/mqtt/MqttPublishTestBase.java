@@ -37,6 +37,7 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.tests.DownstreamMessageAssertions;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.EventConstants;
@@ -564,7 +565,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
             }
             LOGGER.trace("received {}", msg);
             ctx.verify(() -> {
-                IntegrationTestSupport.assertTelemetryMessageProperties(msg, tenantId);
+                DownstreamMessageAssertions.assertTelemetryMessageProperties(msg, tenantId);
                 assertThat(msg.getQos().ordinal()).isEqualTo(getQos().ordinal());
                 assertAdditionalMessageProperties(msg);
             });

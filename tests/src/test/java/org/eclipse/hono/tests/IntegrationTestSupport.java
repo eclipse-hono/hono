@@ -1478,27 +1478,6 @@ public final class IntegrationTestSupport {
     }
 
     /**
-     * Verifies that a telemetry message that has been received by a downstream consumer contains
-     * all properties that are required by the north bound Telemetry API.
-     *
-     * @param msg The message to check.
-     * @param expectedTenantId The identifier of the tenant that the origin device is expected to belong to.
-     * @throws AssertionError if any of the checks fail.
-     */
-    public static void assertTelemetryMessageProperties(
-            final DownstreamMessage<? extends MessageContext> msg,
-            final String expectedTenantId) {
-
-        assertWithMessage("message tenant ID").that(msg.getTenantId()).isEqualTo(expectedTenantId);
-        assertWithMessage("message tenant ID").that(msg.getDeviceId()).isNotNull();
-        final var ttdValue = msg.getTimeTillDisconnect();
-        if (ttdValue != null) {
-            assertWithMessage("ttd property value").that(ttdValue).isAtLeast(-1);
-            assertWithMessage("message creation time").that(msg.getCreationTime()).isNotNull();
-        }
-    }
-
-    /**
      * Verifies that a device status' auto provisioning properties have certain values.
      *
      * @param deviceStatus The device status object.

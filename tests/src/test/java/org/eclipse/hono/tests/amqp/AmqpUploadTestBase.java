@@ -38,6 +38,7 @@ import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.tests.DownstreamMessageAssertions;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Adapter;
@@ -394,7 +395,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                             msg.getContentType(), msg.getPayload().toString());
                 }
                 messageSending.verify(() -> {
-                    IntegrationTestSupport.assertTelemetryMessageProperties(msg, tenantId);
+                    DownstreamMessageAssertions.assertTelemetryMessageProperties(msg, tenantId);
                     assertThat(msg.getQos()).isEqualTo(AmqpUploadTestBase.getQoS(senderQoS));
                     assertAdditionalMessageProperties(msg);
                     callback.handle(null);

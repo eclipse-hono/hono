@@ -25,7 +25,7 @@ import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.service.management.tenant.Tenant;
-import org.eclipse.hono.tests.AmqpMessageContextConditionalVerifier;
+import org.eclipse.hono.tests.DownstreamMessageAssertions;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -100,7 +100,7 @@ public class EventMqttIT extends MqttPublishTestBase {
 
     @Override
     protected void assertAdditionalMessageProperties(final DownstreamMessage<? extends MessageContext> msg) {
-        AmqpMessageContextConditionalVerifier.assertMessageIsDurable(msg);
+        DownstreamMessageAssertions.assertMessageIsDurable(msg);
         assertThat(msg.getCreationTime()).isNotNull();
     }
 

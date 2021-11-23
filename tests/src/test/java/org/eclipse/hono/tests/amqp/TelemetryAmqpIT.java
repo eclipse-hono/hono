@@ -12,13 +12,12 @@
  *******************************************************************************/
 package org.eclipse.hono.tests.amqp;
 
-import static com.google.common.truth.Truth.assertThat;
-
 import java.util.stream.Stream;
 
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
+import org.eclipse.hono.tests.DownstreamMessageAssertions;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
@@ -52,6 +51,6 @@ public class TelemetryAmqpIT extends AmqpUploadTestBase {
 
     @Override
     protected void assertAdditionalMessageProperties(final DownstreamMessage<? extends MessageContext> msg) {
-        assertThat(msg.getCreationTime()).isNotNull();
+        DownstreamMessageAssertions.assertMessageContainsCreationTime(msg);
     }
 }

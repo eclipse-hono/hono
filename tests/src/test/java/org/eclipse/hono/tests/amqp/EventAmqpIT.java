@@ -23,7 +23,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
-import org.eclipse.hono.tests.AmqpMessageContextConditionalVerifier;
+import org.eclipse.hono.tests.DownstreamMessageAssertions;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.AmqpErrorException;
 import org.eclipse.hono.util.MessageHelper;
@@ -65,8 +65,8 @@ public class EventAmqpIT extends AmqpUploadTestBase {
 
     @Override
     protected void assertAdditionalMessageProperties(final DownstreamMessage<? extends MessageContext> msg) {
-        AmqpMessageContextConditionalVerifier.assertMessageIsDurable(msg);
-        assertThat(msg.getCreationTime()).isNotNull();
+        DownstreamMessageAssertions.assertMessageIsDurable(msg);
+        DownstreamMessageAssertions.assertMessageContainsCreationTime(msg);
     }
 
     /**

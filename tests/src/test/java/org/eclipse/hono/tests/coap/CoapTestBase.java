@@ -66,6 +66,7 @@ import org.eclipse.hono.config.KeyLoader;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.CommandEndpointConfiguration.SubscriberRole;
+import org.eclipse.hono.tests.DownstreamMessageAssertions;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Adapter;
@@ -613,7 +614,7 @@ public abstract class CoapTestBase {
         createConsumer(tenantId, msg -> {
             ctx.verify(() -> {
                 logger.trace("received {}", msg);
-                IntegrationTestSupport.assertTelemetryMessageProperties(msg, tenantId);
+                DownstreamMessageAssertions.assertTelemetryMessageProperties(msg, tenantId);
                 assertThat(msg.getQos()).isEqualTo(getExpectedQoS(expectedQos));
                 assertAdditionalMessageProperties(msg);
                 if (messageConsumer != null) {
