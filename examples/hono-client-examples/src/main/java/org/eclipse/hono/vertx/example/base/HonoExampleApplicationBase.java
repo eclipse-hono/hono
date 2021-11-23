@@ -29,6 +29,7 @@ import org.eclipse.hono.application.client.amqp.ProtonBasedApplicationClient;
 import org.eclipse.hono.application.client.kafka.impl.KafkaApplicationClientImpl;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.kafka.CommonKafkaClientConfigProperties;
 import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
@@ -136,13 +137,15 @@ public class HonoExampleApplicationBase {
         // properties.put("ssl.truststore.location", "/path/to/file");
         // properties.put("ssl.truststore.password", "secret");
 
+        final CommonKafkaClientConfigProperties commonClientConfig = new CommonKafkaClientConfigProperties();
+        commonClientConfig.setCommonClientConfig(properties);
         final MessagingKafkaConsumerConfigProperties consumerConfig = new MessagingKafkaConsumerConfigProperties();
-        consumerConfig.setCommonClientConfig(properties);
+        consumerConfig.setCommonClientConfig(commonClientConfig);
         consumerConfig.setDefaultClientIdPrefix(clientIdPrefix);
         consumerConfig.setConsumerConfig(Map.of("group.id", consumerGroupId));
 
         final MessagingKafkaProducerConfigProperties producerConfig = new MessagingKafkaProducerConfigProperties();
-        producerConfig.setCommonClientConfig(properties);
+        producerConfig.setCommonClientConfig(commonClientConfig);
         producerConfig.setDefaultClientIdPrefix(clientIdPrefix);
 
         final KafkaProducerFactory<String, Buffer> producerFactory = CachingKafkaProducerFactory.sharedFactory(vertx);

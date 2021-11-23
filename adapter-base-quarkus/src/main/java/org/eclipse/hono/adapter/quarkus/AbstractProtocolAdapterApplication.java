@@ -50,6 +50,8 @@ import org.eclipse.hono.client.command.amqp.ProtonBasedDelegatingCommandConsumer
 import org.eclipse.hono.client.command.amqp.ProtonBasedInternalCommandConsumer;
 import org.eclipse.hono.client.command.kafka.KafkaBasedCommandResponseSender;
 import org.eclipse.hono.client.command.kafka.KafkaBasedInternalCommandConsumer;
+import org.eclipse.hono.client.kafka.CommonKafkaClientConfigProperties;
+import org.eclipse.hono.client.kafka.CommonKafkaClientOptions;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaClientOptions;
 import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
@@ -221,20 +223,25 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     }
 
     @Inject
-    void setKafkaClientOptions(final KafkaClientOptions options) {
+    void setKafkaClientOptions(
+            @ConfigMapping(prefix = "hono.kafka") final CommonKafkaClientOptions commonOptions,
+            final KafkaClientOptions options) {
+
+        final CommonKafkaClientConfigProperties commonConfig = new CommonKafkaClientConfigProperties(commonOptions);
+
         this.kafkaProducerConfig = new MessagingKafkaProducerConfigProperties();
         Optional.ofNullable(getComponentName()).ifPresent(this.kafkaProducerConfig::setDefaultClientIdPrefix);
-        this.kafkaProducerConfig.setCommonClientConfig(options.commonClientConfig());
+        this.kafkaProducerConfig.setCommonClientConfig(commonConfig);
         this.kafkaProducerConfig.setProducerConfig(options.producerConfig());
 
         this.kafkaConsumerConfig = new MessagingKafkaConsumerConfigProperties();
         Optional.ofNullable(getComponentName()).ifPresent(this.kafkaConsumerConfig::setDefaultClientIdPrefix);
-        this.kafkaConsumerConfig.setCommonClientConfig(options.commonClientConfig());
+        this.kafkaConsumerConfig.setCommonClientConfig(commonConfig);
         this.kafkaConsumerConfig.setConsumerConfig(options.consumerConfig());
 
         this.kafkaAdminClientConfig = new KafkaAdminClientConfigProperties();
         Optional.ofNullable(getComponentName()).ifPresent(this.kafkaAdminClientConfig::setDefaultClientIdPrefix);
-        this.kafkaAdminClientConfig.setCommonClientConfig(options.commonClientConfig());
+        this.kafkaAdminClientConfig.setCommonClientConfig(commonConfig);
         this.kafkaAdminClientConfig.setAdminClientConfig(options.adminClientConfig());
     }
 

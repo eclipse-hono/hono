@@ -43,7 +43,8 @@ public class KafkaAdminClientConfigProperties extends AbstractKafkaConfigPropert
     public KafkaAdminClientConfigProperties(final CommonKafkaClientOptions commonOptions,
             final KafkaAdminClientOptions options) {
 
-        setCommonClientConfig(ConfigOptionsHelper.toStringValueMap(commonOptions.commonClientConfig()));
+        final CommonKafkaClientConfigProperties commonConfig = new CommonKafkaClientConfigProperties(commonOptions);
+        setCommonClientConfig(commonConfig);
         setSpecificClientConfig(ConfigOptionsHelper.toStringValueMap(options.adminClientConfig()));
     }
 

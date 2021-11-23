@@ -20,6 +20,7 @@ import java.util.Map;
 
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties;
+import org.eclipse.hono.client.kafka.CommonKafkaClientConfigProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -65,13 +66,15 @@ public class KafkaProducerConfigPropertiesTest {
 
     /**
      * Verifies that properties provided with {@link KafkaProducerConfigProperties#setProducerConfig(Map)} and
-     * {@link AbstractKafkaConfigProperties#setCommonClientConfig(Map)} are returned in
+     * {@link AbstractKafkaConfigProperties#setCommonClientConfig(CommonKafkaClientConfigProperties)} are returned in
      * {@link KafkaProducerConfigProperties#getProducerConfig(String)}, with the producer config properties having
      * precedence.
      */
     @Test
     public void testThatGetProducerConfigReturnsGivenPropertiesWithCommonProperties() {
-        config.setCommonClientConfig(Map.of("foo", "toBeOverridden", "common", "commonValue"));
+        final CommonKafkaClientConfigProperties commonConfig = new CommonKafkaClientConfigProperties();
+        commonConfig.setCommonClientConfig(Map.of("foo", "toBeOverridden", "common", "commonValue"));
+        config.setCommonClientConfig(commonConfig);
         config.setProducerConfig(Map.of("foo", "bar"));
 
         final Map<String, String> producerConfig = config.getProducerConfig("producerName");
