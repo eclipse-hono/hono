@@ -56,14 +56,17 @@ public class KafkaAdminClientConfigPropertiesTest {
 
     /**
      * Verifies that properties provided with {@link KafkaAdminClientConfigProperties#setAdminClientConfig(Map)} and
-     * {@link AbstractKafkaConfigProperties#setCommonClientConfig(Map)} are returned
-     * in {@link KafkaAdminClientConfigProperties#getAdminClientConfig(String)}, with the admin client config properties having
-     * precedence.
+     * {@link AbstractKafkaConfigProperties#setCommonClientConfig(CommonKafkaClientConfigProperties)} are returned in
+     * {@link KafkaAdminClientConfigProperties#getAdminClientConfig(String)}, with the admin client config properties
+     * having precedence.
      */
     @Test
     public void testThatGetAdminClientConfigReturnsGivenPropertiesWithCommonProperties() {
+        final CommonKafkaClientConfigProperties commonConfig = new CommonKafkaClientConfigProperties();
+        commonConfig.setCommonClientConfig(Map.of("foo", "toBeOverridden", "common", "commonValue"));
+
         final KafkaAdminClientConfigProperties config = new KafkaAdminClientConfigProperties();
-        config.setCommonClientConfig(Map.of("foo", "toBeOverridden", "common", "commonValue"));
+        config.setCommonClientConfig(commonConfig);
         config.setAdminClientConfig(Map.of("foo", "bar"));
 
         final Map<String, String> adminClientConfig = config.getAdminClientConfig("adminClientName");

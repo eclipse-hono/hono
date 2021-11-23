@@ -27,6 +27,7 @@ import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
 import org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties;
+import org.eclipse.hono.client.kafka.CommonKafkaClientConfigProperties;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.HonoTopic.Type;
 import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
@@ -83,11 +84,14 @@ public class KafkaApplicationClientImplTest {
 
         mockConsumer = new KafkaMockConsumer(OffsetResetStrategy.EARLIEST);
 
+        final CommonKafkaClientConfigProperties commonConfig = new CommonKafkaClientConfigProperties();
+        commonConfig.setCommonClientConfig(Map.of(AbstractKafkaConfigProperties.PROPERTY_BOOTSTRAP_SERVERS, "kafka"));
+
         final MessagingKafkaConsumerConfigProperties consumerConfig = new MessagingKafkaConsumerConfigProperties();
-        consumerConfig.setCommonClientConfig(Map.of(AbstractKafkaConfigProperties.PROPERTY_BOOTSTRAP_SERVERS, "kafka"));
+        consumerConfig.setCommonClientConfig(commonConfig);
         consumerConfig.setConsumerConfig(Map.of("client.id", "application-test-consumer"));
         final MessagingKafkaProducerConfigProperties producerConfig = new MessagingKafkaProducerConfigProperties();
-        producerConfig.setCommonClientConfig(Map.of(AbstractKafkaConfigProperties.PROPERTY_BOOTSTRAP_SERVERS, "kafka"));
+        producerConfig.setCommonClientConfig(commonConfig);
         producerConfig.setProducerConfig(Map.of("client.id", "application-test-sender"));
 
         client = new KafkaApplicationClientImpl(vertx, consumerConfig, producerFactory, producerConfig);

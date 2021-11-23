@@ -97,9 +97,8 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
 
         mockConsumer = new KafkaMockConsumer(OffsetResetStrategy.LATEST);
 
-        final Map<String, String> commonProperties = Map.of(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "servers");
         consumerConfigProperties = new MessagingKafkaConsumerConfigProperties();
-        consumerConfigProperties.setCommonClientConfig(commonProperties);
+        consumerConfigProperties.setConsumerConfig(Map.of(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "servers"));
     }
 
     /**

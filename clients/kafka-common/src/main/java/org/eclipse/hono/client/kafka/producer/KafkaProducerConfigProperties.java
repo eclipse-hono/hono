@@ -19,6 +19,7 @@ import java.util.Optional;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.Serializer;
 import org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties;
+import org.eclipse.hono.client.kafka.CommonKafkaClientConfigProperties;
 import org.eclipse.hono.client.kafka.CommonKafkaClientOptions;
 import org.eclipse.hono.client.kafka.ConfigOptionsHelper;
 
@@ -65,7 +66,8 @@ public class KafkaProducerConfigProperties extends AbstractKafkaConfigProperties
         this.keySerializerClass = keySerializerClass;
         this.valueSerializerClass = valueSerializerClass;
 
-        setCommonClientConfig(ConfigOptionsHelper.toStringValueMap(commonOptions.commonClientConfig()));
+        final CommonKafkaClientConfigProperties commonConfig = new CommonKafkaClientConfigProperties(commonOptions);
+        setCommonClientConfig(commonConfig);
         setSpecificClientConfig(ConfigOptionsHelper.toStringValueMap(options.producerConfig()));
     }
 

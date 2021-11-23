@@ -21,6 +21,8 @@ import javax.inject.Inject;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.kafka.CommonKafkaClientConfigProperties;
+import org.eclipse.hono.client.kafka.CommonKafkaClientOptions;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaClientOptions;
 import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
@@ -178,21 +180,25 @@ public class Application extends AbstractServiceApplication {
                         options.metricsPrefixes().orElse(List.of()))
                 : NoopKafkaClientMetricsSupport.INSTANCE;
     }
-
     @Inject
-    void setKafkaClientOptions(final KafkaClientOptions options) {
+    void setKafkaClientOptions(
+            @ConfigMapping(prefix = "hono.kafka") final CommonKafkaClientOptions commonOptions,
+            final KafkaClientOptions options) {
+
+        final CommonKafkaClientConfigProperties commonConfig = new CommonKafkaClientConfigProperties(commonOptions);
+
         this.kafkaProducerConfig = new MessagingKafkaProducerConfigProperties();
-        this.kafkaProducerConfig.setCommonClientConfig(options.commonClientConfig());
+        this.kafkaProducerConfig.setCommonClientConfig(commonConfig);
         this.kafkaProducerConfig.setProducerConfig(options.producerConfig());
         this.kafkaProducerConfig.setDefaultClientIdPrefix(DEFAULT_CLIENT_ID_PREFIX);
 
         this.kafkaConsumerConfig = new MessagingKafkaConsumerConfigProperties();
-        this.kafkaConsumerConfig.setCommonClientConfig(options.commonClientConfig());
+        this.kafkaConsumerConfig.setCommonClientConfig(commonConfig);
         this.kafkaConsumerConfig.setConsumerConfig(options.consumerConfig());
         this.kafkaConsumerConfig.setDefaultClientIdPrefix(DEFAULT_CLIENT_ID_PREFIX);
 
         this.kafkaAdminClientConfig = new KafkaAdminClientConfigProperties();
-        this.kafkaAdminClientConfig.setCommonClientConfig(options.commonClientConfig());
+        this.kafkaAdminClientConfig.setCommonClientConfig(commonConfig);
         this.kafkaAdminClientConfig.setAdminClientConfig(options.adminClientConfig());
         this.kafkaAdminClientConfig.setDefaultClientIdPrefix(DEFAULT_CLIENT_ID_PREFIX);
     }

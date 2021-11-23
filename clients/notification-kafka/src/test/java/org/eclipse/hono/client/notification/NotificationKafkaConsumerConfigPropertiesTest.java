@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties;
+import org.eclipse.hono.client.kafka.CommonKafkaClientConfigProperties;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -66,14 +67,17 @@ public class NotificationKafkaConsumerConfigPropertiesTest {
 
     /**
      * Verifies that properties provided with {@link NotificationKafkaConsumerConfigProperties#setConsumerConfig(Map)}
-     * and {@link AbstractKafkaConfigProperties#setCommonClientConfig(Map)} are returned in
-     * {@link NotificationKafkaConsumerConfigProperties#getConsumerConfig(String)}, with the consumer config properties
-     * having precedence.
+     * and {@link AbstractKafkaConfigProperties#setCommonClientConfig(CommonKafkaClientConfigProperties)} are returned
+     * in {@link NotificationKafkaConsumerConfigProperties#getConsumerConfig(String)}, with the consumer config
+     * properties having precedence.
      */
     @Test
     public void testThatGetConsumerConfigReturnsGivenPropertiesWithCommonProperties() {
+        final CommonKafkaClientConfigProperties commonConfig = new CommonKafkaClientConfigProperties();
+        commonConfig.setCommonClientConfig(Map.of("foo", "toBeOverridden", "common", "commonValue"));
+
         final NotificationKafkaConsumerConfigProperties config = new NotificationKafkaConsumerConfigProperties();
-        config.setCommonClientConfig(Map.of("foo", "toBeOverridden", "common", "commonValue"));
+        config.setCommonClientConfig(commonConfig);
         config.setConsumerConfig(Map.of("foo", "bar"));
 
         final Map<String, String> consumerConfig = config.getConsumerConfig("consumerName");

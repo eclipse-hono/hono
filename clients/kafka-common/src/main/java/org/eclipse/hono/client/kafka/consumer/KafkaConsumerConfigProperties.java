@@ -19,6 +19,7 @@ import java.util.Optional;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties;
+import org.eclipse.hono.client.kafka.CommonKafkaClientConfigProperties;
 import org.eclipse.hono.client.kafka.CommonKafkaClientOptions;
 import org.eclipse.hono.client.kafka.ConfigOptionsHelper;
 
@@ -72,7 +73,8 @@ public class KafkaConsumerConfigProperties extends AbstractKafkaConfigProperties
         this.keyDeserializerClass = keyDeserializerClass;
         this.valueDeserializerClass = valueDeserializerClass;
 
-        setCommonClientConfig(ConfigOptionsHelper.toStringValueMap(commonOptions.commonClientConfig()));
+        final CommonKafkaClientConfigProperties commonConfig = new CommonKafkaClientConfigProperties(commonOptions);
+        setCommonClientConfig(commonConfig);
         setSpecificClientConfig(ConfigOptionsHelper.toStringValueMap(options.consumerConfig()));
         options.pollTimeout().ifPresent(this::setPollTimeout);
     }

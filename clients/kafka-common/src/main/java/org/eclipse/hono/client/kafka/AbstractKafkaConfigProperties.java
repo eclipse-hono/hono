@@ -51,8 +51,9 @@ public abstract class AbstractKafkaConfigProperties {
      * @param commonConfig The config.
      * @throws NullPointerException if the config is {@code null}.
      */
-    public final void setCommonClientConfig(final Map<String, String> commonConfig) {
-        this.commonClientConfig = Objects.requireNonNull(commonConfig);
+    public final void setCommonClientConfig(final CommonKafkaClientConfigProperties commonConfig) {
+        Objects.requireNonNull(commonConfig);
+        this.commonClientConfig = commonConfig.getCommonClientConfig();
     }
 
     /**
