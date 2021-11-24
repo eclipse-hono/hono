@@ -21,7 +21,6 @@ import java.util.UUID;
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.header.Headers;
-import org.apache.kafka.common.header.internals.RecordHeader;
 import org.eclipse.hono.client.command.CommandResponse;
 import org.eclipse.hono.client.command.Commands;
 import org.eclipse.hono.client.kafka.HonoTopic;
@@ -103,25 +102,26 @@ public class KafkaBasedCommandResponseSenderTest {
 
                         //Verify if the record contains the necessary headers.
                         final Headers headers = record.headers();
-                        assertThat(headers.headers(MessageHelper.APP_PROPERTY_TENANT_ID)).hasSize(1);
-                        assertThat(headers).contains(
-                                new RecordHeader(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId.getBytes()));
-
-                        assertThat(headers.headers(MessageHelper.APP_PROPERTY_DEVICE_ID)).hasSize(1);
-                        assertThat(headers).contains(
-                                new RecordHeader(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId.getBytes()));
-
-                        assertThat(headers.headers(MessageHelper.SYS_PROPERTY_CORRELATION_ID)).hasSize(1);
-                        assertThat(headers).contains(
-                                new RecordHeader(MessageHelper.SYS_PROPERTY_CORRELATION_ID, correlationId.getBytes()));
-
-                        assertThat(headers.headers(MessageHelper.APP_PROPERTY_STATUS)).hasSize(1);
-                        assertThat(headers).contains(
-                                new RecordHeader(MessageHelper.APP_PROPERTY_STATUS, Json.encode(status).getBytes()));
-
-                        assertThat(headers.headers(MessageHelper.SYS_PROPERTY_CONTENT_TYPE)).hasSize(1);
-                        assertThat(headers).contains(
-                                new RecordHeader(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, contentType.getBytes()));
+                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                                headers,
+                                MessageHelper.APP_PROPERTY_TENANT_ID,
+                                tenantId);
+                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                                headers,
+                                MessageHelper.APP_PROPERTY_DEVICE_ID,
+                                deviceId);
+                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                                headers,
+                                MessageHelper.SYS_PROPERTY_CORRELATION_ID,
+                                correlationId);
+                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                                headers,
+                                MessageHelper.APP_PROPERTY_STATUS,
+                                status);
+                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                                headers,
+                                MessageHelper.SYS_PROPERTY_CONTENT_TYPE,
+                                contentType);
 
                         final var creationTimeHeader = headers.headers(MessageHelper.SYS_PROPERTY_CREATION_TIME);
                         assertThat(creationTimeHeader).hasSize(1);
@@ -130,12 +130,14 @@ public class KafkaBasedCommandResponseSenderTest {
                                 Long.class);
                         assertThat(creationTimeMillis).isGreaterThan(0L);
 
-                        assertThat(headers.headers(additionalHeader1Name)).hasSize(1);
-                        assertThat(headers).contains(
-                                new RecordHeader(additionalHeader1Name, additionalHeader1Value.getBytes()));
-                        assertThat(headers.headers(additionalHeader2Name)).hasSize(1);
-                        assertThat(headers).contains(
-                                new RecordHeader(additionalHeader2Name, additionalHeader2Value.getBytes()));
+                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                                headers,
+                                additionalHeader1Name,
+                                additionalHeader1Value);
+                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                                headers,
+                                additionalHeader2Name,
+                                additionalHeader2Value);
                     });
                     ctx.completeNow();
                 }));

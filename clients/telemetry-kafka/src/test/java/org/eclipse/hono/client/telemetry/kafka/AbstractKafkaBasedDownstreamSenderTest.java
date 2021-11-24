@@ -24,7 +24,6 @@ import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.errors.AuthorizationException;
 import org.apache.kafka.common.header.Headers;
-import org.apache.kafka.common.header.internals.RecordHeader;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
@@ -42,7 +41,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -116,7 +114,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
                         assertThat(actual.key()).isEqualTo(DEVICE_ID);
                         assertThat(actual.topic()).isEqualTo(topic.toString());
                         assertThat(actual.value().toString()).isEqualTo(payload);
-                        assertUniqueHeaderWithExpectedValue(actual.headers(), "foo", "bar");
+                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(actual.headers(), "foo", "bar");
 
                         // ...AND contains the standard headers
                         KafkaClientUnitTestHelper.assertStandardHeaders(actual, DEVICE_ID, CONTENT_TYPE, qos.ordinal());
@@ -294,7 +292,9 @@ public class AbstractKafkaBasedDownstreamSenderTest {
                 .send(topic, tenant, device, qos, contentTypeParameter, null, properties, null, null)
                 .onComplete(ctx.succeeding(v -> {
                     ctx.verify(() -> {
-                        assertUniqueHeaderWithExpectedValue(mockProducer.history().get(0).headers(), CONTENT_TYPE_KEY,
+                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                                mockProducer.history().get(0).headers(),
+                                CONTENT_TYPE_KEY,
                                 expectedContentType);
                     });
                     ctx.completeNow();
@@ -323,8 +323,10 @@ public class AbstractKafkaBasedDownstreamSenderTest {
                 .onComplete(ctx.succeeding(t -> {
                     ctx.verify(() -> {
                         // THEN the TTL from the properties is used
-                        assertUniqueHeaderWithExpectedValue(mockProducer.history().get(0).headers(), "ttl",
-                                Json.encode(10_000L));
+                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                                mockProducer.history().get(0).headers(),
+                                "ttl",
+                                10_000L);
                     });
                     ctx.completeNow();
                 }));
@@ -350,8 +352,10 @@ public class AbstractKafkaBasedDownstreamSenderTest {
                 .onComplete(ctx.succeeding(t -> {
                     ctx.verify(() -> {
                         // THEN the TTL from the defaults is used
-                        assertUniqueHeaderWithExpectedValue(mockProducer.history().get(0).headers(), "ttl",
-                                Json.encode(10_000L));
+                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                                mockProducer.history().get(0).headers(),
+                                "ttl",
+                                10_000L);
                     });
                     ctx.completeNow();
                 }));
@@ -376,8 +380,10 @@ public class AbstractKafkaBasedDownstreamSenderTest {
                 .onComplete(ctx.succeeding(t -> {
                     ctx.verify(() -> {
                         // THEN the TTL from the device's defaults is used
-                        assertUniqueHeaderWithExpectedValue(mockProducer.history().get(0).headers(), "ttl",
-                                Json.encode(20_000L));
+                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                                mockProducer.history().get(0).headers(),
+                                "ttl",
+                                20_000L);
                     });
                     ctx.completeNow();
                 }));
@@ -406,8 +412,10 @@ public class AbstractKafkaBasedDownstreamSenderTest {
                 .onComplete(ctx.succeeding(t -> {
                     ctx.verify(() -> {
                         // THEN the TTL is limited to the max TTL
-                        assertUniqueHeaderWithExpectedValue(mockProducer.history().get(0).headers(), "ttl",
-                                Json.encode(10_000L));
+                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                                mockProducer.history().get(0).headers(),
+                                "ttl",
+                                10_000L);
                     });
                     ctx.completeNow();
                 }));
@@ -432,8 +440,10 @@ public class AbstractKafkaBasedDownstreamSenderTest {
                 .onComplete(ctx.succeeding(t -> {
                     ctx.verify(() -> {
                         // THEN the max TTL is used
-                        assertUniqueHeaderWithExpectedValue(mockProducer.history().get(0).headers(), "ttl",
-                                Json.encode(30_000L));
+                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                                mockProducer.history().get(0).headers(),
+                                "ttl",
+                                30_000L);
                     });
                     ctx.completeNow();
                 }));
@@ -461,7 +471,10 @@ public class AbstractKafkaBasedDownstreamSenderTest {
                     ctx.verify(() -> {
                         // THEN the producer record contains a creation time
                         final Headers headers = mockProducer.history().get(0).headers();
-                        assertUniqueHeaderWithExpectedValue(headers, "ttd", Json.encode(ttd));
+                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                                headers,
+                                "ttd",
+                                ttd);
                         assertThat(headers.headers("creation-time")).isNotNull();
                     });
                     ctx.completeNow();
@@ -520,8 +533,10 @@ public class AbstractKafkaBasedDownstreamSenderTest {
                 .onComplete(ctx.succeeding(t -> {
                     ctx.verify(() -> {
                         // THEN the creation time is preserved
-                        assertUniqueHeaderWithExpectedValue(mockProducer.history().get(0).headers(), "creation-time",
-                                Json.encode(creationTime));
+                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                                mockProducer.history().get(0).headers(),
+                                "creation-time",
+                                creationTime);
                     });
                     ctx.completeNow();
                 }));
@@ -575,11 +590,6 @@ public class AbstractKafkaBasedDownstreamSenderTest {
         assertThrows(NullPointerException.class,
                 () -> sender.send(topic, tenant, device, null, CONTENT_TYPE, null, null, null, null));
 
-    }
-
-    private void assertUniqueHeaderWithExpectedValue(final Headers headers, final String key, final String expected) {
-        assertThat(headers.headers(key)).hasSize(1);
-        assertThat(headers).contains(new RecordHeader(key, expected.getBytes()));
     }
 
     private CachingKafkaProducerFactory<String, Buffer> newProducerFactory(

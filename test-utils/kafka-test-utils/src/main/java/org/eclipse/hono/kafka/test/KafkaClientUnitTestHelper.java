@@ -17,8 +17,12 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static com.google.common.truth.Truth.assertThat;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Objects;
+
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.header.internals.RecordHeader;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.eclipse.hono.test.VertxMockSupport;
@@ -80,6 +84,36 @@ public class KafkaClientUnitTestHelper {
     }
 
     /**
+     * Asserts existence of a unique header value.
+     *
+     * @param headers The headers to check.
+     * @param key The name of the header.
+     * @param expectedValue The expected value.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @throws AssertionError if the headers do not contain a single occurrence of the given key with
+     *                        the given value.
+     */
+    public static void assertUniqueHeaderWithExpectedValue(
+            final Headers headers,
+            final String key,
+            final Object expectedValue) {
+
+        Objects.requireNonNull(headers);
+        Objects.requireNonNull(key);
+        Objects.requireNonNull(expectedValue);
+
+        final String encodedValue;
+        if (expectedValue instanceof String) {
+            encodedValue = (String) expectedValue;
+        } else {
+            encodedValue = Json.encode(expectedValue);
+        }
+
+        assertThat(headers.headers(key)).hasSize(1);
+        assertThat(headers).contains(new RecordHeader(key, encodedValue.getBytes(StandardCharsets.UTF_8)));
+    }
+
+    /**
      * Asserts that a given Kafka producer record contains the standard headers only once and with the expected values.
      * The following headers are expected:
      * <ul>
@@ -93,6 +127,7 @@ public class KafkaClientUnitTestHelper {
      * @param deviceId The expected device ID.
      * @param contentType The expected content type.
      * @param qos The expected QoS level.
+     * @throws AssertionError if any of the checks fail.
      */
     public static void assertStandardHeaders(
             final ProducerRecord<String, Buffer> actual,
@@ -100,21 +135,18 @@ public class KafkaClientUnitTestHelper {
             final String contentType,
             final int qos) {
 
-        assertThat(actual.headers().headers("content-type")).hasSize(1);
-        assertThat(actual.headers()).contains(new RecordHeader("content-type", contentType.getBytes()));
+        final Headers headers = actual.headers();
+        assertUniqueHeaderWithExpectedValue(headers, "content-type", contentType);
 
-        final var creationTimeHeader = actual.headers().headers("creation-time");
+        final var creationTimeHeader = headers.headers("creation-time");
         assertThat(creationTimeHeader).hasSize(1);
         final Long creationTimeMillis = Json.decodeValue(
                 Buffer.buffer(creationTimeHeader.iterator().next().value()),
                 Long.class);
         assertThat(creationTimeMillis).isGreaterThan(0L);
 
-        assertThat(actual.headers().headers("device_id")).hasSize(1);
-        assertThat(actual.headers()).contains(new RecordHeader("device_id", deviceId.getBytes()));
-
-        assertThat(actual.headers().headers("qos")).hasSize(1);
-        assertThat(actual.headers()).contains(new RecordHeader("qos", Json.encode(qos).getBytes()));
+        assertUniqueHeaderWithExpectedValue(headers, "device_id", deviceId);
+        assertUniqueHeaderWithExpectedValue(headers, "qos", qos);
     }
 
 }
