@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.application.client.kafka.impl;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
@@ -44,6 +45,7 @@ public class KafkaDownstreamMessage implements DownstreamMessage<KafkaMessageCon
     private final QoS qos;
     private final Buffer payload;
     private final Instant creationTime;
+    private final Duration timeToLive;
     private final Integer timeTillDisconnect;
 
     /**
@@ -64,6 +66,7 @@ public class KafkaDownstreamMessage implements DownstreamMessage<KafkaMessageCon
         qos = getQosHeaderValue(record.headers());
         payload = record.value();
         creationTime = getCreationTimeHeaderValue(record.headers());
+        timeToLive = getTimeToLiveHeaderValue(record.headers());
         timeTillDisconnect = getTimeTillDisconnectHeaderValue(record.headers());
     }
 
@@ -86,6 +89,12 @@ public class KafkaDownstreamMessage implements DownstreamMessage<KafkaMessageCon
     private Instant getCreationTimeHeaderValue(final List<KafkaHeader> headers) {
         return KafkaRecordHelper.getHeaderValue(headers, MessageHelper.SYS_PROPERTY_CREATION_TIME, Long.class)
                 .map(Instant::ofEpochMilli)
+                .orElse(null);
+    }
+
+    private Duration getTimeToLiveHeaderValue(final List<KafkaHeader> headers) {
+        return KafkaRecordHelper.getHeaderValue(headers, MessageHelper.SYS_HEADER_PROPERTY_TTL, Long.class)
+                .map(Duration::ofMillis)
                 .orElse(null);
     }
 
@@ -132,6 +141,14 @@ public class KafkaDownstreamMessage implements DownstreamMessage<KafkaMessageCon
     @Override
     public Instant getCreationTime() {
         return creationTime;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Duration getTimeToLive() {
+        return timeToLive;
     }
 
     @Override

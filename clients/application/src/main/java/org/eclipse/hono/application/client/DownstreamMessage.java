@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.application.client;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 
@@ -76,6 +77,13 @@ public interface DownstreamMessage<T extends MessageContext> extends Message<T> 
      * @return The instant in time or {@code null} if unknown.
      */
     Instant getCreationTime();
+
+    /**
+     * Gets the period of time after which this message should be considered stale.
+     *
+     * @return The duration or {@code null} if the message has no time-to-live.
+     */
+    Duration getTimeToLive();
 
     /**
      * Gets the amount of time that the sender of this message will stay connected
