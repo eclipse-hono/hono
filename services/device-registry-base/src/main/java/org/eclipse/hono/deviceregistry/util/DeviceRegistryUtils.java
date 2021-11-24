@@ -28,6 +28,8 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import javax.security.auth.x500.X500Principal;
+
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
@@ -349,23 +351,37 @@ public final class DeviceRegistryUtils {
      *
      * @param credential The credential object to match.
      * @param tenant The tenant information.
+     * @param clientContext todo.
      * @return todo.
      */
-    public static JsonObject applyAuthIdTemplate(final JsonObject credential, final Tenant tenant) {
+    public static JsonObject applyAuthIdTemplate(final JsonObject credential, final Tenant tenant,
+            final JsonObject clientContext) {
         Objects.requireNonNull(credential);
 
         final String type = credential.getString(RegistryManagementConstants.FIELD_TYPE);
-        if (!CredentialsConstants.SECRETS_TYPE_X509_CERT.equals(type)) {
-            return credential;
+        if (CredentialsConstants.SECRETS_TYPE_X509_CERT.equals(type)) {
+            // TODO this is just to show that that issuer DN is taken from the client context for draft purpose and not
+            // final implementation
+            if (clientContext != null && !clientContext.isEmpty()) {
+                final byte[] bytes = clientContext.getBinary(CredentialsConstants.FIELD_CLIENT_CERT);
+                if (bytes != null) {
+                    try {
+                        final CertificateFactory factory = CertificateFactory.getInstance("X.509");
+                        final X509Certificate cert = (X509Certificate) factory
+                                .generateCertificate(new ByteArrayInputStream(bytes));
+                        final String issuerDN = cert.getIssuerX500Principal().getName(X500Principal.RFC2253);
+                        final String subjectDN = credential.getString(RegistryManagementConstants.FIELD_AUTH_ID);
+                        tenant.getAuthIdTemplate(issuerDN)
+                                .map(IdentityTemplate::new)
+                                .map(t -> t.apply(subjectDN))
+                                .map(generatedAuthId -> credential.put(RegistryManagementConstants.FIELD_AUTH_ID,
+                                        generatedAuthId));
+                    } catch (final CertificateException e) {
+                        // TODO.
+                    }
+                }
+            }
         }
-
-        final String subjectDN = credential.getString(RegistryManagementConstants.FIELD_AUTH_ID);
-        final Optional<String> authIdTemplate = tenant.getAuthIdTemplate(subjectDN);
-        authIdTemplate
-                .map(IdentityTemplate::new)
-                .map(t -> t.apply(subjectDN))
-                .map(generatedAuthId -> credential.put(RegistryManagementConstants.FIELD_AUTH_ID, generatedAuthId));
-
         return credential;
     }
 

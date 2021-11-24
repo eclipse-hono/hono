@@ -77,7 +77,7 @@ public class CredentialsServiceImpl extends AbstractCredentialsService {
                     final var secrets = result.getCredentials()
                             .stream()
                             .map(JsonObject::mapFrom)
-                            .map(c -> DeviceRegistryUtils.applyAuthIdTemplate(c, tenant))
+                            .map(c -> DeviceRegistryUtils.applyAuthIdTemplate(c, tenant, clientContext))
                             .filter(filter(key.getType(), key.getAuthId()))
                             .filter(credential -> DeviceRegistryUtils.matchesWithClientContext(credential, clientContext))
                             .flatMap(c -> c.getJsonArray(CredentialsConstants.FIELD_SECRETS)
