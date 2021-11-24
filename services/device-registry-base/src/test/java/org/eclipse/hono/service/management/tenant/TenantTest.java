@@ -283,7 +283,10 @@ public class TenantTest {
         final JsonObject tenantSpec = new JsonObject()
                 .put(RegistryManagementConstants.FIELD_RESOURCE_LIMITS, new JsonObject()
                         .put(RegistryManagementConstants.FIELD_MAX_CONNECTIONS, 100)
-                        .put(RegistryManagementConstants.FIELD_MAX_TTL, 30)
+                        .put(RegistryManagementConstants.FIELD_MAX_TTL, 60)
+                        .put(RegistryManagementConstants.FIELD_MAX_TTL_COMMAND_RESPONSE, 40)
+                        .put(RegistryManagementConstants.FIELD_MAX_TTL_TELEMETRY_QOS0, 10)
+                        .put(RegistryManagementConstants.FIELD_MAX_TTL_TELEMETRY_QOS1, 30)
                         .put(RegistryManagementConstants.FIELD_DATA_VOLUME, new JsonObject()
                                 .put(RegistryManagementConstants.FIELD_MAX_BYTES, 20_000_000)
                                 .put(RegistryManagementConstants.FIELD_EFFECTIVE_SINCE, "2019-04-25T14:30:00+02:00")
@@ -303,7 +306,10 @@ public class TenantTest {
         final ResourceLimits limits = tenant.getResourceLimits();
         assertNotNull(limits);
         assertEquals(100, limits.getMaxConnections());
-        assertEquals(30, limits.getMaxTtl());
+        assertEquals(60, limits.getMaxTtl());
+        assertEquals(40, limits.getMaxTtlCommandResponse());
+        assertEquals(10, limits.getMaxTtlTelemetryQoS0());
+        assertEquals(30, limits.getMaxTtlTelemetryQoS1());
         assertNotNull(limits.getDataVolume());
         assertEquals(
                 DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse("2019-04-25T14:30:00+02:00", OffsetDateTime::from).toInstant(),

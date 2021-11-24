@@ -967,9 +967,45 @@ components:
                   devices of this tenant. Any default TTL value specified
                   at either the tenant or device level will be limited to
                   the max value specified here.
-                  If this property is set to a value greater than -1 and no
+                  If this property is set to a value greater than `-1` and no
                   default TTL is specified for a device, the max value will
                   be used for events published by the device.
+                  A value of `-1` (the default) indicates that no limit is set.
+                  Note that this property contains the TTL in seconds whereas
+                  the AMQP 1.0 specification defines a message's ttl header
+                  to use milliseconds.
+            "max-ttl-telemetry-qos0":
+               type: integer
+               default: -1
+               description: |
+                  The maximum time-to-live (in seconds) to use for telemetry messages that
+                  are published by devices of this tenant using QoS 0.
+                  If this property is set to a value greater than `-1` then this value will
+                  be used for all QoS 0 telemetry messages published by the tenant's devices.
+                  A value of `-1` (the default) indicates that no limit is set.
+                  Note that this property contains the TTL in seconds whereas
+                  the AMQP 1.0 specification defines a message's ttl header
+                  to use milliseconds.
+            "max-ttl-telemetry-qos1":
+               type: integer
+               default: -1
+               description: |
+                  The maximum time-to-live (in seconds) to use for telemetry messages that
+                  are published by devices of this tenant using QoS 1.
+                  If this property is set to a value greater than `-1` then this value will
+                  be used for all QoS 1 telemetry messages published by the tenant's devices.
+                  A value of `-1` (the default) indicates that no limit is set.
+                  Note that this property contains the TTL in seconds whereas
+                  the AMQP 1.0 specification defines a message's ttl header
+                  to use milliseconds.
+            "max-ttl-command-response":
+               type: integer
+               default: -1
+               description: |
+                  The maximum time-to-live (in seconds) to use for command response messages
+                  published by devices of this tenant.
+                  If this property is set to a value greater than `-1` then this value will
+                  be used for all command response messages published by the tenant's devices.
                   A value of `-1` (the default) indicates that no limit is set.
                   Note that this property contains the TTL in seconds whereas
                   the AMQP 1.0 specification defines a message's ttl header
