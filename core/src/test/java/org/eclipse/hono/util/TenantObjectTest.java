@@ -358,6 +358,7 @@ public class TenantObjectTest {
     public void testGetResourceLimits() {
         final JsonObject limitsConfig = new JsonObject()
                 .put("max-connections", 2)
+                .put(TenantConstants.FIELD_MAX_TTL_COMMAND_RESPONSE, 30L)
                 .put("data-volume",
                         new JsonObject().put("max-bytes", 20_000_000)
                                 .put("effective-since", "2019-04-25T15:30:00+01:00")
@@ -368,6 +369,7 @@ public class TenantObjectTest {
         tenantObject.setResourceLimits(limitsConfig);
         assertThat(tenantObject.getResourceLimits()).isNotNull();
         assertThat(tenantObject.getResourceLimits().getMaxConnections()).isEqualTo(2);
+        assertThat(tenantObject.getResourceLimits().getMaxTtlCommandResponse()).isEqualTo(30L);
         assertThat(tenantObject.getResourceLimits().getDataVolume().getMaxBytes()).isEqualTo(20_000_000L);
         assertThat(tenantObject.getResourceLimits().getDataVolume().getEffectiveSince()).isEqualTo(Instant.parse("2019-04-25T14:30:00Z"));
         assertThat(tenantObject.getResourceLimits().getDataVolume().getPeriod().getMode()).isEqualTo(PeriodMode.days);

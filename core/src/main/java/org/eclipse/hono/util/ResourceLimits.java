@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -31,6 +31,12 @@ public class ResourceLimits {
     private int maxConnections = TenantConstants.UNLIMITED_CONNECTIONS;
     @JsonProperty(TenantConstants.FIELD_MAX_TTL)
     private long maxTtl = TenantConstants.UNLIMITED_TTL;
+    @JsonProperty(TenantConstants.FIELD_MAX_TTL_TELEMETRY_QOS0)
+    private long maxTtlTelemetryQos0 = TenantConstants.UNLIMITED_TTL;
+    @JsonProperty(TenantConstants.FIELD_MAX_TTL_TELEMETRY_QOS1)
+    private long maxTtlTelemetryQoS1 = TenantConstants.UNLIMITED_TTL;
+    @JsonProperty(TenantConstants.FIELD_MAX_TTL_COMMAND_RESPONSE)
+    private long maxTtlCommandResponse = TenantConstants.UNLIMITED_TTL;
 
     @JsonProperty(TenantConstants.FIELD_DATA_VOLUME)
     private DataVolume dataVolume;
@@ -68,6 +74,35 @@ public class ResourceLimits {
     }
 
     /**
+     * Gets the maximum time-to-live to use for messages published by
+     * devices of a tenant to a given endpoint.
+     *
+     * @param endpointName The name of the endpoint.
+     * @param qos The quality of service being used for the messages.
+     * @return The time-to-live in seconds.
+     * @throws NullPointerException if the endpoint name indicates a telemetry endpoint and qos is {@code null}.
+     * @throws IllegalArgumentException if endpoint name is unknown.
+     */
+    public final long getMaxTtl(final String endpointName, final QoS qos) {
+        if (EventConstants.isEventEndpoint(endpointName)) {
+            return getMaxTtl();
+        } else if (TelemetryConstants.isTelemetryEndpoint(endpointName)) {
+            if (qos == null) {
+                throw new NullPointerException("QoS must not be null for telemetry endpoint");
+            }
+            switch (qos) {
+            case AT_MOST_ONCE: return getMaxTtlTelemetryQoS0();
+            case AT_LEAST_ONCE:
+            default: return getMaxTtlTelemetryQoS1();
+            }
+        } else if (CommandConstants.isNorthboundCommandResponseEndpoint(endpointName)) {
+            return getMaxTtlCommandResponse();
+        } else {
+            throw new IllegalArgumentException("unknown endpoint name");
+        }
+    }
+
+    /**
      * Sets the maximum time-to-live to use for events published by
      * devices of a tenant.
      *
@@ -75,7 +110,7 @@ public class ResourceLimits {
      * @return A reference to this for fluent use.
      * @throws IllegalArgumentException if the time-to-live is set to less than -1.
      */
-    public ResourceLimits setMaxTtl(final long maxTtl) {
+    public final ResourceLimits setMaxTtl(final long maxTtl) {
         if (maxTtl < -1) {
             throw new IllegalArgumentException("Maximum time-to-live property must be set to value >= -1");
         }
@@ -89,8 +124,86 @@ public class ResourceLimits {
      *
      * @return The time-to-live in seconds.
      */
-    public long getMaxTtl() {
+    public final long getMaxTtl() {
         return this.maxTtl;
+    }
+
+    /**
+     * Sets the maximum time-to-live to use for telemetry messages published by
+     * devices of a tenant with QoS 0.
+     *
+     * @param maxTtl The time-to-live in seconds.
+     * @return A reference to this for fluent use.
+     * @throws IllegalArgumentException if the time-to-live is set to less than -1.
+     */
+    public final ResourceLimits setMaxTtlTelemetryQoS0(final long maxTtl) {
+        if (maxTtl < -1) {
+            throw new IllegalArgumentException("Maximum time-to-live property must be set to value >= -1");
+        }
+        this.maxTtlTelemetryQos0 = maxTtl;
+        return this;
+    }
+
+    /**
+     * Gets the maximum time-to-live to use for telemetry messages published by
+     * devices of a tenant with QoS 0.
+     *
+     * @return The time-to-live in seconds.
+     */
+    public final long getMaxTtlTelemetryQoS0() {
+        return this.maxTtlTelemetryQos0;
+    }
+
+    /**
+     * Sets the maximum time-to-live to use for telemetry messages published by
+     * devices of a tenant with QoS 1.
+     *
+     * @param maxTtl The time-to-live in seconds.
+     * @return A reference to this for fluent use.
+     * @throws IllegalArgumentException if the time-to-live is set to less than -1.
+     */
+    public final ResourceLimits setMaxTtlTelemetryQoS1(final long maxTtl) {
+        if (maxTtl < -1) {
+            throw new IllegalArgumentException("Maximum time-to-live property must be set to value >= -1");
+        }
+        this.maxTtlTelemetryQoS1 = maxTtl;
+        return this;
+    }
+
+    /**
+     * Gets the maximum time-to-live to use for telemetry messages published by
+     * devices of a tenant with QoS 1.
+     *
+     * @return The time-to-live in seconds.
+     */
+    public final long getMaxTtlTelemetryQoS1() {
+        return this.maxTtlTelemetryQoS1;
+    }
+
+    /**
+     * Sets the maximum time-to-live to use for command responses published by
+     * devices of a tenant.
+     *
+     * @param maxTtl The time-to-live in seconds.
+     * @return A reference to this for fluent use.
+     * @throws IllegalArgumentException if the time-to-live is set to less than -1.
+     */
+    public final ResourceLimits setMaxTtlCommandResponse(final long maxTtl) {
+        if (maxTtl < -1) {
+            throw new IllegalArgumentException("Maximum time-to-live property must be set to value >= -1");
+        }
+        this.maxTtlCommandResponse = maxTtl;
+        return this;
+    }
+
+    /**
+     * Gets the maximum time-to-live to use for command responses published by
+     * devices of a tenant.
+     *
+     * @return The time-to-live in seconds.
+     */
+    public final long getMaxTtlCommandResponse() {
+        return this.maxTtlCommandResponse;
     }
 
     /**

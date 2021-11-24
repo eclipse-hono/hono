@@ -337,6 +337,21 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String FIELD_MAX_TTL = "max-ttl";
     /**
+     * The name of the property that contains the maximum <em>time to live</em> (seconds) for
+     * downstream QoS 0 telemetry messages that protocol adapters should use for a tenant.
+     */
+    public static final String FIELD_MAX_TTL_TELEMETRY_QOS0 = "max-ttl-telemetry-qos0";
+    /**
+     * The name of the property that contains the maximum <em>time to live</em> (seconds) for
+     * downstream QoS 1 telemetry messages that protocol adapters should use for a tenant.
+     */
+    public static final String FIELD_MAX_TTL_TELEMETRY_QOS1 = "max-ttl-telemetry-qos1";
+    /**
+     * The name of the property that contains the maximum <em>time to live</em> (seconds) for
+     * downstream command response messages that protocol adapters should use for a tenant.
+     */
+    public static final String FIELD_MAX_TTL_COMMAND_RESPONSE = "max-ttl-command-response";
+    /**
      * The name of the property that contains the minimum message size in bytes.
      */
     public static final String FIELD_MINIMUM_MESSAGE_SIZE = "minimum-message-size";
