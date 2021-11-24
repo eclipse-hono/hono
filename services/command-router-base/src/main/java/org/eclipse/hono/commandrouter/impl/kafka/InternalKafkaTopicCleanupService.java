@@ -26,6 +26,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
 import org.eclipse.hono.commandrouter.AdapterInstanceStatusService;
@@ -124,8 +125,16 @@ public class InternalKafkaTopicCleanupService implements Lifecycle {
                             determineToBeDeletedTopics(allTopics);
                         } else {
                             adminClient.deleteTopics(existingTopicsToDelete)
-                                    .onSuccess(v -> LOG.info("deleted topics {}", existingTopicsToDelete))
-                                    .onFailure(thr -> LOG.warn("error deleting topics {}", existingTopicsToDelete, thr))
+                                    .onSuccess(v -> LOG.info("triggered deletion of {} topics ({})",
+                                            existingTopicsToDelete.size(), existingTopicsToDelete))
+                                    .onFailure(thr -> {
+                                        if (thr instanceof UnknownTopicOrPartitionException) {
+                                            LOG.info("triggered deletion of {} topics, some had already been deleted ({})",
+                                                    existingTopicsToDelete.size(), existingTopicsToDelete);
+                                        } else {
+                                            LOG.warn("error deleting topics {}", existingTopicsToDelete, thr);
+                                        }
+                                    })
                                     .onComplete(ar -> {
                                         topicsToDelete.clear();
                                         determineToBeDeletedTopics();
