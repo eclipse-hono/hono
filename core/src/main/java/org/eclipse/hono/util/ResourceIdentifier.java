@@ -291,11 +291,21 @@ public final class ResourceIdentifier {
      * Checks if this resource identifier contains the event endpoint.
      *
      * @return {@code true} if this resource's endpoint is either
-     *         {@link EventConstants#EVENT_ENDPOINT} or {@link EventConstants#EVENT_ENDPOINT_SHORT}.
+     *         {@value EventConstants#EVENT_ENDPOINT} or {@value EventConstants#EVENT_ENDPOINT_SHORT}.
      */
     public boolean hasEventEndpoint() {
-        return EventConstants.EVENT_ENDPOINT.equals(getEndpoint()) ||
-                EventConstants.EVENT_ENDPOINT_SHORT.equals(getEndpoint());
+        return EventConstants.isEventEndpoint(getEndpoint());
+    }
+
+    /**
+     * Checks if this resource identifier contains the telemetry endpoint.
+     *
+     * @return {@code true} if this resource's endpoint is either
+     *         {@value TelemetryConstants#TELEMETRY_ENDPOINT} or
+     *         {@value TelemetryConstants#TELEMETRY_ENDPOINT_SHORT}.
+     */
+    public boolean hasTelemetryEndpoint() {
+        return TelemetryConstants.isTelemetryEndpoint(getEndpoint());
     }
 
     @Override
