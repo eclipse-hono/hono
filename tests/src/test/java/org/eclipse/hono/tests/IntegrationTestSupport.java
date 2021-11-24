@@ -1002,7 +1002,8 @@ public final class IntegrationTestSupport {
         final Promise<Void> tenantTopicsDeletionDonePromise = Promise.promise();
         tenantsToDeleteTopicsForAfterDelay.add(Pair.of(tenantsToDelete, Instant.now()));
         final List<String> tenantsToDeleteTopicsForNow = new LinkedList<>();
-        final Instant nowMinusCommitInterval = Instant.now().minus(AsyncHandlingAutoCommitKafkaConsumer.DEFAULT_COMMIT_INTERVAL);
+        final Instant nowMinusCommitInterval = Instant.now()
+                .minus(AsyncHandlingAutoCommitKafkaConsumer.DEFAULT_COMMIT_INTERVAL.plusSeconds(1)); // commit interval with added buffer
         final Iterator<Pair<List<String>, Instant>> iterator = tenantsToDeleteTopicsForAfterDelay.iterator();
         while (iterator.hasNext()) {
             final Pair<List<String>, Instant> tenantsToDeleteAndInstantPair = iterator.next();
