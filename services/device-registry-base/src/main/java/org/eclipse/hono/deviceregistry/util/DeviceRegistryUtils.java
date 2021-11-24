@@ -37,6 +37,7 @@ import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.IdentityTemplate;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
@@ -341,6 +342,31 @@ public final class DeviceRegistryUtils {
                         })
                         .orElse(true));
 
+    }
+
+    /**
+     * todo.
+     *
+     * @param credential The credential object to match.
+     * @param tenant The tenant information.
+     * @return todo.
+     */
+    public static JsonObject applyAuthIdTemplate(final JsonObject credential, final Tenant tenant) {
+        Objects.requireNonNull(credential);
+
+        final String type = credential.getString(RegistryManagementConstants.FIELD_TYPE);
+        if (!CredentialsConstants.SECRETS_TYPE_X509_CERT.equals(type)) {
+            return credential;
+        }
+
+        final String subjectDN = credential.getString(RegistryManagementConstants.FIELD_AUTH_ID);
+        final Optional<String> authIdTemplate = tenant.getAuthIdTemplate(subjectDN);
+        authIdTemplate
+                .map(IdentityTemplate::new)
+                .map(t -> t.apply(subjectDN))
+                .map(generatedAuthId -> credential.put(RegistryManagementConstants.FIELD_AUTH_ID, generatedAuthId));
+
+        return credential;
     }
 
     /**

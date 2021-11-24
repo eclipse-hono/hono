@@ -21,10 +21,10 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.client.util.MessagingClientProvider;
-import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.device.DeviceAndGatewayAutoProvisioner;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
@@ -59,7 +59,7 @@ public class AbstractCredentialsServiceTest {
 
         final AbstractCredentialsService credentialsService = new AbstractCredentialsService() {
             @Override
-            protected Future<CredentialsResult<JsonObject>> processGet(final TenantKey tenant, final CredentialKey key,
+            protected Future<CredentialsResult<JsonObject>> processGet(final Tenant tenant, final CredentialKey key,
                     final JsonObject clientContext, final Span span) {
                 return Future.succeededFuture(CredentialsResult.from(HttpURLConnection.HTTP_BAD_GATEWAY));
             }

@@ -19,10 +19,10 @@ import java.util.Optional;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
-import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.management.device.DeviceAndGatewayAutoProvisioner;
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.Constants;
@@ -98,7 +98,7 @@ public abstract class AbstractCredentialsService implements CredentialsService, 
     /**
      * Get credentials for a device.
      *
-     * @param tenant The tenant key object.
+     * @param tenant The tenant information.
      * @param key The credentials key object.
      * @param clientContext Optional bag of properties that can be used to identify the device.
      * @param span The active OpenTracing span for this operation.
@@ -106,7 +106,7 @@ public abstract class AbstractCredentialsService implements CredentialsService, 
      * @throws NullPointerException if any of the parameters other than client context are {@code null}.
      */
     protected abstract Future<CredentialsResult<JsonObject>> processGet(
-            TenantKey tenant,
+            Tenant tenant,
             CredentialKey key,
             JsonObject clientContext,
             Span span);
@@ -153,7 +153,7 @@ public abstract class AbstractCredentialsService implements CredentialsService, 
                 .compose(tenant -> {
                     LOG.trace("retrieving credentials by auth-id");
                     return processGet(
-                            TenantKey.from(tenantId),
+                            tenant,
                             CredentialKey.from(tenantId, authId, type),
                             clientContext,
                             span)

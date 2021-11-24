@@ -22,8 +22,8 @@ import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedCredentialsCon
 import org.eclipse.hono.deviceregistry.mongodb.model.CredentialsDao;
 import org.eclipse.hono.deviceregistry.service.credentials.AbstractCredentialsService;
 import org.eclipse.hono.deviceregistry.service.credentials.CredentialKey;
-import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
@@ -87,7 +87,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsSer
      */
     @Override
     protected Future<CredentialsResult<JsonObject>> processGet(
-            final TenantKey tenant,
+            final Tenant tenant,
             final CredentialKey key,
             final JsonObject clientContext,
             final Span span) {
@@ -96,7 +96,8 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsSer
         Objects.requireNonNull(key);
         Objects.requireNonNull(span);
 
-        return dao.getByAuthIdAndType(tenant.getTenantId(), key.getAuthId(), key.getType(), span.context())
+        //todo to make use of the tenant to apply the auth-id template in case of X509 certificate credential.
+        return dao.getByAuthIdAndType(key.getTenantId(), key.getAuthId(), key.getType(), span.context())
                 .map(dto -> {
                     LOG.trace("found credentials matching criteria");
                     final var json = JsonObject.mapFrom(dto.getCredentials().get(0));
@@ -109,7 +110,7 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsSer
                                     credential,
                                     getCacheDirective(key.getType())))
                             .orElseThrow(() -> new ClientErrorException(
-                                    tenant.getTenantId(),
+                                    key.getTenantId(),
                                     HttpURLConnection.HTTP_NOT_FOUND,
                                     "no matching credentials on record"));
                 })

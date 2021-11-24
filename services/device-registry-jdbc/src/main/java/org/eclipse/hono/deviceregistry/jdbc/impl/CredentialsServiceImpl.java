@@ -26,9 +26,9 @@ import java.util.stream.Collectors;
 import org.eclipse.hono.deviceregistry.jdbc.config.DeviceServiceProperties;
 import org.eclipse.hono.deviceregistry.service.credentials.AbstractCredentialsService;
 import org.eclipse.hono.deviceregistry.service.credentials.CredentialKey;
-import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.base.jdbc.store.device.TableAdapterStore;
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
@@ -60,7 +60,7 @@ public class CredentialsServiceImpl extends AbstractCredentialsService {
 
     @Override
     protected Future<CredentialsResult<JsonObject>> processGet(
-            final TenantKey tenant,
+            final Tenant tenant,
             final CredentialKey key,
             final JsonObject clientContext,
             final Span span) {
@@ -77,6 +77,7 @@ public class CredentialsServiceImpl extends AbstractCredentialsService {
                     final var secrets = result.getCredentials()
                             .stream()
                             .map(JsonObject::mapFrom)
+                            .map(c -> DeviceRegistryUtils.applyAuthIdTemplate(c, tenant))
                             .filter(filter(key.getType(), key.getAuthId()))
                             .filter(credential -> DeviceRegistryUtils.matchesWithClientContext(credential, clientContext))
                             .flatMap(c -> c.getJsonArray(CredentialsConstants.FIELD_SECRETS)
