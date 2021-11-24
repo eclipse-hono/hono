@@ -14,6 +14,7 @@
 
 package org.eclipse.hono.application.client.amqp;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Map;
@@ -152,6 +153,14 @@ public final class ProtonBasedDownstreamMessage implements DownstreamMessage<Amq
     @Override
     public Instant getCreationTime() {
         return message.getCreationTime() == 0L ? null : Instant.ofEpochMilli(message.getCreationTime());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Duration getTimeToLive() {
+        return message.getTtl() == 0L ? null : Duration.ofMillis(message.getTtl());
     }
 
     /**
