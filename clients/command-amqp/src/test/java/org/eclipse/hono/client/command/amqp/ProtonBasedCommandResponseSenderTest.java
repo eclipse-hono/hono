@@ -40,6 +40,7 @@ import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.RegistrationAssertion;
+import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -137,13 +138,15 @@ public class ProtonBasedCommandResponseSenderTest {
     }
 
     /**
-     * Verifies that command response messages being sent downstream contain a creation-time.
+     * Verifies that command response messages being sent downstream contain a creation-time
+     * and a time-to-live as defined at the tenant level.
      */
     @Test
-    public void testCommandResponseMessageHasCreationTime() {
+    public void testCommandResponseMessageHasCreationTimeAndTtl() {
 
         final var now = Instant.now();
         final TenantObject tenant = TenantObject.from(TENANT_ID);
+        tenant.setResourceLimits(new ResourceLimits().setMaxTtlCommandResponse(10L));
 
         when(protonSender.sendQueueFull()).thenReturn(Boolean.FALSE);
         when(protonSender.send(any(Message.class), VertxMockSupport.anyHandler())).thenReturn(mock(ProtonDelivery.class));
@@ -169,6 +172,8 @@ public class ProtonBasedCommandResponseSenderTest {
                 VertxMockSupport.anyHandler());
         // THEN the message being sent contains a creation-time
         assertThat(downstreamMessage.getValue().getCreationTime()).isAtLeast(now.toEpochMilli());
+        // and a TTL
+        assertThat(downstreamMessage.getValue().getTtl()).isEqualTo(10_000L);
         // and a 200 status code
         assertThat(MessageHelper.getStatus(downstreamMessage.getValue())).isEqualTo(HttpURLConnection.HTTP_OK);
     }

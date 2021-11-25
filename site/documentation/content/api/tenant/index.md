@@ -227,12 +227,16 @@ This allows for future *well-known* additions and also allows to add further inf
 
 The table below contains the properties which are used to configure a tenant's resource limits:
 
-| Name                | Mandatory | JSON Type     | Default Value | Description |
-| :------------------ | :-------: | :------------ | :------------ | :---------- |
-| *max-connections*   | *no*      | *number*      | `-1`          | The maximum number of concurrent connections allowed from devices of this tenant. The default value `-1` indicates that no limit is set. |
-| *max-ttl*           | *no*      | *number*      | `-1`          | The maximum time-to-live (in seconds) to use for events published by devices of this tenant. Any default TTL value specified at either the tenant or device level will be limited to the max value specified here. If this property is set to a value greater than `-1` and no default TTL is specified for a device, the max value will be used for events published by the device. A value of `-1` (the default) indicates that no limit is set. **Note** that this property contains the TTL in *seconds* whereas the AMQP 1.0 specification defines a message's *ttl* header to use milliseconds. |
-| *connection-duration*| *no*      | *object*      | `-`           | The maximum connection duration allowed for the given tenant. Refer to  [Connection Duration Configuration Format]({{< relref "#connection-duration-configuration-format" >}}) for details.|
-| *data-volume*       | *no*      | *object*      | `-`           | The maximum data volume allowed for the given tenant. Refer to  [Data Volume Configuration Format]({{< relref "#data-volume-configuration-format" >}}) for details.|
+| Name                       | Mandatory | JSON Type | Default Value | Description |
+| :------------------------- | :-------: | :-------: | :-----------: | :---------- |
+| *connection-duration*      | *no*      | *object*  | `-`           | The maximum connection duration allowed for the given tenant. Refer to  [Connection Duration Configuration Format]({{< relref "#connection-duration-configuration-format" >}}) for details.|
+| *data-volume*              | *no*      | *object*  | `-`           | The maximum data volume allowed for the given tenant. Refer to  [Data Volume Configuration Format]({{< relref "#data-volume-configuration-format" >}}) for details.|
+| *max-connections*          | *no*      | *number*  | `-1`          | The maximum number of concurrent connections allowed from devices of this tenant. The default value `-1` indicates that no limit is set. |
+| *max-ttl*                  | *no*      | *number*  | `-1`          | The maximum time-to-live (in seconds) to use for events published by devices of this tenant. **Note** that this property contains the TTL in *seconds* whereas the AMQP 1.0 specification defines a message's *ttl* header to use milliseconds. |
+| *max-ttl-command-response* | *no*      | *number*  | `-1`          | The maximum time-to-live (in seconds) to use for command response messages published by devices of this tenant. **Note** that this property contains the TTL in *seconds* whereas the AMQP 1.0 specification defines a message's *ttl* header to use milliseconds. |
+| *max-ttl-telemetry-qos0*   | *no*      | *number*  | `-1`          | The maximum time-to-live (in seconds) to use for telemetry messages published by devices of this tenant using QoS 0. **Note** that this property contains the TTL in *seconds* whereas the AMQP 1.0 specification defines a message's *ttl* header to use milliseconds. |
+| *max-ttl-telemetry-qos1*   | *no*      | *number*  | `-1`          | The maximum time-to-live (in seconds) to use for telemetry messages published by devices of this tenant using QoS 1. **Note** that this property contains the TTL in *seconds* whereas the AMQP 1.0 specification defines a message's *ttl* header to use milliseconds. |
+
 
 Protocol adapters SHOULD use the *max-connections* property to determine if a device's connection request should be accepted or rejected.
 
@@ -243,14 +247,43 @@ published by devices as follows:
 1. If a *max-ttl* value greater than *effective ttl* is set for the tenant, use that value as the new *effective ttl*.
 1. If the event published by the device
    * contains a *ttl* header and either *effective ttl* is `-1` or the *ttl* value (in seconds) provided by the device is
-      smaller than the *effective ttl*, then use the *ttl* value provided by the device as the new *effective ttl*.
+     smaller than the *effective ttl*, then use the *ttl* value provided by the device as the new *effective ttl*.
    * does not contain a *ttl* header but a default property with name *ttl* is configured for the device (with the device
-      level taking precedence over the tenant level) and either *effective ttl* is `-1` or the default property's value
-      is smaller than the *effective ttl*, then use the configured default *ttl* value as the new *effective ttl*.
+     level taking precedence over the tenant level) and either *effective ttl* is `-1` or the default property's value
+     is smaller than the *effective ttl*, then use the configured default *ttl* value as the new *effective ttl*.
+1. If *effective ttl* is not `-1`, then set the downstream message's *ttl* header to its value (in milliseconds).
+
+Protocol adapters SHOULD use the *max-ttl-telemetry-qos0* and *max-ttl-telemetry-qos1* properties to determine the
+*effective time-to-live* for *telemetry* messages published by devices with QoS 0 or QoS 1 respectively as follows:
+
+1. Set *effective ttl* to `-1` (unlimited).
+1. If a *max-ttl-telemetry-qos0* value greater than *effective ttl* is set for the tenant, use that value as the
+   new *effective ttl*.
+1. If the message published by the device
+   * contains a *ttl* header and either *effective ttl* is `-1` or the *ttl* value (in seconds) provided by the device is
+     smaller than the *effective ttl*, then use the *ttl* value provided by the device as the new *effective ttl*.
+   * does not contain a *ttl* header but a default property with name *ttl-telemetry-qos0* is configured for the device
+     (with the device level taking precedence over the tenant level) and either *effective ttl* is `-1` or the default
+     property's value is smaller than the *effective ttl*, then use the configured default *ttl* value as the new *effective ttl*.
+1. If *effective ttl* is not `-1`, then set the downstream message's *ttl* header to its value (in milliseconds).
+
+Protocol adapters SHOULD use the *max-ttl-command-response* property to determine the *effective time-to-live* for
+*command response* messages published by devices as follows:
+
+1. Set *effective ttl* to `-1` (unlimited).
+1. If a *max-ttl-command-response* value greater than *effective ttl* is set for the tenant, use that value as the
+   new *effective ttl*.
+1. If the message published by the device
+   * contains a *ttl* header and either *effective ttl* is `-1` or the *ttl* value (in seconds) provided by the device is
+     smaller than the *effective ttl*, then use the *ttl* value provided by the device as the new *effective ttl*.
+   * does not contain a *ttl* header but a default property with name *ttl-command-response* is configured at the device's
+     tenant level and either *effective ttl* is `-1` or the default property's value is smaller than the *effective ttl*,
+     then use the configured default *ttl* value as the new *effective ttl*.
 1. If *effective ttl* is not `-1`, then set the downstream message's *ttl* header to its value (in milliseconds).
 
 The JSON object MAY contain an arbitrary number of additional members with arbitrary names of either scalar or complex type.
-This allows for future *well-known* additions and also allows to add further information which might be relevant to a *custom* adapter only.
+This allows for future *well-known* additions and also allows to add further information which might be relevant to a
+*custom* adapter only.
 
 ### Connection Duration Configuration Format
 

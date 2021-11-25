@@ -132,10 +132,15 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
         final KafkaAdminClientConfigProperties kafkaCommandInternalConfig = kafkaCommandInternalConfig();
         final MessagingKafkaConsumerConfigProperties kafkaCommandConfig = kafkaCommandConfig();
         final KafkaClientMetricsSupport kafkaClientMetricsSupport = kafkaClientMetricsSupport(kafkaMetricsConfig());
-        final MessagingClientProviders messagingClientProviders = messagingClientProviders(samplerFactory, getTracer(),
-                vertx(), adapterProperties, kafkaClientMetricsSupport);
-
         final TenantClient tenantClient = tenantClient(samplerFactory);
+        final MessagingClientProviders messagingClientProviders = messagingClientProviders(
+                samplerFactory,
+                getTracer(),
+                vertx(),
+                adapterProperties,
+                kafkaClientMetricsSupport,
+                tenantClient);
+
         final DeviceRegistrationClient registrationClient = registrationClient(samplerFactory);
         try {
             // look up client via bean factory in order to take advantage of conditional bean instantiation based
@@ -162,9 +167,16 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
             if (kafkaCommandInternalConfig.isConfigured() && kafkaCommandConfig.isConfigured()
                     && kafkaCommandResponseSender != null) {
                 commandConsumerFactory.registerInternalCommandConsumer(
-                        (id, handlers) -> new KafkaBasedInternalCommandConsumer(vertx(), kafkaCommandInternalConfig,
-                                kafkaCommandConfig, kafkaCommandResponseSender, id, handlers, getTracer())
-                                        .setMetricsSupport(kafkaClientMetricsSupport));
+                        (id, handlers) -> new KafkaBasedInternalCommandConsumer(
+                                vertx(),
+                                kafkaCommandInternalConfig,
+                                kafkaCommandConfig,
+                                tenantClient,
+                                kafkaCommandResponseSender,
+                                id,
+                                handlers,
+                                getTracer())
+                            .setMetricsSupport(kafkaClientMetricsSupport));
             }
             adapter.setCommandConsumerFactory(commandConsumerFactory);
         }

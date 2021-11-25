@@ -60,8 +60,13 @@ public class ProtonBasedInternalCommandSender extends SenderCachingServiceClient
     }
 
     @Override
-    public Future<Void> sendCommand(final CommandContext commandContext, final String adapterInstanceId) {
+    public Future<Void> sendCommand(
+            final CommandContext commandContext,
+            final String adapterInstanceId) {
+
         Objects.requireNonNull(commandContext);
+        Objects.requireNonNull(adapterInstanceId);
+
         return getOrCreateSenderLink(getTargetAddress(adapterInstanceId))
                 .recover(thr -> Future.failedFuture(StatusCodeMapper.toServerError(thr)))
                 .compose(sender -> {

@@ -40,10 +40,13 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
+import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import io.opentracing.Span;
 import io.opentracing.Tracer;
@@ -180,35 +183,51 @@ public class ProtonBasedDownstreamSenderTest {
     }
 
     /**
-     * Verifies that a downstream telemetry message always contains a creation-time.
+     * Verifies that a downstream telemetry message always contains a creation-time
+     * and a time-to-live as defined at the tenant level.
+     *
+     * @param qosLevel The quality of service used for sending the message.
+     * @param expectedTtl The time to live (in millis) expected to be set on the message.
      */
-    @Test
-    public void testDownstreamTelemetryMessageHasCreationTime() {
+    @ParameterizedTest
+    @CsvSource(value = { "AT_MOST_ONCE,10000", "AT_LEAST_ONCE,20000" })
+    public void testDownstreamTelemetryMessageHasCreationTimeAndTtl(
+            final QoS qosLevel,
+            final long expectedTtl) {
 
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
+        tenant.setResourceLimits(new ResourceLimits()
+                .setMaxTtlTelemetryQoS0(10L)
+                .setMaxTtlTelemetryQoS1(20L));
         final RegistrationAssertion device = new RegistrationAssertion("4711");
 
         // WHEN sending a message without specifying any properties
-        sender.sendTelemetry(tenant, device, QoS.AT_MOST_ONCE, "text/plain", Buffer.buffer("hello"), null, span.context());
+        sender.sendTelemetry(tenant, device, qosLevel, "text/plain", Buffer.buffer("hello"), null, span.context());
 
         // THEN the message contains a creation-time
-        verify(protonSender).send(argThat(message -> message.getCreationTime() > 0), VertxMockSupport.anyHandler());
+        verify(protonSender).send(
+                argThat(message -> message.getCreationTime() > 0 && message.getTtl() == expectedTtl),
+                VertxMockSupport.anyHandler());
     }
 
     /**
-     * Verifies that a downstream event always contains a creation-time.
+     * Verifies that a downstream event always contains a creation-time
+     * and a time-to-live as defined at the tenant level.
      */
     @Test
-    public void testDownstreamEventHasCreationTime() {
+    public void testDownstreamEventHasCreationTimeAndTtl() {
 
         final TenantObject tenant = TenantObject.from(Constants.DEFAULT_TENANT, true);
         final RegistrationAssertion device = new RegistrationAssertion("4711");
+        tenant.setResourceLimits(new ResourceLimits().setMaxTtl(60L));
 
         // WHEN sending a message without specifying any properties
         sender.sendEvent(tenant, device, "text/plain", Buffer.buffer("hello"), null, span.context());
 
         // THEN the message contains a creation-time
-        verify(protonSender).send(argThat(message -> message.getCreationTime() > 0), VertxMockSupport.anyHandler());
+        verify(protonSender).send(argThat(
+                message -> message.getCreationTime() > 0 && message.getTtl() == 60000L),
+                VertxMockSupport.anyHandler());
     }
 
 }

@@ -41,7 +41,6 @@ import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.DownstreamMessageAssertions;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
-import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.AmqpErrorException;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
@@ -92,6 +91,14 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
     protected abstract String getEndpointName();
 
     /**
+     * Prepares the configuration to register with the tenant.
+     *
+     * @param tenantConfig The configuration.
+     */
+    protected void prepareTenantConfig(final Tenant tenantConfig) {
+    }
+
+    /**
      * Gets the generic quality-of-service level corresponding to
      * AMQP delivery semantics.
      *
@@ -134,7 +141,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
 
         final VertxTestContext setup = new VertxTestContext();
 
-        setupProtocolAdapter(tenantId, deviceId, ProtonQoS.AT_LEAST_ONCE, false)
+        setupProtocolAdapter(tenantId, new Tenant(), deviceId, ProtonQoS.AT_LEAST_ONCE)
             .map(s -> {
                 setup.verify(() -> {
                     final UnsignedLong maxMessageSize = s.getRemoteMaxMessageSize();
@@ -182,45 +189,43 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
 
-        createConsumer(tenantId, msg -> {
-            ctx.failNow(new AssertionError("should not have received message"));
-        })
-        .compose(consumer -> setupProtocolAdapter(tenantId, deviceId, ProtonQoS.AT_LEAST_ONCE, false))
-        .onComplete(ctx.succeeding(s -> {
+        createConsumer(
+                tenantId,
+                msg -> ctx.failNow(new AssertionError("should not have received message")))
+            .compose(consumer -> setupProtocolAdapter(tenantId, new Tenant(), deviceId, ProtonQoS.AT_LEAST_ONCE))
+            .onComplete(ctx.succeeding(s -> {
 
-            s.detachHandler(remoteDetach -> {
-                ctx.verify(() -> {
-                    final ErrorCondition errorCondition = s.getRemoteCondition();
-                    assertThat(remoteDetach.succeeded()).isFalse();
-                    assertThat(errorCondition).isNotNull();
-                    assertThat((Comparable<Symbol>) errorCondition.getCondition()).isEqualTo(LinkError.MESSAGE_SIZE_EXCEEDED);
+                s.detachHandler(remoteDetach -> {
+                    ctx.verify(() -> {
+                        final ErrorCondition errorCondition = s.getRemoteCondition();
+                        assertThat(remoteDetach.succeeded()).isFalse();
+                        assertThat(errorCondition).isNotNull();
+                        assertThat((Comparable<Symbol>) errorCondition.getCondition()).isEqualTo(LinkError.MESSAGE_SIZE_EXCEEDED);
+                    });
+                    log.info("AMQP adapter detached link as expected");
+                    s.close();
+                    ctx.completeNow();
                 });
-                log.info("AMQP adapter detached link as expected");
-                s.close();
-                ctx.completeNow();
-            });
 
-            final UnsignedLong maxMessageSize = s.getRemoteMaxMessageSize();
-            log.info("AMQP adapter uses max-message-size {}", maxMessageSize);
+                final UnsignedLong maxMessageSize = s.getRemoteMaxMessageSize();
+                log.info("AMQP adapter uses max-message-size {}", maxMessageSize);
 
-            ctx.verify(() -> {
-                assertWithMessage("max-message-size included in adapter's attach frame")
-                        .that(maxMessageSize).isNotNull();
-                assertWithMessage("max-message-size").that(maxMessageSize.longValue()).isGreaterThan(0);
-            });
+                ctx.verify(() -> {
+                    assertWithMessage("max-message-size included in adapter's attach frame")
+                            .that(maxMessageSize).isNotNull();
+                    assertWithMessage("max-message-size").that(maxMessageSize.longValue()).isGreaterThan(0);
+                });
 
-            final Message msg = ProtonHelper.message();
-            msg.setContentType("opaque/binary");
-            msg.setAddress(getEndpointName());
-            msg.setBody(new Data(new Binary(IntegrationTestSupport.getPayload(maxMessageSize.intValue()))));
+                final Message msg = ProtonHelper.message();
+                msg.setContentType("opaque/binary");
+                msg.setAddress(getEndpointName());
+                msg.setBody(new Data(new Binary(IntegrationTestSupport.getPayload(maxMessageSize.intValue()))));
 
-            context.runOnContext(go -> {
-                log.debug("sending message");
-                s.send(msg);
-            });
-        }));
-
-
+                context.runOnContext(go -> {
+                    log.debug("sending message");
+                    s.send(msg);
+                });
+            }));
     }
 
     /**
@@ -314,9 +319,11 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
 
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
+        final Tenant tenantConfig = new Tenant();
+        prepareTenantConfig(tenantConfig);
 
         final VertxTestContext setup = new VertxTestContext();
-        setupProtocolAdapter(tenantId, deviceId, senderQos, false)
+        setupProtocolAdapter(tenantId, tenantConfig, deviceId, senderQos)
             .onComplete(setup.succeeding(s -> {
                 setup.verify(() -> {
                     final UnsignedLong maxMessageSize = s.getRemoteMaxMessageSize();
@@ -357,6 +364,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         helper.getCertificate(deviceCert.certificatePath())
             .compose(cert -> {
                 final var tenant = Tenants.createTenantForTrustAnchor(cert);
+                prepareTenantConfig(tenant);
                 return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
             })
             .compose(ok -> connectToAdapter(deviceCert))
@@ -527,27 +535,22 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
      * </ul>
      *
      * @param tenantId The tenant to register with the device registry.
+     * @param tenantConfig The tenant's configuration data.
      * @param deviceId The device to add to the tenant identified by tenantId.
      * @param senderQos The delivery semantics used by the device for uploading messages.
-     * @param disableTenant If true, disable the protocol adapter for the tenant.
      *
      * @return A future succeeding with the created sender.
      */
     protected Future<ProtonSender> setupProtocolAdapter(
             final String tenantId,
+            final Tenant tenantConfig,
             final String deviceId,
-            final ProtonQoS senderQos,
-            final boolean disableTenant) {
+            final ProtonQoS senderQos) {
 
         final String username = IntegrationTestSupport.getUsername(deviceId, tenantId);
 
-        final Tenant tenant = new Tenant();
-        if (disableTenant) {
-            tenant.addAdapterConfig(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_AMQP).setEnabled(false));
-        }
-
         return helper.registry
-                .addDeviceForTenant(tenantId, tenant, deviceId, DEVICE_PASSWORD)
+                .addDeviceForTenant(tenantId, tenantConfig, deviceId, DEVICE_PASSWORD)
                 .compose(ok -> connectToAdapter(username, DEVICE_PASSWORD))
                 .compose(con -> createProducer(null, senderQos))
                 .recover(t -> {

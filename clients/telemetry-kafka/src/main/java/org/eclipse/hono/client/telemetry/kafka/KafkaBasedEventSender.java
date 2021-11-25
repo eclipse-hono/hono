@@ -72,7 +72,14 @@ public class KafkaBasedEventSender extends AbstractKafkaBasedDownstreamSender im
         }
 
         final HonoTopic topic = new HonoTopic(HonoTopic.Type.EVENT, tenant.getTenantId());
-        final Map<String, Object> propsWithDefaults = addDefaults(tenant, device, QoS.AT_LEAST_ONCE, contentType, properties);
+        final Map<String, Object> propsWithDefaults = addDefaults(
+                topic.getType().endpoint,
+                tenant,
+                device,
+                QoS.AT_LEAST_ONCE,
+                contentType,
+                payload,
+                properties);
         final String topicName = topic.toString();
 
         final Span currentSpan = startChildSpan(

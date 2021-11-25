@@ -14,6 +14,7 @@ package org.eclipse.hono.tests.amqp;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -23,10 +24,12 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.DownstreamMessageAssertions;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.AmqpErrorException;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.ResourceLimits;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -45,6 +48,7 @@ import io.vertx.proton.ProtonQoS;
 public class EventAmqpIT extends AmqpUploadTestBase {
 
     private static final String EVENT_ENDPOINT = "event";
+    private static final Duration TTL = Duration.ofSeconds(60L);
 
     static Stream<ProtonQoS> senderQoSTypes() {
         // events may only be published using AT LEAST ONCE delivery semantics
@@ -59,6 +63,11 @@ public class EventAmqpIT extends AmqpUploadTestBase {
     }
 
     @Override
+    protected void prepareTenantConfig(final Tenant config) {
+        config.setResourceLimits(new ResourceLimits().setMaxTtl(TTL.toSeconds()));
+    }
+
+    @Override
     protected String getEndpointName() {
         return EVENT_ENDPOINT;
     }
@@ -67,6 +76,7 @@ public class EventAmqpIT extends AmqpUploadTestBase {
     protected void assertAdditionalMessageProperties(final DownstreamMessage<? extends MessageContext> msg) {
         DownstreamMessageAssertions.assertMessageIsDurable(msg);
         DownstreamMessageAssertions.assertMessageContainsCreationTime(msg);
+        DownstreamMessageAssertions.assertMessageContainsTimeToLive(msg, TTL);
     }
 
     /**
@@ -85,7 +95,7 @@ public class EventAmqpIT extends AmqpUploadTestBase {
         final String messagePayload = UUID.randomUUID().toString();
         final Message event = ProtonHelper.message();
 
-        setupProtocolAdapter(tenantId, deviceId, ProtonQoS.AT_LEAST_ONCE, false)
+        setupProtocolAdapter(tenantId, new Tenant(), deviceId, ProtonQoS.AT_LEAST_ONCE)
                 .map(s -> sender = s)
                 .onComplete(setup.succeedingThenComplete());
 

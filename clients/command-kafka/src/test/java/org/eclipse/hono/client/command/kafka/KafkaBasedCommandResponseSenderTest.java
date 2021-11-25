@@ -33,6 +33,7 @@ import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.RegistrationAssertion;
+import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -97,6 +98,7 @@ public class KafkaBasedCommandResponseSenderTest {
                 .testFactory(vertx, (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
         final var sender = new KafkaBasedCommandResponseSender(factory, kafkaProducerConfig, tracer);
         final TenantObject tenant = TenantObject.from(tenantId);
+        tenant.setResourceLimits(new ResourceLimits().setMaxTtlCommandResponse(10L));
 
         // WHEN sending a command response
         sender.sendCommandResponse(
@@ -142,6 +144,10 @@ public class KafkaBasedCommandResponseSenderTest {
                                 Buffer.buffer(creationTimeHeader.iterator().next().value()),
                                 Long.class);
                         assertThat(creationTimeMillis).isGreaterThan(0L);
+                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                                headers,
+                                MessageHelper.SYS_HEADER_PROPERTY_TTL,
+                                10000L);
                         KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
                                 headers,
                                 additionalHeader1Name,

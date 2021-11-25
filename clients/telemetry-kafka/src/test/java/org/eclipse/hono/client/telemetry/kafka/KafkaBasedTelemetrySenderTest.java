@@ -28,8 +28,10 @@ import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
 import org.eclipse.hono.test.TracingMockSupport;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
+import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -71,12 +73,14 @@ public class KafkaBasedTelemetrySenderTest {
      * Verifies that the Kafka record is created as expected when sending telemetry data.
      *
      * @param qos The quality of service used for sending the message.
+     * @param expectedTtl The ttl expected in the message.
      * @param ctx The vert.x test context.
      */
     @ParameterizedTest
-    @CsvSource(value = { "AT_MOST_ONCE", "AT_LEAST_ONCE" })
+    @CsvSource(value = { "AT_MOST_ONCE,10000", "AT_LEAST_ONCE,60000" })
     public void testSendTelemetryCreatesCorrectRecord(
             final QoS qos,
+            final long expectedTtl,
             final VertxTestContext ctx) {
 
         // GIVEN a telemetry sender
@@ -96,6 +100,9 @@ public class KafkaBasedTelemetrySenderTest {
         final var factory = CachingKafkaProducerFactory
                 .testFactory(vertxMock, (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
         final var sender = new KafkaBasedTelemetrySender(factory, kafkaProducerConfig, true, tracer);
+        tenant.setResourceLimits(new ResourceLimits()
+                .setMaxTtlTelemetryQoS0(10L)
+                .setMaxTtlTelemetryQoS1(60L));
 
         // WHEN sending telemetry data
         sender.sendTelemetry(tenant, device, qos, contentType, Buffer.buffer(payload), properties, null)
@@ -111,6 +118,10 @@ public class KafkaBasedTelemetrySenderTest {
                     assertThat(producerRecord.value().toString()).isEqualTo(payload);
 
                     KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(producerRecord.headers(), "foo", "bar");
+                    KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                            producerRecord.headers(),
+                            MessageHelper.SYS_HEADER_PROPERTY_TTL,
+                            expectedTtl);
 
                     // ...AND contains the standard headers
                     KafkaClientUnitTestHelper.assertStandardHeaders(

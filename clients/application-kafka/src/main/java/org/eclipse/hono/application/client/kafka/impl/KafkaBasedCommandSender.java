@@ -290,7 +290,7 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
         props.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
         props.put(MessageHelper.SYS_PROPERTY_SUBJECT, subject);
         props.put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE,
-                Objects.nonNull(contentType) ? contentType : MessageHelper.CONTENT_TYPE_OCTET_STREAM);
+                Optional.ofNullable(contentType).orElse(MessageHelper.CONTENT_TYPE_OCTET_STREAM));
         Optional.ofNullable(correlationId)
                 .ifPresent(id -> props.put(MessageHelper.SYS_PROPERTY_CORRELATION_ID, id));
         props.put(KafkaRecordHelper.HEADER_RESPONSE_REQUIRED, responseRequired);

@@ -112,7 +112,7 @@ public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappin
      * and delegates the command to the resulting protocol adapter instance.
      *
      * @param consumerRecord The consumer record corresponding to the command.
-     * @return A future indicating the output of the operation.
+     * @return A future indicating the outcome of the operation.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public Future<Void> mapAndDelegateIncomingCommandMessage(final KafkaConsumerRecord<String, Buffer> consumerRecord) {
@@ -140,9 +140,16 @@ public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappin
         command.logToSpan(currentSpan);
         if (!command.isValid()) {
             log.debug("received invalid command record [{}]", command);
-            commandContext.reject("malformed command message");
-            reportInvalidCommand(commandContext, timer);
-            return Future.failedFuture("command is invalid");
+            return tenantClient.get(command.getTenant(), currentSpan.context())
+                    .compose(tenantConfig -> {
+                        commandContext.put(CommandContext.KEY_TENANT_CONFIG, tenantConfig);
+                        return Future.failedFuture("command is invalid");
+                    })
+                    .onComplete(ar -> {
+                        commandContext.reject("malformed command message");
+                        reportInvalidCommand(commandContext, timer);
+                    })
+                    .mapEmpty();
         }
         log.trace("received valid command record [{}]", command);
         commandQueue.add(commandContext);

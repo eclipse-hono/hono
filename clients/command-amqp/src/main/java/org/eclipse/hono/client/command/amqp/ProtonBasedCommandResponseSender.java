@@ -22,9 +22,11 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.amqp.AbstractServiceClient;
+import org.eclipse.hono.client.amqp.DownstreamAmqpMessageFactory;
 import org.eclipse.hono.client.amqp.GenericSenderLink;
 import org.eclipse.hono.client.command.CommandResponse;
 import org.eclipse.hono.client.command.CommandResponseSender;
+import org.eclipse.hono.client.util.DownstreamMessageProperties;
 import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -74,9 +76,22 @@ public class ProtonBasedCommandResponseSender extends AbstractServiceClient impl
         });
     }
 
-    private Message createDownstreamMessage(final CommandResponse response, final Map<String, Object> properties) {
+    private Message createDownstreamMessage(
+            final CommandResponse response,
+            final TenantObject tenant,
+            final RegistrationAssertion device,
+            final Map<String, Object> properties) {
+
+        final var props = new DownstreamMessageProperties(
+                CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT,
+                tenant.getDefaults().getMap(),
+                device.getDefaults(),
+                properties,
+                tenant.getResourceLimits())
+            .asMap();
+
         final Message msg = ProtonHelper.message();
-        MessageHelper.setApplicationProperties(msg, properties);
+        DownstreamAmqpMessageFactory.addDefaults(msg, props);
         MessageHelper.setCreationTime(msg);
         msg.setCorrelationId(response.getCorrelationId());
         MessageHelper.setPayload(msg, response.getContentType(), response.getPayload());
@@ -89,7 +104,7 @@ public class ProtonBasedCommandResponseSender extends AbstractServiceClient impl
         MessageHelper.addTenantId(msg, response.getTenantId());
         MessageHelper.addDeviceId(msg, response.getDeviceId());
         if (jmsVendorPropsEnabled) {
-            MessageHelper.addJmsVendorProperties(msg);
+            DownstreamAmqpMessageFactory.addJmsVendorProperties(msg);
         }
         return msg;
     }
@@ -101,20 +116,25 @@ public class ProtonBasedCommandResponseSender extends AbstractServiceClient impl
             final CommandResponse response,
             final SpanContext context) {
 
+        Objects.requireNonNull(tenant);
+        Objects.requireNonNull(device);
         Objects.requireNonNull(response);
 
-        return createSender(response.getTenantId(), response.getReplyToId())
+        final Span span = newChildSpan(context, "forward Command response");
+        final var sender = createSender(response.getTenantId(), response.getReplyToId());
+
+        return sender
                 .recover(thr -> Future.failedFuture(StatusCodeMapper.toServerError(thr)))
-                .compose(sender -> {
-                    final Message msg = createDownstreamMessage(response, response.getAdditionalProperties());
-                    final Span span = newChildSpan(context, "forward Command response");
+                .compose(s -> {
+                    final Message msg = createDownstreamMessage(response, tenant, device, response.getAdditionalProperties());
                     if (response.getMessagingType() != getMessagingType()) {
                         span.log(String.format("using messaging type %s instead of type %s used for the original command",
                                 getMessagingType(), response.getMessagingType()));
                     }
-                    return sender.sendAndWaitForOutcome(msg, span)
-                            .onComplete(delivery -> sender.close());
+                    return s.sendAndWaitForOutcome(msg, span);
                 })
+                .onSuccess(delivery -> sender.result().close())
+                .onComplete(ar -> span.finish())
                 .mapEmpty();
     }
 }

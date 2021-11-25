@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.client.command.kafka;
 
+import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +29,8 @@ import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.errors.TopicExistsException;
 import org.eclipse.hono.client.NoConsumerException;
+import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.command.CommandAlreadyProcessedException;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandHandlerWrapper;
@@ -41,6 +44,8 @@ import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
+import org.eclipse.hono.client.registry.TenantClient;
+import org.eclipse.hono.client.registry.TenantDisabledOrNotRegisteredException;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
@@ -72,6 +77,7 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
     private static final int NUM_PARTITIONS = 1;
     private static final long CREATE_TOPIC_RETRY_INTERVAL = 1000L;
 
+    private final Vertx vertx;
     private final Supplier<Future<KafkaConsumer<String, Buffer>>> consumerCreator;
     private final Supplier<Future<Admin>> kafkaAdminClientCreator;
     private final String adapterInstanceId;
@@ -79,6 +85,7 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
     private final CommandHandlers commandHandlers;
     private final Tracer tracer;
     private final CommandResponseSender commandResponseSender;
+    private final TenantClient tenantClient;
     private final AtomicBoolean isTopicCreated = new AtomicBoolean(false);
     private final AtomicBoolean retryCreateTopic = new AtomicBoolean(true);
     /**
@@ -90,7 +97,6 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
     private Admin adminClient;
     private Context context;
     private KafkaClientMetricsSupport metricsSupport;
-    private final Vertx vertx;
     private long retryCreateTopicTimerId;
 
     /**
@@ -99,6 +105,7 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
      * @param vertx The Vert.x instance to use.
      * @param adminClientConfigProperties The Kafka admin client config properties.
      * @param consumerConfigProperties The Kafka consumer config properties.
+     * @param tenantClient The client to use for retrieving tenant configuration data.
      * @param commandResponseSender The sender used to send command responses.
      * @param adapterInstanceId The adapter instance id.
      * @param commandHandlers The command handlers to choose from for handling a received command.
@@ -109,13 +116,16 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
             final Vertx vertx,
             final KafkaAdminClientConfigProperties adminClientConfigProperties,
             final MessagingKafkaConsumerConfigProperties consumerConfigProperties,
+            final TenantClient tenantClient,
             final CommandResponseSender commandResponseSender,
             final String adapterInstanceId,
             final CommandHandlers commandHandlers,
             final Tracer tracer) {
+
         this.vertx = Objects.requireNonNull(vertx);
         Objects.requireNonNull(adminClientConfigProperties);
         Objects.requireNonNull(consumerConfigProperties);
+        this.tenantClient = Objects.requireNonNull(tenantClient);
         this.commandResponseSender = Objects.requireNonNull(commandResponseSender);
         this.adapterInstanceId = Objects.requireNonNull(adapterInstanceId);
         this.commandHandlers = Objects.requireNonNull(commandHandlers);
@@ -152,6 +162,7 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
      * @param kafkaAdminClient The Kafka admin client to use.
      * @param kafkaConsumer The Kafka consumer to use.
      * @param clientId The consumer client identifier.
+     * @param tenantClient The client to use for retrieving tenant configuration data.
      * @param commandResponseSender The sender used to send command responses.
      * @param adapterInstanceId The adapter instance id.
      * @param commandHandlers The command handlers to choose from for handling a received command.
@@ -163,14 +174,17 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
             final Admin kafkaAdminClient,
             final KafkaConsumer<String, Buffer> kafkaConsumer,
             final String clientId,
+            final TenantClient tenantClient,
             final CommandResponseSender commandResponseSender,
             final String adapterInstanceId,
             final CommandHandlers commandHandlers,
             final Tracer tracer) {
+
         this.context = Objects.requireNonNull(context);
         Objects.requireNonNull(kafkaAdminClient);
         this.consumer = Objects.requireNonNull(kafkaConsumer);
         this.clientId = Objects.requireNonNull(clientId);
+        this.tenantClient = Objects.requireNonNull(tenantClient);
         this.commandResponseSender = Objects.requireNonNull(commandResponseSender);
         this.adapterInstanceId = Objects.requireNonNull(adapterInstanceId);
         this.commandHandlers = Objects.requireNonNull(commandHandlers);
@@ -380,28 +394,45 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
         final Span currentSpan = CommandContext.createSpan(tracer, command, spanContext, followsFromSpanContext);
         currentSpan.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
 
-        final CommandContext commandContext = new KafkaBasedCommandContext(command, commandResponseSender, currentSpan);
+        final var commandContext = new KafkaBasedCommandContext(command, commandResponseSender, currentSpan);
 
-        if (commandHandler != null) {
-            // partition index and offset here are related to the *tenant-based* topic the command was originally received in
-            // therefore they are stored with the tenant as key
-            final Map<Integer, Long> lastHandledPartitionOffsets = lastHandledPartitionOffsetsPerTenant
-                    .computeIfAbsent(command.getTenant(), k -> new HashMap<>());
-            final Long lastHandledOffset = lastHandledPartitionOffsets.get(commandPartition);
-            if (lastHandledOffset != null && commandOffset <= lastHandledOffset) {
-                LOG.debug("ignoring command - record partition offset {} <= last handled offset {} [{}]", commandOffset,
-                        lastHandledOffset, command);
-                TracingHelper.logError(currentSpan, "command record already handled before");
-                commandContext.release(new CommandAlreadyProcessedException());
-            } else {
-                lastHandledPartitionOffsets.put(commandPartition, commandOffset);
-                LOG.trace("using [{}] for received command [{}]", commandHandler, command);
-                // command.isValid() check not done here - it is to be done in the command handler
-                commandHandler.handleCommand(commandContext);
-            }
-        } else {
-            LOG.info("no command handler found for command [{}]", command);
-            commandContext.release(new NoConsumerException("no command handler found for command"));
-        }
+        tenantClient.get(command.getTenant(), spanContext)
+            .onFailure(t -> {
+                if (ServiceInvocationException.extractStatusCode(t) == HttpURLConnection.HTTP_NOT_FOUND) {
+                    commandContext.reject(new TenantDisabledOrNotRegisteredException(
+                            command.getTenant(),
+                            HttpURLConnection.HTTP_NOT_FOUND));
+                } else {
+                    commandContext.release(new ServerErrorException(
+                            command.getTenant(),
+                            HttpURLConnection.HTTP_UNAVAILABLE,
+                            "error retrieving tenant configuration",
+                            t));
+                }
+            })
+            .onSuccess(tenantConfig -> {
+                commandContext.put(CommandContext.KEY_TENANT_CONFIG, tenantConfig);
+                if (commandHandler != null) {
+                    // partition index and offset here are related to the *tenant-based* topic the command was originally received in
+                    // therefore they are stored with the tenant as key
+                    final Map<Integer, Long> lastHandledPartitionOffsets = lastHandledPartitionOffsetsPerTenant
+                            .computeIfAbsent(command.getTenant(), k -> new HashMap<>());
+                    final Long lastHandledOffset = lastHandledPartitionOffsets.get(commandPartition);
+                    if (lastHandledOffset != null && commandOffset <= lastHandledOffset) {
+                        LOG.debug("ignoring command - record partition offset {} <= last handled offset {} [{}]", commandOffset,
+                                lastHandledOffset, command);
+                        TracingHelper.logError(currentSpan, "command record already handled before");
+                        commandContext.release(new CommandAlreadyProcessedException());
+                    } else {
+                        lastHandledPartitionOffsets.put(commandPartition, commandOffset);
+                        LOG.trace("using [{}] for received command [{}]", commandHandler, command);
+                        // command.isValid() check not done here - it is to be done in the command handler
+                        commandHandler.handleCommand(commandContext);
+                    }
+                } else {
+                    LOG.info("no command handler found for command [{}]", command);
+                    commandContext.release(new NoConsumerException("no command handler found for command"));
+                }
+            });
     }
 }

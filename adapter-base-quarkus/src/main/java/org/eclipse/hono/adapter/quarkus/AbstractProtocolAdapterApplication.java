@@ -277,6 +277,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         final MessagingClientProvider<EventSender> eventSenderProvider = new MessagingClientProvider<>();
         final MessagingClientProvider<CommandResponseSender> commandResponseSenderProvider = new MessagingClientProvider<>();
         final KafkaClientMetricsSupport kafkaClientMetricsSupport = kafkaClientMetricsSupport(kafkaMetricsOptions);
+        final var tenantClient = tenantClient();
 
         if (kafkaEventConfig.isConfigured()) {
             LOG.info("Kafka client configuration present, adding Kafka messaging clients");
@@ -288,7 +289,10 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                     protocolAdapterProperties.isDefaultsEnabled(), tracer));
             eventSenderProvider.setClient(new KafkaBasedEventSender(factory, kafkaEventConfig,
                     protocolAdapterProperties.isDefaultsEnabled(), tracer));
-            commandResponseSenderProvider.setClient(new KafkaBasedCommandResponseSender(factory, kafkaCommandResponseConfig, tracer));
+            commandResponseSenderProvider.setClient(new KafkaBasedCommandResponseSender(
+                    factory,
+                    kafkaCommandResponseConfig,
+                    tracer));
         }
         if (downstreamSenderConfig.isHostConfigured()) {
             telemetrySenderProvider.setClient(downstreamSender());
@@ -317,9 +321,16 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             if (kafkaCommandInternalConfig.isConfigured() && kafkaCommandConfig.isConfigured()
                     && kafkaCommandResponseSender != null) {
                 commandConsumerFactory.registerInternalCommandConsumer(
-                        (id, handlers) -> new KafkaBasedInternalCommandConsumer(vertx, kafkaCommandInternalConfig,
-                                kafkaCommandConfig, kafkaCommandResponseSender, id, handlers, tracer)
-                                        .setMetricsSupport(kafkaClientMetricsSupport));
+                        (id, handlers) -> new KafkaBasedInternalCommandConsumer(
+                                vertx,
+                                kafkaCommandInternalConfig,
+                                kafkaCommandConfig,
+                                tenantClient,
+                                kafkaCommandResponseSender,
+                                id,
+                                handlers,
+                                tracer)
+                            .setMetricsSupport(kafkaClientMetricsSupport));
             }
 
             adapter.setCommandConsumerFactory(commandConsumerFactory);
@@ -329,7 +340,6 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             throw new IllegalStateException("No Command Router connection configured");
         }
 
-        final var tenantClient = tenantClient();
         adapter.setMessagingClientProviders(messagingClientProviders);
         Optional.ofNullable(connectionEventProducer())
             .ifPresent(adapter::setConnectionEventProducer);

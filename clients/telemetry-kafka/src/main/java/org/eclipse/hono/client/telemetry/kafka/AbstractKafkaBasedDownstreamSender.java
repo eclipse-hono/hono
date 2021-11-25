@@ -21,11 +21,10 @@ import java.util.Optional;
 import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
+import org.eclipse.hono.client.util.DownstreamMessageProperties;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
-import org.eclipse.hono.util.ResourceLimits;
-import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 
 import io.opentracing.Tracer;
@@ -61,83 +60,62 @@ public abstract class AbstractKafkaBasedDownstreamSender extends AbstractKafkaBa
     /**
      * Adds default properties defined either at the device or tenant level are added to the message headers.
      *
+     * @param endpointName The endpoint that the message is targeted at.
      * @param tenant The tenant that the device belongs to.
      * @param device The registration assertion for the device that the data originates from.
      * @param qos The delivery semantics to use for sending the data.
-     * @param contentType The content type of the data. If {@code null}, the content type be taken from the following
-     *            sources (in that order, the first one that is present is used):
+     * @param contentType The content type of the data. If {@code null}, the content type will be determined
+     *            from the following sources (in that order, the first one that is present is used):
      *            <ol>
      *            <li>the <em>contentType</em> parameter</li>
-     *            <li>the property with key {@link org.eclipse.hono.util.MessageHelper#SYS_PROPERTY_CONTENT_TYPE} in the
+     *            <li>the property with key {@value org.eclipse.hono.util.MessageHelper#SYS_PROPERTY_CONTENT_TYPE} in the
      *            <em>properties</em> parameter</li>
      *            <li>the device default</li>
      *            <li>the tenant default</li>
-     *            <li>the {@linkplain org.eclipse.hono.util.MessageHelper#CONTENT_TYPE_OCTET_STREAM default content
-     *            type}</li>
+     *            <li>the default content type ({@value org.eclipse.hono.util.MessageHelper#CONTENT_TYPE_OCTET_STREAM}
+     *            if payload is not {@code null}</li>
      *            </ol>
+     * @param payload The data to send in the message or {@code null}.
      * @param properties Additional meta data that should be included in the downstream message.
      * @return The augmented properties.
-     * @throws NullPointerException if tenant, device or qos are {@code null}.
+     * @throws NullPointerException if endpoint name, tenant, device or qos are {@code null}.
      */
     protected final Map<String, Object> addDefaults(
+            final String endpointName,
             final TenantObject tenant,
             final RegistrationAssertion device,
             final QoS qos,
             final String contentType,
+            final Buffer payload,
             final Map<String, Object> properties) {
 
+        Objects.requireNonNull(endpointName);
         Objects.requireNonNull(tenant);
         Objects.requireNonNull(device);
         Objects.requireNonNull(qos);
 
-        final Map<String, Object> headerProperties = new HashMap<>();
-        if (isDefaultsEnabled) {
-            headerProperties.putAll(tenant.getDefaults().copy().getMap()); // (1) add tenant defaults
-            headerProperties.putAll(device.getDefaults()); // (2) overwrite with device defaults
-        }
+        final Map<String, Object> messageProperties = Optional.ofNullable(properties)
+                .map(HashMap::new)
+                .orElseGet(HashMap::new);
+        messageProperties.put(MessageHelper.APP_PROPERTY_DEVICE_ID, device.getDeviceId());
+        messageProperties.put(MessageHelper.APP_PROPERTY_QOS, qos.ordinal());
 
-        // (3) overwrite with properties provided by protocol adapter
-        Optional.ofNullable(properties).ifPresent(headerProperties::putAll);
+        final var propsWithDefaults = new DownstreamMessageProperties(
+                endpointName,
+                isDefaultsEnabled ? tenant.getDefaults().getMap() : null,
+                isDefaultsEnabled ? device.getDefaults() : null,
+                messageProperties,
+                tenant.getResourceLimits())
+            .asMap();
 
-        // (4) overwrite by values of separate parameters
-        headerProperties.put(MessageHelper.APP_PROPERTY_DEVICE_ID, device.getDeviceId());
-        headerProperties.put(MessageHelper.APP_PROPERTY_QOS, qos.ordinal());
         if (contentType != null) {
-            headerProperties.put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, contentType);
+            propsWithDefaults.put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, contentType);
+        } else if (payload != null) {
+            propsWithDefaults.putIfAbsent(
+                    MessageHelper.SYS_PROPERTY_CONTENT_TYPE,
+                    MessageHelper.CONTENT_TYPE_OCTET_STREAM);
         }
 
-        // (5) if still no content type present, set the default content type
-        headerProperties.putIfAbsent(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, MessageHelper.CONTENT_TYPE_OCTET_STREAM);
-
-        // make sure that device provided TTL is capped at max TTL (if set)
-        headerProperties.compute(MessageHelper.SYS_HEADER_PROPERTY_TTL, (k, v) -> {
-
-            final long maxTtl = Optional.ofNullable(tenant)
-                    .flatMap(t -> Optional.ofNullable(t.getResourceLimits()))
-                    .map(ResourceLimits::getMaxTtl)
-                    .orElse(TenantConstants.UNLIMITED_TTL);
-
-            final long ttlSeconds;
-            if (v instanceof Number) { // TTL is configured
-                final long ttl = ((Number) v).longValue();
-                if (maxTtl != TenantConstants.UNLIMITED_TTL && ttl > maxTtl) {
-                    log.debug("limiting TTL [{}s] to max TTL [{}s]", ttl, maxTtl);
-                    ttlSeconds = maxTtl;
-                } else {
-                    log.trace("keeping message TTL [{}s, max TTL: {}s]", ttl, maxTtl);
-                    ttlSeconds = ttl;
-                }
-            } else {
-                if (maxTtl != TenantConstants.UNLIMITED_TTL) {
-                    log.debug("setting TTL to tenant's max TTL [{}s]", maxTtl);
-                    ttlSeconds = maxTtl;
-                } else {
-                    return null;
-                }
-            }
-            return ttlSeconds * 1000L; // API specification defines TTL in milliseconds
-        });
-
-        return headerProperties;
+        return propsWithDefaults;
     }
 }

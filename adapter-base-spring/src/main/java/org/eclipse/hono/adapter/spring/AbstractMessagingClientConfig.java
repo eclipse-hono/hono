@@ -27,6 +27,7 @@ import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
+import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.TelemetrySender;
 import org.eclipse.hono.client.telemetry.amqp.ProtonBasedDownstreamSender;
@@ -66,6 +67,7 @@ public abstract class AbstractMessagingClientConfig implements ComponentNameProv
      * @param vertx The Vert.x instance to use.
      * @param adapterProperties The adapter's configuration properties.
      * @param kafkaClientMetricsSupport The Kafka metrics support.
+     * @param tenantClient The client to use for retrieving tenant configuration data.
      * @return The created messaging clients.
      */
     protected MessagingClientProviders messagingClientProviders(
@@ -73,7 +75,8 @@ public abstract class AbstractMessagingClientConfig implements ComponentNameProv
             final Tracer tracer,
             final Vertx vertx,
             final ProtocolAdapterProperties adapterProperties,
-            final KafkaClientMetricsSupport kafkaClientMetricsSupport) {
+            final KafkaClientMetricsSupport kafkaClientMetricsSupport,
+            final TenantClient tenantClient) {
 
         final MessagingClientProvider<TelemetrySender> telemetrySenderProvider = new MessagingClientProvider<>();
         final MessagingClientProvider<EventSender> eventSenderProvider = new MessagingClientProvider<>();
@@ -86,10 +89,15 @@ public abstract class AbstractMessagingClientConfig implements ComponentNameProv
 
             telemetrySenderProvider.setClient(new KafkaBasedTelemetrySender(factory, kafkaTelemetryConfig(),
                     adapterProperties.isDefaultsEnabled(), tracer));
-            eventSenderProvider.setClient(new KafkaBasedEventSender(factory, kafkaEventConfig(),
-                    adapterProperties.isDefaultsEnabled(), tracer));
-            commandResponseSenderProvider.setClient(new KafkaBasedCommandResponseSender(factory,
-                    kafkaCommandResponseConfig(), tracer));
+            eventSenderProvider.setClient(new KafkaBasedEventSender(
+                    factory,
+                    kafkaEventConfig(),
+                    adapterProperties.isDefaultsEnabled(),
+                    tracer));
+            commandResponseSenderProvider.setClient(new KafkaBasedCommandResponseSender(
+                    factory,
+                    kafkaCommandResponseConfig(),
+                    tracer));
         }
 
         if (downstreamSenderConfig().isHostConfigured()) {
