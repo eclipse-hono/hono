@@ -18,14 +18,14 @@ import static org.mockito.Mockito.mock;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.time.Instant;
-import java.util.Map;
 
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.messaging.Data;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
-import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.buffer.Buffer;
@@ -48,21 +48,18 @@ class ProtonBasedDownstreamMessageTest {
 
         final var now = Instant.now().toEpochMilli();
         final var delivery = mock(ProtonDelivery.class);
-        final var msg = MessageHelper.newMessage(
-                ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, "tenant", "device"),
-                "text/plain",
-                Buffer.buffer("hello"),
-                TenantObject.from("tenant"),
-                Map.of(
-                        MessageHelper.APP_PROPERTY_QOS, 1,
-                        "other", "property"),
-                Map.of(),
-                false,
-                false);
+        final var msg = ProtonHelper.message();
+        msg.setAddress(ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, "tenant", "device").toString());
+        msg.setContentType("text/plain");
+        msg.setBody(new Data(new Binary(Buffer.buffer("hello").getBytes())));
         msg.setCreationTime(now);
+        MessageHelper.addDeviceId(msg, "device");
         MessageHelper.addTimeUntilDisconnect(msg, 22);
+        MessageHelper.addProperty(msg, MessageHelper.APP_PROPERTY_QOS, 1);
+        MessageHelper.addProperty(msg, "other", "property");
 
         final var downstreamMessage = ProtonBasedDownstreamMessage.from(msg, delivery);
+
         assertThat(downstreamMessage.getContentType()).isEqualTo("text/plain");
         assertThat(downstreamMessage.getCreationTime()).isEqualTo(Instant.ofEpochMilli(now));
         assertThat(downstreamMessage.getDeviceId()).isEqualTo("device");
