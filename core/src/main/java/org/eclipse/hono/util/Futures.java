@@ -133,4 +133,23 @@ public final class Futures {
         }
     }
 
+    /**
+     * Gets a handler that completes the given handler on the current Vert.x context (if set).
+     *
+     * @param handlerToComplete The handler to apply the result of the returned handler on.
+     * @param <T> The type of the result.
+     * @return The handler that will wrap the given handler so that it is handled on the original context.
+     * @throws NullPointerException if handlerToComplete is {@code null}.
+     */
+    public static <T> Handler<AsyncResult<T>> onCurrentContextCompletionHandler(
+            final Handler<AsyncResult<T>> handlerToComplete) {
+        Objects.requireNonNull(handlerToComplete);
+        final Context context = Vertx.currentContext();
+        if (context == null) {
+            return handlerToComplete;
+        } else {
+            return ar -> context.runOnContext(v -> handlerToComplete.handle(ar));
+        }
+    }
+
 }

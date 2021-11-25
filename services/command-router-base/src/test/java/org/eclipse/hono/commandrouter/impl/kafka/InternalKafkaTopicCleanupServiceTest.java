@@ -59,7 +59,7 @@ public class InternalKafkaTopicCleanupServiceTest {
         adapterInstanceStatusService = mock(AdapterInstanceStatusService.class);
         kafkaAdminClient = mock(KafkaAdminClient.class);
         internalKafkaTopicCleanupService = new InternalKafkaTopicCleanupService(vertx, adapterInstanceStatusService,
-                () -> kafkaAdminClient);
+                kafkaAdminClient);
         internalKafkaTopicCleanupService.start();
     }
 
