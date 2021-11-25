@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.notification;
 
+import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
 import org.eclipse.hono.notification.deviceregistry.CredentialsChangeNotification;
 import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
 import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
@@ -65,6 +66,8 @@ public final class NotificationTypeResolver extends TypeIdResolverBase {
             return context.constructSpecializedType(this.baseType, DeviceChangeNotification.class);
         case CredentialsChangeNotification.TYPE:
             return context.constructSpecializedType(this.baseType, CredentialsChangeNotification.class);
+        case AllDevicesOfTenantDeletedNotification.TYPE:
+            return context.constructSpecializedType(this.baseType, AllDevicesOfTenantDeletedNotification.class);
         default:
             return null;
         }

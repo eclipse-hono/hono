@@ -27,6 +27,7 @@ import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.notification.NoOpNotificationSender;
 import org.eclipse.hono.notification.NotificationSender;
+import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
 import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
 import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
 import org.eclipse.hono.service.management.Filter;
@@ -406,7 +407,8 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
                     }
                     return processDeleteDevicesOfTenant(tenantId, span);
                 })
-                // TODO send notification
+                .onSuccess(result -> notificationSender
+                        .publish(new AllDevicesOfTenantDeletedNotification(tenantId, Instant.now())))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 

@@ -15,6 +15,7 @@ package org.eclipse.hono.client.notification;
 
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.notification.AbstractNotification;
+import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
 import org.eclipse.hono.notification.deviceregistry.CredentialsChangeNotification;
 import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
 import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
@@ -44,6 +45,8 @@ public final class NotificationTopicHelper {
             address = DeviceChangeNotification.ADDRESS;
         } else if (CredentialsChangeNotification.class.equals(notificationType)) {
             address = CredentialsChangeNotification.ADDRESS;
+        } else if (AllDevicesOfTenantDeletedNotification.class.equals(notificationType)) {
+            address = AllDevicesOfTenantDeletedNotification.ADDRESS;
         } else {
             throw new IllegalArgumentException("Unknown notification type " + notificationType.getName());
         }

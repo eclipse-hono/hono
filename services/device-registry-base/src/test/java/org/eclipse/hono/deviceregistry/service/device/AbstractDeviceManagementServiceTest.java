@@ -25,6 +25,7 @@ import java.util.Optional;
 
 import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationSender;
+import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
 import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
 import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
 import org.eclipse.hono.service.management.Id;
@@ -179,6 +180,27 @@ public class AbstractDeviceManagementServiceTest {
                 })));
     }
 
+    /**
+     * Verifies that {@link AbstractDeviceManagementService#deleteDevicesOfTenant(String, Span)} publishes the expected
+     * notification.
+     *
+     * @param context The vert.x test context.
+     */
+    @Test
+    public void testNotificationOnDeleteDevicesOfTenant(final VertxTestContext context) {
+        deviceManagementService
+                .createDevice(DEFAULT_TENANT_ID, Optional.of(DEFAULT_DEVICE_ID), new Device(), SPAN)
+                .compose(result -> deviceManagementService.deleteDevicesOfTenant(DEFAULT_TENANT_ID, SPAN))
+                .onComplete(context.succeeding(result -> context.verify(() -> {
+                    verify(notificationSender, times(2)).publish(notificationArgumentCaptor.capture());
+
+                    final var notification = (AllDevicesOfTenantDeletedNotification) notificationArgumentCaptor.getValue();
+                    assertThat(notification.getTenantId()).isEqualTo(DEFAULT_TENANT_ID);
+                    assertThat(notification.getCreationTime()).isNotNull();
+                    context.completeNow();
+                })));
+    }
+
     private static class TestDeviceManagementService extends AbstractDeviceManagementService {
 
         @Override
@@ -204,6 +226,11 @@ public class AbstractDeviceManagementServiceTest {
         @Override
         protected Future<Result<Void>> processDeleteDevice(final DeviceKey key, final Optional<String> resourceVersion,
                 final Span span) {
+            return Future.succeededFuture(Result.from(HttpURLConnection.HTTP_NO_CONTENT));
+        }
+
+        @Override
+        protected Future<Result<Void>> processDeleteDevicesOfTenant(final String tenantId, final Span span) {
             return Future.succeededFuture(Result.from(HttpURLConnection.HTTP_NO_CONTENT));
         }
     }
