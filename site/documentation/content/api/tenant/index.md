@@ -236,16 +236,18 @@ The table below contains the properties which are used to configure a tenant's r
 
 Protocol adapters SHOULD use the *max-connections* property to determine if a device's connection request should be accepted or rejected.
 
-Protocol adapters SHOULD use the *max-ttl* property to determine the *effective time-to-live* for events published by devices as follows:
+Protocol adapters SHOULD use the *max-ttl* property to determine the *effective time-to-live* for *event* messages
+published by devices as follows:
 
-1. If a non-default *max-ttl* is set for the tenant, use that value as the *effective ttl*, otherwise set *effective ttl* to `-1`.
+1. Set *effective ttl* to `-1` (unlimited).
+1. If a *max-ttl* value greater than *effective ttl* is set for the tenant, use that value as the new *effective ttl*.
 1. If the event published by the device
-   1. contains a *ttl* header and *effective ttl* is not `-1` and the *ttl* value (in seconds) provided by the device is smaller than the
-      *effective ttl*, use the device provided *ttl* value as the new *effective ttl*.
-   1. does not contain a *ttl* header but a default *ttl* value is configured for the device (with the device level taking precedence
-      over the tenant level) and *effective ttl* is not `-1` and the default value is smaller than the *effective ttl*,
-      use the default *ttl* value as the new *effective ttl*.
-1. If *effective ttl* is not `-1`, set the downstream event message's *ttl* header to its value (in milliseconds).
+   * contains a *ttl* header and either *effective ttl* is `-1` or the *ttl* value (in seconds) provided by the device is
+      smaller than the *effective ttl*, then use the *ttl* value provided by the device as the new *effective ttl*.
+   * does not contain a *ttl* header but a default property with name *ttl* is configured for the device (with the device
+      level taking precedence over the tenant level) and either *effective ttl* is `-1` or the default property's value
+      is smaller than the *effective ttl*, then use the configured default *ttl* value as the new *effective ttl*.
+1. If *effective ttl* is not `-1`, then set the downstream message's *ttl* header to its value (in milliseconds).
 
 The JSON object MAY contain an arbitrary number of additional members with arbitrary names of either scalar or complex type.
 This allows for future *well-known* additions and also allows to add further information which might be relevant to a *custom* adapter only.
