@@ -19,6 +19,7 @@ import org.eclipse.hono.application.client.amqp.ProtonBasedApplicationClient;
 import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
 import org.eclipse.hono.application.client.kafka.impl.KafkaApplicationClientImpl;
 import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.kafka.CommonKafkaClientConfigProperties;
 import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
@@ -78,27 +79,46 @@ public class AppConfiguration {
     }
 
     /**
-     * Exposes Kafka consumer configuration properties as a Spring bean.
+     * Exposes common configuration properties for a clients accessing the Kafka cluster as a Spring bean.
      *
      * @return The properties.
      */
     @ConfigurationProperties(prefix = "hono.kafka")
+    @Bean
+    public CommonKafkaClientConfigProperties commonKafkaClientConfig() {
+        return new CommonKafkaClientConfigProperties();
+    }
+
+    /**
+     * Exposes Kafka consumer configuration properties as a Spring bean.
+     *
+     * @param commonKafkaClientConfig The common Kafka client configuration.
+     * @return The properties.
+     */
+    @ConfigurationProperties(prefix = "hono.kafka.consumer")
     @Profile("kafka")
     @Bean
-    public MessagingKafkaConsumerConfigProperties messagingKafkaClientConfig() {
-        return new MessagingKafkaConsumerConfigProperties();
+    public MessagingKafkaConsumerConfigProperties messagingKafkaConsumerConfig(
+            final CommonKafkaClientConfigProperties commonKafkaClientConfig) {
+        final MessagingKafkaConsumerConfigProperties configProperties = new MessagingKafkaConsumerConfigProperties();
+        configProperties.setCommonClientConfig(commonKafkaClientConfig);
+        return configProperties;
     }
 
     /**
      * Exposes Kafka producer configuration properties as a Spring bean.
      *
+     * @param commonKafkaClientConfig The common Kafka client configuration.
      * @return The properties.
      */
-    @ConfigurationProperties(prefix = "hono.kafka")
+    @ConfigurationProperties(prefix = "hono.kafka.producer")
     @Profile("kafka")
     @Bean
-    public MessagingKafkaProducerConfigProperties messagingKafkaProducerConfig() {
-        return new MessagingKafkaProducerConfigProperties();
+    public MessagingKafkaProducerConfigProperties messagingKafkaProducerConfig(
+            final CommonKafkaClientConfigProperties commonKafkaClientConfig) {
+        final MessagingKafkaProducerConfigProperties configProperties = new MessagingKafkaProducerConfigProperties();
+        configProperties.setCommonClientConfig(commonKafkaClientConfig);
+        return configProperties;
     }
 
     /**

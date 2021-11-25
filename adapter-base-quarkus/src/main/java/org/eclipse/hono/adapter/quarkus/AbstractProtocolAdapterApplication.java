@@ -50,10 +50,10 @@ import org.eclipse.hono.client.command.amqp.ProtonBasedDelegatingCommandConsumer
 import org.eclipse.hono.client.command.amqp.ProtonBasedInternalCommandConsumer;
 import org.eclipse.hono.client.command.kafka.KafkaBasedCommandResponseSender;
 import org.eclipse.hono.client.command.kafka.KafkaBasedInternalCommandConsumer;
-import org.eclipse.hono.client.kafka.CommonKafkaClientConfigProperties;
 import org.eclipse.hono.client.kafka.CommonKafkaClientOptions;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
-import org.eclipse.hono.client.kafka.KafkaClientOptions;
+import org.eclipse.hono.client.kafka.KafkaAdminClientOptions;
+import org.eclipse.hono.client.kafka.consumer.KafkaConsumerOptions;
 import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.metrics.KafkaMetricsOptions;
@@ -61,6 +61,7 @@ import org.eclipse.hono.client.kafka.metrics.MicrometerKafkaClientMetricsSupport
 import org.eclipse.hono.client.kafka.metrics.NoopKafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.producer.KafkaProducerOptions;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
@@ -133,9 +134,11 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     private PrometheusBasedResourceLimitChecksConfig resourceLimitChecksConfig;
     private ConnectionEventProducerConfig connectionEventsConfig;
 
-    private MessagingKafkaProducerConfigProperties kafkaProducerConfig;
-    private MessagingKafkaConsumerConfigProperties kafkaConsumerConfig;
-    private KafkaAdminClientConfigProperties kafkaAdminClientConfig;
+    private MessagingKafkaProducerConfigProperties kafkaTelemetryConfig;
+    private MessagingKafkaProducerConfigProperties kafkaEventConfig;
+    private MessagingKafkaProducerConfigProperties kafkaCommandResponseConfig;
+    private MessagingKafkaConsumerConfigProperties kafkaCommandConfig;
+    private KafkaAdminClientConfigProperties kafkaCommandInternalConfig;
 
     private Cache<Object, TenantResult<TenantObject>> tenantResponseCache;
     private Cache<Object, RegistrationResult> registrationResponseCache;
@@ -225,24 +228,26 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     @Inject
     void setKafkaClientOptions(
             @ConfigMapping(prefix = "hono.kafka") final CommonKafkaClientOptions commonOptions,
-            final KafkaClientOptions options) {
+            @ConfigMapping(prefix = "hono.kafka.telemetry") final KafkaProducerOptions telemetryOptions,
+            @ConfigMapping(prefix = "hono.kafka.event") final KafkaProducerOptions eventOptions,
+            @ConfigMapping(prefix = "hono.kafka.commandResponse") final KafkaProducerOptions commandResponseOptions,
+            @ConfigMapping(prefix = "hono.kafka.command") final KafkaConsumerOptions commandOptions,
+            @ConfigMapping(prefix = "hono.kafka.commandInternal") final KafkaAdminClientOptions commandInternalOptions) {
 
-        final CommonKafkaClientConfigProperties commonConfig = new CommonKafkaClientConfigProperties(commonOptions);
+        kafkaTelemetryConfig = new MessagingKafkaProducerConfigProperties(commonOptions, telemetryOptions);
+        Optional.ofNullable(getComponentName()).ifPresent(kafkaTelemetryConfig::setDefaultClientIdPrefix);
 
-        this.kafkaProducerConfig = new MessagingKafkaProducerConfigProperties();
-        Optional.ofNullable(getComponentName()).ifPresent(this.kafkaProducerConfig::setDefaultClientIdPrefix);
-        this.kafkaProducerConfig.setCommonClientConfig(commonConfig);
-        this.kafkaProducerConfig.setProducerConfig(options.producerConfig());
+        kafkaEventConfig = new MessagingKafkaProducerConfigProperties(commonOptions, eventOptions);
+        Optional.ofNullable(getComponentName()).ifPresent(kafkaEventConfig::setDefaultClientIdPrefix);
 
-        this.kafkaConsumerConfig = new MessagingKafkaConsumerConfigProperties();
-        Optional.ofNullable(getComponentName()).ifPresent(this.kafkaConsumerConfig::setDefaultClientIdPrefix);
-        this.kafkaConsumerConfig.setCommonClientConfig(commonConfig);
-        this.kafkaConsumerConfig.setConsumerConfig(options.consumerConfig());
+        kafkaCommandResponseConfig = new MessagingKafkaProducerConfigProperties(commonOptions, commandResponseOptions);
+        Optional.ofNullable(getComponentName()).ifPresent(kafkaCommandResponseConfig::setDefaultClientIdPrefix);
 
-        this.kafkaAdminClientConfig = new KafkaAdminClientConfigProperties();
-        Optional.ofNullable(getComponentName()).ifPresent(this.kafkaAdminClientConfig::setDefaultClientIdPrefix);
-        this.kafkaAdminClientConfig.setCommonClientConfig(commonConfig);
-        this.kafkaAdminClientConfig.setAdminClientConfig(options.adminClientConfig());
+        kafkaCommandConfig = new MessagingKafkaConsumerConfigProperties(commonOptions, commandOptions);
+        Optional.ofNullable(getComponentName()).ifPresent(kafkaCommandConfig::setDefaultClientIdPrefix);
+
+        kafkaCommandInternalConfig = new KafkaAdminClientConfigProperties(commonOptions, commandInternalOptions);
+        Optional.ofNullable(getComponentName()).ifPresent(kafkaCommandInternalConfig::setDefaultClientIdPrefix);
     }
 
     @Override
@@ -282,20 +287,17 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         final MessagingClientProvider<CommandResponseSender> commandResponseSenderProvider = new MessagingClientProvider<>();
         final KafkaClientMetricsSupport kafkaClientMetricsSupport = kafkaClientMetricsSupport(kafkaMetricsOptions);
 
-        if (kafkaProducerConfig.isConfigured()) {
-            LOG.info("Kafka Producer is configured, adding Kafka messaging clients");
-
-            Optional.ofNullable(getComponentName()).ifPresent(kafkaProducerConfig::setDefaultClientIdPrefix);
-            LOG.debug("KafkaProducerConfig: {}", kafkaProducerConfig.getProducerConfig("log"));
+        if (kafkaEventConfig.isConfigured()) {
+            LOG.info("Kafka client configuration present, adding Kafka messaging clients");
 
             final KafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory.sharedFactory(vertx);
             factory.setMetricsSupport(kafkaClientMetricsSupport);
 
-            telemetrySenderProvider.setClient(new KafkaBasedTelemetrySender(factory, kafkaProducerConfig,
+            telemetrySenderProvider.setClient(new KafkaBasedTelemetrySender(factory, kafkaTelemetryConfig,
                     protocolAdapterProperties.isDefaultsEnabled(), tracer));
-            eventSenderProvider.setClient(new KafkaBasedEventSender(factory, kafkaProducerConfig,
+            eventSenderProvider.setClient(new KafkaBasedEventSender(factory, kafkaEventConfig,
                     protocolAdapterProperties.isDefaultsEnabled(), tracer));
-            commandResponseSenderProvider.setClient(new KafkaBasedCommandResponseSender(factory, kafkaProducerConfig, tracer));
+            commandResponseSenderProvider.setClient(new KafkaBasedCommandResponseSender(factory, kafkaCommandResponseConfig, tracer));
         }
         if (downstreamSenderConfig.isHostConfigured()) {
             telemetrySenderProvider.setClient(downstreamSender());
@@ -321,11 +323,11 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
             final CommandResponseSender kafkaCommandResponseSender = messagingClientProviders
                     .getCommandResponseSenderProvider().getClient(MessagingType.kafka);
-            if (kafkaAdminClientConfig.isConfigured() && kafkaConsumerConfig.isConfigured()
+            if (kafkaCommandInternalConfig.isConfigured() && kafkaCommandConfig.isConfigured()
                     && kafkaCommandResponseSender != null) {
                 commandConsumerFactory.registerInternalCommandConsumer(
-                        (id, handlers) -> new KafkaBasedInternalCommandConsumer(vertx, kafkaAdminClientConfig,
-                                kafkaConsumerConfig, kafkaCommandResponseSender, id, handlers, tracer)
+                        (id, handlers) -> new KafkaBasedInternalCommandConsumer(vertx, kafkaCommandInternalConfig,
+                                kafkaCommandConfig, kafkaCommandResponseSender, id, handlers, tracer)
                                         .setMetricsSupport(kafkaClientMetricsSupport));
             }
 

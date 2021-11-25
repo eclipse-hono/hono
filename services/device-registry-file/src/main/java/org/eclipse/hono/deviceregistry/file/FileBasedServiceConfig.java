@@ -18,6 +18,7 @@ import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.kafka.CommonKafkaClientConfigProperties;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
@@ -185,9 +186,9 @@ public class FileBasedServiceConfig {
                     true));
         }
 
-        if (messagingKafkaProducerConfig().isConfigured()) {
+        if (kafkaEventConfig().isConfigured()) {
             final KafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory.sharedFactory(vertx);
-            result.setClient(new KafkaBasedEventSender(factory, messagingKafkaProducerConfig(), true, tracer));
+            result.setClient(new KafkaBasedEventSender(factory, kafkaEventConfig(), true, tracer));
         }
 
         healthCheckServer.registerHealthCheckResources(ServiceClientAdapter.forClient(result));
@@ -209,14 +210,26 @@ public class FileBasedServiceConfig {
     }
 
     /**
-     * Exposes configuration properties for a producer accessing the Kafka cluster as a Spring bean.
+     * Exposes common configuration properties for a clients accessing the Kafka cluster as a Spring bean.
      *
      * @return The properties.
      */
     @ConfigurationProperties(prefix = "hono.kafka")
     @Bean
-    public MessagingKafkaProducerConfigProperties messagingKafkaProducerConfig() {
+    public CommonKafkaClientConfigProperties commonKafkaClientConfig() {
+        return new CommonKafkaClientConfigProperties();
+    }
+
+    /**
+     * Exposes configuration properties for the Kafka producer that publishes events as a Spring bean.
+     *
+     * @return The properties.
+     */
+    @ConfigurationProperties(prefix = "hono.kafka.event")
+    @Bean
+    public MessagingKafkaProducerConfigProperties kafkaEventConfig() {
         final MessagingKafkaProducerConfigProperties configProperties = new MessagingKafkaProducerConfigProperties();
+        configProperties.setCommonClientConfig(commonKafkaClientConfig());
         configProperties.setDefaultClientIdPrefix("device-registry");
         return configProperties;
     }

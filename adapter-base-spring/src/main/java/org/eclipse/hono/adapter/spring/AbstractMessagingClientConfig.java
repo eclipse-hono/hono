@@ -21,6 +21,7 @@ import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.command.amqp.ProtonBasedCommandResponseSender;
 import org.eclipse.hono.client.command.kafka.KafkaBasedCommandResponseSender;
+import org.eclipse.hono.client.kafka.CommonKafkaClientConfigProperties;
 import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
@@ -78,17 +79,17 @@ public abstract class AbstractMessagingClientConfig implements ComponentNameProv
         final MessagingClientProvider<EventSender> eventSenderProvider = new MessagingClientProvider<>();
         final MessagingClientProvider<CommandResponseSender> commandResponseSenderProvider = new MessagingClientProvider<>();
 
-        if (messagingKafkaProducerConfig().isConfigured()) {
-            log.info("Kafka Producer is configured, adding Kafka messaging clients");
-            final MessagingKafkaProducerConfigProperties producerConfig = messagingKafkaProducerConfig();
+        if (commonKafkaClientConfig().isConfigured()) {
+            log.info("Kafka client configuration present, adding Kafka messaging clients");
             final KafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory.sharedFactory(vertx);
             factory.setMetricsSupport(kafkaClientMetricsSupport);
 
-            telemetrySenderProvider.setClient(new KafkaBasedTelemetrySender(factory, producerConfig,
+            telemetrySenderProvider.setClient(new KafkaBasedTelemetrySender(factory, kafkaTelemetryConfig(),
                     adapterProperties.isDefaultsEnabled(), tracer));
-            eventSenderProvider.setClient(
-                    new KafkaBasedEventSender(factory, producerConfig, adapterProperties.isDefaultsEnabled(), tracer));
-            commandResponseSenderProvider.setClient(new KafkaBasedCommandResponseSender(factory, producerConfig, tracer));
+            eventSenderProvider.setClient(new KafkaBasedEventSender(factory, kafkaEventConfig(),
+                    adapterProperties.isDefaultsEnabled(), tracer));
+            commandResponseSenderProvider.setClient(new KafkaBasedCommandResponseSender(factory,
+                    kafkaCommandResponseConfig(), tracer));
         }
 
         if (downstreamSenderConfig().isHostConfigured()) {
@@ -116,14 +117,26 @@ public abstract class AbstractMessagingClientConfig implements ComponentNameProv
     }
 
     /**
-     * Exposes configuration properties for a producer accessing the Kafka cluster as a Spring bean.
+     * Exposes common configuration properties for a clients accessing the Kafka cluster as a Spring bean.
      *
      * @return The properties.
      */
     @ConfigurationProperties(prefix = "hono.kafka")
     @Bean
-    public MessagingKafkaProducerConfigProperties messagingKafkaProducerConfig() {
+    public CommonKafkaClientConfigProperties commonKafkaClientConfig() {
+        return new CommonKafkaClientConfigProperties();
+    }
+
+    /**
+     * Exposes configuration properties for the Kafka producer that publishes telemetry messages as a Spring bean.
+     *
+     * @return The properties.
+     */
+    @ConfigurationProperties(prefix = "hono.kafka.telemetry")
+    @Bean
+    public MessagingKafkaProducerConfigProperties kafkaTelemetryConfig() {
         final MessagingKafkaProducerConfigProperties configProperties = new MessagingKafkaProducerConfigProperties();
+        configProperties.setCommonClientConfig(commonKafkaClientConfig());
         if (getComponentName() != null) {
             configProperties.setDefaultClientIdPrefix(getComponentName());
         }
@@ -131,14 +144,47 @@ public abstract class AbstractMessagingClientConfig implements ComponentNameProv
     }
 
     /**
-     * Exposes configuration properties for a consumer accessing the Kafka cluster as a Spring bean.
+     * Exposes configuration properties for the Kafka producer that publishes events as a Spring bean.
      *
      * @return The properties.
      */
-    @ConfigurationProperties(prefix = "hono.kafka")
+    @ConfigurationProperties(prefix = "hono.kafka.event")
     @Bean
-    public MessagingKafkaConsumerConfigProperties messagingKafkaConsumerConfig() {
+    public MessagingKafkaProducerConfigProperties kafkaEventConfig() {
+        final MessagingKafkaProducerConfigProperties configProperties = new MessagingKafkaProducerConfigProperties();
+        configProperties.setCommonClientConfig(commonKafkaClientConfig());
+        if (getComponentName() != null) {
+            configProperties.setDefaultClientIdPrefix(getComponentName());
+        }
+        return configProperties;
+    }
+
+    /**
+     * Exposes configuration properties for the Kafka producer that publishes command responses as a Spring bean.
+     *
+     * @return The properties.
+     */
+    @ConfigurationProperties(prefix = "hono.kafka.command-response")
+    @Bean
+    public MessagingKafkaProducerConfigProperties kafkaCommandResponseConfig() {
+        final MessagingKafkaProducerConfigProperties configProperties = new MessagingKafkaProducerConfigProperties();
+        configProperties.setCommonClientConfig(commonKafkaClientConfig());
+        if (getComponentName() != null) {
+            configProperties.setDefaultClientIdPrefix(getComponentName());
+        }
+        return configProperties;
+    }
+
+    /**
+     * Exposes configuration properties for the Kafka consumer that receives commands as a Spring bean.
+     *
+     * @return The properties.
+     */
+    @ConfigurationProperties(prefix = "hono.kafka.command")
+    @Bean
+    public MessagingKafkaConsumerConfigProperties kafkaCommandConfig() {
         final MessagingKafkaConsumerConfigProperties configProperties = new MessagingKafkaConsumerConfigProperties();
+        configProperties.setCommonClientConfig(commonKafkaClientConfig());
         if (getComponentName() != null) {
             configProperties.setDefaultClientIdPrefix(getComponentName());
         }

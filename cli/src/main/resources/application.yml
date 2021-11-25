@@ -128,8 +128,9 @@ hono:
   kafka:
     commonClientConfig:
       client.id: hono-cli
-    consumerConfig:
-      group.id: cli
+    consumer:
+      consumerConfig:
+        group.id: cli
 
 ---
 # This profile enables the collection of statistics of received messages from

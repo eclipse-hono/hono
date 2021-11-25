@@ -18,6 +18,7 @@ import java.util.Optional;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.kafka.CommonKafkaClientConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
 import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
@@ -445,27 +446,40 @@ public class ApplicationConfig {
 
     //Kafka based
     /**
-     * Exposes configuration properties for a consumer accessing the Kafka cluster as a Spring bean.
+     * Exposes common configuration properties for a clients accessing the Kafka cluster as a Spring bean.
      *
      * @return The properties.
      */
     @ConfigurationProperties(prefix = "hono.kafka")
     @Bean
-    public MessagingKafkaConsumerConfigProperties messagingKafkaConsumerConfig() {
-        final MessagingKafkaConsumerConfigProperties kafkaConsumerConfigProperties = new MessagingKafkaConsumerConfigProperties();
-        kafkaConsumerConfigProperties.setDefaultClientIdPrefix("cmd-router");
-        return kafkaConsumerConfigProperties;
+    public CommonKafkaClientConfigProperties commonKafkaClientConfig() {
+        return new CommonKafkaClientConfigProperties();
     }
 
     /**
-     * Exposes configuration properties for a producer accessing the Kafka cluster as a Spring bean.
+     * Exposes configuration properties for the Kafka consumer that receives commands as a Spring bean.
      *
      * @return The properties.
      */
-    @ConfigurationProperties(prefix = "hono.kafka")
+    @ConfigurationProperties(prefix = "hono.kafka.command-in")
+    @Bean
+    public MessagingKafkaConsumerConfigProperties messagingKafkaConsumerConfig() {
+        final MessagingKafkaConsumerConfigProperties configProperties = new MessagingKafkaConsumerConfigProperties();
+        configProperties.setCommonClientConfig(commonKafkaClientConfig());
+        configProperties.setDefaultClientIdPrefix("cmd-router");
+        return configProperties;
+    }
+
+    /**
+     * Exposes configuration properties for the Kafka producer that publishes commands as a Spring bean.
+     *
+     * @return The properties.
+     */
+    @ConfigurationProperties(prefix = "hono.kafka.command-out")
     @Bean
     public MessagingKafkaProducerConfigProperties messagingKafkaProducerConfig() {
         final MessagingKafkaProducerConfigProperties configProperties = new MessagingKafkaProducerConfigProperties();
+        configProperties.setCommonClientConfig(commonKafkaClientConfig());
         configProperties.setDefaultClientIdPrefix("cmd-router");
         return configProperties;
     }
@@ -484,14 +498,15 @@ public class ApplicationConfig {
     }
 
     /**
-     * Exposes configuration properties for an admin client accessing the Kafka cluster as a Spring bean.
+     * Exposes configuration properties for the Kafka client used for the cleanup of internal topics as a Spring bean.
      *
      * @return The properties.
      */
-    @ConfigurationProperties(prefix = "hono.kafka")
+    @ConfigurationProperties(prefix = "hono.kafka.cleanup")
     @Bean
     public KafkaAdminClientConfigProperties kafkaAdminClientConfig() {
         final KafkaAdminClientConfigProperties configProperties = new KafkaAdminClientConfigProperties();
+        configProperties.setCommonClientConfig(commonKafkaClientConfig());
         configProperties.setDefaultClientIdPrefix("cmd-router");
         return configProperties;
     }
