@@ -29,152 +29,167 @@ import io.smallrye.config.WithDefault;
 public interface InfinispanRemoteConfigurationOptions {
 
     /**
-     * Gets the options.
+     * Gets the connection pool options.
      *
      * @return The options.
      */
     Map<String, String> connectionPool();
 
     /**
-     * Gets the options.
+     * Gets the SASL properties.
      *
-     * @return The options.
+     * @return The properties.
      */
     Map<String, String> saslProperties();
 
     /**
-     * Gets the options.
+     * Gets the cluster options.
      *
      * @return The options.
      */
     Map<String, String> cluster();
 
     /**
-     * Gets the value.
+     * Gets the list of remote servers as a string of the form <em>host1[:port][;host2[:port]]</em>.
      *
-     * @return The value.
+     * @return The servers.
      */
     Optional<String> serverList();
 
     /**
-     * Gets the value.
+     * Gets the auth server name.
      *
-     * @return The value.
+     * @return The server name.
      */
     Optional<String> authServerName();
 
     /**
-     * Gets the value.
+     * Gets the user name to use for authentication.
      *
-     * @return The value.
+     * @return The user name.
      */
     Optional<String> authUsername();
 
     /**
-     * Gets the value.
+     * Gets the password to use for authentication.
      *
-     * @return The value.
+     * @return The password.
      */
     Optional<String> authPassword();
 
     /**
-     * Gets the value.
+     * Gets the auth realm (for DIGEST-MD5 authentication).
      *
-     * @return The value.
+     * @return The realm.
      */
     Optional<String> authRealm();
 
     /**
-     * Gets the value.
+     * Gets the SASL mechanism to use for authentication.
      *
-     * @return The value.
+     * @return The mechanism.
      */
     Optional<String> saslMechanism();
 
     /**
-     * Gets the value.
+     * Gets the socket timeout.
      *
-     * @return The value.
+     * @return The timeout.
      */
     @WithDefault("60000")
     int socketTimeout();
 
     /**
-     * Gets the value.
+     * Gets the connect timeout.
      *
-     * @return The value.
+     * @return The timeout.
      */
     @WithDefault("60000")
     int connectTimeout();
 
     /**
-     * Gets the value.
+     * Gets the path of the trust store.
      *
-     * @return The value.
+     * @return The path.
      */
     Optional<String> trustStorePath();
 
     /**
-     * Gets the value.
+     * Gets the trust store file name.
      *
-     * @return The value.
+     * @return The file name.
      */
     Optional<String> trustStoreFileName();
 
     /**
-     * Gets the value.
+     * Gets the type of the trust store (JKS, JCEKS, PCKS12 or PEM).
      *
-     * @return The value.
+     * @return The type.
      */
     Optional<String> trustStoreType();
 
     /**
-     * Gets the value.
+     * Gets the password of the trust store.
      *
-     * @return The value.
+     * @return The password.
      */
     Optional<String> trustStorePassword();
 
     /**
-     * Gets the value.
+     * Gets the file name of a keystore to use when using client certificate authentication.
      *
-     * @return The value.
+     * @return The file name.
      */
     Optional<String> keyStoreFileName();
 
     /**
-     * Gets the value.
+     * Gets the keystore type.
      *
-     * @return The value.
+     * @return The type.
      */
     Optional<String> keyStoreType();
 
     /**
-     * Gets the value.
+     * Gets the keystore password.
      *
-     * @return The value.
+     * @return The password.
      */
     Optional<String> keyStorePassword();
 
     /**
-     * Gets the value.
+     * Gets the key alias.
      *
-     * @return The value.
+     * @return The alias.
      */
     Optional<String> keyAlias();
 
     /**
-     * Gets the value.
+     * Gets the certificate password in the keystore.
      *
-     * @return The value.
+     * @return The password.
      */
     Optional<String> keyStoreCertificatePassword();
 
     /**
-     * Gets the value.
+     * Checks whether TLS is enabled.
      *
-     * @return The value.
+     * @return {@code true} if TLS is enabled.
      */
     @WithDefault("false")
     boolean useSsl();
+
+    /**
+     * Gets the list of ciphers, separated with spaces and in order of preference, that are used during the TLS
+     * handshake.
+     *
+     * @return The ciphers.
+     */
+    Optional<String> sslCiphers();
+
+    /**
+     * Gets the TLS protocol to use (e.g. TLSv1.2).
+     *
+     * @return The protocol.
+     */
+    Optional<String> sslProtocol();
 }
