@@ -21,6 +21,7 @@ import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.kafka.CommonKafkaClientConfigProperties;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
@@ -381,9 +382,9 @@ public class ApplicationConfig {
                     true));
         }
 
-        if (messagingKafkaProducerConfig().isConfigured()) {
+        if (kafkaEventConfig().isConfigured()) {
             final KafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory.sharedFactory(vertx());
-            result.setClient(new KafkaBasedEventSender(factory, messagingKafkaProducerConfig(), true, tracer()));
+            result.setClient(new KafkaBasedEventSender(factory, kafkaEventConfig(), true, tracer()));
         }
 
         healthCheckServer().registerHealthCheckResources(ServiceClientAdapter.forClient(result));
@@ -405,14 +406,26 @@ public class ApplicationConfig {
     }
 
     /**
-     * Exposes configuration properties for a producer accessing the Kafka cluster as a Spring bean.
+     * Exposes common configuration properties for a clients accessing the Kafka cluster as a Spring bean.
      *
      * @return The properties.
      */
     @ConfigurationProperties(prefix = "hono.kafka")
     @Bean
-    public MessagingKafkaProducerConfigProperties messagingKafkaProducerConfig() {
+    public CommonKafkaClientConfigProperties commonKafkaClientConfig() {
+        return new CommonKafkaClientConfigProperties();
+    }
+
+    /**
+     * Exposes configuration properties for the Kafka producer that publishes events as a Spring bean.
+     *
+     * @return The properties.
+     */
+    @ConfigurationProperties(prefix = "hono.kafka.event")
+    @Bean
+    public MessagingKafkaProducerConfigProperties kafkaEventConfig() {
         final MessagingKafkaProducerConfigProperties configProperties = new MessagingKafkaProducerConfigProperties();
+        configProperties.setCommonClientConfig(commonKafkaClientConfig());
         configProperties.setDefaultClientIdPrefix("device-registry");
         return configProperties;
     }
@@ -750,15 +763,15 @@ public class ApplicationConfig {
     }
 
     /**
-     * Exposes Kafka client configuration properties for publishing notifications as a Spring bean.
+     * Exposes configuration properties for the Kafka producer that publishes notifications as a Spring bean.
      *
      * @return The properties.
      */
-    // TODO: [#2904] use dedicated configuration for notifications
-    @ConfigurationProperties(prefix = "hono.kafka")
+    @ConfigurationProperties(prefix = "hono.kafka.notification")
     @Bean
     public NotificationKafkaProducerConfigProperties notificationKafkaProducerConfig() {
         final var configProperties = new NotificationKafkaProducerConfigProperties();
+        configProperties.setCommonClientConfig(commonKafkaClientConfig());
         configProperties.setDefaultClientIdPrefix("device-registry");
         return configProperties;
     }

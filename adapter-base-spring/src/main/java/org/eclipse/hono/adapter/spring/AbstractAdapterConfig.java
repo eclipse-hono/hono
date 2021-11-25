@@ -129,8 +129,8 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
         Objects.requireNonNull(adapterProperties);
         Objects.requireNonNull(samplerFactory);
 
-        final KafkaAdminClientConfigProperties kafkaAdminClientConfig = kafkaAdminClientConfig();
-        final MessagingKafkaConsumerConfigProperties kafkaConsumerConfig = messagingKafkaConsumerConfig();
+        final KafkaAdminClientConfigProperties kafkaCommandInternalConfig = kafkaCommandInternalConfig();
+        final MessagingKafkaConsumerConfigProperties kafkaCommandConfig = kafkaCommandConfig();
         final KafkaClientMetricsSupport kafkaClientMetricsSupport = kafkaClientMetricsSupport(kafkaMetricsConfig());
         final MessagingClientProviders messagingClientProviders = messagingClientProviders(samplerFactory, getTracer(),
                 vertx(), adapterProperties, kafkaClientMetricsSupport);
@@ -159,11 +159,11 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
             }
             final CommandResponseSender kafkaCommandResponseSender = messagingClientProviders
                     .getCommandResponseSenderProvider().getClient(MessagingType.kafka);
-            if (kafkaAdminClientConfig.isConfigured() && kafkaConsumerConfig.isConfigured()
+            if (kafkaCommandInternalConfig.isConfigured() && kafkaCommandConfig.isConfigured()
                     && kafkaCommandResponseSender != null) {
                 commandConsumerFactory.registerInternalCommandConsumer(
-                        (id, handlers) -> new KafkaBasedInternalCommandConsumer(vertx(), kafkaAdminClientConfig,
-                                kafkaConsumerConfig, kafkaCommandResponseSender, id, handlers, getTracer())
+                        (id, handlers) -> new KafkaBasedInternalCommandConsumer(vertx(), kafkaCommandInternalConfig,
+                                kafkaCommandConfig, kafkaCommandResponseSender, id, handlers, getTracer())
                                         .setMetricsSupport(kafkaClientMetricsSupport));
             }
             adapter.setCommandConsumerFactory(commandConsumerFactory);
@@ -249,14 +249,15 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
     }
 
     /**
-     * Exposes configuration properties for an admin client accessing the Kafka cluster as a Spring bean.
+     * Exposes configuration properties for the Kafka client that creates internal command topics as a Spring bean.
      *
      * @return The properties.
      */
-    @ConfigurationProperties(prefix = "hono.kafka")
+    @ConfigurationProperties(prefix = "hono.kafka.command-internal")
     @Bean
-    public KafkaAdminClientConfigProperties kafkaAdminClientConfig() {
+    public KafkaAdminClientConfigProperties kafkaCommandInternalConfig() {
         final KafkaAdminClientConfigProperties configProperties = new KafkaAdminClientConfigProperties();
+        configProperties.setCommonClientConfig(commonKafkaClientConfig());
         if (getComponentName() != null) {
             configProperties.setDefaultClientIdPrefix(getComponentName());
         }

@@ -21,10 +21,10 @@ import javax.inject.Inject;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
-import org.eclipse.hono.client.kafka.CommonKafkaClientConfigProperties;
 import org.eclipse.hono.client.kafka.CommonKafkaClientOptions;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
-import org.eclipse.hono.client.kafka.KafkaClientOptions;
+import org.eclipse.hono.client.kafka.KafkaAdminClientOptions;
+import org.eclipse.hono.client.kafka.consumer.KafkaConsumerOptions;
 import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.metrics.KafkaMetricsOptions;
@@ -32,6 +32,7 @@ import org.eclipse.hono.client.kafka.metrics.MicrometerKafkaClientMetricsSupport
 import org.eclipse.hono.client.kafka.metrics.NoopKafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.producer.KafkaProducerOptions;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
@@ -180,26 +181,21 @@ public class Application extends AbstractServiceApplication {
                         options.metricsPrefixes().orElse(List.of()))
                 : NoopKafkaClientMetricsSupport.INSTANCE;
     }
+
     @Inject
     void setKafkaClientOptions(
             @ConfigMapping(prefix = "hono.kafka") final CommonKafkaClientOptions commonOptions,
-            final KafkaClientOptions options) {
+            @ConfigMapping(prefix = "hono.kafka.commandOut") final KafkaProducerOptions producerOptions,
+            @ConfigMapping(prefix = "hono.kafka.commandIn") final KafkaConsumerOptions consumerOptions,
+            @ConfigMapping(prefix = "hono.kafka.cleanup") final KafkaAdminClientOptions adminClientOptions) {
 
-        final CommonKafkaClientConfigProperties commonConfig = new CommonKafkaClientConfigProperties(commonOptions);
-
-        this.kafkaProducerConfig = new MessagingKafkaProducerConfigProperties();
-        this.kafkaProducerConfig.setCommonClientConfig(commonConfig);
-        this.kafkaProducerConfig.setProducerConfig(options.producerConfig());
+        this.kafkaProducerConfig = new MessagingKafkaProducerConfigProperties(commonOptions, producerOptions);
         this.kafkaProducerConfig.setDefaultClientIdPrefix(DEFAULT_CLIENT_ID_PREFIX);
 
-        this.kafkaConsumerConfig = new MessagingKafkaConsumerConfigProperties();
-        this.kafkaConsumerConfig.setCommonClientConfig(commonConfig);
-        this.kafkaConsumerConfig.setConsumerConfig(options.consumerConfig());
+        this.kafkaConsumerConfig = new MessagingKafkaConsumerConfigProperties(commonOptions, consumerOptions);
         this.kafkaConsumerConfig.setDefaultClientIdPrefix(DEFAULT_CLIENT_ID_PREFIX);
 
-        this.kafkaAdminClientConfig = new KafkaAdminClientConfigProperties();
-        this.kafkaAdminClientConfig.setCommonClientConfig(commonConfig);
-        this.kafkaAdminClientConfig.setAdminClientConfig(options.adminClientConfig());
+        this.kafkaAdminClientConfig = new KafkaAdminClientConfigProperties(commonOptions, adminClientOptions);
         this.kafkaAdminClientConfig.setDefaultClientIdPrefix(DEFAULT_CLIENT_ID_PREFIX);
     }
 
