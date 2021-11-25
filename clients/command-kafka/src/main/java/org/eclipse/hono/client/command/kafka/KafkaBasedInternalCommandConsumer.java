@@ -22,6 +22,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
+import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -35,6 +36,7 @@ import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.command.InternalCommandConsumer;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
+import org.eclipse.hono.client.kafka.KafkaClientFactory;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
@@ -72,12 +74,12 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
     private static final long CREATE_TOPIC_RETRY_INTERVAL = 1000L;
 
     private final Supplier<KafkaConsumer<String, Buffer>> consumerCreator;
+    private final Supplier<Future<Admin>> kafkaAdminClientCreator;
     private final String adapterInstanceId;
     private final String clientId;
     private final CommandHandlers commandHandlers;
     private final Tracer tracer;
     private final CommandResponseSender commandResponseSender;
-    private final Admin adminClient;
     private final AtomicBoolean isTopicCreated = new AtomicBoolean(false);
     private final AtomicBoolean retryCreateTopic = new AtomicBoolean(true);
     /**
@@ -86,6 +88,7 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
     private final Map<String, Map<Integer, Long>> lastHandledPartitionOffsetsPerTenant = new HashMap<>();
 
     private KafkaConsumer<String, Buffer> consumer;
+    private Admin adminClient;
     private Context context;
     private KafkaClientMetricsSupport metricsSupport;
     private final Vertx vertx;
@@ -122,7 +125,12 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
         final Map<String, String> adminClientConfig = adminClientConfigProperties.getAdminClientConfig(CLIENT_NAME);
         // Vert.x KafkaAdminClient doesn't support creating topics using the broker default replication factor,
         // therefore use Kafka Admin client directly here
-        adminClient = Admin.create(new HashMap<>(adminClientConfig));
+        final String bootstrapServersConfig = adminClientConfig.get(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG);
+        final KafkaClientFactory kafkaClientFactory = new KafkaClientFactory(vertx);
+        kafkaAdminClientCreator = () -> kafkaClientFactory.createClientWithRetries(
+                () -> Admin.create(new HashMap<>(adminClientConfig)),
+                bootstrapServersConfig,
+                null);
 
         final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig(CLIENT_NAME);
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, adapterInstanceId);
@@ -160,7 +168,7 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
             final CommandHandlers commandHandlers,
             final Tracer tracer) {
         this.context = Objects.requireNonNull(context);
-        this.adminClient = Objects.requireNonNull(kafkaAdminClient);
+        Objects.requireNonNull(kafkaAdminClient);
         this.consumer = Objects.requireNonNull(kafkaConsumer);
         this.clientId = Objects.requireNonNull(clientId);
         this.commandResponseSender = Objects.requireNonNull(commandResponseSender);
@@ -169,6 +177,7 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
         this.tracer = Objects.requireNonNull(tracer);
         this.vertx = context.owner();
         consumerCreator = () -> kafkaConsumer;
+        kafkaAdminClientCreator = () -> Future.succeededFuture(kafkaAdminClient);
     }
 
     /**
@@ -194,7 +203,11 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
         consumer = consumerCreator.get();
         Optional.ofNullable(metricsSupport).ifPresent(ms -> ms.registerKafkaConsumer(consumer.unwrap()));
         // trigger creation of adapter specific topic and consumer
-        return createTopic()
+        return kafkaAdminClientCreator.get()
+                .compose(client -> {
+                    adminClient = client;
+                    return createTopic();
+                })
                 .recover(e -> retryCreateTopic())
                 .compose(v -> {
                     isTopicCreated.set(true);

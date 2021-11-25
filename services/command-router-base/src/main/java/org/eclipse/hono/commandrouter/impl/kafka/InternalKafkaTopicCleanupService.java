@@ -21,6 +21,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -29,7 +30,9 @@ import java.util.stream.Collectors;
 import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
+import org.eclipse.hono.client.kafka.KafkaClientFactory;
 import org.eclipse.hono.commandrouter.AdapterInstanceStatusService;
+import org.eclipse.hono.util.Futures;
 import org.eclipse.hono.util.Lifecycle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,8 +57,9 @@ public class InternalKafkaTopicCleanupService implements Lifecycle {
 
     private final Vertx vertx;
     private final AdapterInstanceStatusService adapterInstanceStatusService;
-    private final Supplier<KafkaAdminClient> kafkaAdminClientCreator;
+    private final Supplier<Future<KafkaAdminClient>> kafkaAdminClientCreator;
     private final Set<String> topicsToDelete = new HashSet<>();
+    private final AtomicReference<Promise<Void>> startResultPromiseRef = new AtomicReference<>();
     private final AtomicBoolean stopCalled = new AtomicBoolean();
 
     private KafkaAdminClient adminClient;
@@ -77,8 +81,9 @@ public class InternalKafkaTopicCleanupService implements Lifecycle {
         this.adapterInstanceStatusService = Objects.requireNonNull(adapterInstanceStatusService);
         Objects.requireNonNull(adminClientConfigProperties);
 
-        this.kafkaAdminClientCreator = () -> KafkaAdminClient.create(vertx,
-                adminClientConfigProperties.getAdminClientConfig(CLIENT_NAME));
+        final Map<String, String> adminClientConfig = adminClientConfigProperties.getAdminClientConfig(CLIENT_NAME);
+        final KafkaClientFactory kafkaClientFactory = new KafkaClientFactory(vertx);
+        this.kafkaAdminClientCreator = () -> kafkaClientFactory.createKafkaAdminClientWithRetries(adminClientConfig, null);
     }
 
     /**
@@ -88,26 +93,40 @@ public class InternalKafkaTopicCleanupService implements Lifecycle {
      *
      * @param vertx The Vert.x instance to use.
      * @param adapterInstanceStatusService The service providing info about the status of adapter instances.
-     * @param kafkaAdminClientCreator The supplier for the Kafka admin client to use.
+     * @param kafkaAdminClient The Kafka admin client to use.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     InternalKafkaTopicCleanupService(
             final Vertx vertx,
             final AdapterInstanceStatusService adapterInstanceStatusService,
-            final Supplier<KafkaAdminClient> kafkaAdminClientCreator) {
+            final KafkaAdminClient kafkaAdminClient) {
         this.vertx = Objects.requireNonNull(vertx);
         this.adapterInstanceStatusService = Objects.requireNonNull(adapterInstanceStatusService);
-        this.kafkaAdminClientCreator = Objects.requireNonNull(kafkaAdminClientCreator);
+        Objects.requireNonNull(kafkaAdminClient);
+        this.kafkaAdminClientCreator = () -> Future.succeededFuture(kafkaAdminClient);
     }
 
     @Override
     public Future<Void> start() {
-        if (adminClient == null) {
-            adminClient = kafkaAdminClientCreator.get();
-            timerId = vertx.setPeriodic(CHECK_INTERVAL_MILLIS, tid -> performCleanup());
-            LOG.info("started InternalKafkaTopicCleanupService");
+        final Promise<Void> startPromise = Promise.promise();
+        // there is usually just *one* InternalKafkaTopicCleanupService instance, but this instance may be used from different verticles;
+        // let the admin client creation here be done only on the first start() invocation; subsequent start() invocations
+        // will be completed along with the completion of the first invocation;
+        // it is made sure that each completion is done on the vert.x context of the corresponding start() invocation
+        if (!startResultPromiseRef.compareAndSet(null, startPromise)) {
+            startResultPromiseRef.get().future().onComplete(Futures.onCurrentContextCompletionHandler(startPromise));
+            LOG.trace("start already called");
+            return startPromise.future();
         }
-        return Future.succeededFuture();
+        kafkaAdminClientCreator.get()
+                .onSuccess(client -> {
+                    adminClient = client;
+                    timerId = vertx.setPeriodic(CHECK_INTERVAL_MILLIS, tid -> performCleanup());
+                    LOG.info("started InternalKafkaTopicCleanupService");
+                })
+                .map((Void) null)
+                .onComplete(startPromise);
+        return startPromise.future();
     }
 
     /**
