@@ -18,10 +18,6 @@ import static com.google.common.truth.Truth.assertThat;
 
 import javax.inject.Inject;
 
-import org.eclipse.hono.deviceconnection.infinispan.client.CommonCacheConfig;
-import org.eclipse.hono.deviceconnection.infinispan.client.CommonCacheOptions;
-import org.eclipse.hono.deviceconnection.infinispan.client.InfinispanRemoteConfigurationOptions;
-import org.eclipse.hono.deviceconnection.infinispan.client.InfinispanRemoteConfigurationProperties;
 import org.infinispan.client.hotrod.impl.ConfigurationProperties;
 import org.junit.jupiter.api.Test;
 
@@ -74,5 +70,6 @@ public class QuarkusPropertyBindingTest {
         assertThat(remoteCacheConfig.getTrustStoreType()).isEqualTo("PKCS12");
         assertThat(remoteCacheConfig.getTrustStorePassword()).isEqualTo("trust-store-secret");
         assertThat(remoteCacheConfig.getUseSSL()).isTrue();
+        assertThat(remoteCacheConfig.getSSLCiphers()).isEqualTo("TLS_AES_128_GCM_SHA256 TLS_AES_256_GCM_SHA384 TLS_CHACHA20_POLY1305_SHA256");
     }
 }

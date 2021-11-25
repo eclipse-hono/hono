@@ -75,6 +75,9 @@ public class InfinispanRemoteConfigurationProperties extends ConfigurationProper
         options.trustStoreType().ifPresent(this::setTrustStoreType);
 
         setUseSSL(options.useSsl());
+
+        options.sslCiphers().ifPresent(this::setSSLCiphers);
+        options.sslProtocol().ifPresent(this::setSSLProtocol);
     }
 
     /**
@@ -123,9 +126,25 @@ public class InfinispanRemoteConfigurationProperties extends ConfigurationProper
        });
     }
 
+    // ------- Getters/setters missing in the parent ConfigurationProperties class -------
     /**
-    * {@inheritDoc}
-    */
+     * Gets the SSL ciphers.
+     *
+     * @return The ciphers.
+     */
+    public String getSSLCiphers() {
+        return getProperties().getProperty(SSL_CIPHERS);
+    }
+
+    /**
+     * Sets the SSL ciphers.
+     *
+     * @param ciphers The ciphers.
+     */
+    public void setSSLCiphers(final String ciphers) {
+        getProperties().put(SSL_CIPHERS, ciphers);
+    }
+
    @Override
    public String toString() {
        return MoreObjects
