@@ -19,8 +19,8 @@ package org.eclipse.hono.util;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Objects;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,11 +58,12 @@ public class KubernetesContainerUtil {
         try {
             final File file = new File("/proc/self/cgroup");
             if (file.exists()) {
-                final Path path = file.toPath();
-                final String id = Files.lines(path).map(KubernetesContainerUtil::getContainerId).filter(Objects::nonNull)
-                        .findFirst().orElse(null);
-                LOGGER.debug("Found container id {}", id);
-                return id;
+                try (Stream<String> lines = Files.lines(file.toPath())) {
+                    final String id = lines.map(KubernetesContainerUtil::getContainerId).filter(Objects::nonNull)
+                            .findFirst().orElse(null);
+                    LOGGER.debug("Found container id {}", id);
+                    return id;
+                }
             } else {
                 LOGGER.warn("Unable to access container information");
             }

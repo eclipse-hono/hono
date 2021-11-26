@@ -122,7 +122,9 @@ public class KubernetesBasedAdapterInstanceStatusService implements AdapterInsta
             @Override
             public void eventReceived(final Action watchAction, final Pod pod) {
                 LOG.trace("event received: {}, pod: {}", watchAction, pod != null ? pod.getMetadata().getName() : null);
-                applyPodStatus(watchAction, pod);
+                if (pod != null) {
+                    applyPodStatus(watchAction, pod);
+                }
             }
 
             @Override
