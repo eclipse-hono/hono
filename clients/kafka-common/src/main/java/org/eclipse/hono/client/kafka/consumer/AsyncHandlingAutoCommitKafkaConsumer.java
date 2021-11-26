@@ -498,19 +498,19 @@ public class AsyncHandlingAutoCommitKafkaConsumer extends HonoKafkaConsumer {
                 }
                 try {
                     getUnderlyingConsumer().commitAsync(offsets, (committedOffsets, error) -> {
-                        if (error != null) {
+                        if (error instanceof RebalanceInProgressException) {
+                            log.debug("could not do periodic commit: {} [client-id: {}]", error, getClientId());
+                            if (isCooperativeRebalancingConfigured()) {
+                                // with cooperative rebalancing, there isn't necessarily an offset commit during the rebalance, so retry the offset commit after the rebalance
+                                periodicCommitRetryAfterRebalanceNeeded.set(true);
+                            }
+                        } else if (error != null) {
                             log.info("periodic commit failed: {} [client-id: {}]", error, getClientId());
                         } else {
                             log.trace("periodic commit succeeded");
                             setCommittedOffsets(committedOffsets);
                         }
                     });
-                } catch (final RebalanceInProgressException ex) {
-                    log.debug("could not do periodic commit [client-id: {}]", getClientId(), ex);
-                    if (isCooperativeRebalancingConfigured()) {
-                        // with cooperative rebalancing, there isn't necessarily an offset commit during the rebalance, so retry the offset commit after the rebalance
-                        periodicCommitRetryAfterRebalanceNeeded.set(true);
-                    }
                 } catch (final Exception ex) {
                     log.error("error doing periodic commit [client-id: {}]", getClientId(), ex);
                 }
