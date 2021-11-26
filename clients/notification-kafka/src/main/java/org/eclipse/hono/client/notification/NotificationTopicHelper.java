@@ -21,7 +21,7 @@ import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
 import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 
 /**
- * Utility methods to determine the Kafka topic for a given type of notifications.
+ * Utility methods to determine the Kafka topic for a given type of notification.
  */
 public final class NotificationTopicHelper {
 
@@ -30,10 +30,10 @@ public final class NotificationTopicHelper {
     }
 
     /**
-     * Gets the topic name to consume notifications from.
+     * Gets the topic name for a notification type.
      *
-     * @param notificationType The class of the notifications to consume.
-     * @param <T> The type of notifications to consume.
+     * @param notificationType The class of the notification.
+     * @param <T> The type of notification.
      * @return The topic name.
      * @throws IllegalArgumentException If the given type is not a known subclass of {@link AbstractNotification}.
      */

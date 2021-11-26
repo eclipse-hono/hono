@@ -93,7 +93,7 @@ public class KafkaBasedNotificationReceiver implements NotificationReceiver {
             final Handler<T> consumer) {
 
         if (started) {
-            throw new IllegalStateException("consumers cannot be added when consumer is already started.");
+            throw new IllegalStateException("consumers cannot be added when receiver is already started.");
         }
 
         topics.add(NotificationTopicHelper.getTopicName(notificationType));
