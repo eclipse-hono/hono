@@ -21,6 +21,9 @@ description = "Information about changes in recent Hono releases. Includes new f
   Java process was lacking authority to create a temporary directory in the file system's root folder (`/`).
   This has been fixed.
 * Command response messages published via Kafka did not contain the `tenant_id` header. This has been fixed.
+* Hono's components now support configuring the ciphers used in the TLS handshake when connecting to Infinispan servers.
+  For the Command Router component [remote data grid configuration]({{% doclink "/admin-guide/command-router-config/#remote-cache" %}})
+  this can be done by setting the `hono.commandRouter.cache.remote.sslCiphers` property.
 
 ## 1.10.0
 

@@ -137,7 +137,7 @@ configuring the connection to the data grid:
 | `HONO_DEVICECONNECTION_REMOTE_AUTHUSERNAME`<br>`hono.deviceConnection.remote.authUsername` | yes | - | The username to use for authenticating to the server. |
 | `HONO_DEVICECONNECTION_REMOTE_AUTHPASSWORD`<br>`hono.deviceConnection.remote.authPassword` | yes | - | The password to use for authenticating to the server. |
 
-In general, the service supports all configuration properties of the [Infinispan Hotrod client](https://docs.jboss.org/infinispan/10.1/apidocs/org/infinispan/client/hotrod/configuration/package-summary.html#package.description) using `hono.deviceConnection.remote` instead of the `infinispan.client.hotrod` prefix.
+In general, the service supports all configuration properties of the [Infinispan Hotrod client](https://docs.jboss.org/infinispan/12.1/apidocs/org/infinispan/client/hotrod/configuration/package-summary.html#package.description) using `hono.deviceConnection.remote` instead of the `infinispan.client.hotrod` prefix.
 
 ### Embedded cache
 
@@ -145,7 +145,7 @@ The following table provides an overview of the configuration variables and corr
 
 | OS Environment Variable<br>Java System Property | Mandatory | Default | Description                                 |
 | :---------------------------------------------- | :-------: | :------ | :------------------------------------------ |
-| `HONO_DEVICECONNECTION_EMBEDDED_CONFIGURATIONFILE`<br>`hono.deviceConnection.embedded.configurationFile` | yes | - | The absolute path to an Infinispan configuration file. Also see the [Infinispan Configuration Schema](https://docs.jboss.org/infinispan/10.1/configdocs/). |
+| `HONO_DEVICECONNECTION_EMBEDDED_CONFIGURATIONFILE`<br>`hono.deviceConnection.embedded.configurationFile` | yes | - | The absolute path to an Infinispan configuration file. Also see the [Infinispan Configuration Schema](https://docs.jboss.org/infinispan/12.1/configdocs/infinispan-config-12.1.html). |
 
 ## Authentication Service Connection Configuration
 
