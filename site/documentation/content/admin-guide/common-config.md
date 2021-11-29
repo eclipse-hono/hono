@@ -154,7 +154,7 @@ the connection to the data grid:
 | `HONO_DEVICECONNECTION_AUTHPASSWORD`<br>`hono.deviceConnection.authPassword` | yes | - | The password to use for authenticating to the server. |
 
 In general, the service supports all configuration properties of the
-[Infinispan Hotrod client](https://docs.jboss.org/infinispan/10.1/apidocs/org/infinispan/client/hotrod/configuration/package-summary.html#package.description)
+[Infinispan Hotrod client](https://docs.jboss.org/infinispan/12.1/apidocs/org/infinispan/client/hotrod/configuration/package-summary.html#package.description)
 using `hono.deviceConnection` instead of the `infinispan.client.hotrod` prefix.
 
 <a name="command-router-service-connection-configuration"></a>
