@@ -73,7 +73,7 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
     private static final String CLIENT_NAME = "internal-cmd";
     private static final long CREATE_TOPIC_RETRY_INTERVAL = 1000L;
 
-    private final Supplier<KafkaConsumer<String, Buffer>> consumerCreator;
+    private final Supplier<Future<KafkaConsumer<String, Buffer>>> consumerCreator;
     private final Supplier<Future<Admin>> kafkaAdminClientCreator;
     private final String adapterInstanceId;
     private final String clientId;
@@ -130,7 +130,7 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
         kafkaAdminClientCreator = () -> kafkaClientFactory.createClientWithRetries(
                 () -> Admin.create(new HashMap<>(adminClientConfig)),
                 bootstrapServersConfig,
-                null);
+                KafkaClientFactory.UNLIMITED_RETRIES_DURATION);
 
         final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig(CLIENT_NAME);
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, adapterInstanceId);
@@ -140,7 +140,8 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
         // - set it to "earliest" just in case records have already been published to it
         consumerConfig.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         this.clientId = consumerConfig.get(ConsumerConfig.CLIENT_ID_CONFIG);
-        consumerCreator = () -> KafkaConsumer.create(vertx, consumerConfig, String.class, Buffer.class);
+        consumerCreator = () -> kafkaClientFactory.createKafkaConsumerWithRetries(consumerConfig, String.class,
+                Buffer.class, KafkaClientFactory.UNLIMITED_RETRIES_DURATION);
     }
 
     /**
@@ -176,7 +177,7 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
         this.commandHandlers = Objects.requireNonNull(commandHandlers);
         this.tracer = Objects.requireNonNull(tracer);
         this.vertx = context.owner();
-        consumerCreator = () -> kafkaConsumer;
+        consumerCreator = () -> Future.succeededFuture(kafkaConsumer);
         kafkaAdminClientCreator = () -> Future.succeededFuture(kafkaAdminClient);
     }
 
@@ -199,11 +200,9 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
                 return Future.failedFuture(new IllegalStateException("Consumer must be started in a Vert.x context"));
             }
         }
-        // create KafkaConsumer here so that it is created in the Vert.x context of the start() method (KafkaConsumer uses vertx.getOrCreateContext())
-        consumer = consumerCreator.get();
-        Optional.ofNullable(metricsSupport).ifPresent(ms -> ms.registerKafkaConsumer(consumer.unwrap()));
-        // trigger creation of adapter specific topic and consumer
+        // trigger creation of admin client, adapter specific topic and consumer
         return kafkaAdminClientCreator.get()
+                .onFailure(thr -> LOG.error("admin client creation failed", thr))
                 .compose(client -> {
                     adminClient = client;
                     return createTopic();
@@ -211,6 +210,13 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
                 .recover(e -> retryCreateTopic())
                 .compose(v -> {
                     isTopicCreated.set(true);
+                    // create consumer
+                    return consumerCreator.get()
+                            .onFailure(thr -> LOG.error("consumer creation failed", thr));
+                })
+                .compose(client -> {
+                    consumer = client;
+                    Optional.ofNullable(metricsSupport).ifPresent(ms -> ms.registerKafkaConsumer(consumer.unwrap()));
                     return subscribeToTopic();
                 });
     }

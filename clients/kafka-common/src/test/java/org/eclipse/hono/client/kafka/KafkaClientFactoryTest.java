@@ -46,7 +46,7 @@ public class KafkaClientFactoryTest {
         VertxMockSupport.runTimersImmediately(vertx);
         final KafkaClientFactory kafkaClientFactory = new KafkaClientFactory(vertx);
 
-        final String bootstrapServers = "some.invalid.hostname.local:9094";
+        final String bootstrapServers = "some.hostname.that.is.invalid:9094";
         final Map<String, String> clientConfig = Map.of(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
 
         final AtomicInteger creationAttempts = new AtomicInteger();
@@ -60,7 +60,7 @@ public class KafkaClientFactoryTest {
             // let the 3rd attempt succeed (regardless of the config)
             return client;
         };
-        kafkaClientFactory.createClientWithRetries(clientSupplier, bootstrapServers, Duration.ofSeconds(1))
+        kafkaClientFactory.createClientWithRetries(clientSupplier, bootstrapServers, Duration.ofSeconds(20))
                 .onComplete(ar -> {
                     assertThat(ar.succeeded()).isTrue();
                     assertThat(ar.result()).isEqualTo(client);
@@ -77,7 +77,7 @@ public class KafkaClientFactoryTest {
         final KafkaClientFactory kafkaClientFactory = new KafkaClientFactory(vertx);
 
         // contains entry with missing port
-        final String invalidBootstrapServers = "some.invalid.hostname.local, some.invalid.hostname.local:9094";
+        final String invalidBootstrapServers = "some.hostname.that.is.invalid, some.hostname.that.is.invalid:9094";
         final Map<String, String> clientConfig = Map.of(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, invalidBootstrapServers);
 
         final AtomicInteger creationAttempts = new AtomicInteger();
@@ -86,7 +86,7 @@ public class KafkaClientFactoryTest {
             Admin.create(new HashMap<>(clientConfig));
             throw new AssertionError("admin client creation should have thrown exception");
         };
-        kafkaClientFactory.createClientWithRetries(clientSupplier, invalidBootstrapServers, Duration.ofSeconds(1))
+        kafkaClientFactory.createClientWithRetries(clientSupplier, invalidBootstrapServers, Duration.ofSeconds(20))
                 .onComplete(ar -> {
                     assertThat(ar.succeeded()).isFalse();
                     assertThat(ar.cause().getCause()).isInstanceOf(ConfigException.class);
@@ -104,7 +104,7 @@ public class KafkaClientFactoryTest {
         VertxMockSupport.runTimersImmediately(vertx);
         final KafkaClientFactory kafkaClientFactory = new KafkaClientFactory(vertx);
 
-        final String bootstrapServers = "some.invalid.hostname.local:9094";
+        final String bootstrapServers = "some.hostname.that.is.invalid:9094";
         final Map<String, String> clientConfig = Map.of(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
 
         final AtomicInteger creationAttempts = new AtomicInteger();
@@ -112,18 +112,45 @@ public class KafkaClientFactoryTest {
         final Supplier<Object> clientSupplier = () -> {
             if (creationAttempts.incrementAndGet() == expectedCreationAttempts) {
                 // let following retries be skipped by letting the retry-timeout be reached
-                kafkaClientFactory.setClock(Clock.offset(Clock.systemUTC(), Duration.ofSeconds(10)));
+                kafkaClientFactory.setClock(Clock.offset(Clock.systemUTC(), Duration.ofSeconds(60)));
             }
             Admin.create(new HashMap<>(clientConfig));
             throw new AssertionError("admin client creation should have thrown exception");
         };
-        kafkaClientFactory.createClientWithRetries(clientSupplier, bootstrapServers, Duration.ofSeconds(1))
+        kafkaClientFactory.createClientWithRetries(clientSupplier, bootstrapServers, Duration.ofSeconds(20))
+                .onComplete(ar -> {
+                    assertThat(ar.succeeded()).isFalse();
+                    assertThat(ar.cause().getCause()).isInstanceOf(ConfigException.class);
+                    assertThat(ar.cause().getCause().getMessage()).contains(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG);
+                    // only the number of retries before changing the clock should have been done here
+                    assertThat(creationAttempts.get()).isEqualTo(expectedCreationAttempts);
+                });
+    }
+
+    /**
+     * Verifies that trying to create a client with an unresolvable URL fails if the retry timeout is set to zero.
+     */
+    @Test
+    public void testClientCreationFailsForZeroRetryTimeout() {
+        VertxMockSupport.runTimersImmediately(vertx);
+        final KafkaClientFactory kafkaClientFactory = new KafkaClientFactory(vertx);
+
+        final String bootstrapServers = "some.hostname.that.is.invalid:9094";
+        final Map<String, String> clientConfig = Map.of(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+
+        final AtomicInteger creationAttempts = new AtomicInteger();
+        final Supplier<Object> clientSupplier = () -> {
+            creationAttempts.incrementAndGet();
+            Admin.create(new HashMap<>(clientConfig));
+            throw new AssertionError("admin client creation should have thrown exception");
+        };
+        kafkaClientFactory.createClientWithRetries(clientSupplier, bootstrapServers, Duration.ZERO)
                 .onComplete(ar -> {
                     assertThat(ar.succeeded()).isFalse();
                     assertThat(ar.cause().getCause()).isInstanceOf(ConfigException.class);
                     assertThat(ar.cause().getCause().getMessage()).contains(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG);
                     // no retries should have been done here
-                    assertThat(creationAttempts.get()).isEqualTo(expectedCreationAttempts);
+                    assertThat(creationAttempts.get()).isEqualTo(1);
                 });
     }
 }

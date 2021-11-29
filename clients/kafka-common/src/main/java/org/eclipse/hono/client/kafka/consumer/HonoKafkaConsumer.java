@@ -31,11 +31,13 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
+import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.apache.kafka.clients.consumer.CooperativeStickyAssignor;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.kafka.KafkaClientFactory;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.eclipse.hono.util.Futures;
@@ -112,6 +114,7 @@ public class HonoKafkaConsumer implements Lifecycle {
     private Supplier<Consumer<String, Buffer>> kafkaConsumerSupplier;
     private KafkaClientMetricsSupport metricsSupport;
     private Long pollPauseTimeoutTimerId;
+    private Duration consumerCreationRetriesTimeout = Duration.ZERO; // consumer creation retries disabled by default
 
     /**
      * Creates a consumer to receive records on the given topics.
@@ -245,6 +248,22 @@ public class HonoKafkaConsumer implements Lifecycle {
      */
     public final void setMetricsSupport(final KafkaClientMetricsSupport metricsSupport) {
         this.metricsSupport = metricsSupport;
+    }
+
+    /**
+     * Defines the duration for which to retry creating the Kafka consumer instance as part of the {@link #start()}
+     * invocation. A retry for a creation attempt is done if creation fails because the
+     * {@value CommonClientConfigs#BOOTSTRAP_SERVERS_CONFIG} config property contains a (non-empty) list of URLs that
+     * are not (yet) resolvable.
+     * <p>
+     * The default is to not do any retries (corresponds to using {@link Duration#ZERO}).
+     *
+     * @param consumerCreationRetriesTimeout The maximum time for which retries are done. Using a negative duration or
+     *            {@code null} here is interpreted as an unlimited timeout value ({@link KafkaClientFactory#UNLIMITED_RETRIES_DURATION}
+     *            may be used for that case).
+     */
+    public final void setConsumerCreationRetriesTimeout(final Duration consumerCreationRetriesTimeout) {
+        this.consumerCreationRetriesTimeout = consumerCreationRetriesTimeout;
     }
 
     /**
@@ -407,41 +426,52 @@ public class HonoKafkaConsumer implements Lifecycle {
         final Promise<Void> startPromise = Promise.promise();
         runOnContext(v -> {
             // create KafkaConsumer here so that it is created in the Vert.x context of the start() method (KafkaConsumer uses vertx.getOrCreateContext())
-            kafkaConsumer = Optional.ofNullable(kafkaConsumerSupplier)
-                    .map(supplier -> KafkaConsumer.create(vertx, supplier.get()))
-                    .orElseGet(() -> KafkaConsumer.create(vertx, consumerConfig, String.class, Buffer.class));
-            Optional.ofNullable(metricsSupport).ifPresent(ms -> ms.registerKafkaConsumer(kafkaConsumer.unwrap()));
-            kafkaConsumer.handler(record -> {
-                if (!startPromise.future().isComplete()) {
-                    log.debug("postponing record handling until start() is completed [topic: {}, partition: {}, offset: {}]",
-                            record.topic(), record.partition(), record.offset());
-                }
-                startPromise.future().onSuccess(v2 -> {
-                    if (respectTtl && KafkaRecordHelper.isTtlElapsed(record.headers())) {
-                        onRecordHandlerSkippedForExpiredRecord(record);
-                    } else {
-                        try {
-                            recordHandler.handle(record);
-                        } catch (final Exception e) {
-                            log.warn("error handling record [topic: {}, partition: {}, offset: {}, headers: {}]",
-                                    record.topic(), record.partition(), record.offset(), record.headers(), e);
-                        }
-                    }
-                });
-            });
-            kafkaConsumer.batchHandler(this::onBatchOfRecordsReceived);
-            kafkaConsumer.exceptionHandler(error -> log.error("consumer error occurred [client-id: {}]",
-                    getClientId(), error));
-            installRebalanceListeners();
-            // subscribe and wait for rebalance to make sure that when start() completes,
-            // the consumer is actually ready to receive records already
-            kafkaConsumer.asStream().pollTimeout(Duration.ofMillis(10)); // let polls finish quickly until start() is completed
-            subscribeAndWaitForRebalance()
-                    .onSuccess(v2 -> {
-                        kafkaConsumer.asStream().pollTimeout(POLL_TIMEOUT);
-                        logSubscribedTopicsOnStartComplete();
+            Optional.ofNullable(kafkaConsumerSupplier)
+                    .map(supplier -> Future.succeededFuture(KafkaConsumer.create(vertx, supplier.get())))
+                    .orElseGet(() -> {
+                        final KafkaClientFactory kafkaClientFactory = new KafkaClientFactory(vertx);
+                        return kafkaClientFactory.createKafkaConsumerWithRetries(consumerConfig, String.class,
+                                Buffer.class, consumerCreationRetriesTimeout);
                     })
-                    .onComplete(startPromise);
+                    .onFailure(thr -> {
+                        log.error("error creating consumer [client-id: {}]", getClientId(), thr);
+                        startPromise.fail(thr);
+                    })
+                    .onSuccess(consumer -> {
+                        kafkaConsumer = consumer;
+                        Optional.ofNullable(metricsSupport).ifPresent(ms -> ms.registerKafkaConsumer(kafkaConsumer.unwrap()));
+                        kafkaConsumer.handler(record -> {
+                            if (!startPromise.future().isComplete()) {
+                                log.debug("postponing record handling until start() is completed [topic: {}, partition: {}, offset: {}]",
+                                        record.topic(), record.partition(), record.offset());
+                            }
+                            startPromise.future().onSuccess(v2 -> {
+                                if (respectTtl && KafkaRecordHelper.isTtlElapsed(record.headers())) {
+                                    onRecordHandlerSkippedForExpiredRecord(record);
+                                } else {
+                                    try {
+                                        recordHandler.handle(record);
+                                    } catch (final Exception e) {
+                                        log.warn("error handling record [topic: {}, partition: {}, offset: {}, headers: {}]",
+                                                record.topic(), record.partition(), record.offset(), record.headers(), e);
+                                    }
+                                }
+                            });
+                        });
+                        kafkaConsumer.batchHandler(this::onBatchOfRecordsReceived);
+                        kafkaConsumer.exceptionHandler(error -> log.error("consumer error occurred [client-id: {}]",
+                                getClientId(), error));
+                        installRebalanceListeners();
+                        // subscribe and wait for rebalance to make sure that when start() completes,
+                        // the consumer is actually ready to receive records already
+                        kafkaConsumer.asStream().pollTimeout(Duration.ofMillis(10)); // let polls finish quickly until start() is completed
+                        subscribeAndWaitForRebalance()
+                                .onSuccess(v2 -> {
+                                    kafkaConsumer.asStream().pollTimeout(POLL_TIMEOUT);
+                                    logSubscribedTopicsOnStartComplete();
+                                })
+                                .onComplete(startPromise);
+                    });
         });
         return startPromise.future();
     }

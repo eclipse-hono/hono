@@ -83,7 +83,8 @@ public class InternalKafkaTopicCleanupService implements Lifecycle {
 
         final Map<String, String> adminClientConfig = adminClientConfigProperties.getAdminClientConfig(CLIENT_NAME);
         final KafkaClientFactory kafkaClientFactory = new KafkaClientFactory(vertx);
-        this.kafkaAdminClientCreator = () -> kafkaClientFactory.createKafkaAdminClientWithRetries(adminClientConfig, null);
+        this.kafkaAdminClientCreator = () -> kafkaClientFactory.createKafkaAdminClientWithRetries(adminClientConfig,
+                KafkaClientFactory.UNLIMITED_RETRIES_DURATION);
     }
 
     /**
