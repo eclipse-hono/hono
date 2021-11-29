@@ -22,6 +22,7 @@ import org.apache.kafka.clients.consumer.CooperativeStickyAssignor;
 import org.eclipse.hono.client.command.kafka.KafkaBasedCommandResponseSender;
 import org.eclipse.hono.client.command.kafka.KafkaBasedInternalCommandSender;
 import org.eclipse.hono.client.kafka.HonoTopic;
+import org.eclipse.hono.client.kafka.KafkaClientFactory;
 import org.eclipse.hono.client.kafka.consumer.AsyncHandlingAutoCommitKafkaConsumer;
 import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
@@ -164,6 +165,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
         consumerConfig.putIfAbsent(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         kafkaConsumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, COMMANDS_TOPIC_PATTERN,
                 commandHandler::mapAndDelegateIncomingCommandMessage, consumerConfig);
+        kafkaConsumer.setConsumerCreationRetriesTimeout(KafkaClientFactory.UNLIMITED_RETRIES_DURATION);
         kafkaConsumer.setMetricsSupport(kafkaClientMetricsSupport);
         kafkaConsumer.setOnRebalanceDoneHandler(
                 partitions -> commandQueue.setCurrentlyHandledPartitions(Helper.to(partitions)));

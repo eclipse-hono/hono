@@ -22,6 +22,7 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 import org.apache.kafka.clients.consumer.Consumer;
+import org.eclipse.hono.client.kafka.KafkaClientFactory;
 import org.eclipse.hono.client.kafka.consumer.HonoKafkaConsumer;
 import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationReceiver;
@@ -82,6 +83,7 @@ public class KafkaBasedNotificationReceiver implements NotificationReceiver {
     @Override
     public Future<Void> start() {
         honoKafkaConsumer = new HonoKafkaConsumer(vertx, topics, getRecordHandler(), consumerConfig.getConsumerConfig(NAME));
+        honoKafkaConsumer.setConsumerCreationRetriesTimeout(KafkaClientFactory.UNLIMITED_RETRIES_DURATION);
         Optional.ofNullable(kafkaConsumerSupplier).ifPresent(honoKafkaConsumer::setKafkaConsumerSupplier);
         return honoKafkaConsumer
                 .start()

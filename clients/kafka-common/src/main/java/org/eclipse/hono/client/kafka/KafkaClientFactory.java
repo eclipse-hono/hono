@@ -35,11 +35,18 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.kafka.admin.KafkaAdminClient;
+import io.vertx.kafka.client.consumer.KafkaConsumer;
 
 /**
  * A factory to create Kafka clients.
  */
 public class KafkaClientFactory {
+
+    /**
+     * Duration value that may be used for the {@code retriesTimeout} parameter of the factory methods,
+     * signifying unlimited retries.
+     */
+    public static final Duration UNLIMITED_RETRIES_DURATION = Duration.ofSeconds(-1);
 
     private static final Logger LOG = LoggerFactory.getLogger(KafkaClientFactory.class);
 
@@ -87,7 +94,7 @@ public class KafkaClientFactory {
      * @param clientSupplier The action that will create the client.
      * @param bootstrapServersConfig The {@value CommonClientConfigs#BOOTSTRAP_SERVERS_CONFIG} config property value.
      *                               A {@code null} value will lead to a failed result future.
-     * @param retriesTimeout Thr maximum time for which retries are done. Using a negative duration or {@code null}
+     * @param retriesTimeout The maximum time for which retries are done. Using a negative duration or {@code null}
      *                       here is interpreted as an unlimited timeout value.
      * @return A future indicating the outcome of the creation attempt.
      * @throws NullPointerException if clientSupplier is {@code null}.
@@ -107,6 +114,42 @@ public class KafkaClientFactory {
     }
 
     /**
+     * Creates a new KafkaConsumer.
+     * <p>
+     * If creation fails because the {@value CommonClientConfigs#BOOTSTRAP_SERVERS_CONFIG} config property contains a
+     * (non-empty) list of URLs that are not (yet) resolvable, further creation attempts are done with a delay of
+     * {@value #CLIENT_CREATION_RETRY_DELAY_MILLIS}ms in between. These retries are done until the given
+     * <em>retriesTimeout</em> has elapsed.
+     *
+     * @param consumerConfig The consumer configuration properties.
+     * @param keyType The class type for the key deserialization.
+     * @param valueType The class type for the value deserialization.
+     * @param retriesTimeout The maximum time for which retries are done. Using a negative duration or {@code null}
+     *                       here is interpreted as an unlimited timeout value.
+     * @param <K> The class type for the key deserialization.
+     * @param <V> The class type for the value deserialization.
+     * @return A future indicating the outcome of the creation attempt.
+     * @throws NullPointerException if any of the parameters except retriesTimeout is {@code null}.
+     */
+    public <K, V> Future<KafkaConsumer<K, V>> createKafkaConsumerWithRetries(
+            final Map<String, String> consumerConfig,
+            final Class<K> keyType,
+            final Class<V> valueType,
+            final Duration retriesTimeout) {
+        Objects.requireNonNull(consumerConfig);
+        Objects.requireNonNull(keyType);
+        Objects.requireNonNull(valueType);
+
+        final Promise<KafkaConsumer<K, V>> resultPromise = Promise.promise();
+        createClientWithRetries(
+                () -> KafkaConsumer.create(vertx, consumerConfig, keyType, valueType),
+                getRetriesTimeLimit(retriesTimeout),
+                () -> containsValidServerEntries(consumerConfig.get(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG)),
+                resultPromise);
+        return resultPromise.future();
+    }
+
+    /**
      * Creates a new KafkaAdminClient.
      * <p>
      * If creation fails because the {@value CommonClientConfigs#BOOTSTRAP_SERVERS_CONFIG} config property contains a
@@ -115,7 +158,7 @@ public class KafkaClientFactory {
      * <em>retriesTimeout</em> has elapsed.
      *
      * @param clientConfig The admin client configuration properties.
-     * @param retriesTimeout Thr maximum time for which retries are done. Using a negative duration or {@code null}
+     * @param retriesTimeout The maximum time for which retries are done. Using a negative duration or {@code null}
      *                       here is interpreted as an unlimited timeout value.
      * @return A future indicating the outcome of the creation attempt.
      * @throws NullPointerException if any of the parameters except retriesTimeout is {@code null}.
@@ -137,6 +180,8 @@ public class KafkaClientFactory {
     private Instant getRetriesTimeLimit(final Duration retriesTimeout) {
         if (retriesTimeout == null || retriesTimeout.isNegative()) {
             return Instant.MAX;
+        } else if (retriesTimeout.isZero()) {
+            return Instant.MIN;
         }
         return Instant.now(clock).plus(retriesTimeout);
     }
@@ -151,7 +196,8 @@ public class KafkaClientFactory {
         } catch (final Exception e) {
             // perform retry in case bootstrap URLs are not resolvable ("No resolvable bootstrap urls given in bootstrap.servers")
             // (see org.apache.kafka.clients.ClientUtils#parseAndValidateAddresses)
-            if (e instanceof KafkaException && isBootstrapServersConfigException(e.getCause()) && serverEntriesValid.get()) {
+            if (!retriesTimeLimit.equals(Instant.MIN) && e instanceof KafkaException
+                    && isBootstrapServersConfigException(e.getCause()) && serverEntriesValid.get()) {
                 if (Instant.now(clock).isBefore(retriesTimeLimit)) {
                     LOG.debug("error creating Kafka client, will retry in {}ms: {}", CLIENT_CREATION_RETRY_DELAY_MILLIS,
                             e.getCause().getMessage());
