@@ -128,10 +128,11 @@ Hono consists of a set of microservices which are deployed as Docker containers.
   * An *HTTP Adapter* instance that exposes Hono's Telemetry and Event APIs as URI resources.
   * An *MQTT Adapter* instance that exposes Hono's Telemetry and Event APIs as a generic MQTT topic hierarchy.
   * An *AMQP Adapter* instance that exposes Hono's Telemetry and Event APIs as a set of AMQP 1.0 addresses.
+  * A *Command Router* instance that receives Command & Control messages and forwards them to protocol adapters.
   * A *Device Registry* instance that manages registration information and issues device registration assertions to protocol adapters.
   * An *Auth Server* instance that authenticates Hono components and issues tokens asserting identity and authorities.
 * Kafka Cluster
-  * An *Apache Kafka* broker instance that downstream applications connect to in order to consume telemetry data and events from devices.
+  * An *Apache Kafka* broker instance that downstream applications connect to in order to consume telemetry data and events from devices and to send Command & Control messages to devices.
   * An *Apache Zookeeper* instance that is required by the Kafka cluster.
 * Monitoring Infrastructure
   * A *Prometheus* instance for storing metrics data from services and protocol adapters.
