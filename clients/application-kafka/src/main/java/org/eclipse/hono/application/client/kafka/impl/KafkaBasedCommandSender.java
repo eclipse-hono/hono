@@ -267,9 +267,16 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
         final HonoTopic topic = new HonoTopic(HonoTopic.Type.COMMAND, tenantId);
         final Map<String, Object> headerProperties = getHeaderProperties(deviceId, command, contentType, correlationId,
                 responseRequired, properties);
-
-        return sendAndWaitForOutcome(topic.toString(), tenantId, deviceId, data, headerProperties, spanOperationName,
-                context);
+        final String topicName = topic.toString();
+        final Span currentSpan = startChildSpan(spanOperationName, topicName, tenantId, deviceId, context);
+        return sendAndWaitForOutcome(
+                topicName,
+                tenantId,
+                deviceId,
+                data,
+                headerProperties,
+                currentSpan)
+            .onComplete(ar -> currentSpan.finish());
     }
 
     private Map<String, Object> getHeaderProperties(final String deviceId, final String subject,

@@ -29,6 +29,7 @@ import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.util.MessageHelper;
 
+import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
@@ -69,17 +70,28 @@ public class KafkaBasedInternalCommandSender extends AbstractKafkaBasedMessageSe
             throw new IllegalArgumentException("command is not an instance of KafkaBasedCommand");
         }
 
+        final String topicName = getInternalCommandTopic(adapterInstanceId);
+        final Span currentSpan = startChildSpan(
+                "delegate Command request",
+                topicName,
+                command.getTenant(),
+                command.getDeviceId(),
+                commandContext.getTracingContext());
+
         return sendAndWaitForOutcome(
-                getInternalCommandTopic(adapterInstanceId),
+                topicName,
                 command.getTenant(),
                 command.getDeviceId(),
                 command.getPayload(),
                 getHeaders((KafkaBasedCommand) command),
-                "delegate Command request",
-                commandContext.getTracingContext())
-                        .onSuccess(v -> commandContext.accept())
-                        .onFailure(thr -> commandContext.release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
-                                "failed to publish command message on internal command topic", thr)));
+                currentSpan)
+            .onSuccess(v -> commandContext.accept())
+            .onFailure(thr -> commandContext.release(new ServerErrorException(
+                    command.getTenant(),
+                    HttpURLConnection.HTTP_UNAVAILABLE,
+                    "failed to publish command message on internal command topic",
+                    thr)))
+            .onComplete(ar -> currentSpan.finish());
     }
 
     private static String getInternalCommandTopic(final String adapterInstanceId) {

@@ -25,6 +25,8 @@ import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantObject;
 
+import io.opentracing.References;
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
@@ -73,8 +75,30 @@ public class KafkaBasedTelemetrySender extends AbstractKafkaBasedDownstreamSende
         }
 
         final HonoTopic topic = new HonoTopic(HonoTopic.Type.TELEMETRY, tenant.getTenantId());
+        final Map<String, Object> propsWithDefaults = addDefaults(tenant, device, qos, contentType, properties);
+        final String topicName = topic.toString();
 
-        return send(topic, tenant, device, qos, contentType, payload, properties, "forward Telemetry data", context);
+        final Span currentSpan = startSpan(
+                "forward Telemetry",
+                topicName,
+                tenant.getTenantId(),
+                device.getDeviceId(),
+                qos == QoS.AT_MOST_ONCE ? References.FOLLOWS_FROM : References.CHILD_OF,
+                context);
+        final var outcome = sendAndWaitForOutcome(
+                topic.toString(),
+                tenant.getTenantId(),
+                device.getDeviceId(),
+                payload,
+                propsWithDefaults,
+                currentSpan)
+            .onComplete(ar -> currentSpan.finish());
+
+        if (qos == QoS.AT_MOST_ONCE) {
+            return Future.succeededFuture();
+        } else {
+            return outcome;
+        }
     }
 
     @Override

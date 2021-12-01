@@ -15,12 +15,11 @@ package org.eclipse.hono.tests;
 import java.util.List;
 import java.util.Map;
 
-import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 
-import io.opentracing.SpanContext;
+import io.opentracing.noop.NoopSpan;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
@@ -38,42 +37,14 @@ public class GenericKafkaSender extends AbstractKafkaBasedMessageSender {
      * @param producerConfig The Kafka producer configuration.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public GenericKafkaSender(final KafkaProducerFactory<String, Buffer> producerFactory,
+    public GenericKafkaSender(
+            final KafkaProducerFactory<String, Buffer> producerFactory,
             final MessagingKafkaProducerConfigProperties producerConfig) {
+
         super(producerFactory, "generic-sender", producerConfig, NoopTracerFactory.create());
     }
 
     /**
-     * Sends a message to a kafka cluster and doesn't wait for an outcome.
-     *
-     * @param topic      The topic to send the message to.
-     * @param tenantId   The tenant that the device belongs to.
-     * @param deviceId   The device identifier.
-     * @param payload    The data to send.
-     * @param properties Additional meta data that should be included in the message.
-     * @throws NullPointerException if topic, tenantId, deviceId or properties are {@code null}.
-     */
-    public void send(final String topic, final String tenantId, final String deviceId, final Buffer payload,
-            final Map<String, Object> properties) {
-        super.send(topic, tenantId, deviceId, payload, properties, null, (SpanContext) null);
-    }
-
-    /**
-     * Sends a message to a kafka cluster and doesn't wait for an outcome.
-     *
-     * @param topic    The topic to send the message to.
-     * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The device identifier.
-     * @param payload  The data to send.
-     * @param headers  Additional meta data that should be included in the message.
-     * @throws NullPointerException if topic, tenantId, deviceId or headers are {@code null}.
-     */
-    public void send(final String topic, final String tenantId, final String deviceId, final Buffer payload,
-            final List<KafkaHeader> headers) {
-        super.send(topic, tenantId, deviceId, payload, headers, null, (SpanContext) null);
-    }
-
-    /**
      * Sends a message to a kafka cluster and waits for the outcome.
      *
      * @param topic      The topic to send the message to.
@@ -89,9 +60,13 @@ public class GenericKafkaSender extends AbstractKafkaBasedMessageSender {
      * not be sent. The error code contained in the exception indicates the cause of the failure.
      * @throws NullPointerException if topic, tenantId, deviceId or properties are {@code null}.
      */
-    public Future<Void> sendAndWaitForOutcome(final String topic, final String tenantId, final String deviceId,
+    public Future<Void> sendAndWaitForOutcome(
+            final String topic,
+            final String tenantId,
+            final String deviceId,
             final Buffer payload, final Map<String, Object> properties) {
-        return super.sendAndWaitForOutcome(topic, tenantId, deviceId, payload, properties, null, (SpanContext) null);
+
+        return super.sendAndWaitForOutcome(topic, tenantId, deviceId, payload, properties, NoopSpan.INSTANCE);
     }
 
     /**
@@ -110,9 +85,13 @@ public class GenericKafkaSender extends AbstractKafkaBasedMessageSender {
      * not be sent. The error code contained in the exception indicates the cause of the failure.
      * @throws NullPointerException if topic, tenantId, deviceId or headers are {@code null}.
      */
-    public Future<Void> sendAndWaitForOutcome(final String topic, final String tenantId, final String deviceId,
+    public Future<Void> sendAndWaitForOutcome(
+            final String topic,
+            final String tenantId,
+            final String deviceId,
             final Buffer payload, final List<KafkaHeader> headers) {
-        return super.sendAndWaitForOutcome(topic, tenantId, deviceId, payload, headers, null, (SpanContext) null);
+
+        return super.sendAndWaitForOutcome(topic, tenantId, deviceId, payload, headers, NoopSpan.INSTANCE);
     }
 
 }
