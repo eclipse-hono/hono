@@ -435,9 +435,18 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
         kafkaConsumerConfig.setConsumerConfig(Map.of(
                 ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS));
         final CommandRouterMetrics metrics = mock(CommandRouterMetrics.class);
-        final var kafkaBasedCommandConsumerFactoryImpl = new KafkaBasedCommandConsumerFactoryImpl(vertx, tenantClient,
-                commandTargetMapper, producerFactory, IntegrationTestSupport.getKafkaProducerConfig(),
-                kafkaConsumerConfig, metrics, NoopKafkaClientMetricsSupport.INSTANCE, tracer, null);
+        final var kafkaBasedCommandConsumerFactoryImpl = new KafkaBasedCommandConsumerFactoryImpl(
+                vertx,
+                tenantClient,
+                commandTargetMapper,
+                producerFactory,
+                IntegrationTestSupport.getKafkaProducerConfig(),
+                IntegrationTestSupport.getKafkaProducerConfig(),
+                kafkaConsumerConfig,
+                metrics,
+                NoopKafkaClientMetricsSupport.INSTANCE,
+                tracer,
+                null);
         kafkaBasedCommandConsumerFactoryImpl.setGroupId(commandRouterGroupId);
         componentsToStopAfterTest.add(kafkaBasedCommandConsumerFactoryImpl);
         return kafkaBasedCommandConsumerFactoryImpl;
