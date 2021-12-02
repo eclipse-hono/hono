@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
@@ -38,7 +38,6 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.EncodeException;
 import io.vertx.core.json.Json;
@@ -265,15 +264,13 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
             return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "sender already stopped"));
         }
         final KafkaProducerRecord<String, Buffer> record = KafkaProducerRecord.create(topic, deviceId, payload);
-        final Promise<RecordMetadata> sendPromise = Promise.promise();
 
         log.trace("sending message to Kafka [topic: {}, tenantId: {}, deviceId: {}]", topic, tenantId, deviceId);
         record.addHeaders(headers);
         KafkaTracingHelper.injectSpanContext(tracer, record, span.context());
         logProducerRecord(span, record);
-        getOrCreateProducer().send(record, sendPromise);
 
-        return sendPromise.future()
+        return getOrCreateProducer().send(record)
                 .recover(t -> {
                     logError(span, topic, tenantId, deviceId, t);
                     span.finish();
@@ -381,10 +378,15 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
 
     }
 
-    private void logError(final Span span, final String topic, final String tenantId, final String deviceId,
+    private void logError(
+            final Span span,
+            final String topic,
+            final String tenantId,
+            final String deviceId,
             final Throwable cause) {
-        log.debug("sending message failed [topic: {}, key: {}, tenantId: {}, deviceId: {}]", topic, deviceId, tenantId,
-                deviceId, cause);
+
+        log.debug("sending message failed [topic: {}, key: {}, tenantId: {}, deviceId: {}]",
+                topic, deviceId, tenantId, deviceId, cause);
 
         Tags.HTTP_STATUS.set(span, getErrorCode(cause));
         TracingHelper.logError(span, cause);
@@ -392,19 +394,26 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
 
     private int getErrorCode(final Throwable t) {
         /*
-         * TODO set error code depending on exception?
+         * TODO set error code depending on type of exception?
          *
-         * Possible thrown exceptions include:
+         * terminal problems (the message will never be sent):
          *
-         * Non-Retriable exceptions (fatal, the message will never be sent):
+         * InvalidTopicException
+         * OffsetMetadataTooLargeException
+         * RecordBatchTooLargeException
+         * RecordTooLargeException
+         * UnknownServerException
+         * UnknownProducerIdException
          *
-         * InvalidTopicException OffsetMetadataTooLargeException RecordBatchTooLargeException RecordTooLargeException
-         * UnknownServerException UnknownProducerIdException
+         * transient problems (may be covered by increasing #.retries):
          *
-         * Retriable exceptions (transient, may be covered by increasing #.retries):
-         *
-         * CorruptRecordException InvalidMetadataException NotEnoughReplicasAfterAppendException
-         * NotEnoughReplicasException OffsetOutOfRangeException TimeoutException UnknownTopicOrPartitionException
+         * CorruptRecordException
+         * InvalidMetadataException
+         * NotEnoughReplicasAfterAppendException
+         * NotEnoughReplicasException
+         * OffsetOutOfRangeException
+         * TimeoutException
+         * UnknownTopicOrPartitionException
          */
 
         return HttpURLConnection.HTTP_UNAVAILABLE;

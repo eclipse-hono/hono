@@ -55,7 +55,10 @@ public class KafkaBasedInternalCommandSender extends AbstractKafkaBasedMessageSe
     }
 
     @Override
-    public Future<Void> sendCommand(final CommandContext commandContext, final String adapterInstanceId) {
+    public Future<Void> sendCommand(
+            final CommandContext commandContext,
+            final String adapterInstanceId) {
+
         Objects.requireNonNull(commandContext);
         Objects.requireNonNull(adapterInstanceId);
 

@@ -14,25 +14,27 @@
 package org.eclipse.hono.client.telemetry.kafka;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.*;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.kafka.clients.producer.MockProducer;
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
+import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
-import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.buffer.Buffer;
@@ -45,115 +47,88 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 public class KafkaBasedTelemetrySenderTest {
 
-    private final TenantObject tenant = new TenantObject("the-tenant", true);
     private final RegistrationAssertion device = new RegistrationAssertion("the-device");
-    private final Tracer tracer = NoopTracerFactory.create();
 
     private MessagingKafkaProducerConfigProperties kafkaProducerConfig;
+    private TenantObject tenant;
 
     /**
      * Sets up the fixture.
      */
     @BeforeEach
     public void setUp() {
-
+        tenant = new TenantObject("the-tenant", true);
         kafkaProducerConfig = new MessagingKafkaProducerConfigProperties();
         kafkaProducerConfig.setProducerConfig(new HashMap<>());
 
     }
 
     /**
-     * Verifies that the Kafka record is created as expected when sending telemetry data with QoS 0.
+     * Verifies that the Kafka record is created as expected when sending telemetry data.
      *
+     * @param qos The quality of service used for sending the message.
      * @param ctx The vert.x test context.
      */
-    @Test
-    public void testSendTelemetryCreatesCorrectRecordWithQoS0(final VertxTestContext ctx) {
+    @ParameterizedTest
+    @CsvSource(value = { "AT_MOST_ONCE", "AT_LEAST_ONCE" })
+    public void testSendTelemetryCreatesCorrectRecord(
+            final QoS qos,
+            final VertxTestContext ctx) {
 
         // GIVEN a telemetry sender
-        final QoS qos = QoS.AT_MOST_ONCE;
         final String payload = "the-payload";
-        final String contentType = "the-content-type";
-        final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
-        final CachingKafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory
+        final String contentType = "text/plain";
+        final Map<String, Object> properties = Map.of("foo", "bar");
+        final var spanFinished = ctx.checkpoint();
+        final var messageHasHeaders = ctx.checkpoint();
+        final var span = TracingMockSupport.mockSpan();
+        doAnswer(invocation -> {
+            spanFinished.flag();
+            return null;
+        }).when(span).finish();
+        final var tracer = TracingMockSupport.mockTracer(span);
+
+        final var mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
+        final var factory = CachingKafkaProducerFactory
                 .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
-        final KafkaBasedTelemetrySender sender = new KafkaBasedTelemetrySender(factory, kafkaProducerConfig,
-                true, tracer);
+        final var sender = new KafkaBasedTelemetrySender(factory, kafkaProducerConfig, true, tracer);
 
-        // WHEN sending telemetry data with QoS 0
-        sender.sendTelemetry(tenant, device, qos, contentType, Buffer.buffer(payload), null, null)
-                .onComplete(ctx.succeeding(t -> {
-                    ctx.verify(() -> {
-                        // THEN the producer record is created from the given values...
-                        final ProducerRecord<String, Buffer> actual = mockProducer.history().get(0);
+        // WHEN sending telemetry data
+        sender.sendTelemetry(tenant, device, qos, contentType, Buffer.buffer(payload), properties, null)
+            .onComplete(ctx.succeeding(t -> {
+                ctx.verify(() -> {
 
-                        assertThat(actual.key()).isEqualTo(device.getDeviceId());
-                        assertThat(actual.topic())
-                                .isEqualTo(new HonoTopic(HonoTopic.Type.TELEMETRY, tenant.getTenantId()).toString());
-                        assertThat(actual.value().toString()).isEqualTo(payload);
+                    // THEN the producer record is created from the given values...
+                    final var producerRecord = mockProducer.history().get(0);
 
-                        // ...AND contains the standard headers
-                        KafkaClientUnitTestHelper.assertStandardHeaders(
-                                actual,
-                                device.getDeviceId(),
-                                contentType,
-                                qos.ordinal());
-                    });
-                    ctx.completeNow();
-                }));
+                    assertThat(producerRecord.key()).isEqualTo(device.getDeviceId());
+                    assertThat(producerRecord.topic())
+                            .isEqualTo(new HonoTopic(HonoTopic.Type.TELEMETRY, tenant.getTenantId()).toString());
+                    assertThat(producerRecord.value().toString()).isEqualTo(payload);
 
+                    KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(producerRecord.headers(), "foo", "bar");
+
+                    // ...AND contains the standard headers
+                    KafkaClientUnitTestHelper.assertStandardHeaders(
+                            producerRecord,
+                            device.getDeviceId(),
+                            contentType,
+                            qos.ordinal());
+
+                });
+                messageHasHeaders.flag();
+            }));
     }
 
     /**
-     * Verifies that the Kafka record is created as expected when sending telemetry data with QoS 1.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testSendTelemetryCreatesCorrectRecordWithQoS1(final VertxTestContext ctx) {
-
-        // GIVEN a telemetry sender
-        final QoS qos = QoS.AT_LEAST_ONCE;
-        final String contentType = "the-content-type";
-        final String payload = "the-payload";
-        final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
-        final CachingKafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory
-                .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
-        final KafkaBasedTelemetrySender sender = new KafkaBasedTelemetrySender(factory, kafkaProducerConfig,
-                true, tracer);
-
-        // WHEN sending telemetry data with QoS 1
-        sender.sendTelemetry(tenant, device, qos, contentType, Buffer.buffer(payload), null, null)
-                .onComplete(ctx.succeeding(t -> {
-                    ctx.verify(() -> {
-                        // THEN the producer record is created from the given values...
-                        final ProducerRecord<String, Buffer> actual = mockProducer.history().get(0);
-
-                        assertThat(actual.key()).isEqualTo(device.getDeviceId());
-                        assertThat(actual.topic())
-                                .isEqualTo(new HonoTopic(HonoTopic.Type.TELEMETRY, tenant.getTenantId()).toString());
-                        assertThat(actual.value().toString()).isEqualTo(payload);
-
-                        // ...AND contains the standard headers
-                        KafkaClientUnitTestHelper.assertStandardHeaders(
-                                actual,
-                                device.getDeviceId(),
-                                contentType,
-                                qos.ordinal());
-                    });
-                    ctx.completeNow();
-                }));
-
-    }
-
-    /**
-     * Verifies that the constructor throws a nullpointer exception if a parameter is {@code null}.
+     * Verifies that the constructor throws an NPE if a parameter is {@code null}.
      */
     @Test
     public void testThatConstructorThrowsOnMissingParameter() {
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         final CachingKafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory
                 .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+        final Tracer tracer = NoopTracerFactory.create();
 
         assertThrows(NullPointerException.class,
                 () -> new KafkaBasedTelemetrySender(null, kafkaProducerConfig, true, tracer));
@@ -168,7 +143,7 @@ public class KafkaBasedTelemetrySenderTest {
     /**
      * Verifies that
      * {@link KafkaBasedTelemetrySender#sendTelemetry(TenantObject, RegistrationAssertion, QoS, String, Buffer, Map, SpanContext)}
-     * throws a nullpointer exception if a mandatory parameter is {@code null}.
+     * throws an NPE if a mandatory parameter is {@code null}.
      */
     @Test
     public void testThatSendTelemetryThrowsOnMissingMandatoryParameter() {
@@ -176,6 +151,7 @@ public class KafkaBasedTelemetrySenderTest {
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         final CachingKafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory
                 .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+        final Tracer tracer = NoopTracerFactory.create();
 
         final KafkaBasedTelemetrySender sender = new KafkaBasedTelemetrySender(factory, kafkaProducerConfig,
                 true, tracer);
@@ -188,6 +164,5 @@ public class KafkaBasedTelemetrySenderTest {
 
         assertThrows(NullPointerException.class,
                 () -> sender.sendTelemetry(tenant, device, null, "the-content-type", null, null, null));
-
     }
 }

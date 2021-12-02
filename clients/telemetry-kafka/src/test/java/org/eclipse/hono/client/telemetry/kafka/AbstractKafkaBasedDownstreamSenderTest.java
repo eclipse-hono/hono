@@ -22,9 +22,6 @@ import java.util.Map;
 
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.common.errors.AuthorizationException;
-import org.apache.kafka.common.header.Headers;
-import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
@@ -74,23 +71,6 @@ public class AbstractKafkaBasedDownstreamSenderTest {
     }
 
     /**
-     * Verifies that {@link AbstractKafkaBasedDownstreamSender#start()} creates a producer and
-     * {@link AbstractKafkaBasedDownstreamSender#stop()} closes it.
-     */
-    @Test
-    public void testLifecycle() {
-        final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
-        final CachingKafkaProducerFactory<String, Buffer> factory = newProducerFactory(mockProducer);
-        final AbstractKafkaBasedDownstreamSender sender = newSender(factory);
-
-        assertThat(factory.getProducer(PRODUCER_NAME).isEmpty()).isTrue();
-        sender.start();
-        assertThat(factory.getProducer(PRODUCER_NAME).isPresent()).isTrue();
-        sender.stop();
-        assertThat(factory.getProducer(PRODUCER_NAME).isEmpty()).isTrue();
-    }
-
-    /**
      * Verifies that the Kafka record is created as expected.
      *
      * @param ctx The vert.x test context.
@@ -121,91 +101,6 @@ public class AbstractKafkaBasedDownstreamSenderTest {
                     });
                     ctx.completeNow();
                 }));
-    }
-
-    /**
-     * Verifies that the send method returns the underlying error wrapped in a {@link ServerErrorException}.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testSendFailsWithTheExpectedError(final VertxTestContext ctx) {
-
-        // GIVEN a sender sending a message
-        final RuntimeException expectedError = new RuntimeException("boom");
-        final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(false);
-        final AbstractKafkaBasedDownstreamSender sender = newSender(mockProducer);
-
-        sender.send(topic, tenant, device, qos, CONTENT_TYPE, null, null, null, null)
-                .onComplete(ctx.failing(t -> {
-                    ctx.verify(() -> {
-                        // THEN it fails with the expected error
-                        assertThat(t).isInstanceOf(ServerErrorException.class);
-                        assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(503);
-                        assertThat(t.getCause()).isEqualTo(expectedError);
-                    });
-                    ctx.completeNow();
-                }));
-
-        // WHEN the send operation fails
-        mockProducer.errorNext(expectedError);
-
-    }
-
-    /**
-     * Verifies that the producer is closed when sending of a message fails with a fatal error.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testProducerIsClosedOnFatalError(final VertxTestContext ctx) {
-
-        final AuthorizationException expectedError = new AuthorizationException("go away");
-
-        // GIVEN a sender sending a message
-        final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(false);
-        final CachingKafkaProducerFactory<String, Buffer> factory = newProducerFactory(mockProducer);
-        newSender(factory).send(topic, tenant, device, qos, CONTENT_TYPE, null, null, null, null)
-                .onComplete(ctx.failing(t -> {
-                    ctx.verify(() -> {
-                        // THEN the producer is removed and closed
-                        assertThat(factory.getProducer(PRODUCER_NAME).isEmpty()).isTrue();
-                        assertThat(mockProducer.closed()).isTrue();
-                    });
-                    ctx.completeNow();
-                }));
-
-        // WHEN the send operation fails
-        mockProducer.errorNext(expectedError);
-
-    }
-
-    /**
-     * Verifies that the producer is not closed when sending of a message fails with a non-fatal error.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testProducerIsNotClosedOnNonFatalError(final VertxTestContext ctx) {
-
-        final RuntimeException expectedError = new RuntimeException("foo");
-
-        // GIVEN a sender sending a message
-        final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(false);
-        final CachingKafkaProducerFactory<String, Buffer> factory = newProducerFactory(mockProducer);
-        newSender(factory).send(topic, tenant, device, qos, CONTENT_TYPE, null, null, null, null)
-                .onComplete(ctx.failing(t -> {
-                    ctx.verify(() -> {
-                        // THEN the producer is present and still open
-                        assertThat(factory.getProducer(PRODUCER_NAME).isPresent()).isTrue();
-                        assertThat(mockProducer.closed()).isFalse();
-                    });
-                    ctx.completeNow();
-                }));
-
-        // WHEN the send operation fails
-        mockProducer.errorNext(expectedError);
-
     }
 
     /**
@@ -447,100 +342,6 @@ public class AbstractKafkaBasedDownstreamSenderTest {
                     });
                     ctx.completeNow();
                 }));
-    }
-
-    /**
-     * Verifies that if the properties contain a <em>ttd</em> property but no <em>creation-time</em> then the latter is
-     * added.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testThatCreationTimeIsAddedWhenNotPresentAndTtdIsSet(final VertxTestContext ctx) {
-        final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
-        final AbstractKafkaBasedDownstreamSender sender = newSender(mockProducer);
-
-        // GIVEN properties that contain a TTD
-        final long ttd = 99L;
-        final Map<String, Object> properties = new HashMap<>();
-        properties.put("ttd", ttd);
-
-        // WHEN sending the message
-        sender.send(topic, tenant, device, qos, CONTENT_TYPE, null, properties, null, null)
-                .onComplete(ctx.succeeding(t -> {
-                    ctx.verify(() -> {
-                        // THEN the producer record contains a creation time
-                        final Headers headers = mockProducer.history().get(0).headers();
-                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
-                                headers,
-                                "ttd",
-                                ttd);
-                        assertThat(headers.headers("creation-time")).isNotNull();
-                    });
-                    ctx.completeNow();
-                }));
-
-    }
-
-    /**
-     * Verifies that if the properties contain a <em>ttl</em> property but no <em>creation-time</em> then the latter is
-     * added.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testThatCreationTimeIsAddedWhenNotPresentAndTtlIsSet(final VertxTestContext ctx) {
-        final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
-        final AbstractKafkaBasedDownstreamSender sender = newSender(mockProducer);
-
-        // GIVEN properties that contain a TTL
-        final Map<String, Object> properties = new HashMap<>();
-        properties.put("ttl", 99L);
-
-        // WHEN sending the message
-        sender.send(topic, tenant, device, qos, CONTENT_TYPE, null, properties, null, null)
-                .onComplete(ctx.succeeding(t -> {
-                    ctx.verify(() -> {
-                        // THEN the producer record contains a creation time
-                        final ProducerRecord<String, Buffer> record = mockProducer.history().get(0);
-                        assertThat(record.headers().headers("creation-time")).hasSize(1);
-                        assertThat(record.headers().headers("creation-time")).isNotNull();
-                    });
-                    ctx.completeNow();
-                }));
-
-    }
-
-    /**
-     * Verifies that if the properties contain a <em>creation-time</em> property then it is preserved.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testThatCreationTimeIsNotChanged(final VertxTestContext ctx) {
-        final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
-        final AbstractKafkaBasedDownstreamSender sender = newSender(mockProducer);
-
-        // GIVEN properties that contain creation-time
-        final long creationTime = 12345L;
-        final Map<String, Object> properties = new HashMap<>();
-        properties.put("ttd", 99L);
-        properties.put("ttl", 2L);
-        properties.put("creation-time", creationTime);
-
-        // WHEN sending the message
-        sender.send(topic, tenant, device, qos, CONTENT_TYPE, null, properties, null, null)
-                .onComplete(ctx.succeeding(t -> {
-                    ctx.verify(() -> {
-                        // THEN the creation time is preserved
-                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
-                                mockProducer.history().get(0).headers(),
-                                "creation-time",
-                                creationTime);
-                    });
-                    ctx.completeNow();
-                }));
-
     }
 
     /**

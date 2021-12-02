@@ -54,16 +54,23 @@ public class KafkaBasedTelemetrySender extends AbstractKafkaBasedDownstreamSende
     }
 
     @Override
-    public Future<Void> sendTelemetry(final TenantObject tenant, final RegistrationAssertion device, final QoS qos,
-            final String contentType, final Buffer payload, final Map<String, Object> properties,
+    public Future<Void> sendTelemetry(
+            final TenantObject tenant,
+            final RegistrationAssertion device,
+            final QoS qos,
+            final String contentType,
+            final Buffer payload,
+            final Map<String, Object> properties,
             final SpanContext context) {
 
         Objects.requireNonNull(tenant);
         Objects.requireNonNull(device);
         Objects.requireNonNull(qos);
 
-        log.trace("send telemetry data [tenantId: {}, deviceId: {}, qos: {}, contentType: {}, properties: {}]",
-                tenant.getTenantId(), device.getDeviceId(), qos, contentType, properties);
+        if (log.isTraceEnabled()) {
+            log.trace("send telemetry data [tenantId: {}, deviceId: {}, qos: {}, contentType: {}, properties: {}]",
+                    tenant.getTenantId(), device.getDeviceId(), qos, contentType, properties);
+        }
 
         final HonoTopic topic = new HonoTopic(HonoTopic.Type.TELEMETRY, tenant.getTenantId());
 
@@ -74,5 +81,4 @@ public class KafkaBasedTelemetrySender extends AbstractKafkaBasedDownstreamSende
     public String toString() {
         return KafkaBasedTelemetrySender.class.getName() + " via Kafka";
     }
-
 }

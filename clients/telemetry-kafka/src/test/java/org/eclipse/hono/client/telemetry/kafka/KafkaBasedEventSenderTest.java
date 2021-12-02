@@ -14,17 +14,17 @@
 package org.eclipse.hono.client.telemetry.kafka;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.verify;
 import static com.google.common.truth.Truth.assertThat;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.kafka.clients.producer.MockProducer;
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
+import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.TenantObject;
@@ -46,7 +46,6 @@ public class KafkaBasedEventSenderTest {
 
     private final TenantObject tenant = new TenantObject("the-tenant", true);
     private final RegistrationAssertion device = new RegistrationAssertion("the-device");
-    private final Tracer tracer = NoopTracerFactory.create();
 
     private MessagingKafkaProducerConfigProperties kafkaProducerConfig;
 
@@ -57,8 +56,13 @@ public class KafkaBasedEventSenderTest {
     public void setUp() {
 
         kafkaProducerConfig = new MessagingKafkaProducerConfigProperties();
-        kafkaProducerConfig.setProducerConfig(new HashMap<>());
+        kafkaProducerConfig.setProducerConfig(Map.of("hono.kafka.producerConfig.bootstrap.servers", "localhost:9092"));
+    }
 
+    private CachingKafkaProducerFactory<String, Buffer> newProducerFactory(
+            final MockProducer<String, Buffer> mockProducer) {
+
+        return CachingKafkaProducerFactory.testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
     }
 
     /**
@@ -70,31 +74,39 @@ public class KafkaBasedEventSenderTest {
     public void testSendEventCreatesCorrectRecord(final VertxTestContext ctx) {
 
         // GIVEN a sender
-        final String contentType = "the-content-type";
+        final String contentType = "text/plain";
         final String payload = "the-payload";
-        final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
-        final CachingKafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory
-                .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
-        final KafkaBasedEventSender sender = new KafkaBasedEventSender(factory, kafkaProducerConfig, true, tracer);
+        final Map<String, Object> properties = Map.of("foo", "bar");
+
+        final var span = TracingMockSupport.mockSpan();
+        final var tracer = TracingMockSupport.mockTracer(span);
+
+        final var mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
+        final var factory = newProducerFactory(mockProducer);
+        final var sender = new KafkaBasedEventSender(factory, kafkaProducerConfig, true, tracer);
 
         // WHEN sending a message
-        sender.sendEvent(tenant, device, contentType, Buffer.buffer(payload), null, null)
+        sender.sendEvent(tenant, device, contentType, Buffer.buffer(payload), properties, null)
                 .onComplete(ctx.succeeding(t -> {
                     ctx.verify(() -> {
                         // THEN the producer record is created from the given values...
-                        final ProducerRecord<String, Buffer> actual = mockProducer.history().get(0);
+                        final var producerRecord = mockProducer.history().get(0);
 
-                        assertThat(actual.key()).isEqualTo(device.getDeviceId());
-                        assertThat(actual.topic())
+                        assertThat(producerRecord.key()).isEqualTo(device.getDeviceId());
+                        assertThat(producerRecord.topic())
                                 .isEqualTo(new HonoTopic(HonoTopic.Type.EVENT, tenant.getTenantId()).toString());
-                        assertThat(actual.value().toString()).isEqualTo(payload);
+                        assertThat(producerRecord.value().toString()).isEqualTo(payload);
+
+                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(producerRecord.headers(), "foo", "bar");
 
                         // ...AND contains the standard headers
                         KafkaClientUnitTestHelper.assertStandardHeaders(
-                                actual,
+                                producerRecord,
                                 device.getDeviceId(),
                                 contentType,
                                 QoS.AT_LEAST_ONCE.ordinal());
+
+                        verify(span).finish();
                     });
                     ctx.completeNow();
                 }));
@@ -109,6 +121,7 @@ public class KafkaBasedEventSenderTest {
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         final CachingKafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory
                 .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+        final Tracer tracer = NoopTracerFactory.create();
 
         assertThrows(NullPointerException.class,
                 () -> new KafkaBasedEventSender(null, kafkaProducerConfig, true, tracer));
@@ -130,6 +143,7 @@ public class KafkaBasedEventSenderTest {
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         final CachingKafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory
                 .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+        final Tracer tracer = NoopTracerFactory.create();
 
         final KafkaBasedEventSender sender = new KafkaBasedEventSender(factory, kafkaProducerConfig, true, tracer);
 

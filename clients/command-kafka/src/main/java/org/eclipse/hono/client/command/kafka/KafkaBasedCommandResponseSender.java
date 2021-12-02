@@ -56,14 +56,19 @@ public class KafkaBasedCommandResponseSender extends AbstractKafkaBasedMessageSe
     }
 
     @Override
-    public Future<Void> sendCommandResponse(final CommandResponse response, final SpanContext context) {
+    public Future<Void> sendCommandResponse(
+            final CommandResponse response,
+            final SpanContext context) {
 
         Objects.requireNonNull(response);
+
+        if (log.isTraceEnabled()) {
+            log.trace("publish command response [{}]", response);
+        }
 
         final String topic = new HonoTopic(HonoTopic.Type.COMMAND_RESPONSE, response.getTenantId()).toString();
         final Span span = startChildSpan("forward Command response", topic, response.getTenantId(),
                 response.getDeviceId(), context);
-        log.trace("publish command response [{}]", response);
         if (response.getMessagingType() != getMessagingType()) {
             span.log(String.format("using messaging type %s instead of type %s used for the original command",
                     getMessagingType(), response.getMessagingType()));

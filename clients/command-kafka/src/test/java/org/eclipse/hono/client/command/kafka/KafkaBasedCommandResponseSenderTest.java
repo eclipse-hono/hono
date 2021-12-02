@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
@@ -12,13 +12,13 @@
  */
 package org.eclipse.hono.client.command.kafka;
 
+import static org.mockito.Mockito.verify;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.header.Headers;
 import org.eclipse.hono.client.command.CommandResponse;
@@ -27,6 +27,7 @@ import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
+import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
@@ -34,9 +35,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopSpan;
-import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.Json;
 import io.vertx.junit5.VertxExtension;
@@ -47,7 +48,7 @@ import io.vertx.junit5.VertxTestContext;
  */
 @ExtendWith(VertxExtension.class)
 public class KafkaBasedCommandResponseSenderTest {
-    private final Tracer tracer = NoopTracerFactory.create();
+
     private MessagingKafkaProducerConfigProperties kafkaProducerConfig;
 
     /**
@@ -65,7 +66,7 @@ public class KafkaBasedCommandResponseSenderTest {
         final String tenantId = "test-tenant";
         final String deviceId = "test-device";
         final String correlationId = UUID.randomUUID().toString();
-        final String contentType = "the-content-type";
+        final String contentType = "text/plain";
         final String payload = "the-payload";
         final int status = 200;
         final String additionalHeader1Name = "testHeader1";
@@ -82,11 +83,13 @@ public class KafkaBasedCommandResponseSenderTest {
                 contentType,
                 status);
         commandResponse.setAdditionalProperties(additionalProperties);
-        final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
-        final CachingKafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory
+
+        final Span span = TracingMockSupport.mockSpan();
+        final Tracer tracer = TracingMockSupport.mockTracer(span);
+        final var mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
+        final var factory = CachingKafkaProducerFactory
                 .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
-        final KafkaBasedCommandResponseSender sender = new KafkaBasedCommandResponseSender(factory, kafkaProducerConfig,
-                tracer);
+        final var sender = new KafkaBasedCommandResponseSender(factory, kafkaProducerConfig, tracer);
 
         // WHEN sending a command response
         sender.sendCommandResponse(commandResponse, NoopSpan.INSTANCE.context())
@@ -138,6 +141,7 @@ public class KafkaBasedCommandResponseSenderTest {
                                 headers,
                                 additionalHeader2Name,
                                 additionalHeader2Value);
+                        verify(span).finish();
                     });
                     ctx.completeNow();
                 }));

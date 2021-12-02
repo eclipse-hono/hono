@@ -12,6 +12,7 @@
  */
 package org.eclipse.hono.application.client.kafka.impl;
 
+import static org.mockito.Mockito.verify;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
@@ -45,6 +46,7 @@ import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
 import org.eclipse.hono.kafka.test.KafkaMockConsumer;
+import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,13 +55,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
 import io.opentracing.noop.NoopSpan;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Context;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -83,6 +88,8 @@ public class KafkaBasedCommandSenderTest {
     private String tenantId;
     private String deviceId;
     private Vertx vertx;
+    private Tracer tracer;
+    private Span span;
 
     /**
      *
@@ -98,15 +105,18 @@ public class KafkaBasedCommandSenderTest {
         producerConfig = new MessagingKafkaProducerConfigProperties();
         producerConfig.setProducerConfig(Map.of("client.id", "application-test-sender"));
 
+        span = TracingMockSupport.mockSpan();
+        tracer = TracingMockSupport.mockTracer(span);
+
         mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
-        final CachingKafkaProducerFactory<String, Buffer> producerFactory = CachingKafkaProducerFactory
+        final var producerFactory = CachingKafkaProducerFactory
                 .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
         commandSender = new KafkaBasedCommandSender(
                 vertx,
                 consumerConfig,
                 producerFactory,
                 producerConfig,
-                NoopTracerFactory.create());
+                tracer);
         tenantId = UUID.randomUUID().toString();
         deviceId = UUID.randomUUID().toString();
     }
@@ -128,32 +138,49 @@ public class KafkaBasedCommandSenderTest {
      */
     @Test
     public void testSendAsyncCommandSucceeds(final VertxTestContext ctx) {
-        final Map<String, Object> headerProperties = new HashMap<>();
+        final Map<String, Object> headerProperties = Map.of("appKey", "appValue");
         final String correlationId = UUID.randomUUID().toString();
         final String subject = "setVolume";
-        headerProperties.put("appKey", "appValue");
 
-        commandSender
-                .sendAsyncCommand(tenantId, deviceId, subject, null, Buffer.buffer("{\"value\": 20}"), correlationId,
-                null, headerProperties, NoopSpan.INSTANCE.context())
-                .onComplete(ctx.succeeding(ok -> {
-                    ctx.verify(() -> {
-                        final ProducerRecord<String, Buffer> commandRecord = mockProducer.history().get(0);
-                        assertThat(commandRecord.key()).isEqualTo(deviceId);
+        commandSender.sendAsyncCommand(
+                tenantId,
+                deviceId,
+                subject,
+                "application/json",
+                new JsonObject().put("value", 20).toBuffer(),
+                correlationId,
+                null,
+                headerProperties,
+                null)
+            .onComplete(ctx.succeeding(ok -> {
+                ctx.verify(() -> {
+                    final ProducerRecord<String, Buffer> commandRecord = mockProducer.history().get(0);
+                    assertThat(commandRecord.key()).isEqualTo(deviceId);
 
-                        assertThat(commandRecord.headers().headers(MessageHelper.SYS_PROPERTY_SUBJECT)).hasSize(1);
-                        assertThat(commandRecord.headers()).contains(
-                                new RecordHeader(MessageHelper.SYS_PROPERTY_SUBJECT, subject.getBytes()));
-
-                        assertThat(commandRecord.headers().headers(MessageHelper.SYS_PROPERTY_CORRELATION_ID)).hasSize(1);
-                        assertThat(commandRecord.headers()).contains(
-                                new RecordHeader(MessageHelper.SYS_PROPERTY_CORRELATION_ID, correlationId.getBytes()));
-
-                        assertThat(commandRecord.headers().headers("appKey")).hasSize(1);
-                        assertThat(commandRecord.headers()).contains(new RecordHeader("appKey", "appValue".getBytes()));
-                    });
-                    ctx.completeNow();
-                }));
+                    KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                            commandRecord.headers(),
+                            MessageHelper.APP_PROPERTY_DEVICE_ID,
+                            deviceId);
+                    KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                            commandRecord.headers(),
+                            MessageHelper.SYS_PROPERTY_SUBJECT,
+                            subject);
+                    KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                            commandRecord.headers(),
+                            MessageHelper.SYS_PROPERTY_CONTENT_TYPE,
+                            "application/json");
+                    KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                            commandRecord.headers(),
+                            MessageHelper.SYS_PROPERTY_CORRELATION_ID,
+                            correlationId);
+                    KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                            commandRecord.headers(),
+                            "appKey",
+                            "appValue");
+                    verify(span).finish();
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -163,27 +190,75 @@ public class KafkaBasedCommandSenderTest {
      */
     @Test
     public void testSendOneWayCommandSucceeds(final VertxTestContext ctx) {
-        final Map<String, Object> headerProperties = new HashMap<>();
+        final Map<String, Object> headerProperties = Map.of("appKey", "appValue");
         final String subject = "setVolume";
-        headerProperties.put("appKey", "appValue");
 
-        commandSender
-                .sendOneWayCommand(tenantId, deviceId, subject, null, Buffer.buffer("{\"value\": 20}"), headerProperties,
+        commandSender.sendOneWayCommand(
+                tenantId,
+                deviceId,
+                subject,
+                "application/json",
+                new JsonObject().put("value", 20).toBuffer(),
+                headerProperties,
                 NoopSpan.INSTANCE.context())
-                .onComplete(ctx.succeeding(ok -> {
+            .onComplete(ctx.succeeding(ok -> {
+                ctx.verify(() -> {
+                    final ProducerRecord<String, Buffer> commandRecord = mockProducer.history().get(0);
+                    assertThat(commandRecord.key()).isEqualTo(deviceId);
+
+                    KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                            commandRecord.headers(),
+                            MessageHelper.APP_PROPERTY_DEVICE_ID,
+                            deviceId);
+                    KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                            commandRecord.headers(),
+                            MessageHelper.SYS_PROPERTY_SUBJECT,
+                            subject);
+                    KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                            commandRecord.headers(),
+                            MessageHelper.SYS_PROPERTY_CONTENT_TYPE,
+                            "application/json");
+                    KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                            commandRecord.headers(),
+                            "appKey",
+                            "appValue");
+                    verify(span).finish();
+                });
+                ctx.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that
+     * {@link org.eclipse.hono.application.client.CommandSender#sendCommand(String, String, String, String, Buffer, String, Map, Duration, SpanContext)}
+     * fails as the timeout is reached.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testSendCommandAndReceiveResponseTimesOut(final VertxTestContext ctx) {
+        final Context context = vertx.getOrCreateContext();
+        commandSender.setKafkaConsumerSupplier(() -> mockConsumer);
+        context.runOnContext(v -> {
+            commandSender.sendCommand(
+                    tenantId,
+                    deviceId,
+                    "testCommand",
+                    "text/plain",
+                    Buffer.buffer("data"),
+                    null,
+                    null,
+                    Duration.ofMillis(5),
+                    null)
+                .onComplete(ctx.failing(error -> {
                     ctx.verify(() -> {
-                        final ProducerRecord<String, Buffer> commandRecord = mockProducer.history().get(0);
-                        assertThat(commandRecord.key()).isEqualTo(deviceId);
-
-                        assertThat(commandRecord.headers().headers(MessageHelper.SYS_PROPERTY_SUBJECT)).hasSize(1);
-                        assertThat(commandRecord.headers()).contains(
-                                new RecordHeader(MessageHelper.SYS_PROPERTY_SUBJECT, subject.getBytes()));
-
-                        assertThat(commandRecord.headers().headers("appKey")).hasSize(1);
-                        assertThat(commandRecord.headers()).contains(new RecordHeader("appKey", "appValue".getBytes()));
+                        // VERIFY that the error is caused due to time out.
+                        assertThat(error).isInstanceOf(SendMessageTimeoutException.class);
+                        verify(span).finish();
                     });
                     ctx.completeNow();
                 }));
+        });
     }
 
     /**
@@ -228,33 +303,12 @@ public class KafkaBasedCommandSenderTest {
         sendCommandAndReceiveResponse(ctx, correlationId, null, "failure", false, 500);
     }
 
-    /**
-     * Verifies that
-     * {@link org.eclipse.hono.application.client.CommandSender#sendCommand(String, String, String, String, Buffer, String, Map, Duration, SpanContext)}
-     * fails as the timeout is reached.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testSendCommandAndReceiveResponseTimesOut(final VertxTestContext ctx) {
-        final Context context = vertx.getOrCreateContext();
-        commandSender.setKafkaConsumerSupplier(() -> mockConsumer);
-        context.runOnContext(v -> {
-            commandSender
-                    .sendCommand(tenantId, deviceId, "testCommand", null, Buffer.buffer("data"), null, null,
-                            Duration.ofMillis(5), NoopSpan.INSTANCE.context())
-                    .onComplete(ctx.failing(error -> {
-                        ctx.verify(() -> {
-                            // VERIFY that the error is caused due to time out.
-                            assertThat(error).isInstanceOf(SendMessageTimeoutException.class);
-                        });
-                        ctx.completeNow();
-                    }));
-        });
-    }
-
-    private void sendCommandAndReceiveResponse(final VertxTestContext ctx, final String correlationId,
-            final Integer responseStatus, final String responsePayload, final boolean expectSuccess,
+    private void sendCommandAndReceiveResponse(
+            final VertxTestContext ctx,
+            final String correlationId,
+            final Integer responseStatus,
+            final String responsePayload,
+            final boolean expectSuccess,
             final int expectedStatusCode) {
 
         final Context context = vertx.getOrCreateContext();
@@ -271,7 +325,7 @@ public class KafkaBasedCommandSenderTest {
                 });
             }
         };
-        final CachingKafkaProducerFactory<String, Buffer> producerFactory = CachingKafkaProducerFactory
+        final var producerFactory = CachingKafkaProducerFactory
                 .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
         commandSender = new KafkaBasedCommandSender(
                 vertx,
@@ -281,8 +335,8 @@ public class KafkaBasedCommandSenderTest {
                 NoopTracerFactory.create());
 
         final Map<String, Object> headerProperties = new HashMap<>();
-        final String command = "setVolume";
         headerProperties.put("appKey", "appValue");
+        final String command = "setVolume";
         final ConsumerRecord<String, Buffer> commandResponseRecord = commandResponseRecord(tenantId,
                 deviceId, correlationId, responseStatus, Buffer.buffer(responsePayload));
         final String responseTopic = new HonoTopic(HonoTopic.Type.COMMAND_RESPONSE, tenantId).toString();
@@ -303,7 +357,7 @@ public class KafkaBasedCommandSenderTest {
 
         context.runOnContext(v -> {
             // Send a command to the device
-            commandSender.sendCommand(tenantId, deviceId, command, null, Buffer.buffer("test"), headerProperties)
+            commandSender.sendCommand(tenantId, deviceId, command, "text/plain", Buffer.buffer("test"), headerProperties)
                     .onComplete(ar -> {
                         ctx.verify(() -> {
                             if (expectSuccess) {
