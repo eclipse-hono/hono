@@ -89,7 +89,8 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
      *            protocol adapter instance that can handle it. Note that no initialization of this factory will be done
      *            here, that is supposed to be done by the calling method.
      * @param kafkaProducerFactory The producer factory for creating Kafka producers for sending messages.
-     * @param kafkaProducerConfig The Kafka producer configuration.
+     * @param internalCommandProducerConfig The configuration for producing messages on the command-internal topic.
+     * @param commandResponseProducerConfig The configuration for producing command-response messages.
      * @param kafkaConsumerConfig The Kafka consumer configuration.
      * @param metrics The component to use for reporting metrics.
      * @param kafkaClientMetricsSupport The Kafka metrics support.
@@ -102,7 +103,8 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
             final TenantClient tenantClient,
             final CommandTargetMapper commandTargetMapper,
             final KafkaProducerFactory<String, Buffer> kafkaProducerFactory,
-            final MessagingKafkaProducerConfigProperties kafkaProducerConfig,
+            final MessagingKafkaProducerConfigProperties internalCommandProducerConfig,
+            final MessagingKafkaProducerConfigProperties commandResponseProducerConfig,
             final MessagingKafkaConsumerConfigProperties kafkaConsumerConfig,
             final CommandRouterMetrics metrics,
             final KafkaClientMetricsSupport kafkaClientMetricsSupport,
@@ -113,16 +115,18 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
         this.tenantClient = Objects.requireNonNull(tenantClient);
         this.commandTargetMapper = Objects.requireNonNull(commandTargetMapper);
         Objects.requireNonNull(kafkaProducerFactory);
-        Objects.requireNonNull(kafkaProducerConfig);
+        Objects.requireNonNull(internalCommandProducerConfig);
+        Objects.requireNonNull(commandResponseProducerConfig);
         this.kafkaConsumerConfig = Objects.requireNonNull(kafkaConsumerConfig);
         this.metrics = Objects.requireNonNull(metrics);
         this.kafkaClientMetricsSupport = Objects.requireNonNull(kafkaClientMetricsSupport);
         this.tracer = Objects.requireNonNull(tracer);
         this.internalKafkaTopicCleanupService = internalKafkaTopicCleanupService;
 
-        internalCommandSender = new KafkaBasedInternalCommandSender(kafkaProducerFactory, kafkaProducerConfig, tracer);
-        kafkaBasedCommandResponseSender = new KafkaBasedCommandResponseSender(kafkaProducerFactory, kafkaProducerConfig,
+        internalCommandSender = new KafkaBasedInternalCommandSender(kafkaProducerFactory, internalCommandProducerConfig,
                 tracer);
+        kafkaBasedCommandResponseSender = new KafkaBasedCommandResponseSender(kafkaProducerFactory,
+                commandResponseProducerConfig, tracer);
     }
 
     /**

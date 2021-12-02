@@ -255,7 +255,7 @@ public class ApplicationConfig {
 
         final CommandTargetMapper commandTargetMapper = CommandTargetMapper.create(registrationClient, deviceConnectionInfo, getTracer());
         final MessagingClientProvider<CommandConsumerFactory> commandConsumerFactoryProvider = new MessagingClientProvider<>();
-        if (messagingKafkaProducerConfig().isConfigured() && messagingKafkaConsumerConfig().isConfigured()) {
+        if (messagingCommandInternalKafkaProducerConfig().isConfigured() && messagingKafkaConsumerConfig().isConfigured()) {
             final KafkaClientMetricsSupport kafkaClientMetricsSupport = kafkaClientMetricsSupport(meterRegistry, kafkaMetricsConfig());
             final KafkaProducerFactory<String, Buffer> kafkaProducerFactory = kafkaProducerFactory(kafkaClientMetricsSupport);
             commandConsumerFactoryProvider.setClient(new KafkaBasedCommandConsumerFactoryImpl(
@@ -263,7 +263,8 @@ public class ApplicationConfig {
                     tenantClient,
                     commandTargetMapper,
                     kafkaProducerFactory,
-                    messagingKafkaProducerConfig(),
+                    messagingCommandInternalKafkaProducerConfig(),
+                    messagingCommandResponseKafkaProducerConfig(),
                     messagingKafkaConsumerConfig(),
                     metrics,
                     kafkaClientMetricsSupport,
@@ -296,7 +297,7 @@ public class ApplicationConfig {
      */
     @Bean
     public Optional<InternalKafkaTopicCleanupService> internalKafkaTopicCleanupService(final AdapterInstanceStatusService adapterInstanceStatusService) {
-        if (messagingKafkaProducerConfig().isConfigured() && messagingKafkaConsumerConfig().isConfigured()
+        if (messagingCommandInternalKafkaProducerConfig().isConfigured() && messagingKafkaConsumerConfig().isConfigured()
                 && kafkaAdminClientConfig().isConfigured()
                 && !(adapterInstanceStatusService instanceof AdapterInstanceStatusService.UnknownStatusProvidingService)) {
             return Optional.of(new InternalKafkaTopicCleanupService(vertx(), adapterInstanceStatusService, kafkaAdminClientConfig()));
@@ -461,7 +462,7 @@ public class ApplicationConfig {
      *
      * @return The properties.
      */
-    @ConfigurationProperties(prefix = "hono.kafka.command-in")
+    @ConfigurationProperties(prefix = "hono.kafka.command")
     @Bean
     public MessagingKafkaConsumerConfigProperties messagingKafkaConsumerConfig() {
         final MessagingKafkaConsumerConfigProperties configProperties = new MessagingKafkaConsumerConfigProperties();
@@ -471,13 +472,28 @@ public class ApplicationConfig {
     }
 
     /**
-     * Exposes configuration properties for the Kafka producer that publishes commands as a Spring bean.
+     * Exposes configuration properties for the Kafka producer that publishes commands on the command-internal topic
+     * as a Spring bean.
      *
      * @return The properties.
      */
-    @ConfigurationProperties(prefix = "hono.kafka.command-out")
+    @ConfigurationProperties(prefix = "hono.kafka.command-internal")
     @Bean
-    public MessagingKafkaProducerConfigProperties messagingKafkaProducerConfig() {
+    public MessagingKafkaProducerConfigProperties messagingCommandInternalKafkaProducerConfig() {
+        final MessagingKafkaProducerConfigProperties configProperties = new MessagingKafkaProducerConfigProperties();
+        configProperties.setCommonClientConfig(commonKafkaClientConfig());
+        configProperties.setDefaultClientIdPrefix("cmd-router");
+        return configProperties;
+    }
+
+    /**
+     * Exposes configuration properties for the Kafka producer that publishes command responses as a Spring bean.
+     *
+     * @return The properties.
+     */
+    @ConfigurationProperties(prefix = "hono.kafka.command-response")
+    @Bean
+    public MessagingKafkaProducerConfigProperties messagingCommandResponseKafkaProducerConfig() {
         final MessagingKafkaProducerConfigProperties configProperties = new MessagingKafkaProducerConfigProperties();
         configProperties.setCommonClientConfig(commonKafkaClientConfig());
         configProperties.setDefaultClientIdPrefix("cmd-router");

@@ -128,7 +128,8 @@ public class Application extends AbstractServiceApplication {
     private RequestResponseClientConfigProperties deviceRegistrationClientConfig;
     private RequestResponseClientConfigProperties tenantClientConfig;
     private KafkaClientMetricsSupport kafkaClientMetricsSupport;
-    private MessagingKafkaProducerConfigProperties kafkaProducerConfig;
+    private MessagingKafkaProducerConfigProperties commandInternalKafkaProducerConfig;
+    private MessagingKafkaProducerConfigProperties commandResponseKafkaProducerConfig;
     private MessagingKafkaConsumerConfigProperties kafkaConsumerConfig;
     private KafkaAdminClientConfigProperties kafkaAdminClientConfig;
     private InternalKafkaTopicCleanupService internalKafkaTopicCleanupService;
@@ -185,12 +186,16 @@ public class Application extends AbstractServiceApplication {
     @Inject
     void setKafkaClientOptions(
             @ConfigMapping(prefix = "hono.kafka") final CommonKafkaClientOptions commonOptions,
-            @ConfigMapping(prefix = "hono.kafka.commandOut") final KafkaProducerOptions producerOptions,
-            @ConfigMapping(prefix = "hono.kafka.commandIn") final KafkaConsumerOptions consumerOptions,
+            @ConfigMapping(prefix = "hono.kafka.commandInternal") final KafkaProducerOptions commandInternalProducerOptions,
+            @ConfigMapping(prefix = "hono.kafka.commandResponse") final KafkaProducerOptions commandResponseProducerOptions,
+            @ConfigMapping(prefix = "hono.kafka.command") final KafkaConsumerOptions consumerOptions,
             @ConfigMapping(prefix = "hono.kafka.cleanup") final KafkaAdminClientOptions adminClientOptions) {
 
-        this.kafkaProducerConfig = new MessagingKafkaProducerConfigProperties(commonOptions, producerOptions);
-        this.kafkaProducerConfig.setDefaultClientIdPrefix(DEFAULT_CLIENT_ID_PREFIX);
+        this.commandInternalKafkaProducerConfig = new MessagingKafkaProducerConfigProperties(commonOptions, commandInternalProducerOptions);
+        this.commandInternalKafkaProducerConfig.setDefaultClientIdPrefix(DEFAULT_CLIENT_ID_PREFIX);
+
+        this.commandResponseKafkaProducerConfig = new MessagingKafkaProducerConfigProperties(commonOptions, commandResponseProducerOptions);
+        this.commandResponseKafkaProducerConfig.setDefaultClientIdPrefix(DEFAULT_CLIENT_ID_PREFIX);
 
         this.kafkaConsumerConfig = new MessagingKafkaConsumerConfigProperties(commonOptions, consumerOptions);
         this.kafkaConsumerConfig.setDefaultClientIdPrefix(DEFAULT_CLIENT_ID_PREFIX);
@@ -288,10 +293,11 @@ public class Application extends AbstractServiceApplication {
             final CommandTargetMapper commandTargetMapper) {
 
         final MessagingClientProvider<CommandConsumerFactory> commandConsumerFactoryProvider = new MessagingClientProvider<>();
-        if (kafkaProducerConfig.isConfigured() && kafkaConsumerConfig.isConfigured()) {
+        if (kafkaConsumerConfig.isConfigured() && commandResponseKafkaProducerConfig.isConfigured()
+                && commandInternalKafkaProducerConfig.isConfigured()) {
             final KafkaProducerFactory<String, Buffer> kafkaProducerFactory = CachingKafkaProducerFactory.sharedFactory(vertx);
             kafkaProducerFactory.setMetricsSupport(kafkaClientMetricsSupport);
-            if (internalKafkaTopicCleanupService == null && kafkaProducerConfig.isConfigured()
+            if (internalKafkaTopicCleanupService == null && commandInternalKafkaProducerConfig.isConfigured()
                     && kafkaConsumerConfig.isConfigured() && kafkaAdminClientConfig.isConfigured()
                     && !(adapterInstanceStatusService instanceof AdapterInstanceStatusService.UnknownStatusProvidingService)) {
                 internalKafkaTopicCleanupService = new InternalKafkaTopicCleanupService(vertx, adapterInstanceStatusService, kafkaAdminClientConfig);
@@ -301,7 +307,8 @@ public class Application extends AbstractServiceApplication {
                     tenantClient,
                     commandTargetMapper,
                     kafkaProducerFactory,
-                    kafkaProducerConfig,
+                    commandInternalKafkaProducerConfig,
+                    commandResponseKafkaProducerConfig,
                     kafkaConsumerConfig,
                     metrics,
                     kafkaClientMetricsSupport,
