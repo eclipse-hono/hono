@@ -411,7 +411,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      *
      * @return The number of attempts.
      */
-    public int getReconnectAttempts() {
+    public final int getReconnectAttempts() {
         return reconnectAttempts;
     }
 
@@ -426,7 +426,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      * @param attempts The number of attempts to make.
      * @throws IllegalArgumentException if attempts is &lt; -1.
      */
-    public void setReconnectAttempts(final int attempts) {
+    public final void setReconnectAttempts(final int attempts) {
         if (attempts < -1) {
             throw new IllegalArgumentException("attempts must be >= -1");
         } else {
@@ -442,7 +442,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      *
      * @return The minimum delay in milliseconds.
      */
-    public long getReconnectMinDelay() {
+    public final long getReconnectMinDelay() {
         return reconnectMinDelay;
     }
 
@@ -455,7 +455,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      * @param reconnectMinDelay The minimum delay in milliseconds.
      * @throws IllegalArgumentException if reconnectMinDelay is &lt; 0.
      */
-    public void setReconnectMinDelay(final long reconnectMinDelay) {
+    public final void setReconnectMinDelay(final long reconnectMinDelay) {
         if (reconnectMinDelay < 0) {
             throw new IllegalArgumentException("minimum delay must be >= 0");
         } else {
@@ -471,7 +471,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      *
      * @return The maximum delay in milliseconds.
      */
-    public long getReconnectMaxDelay() {
+    public final long getReconnectMaxDelay() {
         return reconnectMaxDelay;
     }
 
@@ -484,7 +484,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      * @param reconnectMaxDelay The maximum delay in milliseconds.
      * @throws IllegalArgumentException if reconnectMaxDelay is &lt; 0.
      */
-    public void setReconnectMaxDelay(final long reconnectMaxDelay) {
+    public final void setReconnectMaxDelay(final long reconnectMaxDelay) {
         if (reconnectMaxDelay < 0) {
             throw new IllegalArgumentException("maximum delay must be >= 0");
         } else {
@@ -500,7 +500,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      *
      * @return The value to exponentially increase the delay by in milliseconds.
      */
-    public long getReconnectDelayIncrement() {
+    public final long getReconnectDelayIncrement() {
         return reconnectDelayIncrement;
     }
 
@@ -513,7 +513,7 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
      * @param reconnectDelayIncrement The value to exponentially increase the delay by in milliseconds.
      * @throws IllegalArgumentException if reconnectDelayIncrement is &lt; 0.
      */
-    public void setReconnectDelayIncrement(final long reconnectDelayIncrement) {
+    public final void setReconnectDelayIncrement(final long reconnectDelayIncrement) {
         if (reconnectDelayIncrement < 0) {
             throw new IllegalArgumentException("value must be >= 0");
         } else {
@@ -616,9 +616,11 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
     /**
      * Sets the rewrite rule for downstream addresses.
      * This method parses the rule and tries to precompile the pattern to be used.
-     * The pattern and replacement can be obtained by {@link #getAddressRewritePattern()} and {@link #getAddressRewriteReplacement()} methods.
+     * The pattern and replacement can be obtained by {@link #getAddressRewritePattern()} and
+     * {@link #getAddressRewriteReplacement()} methods.
      *
-     * For more information about syntax and behavior of this property see {@link org.eclipse.hono.util.AddressHelper#rewrite(String, ClientConfigProperties)} method.
+     * For more information about syntax and behavior of this property see
+     * {@link org.eclipse.hono.util.AddressHelper#rewrite(String, ClientConfigProperties)} method.
      *
      * @param addressRewriteRule The rewrite rule to be applied to the address.
      */

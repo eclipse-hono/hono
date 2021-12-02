@@ -183,7 +183,7 @@ public interface AbstractDeviceManagementSearchDevicesTest {
         final Filter filter = new Filter("/enabled", true);
         final Sort sortOption = new Sort("/id");
 
-        sortOption.setDirection(Sort.Direction.desc);
+        sortOption.setDirection(Sort.Direction.DESC);
         createDevices(tenantId, Map.of(
                 "testDevice1", new Device().setEnabled(true),
                 "testDevice2", new Device().setEnabled(true)))
@@ -218,7 +218,7 @@ public interface AbstractDeviceManagementSearchDevicesTest {
         final Filter filter = new Filter("/enabled", true);
         final Sort sortOption = new Sort("/ext/id");
 
-        sortOption.setDirection(Sort.Direction.desc);
+        sortOption.setDirection(Sort.Direction.DESC);
         createDevices(tenantId, Map.of(
                 "testDevice1", new Device().setEnabled(true).setExtensions(Map.of("id", "aaa")),
                 "testDevice2", new Device().setEnabled(true).setExtensions(Map.of("id", "bbb"))))

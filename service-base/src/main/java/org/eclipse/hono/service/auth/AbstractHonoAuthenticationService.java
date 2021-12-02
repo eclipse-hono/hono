@@ -41,7 +41,7 @@ public abstract class AbstractHonoAuthenticationService<T> extends BaseAuthentic
     /**
      * The default supported SASL mechanisms.
      */
-    public static final String[] DEFAULT_SASL_MECHANISMS = { AuthenticationConstants.MECHANISM_EXTERNAL,
+    protected static final String[] DEFAULT_SASL_MECHANISMS = { AuthenticationConstants.MECHANISM_EXTERNAL,
             AuthenticationConstants.MECHANISM_PLAIN };
 
     /**

@@ -27,6 +27,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonInclude(Include.NON_DEFAULT)
 public class ResourceLimits {
 
+    private static final String ERROR_MAX_TTL_LESS_THAN_UNLIMITED =
+            "Maximum time-to-live property must be set to value >= -1";
+
     @JsonProperty(TenantConstants.FIELD_MAX_CONNECTIONS)
     private int maxConnections = TenantConstants.UNLIMITED_CONNECTIONS;
     @JsonProperty(TenantConstants.FIELD_MAX_TTL)
@@ -112,7 +115,7 @@ public class ResourceLimits {
      */
     public final ResourceLimits setMaxTtl(final long maxTtl) {
         if (maxTtl < -1) {
-            throw new IllegalArgumentException("Maximum time-to-live property must be set to value >= -1");
+            throw new IllegalArgumentException(ERROR_MAX_TTL_LESS_THAN_UNLIMITED);
         }
         this.maxTtl = maxTtl;
         return this;
@@ -138,7 +141,7 @@ public class ResourceLimits {
      */
     public final ResourceLimits setMaxTtlTelemetryQoS0(final long maxTtl) {
         if (maxTtl < -1) {
-            throw new IllegalArgumentException("Maximum time-to-live property must be set to value >= -1");
+            throw new IllegalArgumentException(ERROR_MAX_TTL_LESS_THAN_UNLIMITED);
         }
         this.maxTtlTelemetryQos0 = maxTtl;
         return this;
@@ -164,7 +167,7 @@ public class ResourceLimits {
      */
     public final ResourceLimits setMaxTtlTelemetryQoS1(final long maxTtl) {
         if (maxTtl < -1) {
-            throw new IllegalArgumentException("Maximum time-to-live property must be set to value >= -1");
+            throw new IllegalArgumentException(ERROR_MAX_TTL_LESS_THAN_UNLIMITED);
         }
         this.maxTtlTelemetryQoS1 = maxTtl;
         return this;
@@ -190,7 +193,7 @@ public class ResourceLimits {
      */
     public final ResourceLimits setMaxTtlCommandResponse(final long maxTtl) {
         if (maxTtl < -1) {
-            throw new IllegalArgumentException("Maximum time-to-live property must be set to value >= -1");
+            throw new IllegalArgumentException(ERROR_MAX_TTL_LESS_THAN_UNLIMITED);
         }
         this.maxTtlCommandResponse = maxTtl;
         return this;

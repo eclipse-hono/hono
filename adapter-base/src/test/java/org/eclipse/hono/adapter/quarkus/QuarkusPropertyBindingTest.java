@@ -47,7 +47,7 @@ public class QuarkusPropertyBindingTest {
         final var props = new ConnectionEventProducerConfig(eventProducerOptions);
         assertThat(props.getLogLevel()).isEqualTo("debug");
         assertThat(props.isDebugLogLevel()).isTrue();
-        assertThat(props.getType()).isEqualTo(ConnectionEventProducerType.events);
+        assertThat(props.getType()).isEqualTo(ConnectionEventProducerType.EVENTS);
     }
 
     @Test

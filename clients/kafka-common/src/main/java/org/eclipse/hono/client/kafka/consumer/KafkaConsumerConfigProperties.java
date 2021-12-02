@@ -121,13 +121,13 @@ public class KafkaConsumerConfigProperties extends AbstractKafkaConfigProperties
      * Adapt the properties. It is invoked by {@link #getConsumerConfig(String)} on the result of applying the consumer
      * configuration on the common configuration.
      * <p>
-     * Subclasses may overwrite this method to set expected configuration values. The default implementation does
-     * nothing.
+     * Subclasses may overwrite this method to set expected configuration values.
+     * This default implementation does nothing.
      *
      * @param config The consumer configuration to be adapted.
      */
     protected void adaptConfiguration(final Map<String, String> config) {
-
+        // empty default implementation
     }
 
     /**

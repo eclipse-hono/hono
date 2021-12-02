@@ -258,13 +258,13 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         final CompletableFuture<Void> startup = new CompletableFuture<>();
         final Promise<String> deploymentTracker = Promise.promise();
         vertx.deployVerticle(
-                () -> adapter(),
+                this::adapter,
                 new DeploymentOptions().setInstances(appConfig.getMaxInstances()),
                 deploymentTracker);
         deploymentTracker.future()
             .compose(s -> healthCheckServer.start())
             .onSuccess(ok -> startup.complete(null))
-            .onFailure(t -> startup.completeExceptionally(t));
+            .onFailure(startup::completeExceptionally);
         startup.join();
 
     }
@@ -358,9 +358,9 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
      */
     protected ConnectionEventProducer connectionEventProducer() {
         switch (connectionEventsConfig.getType()) {
-        case logging:
+        case LOGGING:
             return new LoggingConnectionEventProducer(connectionEventsConfig);
-        case events:
+        case EVENTS:
             return new HonoEventConnectionEventProducer();
         default:
             return null;

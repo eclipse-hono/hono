@@ -57,5 +57,5 @@ public interface AuthHandler<T extends ExecutionContext> {
      * @return The provider or {@code null}.
      * @throws NullPointerException if the context is {@code null}.
      */
-    DeviceCredentialsAuthProvider<?> getAuthProvider(T context);
+    DeviceCredentialsAuthProvider<? extends AbstractDeviceCredentials> getAuthProvider(T context);
 }

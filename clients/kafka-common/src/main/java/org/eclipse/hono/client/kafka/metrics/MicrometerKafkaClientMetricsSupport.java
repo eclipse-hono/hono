@@ -62,6 +62,7 @@ public final class MicrometerKafkaClientMetricsSupport implements KafkaClientMet
     );
 
     private static final Logger LOG = LoggerFactory.getLogger(MicrometerKafkaClientMetricsSupport.class);
+    private static final String PREFIX_KAFKA = "kafka.";
 
     private final MeterRegistry meterRegistry;
     private final Map<Producer<?, ?>, KafkaClientMetrics> producerMetricsMap = new HashMap<>();
@@ -87,9 +88,9 @@ public final class MicrometerKafkaClientMetricsSupport implements KafkaClientMet
         final List<String> metricsPrefixesToUse = new ArrayList<>(useDefaultMetrics ? DEFAULT_METRICS_PREFIXES : List.of());
         metricsPrefixes.stream()
                 .map(String::trim)
-                .filter(p -> p.startsWith("kafka.")) // sanity check - only entries with kafka prefix are relevant here
+                .filter(p -> p.startsWith(PREFIX_KAFKA)) // sanity check - only entries with kafka prefix are relevant here
                 .forEach(metricsPrefixesToUse::add);
-        final boolean reportAllMetrics = metricsPrefixesToUse.contains("kafka") || metricsPrefixesToUse.contains("kafka.");
+        final boolean reportAllMetrics = metricsPrefixesToUse.contains("kafka") || metricsPrefixesToUse.contains(PREFIX_KAFKA);
         this.producerMetricsEnabled = reportAllMetrics || metricsPrefixesToUse.stream().anyMatch(
                 prefix -> "kafka.producer".startsWith(prefix) || prefix.startsWith("kafka.producer"));
         this.consumerMetricsEnabled = reportAllMetrics || metricsPrefixesToUse.stream().anyMatch(
@@ -103,7 +104,7 @@ public final class MicrometerKafkaClientMetricsSupport implements KafkaClientMet
             this.meterRegistry.config().meterFilter(MeterFilter
                     .accept(id -> metricsPrefixesToUse.stream().anyMatch(prefix -> id.getName().startsWith(prefix))));
             // deny all kafka metrics not previously accepted
-            this.meterRegistry.config().meterFilter(MeterFilter.denyNameStartsWith("kafka."));
+            this.meterRegistry.config().meterFilter(MeterFilter.denyNameStartsWith(PREFIX_KAFKA));
         } else {
             LOG.info("activating Kafka client metrics support; all metrics will be reported "
                     + "- consider configuring individual metrics to reduce the number of reported metrics");

@@ -111,7 +111,7 @@ public final class FileBasedDeviceManagementSearchDevicesTest implements Abstrac
         final Filter filter = new Filter("/enabled", true);
         final Sort sortOption = new Sort("/id");
 
-        sortOption.setDirection(Sort.Direction.desc);
+        sortOption.setDirection(Sort.Direction.DESC);
         createDevices(tenantId, Map.of(
                 "testDevice1", new Device().setEnabled(true),
                 "testDevice2", new Device().setEnabled(true)))

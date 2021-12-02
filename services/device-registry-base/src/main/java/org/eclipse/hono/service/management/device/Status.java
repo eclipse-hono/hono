@@ -43,12 +43,6 @@ public class Status<T extends Status<T>> {
     private String lastUser;
 
     /**
-     * Creates an empty status.
-     */
-    public Status() {
-    }
-
-    /**
      * Sets the creation time to the given value.
      *
      * @param creationTime The creation time.

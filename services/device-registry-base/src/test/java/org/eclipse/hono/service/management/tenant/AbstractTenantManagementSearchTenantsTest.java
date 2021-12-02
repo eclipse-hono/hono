@@ -203,7 +203,7 @@ public interface AbstractTenantManagementSearchTenantsTest {
         final int pageOffset = 1;
         final Filter filter = new Filter("/enabled", true);
         final Sort sortOption = new Sort("/ext/id");
-        sortOption.setDirection(Sort.Direction.desc);
+        sortOption.setDirection(Sort.Direction.DESC);
 
         createTenants(Map.of(
                 tenantId1, new Tenant().setEnabled(true).setExtensions(Map.of("id", "1")),
@@ -243,8 +243,8 @@ public interface AbstractTenantManagementSearchTenantsTest {
         final Filter filter = new Filter("/enabled", true);
         final Sort sortOption1 = new Sort("/ext/group");
         final Sort sortOption2 = new Sort("/ext/id");
-        sortOption1.setDirection(Sort.Direction.desc);
-        sortOption2.setDirection(Sort.Direction.asc);
+        sortOption1.setDirection(Sort.Direction.DESC);
+        sortOption2.setDirection(Sort.Direction.ASC);
 
         createTenants(Map.of(
                 tenantId1, new Tenant().setEnabled(false).setExtensions(Map.of("id", "1", "group", "B")),
@@ -328,7 +328,7 @@ public interface AbstractTenantManagementSearchTenantsTest {
         final Filter filter1 = new Filter("/ext/id", "testTenant-?");
         final Filter filter2 = new Filter("/ext/value", "test$?Value");
         final Sort sortOption = new Sort("/ext/id");
-        sortOption.setDirection(Sort.Direction.desc);
+        sortOption.setDirection(Sort.Direction.DESC);
 
         createTenants(Map.of(
                 tenantId1, new Tenant().setEnabled(false).setExtensions(

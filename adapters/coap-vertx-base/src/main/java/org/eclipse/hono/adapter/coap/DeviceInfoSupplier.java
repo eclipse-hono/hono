@@ -43,12 +43,6 @@ public class DeviceInfoSupplier implements ApplicationLevelInfoSupplier, Advance
     private static final Logger LOG = LoggerFactory.getLogger(DeviceInfoSupplier.class);
 
     /**
-     * Creates a new device information supplier.
-     */
-    public DeviceInfoSupplier() {
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override

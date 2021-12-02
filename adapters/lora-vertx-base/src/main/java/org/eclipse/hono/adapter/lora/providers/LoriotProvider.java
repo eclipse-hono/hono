@@ -65,7 +65,7 @@ public class LoriotProvider extends JsonBasedLoraProvider {
 
     private static final String COMMAND_FIELD_LORIOT_CMD = "cmd";
     private static final String COMMAND_FIELD_LORIOT_CONFIRMED = "confirmed";
-    private static final String COMMAND_FIELD_LORIOT_data = "data";
+    private static final String COMMAND_FIELD_LORIOT_DATA = "data";
     private static final String COMMAND_FIELD_LORIOT_EUI = "EUI";
     private static final String COMMAND_VALUE_LORIOT_TX = "tx";
 
@@ -167,7 +167,7 @@ public class LoriotProvider extends JsonBasedLoraProvider {
         final JsonObject json = new JsonObject();
         json.put(COMMAND_FIELD_LORIOT_CMD, COMMAND_VALUE_LORIOT_TX);
         json.put(COMMAND_FIELD_LORIOT_CONFIRMED, false);
-        json.put(COMMAND_FIELD_LORIOT_data, BaseEncoding.base16().encode(payload.getBytes()));
+        json.put(COMMAND_FIELD_LORIOT_DATA, BaseEncoding.base16().encode(payload.getBytes()));
         json.put(COMMAND_FIELD_LORIOT_EUI, deviceId);
         return json;
     }

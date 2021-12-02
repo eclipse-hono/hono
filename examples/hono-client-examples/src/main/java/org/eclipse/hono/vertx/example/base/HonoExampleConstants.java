@@ -30,7 +30,8 @@ public class HonoExampleConstants {
      */
     public static final String HONO_MESSAGING_HOST = System.getProperty("consumer.host", HONO_CONTAINER_HOST);
     /**
-     * Port of the AMQP network where consumers can receive data (in the standard setup this is the port of the qdrouter).
+     * Port of the AMQP network where consumers can receive data (in the standard setup this is the port
+     * of the qdrouter).
      */
     public static final int HONO_AMQP_CONSUMER_PORT = Integer.parseInt(System.getProperty("consumer.port", "15671"));
     /**
@@ -41,9 +42,11 @@ public class HonoExampleConstants {
     public static final String TENANT_ID = "DEFAULT_TENANT";
 
     /**
-     * For devices signalling that they remain connected for an indeterminate amount of time, a command is periodically sent to the device after the following number of seconds elapsed.
+     * For devices signaling that they remain connected for an indeterminate amount of time, a command is
+     * periodically sent to the device after the following number of seconds elapsed.
      */
-    public static final int COMMAND_INTERVAL_FOR_DEVICES_CONNECTED_WITH_UNLIMITED_EXPIRY = Integer.parseInt(System.getProperty("command.repetition.interval", "5"));
+    public static final int COMMAND_INTERVAL_FOR_DEVICES_CONNECTED_WITH_UNLIMITED_EXPIRY =
+            Integer.parseInt(System.getProperty("command.repetition.interval", "5"));
 
     private HonoExampleConstants() {
         // prevent instantiation

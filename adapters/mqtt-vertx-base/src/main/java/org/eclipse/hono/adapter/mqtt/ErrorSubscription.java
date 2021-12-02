@@ -205,9 +205,11 @@ public final class ErrorSubscription extends AbstractSubscription {
     public String getErrorPublishTopic(final MqttContext context, final int errorCode) {
         Objects.requireNonNull(context);
 
-        final String contextTopicDeviceId = Optional.ofNullable(context.topic()).map(ResourceIdentifier::getResourceId)
+        final String contextTopicDeviceId = Optional.ofNullable(context.topic())
+                .map(ResourceIdentifier::getResourceId)
                 .orElse(null);
-        final String contextEndpoint = Optional.ofNullable(context.topic()).map(ResourceIdentifier::getEndpoint)
+        final String contextEndpoint = Optional.ofNullable(context.topic())
+                .map(ResourceIdentifier::getEndpoint)
                 .orElse("");
         return getErrorPublishTopic(contextEndpoint, contextTopicDeviceId, context.correlationId(), errorCode);
     }
@@ -223,7 +225,11 @@ public final class ErrorSubscription extends AbstractSubscription {
      * @param errorCode The error code.
      * @return The topic name.
      */
-    public String getErrorPublishTopic(final String messageEndpoint, final String deviceId, final String correlationId, final int errorCode) {
+    public String getErrorPublishTopic(
+            final String messageEndpoint,
+            final String deviceId,
+            final String correlationId,
+            final int errorCode) {
 
         final String topicTenantId = containsTenantId() ? getTenant() : "";
         final String topicDeviceId;
@@ -252,10 +258,13 @@ public final class ErrorSubscription extends AbstractSubscription {
             case EventConstants.EVENT_ENDPOINT:
             case EventConstants.EVENT_ENDPOINT_SHORT:
                 return messageEndpoint;
-            case CommandConstants.COMMAND_ENDPOINT: // command response messages have a topic of the form "command///res/${req-id}/${status}"
+            case CommandConstants.COMMAND_ENDPOINT:
+                // command response messages have a topic of the form "command///res/${req-id}/${status}"
                 return COMMAND_RESPONSE_ENDPOINT;
             case CommandConstants.COMMAND_ENDPOINT_SHORT:
                 return COMMAND_RESPONSE_ENDPOINT_SHORT;
+            default:
+                return UNKNOWN_ENDPOINT;
             }
         }
         return UNKNOWN_ENDPOINT;

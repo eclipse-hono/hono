@@ -76,17 +76,18 @@ public class HonoHttpDevice {
     protected static final String ORIGIN_URI = "http://hono.eclipse.org";
 
     private static final Vertx VERTX = Vertx.vertx();
+    private static final String CONTENT_TYPE_APPLICATION_JSON = "application/json";
 
     /**
      * Different types of requests this application may send.
      */
     private enum Request {
-        EmptyEventWithTtd(null, EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION, 60, true),
-        EmptyEventAlreadyInvalid(null, EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION, 0, true),
-        JsonEventWithoutTtd(new JsonObject().put("threshold", "exceeded"), "application/json", null, true),
-        JsonEventWithTtd(new JsonObject().put("threshold", "exceeded"), "application/json", 120, true),
-        TelemetryWithoutTtd(new JsonObject().put("weather", "sunny"), "application/json", null, false),
-        TelemetryWithTtd(new JsonObject().put("weather", "cloudy"), "application/json", 60, false);
+        EMPTY_EVENT_WITH_TTD(null, EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION, 60, true),
+        EMPTY_EVENT_ALREADY_INVALID(null, EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION, 0, true),
+        JSON_EVENT_WITHOUT_TTD(new JsonObject().put("threshold", "exceeded"), CONTENT_TYPE_APPLICATION_JSON, null, true),
+        JSON_EVENT_WITH_TTD(new JsonObject().put("threshold", "exceeded"), CONTENT_TYPE_APPLICATION_JSON, 120, true),
+        TELEMETRY_WITHOUT_TTD(new JsonObject().put("weather", "sunny"), CONTENT_TYPE_APPLICATION_JSON, null, false),
+        TELEMETRY_WITH_TTD(new JsonObject().put("weather", "cloudy"), CONTENT_TYPE_APPLICATION_JSON, 60, false);
 
         /**
          * The payload of the message, defined as JsonObject. May be {@code null}.
@@ -130,18 +131,18 @@ public class HonoHttpDevice {
     }
 
     private final List<Request> requests = Arrays.asList(
-            Request.EmptyEventWithTtd,
-            Request.EmptyEventWithTtd,
-            Request.EmptyEventWithTtd,
-            Request.TelemetryWithoutTtd,
-            Request.EmptyEventWithTtd,
-            Request.TelemetryWithoutTtd,
-            Request.JsonEventWithTtd,
-            Request.TelemetryWithoutTtd,
-            Request.JsonEventWithoutTtd,
-            Request.EmptyEventAlreadyInvalid,
-            Request.TelemetryWithTtd,
-            Request.TelemetryWithoutTtd
+            Request.EMPTY_EVENT_WITH_TTD,
+            Request.EMPTY_EVENT_WITH_TTD,
+            Request.EMPTY_EVENT_WITH_TTD,
+            Request.TELEMETRY_WITHOUT_TTD,
+            Request.EMPTY_EVENT_WITH_TTD,
+            Request.TELEMETRY_WITHOUT_TTD,
+            Request.JSON_EVENT_WITH_TTD,
+            Request.TELEMETRY_WITHOUT_TTD,
+            Request.JSON_EVENT_WITHOUT_TTD,
+            Request.EMPTY_EVENT_ALREADY_INVALID,
+            Request.TELEMETRY_WITH_TTD,
+            Request.TELEMETRY_WITHOUT_TTD
     );
 
     private final HttpClient httpClient;

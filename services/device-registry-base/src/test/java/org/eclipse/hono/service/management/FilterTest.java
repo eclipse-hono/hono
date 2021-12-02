@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.service.management.device;
+package org.eclipse.hono.service.management;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 

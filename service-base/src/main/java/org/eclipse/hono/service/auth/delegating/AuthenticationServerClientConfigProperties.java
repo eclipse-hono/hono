@@ -19,6 +19,7 @@ import java.util.Objects;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.SignatureSupportingConfigProperties;
 import org.eclipse.hono.service.auth.AbstractHonoAuthenticationService;
+import org.eclipse.hono.util.AuthenticationConstants;
 
 
 /**
@@ -28,7 +29,9 @@ import org.eclipse.hono.service.auth.AbstractHonoAuthenticationService;
 public class AuthenticationServerClientConfigProperties extends ClientConfigProperties {
 
     private SignatureSupportingConfigProperties validation = new SignatureSupportingConfigProperties();
-    private List<String> supportedSaslMechanisms = List.of(AbstractHonoAuthenticationService.DEFAULT_SASL_MECHANISMS);
+    private List<String> supportedSaslMechanisms = List.of(
+            AuthenticationConstants.MECHANISM_EXTERNAL,
+            AuthenticationConstants.MECHANISM_PLAIN);
 
     /**
      * Creates new properties using default values.

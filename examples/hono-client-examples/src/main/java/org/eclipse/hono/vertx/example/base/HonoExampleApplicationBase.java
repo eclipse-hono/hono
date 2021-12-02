@@ -13,12 +13,15 @@
 
 package org.eclipse.hono.vertx.example.base;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CountDownLatch;
+import java.util.Random;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 import org.eclipse.hono.application.client.ApplicationClient;
 import org.eclipse.hono.application.client.DownstreamMessage;
@@ -35,6 +38,7 @@ import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,11 +62,18 @@ public class HonoExampleApplicationBase {
 
     public static final String HONO_CLIENT_USER = System.getProperty("username", "consumer@HONO");
     public static final String HONO_CLIENT_PASSWORD = System.getProperty("password", "verysecret");
-    public static final Boolean USE_PLAIN_CONNECTION = Boolean.valueOf(System.getProperty("plain.connection", "false"));
-    public static final Boolean SEND_ONE_WAY_COMMANDS = Boolean.valueOf(System.getProperty("sendOneWayCommands", "false"));
+    public static final Boolean USE_PLAIN_CONNECTION =
+            Boolean.valueOf(System.getProperty("plain.connection", "false"));
+    public static final Boolean SEND_ONE_WAY_COMMANDS =
+            Boolean.valueOf(System.getProperty("sendOneWayCommands", "false"));
     public static final Boolean USE_KAFKA = Boolean.valueOf(System.getProperty("kafka", "false"));
 
     private static final Logger LOG = LoggerFactory.getLogger(HonoExampleApplicationBase.class);
+    // used by Kafka for request logging
+    private static final String KAFKA_CLIENT_ID_PREFIX = "example.application";
+    private static final String KAFKA_CONSUMER_GROUP_ID = "hono-example-application";
+    private static final String COMMAND_SEND_LIFECYCLE_INFO = "sendLifecycleInfo";
+    private static final Random RAND = new Random();
 
     private final Vertx vertx = Vertx.vertx();
     private final ApplicationClient<? extends MessageContext> client;
@@ -74,8 +85,8 @@ public class HonoExampleApplicationBase {
      */
     private final Map<String, Handler<Void>> periodicCommandSenderTimerCancelerMap = new HashMap<>();
     /**
-     * A map holding the last reported notification for a device being connected. Will be emptied as soon as the notification
-     * is handled.
+     * A map holding the last reported notification for a device being connected. Will be emptied as soon as the
+     * notification is handled.
      * Only affects devices that use a connection oriented protocol like MQTT.
      */
     private final Map<String, TimeUntilDisconnectNotification> pendingTtdNotification = new HashMap<>();
@@ -108,11 +119,14 @@ public class HonoExampleApplicationBase {
     private ApplicationClient<? extends MessageContext> createAmqpApplicationClient() {
 
         final ClientConfigProperties props = new ClientConfigProperties();
+        props.setLinkEstablishmentTimeout(5000L);
         props.setHost(HonoExampleConstants.HONO_MESSAGING_HOST);
         props.setPort(port);
         if (!USE_PLAIN_CONNECTION) {
             props.setUsername(HONO_CLIENT_USER);
             props.setPassword(HONO_CLIENT_PASSWORD);
+            props.setTlsEnabled(true);
+            props.setServerRole("AMQP Messaging Network");
             props.setTrustStorePath("target/config/hono-demo-certs-jar/trusted-certs.pem");
             props.setHostnameVerificationRequired(false);
         }
@@ -128,8 +142,6 @@ public class HonoExampleApplicationBase {
      * your project as well and adopt the file path.
      */
     private ApplicationClient<? extends MessageContext> createKafkaApplicationClient() {
-        final String clientIdPrefix = "example.application"; // used by Kafka for request logging
-        final String consumerGroupId = "hono-example-application";
 
         final Map<String, String> properties = new HashMap<>();
         properties.put("bootstrap.servers", HonoExampleConstants.HONO_MESSAGING_HOST + ":" + port);
@@ -141,12 +153,12 @@ public class HonoExampleApplicationBase {
         commonClientConfig.setCommonClientConfig(properties);
         final MessagingKafkaConsumerConfigProperties consumerConfig = new MessagingKafkaConsumerConfigProperties();
         consumerConfig.setCommonClientConfig(commonClientConfig);
-        consumerConfig.setDefaultClientIdPrefix(clientIdPrefix);
-        consumerConfig.setConsumerConfig(Map.of("group.id", consumerGroupId));
+        consumerConfig.setDefaultClientIdPrefix(KAFKA_CLIENT_ID_PREFIX);
+        consumerConfig.setConsumerConfig(Map.of("group.id", KAFKA_CONSUMER_GROUP_ID));
 
         final MessagingKafkaProducerConfigProperties producerConfig = new MessagingKafkaProducerConfigProperties();
         producerConfig.setCommonClientConfig(commonClientConfig);
-        producerConfig.setDefaultClientIdPrefix(clientIdPrefix);
+        producerConfig.setDefaultClientIdPrefix(KAFKA_CLIENT_ID_PREFIX);
 
         final KafkaProducerFactory<String, Buffer> producerFactory = CachingKafkaProducerFactory.sharedFactory(vertx);
         return new KafkaApplicationClientImpl(vertx, consumerConfig, producerFactory, producerConfig);
@@ -154,39 +166,55 @@ public class HonoExampleApplicationBase {
 
     /**
      * Start the application client and set the message handling method to treat data that is received.
-     *
-     * @throws Exception Thrown if the latch is interrupted during waiting or if the read from System.in throws an
-     *             IOException.
      */
-    protected void consumeData() throws Exception {
+    protected void consumeData() {
 
-        final CountDownLatch latch = new CountDownLatch(1);
+        final CompletableFuture<ApplicationClient<? extends MessageContext>> startup = new CompletableFuture<>();
 
-        final Future<CompositeFuture> startFuture = client.start()
-                .onSuccess(v -> {
-                    if (client instanceof AmqpApplicationClient) {
-                        final AmqpApplicationClient ac = (AmqpApplicationClient) client;
-                        ac.addDisconnectListener(c -> LOG.info("lost connection to Hono, trying to reconnect ..."));
-                        ac.addReconnectListener(c -> LOG.info("reconnected to Hono"));
-                    }
-                })
-                .compose(v -> CompositeFuture.all(createEventConsumer(), createTelemetryConsumer()))
-                .onSuccess(v -> LOG.info("Consumer ready for telemetry and event messages."))
-                .onFailure(cause -> LOG.error("{} consumer failed to start [{}:{}]",
-                        USE_KAFKA ? "Kafka" : "AMQP", HonoExampleConstants.HONO_MESSAGING_HOST, port, cause))
-                .onComplete(ar -> latch.countDown());
+        if (client instanceof AmqpApplicationClient) {
+            final AmqpApplicationClient ac = (AmqpApplicationClient) client;
+            ac.addDisconnectListener(c -> LOG.info("lost connection to Hono, trying to reconnect ..."));
+            ac.addReconnectListener(c -> LOG.info("reconnected to Hono"));
+        }
 
-        latch.await();
+        client.start()
+            .compose(v -> CompositeFuture.all(createEventConsumer(), createTelemetryConsumer()))
+            .onSuccess(ok -> startup.complete(client))
+            .onFailure(startup::completeExceptionally);
+
+        try {
+            startup.join();
+            LOG.info("Consumer ready for telemetry and event messages");
+            System.in.read();
+        } catch (final CompletionException e) {
+            LOG.error("{} consumer failed to start [{}:{}]",
+                    USE_KAFKA ? "Kafka" : "AMQP", HonoExampleConstants.HONO_MESSAGING_HOST, port, e.getCause());
+        } catch (final IOException e) {
+            // nothing we can do
+        }
+
+        final CompletableFuture<ApplicationClient<? extends MessageContext>> shutDown = new CompletableFuture<>();
 
         @SuppressWarnings("rawtypes")
         final List<Future> closeFutures = new ArrayList<>();
-        if (startFuture.succeeded()) {
-            System.in.read();
-            closeFutures.add(eventConsumer.close());
-            closeFutures.add(telemetryConsumer.close());
-            closeFutures.add(client.stop());
-        }
-        CompositeFuture.join(closeFutures).onComplete(ar -> vertx.close()); // wait for clients to be closed
+        Optional.ofNullable(eventConsumer)
+            .map(MessageConsumer::close)
+            .ifPresent(closeFutures::add);
+        Optional.ofNullable(telemetryConsumer)
+            .map(MessageConsumer::close)
+            .ifPresent(closeFutures::add);
+        Optional.ofNullable(client)
+            .map(Lifecycle::stop)
+            .ifPresent(closeFutures::add);
+
+        CompositeFuture.join(closeFutures)
+            .compose(ok -> vertx.close())
+            .recover(t -> vertx.close())
+            .onComplete(ar -> shutDown.complete(client));
+
+        // wait for clients to be closed
+        shutDown.join();
+        LOG.info("Consumer has been shut down");
     }
 
     /**
@@ -205,7 +233,7 @@ public class HonoExampleApplicationBase {
                     handleEventMessage(msg);
                 },
                 cause -> LOG.error("event consumer closed by remote", cause))
-                .onSuccess(eventConsumer -> this.eventConsumer = eventConsumer);
+            .onSuccess(consumer -> this.eventConsumer = consumer);
     }
 
     /**
@@ -224,17 +252,17 @@ public class HonoExampleApplicationBase {
                     handleTelemetryMessage(msg);
                 },
                 cause -> LOG.error("telemetry consumer closed by remote", cause))
-                .onSuccess(telemetryConsumer -> this.telemetryConsumer = telemetryConsumer);
+            .onSuccess(consumer -> this.telemetryConsumer = consumer);
     }
 
     /**
-     * Handler method for a <em>device ready for command</em> notification (by an explicit event or contained implicitly in
-     * another message).
+     * Handler method for a <em>device ready for command</em> notification (by an explicit event or contained
+     * implicitly in another message).
      * <p>
      * For notifications with a positive ttd value (as usual for request-response protocols), the
      * code creates a simple command in JSON.
      * <p>
-     * For notifications signalling a connection oriented protocol, the handling is delegated to
+     * For notifications signaling a connection oriented protocol, the handling is delegated to
      * {@link #handlePermanentlyConnectedCommandReadinessNotification(TimeUntilDisconnectNotification)}.
      *
      * @param notification The notification containing the tenantId, deviceId and the Instant (that
@@ -263,16 +291,20 @@ public class HonoExampleApplicationBase {
      *
      * @param notification The notification of a permanently connected device to handle.
      */
-    private void handlePermanentlyConnectedCommandReadinessNotification(final TimeUntilDisconnectNotification notification) {
+    private void handlePermanentlyConnectedCommandReadinessNotification(
+            final TimeUntilDisconnectNotification notification) {
+
         final String keyForDevice = notification.getTenantAndDeviceId();
 
         final TimeUntilDisconnectNotification previousNotification = pendingTtdNotification.get(keyForDevice);
         if (previousNotification != null) {
             if (notification.getCreationTime().isAfter(previousNotification.getCreationTime())) {
-                LOG.info("Set new ttd value [{}] of notification for [{}]", notification.getTtd(), notification.getTenantAndDeviceId());
+                LOG.info("Set new ttd value [{}] of notification for [{}]",
+                        notification.getTtd(), notification.getTenantAndDeviceId());
                 pendingTtdNotification.put(keyForDevice, notification);
             } else {
-                LOG.trace("Received notification for [{}] that was already superseded by newer [{}]", notification, previousNotification);
+                LOG.trace("Received notification for [{}] that was already superseded by newer [{}]",
+                        notification, previousNotification);
             }
         } else {
             pendingTtdNotification.put(keyForDevice, notification);
@@ -283,7 +315,8 @@ public class HonoExampleApplicationBase {
                 final TimeUntilDisconnectNotification notificationToHandle = pendingTtdNotification.remove(keyForDevice);
                 if (notificationToHandle != null) {
                     if (notificationToHandle.getTtd() == -1) {
-                        LOG.info("Device notified as being ready to receive a command until further notice : [{}].", notificationToHandle);
+                        LOG.info("Device notified as being ready to receive a command until further notice : [{}].",
+                                notificationToHandle);
 
                         // cancel a still existing timer for this device (if found)
                         cancelPeriodicCommandSender(notification);
@@ -328,16 +361,17 @@ public class HonoExampleApplicationBase {
     }
 
     /**
-     * Calculate the timeout for a command that is tried to be sent to a device for which a {@link TimeUntilDisconnectNotification}
-     * was received.
+     * Calculate the timeout for a command that is tried to be sent to a device for which a
+     * {@link TimeUntilDisconnectNotification} was received.
      *
      * @param notification The notification that was received for the device.
-     * @return The timeout to be set for the command.
+     * @return The timeout (milliseconds) to be set for the command.
      */
     private long calculateCommandTimeout(final TimeUntilDisconnectNotification notification) {
+
         if (notification.getTtd() == -1) {
             // let the command expire directly before the next periodic timer is started
-            return (long) HonoExampleConstants.COMMAND_INTERVAL_FOR_DEVICES_CONNECTED_WITH_UNLIMITED_EXPIRY * 1000;
+            return HonoExampleConstants.COMMAND_INTERVAL_FOR_DEVICES_CONNECTED_WITH_UNLIMITED_EXPIRY * 1000L;
         } else {
             // let the command expire when the notification expires
             return notification.getMillisecondsUntilExpiry();
@@ -357,7 +391,8 @@ public class HonoExampleApplicationBase {
             LOG.debug("Cancelling periodic sender for {}", notification.getTenantAndDeviceId());
             periodicCommandSenderTimerCancelerMap.get(notification.getTenantAndDeviceId()).handle(null);
         } else {
-            LOG.debug("Wanted to cancel periodic sender for {}, but could not find one", notification.getTenantAndDeviceId());
+            LOG.debug("Wanted to cancel periodic sender for {}, but could not find one",
+                    notification.getTenantAndDeviceId());
         }
     }
 
@@ -368,7 +403,8 @@ public class HonoExampleApplicationBase {
     /**
      * Send a command to the device for which a {@link TimeUntilDisconnectNotification} was received.
      * <p>
-     * If the contained <em>ttd</em> is set to a value @gt; 0, the commandClient will be closed after a response was received.
+     * If the contained <em>ttd</em> is set to a value @gt; 0, the commandClient will be closed after a response
+     * was received.
      * If the contained <em>ttd</em> is set to -1, the commandClient will remain open for further commands to be sent.
      * @param ttdNotification The ttd notification that was received for the device.
      */
@@ -380,53 +416,57 @@ public class HonoExampleApplicationBase {
             LOG.debug("Sending command [{}] to [{}].", command, ttdNotification.getTenantAndDeviceId());
         }
 
-        client.sendCommand(tenantId, deviceId, command, "application/json", commandBuffer, buildCommandProperties()).map(result -> {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Successfully sent command payload: [{}].", commandBuffer.toString());
-                LOG.debug("And received response: [{}].", Optional.ofNullable(result.getPayload()).orElseGet(Buffer::buffer).toString());
-            }
-            return result;
-        }).otherwise(t -> {
-            if (t instanceof ServiceInvocationException) {
-                final int errorCode = ((ServiceInvocationException) t).getErrorCode();
-                LOG.debug("Command was replied with error code [{}].", errorCode);
-            } else {
-                LOG.debug("Could not send command : {}.", t.getMessage());
-            }
-            return null;
-        });
+        client.sendCommand(tenantId, deviceId, command, "application/json", commandBuffer, buildCommandProperties())
+            .onSuccess(result -> {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Successfully sent command payload: [{}].", commandBuffer.toString());
+                    LOG.debug("And received response: [{}].", Optional.ofNullable(result.getPayload())
+                            .orElseGet(Buffer::buffer).toString());
+                }
+            })
+            .onFailure(t -> {
+                if (t instanceof ServiceInvocationException) {
+                    final int errorCode = ((ServiceInvocationException) t).getErrorCode();
+                    LOG.debug("Command was replied with error code [{}].", errorCode);
+                } else {
+                    LOG.debug("Could not send command : {}.", t.getMessage());
+                }
+            });
     }
 
     /**
      * Send a one way command to the device for which a {@link TimeUntilDisconnectNotification} was received.
      * <p>
-     * If the contained <em>ttd</em> is set to a value @gt; 0, the commandClient will be closed after a response was received.
+     * If the contained <em>ttd</em> is set to a value @gt; 0, the commandClient will be closed after a response
+     * was received.
      * If the contained <em>ttd</em> is set to -1, the commandClient will remain open for further commands to be sent.
      * @param ttdNotification The ttd notification that was received for the device.
      */
     private void sendOneWayCommandToAdapter(final String tenantId, final String deviceId,
             final TimeUntilDisconnectNotification ttdNotification) {
+
         final Buffer commandBuffer = buildOneWayCommandPayload();
-        final String command = "sendLifecycleInfo";
 
         if (LOG.isDebugEnabled()) {
-            LOG.debug("Sending one-way command [{}] to [{}].", command, ttdNotification.getTenantAndDeviceId());
+            LOG.debug("Sending one-way command [{}] to [{}].",
+                    COMMAND_SEND_LIFECYCLE_INFO, ttdNotification.getTenantAndDeviceId());
         }
 
-        client.sendOneWayCommand(tenantId, deviceId, command, commandBuffer).map(statusResult -> {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Successfully sent one-way command payload: [{}] and received status [{}].", commandBuffer.toString(), statusResult);
-            }
-            return statusResult;
-        }).otherwise(t -> {
-            if (t instanceof ServiceInvocationException) {
-                final int errorCode = ((ServiceInvocationException) t).getErrorCode();
-                LOG.debug("One-way command was replied with error code [{}].", errorCode);
-            } else {
-                LOG.debug("Could not send one-way command : {}.", t.getMessage());
-            }
-            return null;
-        });
+        client.sendOneWayCommand(tenantId, deviceId, COMMAND_SEND_LIFECYCLE_INFO, commandBuffer)
+            .onSuccess(statusResult -> {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Successfully sent one-way command payload: [{}] and received status [{}].",
+                            commandBuffer.toString(), statusResult);
+                }
+            })
+            .onFailure(t -> {
+                if (t instanceof ServiceInvocationException) {
+                    final int errorCode = ((ServiceInvocationException) t).getErrorCode();
+                    LOG.debug("One-way command was replied with error code [{}].", errorCode);
+                } else {
+                    LOG.debug("Could not send one-way command : {}.", t.getMessage());
+                }
+            });
     }
 
     /**
@@ -434,29 +474,31 @@ public class HonoExampleApplicationBase {
      *
      * @return Map The application property map.
      */
-    private Map<String, Object> buildCommandProperties() {
+    private static Map<String, Object> buildCommandProperties() {
         final Map<String, Object> applicationProperties = new HashMap<>(1);
         applicationProperties.put("appId", "example#1");
         return applicationProperties;
     }
 
-    private Buffer buildCommandPayload() {
-        final JsonObject jsonCmd = new JsonObject().put("brightness", (int) (Math.random() * 100));
+    private static Buffer buildCommandPayload() {
+        final JsonObject jsonCmd = new JsonObject().put("brightness", RAND.nextInt(100));
         return Buffer.buffer(jsonCmd.encodePrettily());
     }
 
-    private Buffer buildOneWayCommandPayload() {
+    private static Buffer buildOneWayCommandPayload() {
         final JsonObject jsonCmd = new JsonObject().put("info", "app restarted.");
         return Buffer.buffer(jsonCmd.encodePrettily());
     }
+
     /**
      * Handler method for a Message from Hono that was received as telemetry data.
      * <p>
-     * The tenant, the device, the payload, the content-type, the creation-time and the application properties will be printed to stdout.
+     * The tenant, the device, the payload, the content-type, the creation-time and the application properties
+     * will be logged.
      *
      * @param msg The message that was received.
      */
-    private void handleTelemetryMessage(final DownstreamMessage<? extends MessageContext> msg) {
+    private static void handleTelemetryMessage(final DownstreamMessage<? extends MessageContext> msg) {
         LOG.debug("received telemetry data [tenant: {}, device: {}, content-type: {}]: [{}].",
                 msg.getTenantId(), msg.getDeviceId(), msg.getContentType(), msg.getPayload());
     }
@@ -464,11 +506,12 @@ public class HonoExampleApplicationBase {
     /**
      * Handler method for a Message from Hono that was received as event data.
      * <p>
-     * The tenant, the device, the payload, the content-type, the creation-time and the application properties will be printed to stdout.
+     * The tenant, the device, the payload, the content-type, the creation-time and the application properties will
+     * be logged.
      *
      * @param msg The message that was received.
      */
-    private void handleEventMessage(final DownstreamMessage<? extends MessageContext> msg) {
+    private static void handleEventMessage(final DownstreamMessage<? extends MessageContext> msg) {
         LOG.debug("received event [tenant: {}, device: {}, content-type: {}]: [{}].",
                 msg.getTenantId(), msg.getDeviceId(), msg.getContentType(), msg.getPayload());
     }

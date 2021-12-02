@@ -348,7 +348,7 @@ public class DelegatingDeviceManagementHttpEndpointTest {
                     } else {
                         final Sort sortOption = sortOptions.get(0);
                         return "/manufacturer".equals(sortOption.getField().toString()) &&
-                                Direction.desc == sortOption.getDirection();
+                                Direction.DESC == sortOption.getDirection();
                     }
                 }),
                 any(Span.class));

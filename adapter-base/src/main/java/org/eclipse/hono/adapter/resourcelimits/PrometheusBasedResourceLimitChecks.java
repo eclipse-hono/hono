@@ -42,6 +42,8 @@ import io.vertx.core.Promise;
 public final class PrometheusBasedResourceLimitChecks implements ResourceLimitChecks {
 
     private static final Logger LOG = LoggerFactory.getLogger(PrometheusBasedResourceLimitChecks.class);
+    private static final String EVENT_QUERY_STILL_RUNNING = "query still running, using default value";
+    private static final String LABEL_LIMIT_EXCEEDED = "limit exceeded";
 
     private final Tracer tracer;
     private final TenantClient tenantClient;
@@ -135,13 +137,13 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
             }
         } else {
             LOG.trace("Prometheus query [tenant: {}] still running, using default value", tenant.getTenantId());
-            span.log("query still running, using default value");
+            span.log(EVENT_QUERY_STILL_RUNNING);
             result.complete(Boolean.FALSE);
         }
 
         return result.future()
                 .onSuccess(b -> {
-                    span.log(Map.of("limit exceeded", b));
+                    span.log(Map.of(LABEL_LIMIT_EXCEEDED, b));
                     span.finish();
                 });
     }
@@ -223,13 +225,13 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
                 }
             } else {
                 LOG.trace("Prometheus query [tenant: {}] still running, using default value", tenant.getTenantId());
-                span.log(Map.of(Fields.MESSAGE, "query still running, using default value"));
+                span.log(Map.of(Fields.MESSAGE, EVENT_QUERY_STILL_RUNNING));
                 result.complete(Boolean.FALSE);
             }
         }
         return result.future()
                 .onSuccess(b -> {
-                    span.log(Map.of("limit exceeded", b));
+                    span.log(Map.of(LABEL_LIMIT_EXCEEDED, b));
                     span.finish();
                 });
     }
@@ -275,12 +277,12 @@ public final class PrometheusBasedResourceLimitChecks implements ResourceLimitCh
             }
         } else {
             LOG.trace("Prometheus query [tenant: {}] still running, using default value", tenant.getTenantId());
-            span.log(Map.of(Fields.MESSAGE, "query still running, using default value"));
+            span.log(Map.of(Fields.MESSAGE, EVENT_QUERY_STILL_RUNNING));
             result.complete(Boolean.FALSE);
         }
         return result.future()
                 .onSuccess(b -> {
-                    span.log(Map.of("limit exceeded", b));
+                    span.log(Map.of(LABEL_LIMIT_EXCEEDED, b));
                     span.finish();
                 });
     }

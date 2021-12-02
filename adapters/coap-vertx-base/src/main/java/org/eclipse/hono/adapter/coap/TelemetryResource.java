@@ -63,12 +63,12 @@ public class TelemetryResource extends AbstractHonoResource {
     }
 
     @Override
-    public Future<Void> handlePost(final CoapContext ctx) {
+    public Future<Void> handlePostRequest(final CoapContext ctx) {
         return doUploadMessage(ctx, MetricsTags.EndpointType.TELEMETRY);
     }
 
     @Override
-    public Future<Void> handlePut(final CoapContext ctx) {
-        return handlePost(ctx);
+    public Future<Void> handlePutRequest(final CoapContext ctx) {
+        return handlePostRequest(ctx);
     }
 }

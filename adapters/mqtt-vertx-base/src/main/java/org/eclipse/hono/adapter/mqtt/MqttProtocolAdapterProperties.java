@@ -99,7 +99,7 @@ public class MqttProtocolAdapterProperties extends ProtocolAdapterProperties {
      *
      * @return The timeout in milliseconds.
      */
-    public long getSendMessageToDeviceTimeout() {
+    public final long getSendMessageToDeviceTimeout() {
         return sendMessageToDeviceTimeout;
     }
 
@@ -114,7 +114,7 @@ public class MqttProtocolAdapterProperties extends ProtocolAdapterProperties {
      * @param sendMessageToDeviceTimeout The timeout in milliseconds.
      * @throws IllegalArgumentException if the timeout is negative.
      */
-    public void setSendMessageToDeviceTimeout(final long sendMessageToDeviceTimeout) {
+    public final void setSendMessageToDeviceTimeout(final long sendMessageToDeviceTimeout) {
         if (sendMessageToDeviceTimeout < 0) {
             throw new IllegalArgumentException("timeout must not be negative");
         }

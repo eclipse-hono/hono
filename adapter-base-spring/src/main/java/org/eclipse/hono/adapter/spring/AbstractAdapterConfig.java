@@ -239,9 +239,9 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
     public ConnectionEventProducer connectionEventProducer() {
         final ConnectionEventProducerConfig config = connectionEventProducerConfig();
         switch (config.getType()) {
-        case logging:
+        case LOGGING:
             return new LoggingConnectionEventProducer(config);
-        case events:
+        case EVENTS:
             return new HonoEventConnectionEventProducer();
         default:
             return null;

@@ -238,8 +238,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         return new DefaultConnectionLimitManager(
                 new MemoryBasedConnectionLimitStrategy(
                         getConfig().isSubstrateVm() ? MINIMAL_MEMORY_SUBSTRATE : MINIMAL_MEMORY_JVM,
-                        MEMORY_PER_CONNECTION + getConfig().getMaxSessionWindowSize()),
-                () -> metrics.getNumberOfConnections(), getConfig());
+                        (long) MEMORY_PER_CONNECTION + (long) getConfig().getMaxSessionWindowSize()),
+                metrics::getNumberOfConnections,
+                getConfig());
     }
 
     @Override

@@ -118,6 +118,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      */
     protected static final int MEMORY_PER_CONNECTION = 20_000;
 
+    private static final String EVENT_SENDING_PUBACK = "sending PUBACK";
     private static final int IANA_MQTT_PORT = 1883;
     private static final int IANA_SECURE_MQTT_PORT = 8883;
     private static final String LOG_FIELD_TOPIC_FILTER = "filter";
@@ -826,7 +827,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                             ctx.getTimer());
                     // check that the remote MQTT client is still connected before sending PUBACK
                     if (ctx.isAtLeastOnce() && ctx.deviceEndpoint().isConnected()) {
-                        currentSpan.log("sending PUBACK");
+                        currentSpan.log(EVENT_SENDING_PUBACK);
                         ctx.acknowledge();
                     }
                     currentSpan.finish();
@@ -907,7 +908,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     ctx.message().topicName(), ctx.message().qosLevel(), tenantObject.getTenantId(), deviceId);
             // check that the remote MQTT client is still connected before sending PUBACK
             if (ctx.isAtLeastOnce() && ctx.deviceEndpoint().isConnected()) {
-                currentSpan.log("sending PUBACK");
+                currentSpan.log(EVENT_SENDING_PUBACK);
                 ctx.acknowledge();
             }
             currentSpan.finish();
@@ -1159,7 +1160,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                             if (errorHandlingMode == ErrorHandlingMode.SKIP_ACK) {
                                 span.log("skipped sending PUBACK");
                             } else if (context.deviceEndpoint().isConnected()) {
-                                span.log("sending PUBACK");
+                                span.log(EVENT_SENDING_PUBACK);
                                 context.acknowledge();
                             }
                         }

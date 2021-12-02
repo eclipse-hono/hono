@@ -97,7 +97,7 @@ public class TelemetryResourceTest extends ResourceTestBase {
         final Device authenticatedDevice = new Device("my-tenant", "the-device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "the-device", span);
 
-        resource.handlePost(context)
+        resource.handlePostRequest(context)
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     // THEN the device gets a response with code 4.03
@@ -142,7 +142,7 @@ public class TelemetryResourceTest extends ResourceTestBase {
         final Device authenticatedDevice = new Device("my-tenant", "the-device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "the-device", span);
 
-        resource.handlePost(context)
+        resource.handlePostRequest(context)
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     // THEN the device gets a response with code 4.00
@@ -187,7 +187,7 @@ public class TelemetryResourceTest extends ResourceTestBase {
         final Device authenticatedDevice = new Device("my-tenant", "the-device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "the-device", span);
 
-        resource.handlePost(context)
+        resource.handlePostRequest(context)
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     // THEN the device gets a response with code 4.00
@@ -230,7 +230,7 @@ public class TelemetryResourceTest extends ResourceTestBase {
         final Device authenticatedDevice = new Device("my-tenant", "the-device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "the-device", span);
 
-        resource.handlePost(context);
+        resource.handlePostRequest(context);
 
         // THEN the device gets a response indicating success
         verify(coapExchange).respond(argThat((Response res) -> ResponseCode.CHANGED.equals(res.getCode())));
@@ -269,7 +269,7 @@ public class TelemetryResourceTest extends ResourceTestBase {
         final Device authenticatedDevice = new Device("tenant", "device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
 
-        resource.handlePost(context);
+        resource.handlePostRequest(context);
 
         // THEN the device gets a response indicating success
         verify(coapExchange).respond(argThat((Response res) -> ResponseCode.CHANGED.equals(res.getCode())));
@@ -310,7 +310,7 @@ public class TelemetryResourceTest extends ResourceTestBase {
         final Device authenticatedDevice = new Device("tenant", "device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
 
-        resource.handlePost(context);
+        resource.handlePostRequest(context);
 
         // THEN the message is being forwarded downstream
         assertTelemetryMessageHasBeenSentDownstream(
@@ -356,7 +356,7 @@ public class TelemetryResourceTest extends ResourceTestBase {
         final Device authenticatedDevice = new Device("tenant", "device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
 
-        resource.handlePost(context)
+        resource.handlePostRequest(context)
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     // THEN the message is not being forwarded downstream
@@ -411,7 +411,7 @@ public class TelemetryResourceTest extends ResourceTestBase {
         final Device authenticatedDevice = new Device("tenant", "device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
 
-        resource.handlePost(context)
+        resource.handlePostRequest(context)
             .onComplete(ctx.succeeding(ok -> {
                 ctx.verify(() -> {
                     // THEN the message is being forwarded downstream
@@ -480,7 +480,7 @@ public class TelemetryResourceTest extends ResourceTestBase {
         final Device authenticatedDevice = new Device("tenant", "device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
 
-        final Future<Void> result = resource.handlePost(context);
+        final Future<Void> result = resource.handlePostRequest(context);
 
         // THEN the message is being forwarded downstream
         assertTelemetryMessageHasBeenSentDownstream(

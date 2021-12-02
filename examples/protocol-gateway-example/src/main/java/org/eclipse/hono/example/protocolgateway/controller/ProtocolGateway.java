@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -60,6 +60,8 @@ public class ProtocolGateway {
     private static final String KEY_DEVICE_ID = MessageHelper.APP_PROPERTY_DEVICE_ID;
 
     private static final Logger LOG = LoggerFactory.getLogger(ProtocolGateway.class);
+
+    private static final String MSG_DEVICE_NOT_LOGGED_IN = "device not logged in";
 
     private final AmqpAdapterClientFactory amqpAdapterClientFactory;
     private final String tenant;
@@ -211,7 +213,7 @@ public class ProtocolGateway {
                         }
                     },
                     () -> {
-                        result.fail("device not logged in");
+                        result.fail(MSG_DEVICE_NOT_LOGGED_IN);
                     });
         return result.future();
     }
@@ -235,7 +237,7 @@ public class ProtocolGateway {
                         }
                     },
                     () -> {
-                        result.fail("device not logged in");
+                        result.fail(MSG_DEVICE_NOT_LOGGED_IN);
                     });
         return result.future();
     }
@@ -256,7 +258,7 @@ public class ProtocolGateway {
                         .onComplete(result);
                 },
                 () -> {
-                    result.fail("device not logged in");
+                    result.fail(MSG_DEVICE_NOT_LOGGED_IN);
                 });
         return result.future();
     }

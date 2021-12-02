@@ -223,15 +223,18 @@ public abstract class ServiceInvocationException extends RuntimeException {
      */
     public static String getErrorMessageForExternalClient(final Throwable t) {
         if (t instanceof ServerErrorException) {
-            final String clientFacingMessage = ((ServerErrorException) t).getClientFacingMessage();
+            final ServerErrorException serverError = (ServerErrorException) t;
+            final String clientFacingMessage = serverError.getClientFacingMessage();
             if (clientFacingMessage != null) {
                 return clientFacingMessage;
             }
-            switch (((ServerErrorException) t).getErrorCode()) {
+            switch (serverError.getErrorCode()) {
             case HttpURLConnection.HTTP_INTERNAL_ERROR:
                 return "Internal server error";
             case HttpURLConnection.HTTP_UNAVAILABLE:
                 return "Temporarily unavailable";
+            default:
+                // fall through
             }
         }
         return Optional.ofNullable(t).map(Throwable::getMessage).orElse(null);

@@ -67,12 +67,12 @@ public class EventResource extends AbstractHonoResource {
     }
 
     @Override
-    public Future<Void> handlePost(final CoapContext ctx) {
+    public Future<Void> handlePostRequest(final CoapContext ctx) {
         return uploadEventMessage(ctx);
     }
 
     @Override
-    public Future<Void> handlePut(final CoapContext ctx) {
+    public Future<Void> handlePutRequest(final CoapContext ctx) {
         return uploadEventMessage(ctx);
     }
 

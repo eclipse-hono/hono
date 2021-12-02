@@ -94,9 +94,11 @@ public final class AuthHandlerTools {
                     ctx.response()
                             .putHeader("WWW-Authenticate", authenticateHeader);
                 }
+                // fall through
+            default:
+                // rely on DefaultFailureHandler to extract/apply the status code
+                ctx.fail(failure);
             }
-            // rely on DefaultFailureHandler to extract/apply the status code
-            ctx.fail(failure);
 
         } else {
             ctx.fail(exception);

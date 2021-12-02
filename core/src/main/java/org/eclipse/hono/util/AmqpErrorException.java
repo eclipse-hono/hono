@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -30,7 +30,8 @@ import io.vertx.proton.ProtonHelper;
 public final class AmqpErrorException extends RuntimeException {
 
     private static final long serialVersionUID = 1L;
-    private final Symbol error;
+
+    private final String error;
 
     /**
      * Creates a new exception for an error and description.
@@ -41,7 +42,7 @@ public final class AmqpErrorException extends RuntimeException {
      */
     public AmqpErrorException(final Symbol error, final String description) {
         super(description);
-        this.error = Objects.requireNonNull(error);
+        this.error = Objects.requireNonNull(error).toString();
     }
 
     /**
@@ -53,7 +54,7 @@ public final class AmqpErrorException extends RuntimeException {
      */
     public AmqpErrorException(final String error, final String description) {
         super(description);
-        this.error = Symbol.getSymbol(Objects.requireNonNull(error));
+        this.error = Objects.requireNonNull(error);
     }
 
     /**
@@ -81,7 +82,7 @@ public final class AmqpErrorException extends RuntimeException {
      * @return The error.
      */
     public Symbol getError() {
-        return error;
+        return Symbol.valueOf(error);
     }
 
     /**

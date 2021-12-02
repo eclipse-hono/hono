@@ -52,6 +52,7 @@ import io.vertx.core.Promise;
 public abstract class TracingSupportingHonoResource extends CoapResource {
 
     private static final Logger LOG = LoggerFactory.getLogger(TracingSupportingHonoResource.class);
+    private static final String MSG_NOT_IMPLEMENTED = "not implemented";
 
     private final Tracer tracer;
     private final CoapProtocolAdapter adapter;
@@ -203,12 +204,12 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
         case POST:
             result = createCoapContextForPost(coapExchange, currentSpan)
                 .compose(coapContext -> applyTraceSamplingPriority(coapContext, currentSpan))
-                .compose(this::handlePost);
+                .compose(this::handlePostRequest);
             break;
         case PUT:
             result = createCoapContextForPut(coapExchange, currentSpan)
                 .compose(coapContext -> applyTraceSamplingPriority(coapContext, currentSpan))
-                .compose(this::handlePut);
+                .compose(this::handlePutRequest);
             break;
         default:
             result = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_METHOD));
@@ -304,7 +305,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      *         and a CoAP response has been sent back to the client.
      *         Otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      */
-    protected Future<Void> handlePost(final CoapContext coapContext) {
+    protected Future<Void> handlePostRequest(final CoapContext coapContext) {
         return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_NOT_IMPLEMENTED));
     }
 
@@ -320,7 +321,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      *         and a CoAP response has been sent back to the client.
      *         Otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      */
-    protected Future<Void> handlePut(final CoapContext coapContext) {
+    protected Future<Void> handlePutRequest(final CoapContext coapContext) {
         return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_NOT_IMPLEMENTED));
     }
 
@@ -333,7 +334,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      */
     @Override
     public final void handleDELETE(final CoapExchange exchange) {
-        throw new UnsupportedOperationException("not implemented");
+        throw new UnsupportedOperationException(MSG_NOT_IMPLEMENTED);
     }
 
     /**
@@ -343,7 +344,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      */
     @Override
     public final void handleFETCH(final CoapExchange exchange) {
-        throw new UnsupportedOperationException("not implemented");
+        throw new UnsupportedOperationException(MSG_NOT_IMPLEMENTED);
     }
 
     /**
@@ -353,7 +354,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      */
     @Override
     public final void handleGET(final CoapExchange exchange) {
-        throw new UnsupportedOperationException("not implemented");
+        throw new UnsupportedOperationException(MSG_NOT_IMPLEMENTED);
     }
 
     /**
@@ -363,7 +364,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      */
     @Override
     public final void handleIPATCH(final CoapExchange exchange) {
-        throw new UnsupportedOperationException("not implemented");
+        throw new UnsupportedOperationException(MSG_NOT_IMPLEMENTED);
     }
 
     /**
@@ -373,7 +374,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      */
     @Override
     public final void handlePATCH(final CoapExchange exchange) {
-        throw new UnsupportedOperationException("not implemented");
+        throw new UnsupportedOperationException(MSG_NOT_IMPLEMENTED);
     }
 
     /**
@@ -383,7 +384,7 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      */
     @Override
     public final void handlePOST(final CoapExchange exchange) {
-        throw new UnsupportedOperationException("not implemented");
+        throw new UnsupportedOperationException(MSG_NOT_IMPLEMENTED);
     }
 
     /**
@@ -393,6 +394,6 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      */
     @Override
     public final void handlePUT(final CoapExchange exchange) {
-        throw new UnsupportedOperationException("not implemented");
+        throw new UnsupportedOperationException(MSG_NOT_IMPLEMENTED);
     }
 }

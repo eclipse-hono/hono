@@ -18,6 +18,7 @@ import java.util.Objects;
 
 import org.eclipse.hono.config.SignatureSupportingConfigProperties;
 import org.eclipse.hono.service.auth.AbstractHonoAuthenticationService;
+import org.eclipse.hono.util.AuthenticationConstants;
 
 
 /**
@@ -29,7 +30,9 @@ public class FileBasedAuthenticationServiceConfigProperties {
     // explicitly initialized with null so that Quarkus doesn't complain about missing configuration property
     private String permissionsPath = null;
     private SignatureSupportingConfigProperties signingProps = new SignatureSupportingConfigProperties();
-    private List<String> supportedSaslMechanisms = List.of(AbstractHonoAuthenticationService.DEFAULT_SASL_MECHANISMS);
+    private List<String> supportedSaslMechanisms = List.of(
+            AuthenticationConstants.MECHANISM_EXTERNAL,
+            AuthenticationConstants.MECHANISM_PLAIN);
 
     /**
      * Creates properties from default values.

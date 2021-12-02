@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,14 +29,16 @@ public final class Sort {
     private final JsonPointer field;
 
     @JsonProperty(RegistryManagementConstants.FIELD_SORT_DIRECTION)
-    private Direction direction = Direction.asc;
+    private Direction direction = Direction.ASC;
 
     /**
      * An enum defining the sort directions.
      */
     public enum Direction {
-        asc,
-        desc
+        @JsonProperty("asc")
+        ASC,
+        @JsonProperty("desc")
+        DESC
     }
 
     /**
@@ -72,7 +74,7 @@ public final class Sort {
     /**
      * Sets the sort direction.
      * <p>
-     * The default value is {@link Direction#asc}
+     * The default value is {@link Direction#ASC}
      *
      * @param direction The sort direction.
      */
@@ -86,6 +88,6 @@ public final class Sort {
      * @return {@code true} if the direction is ascending.
      */
     public boolean isAscending() {
-        return direction == Direction.asc;
+        return direction == Direction.ASC;
     }
 }

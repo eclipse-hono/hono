@@ -319,13 +319,17 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
                                         // found gateway is not valid anymore - just return all found mapping entries
                                         LOG.debug("returning {} command handling adapter instances for device gateways (last known gateway not valid anymore) [tenant: {}, device-id: {}, lastKnownGateway: {}]",
                                                 deviceToInstanceMap.size(), tenantId, deviceId, lastKnownGateway);
-                                        span.log("last known gateway '" + lastKnownGateway + "' is not valid anymore, returning all matching adapter instances");
+                                        span.log(String.format(
+                                                "last known gateway '%s' is not valid anymore, returning all matching adapter instances",
+                                                lastKnownGateway));
                                         return Future.succeededFuture(getAdapterInstancesResultJson(deviceToInstanceMap));
                                     } else if (!deviceToInstanceMap.containsKey(lastKnownGateway)) {
                                         // found gateway has no command handling instance assigned - just return all found mapping entries
                                         LOG.debug("returning {} command handling adapter instances for device gateways (last known gateway not in that list) [tenant: {}, device-id: {}, lastKnownGateway: {}]",
                                                 deviceToInstanceMap.size(), tenantId, deviceId, lastKnownGateway);
-                                        span.log("last known gateway '" + lastKnownGateway + "' has no adapter instance assigned, returning all matching adapter instances");
+                                        span.log(String.format(
+                                                "last known gateway '%s' has no adapter instance assigned, returning all matching adapter instances",
+                                                lastKnownGateway));
                                         return Future.succeededFuture(getAdapterInstancesResultJson(deviceToInstanceMap));
                                     } else {
                                         LOG.debug("returning command handling adapter instance '{}' for last known gateway [tenant: {}, device-id: {}, lastKnownGateway: {}]",
@@ -379,7 +383,9 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
                                 .compose(deviceToInstanceMap -> {
                                     if (deviceToInstanceMap.isEmpty()) {
                                         // no adapter instances found for last-known-gateway and device - check all via gateways
-                                        span.log("last known gateway '" + lastKnownGateway + "' has no adapter instance assigned, returning all matching adapter instances");
+                                        span.log(String.format(
+                                                "last known gateway '%s' has no adapter instance assigned, returning all matching adapter instances",
+                                                lastKnownGateway));
                                         return getAdapterInstancesWithoutLastKnownGatewayCheck(tenantId, deviceId, viaGateways, span);
                                     } else if (deviceToInstanceMap.containsKey(deviceId)) {
                                         // there is a adapter instance set for the device itself - that gets precedence
@@ -562,6 +568,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
 
     @Override
     public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
+        // nothing to register
     }
 
     @Override

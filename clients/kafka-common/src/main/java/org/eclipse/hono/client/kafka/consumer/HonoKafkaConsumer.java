@@ -31,7 +31,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
-import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
@@ -76,8 +75,8 @@ public class HonoKafkaConsumer implements Lifecycle {
      * Timeout used waiting for a rebalance after a subscription was updated.
      */
     private static final long WAIT_FOR_REBALANCE_TIMEOUT = TimeUnit.SECONDS.toMillis(30);
-
     private static final Duration POLL_TIMEOUT = Duration.ofSeconds(1);
+    private static final String MSG_CONSUMER_NOT_INITIALIZED_STARTED = "consumer not initialized/started";
 
     protected final Logger log = LoggerFactory.getLogger(getClass());
     protected final Vertx vertx;
@@ -253,14 +252,13 @@ public class HonoKafkaConsumer implements Lifecycle {
     /**
      * Defines the duration for which to retry creating the Kafka consumer instance as part of the {@link #start()}
      * invocation. A retry for a creation attempt is done if creation fails because the
-     * {@value CommonClientConfigs#BOOTSTRAP_SERVERS_CONFIG} config property contains a (non-empty) list of URLs that
-     * are not (yet) resolvable.
+     * <em>bootstrap.servers</em> config property contains a (non-empty) list of URLs that are not (yet) resolvable.
      * <p>
      * The default is to not do any retries (corresponds to using {@link Duration#ZERO}).
      *
      * @param consumerCreationRetriesTimeout The maximum time for which retries are done. Using a negative duration or
-     *            {@code null} here is interpreted as an unlimited timeout value ({@link KafkaClientFactory#UNLIMITED_RETRIES_DURATION}
-     *            may be used for that case).
+     *            {@code null} here is interpreted as an unlimited timeout value
+     *            ({@link KafkaClientFactory#UNLIMITED_RETRIES_DURATION} may be used for that case).
      */
     public final void setConsumerCreationRetriesTimeout(final Duration consumerCreationRetriesTimeout) {
         this.consumerCreationRetriesTimeout = consumerCreationRetriesTimeout;
@@ -271,7 +269,7 @@ public class HonoKafkaConsumer implements Lifecycle {
      * <p>
      * The default is true.
      *
-     * @param respectTtl The intended behaviour: if true, messages with elapsed ttl are silently dropped and the message
+     * @param respectTtl The intended behavior: if true, messages with elapsed ttl are silently dropped and the message
      *            handler is not invoked.
      */
     public final void setRespectTtl(final boolean respectTtl) {
@@ -391,7 +389,7 @@ public class HonoKafkaConsumer implements Lifecycle {
      */
     protected final KafkaConsumer<String, Buffer> getKafkaConsumer() {
         if (kafkaConsumer == null) {
-            throw new IllegalStateException("consumer not initialized/started");
+            throw new IllegalStateException(MSG_CONSUMER_NOT_INITIALIZED_STARTED);
         }
         return kafkaConsumer;
     }
@@ -406,7 +404,7 @@ public class HonoKafkaConsumer implements Lifecycle {
      */
     protected final Consumer<String, Buffer> getUnderlyingConsumer() {
         if (kafkaConsumer == null) {
-            throw new IllegalStateException("consumer not initialized/started");
+            throw new IllegalStateException(MSG_CONSUMER_NOT_INITIALIZED_STARTED);
         }
         return kafkaConsumer.asStream().unwrap();
     }
@@ -814,7 +812,7 @@ public class HonoKafkaConsumer implements Lifecycle {
     protected void runOnKafkaWorkerThread(final Handler<Void> handler) {
         Objects.requireNonNull(handler);
         if (kafkaConsumerWorker == null) {
-            throw new IllegalStateException("consumer not initialized/started");
+            throw new IllegalStateException(MSG_CONSUMER_NOT_INITIALIZED_STARTED);
         }
         if (!stopCalled.get()) {
             kafkaConsumerWorker.submit(() -> {

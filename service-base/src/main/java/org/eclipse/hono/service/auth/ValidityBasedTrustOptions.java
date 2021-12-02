@@ -43,11 +43,6 @@ public class ValidityBasedTrustOptions implements TrustOptions {
     }
 
     @Override
-    public TrustOptions clone() {
-        return copy();
-    }
-
-    @Override
     public TrustManagerFactory getTrustManagerFactory(final Vertx vertx) {
 
         return factory;

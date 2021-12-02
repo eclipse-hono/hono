@@ -113,13 +113,12 @@ public class KafkaProducerConfigProperties extends AbstractKafkaConfigProperties
      * Adapt the properties. It is invoked by {@link #getProducerConfig(String)} on the result of applying the producer
      * configuration on the common configuration.
      * <p>
-     * Subclasses may overwrite this method to set expected configuration values. The default implementation does
-     * nothing.
+     * Subclasses may overwrite this method to set expected configuration values.
+     * This default implementation does nothing.
      *
      * @param config The producer configuration to be adapted.
      */
     protected void adaptConfiguration(final Map<String, String> config) {
-
+        // empty default implementation
     }
-
 }

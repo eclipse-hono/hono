@@ -273,7 +273,7 @@ public class ServiceConfigProperties extends ServerConfig {
      * @throws NullPointerException if regex is {@code null}.
      * @throws java.util.regex.PatternSyntaxException if regex is not a valid regular expression.
      */
-    public void setDeviceIdPattern(final String regex) {
+    public final void setDeviceIdPattern(final String regex) {
         this.deviceIdPattern = Pattern.compile(Objects.requireNonNull(regex));
     }
 
@@ -297,7 +297,7 @@ public class ServiceConfigProperties extends ServerConfig {
      * @throws NullPointerException if regex is {@code null}.
      * @throws java.util.regex.PatternSyntaxException if regex is not a valid regular expression.
      */
-    public void setTenantIdPattern(final String regex) {
+    public final void setTenantIdPattern(final String regex) {
         this.tenantIdPattern = Pattern.compile(Objects.requireNonNull(regex));
     }
 

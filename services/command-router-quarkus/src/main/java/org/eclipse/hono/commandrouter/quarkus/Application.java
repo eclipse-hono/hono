@@ -93,11 +93,15 @@ public class Application extends AbstractServiceApplication {
     // workaround so that the Quarkus KubernetesClientProcessor finds a Pod watcher and registers corresponding model classes
     static {
         new Watcher<Pod>() {
+
             @Override
             public void eventReceived(final Action action, final Pod resource) {
+                // nothing to do
             }
+
             @Override
             public void onClose(final WatcherException cause) {
+                // nothing to do
             }
         };
     }

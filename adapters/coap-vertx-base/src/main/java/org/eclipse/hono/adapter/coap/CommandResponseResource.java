@@ -84,12 +84,12 @@ public class CommandResponseResource extends AbstractHonoResource {
     }
 
     @Override
-    public Future<Void> handlePost(final CoapContext ctx) {
+    public Future<Void> handlePostRequest(final CoapContext ctx) {
         return uploadCommandResponseMessage(ctx);
     }
 
     @Override
-    public Future<Void> handlePut(final CoapContext ctx) {
+    public Future<Void> handlePutRequest(final CoapContext ctx) {
         return uploadCommandResponseMessage(ctx);
     }
 

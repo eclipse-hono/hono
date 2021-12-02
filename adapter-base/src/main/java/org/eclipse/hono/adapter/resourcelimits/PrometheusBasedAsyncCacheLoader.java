@@ -193,13 +193,13 @@ public abstract class PrometheusBasedAsyncCacheLoader<K, V> implements AsyncCach
         try {
             final String status = response.getString("status");
             if ("error".equals(status)) {
+                final String errorMessage = response.getString("error");
                 TracingHelper.logError(span, Map.of(
-                        Fields.MESSAGE, "error executing query",
+                        Fields.MESSAGE, String.format("error executing query: %s", errorMessage),
                         "status", status,
-                        "error-type", response.getString("errorType"),
-                        "error", response.getString("error")));
+                        Fields.ERROR_KIND, response.getString("errorType")));
                 LOG.debug("error executing query [status: {}, error type: {}, error: {}]",
-                        status, response.getString("errorType"), response.getString("error"));
+                        status, response.getString("errorType"), errorMessage);
                 return 0L;
             } else {
                 // success

@@ -32,14 +32,17 @@ public class NoopBasedMetrics implements Metrics {
      * Creates a new instance.
      */
     protected NoopBasedMetrics() {
+        // empty default implementation
     }
 
     @Override
     public void incrementUnauthenticatedConnections() {
+        // empty default implementation
     }
 
     @Override
     public void decrementUnauthenticatedConnections() {
+        // empty default implementation
     }
 
     @Override

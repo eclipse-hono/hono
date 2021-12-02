@@ -80,7 +80,7 @@ public class EventResourceTest extends ResourceTestBase {
         final Device authenticatedDevice = new Device("tenant", "device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
 
-        resource.handlePost(context);
+        resource.handlePostRequest(context);
 
         // THEN the message is being forwarded downstream
         assertEventHasBeenSentDownstream("tenant", "device", "text/plain");
@@ -123,7 +123,7 @@ public class EventResourceTest extends ResourceTestBase {
         final Device authenticatedDevice = new Device("tenant", "device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
 
-        final Future<Void> result = resource.handlePost(context);
+        final Future<Void> result = resource.handlePostRequest(context);
 
         assertEventHasBeenSentDownstream("tenant", "device", "text/plain");
         outcome.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed message"));
@@ -171,7 +171,7 @@ public class EventResourceTest extends ResourceTestBase {
         final Device authenticatedDevice = new Device("tenant", "device");
         final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
 
-        resource.handlePost(context)
+        resource.handlePostRequest(context)
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     // THEN the message is not being forwarded downstream

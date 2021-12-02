@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,11 +24,7 @@ import org.eclipse.hono.vertx.example.base.HonoExampleApplicationBase;
  */
 public class HonoExampleApplication extends HonoExampleApplicationBase {
 
-    public static void main(final String[] args) throws Exception {
-
-        System.out.println("Starting consumer...");
-        final HonoExampleApplication honoExampleApplication = new HonoExampleApplication();
-        honoExampleApplication.consumeData();
-        System.out.println("Finishing consumer.");
+    public static void main(final String[] args) {
+        new HonoExampleApplication().consumeData();
     }
 }

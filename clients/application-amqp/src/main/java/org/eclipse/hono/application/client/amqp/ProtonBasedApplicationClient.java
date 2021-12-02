@@ -69,6 +69,12 @@ public class ProtonBasedApplicationClient extends ProtonBasedCommandSender imple
         super(connection, SendMessageSampler.Factory.noop());
     }
 
+    private String getTenantScopedLinkAddress(
+            final String endpointName,
+            final String tenantId) {
+        return String.format("%s/%s", endpointName, tenantId);
+    }
+
     @Override
     protected void onDisconnect() {
         // consumer close handlers shall be called upon disconnect from remote peer,
@@ -125,7 +131,7 @@ public class ProtonBasedApplicationClient extends ProtonBasedCommandSender imple
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(messageHandler);
 
-        final String sourceAddress = String.format("%s/%s", TelemetryConstants.TELEMETRY_ENDPOINT, tenantId);
+        final String sourceAddress = getTenantScopedLinkAddress(TelemetryConstants.TELEMETRY_ENDPOINT, tenantId);
         return createConsumer(sourceAddress, messageHandler, closeHandler);
     }
 
@@ -155,7 +161,7 @@ public class ProtonBasedApplicationClient extends ProtonBasedCommandSender imple
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(messageHandler);
 
-        final String sourceAddress = String.format("%s/%s", EventConstants.EVENT_ENDPOINT, tenantId);
+        final String sourceAddress = getTenantScopedLinkAddress(EventConstants.EVENT_ENDPOINT, tenantId);
         return createConsumer(sourceAddress, messageHandler, closeHandler);
     }
 
@@ -216,7 +222,7 @@ public class ProtonBasedApplicationClient extends ProtonBasedCommandSender imple
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(messageHandler);
 
-        final String sourceAddress = String.format("%s/%s", TelemetryConstants.TELEMETRY_ENDPOINT, tenantId);
+        final String sourceAddress = getTenantScopedLinkAddress(TelemetryConstants.TELEMETRY_ENDPOINT, tenantId);
         return createAsyncConsumer(sourceAddress, messageHandler, closeHandler);
     }
 
@@ -246,7 +252,7 @@ public class ProtonBasedApplicationClient extends ProtonBasedCommandSender imple
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(messageHandler);
 
-        final String sourceAddress = String.format("%s/%s", EventConstants.EVENT_ENDPOINT, tenantId);
+        final String sourceAddress = getTenantScopedLinkAddress(EventConstants.EVENT_ENDPOINT, tenantId);
         return createAsyncConsumer(sourceAddress, messageHandler, closeHandler);
     }
 

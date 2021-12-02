@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,7 +21,7 @@ import com.google.common.base.MoreObjects;
  * <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>.
  * It is used for storing and retrieving values from the backend storage and external systems.
  */
-public class TenantKey {
+public final class TenantKey {
 
     private final String tenantId;
     private final String name;

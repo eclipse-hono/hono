@@ -47,12 +47,6 @@ public final class CredentialsDto extends BaseDto<List<CommonCredential>> {
     private boolean requiresMerging;
 
     /**
-     * Default constructor for serialisation/deserialization.
-     */
-    public CredentialsDto() {
-    }
-
-    /**
      * Creates a DTO for persisting credentials.
      * <p>
      * This method also makes sure that the identifiers of the credentials'

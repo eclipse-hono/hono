@@ -23,7 +23,7 @@ import java.util.Objects;
 public class ConnectionEventProducerConfig {
 
     public static final String DEFAULT_LOG_LEVEL = "info";
-    public static final ConnectionEventProducerType DEFAULT_TYPE = ConnectionEventProducerType.logging;
+    public static final ConnectionEventProducerType DEFAULT_TYPE = ConnectionEventProducerType.LOGGING;
 
     private ConnectionEventProducerType type = DEFAULT_TYPE;
     private String logLevel = DEFAULT_LOG_LEVEL;
@@ -115,7 +115,7 @@ public class ConnectionEventProducerConfig {
      */
     public enum ConnectionEventProducerType {
 
-        none, logging, events;
+        NONE, LOGGING, EVENTS;
 
         /**
          * Gets a type for a type name.
@@ -125,13 +125,13 @@ public class ConnectionEventProducerConfig {
          */
         public static ConnectionEventProducerType from(final String name) {
 
-            final String nameToCheck = Objects.requireNonNull(name).toLowerCase();
+            final String nameToCheck = Objects.requireNonNull(name).toUpperCase();
             for (ConnectionEventProducerType type : values()) {
                 if (type.name().equals(nameToCheck)) {
                     return type;
                 }
             }
-            return none;
+            return NONE;
         }
     }
 }
