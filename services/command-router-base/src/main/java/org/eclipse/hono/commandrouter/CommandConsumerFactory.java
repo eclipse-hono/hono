@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.commandrouter;
 
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.MessagingClient;
 
@@ -34,8 +33,8 @@ public interface CommandConsumerFactory extends MessagingClient, Lifecycle {
      *                the execution of this operation.
      * @return A future indicating the outcome of the operation.
      *         <p>
-     *         The future will be failed with a {@link ServiceInvocationException} with an error code indicating
-     *         the cause of the failure.
+     *         The future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException} with an
+     *         error code indicating the cause of the failure.
      * @throws NullPointerException if tenantId is {@code null}.
      */
     Future<Void> createCommandConsumer(String tenantId, SpanContext context);

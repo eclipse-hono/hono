@@ -23,7 +23,6 @@ import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TrustedCertificateAuthority;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.TenantConstants;
-import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantTracingConfig;
 import org.eclipse.hono.util.TracingSamplingMode;
 import org.junit.jupiter.api.Test;

@@ -14,6 +14,7 @@
 package org.eclipse.hono.client.kafka;
 
 import static org.mockito.Mockito.mock;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.time.Clock;

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,9 +14,6 @@
 package org.eclipse.hono.client.device.amqp;
 
 import java.util.Map;
-
-import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.ServerErrorException;
 
 import io.vertx.core.Future;
 import io.vertx.proton.ProtonDelivery;
@@ -43,10 +40,11 @@ public interface EventSender extends AmqpSenderLink {
      *         <p>
      *         The future will succeed if the message has been accepted (and settled) by the peer.
      *         <p>
-     *         The future will be failed with a {@link ServerErrorException} if the message could not be sent due to a
-     *         lack of credit. If an event is sent which cannot be processed by the peer the future will be failed with
-     *         either a {@code ServerErrorException} or a {@link ClientErrorException} depending on the reason for the
-     *         failure to process the message.
+     *         The future will be failed with a {@link org.eclipse.hono.client.ServerErrorException} if the message
+     *         could not be sent due to a lack of credit. If an event is sent which cannot be processed by the peer
+     *         the future will be failed with either a {@code org.eclipse.hono.client.ServerErrorException} or a
+     *         {@link org.eclipse.hono.client.ClientErrorException} depending on the reason for the failure to
+     *         process the message.
      * @throws NullPointerException if any of device-id or payload is {@code null}.
      * @throws IllegalArgumentException if the properties contain a value of type list, map or array.
      */

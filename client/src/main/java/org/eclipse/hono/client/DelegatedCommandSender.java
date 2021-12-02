@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,8 +12,6 @@
  *******************************************************************************/
 
 package org.eclipse.hono.client;
-
-import org.eclipse.hono.config.ClientConfigProperties;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
@@ -44,7 +42,7 @@ public interface DelegatedCommandSender extends MessageSender {
      *         The future will be failed with a {@link ServiceInvocationException} if the
      *         message could not be sent or if no delivery update
      *         was received from the peer within the configured timeout period
-     *         (see {@link ClientConfigProperties#getSendMessageTimeout()}).
+     *         (see {@link org.eclipse.hono.config.ClientConfigProperties#getSendMessageTimeout()}).
      * @throws NullPointerException if command is {@code null}.
      */
     Future<ProtonDelivery> sendCommandMessage(Command command, SpanContext context);

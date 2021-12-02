@@ -14,6 +14,7 @@
 package org.eclipse.hono.adapter.mqtt;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,8 +19,6 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.DownstreamSender;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
-import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.EventConstants;
 
@@ -134,10 +132,10 @@ public class EventSenderImpl extends AbstractDownstreamSender {
      *         The future will succeed if the message has been accepted (and settled)
      *         by the peer.
      *         <p>
-     *         The future will be failed with a {@link ServiceInvocationException} if the
+     *         The future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException} if the
      *         message could not be sent or has not been accepted by the peer or if no delivery update
      *         was received from the peer within the configured timeout period
-     *         (see {@link ClientConfigProperties#getSendMessageTimeout()}).
+     *         (see {@link org.eclipse.hono.config.ClientConfigProperties#getSendMessageTimeout()}).
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     @Override

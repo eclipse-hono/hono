@@ -89,7 +89,9 @@ public abstract class AbstractRequestResponseClient<R extends RequestResponseRes
      * The target address of the sender link used to send requests to the service.
      */
     protected final String linkTargetAddress;
-
+    /**
+     * The sampler to use for timing message processing.
+     */
     protected final SendMessageSampler sampler;
 
     private final Map<Object, TriTuple<Handler<AsyncResult<R>>, Object, Span>> replyMap = new HashMap<>();

@@ -13,6 +13,7 @@
 package org.eclipse.hono.util;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import org.junit.jupiter.api.Test;

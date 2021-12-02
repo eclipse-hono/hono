@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,7 +21,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.mongo.MongoClient;
 
 /**
  * A POJO for configuring a connection to a Mongo DB server.
@@ -241,7 +240,7 @@ public final class MongoDbConfigProperties {
     }
 
     /**
-     * Gets the Mongo DB properties for creating a {@link MongoClient}.
+     * Gets the Mongo DB properties for creating a {@code MongoClient}.
      * <p>
      * If the connectionString is set, it will override all the other connection settings.
      *

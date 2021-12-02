@@ -20,6 +20,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
@@ -33,7 +34,6 @@ import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
-import org.eclipse.hono.client.command.amqp.ProtonBasedDeviceConnectionClient;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.CacheDirective;

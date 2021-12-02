@@ -13,6 +13,7 @@
 package org.eclipse.hono.application.client.kafka.impl;
 
 import static org.mockito.Mockito.verify;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
@@ -56,7 +57,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopSpan;
 import io.opentracing.noop.NoopTracerFactory;

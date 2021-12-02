@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,7 +16,6 @@ import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
 
-import org.eclipse.hono.config.AbstractConfig;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.util.ConfigurationSupportingVerticle;
 import org.eclipse.hono.util.Constants;
@@ -376,7 +375,7 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * Gets the options for configuring the server side trust anchor.
      * <p>
      * This default implementation returns the options returned by
-     * {@link AbstractConfig#getTrustOptions()}.
+     * {@link org.eclipse.hono.config.AbstractConfig#getTrustOptions()}.
      * <p>
      * Subclasses may override this method in order to e.g. use a
      * non-key store based trust manager.

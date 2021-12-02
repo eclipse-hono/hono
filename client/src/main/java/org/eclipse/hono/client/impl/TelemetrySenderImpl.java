@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,7 +25,6 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.NoConsumerException;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.AddressHelper;
@@ -156,7 +155,7 @@ public class TelemetrySenderImpl extends AbstractDownstreamSender {
      *         state at the time the future has been succeeded, i.e. it will be
      *         locally <em>unsettled</em> without any outcome yet.
      *         <p>
-     *         The future will be failed with a {@link ServiceInvocationException} if the
+     *         The future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException} if the
      *         message could not be sent.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */

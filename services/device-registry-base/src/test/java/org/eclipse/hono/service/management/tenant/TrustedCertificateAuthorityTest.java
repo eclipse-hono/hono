@@ -15,6 +15,7 @@
 package org.eclipse.hono.service.management.tenant;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.io.FileInputStream;

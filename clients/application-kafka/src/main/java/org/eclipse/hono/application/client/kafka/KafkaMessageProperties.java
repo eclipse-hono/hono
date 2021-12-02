@@ -19,7 +19,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-import org.eclipse.hono.application.client.Message;
 import org.eclipse.hono.application.client.MessageProperties;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 
@@ -27,7 +26,7 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 
 /**
- * The metadata of a {@link Message} created from a {@link KafkaConsumerRecord}.
+ * The metadata of a Kafka Message created from a {@link KafkaConsumerRecord}.
  */
 public class KafkaMessageProperties implements MessageProperties {
 

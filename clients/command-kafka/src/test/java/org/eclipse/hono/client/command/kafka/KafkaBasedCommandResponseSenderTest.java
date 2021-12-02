@@ -13,6 +13,7 @@
 package org.eclipse.hono.client.command.kafka;
 
 import static org.mockito.Mockito.verify;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.util.HashMap;

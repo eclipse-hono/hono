@@ -14,6 +14,7 @@
 package org.eclipse.hono.deviceregistry.service.credentials;
 
 import static org.mockito.Mockito.mock;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;

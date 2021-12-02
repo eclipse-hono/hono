@@ -21,8 +21,6 @@ import org.eclipse.hono.client.DisconnectListener;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.SendMessageSampler;
-import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.config.ClientConfigProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -96,7 +94,7 @@ public abstract class AbstractHonoClientFactory implements ConnectionLifecycle<H
      *
      * @return A succeeded future if this factory is connected.
      *         Otherwise, the future will be failed with a
-     *         {@link ServerErrorException}.
+     *         {@link org.eclipse.hono.client.ServerErrorException}.
      */
     @Override
     public final Future<Void> isConnected() {
@@ -116,7 +114,7 @@ public abstract class AbstractHonoClientFactory implements ConnectionLifecycle<H
      * @param waitForCurrentConnectAttemptTimeout The maximum number of milliseconds to wait for
      *                                            an ongoing connection attempt to finish.
      * @return A succeeded future if this factory is connected.
-     *         Otherwise, the future will be failed with a {@link ServerErrorException}.
+     *         Otherwise, the future will be failed with a {@link org.eclipse.hono.client.ServerErrorException}.
      */
     @Override
     public final Future<Void> isConnected(final long waitForCurrentConnectAttemptTimeout) {
@@ -126,7 +124,7 @@ public abstract class AbstractHonoClientFactory implements ConnectionLifecycle<H
     /**
      * Gets the default timeout used when checking whether this client is connected to the service.
      * <p>
-     * The value returned here is the {@link ClientConfigProperties#getLinkEstablishmentTimeout()}.
+     * The value returned here is the {@link org.eclipse.hono.config.ClientConfigProperties#getLinkEstablishmentTimeout()}.
      *
      * @return The timeout value in milliseconds.
      */

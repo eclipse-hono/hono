@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,7 +19,6 @@ import org.eclipse.hono.auth.Authorities;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
-import io.jsonwebtoken.JwtException;
 
 /**
  * A utility for creating and parsing JSON Web Tokens containing user identity and
@@ -61,7 +60,7 @@ public interface AuthTokenHelper {
      *
      * @param token The compact encoding of the JWT token to expand.
      * @return The expanded token.
-     * @throws JwtException if the token cannot be expanded, e.g. because its signature cannot
+     * @throws io.jsonwebtoken.JwtException if the token cannot be expanded, e.g. because its signature cannot
      *                      be verified or it is expired or malformed.
      */
     Jws<Claims> expand(String token);

@@ -14,6 +14,7 @@ package org.eclipse.hono.service.management.credentials;
 
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import org.eclipse.hono.util.CredentialsConstants;

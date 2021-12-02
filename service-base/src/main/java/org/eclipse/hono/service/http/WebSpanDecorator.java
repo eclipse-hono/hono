@@ -18,7 +18,6 @@ import java.util.Map;
 
 import io.opentracing.Span;
 import io.opentracing.tag.Tags;
-import io.vertx.core.Handler;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 

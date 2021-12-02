@@ -13,13 +13,9 @@
 
 package org.eclipse.hono.commandrouter;
 
-import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.registry.DeviceDisabledOrNotRegisteredException;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.commandrouter.impl.CommandTargetMapperImpl;
 import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
-import org.eclipse.hono.util.DeviceConnectionConstants;
 
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
@@ -81,9 +77,10 @@ public interface CommandTargetMapper {
      * gateway and adapter instance where that gateway has subscribed for commands.
      * <p>
      * The value of the returned future is a JSON object with the fields
-     * {@link DeviceConnectionConstants#FIELD_PAYLOAD_DEVICE_ID} and
-     * {@link DeviceConnectionConstants#FIELD_ADAPTER_INSTANCE_ID} set to the determined values. If the command is not
-     * mapped to a gateway here, the {@link DeviceConnectionConstants#FIELD_PAYLOAD_DEVICE_ID} contains the given device
+     * {@link org.eclipse.hono.util.DeviceConnectionConstants#FIELD_PAYLOAD_DEVICE_ID} and
+     * {@link org.eclipse.hono.util.DeviceConnectionConstants#FIELD_ADAPTER_INSTANCE_ID} set to the determined values.
+     * If the command is not mapped to a gateway here, the
+     * {@link org.eclipse.hono.util.DeviceConnectionConstants#FIELD_PAYLOAD_DEVICE_ID} contains the given device
      * id itself.
      *
      * @param tenantId The tenant identifier.
@@ -92,11 +89,12 @@ public interface CommandTargetMapper {
      * @return A succeeded Future containing the JSON object with target device/gateway and adapter instance; or a
      *         failed Future with:
      *         <ul>
-     *         <li>a {@link DeviceDisabledOrNotRegisteredException} if the given device is disabled or not registered,
-     *         </li>
-     *         <li>a {@link ClientErrorException} with status <em>Not Found</em> if no matching adapter instance was
-     *         found</li>
-     *         <li>or a {@link ServiceInvocationException} with an error code indicating the cause of the failure</li>
+     *         <li>a {@link org.eclipse.hono.client.registry.DeviceDisabledOrNotRegisteredException} if the given
+     *         device is disabled or not registered,</li>
+     *         <li>a {@link org.eclipse.hono.client.ClientErrorException} with status <em>Not Found</em> if no matching
+     *         adapter instance was found</li>
+     *         <li>or a {@link org.eclipse.hono.client.ServiceInvocationException} with an error code indicating the
+     *         cause of the failure</li>
      *         </ul>
      * @throws NullPointerException if tenantId or deviceId is {@code null}.
      */

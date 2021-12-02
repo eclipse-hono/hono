@@ -24,7 +24,6 @@ import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -102,8 +101,8 @@ public abstract class AbstractHonoClient {
      * The returned span will already contain the following tags:
      * <ul>
      * <li>{@link Tags#COMPONENT} - set to <em>hono-client</em></li>
-     * <li>{@link Tags#PEER_HOSTNAME} - set to {@link ClientConfigProperties#getHost()}</li>
-     * <li>{@link Tags#PEER_PORT} - set to {@link ClientConfigProperties#getPort()}</li>
+     * <li>{@link Tags#PEER_HOSTNAME} - set to {@link org.eclipse.hono.config.ClientConfigProperties#getHost()}</li>
+     * <li>{@link Tags#PEER_PORT} - set to {@link org.eclipse.hono.config.ClientConfigProperties#getPort()}</li>
      * <li>{@link TracingHelper#TAG_PEER_CONTAINER} - set to {@link HonoConnection#getRemoteContainerId()}</li>
      * </ul>
      *
@@ -123,8 +122,8 @@ public abstract class AbstractHonoClient {
      * The returned span will already contain the following tags:
      * <ul>
      * <li>{@link Tags#COMPONENT} - set to <em>hono-client</em></li>
-     * <li>{@link Tags#PEER_HOSTNAME} - set to {@link ClientConfigProperties#getHost()}</li>
-     * <li>{@link Tags#PEER_PORT} - set to {@link ClientConfigProperties#getPort()}</li>
+     * <li>{@link Tags#PEER_HOSTNAME} - set to {@link org.eclipse.hono.config.ClientConfigProperties#getHost()}</li>
+     * <li>{@link Tags#PEER_PORT} - set to {@link org.eclipse.hono.config.ClientConfigProperties#getPort()}</li>
      * <li>{@link TracingHelper#TAG_PEER_CONTAINER} - set to {@link HonoConnection#getRemoteContainerId()}</li>
      * </ul>
      *

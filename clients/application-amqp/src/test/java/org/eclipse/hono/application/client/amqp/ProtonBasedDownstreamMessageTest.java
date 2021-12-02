@@ -15,6 +15,7 @@
 package org.eclipse.hono.application.client.amqp;
 
 import static org.mockito.Mockito.mock;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.time.Instant;

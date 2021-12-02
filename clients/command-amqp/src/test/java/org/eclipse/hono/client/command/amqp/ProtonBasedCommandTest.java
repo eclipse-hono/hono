@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Collections;
@@ -29,7 +30,6 @@ import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Section;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.command.amqp.ProtonBasedCommand;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.Test;

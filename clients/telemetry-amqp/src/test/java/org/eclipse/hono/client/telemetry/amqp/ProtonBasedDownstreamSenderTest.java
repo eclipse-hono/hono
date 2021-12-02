@@ -20,6 +20,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
@@ -45,7 +46,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopSpan;
 import io.opentracing.noop.NoopTracerFactory;

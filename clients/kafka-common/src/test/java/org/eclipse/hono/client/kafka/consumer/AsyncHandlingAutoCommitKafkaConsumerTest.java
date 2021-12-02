@@ -13,6 +13,7 @@
 package org.eclipse.hono.client.kafka.consumer;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 

@@ -14,7 +14,6 @@ package org.eclipse.hono.adapter.limiting;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.eclipse.hono.adapter.limiting.MemoryBasedConnectionLimitStrategy;
 import org.junit.jupiter.api.Test;
 
 /**

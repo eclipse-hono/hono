@@ -14,6 +14,7 @@
 package org.eclipse.hono.client.telemetry.kafka;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Collections;

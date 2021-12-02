@@ -14,7 +14,8 @@
 package org.eclipse.hono.client.telemetry.kafka;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doAnswer;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.util.HashMap;

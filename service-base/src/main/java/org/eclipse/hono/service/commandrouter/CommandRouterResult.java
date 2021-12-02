@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,7 +17,6 @@ import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.RequestResponseResult;
 
-import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -62,7 +61,7 @@ public final class CommandRouterResult extends RequestResponseResult<JsonObject>
      * @param payload The string representation of the JSON payload
      *                to include in the result (may be {@code null}).
      * @return The result.
-     * @throws DecodeException if the given payload is not valid JSON.
+     * @throws io.vertx.core.json.DecodeException if the given payload is not valid JSON.
      */
     public static CommandRouterResult from(final int status, final String payload) {
         if (payload != null) {

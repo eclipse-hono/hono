@@ -15,6 +15,7 @@ package org.eclipse.hono.adapter.lora.providers;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.io.IOException;

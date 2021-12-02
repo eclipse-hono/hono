@@ -13,6 +13,7 @@
 package org.eclipse.hono.tests.commandrouter;
 
 import static org.mockito.Mockito.mock;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.util.ArrayList;

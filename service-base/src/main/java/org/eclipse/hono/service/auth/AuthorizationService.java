@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,7 +14,6 @@ package org.eclipse.hono.service.auth;
 
 import org.eclipse.hono.auth.Activity;
 import org.eclipse.hono.auth.HonoUser;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.vertx.core.Future;
@@ -36,7 +35,7 @@ public interface AuthorizationService {
      *         The future will succeed if the service invocation has been successful.
      *         The boolean contained indicates whether the user is authorized to perform the
      *         activity on the resource.
-     *         Otherwise the future will be failed with a {@link ServiceInvocationException}.
+     *         Otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     Future<Boolean> isAuthorized(HonoUser user, ResourceIdentifier resource, Activity intent);
@@ -51,7 +50,7 @@ public interface AuthorizationService {
      *         The future will succeed if the service invocation has been successful.
      *         The boolean contained indicates whether the user is authorized to execute the
      *         operation on the resource.
-     *         Otherwise the future will be failed with a {@link ServiceInvocationException}.
+     *         Otherwise the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     Future<Boolean> isAuthorized(HonoUser user, ResourceIdentifier resource, String operation);

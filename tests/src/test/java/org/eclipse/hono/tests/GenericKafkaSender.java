@@ -15,7 +15,6 @@ package org.eclipse.hono.tests;
 import java.util.List;
 import java.util.Map;
 
-import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;

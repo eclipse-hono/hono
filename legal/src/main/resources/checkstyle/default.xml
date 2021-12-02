@@ -60,6 +60,7 @@
       <property name="separated" value="true"/>
       <property name="option" value="top"/>
       <property name="staticGroups" value="/^java\./,javax,org,com"/>
+      <property name="separatedStaticGroups" value="true"/>
       <property name="sortStaticImportsAlphabetically" value="true"/>
     </module>
 

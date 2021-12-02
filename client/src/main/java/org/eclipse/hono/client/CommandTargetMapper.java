@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,7 +20,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.impl.CommandTargetMapperImpl;
-import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.RegistrationConstants;
 
 import io.opentracing.SpanContext;
@@ -189,9 +188,10 @@ public interface CommandTargetMapper {
      * gateway and adapter instance where that gateway has subscribed for commands.
      * <p>
      * The value of the returned future is a JSON object with the fields
-     * {@link DeviceConnectionConstants#FIELD_PAYLOAD_DEVICE_ID} and
-     * {@link DeviceConnectionConstants#FIELD_ADAPTER_INSTANCE_ID} set to the determined values. If the command is not
-     * mapped to a gateway here, the {@link DeviceConnectionConstants#FIELD_PAYLOAD_DEVICE_ID} contains the given device
+     * {@link org.eclipse.hono.util.DeviceConnectionConstants#FIELD_PAYLOAD_DEVICE_ID} and
+     * {@link org.eclipse.hono.util.DeviceConnectionConstants#FIELD_ADAPTER_INSTANCE_ID} set to the determined values.
+     * If the command is not mapped to a gateway here, the
+     * {@link org.eclipse.hono.util.DeviceConnectionConstants#FIELD_PAYLOAD_DEVICE_ID} contains the given device
      * id itself.
      * <p>
      * Note that {@link #initialize(CommandTargetMapperContext)} has to have been called already,

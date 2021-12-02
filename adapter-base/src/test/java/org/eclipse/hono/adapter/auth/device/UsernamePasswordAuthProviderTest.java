@@ -19,6 +19,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
@@ -28,8 +29,6 @@ import java.util.Base64;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import org.eclipse.hono.adapter.auth.device.UsernamePasswordAuthProvider;
-import org.eclipse.hono.adapter.auth.device.UsernamePasswordCredentials;
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.registry.CredentialsClient;

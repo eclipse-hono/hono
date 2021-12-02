@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.service.auth;
 
-import java.security.cert.CertificateException;
 import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
 import java.util.List;
@@ -34,7 +33,7 @@ public interface X509CertificateChainValidator {
      *              must be at position 0.
      * @param trustAnchor The trust anchor to use for validating the chain.
      * @return A completed future if the path is valid (according to the implemented tests).
-     *         Otherwise, the future will be failed with a {@link CertificateException}.
+     *         Otherwise, the future will be failed with a {@link java.security.cert.CertificateException}.
      * @throws NullPointerException if any of the parameters are {@code null}.
      * @throws IllegalArgumentException if the chain is empty.
      */
@@ -47,7 +46,7 @@ public interface X509CertificateChainValidator {
      *              must be at position 0.
      * @param trustAnchors The list of trust anchors to use for validating the chain.
      * @return A completed future if the path is valid (according to the implemented tests).
-     *         Otherwise, the future will be failed with a {@link CertificateException}.
+     *         Otherwise, the future will be failed with a {@link java.security.cert.CertificateException}.
      * @throws NullPointerException if any of the parameters are {@code null}.
      * @throws IllegalArgumentException if the chain or trust anchor list are empty.
      */

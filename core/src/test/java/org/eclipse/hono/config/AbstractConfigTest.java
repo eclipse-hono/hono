@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,7 @@
 package org.eclipse.hono.config;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Collections;

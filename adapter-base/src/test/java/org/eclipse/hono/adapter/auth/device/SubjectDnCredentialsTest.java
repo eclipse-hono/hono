@@ -15,8 +15,8 @@
 package org.eclipse.hono.adapter.auth.device;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static com.google.common.truth.Truth.assertThat;
 
+import static com.google.common.truth.Truth.assertThat;
 
 import javax.security.auth.x500.X500Principal;
 

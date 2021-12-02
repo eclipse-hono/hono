@@ -15,6 +15,7 @@ package org.eclipse.hono.adapter.mqtt;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.util.stream.Stream;

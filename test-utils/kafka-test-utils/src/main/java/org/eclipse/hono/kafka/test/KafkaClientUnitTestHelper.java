@@ -15,6 +15,7 @@ package org.eclipse.hono.kafka.test;
 
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.nio.charset.StandardCharsets;

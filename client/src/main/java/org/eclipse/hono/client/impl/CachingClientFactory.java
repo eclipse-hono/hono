@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,7 +22,6 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -140,7 +139,7 @@ public final class CachingClientFactory<T> extends ClientFactory<T> {
      * @param result The handler to invoke with the outcome of the creation attempt.
      *         The handler will be invoked with a succeeded future containing
      *         the client or with a failed future containing a
-     *         {@link ServiceInvocationException} if no client could be
+     *         {@link org.eclipse.hono.client.ServiceInvocationException} if no client could be
      *         created using the factory.
      */
     public void getOrCreateClient(

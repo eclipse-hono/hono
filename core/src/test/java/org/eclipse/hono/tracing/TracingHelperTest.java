@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,6 +15,7 @@ package org.eclipse.hono.tracing;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Collections;

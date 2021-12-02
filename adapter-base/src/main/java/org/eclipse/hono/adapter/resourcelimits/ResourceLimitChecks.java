@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,7 +12,6 @@
  *******************************************************************************/
 package org.eclipse.hono.adapter.resourcelimits;
 
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.TenantObject;
 
 import io.opentracing.SpanContext;
@@ -33,7 +32,7 @@ public interface ResourceLimitChecks {
      *                    if no span is currently active.
      * @return A future indicating the outcome of the check.
      *         <p>
-     *         The future will be failed with a {@link ServiceInvocationException}
+     *         The future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}
      *         if the check could not be performed.
      * @throws NullPointerException if the tenant object is null.
      */
@@ -51,7 +50,7 @@ public interface ResourceLimitChecks {
      * @throws NullPointerException if the tenant object is null.
      * @return A future indicating the outcome of the check.
      *         <p>
-     *         The future will be failed with a {@link ServiceInvocationException}
+     *         The future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}
      *         if the check could not be performed.
      */
     Future<Boolean> isMessageLimitReached(TenantObject tenantObject, long payloadSize, SpanContext spanContext);
@@ -66,7 +65,7 @@ public interface ResourceLimitChecks {
      *                    if no span is currently active.
      * @return A future indicating the outcome of the check.
      *         <p>
-     *         The future will be failed with a {@link ServiceInvocationException}
+     *         The future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}
      *         if the check could not be performed.
      * @throws NullPointerException if the tenant object is null.
      */

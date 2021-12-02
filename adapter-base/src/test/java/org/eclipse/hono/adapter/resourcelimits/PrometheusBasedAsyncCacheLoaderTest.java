@@ -17,6 +17,7 @@ package org.eclipse.hono.adapter.resourcelimits;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.time.Instant;

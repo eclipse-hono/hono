@@ -115,9 +115,8 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
 
     /**
      * The default port.
-     *
-     * Subclasses should override this method to provide a service specific default value.
      * <p>
+     * Subclasses should override this method to provide a service specific default value.
      *
      * @return 8443
      */
@@ -128,9 +127,8 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
 
     /**
      * The default insecure port.
-     *
-     * Subclasses should override this method to provide a service specific default value.
      * <p>
+     * Subclasses should override this method to provide a service specific default value.
      *
      * @return 8080
      */

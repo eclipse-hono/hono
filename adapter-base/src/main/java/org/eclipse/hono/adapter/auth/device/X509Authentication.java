@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,8 +14,6 @@
 package org.eclipse.hono.adapter.auth.device;
 
 import java.security.cert.Certificate;
-
-import org.eclipse.hono.client.ServiceInvocationException;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
@@ -36,7 +34,7 @@ public interface X509Authentication {
      *                    if no context exists (yet).
      * @return A future indicating the outcome of the validation.
      *         <p>
-     *         The future will be failed with a {@link ServiceInvocationException}
+     *         The future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}
      *         if the certificate path could not be validated.
      *         <p>
      *         Otherwise, the future will be succeeded with a JSON object containing

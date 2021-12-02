@@ -14,14 +14,15 @@
 
 package org.eclipse.hono.client.command;
 
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.anyList;
-import static org.mockito.Mockito.anyString;
-import static org.mockito.Mockito.argThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.time.Duration;

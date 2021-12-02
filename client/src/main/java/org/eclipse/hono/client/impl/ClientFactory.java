@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -71,6 +71,9 @@ class ClientFactory<T> {
         }
     }
 
+    /**
+     * Clears this factory's internal state.
+     */
     protected void doClearState() {
         // do nothing
     }

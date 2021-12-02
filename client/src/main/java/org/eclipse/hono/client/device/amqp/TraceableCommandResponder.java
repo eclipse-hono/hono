@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,8 +14,6 @@
 package org.eclipse.hono.client.device.amqp;
 
 import java.util.Map;
-
-import org.eclipse.hono.client.ServiceInvocationException;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
@@ -44,8 +42,8 @@ public interface TraceableCommandResponder extends CommandResponder {
      *         <p>
      *         The future will succeed if the message has been accepted (and settled) by the application.
      *         <p>
-     *         The future will be failed with a {@link ServiceInvocationException} if the message could not be sent or
-     *         has not been accepted by the application.
+     *         The future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException} if the
+     *         message could not be sent or has not been accepted by the application.
      *
      * @throws NullPointerException if any of deviceId, targetAddress, or correlationId is {@code null}.
      */

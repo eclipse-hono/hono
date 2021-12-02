@@ -14,6 +14,7 @@
 package org.eclipse.hono.commandrouter.impl;
 
 import static org.junit.jupiter.api.Assertions.fail;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;

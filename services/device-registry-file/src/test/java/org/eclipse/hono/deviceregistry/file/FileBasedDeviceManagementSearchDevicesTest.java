@@ -14,6 +14,7 @@ package org.eclipse.hono.deviceregistry.file;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
@@ -38,7 +39,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Vertx;
 import io.vertx.core.file.FileSystem;

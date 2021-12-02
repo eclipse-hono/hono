@@ -14,6 +14,7 @@
 package org.eclipse.hono.tests.registry;
 
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;

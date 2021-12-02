@@ -15,6 +15,7 @@ package org.eclipse.hono.client.impl;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.util.HashMap;
