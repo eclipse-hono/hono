@@ -15,6 +15,7 @@ package org.eclipse.hono.client.telemetry.kafka;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
@@ -76,6 +77,7 @@ public abstract class AbstractKafkaBasedDownstreamSender extends AbstractKafkaBa
      *            </ol>
      * @param properties Additional meta data that should be included in the downstream message.
      * @return The augmented properties.
+     * @throws NullPointerException if tenant, device or qos are {@code null}.
      */
     protected final Map<String, Object> addDefaults(
             final TenantObject tenant,
@@ -83,6 +85,10 @@ public abstract class AbstractKafkaBasedDownstreamSender extends AbstractKafkaBa
             final QoS qos,
             final String contentType,
             final Map<String, Object> properties) {
+
+        Objects.requireNonNull(tenant);
+        Objects.requireNonNull(device);
+        Objects.requireNonNull(qos);
 
         final Map<String, Object> headerProperties = new HashMap<>();
         if (isDefaultsEnabled) {
