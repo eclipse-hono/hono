@@ -28,6 +28,7 @@ import io.vertx.kafka.client.serialization.BufferDeserializer;
  * @see <a href="https://www.eclipse.org/hono/docs/api/event-kafka">Event API for Kafka Specification</a>
  * @see <a href="https://www.eclipse.org/hono/docs/api/command-and-control-kafka/">Command &amp; Control API for Kafka Specification</a>
  */
+// When renaming or moving this class, please update it in the documentation
 public class MessagingKafkaConsumerConfigProperties extends KafkaConsumerConfigProperties {
 
     /**
