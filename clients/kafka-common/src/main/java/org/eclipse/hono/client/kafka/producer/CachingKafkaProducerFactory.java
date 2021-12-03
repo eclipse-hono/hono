@@ -43,9 +43,9 @@ import io.vertx.kafka.client.producer.KafkaProducer;
  * <p>
  * Producers are closed and removed from the cache if they throw a {@link #isFatalError(Throwable) fatal exception}.
  * This is triggered by {@link KafkaProducer#exceptionHandler(Handler)} and run asynchronously after the
- * {@link io.vertx.kafka.client.producer.impl.KafkaWriteStreamImpl#send(ProducerRecord, Handler) send operation} has
- * finished. A following invocation of {@link #getOrCreateProducer(String, KafkaProducerConfigProperties)} will then
- * return a new instance.
+ * {@link io.vertx.kafka.client.producer.impl.KafkaWriteStreamImpl#send(org.apache.kafka.clients.producer.ProducerRecord, Handler)
+ * send operation} has finished. A following invocation of {@link #getOrCreateProducer(String, KafkaProducerConfigProperties)}
+ * will then return a new instance.
  *
  * @param <K> The type for the record key serialization.
  * @param <V> The type for the record value serialization.

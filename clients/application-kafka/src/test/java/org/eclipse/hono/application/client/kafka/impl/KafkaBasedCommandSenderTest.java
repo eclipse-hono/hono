@@ -230,7 +230,7 @@ public class KafkaBasedCommandSenderTest {
 
     /**
      * Verifies that
-     * {@link org.eclipse.hono.application.client.CommandSender#sendCommand(String, String, String, String, Buffer, String, Map, Duration, SpanContext)}
+     * {@link org.eclipse.hono.application.client.CommandSender#sendCommand(String, String, String, String, Buffer, String, Map, Duration, io.opentracing.SpanContext)}
      * fails as the timeout is reached.
      *
      * @param ctx The vert.x test context.

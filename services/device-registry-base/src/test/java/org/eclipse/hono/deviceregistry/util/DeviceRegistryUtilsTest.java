@@ -37,7 +37,7 @@ import io.vertx.core.json.JsonObject;
 public class DeviceRegistryUtilsTest {
 
     /**
-     * Verifies the conversion of a {@link Tenant} instance to a {@link TenantObject}.
+     * Verifies the conversion of a {@link Tenant} instance to a {@link org.eclipse.hono.util.TenantObject}.
      */
     @Test
     public void testTenantConversion() {

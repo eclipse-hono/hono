@@ -161,7 +161,7 @@ public class ProtonBasedDownstreamSenderTest {
 
     /**
      * Verifies that a TTL values in the <em>properties</em> parameter of
-     * {@link org.eclipse.hono.client.telemetry.EventSender#sendEvent(TenantObject, RegistrationAssertion, String, Buffer, Map, SpanContext)}
+     * {@link org.eclipse.hono.client.telemetry.EventSender#sendEvent(TenantObject, RegistrationAssertion, String, Buffer, Map, io.opentracing.SpanContext)}
      * are correctly taken as seconds and set as milliseconds at the message.
      */
     @Test

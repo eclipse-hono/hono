@@ -47,7 +47,7 @@ import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
 /**
- * Tests for {@link FileBasedRegistrationService#searchDevices(String, int, int, List, List, Span)}.
+ * Tests for {@link FileBasedRegistrationService#searchDevices(String, int, int, List, List, io.opentracing.Span)}.
  */
 @ExtendWith(VertxExtension.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)

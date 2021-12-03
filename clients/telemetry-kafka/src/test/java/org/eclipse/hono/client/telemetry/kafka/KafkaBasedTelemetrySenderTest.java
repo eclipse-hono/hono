@@ -143,7 +143,7 @@ public class KafkaBasedTelemetrySenderTest {
 
     /**
      * Verifies that
-     * {@link KafkaBasedTelemetrySender#sendTelemetry(TenantObject, RegistrationAssertion, QoS, String, Buffer, Map, SpanContext)}
+     * {@link KafkaBasedTelemetrySender#sendTelemetry(TenantObject, RegistrationAssertion, QoS, String, Buffer, Map, io.opentracing.SpanContext)}
      * throws an NPE if a mandatory parameter is {@code null}.
      */
     @Test

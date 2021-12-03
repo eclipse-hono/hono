@@ -42,7 +42,7 @@ public class TelemetrySenderTest extends AbstractAmqpAdapterClientDownstreamSend
     private static final String ADDRESS = TelemetryConstants.TELEMETRY_ENDPOINT + "/" + TENANT_ID + "/" + DEVICE_ID;
 
     /**
-     * Verifies that the message created by {@link TelemetrySender#send(String, byte[], String, Map)} conforms to the
+     * Verifies that the message created by {@link TelemetrySender#send(String, byte[], String, java.util.Map)} conforms to the
      * expectations of the AMQP adapter.
      */
     @Test
@@ -60,7 +60,7 @@ public class TelemetrySenderTest extends AbstractAmqpAdapterClientDownstreamSend
     }
 
     /**
-     * Verifies that the message created by {@link TelemetrySender#sendAndWaitForOutcome(String, byte[], String, Map)}
+     * Verifies that the message created by {@link TelemetrySender#sendAndWaitForOutcome(String, byte[], String, java.util.Map)}
      * conforms to the expectations of the AMQP adapter.
      *
      * @param ctx The test context to use for running asynchronous tests.
@@ -86,8 +86,8 @@ public class TelemetrySenderTest extends AbstractAmqpAdapterClientDownstreamSend
     }
 
     /**
-     * Verifies that the message created by {@link TelemetrySender#send(String, byte[], String, Map)} conforms to the
-     * expectations of the AMQP adapter.
+     * Verifies that the message created by {@link TelemetrySender#send(String, byte[], String, java.util.Map)} conforms
+     * to the expectations of the AMQP adapter.
      */
     @Test
     public void testSendWithTracing() {
@@ -105,7 +105,7 @@ public class TelemetrySenderTest extends AbstractAmqpAdapterClientDownstreamSend
     }
 
     /**
-     * Verifies that {@link TraceableTelemetrySender#sendAndWaitForOutcome(String, byte[], String, Map, SpanContext)}
+     * Verifies that {@link TraceableTelemetrySender#sendAndWaitForOutcome(String, byte[], String, java.util.Map, SpanContext)}
      * uses the given SpanContext.
      *
      * @param ctx The test context to use for running asynchronous tests.

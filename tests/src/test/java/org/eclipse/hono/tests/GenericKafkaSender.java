@@ -56,7 +56,7 @@ public class GenericKafkaSender extends AbstractKafkaBasedMessageSender {
      * <p>
      * The future will be succeeded if the message has been sent.
      * <p>
-     * The future will be failed with a {@link ServerErrorException} if the data could
+     * The future will be failed with a {@link org.eclipse.hono.client.ServerErrorException} if the data could
      * not be sent. The error code contained in the exception indicates the cause of the failure.
      * @throws NullPointerException if topic, tenantId, deviceId or properties are {@code null}.
      */
@@ -81,7 +81,7 @@ public class GenericKafkaSender extends AbstractKafkaBasedMessageSender {
      * <p>
      * The future will be succeeded if the message has been sent.
      * <p>
-     * The future will be failed with a {@link ServerErrorException} if the data could
+     * The future will be failed with a {@link org.eclipse.hono.client.ServerErrorException} if the data could
      * not be sent. The error code contained in the exception indicates the cause of the failure.
      * @throws NullPointerException if topic, tenantId, deviceId or headers are {@code null}.
      */

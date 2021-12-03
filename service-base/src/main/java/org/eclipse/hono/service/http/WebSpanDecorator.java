@@ -50,7 +50,7 @@ public interface WebSpanDecorator {
 
     /**
      * Decorate span when the response is known. This is effectively invoked in BodyEndHandler which is added to
-     * - {@link io.vertx.ext.web.RoutingContext#addBodyEndHandler(Handler)}
+     * - {@link io.vertx.ext.web.RoutingContext#addBodyEndHandler(io.vertx.core.Handler)}
      *
      * @param request server request
      * @param span server span
