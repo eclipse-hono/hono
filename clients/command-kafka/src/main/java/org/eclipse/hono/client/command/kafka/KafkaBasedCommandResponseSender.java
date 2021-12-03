@@ -12,14 +12,14 @@
  */
 package org.eclipse.hono.client.command.kafka;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.hono.client.command.CommandResponse;
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.kafka.HonoTopic;
-import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
@@ -31,7 +31,6 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.kafka.client.producer.KafkaHeader;
 
 /**
  * A Kafka based client for sending command response messages downstream via a Kafka cluster.
@@ -67,26 +66,37 @@ public class KafkaBasedCommandResponseSender extends AbstractKafkaBasedMessageSe
         }
 
         final String topic = new HonoTopic(HonoTopic.Type.COMMAND_RESPONSE, response.getTenantId()).toString();
-        final Span span = startChildSpan("forward Command response", topic, response.getTenantId(),
-                response.getDeviceId(), context);
+        final Span span = startChildSpan(
+                "forward Command response",
+                topic,
+                response.getTenantId(),
+                response.getDeviceId(),
+                context);
         if (response.getMessagingType() != getMessagingType()) {
             span.log(String.format("using messaging type %s instead of type %s used for the original command",
                     getMessagingType(), response.getMessagingType()));
         }
-        return sendAndWaitForOutcome(topic, response.getTenantId(), response.getDeviceId(), response.getPayload(),
-                getHeaders(response, span), span);
+        return sendAndWaitForOutcome(
+                topic,
+                response.getTenantId(),
+                response.getDeviceId(),
+                response.getPayload(),
+                getHeaders(response),
+                span)
+            .onComplete(ar -> span.finish());
     }
 
-    private List<KafkaHeader> getHeaders(final CommandResponse response, final Span span) {
-
-        final List<KafkaHeader> headers = new ArrayList<>(encodePropertiesAsKafkaHeaders(response.getAdditionalProperties(), span));
-        headers.add(KafkaRecordHelper.createKafkaHeader(MessageHelper.SYS_PROPERTY_CORRELATION_ID, response.getCorrelationId()));
-        headers.add(KafkaRecordHelper.createKafkaHeader(MessageHelper.APP_PROPERTY_TENANT_ID, response.getTenantId()));
-        headers.add(KafkaRecordHelper.createKafkaHeader(MessageHelper.APP_PROPERTY_DEVICE_ID, response.getDeviceId()));
-        headers.add(KafkaRecordHelper.createKafkaHeader(MessageHelper.APP_PROPERTY_STATUS, response.getStatus()));
-        headers.add(KafkaRecordHelper.createKafkaHeader(MessageHelper.SYS_PROPERTY_CONTENT_TYPE,
-                Objects.nonNull(response.getContentType()) ? response.getContentType()
-                        : MessageHelper.CONTENT_TYPE_OCTET_STREAM));
+    private Map<String, Object> getHeaders(final CommandResponse response) {
+        final Map<String, Object> headers = new HashMap<>(response.getAdditionalProperties());
+        headers.put(MessageHelper.SYS_PROPERTY_CORRELATION_ID, response.getCorrelationId());
+        headers.put(MessageHelper.APP_PROPERTY_TENANT_ID, response.getTenantId());
+        headers.put(MessageHelper.APP_PROPERTY_DEVICE_ID, response.getDeviceId());
+        headers.put(MessageHelper.APP_PROPERTY_STATUS, response.getStatus());
+        if (response.getPayload() != null) {
+            headers.put(
+                    MessageHelper.SYS_PROPERTY_CONTENT_TYPE,
+                    Optional.ofNullable(response.getContentType()).orElse(MessageHelper.CONTENT_TYPE_OCTET_STREAM));
+        }
         return headers;
     }
 }

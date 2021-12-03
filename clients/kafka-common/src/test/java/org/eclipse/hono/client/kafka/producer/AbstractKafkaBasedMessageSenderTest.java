@@ -16,7 +16,7 @@ package org.eclipse.hono.client.kafka.producer;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.kafka.clients.producer.MockProducer;
@@ -24,7 +24,6 @@ import org.apache.kafka.common.errors.AuthorizationException;
 import org.apache.kafka.common.header.Headers;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.BeforeEach;
@@ -104,7 +103,7 @@ public class AbstractKafkaBasedMessageSenderTest {
         final var mockProducer = KafkaClientUnitTestHelper.newMockProducer(false);
         final var sender = newSender(mockProducer);
 
-        sender.sendAndWaitForOutcome("topic", "tenant", "device", null, List.of(), NoopSpan.INSTANCE)
+        sender.sendAndWaitForOutcome("topic", "tenant", "device", null, Map.of(), NoopSpan.INSTANCE)
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN it fails with the expected error
@@ -132,7 +131,7 @@ public class AbstractKafkaBasedMessageSenderTest {
         // GIVEN a sender sending a message
         final var mockProducer = KafkaClientUnitTestHelper.newMockProducer(false);
         final var factory = newProducerFactory(mockProducer);
-        newSender(factory).sendAndWaitForOutcome("topic", "tenant", "device", null, List.of(), NoopSpan.INSTANCE)
+        newSender(factory).sendAndWaitForOutcome("topic", "tenant", "device", null, Map.of(), NoopSpan.INSTANCE)
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN the producer is removed and closed
@@ -159,7 +158,7 @@ public class AbstractKafkaBasedMessageSenderTest {
         // GIVEN a sender sending a message
         final var mockProducer = KafkaClientUnitTestHelper.newMockProducer(false);
         final var factory = newProducerFactory(mockProducer);
-        newSender(factory).sendAndWaitForOutcome("topic", "tenant", "device", null, List.of(), NoopSpan.INSTANCE)
+        newSender(factory).sendAndWaitForOutcome("topic", "tenant", "device", null, Map.of(), NoopSpan.INSTANCE)
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN the producer is present and still open
@@ -185,7 +184,7 @@ public class AbstractKafkaBasedMessageSenderTest {
         final var mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         final var factory = newProducerFactory(mockProducer);
 
-        newSender(factory).sendAndWaitForOutcome("topic", "tenant", "device", null, List.of(), NoopSpan.INSTANCE)
+        newSender(factory).sendAndWaitForOutcome("topic", "tenant", "device", null, Map.of(), NoopSpan.INSTANCE)
             .onComplete(ctx.succeeding(t -> {
                 ctx.verify(() -> {
                     final Headers headers = mockProducer.history().get(0).headers();
@@ -207,15 +206,14 @@ public class AbstractKafkaBasedMessageSenderTest {
 
         // GIVEN properties that contain creation-time
         final long creationTime = 12345L;
-        final var creationTimeHeader = KafkaRecordHelper.createKafkaHeader(
-                MessageHelper.SYS_PROPERTY_CREATION_TIME,
-                creationTime);
+        final Map<String, Object> properties = new HashMap<>();
+        properties.put(MessageHelper.SYS_PROPERTY_CREATION_TIME, creationTime);
 
         // WHEN sending the message
         final var mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         final var factory = newProducerFactory(mockProducer);
 
-        newSender(factory).sendAndWaitForOutcome("topic", "tenant", "device", null, List.of(creationTimeHeader), NoopSpan.INSTANCE)
+        newSender(factory).sendAndWaitForOutcome("topic", "tenant", "device", null, properties, NoopSpan.INSTANCE)
             .onComplete(ctx.succeeding(t -> {
                 ctx.verify(() -> {
                     // THEN the creation time is preserved

@@ -118,132 +118,54 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
     }
 
     /**
-     * Sends a message to a kafka cluster and doesn't wait for an outcome.
+     * Sends a message to a Kafka broker and waits for the outcome.
+     * <p>
+     * This method {@linkplain #encodePropertiesAsKafkaHeaders(Map, Span) encodes the given properties}
+     * and then delegates to {@link #sendAndWaitForOutcome(String, String, String, Buffer, List, Span)}.
      *
      * @param topic The topic to send the message to.
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The device identifier.
-     * @param payload The data to send.
+     * @param payload The data to send or {@code null} if the message has no payload.
      * @param properties Additional meta data that should be included in the message.
-     * @param spanOperationName The operation name to set for the span created in this method.
-     *                          If {@code null}, "send message" will be used.
-     * @param context The currently active OpenTracing span (may be {@code null}). An implementation should use this as
-     *            the parent for any span it creates for tracing the execution of this operation.
-     * @throws NullPointerException if topic, tenantId, deviceId or properties are {@code null}.
-     */
-    protected void send(final String topic, final String tenantId, final String deviceId, final Buffer payload,
-            final Map<String, Object> properties, final String spanOperationName, final SpanContext context) {
-
-        Objects.requireNonNull(topic);
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(properties);
-
-        final Span span = startSpan(spanOperationName, topic, tenantId, deviceId, References.FOLLOWS_FROM, context);
-        final List<KafkaHeader> headers = encodePropertiesAsKafkaHeaders(properties, span);
-        sendAndWaitForOutcome(topic, tenantId, deviceId, payload, headers, span);
-    }
-
-    /**
-     * Sends a message to a kafka cluster and doesn't wait for an outcome.
-     *
-     * @param topic The topic to send the message to.
-     * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The device identifier.
-     * @param payload The data to send.
-     * @param headers Additional meta data that should be included in the message.
-     * @param spanOperationName The operation name to set for the span created in this method.
-     *                          If {@code null}, "send message" will be used.
-     * @param context The currently active OpenTracing span (may be {@code null}). An implementation should use this as
-     *            the parent for any span it creates for tracing the execution of this operation.
-     * @throws NullPointerException if topic, tenantId, deviceId or headers are {@code null}.
-     */
-    protected void send(final String topic, final String tenantId, final String deviceId, final Buffer payload,
-            final List<KafkaHeader> headers, final String spanOperationName, final SpanContext context) {
-        Objects.requireNonNull(topic);
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(headers);
-
-        final Span span = startSpan(spanOperationName, topic, tenantId, deviceId, References.FOLLOWS_FROM, context);
-        sendAndWaitForOutcome(topic, tenantId, deviceId, payload, headers, span);
-    }
-
-    /**
-     * Sends a message to a kafka cluster and waits for the outcome.
-     *
-     * @param topic The topic to send the message to.
-     * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The device identifier.
-     * @param payload The data to send.
-     * @param properties Additional meta data that should be included in the message.
-     * @param spanOperationName The operation name to set for the span created in this method.
-     *                          If {@code null}, "send message" will be used.
-     * @param context The currently active OpenTracing span (may be {@code null}). An implementation should use this as
-     *            the parent for any span it creates for tracing the execution of this operation.
+     * @param currentSpan The <em>OpenTracing</em> span used to use for tracking the sending of the message.
+     *             The span will <em>not</em> be finished by this method.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will be succeeded if the message has been sent.
      *         <p>
      *         The future will be failed with a {@link org.eclipse.hono.client.ServerErrorException} if the data could
      *         not be sent. The error code contained in the exception indicates the cause of the failure.
-     * @throws NullPointerException if topic, tenantId, deviceId or properties are {@code null}.
+     * @throws NullPointerException if topic, tenantId, deviceId, properties or span are {@code null}.
      */
-    protected Future<Void> sendAndWaitForOutcome(final String topic, final String tenantId, final String deviceId,
-            final Buffer payload, final Map<String, Object> properties, final String spanOperationName,
-            final SpanContext context) {
+    protected final Future<Void> sendAndWaitForOutcome(
+            final String topic,
+            final String tenantId,
+            final String deviceId,
+            final Buffer payload,
+            final Map<String, Object> properties,
+            final Span currentSpan) {
+
         Objects.requireNonNull(topic);
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(properties);
+        Objects.requireNonNull(currentSpan);
 
-        final Span span = startSpan(spanOperationName, topic, tenantId, deviceId, References.CHILD_OF, context);
-        final List<KafkaHeader> headers = encodePropertiesAsKafkaHeaders(properties, span);
-        return sendAndWaitForOutcome(topic, tenantId, deviceId, payload, headers, span);
+        final List<KafkaHeader> headers = encodePropertiesAsKafkaHeaders(properties, currentSpan);
+        return sendAndWaitForOutcome(topic, tenantId, deviceId, payload, headers, currentSpan);
     }
 
     /**
-     * Sends a message to a kafka cluster and waits for the outcome.
+     * Sends a message to a Kafka broker and waits for the outcome.
      *
      * @param topic The topic to send the message to.
      * @param tenantId The tenant that the device belongs to.
      * @param deviceId The device identifier.
-     * @param payload The data to send.
+     * @param payload The data to send or {@code null} if the message has no payload.
      * @param headers Additional meta data that should be included in the message.
-     * @param spanOperationName The operation name to set for the span created in this method.
-     *                          If {@code null}, "send message" will be used.
-     * @param context The currently active OpenTracing span (may be {@code null}). An implementation should use this as
-     *            the parent for any span it creates for tracing the execution of this operation.
-     * @return A future indicating the outcome of the operation.
-     *         <p>
-     *         The future will be succeeded if the message has been sent.
-     *         <p>
-     *         The future will be failed with a {@link org.eclipse.hono.client.ServerErrorException} if the data could
-     *         not be sent. The error code contained in the exception indicates the cause of the failure.
-     * @throws NullPointerException if topic, tenantId, deviceId or headers are {@code null}.
-     */
-    protected Future<Void> sendAndWaitForOutcome(final String topic, final String tenantId, final String deviceId,
-            final Buffer payload, final List<KafkaHeader> headers, final String spanOperationName,
-            final SpanContext context) {
-        Objects.requireNonNull(topic);
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(headers);
-
-        final Span span = startSpan(spanOperationName, topic, tenantId, deviceId, References.CHILD_OF, context);
-        return sendAndWaitForOutcome(topic, tenantId, deviceId, payload, headers, span);
-    }
-
-    /**
-     * Sends a message to a kafka cluster and waits for the outcome.
-     *
-     * @param topic The topic to send the message to.
-     * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The device identifier.
-     * @param payload The data to send.
-     * @param headers Additional meta data that should be included in the message.
-     * @param span The <em>OpenTracing</em> span used to trace the sending of the message.
-     *             The span will be finished by this method.
+     * @param currentSpan The <em>OpenTracing</em> span used to use for tracking the sending of the message.
+     *             The span will <em>not</em> be finished by this method.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will be succeeded if the message has been sent.
@@ -252,13 +174,19 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
      *         not be sent. The error code contained in the exception indicates the cause of the failure.
      * @throws NullPointerException if topic, tenantId, deviceId, headers or span are {@code null}.
      */
-    protected Future<Void> sendAndWaitForOutcome(final String topic, final String tenantId, final String deviceId,
-            final Buffer payload, final List<KafkaHeader> headers, final Span span) {
+    protected final Future<Void> sendAndWaitForOutcome(
+            final String topic,
+            final String tenantId,
+            final String deviceId,
+            final Buffer payload,
+            final List<KafkaHeader> headers,
+            final Span currentSpan) {
+
         Objects.requireNonNull(topic);
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(headers);
-        Objects.requireNonNull(span);
+        Objects.requireNonNull(currentSpan);
 
         if (stopped) {
             return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "sender already stopped"));
@@ -267,20 +195,16 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
 
         log.trace("sending message to Kafka [topic: {}, tenantId: {}, deviceId: {}]", topic, tenantId, deviceId);
         record.addHeaders(headers);
-        KafkaTracingHelper.injectSpanContext(tracer, record, span.context());
-        logProducerRecord(span, record);
+        KafkaTracingHelper.injectSpanContext(tracer, record, currentSpan.context());
+        logProducerRecord(currentSpan, record);
 
         return getOrCreateProducer().send(record)
-                .recover(t -> {
-                    logError(span, topic, tenantId, deviceId, t);
-                    span.finish();
-                    return Future.failedFuture(new ServerErrorException(getErrorCode(t), t));
+                .onSuccess(recordMetadata -> logRecordMetadata(currentSpan, deviceId, recordMetadata))
+                .otherwise(t -> {
+                    logError(currentSpan, topic, tenantId, deviceId, t);
+                    throw new ServerErrorException(tenantId, getErrorCode(t), t);
                 })
-                .map(recordMetadata -> {
-                    logRecordMetadata(span, deviceId, recordMetadata);
-                    span.finish();
-                    return null;
-                });
+                .mapEmpty();
     }
 
     private KafkaProducer<String, Buffer> getOrCreateProducer() {
@@ -294,7 +218,7 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
      * @param span The span to log to if there are exceptions encoding the properties.
      * @return The created header list.
      */
-    protected final List<KafkaHeader> encodePropertiesAsKafkaHeaders(final Map<String, Object> properties, final Span span) {
+    private List<KafkaHeader> encodePropertiesAsKafkaHeaders(final Map<String, Object> properties, final Span span) {
         final List<KafkaHeader> headers = new ArrayList<>();
 
         properties.forEach((k, v) -> {

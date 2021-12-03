@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
@@ -29,9 +28,7 @@ import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 
-import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
-import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 
 /**
@@ -62,11 +59,8 @@ public abstract class AbstractKafkaBasedDownstreamSender extends AbstractKafkaBa
     }
 
     /**
-     * Sends a message downstream.
-     * <p>
-     * Default properties defined either at the device or tenant level are added to the message headers.
+     * Adds default properties defined either at the device or tenant level are added to the message headers.
      *
-     * @param topic The topic to send the message to.
      * @param tenant The tenant that the device belongs to.
      * @param device The registration assertion for the device that the data originates from.
      * @param qos The delivery semantics to use for sending the data.
@@ -81,53 +75,20 @@ public abstract class AbstractKafkaBasedDownstreamSender extends AbstractKafkaBa
      *            <li>the {@linkplain org.eclipse.hono.util.MessageHelper#CONTENT_TYPE_OCTET_STREAM default content
      *            type}</li>
      *            </ol>
-     * @param payload The data to send.
      * @param properties Additional meta data that should be included in the downstream message.
-     * @param spanOperationName The operation name to set for the span created in this method.
-     *                          If {@code null}, "send message" will be used.
-     * @param context The currently active OpenTracing span (may be {@code null}). An implementation should use this as
-     *            the parent for any span it creates for tracing the execution of this operation.
-     * @return A future indicating the outcome of the operation.
-     *         <p>
-     *         The future will be succeeded if the message has been sent downstream.
-     *         <p>
-     *         The future will be failed with a {@link org.eclipse.hono.client.ServerErrorException} if the data could
-     *         not be sent. The error code contained in the exception indicates the cause of the failure.
-     * @throws NullPointerException if topic, tenant, device, or qos are {@code null}.
+     * @return The augmented properties.
+     * @throws NullPointerException if tenant, device or qos are {@code null}.
      */
-    protected Future<Void> send(
-            final HonoTopic topic,
+    protected final Map<String, Object> addDefaults(
             final TenantObject tenant,
             final RegistrationAssertion device,
             final QoS qos,
             final String contentType,
-            final Buffer payload,
-            final Map<String, Object> properties,
-            final String spanOperationName,
-            final SpanContext context) {
+            final Map<String, Object> properties) {
 
-        Objects.requireNonNull(topic);
         Objects.requireNonNull(tenant);
         Objects.requireNonNull(device);
         Objects.requireNonNull(qos);
-
-        final String tenantId = tenant.getTenantId();
-        final String deviceId = device.getDeviceId();
-        log.trace("sending to Kafka [topic: {}, tenantId: {}, deviceId: {}, qos: {}, contentType: {}, properties: {}]",
-                topic, tenantId, deviceId, qos, contentType, properties);
-        final Map<String, Object> propsWithDefaults = addDefaults(tenant, device, qos, contentType, properties);
-
-        if (QoS.AT_LEAST_ONCE.equals(qos)) {
-            return sendAndWaitForOutcome(topic.toString(), tenantId, deviceId, payload, propsWithDefaults,
-                    spanOperationName, context);
-        } else {
-            send(topic.toString(), tenantId, deviceId, payload, propsWithDefaults, spanOperationName, context);
-            return Future.succeededFuture();
-        }
-    }
-
-    private Map<String, Object> addDefaults(final TenantObject tenant, final RegistrationAssertion device,
-            final QoS qos, final String contentType, final Map<String, Object> properties) {
 
         final Map<String, Object> headerProperties = new HashMap<>();
         if (isDefaultsEnabled) {

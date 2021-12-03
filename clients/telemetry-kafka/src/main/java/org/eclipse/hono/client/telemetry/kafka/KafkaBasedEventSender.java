@@ -25,6 +25,7 @@ import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.TenantObject;
 
+import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
@@ -71,7 +72,23 @@ public class KafkaBasedEventSender extends AbstractKafkaBasedDownstreamSender im
         }
 
         final HonoTopic topic = new HonoTopic(HonoTopic.Type.EVENT, tenant.getTenantId());
-        return send(topic, tenant, device, QoS.AT_LEAST_ONCE, contentType, payload, properties, "forward Event", context);
+        final Map<String, Object> propsWithDefaults = addDefaults(tenant, device, QoS.AT_LEAST_ONCE, contentType, properties);
+        final String topicName = topic.toString();
+
+        final Span currentSpan = startChildSpan(
+                "forward Event",
+                topicName,
+                tenant.getTenantId(),
+                device.getDeviceId(),
+                context);
+        return sendAndWaitForOutcome(
+                topic.toString(),
+                tenant.getTenantId(),
+                device.getDeviceId(),
+                payload,
+                propsWithDefaults,
+                currentSpan)
+            .onComplete(ar -> currentSpan.finish());
     }
 
     @Override
