@@ -47,7 +47,8 @@ type configuration is ignored.
 
 The `org.eclipse.hono.client.kafka.CachingKafkaProducerFactory` factory can be used to create Kafka producers for Hono's
 Kafka based APIs. The producers created by the factory are configured with instances of the class
-`org.eclipse.hono.client.kafka.MessagingKafkaConsumerConfigProperties` which can be used to programmatically configure a producer.
+`org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties` which can be used to programmatically
+configure a producer.
 
 The configuration needs to be provided in the form `HONO_KAFKA_PRODUCERCONFIG_${PROPERTY}` as an environment variable or
 as a Java system property in the form `hono.kafka.producerConfig.${property}`, where `${PROPERTY}` respectively
