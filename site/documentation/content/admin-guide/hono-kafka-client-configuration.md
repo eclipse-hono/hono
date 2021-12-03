@@ -6,6 +6,14 @@ weight = 342
 Several Hono components can be configured to support Kafka as the messaging infrastructure. The Kafka client used
 for this purpose can be configured by means of operating system environment variables and/or Java system properties.
 
+A Hono component can use multiple Kafka clients for different tasks. Each client has a type (producer, consumer, or
+admin client) and a name which is part of the prefix of the configuration properties used to configure the client. The
+name is part of the prefix of the configuration properties used to configure a client. For the clients and their names,
+please refer to the admin guide of the respective component.
+
+The configuration properties are directly passed to the Kafka clients (without the prefixes) without Hono parsing or
+validating them.
+
 {{% notice info %}}
 The support of Kafka as a messaging system is currently a preview and not yet ready for production.
 The implementation as well as its APIs may change with the next version.
@@ -50,13 +58,16 @@ Kafka based APIs. The producers created by the factory are configured with insta
 `org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties` which can be used to programmatically
 configure a producer.
 
-The configuration needs to be provided in the form `HONO_KAFKA_PRODUCERCONFIG_${PROPERTY}` as an environment variable or
-as a Java system property in the form `hono.kafka.producerConfig.${property}`, where `${PROPERTY}` respectively
-`${property}` is any of the Kafka client's [producer properties](https://kafka.apache.org/documentation/#producerconfigs).
-The provided configuration is passed directly to the Kafka producer without Hono parsing or validating it.
+The configuration needs to be provided in the form `HONO_KAFKA_${CLIENTNAME}_PRODUCERCONFIG_${PROPERTY}` as an
+environment variable or as a Java system property in the form `hono.kafka.${clientName}.producerConfig.${property}`,
+where `${PROPERTY}` respectively `${property}` is any of the Kafka client's
+[producer properties](https://kafka.apache.org/documentation/#producerconfigs)
+and `${CLIENTNAME}` respectively `${clientName}` is the name of the client to be configured, as documented in the
+component's admin guide.
 
-The following properties can _not_ be set using this mechanism because the protocol adapters use fixed values instead 
-in order to implement the message delivery semantics defined by Hono's Telemetry and Event APIs.
+The following properties can _not_ be set because
+`org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties` uses fixed values instead in order to
+implement the message delivery semantics defined by Hono's Telemetry and Event APIs.
 
 | Property Name     | Fixed Value |
 | :---------------- | :---------- |
@@ -64,93 +75,71 @@ in order to implement the message delivery semantics defined by Hono's Telemetry
 | `value.serializer`   | `io.vertx.kafka.client.serialization.BufferSerializer` |
 | `enable.idempotence` | `true` |
 
-{{% notice tip %}}
-The Kafka client requires at least the `bootstrap.servers` property to be set. This is the minimal configuration
-required to enable Kafka based messaging.
-{{% /notice %}}
-
-### Using TLS
-
-The factory can be configured to use TLS for authenticating the brokers in the Kafka cluster during connection
-establishment and optionally for authenticating to the broker using a client certificate.
-To use this, a Kafka Producer configuration as described in
-[Kafka documentation - section "Security"](https://kafka.apache.org/documentation/#security_configclients) needs to be
-provided. The properties must be prefixed with `HONO_KAFKA_PRODUCERCONFIG_` and `hono.kafka.producerConfig.` respectively as
-shown in [Producer Configuration Properties]({{< relref "#producer-configuration-properties" >}}).
-The complete reference of available properties and the possible values is available in 
-[Kafka documentation - section "Producer Configs"](https://kafka.apache.org/documentation/#producerconfigs).
+Kafka clients used in Hono will get a unique client identifier, containing client name and component identifier. 
+If the property `client.id` is provided, its value will be used as prefix for the created client identifier.
 
 ## Consumer Configuration Properties
 
 Consumers for Hono's Kafka based APIs are configured with instances of the class
 `org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties` which can be used to programmatically configure a consumer.
 
-The configuration needs to be provided in the form `HONO_KAFKA_CONSUMERCONFIG_${PROPERTY}` as an environment variable or
-as a Java system property in the form `hono.kafka.consumerConfig.${property}`, where `${PROPERTY}` respectively
-`${property}` is any of the Kafka client's [consumer properties](https://kafka.apache.org/documentation/#consumerconfigs).
-The provided configuration is passed directly to the Kafka consumer without Hono parsing or validating it.
+The configuration needs to be provided in the form `HONO_KAFKA_${CLIENTNAME}_CONSUMERCONFIG_${PROPERTY}` as an
+environment variable or as a Java system property in the form `hono.kafka.${clientName}.consumerConfig.${property}`,
+where `${PROPERTY}` respectively `${property}` is any of the Kafka client's
+[consumer properties](https://kafka.apache.org/documentation/#consumerconfigs)
+and `${CLIENTNAME}` respectively `${clientName}` is the name of the client to be configured, as documented in the
+component's admin guide.
 
-The following properties can _not_ be set using this mechanism because the protocol adapters use fixed values instead.
+The following properties can _not_ be set because
+`org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties` uses fixed values instead.
 
 | Property Name     | Fixed Value |
 | :---------------- | :---------- |
 | `key.deserializer`   | `org.apache.kafka.common.serialization.StringDeserializer` |
 | `value.deserializer` | `io.vertx.kafka.client.serialization.BufferDeserializer` |
 
-{{% notice tip %}}
-The Kafka client requires at least the `bootstrap.servers` property to be set. This variable is the minimal configuration
-required to enable Kafka based messaging.
-{{% /notice %}}
-
-### Using TLS
-
-The factory can be configured to use TLS for authenticating the brokers in the Kafka cluster during connection establishment
-and optionally for authenticating to the broker using a client certificate.
-To use this, a Kafka Consumer configuration as described in
-[Kafka documentation - section "Security"](https://kafka.apache.org/documentation/#security_configclients) needs to be provided.
-The properties must be prefixed with `HONO_KAFKA_CONSUMERCONFIG_` and `hono.kafka.consumerConfig.` respectively as shown in
-[Consumer Configuration Properties]({{< relref "#consumer-configuration-properties" >}}).
-The complete reference of available properties and the possible values is available in
-[Kafka documentation - section "Consumer Configs"](https://kafka.apache.org/documentation/#consumerconfigs).
-
+Kafka clients used in Hono will get a unique client identifier, containing client name and component identifier.
+If the property `client.id` is provided, its value will be used as prefix for the created client identifier.
 
 ## Admin Client Configuration Properties
 
 Admin clients for Hono's Kafka based APIs are configured with instances of the class
 `org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties` which can be used to programmatically configure an admin client.
 
-The configuration needs to be provided in the form `HONO_KAFKA_ADMINCLIENTCONFIG_${PROPERTY}` as an environment variable or
-as a Java system property in the form `hono.kafka.adminClientConfig.${property}`, where `${PROPERTY}` respectively
-`${property}` is any of the Kafka client's [admin client properties](https://kafka.apache.org/documentation/#adminclientconfigs).
-The provided configuration is passed directly to the Kafka admin client without Hono parsing or validating it.
+The configuration needs to be provided in the form `HONO_KAFKA_${CLIENTNAME}_ADMINCLIENTCONFIG_${PROPERTY}` as an
+environment variable or as a Java system property in the form `hono.kafka.${clientName}.adminClientConfig.${property}`,
+where `${PROPERTY}` respectively `${property}` is any of the Kafka client's
+[admin client properties](https://kafka.apache.org/documentation/#adminclientconfigs) and `${CLIENTNAME}`
+respectively `${clientName}` is the name of the client to be configured, as documented in the component's admin guide.
 
-{{% notice tip %}}
-The Kafka client requires at least the `bootstrap.servers` property to be set. This variable is the minimal configuration
-required to enable Kafka based messaging.
-{{% /notice %}}
-
-### Using TLS
-
-The factory can be configured to use TLS for authenticating the brokers in the Kafka cluster during connection establishment
-and optionally for authenticating to the broker using a client certificate.
-To use this, a Kafka admin client configuration as described in
-[Kafka documentation - section "Security"](https://kafka.apache.org/documentation/#security_configclients) needs to be provided.
-The properties must be prefixed with `HONO_KAFKA_ADMINCLIENTCONFIG_` and `hono.kafka.adminClientConfig.` respectively as shown in
-[Admin Client Configuration Properties]({{< relref "#admin-client-configuration-properties" >}}).
-The complete reference of available properties and the possible values is available in
-[Kafka documentation - section "Admin Configs"](https://kafka.apache.org/documentation/#adminclientconfigs).
+Kafka clients used in Hono will get a unique client identifier, containing client name and component identifier.
+If the property `client.id` is provided, its value will be used as prefix for the created client identifier.
 
 ## Common Configuration Properties
 
-Configuration properties that are common to all the client types described above can be put in a common configuration section.
-This will avoid having to define duplicate configuration properties for the different client types.
-
-Relevant properties are `bootstrap.servers` and the properties related to authentication and TLS configuration (see chapters above).
+Usually, all Kafka clients will connect to the same Kafka cluster and need the same configuration properties to
+establish the connection, like `bootstrap.servers` and the properties related to authentication and TLS configuration.
+Such configuration properties that are common to all the clients of a Hono component can be put in a common
+configuration section. This will avoid having to define duplicate configuration properties for the different client
+types.
 
 The properties must be prefixed with `HONO_KAFKA_COMMONCLIENTCONFIG_` and `hono.kafka.commonClientConfig.` respectively.
 
 A property with the same name defined in the configuration of one of the specific client types above will have precedence
 over the common property.
+
+{{% notice tip %}}
+The Kafka clients require at least the `bootstrap.servers` property to be set. This is the minimal configuration
+required to enable Kafka based messaging.
+{{% /notice %}}
+
+## Using TLS
+
+The factory can be configured to use TLS for authenticating the brokers in the Kafka cluster during connection
+establishment and optionally for authenticating to the broker using a client certificate.
+To use this, a Kafka client configuration as described in
+[Kafka documentation - section "Security"](https://kafka.apache.org/documentation/#security_configclients) needs to be
+provided, either in the common configuration or individually per client as shown above. 
 
 ## Kafka client metrics configuration
 
