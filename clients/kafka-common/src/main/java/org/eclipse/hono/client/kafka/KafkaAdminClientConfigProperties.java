@@ -61,9 +61,11 @@ public class KafkaAdminClientConfigProperties extends AbstractKafkaConfigPropert
 
     /**
      * Gets the Kafka admin client configuration. This is the result of applying the admin client configuration on the
-     * common configuration. The returned map will contain a property {@code client.id} which will be set to a unique
-     * value containing the already set client id or alternatively the value set via
-     * {@link #setDefaultClientIdPrefix(String)}, the given adminClientName and a newly created UUID.
+     * common configuration.
+     * <p>
+     * It is ensured that the returned map contains a unique {@code client.id}. The client ID will be created from the
+     * given client name, followed by a unique ID (containing component identifiers if running in Kubernetes).
+     * An already set {@code client.id} property value will be used as prefix for the client ID.
      *
      * Note: This method should be called for each new admin client, ensuring that a unique client id is used.
      *

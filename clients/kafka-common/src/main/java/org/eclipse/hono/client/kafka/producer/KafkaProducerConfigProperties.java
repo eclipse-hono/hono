@@ -83,10 +83,11 @@ public class KafkaProducerConfigProperties extends AbstractKafkaConfigProperties
 
     /**
      * Gets the Kafka producer configuration. This is the result of applying the producer configuration on the common
-     * configuration. It includes changes made in {@link #adaptConfiguration(Map)}. The returned map will contain a
-     * property {@code client.id} which will be set to a unique value containing the already set client id or
-     * alternatively the value set via {@link #setDefaultClientIdPrefix(String)}, the given producerName and a newly
-     * created UUID.
+     * configuration. It includes changes made in {@link #adaptConfiguration(Map)}.
+     * <p>
+     * It is ensured that the returned map contains a unique {@code client.id}. The client ID will be created from the
+     * given client name, followed by a unique ID (containing component identifiers if running in Kubernetes).
+     * An already set {@code client.id} property value will be used as prefix for the client ID.
      *
      * Note: This method should be called for each new producer, ensuring that a unique client id is used.
      *

@@ -88,8 +88,6 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
 @ApplicationScoped
 public class Application extends AbstractServiceApplication {
 
-    private static final String DEFAULT_CLIENT_ID_PREFIX = "cmd-router";
-
     // workaround so that the Quarkus KubernetesClientProcessor finds a Pod watcher and registers corresponding model classes
     static {
         new Watcher<Pod>() {
@@ -196,16 +194,9 @@ public class Application extends AbstractServiceApplication {
             @ConfigMapping(prefix = "hono.kafka.cleanup") final KafkaAdminClientOptions adminClientOptions) {
 
         this.commandInternalKafkaProducerConfig = new MessagingKafkaProducerConfigProperties(commonOptions, commandInternalProducerOptions);
-        this.commandInternalKafkaProducerConfig.setDefaultClientIdPrefix(DEFAULT_CLIENT_ID_PREFIX);
-
         this.commandResponseKafkaProducerConfig = new MessagingKafkaProducerConfigProperties(commonOptions, commandResponseProducerOptions);
-        this.commandResponseKafkaProducerConfig.setDefaultClientIdPrefix(DEFAULT_CLIENT_ID_PREFIX);
-
         this.kafkaConsumerConfig = new MessagingKafkaConsumerConfigProperties(commonOptions, consumerOptions);
-        this.kafkaConsumerConfig.setDefaultClientIdPrefix(DEFAULT_CLIENT_ID_PREFIX);
-
         this.kafkaAdminClientConfig = new KafkaAdminClientConfigProperties(commonOptions, adminClientOptions);
-        this.kafkaAdminClientConfig.setDefaultClientIdPrefix(DEFAULT_CLIENT_ID_PREFIX);
     }
 
     @Override

@@ -47,15 +47,6 @@ public class KafkaConsumerConfigPropertiesTest {
     }
 
     /**
-     * Verifies that trying to set a {@code null} client ID throws a {@link NullPointerException}.
-     */
-    @Test
-    public void testThatClientIdCanNotBeSetToNull() {
-        assertThrows(NullPointerException.class,
-                () -> config.setDefaultClientIdPrefix(null));
-    }
-
-    /**
      * Verifies that trying to set a negative poll timeout throws an {@link IllegalArgumentException}.
      */
     @Test
@@ -108,33 +99,18 @@ public class KafkaConsumerConfigPropertiesTest {
     }
 
     /**
-     * Verifies that the client ID set with {@link KafkaConsumerConfigProperties#setDefaultClientIdPrefix(String)} is
-     * applied when it is NOT present in the configuration.
+     * Verifies that the client ID set in the {@link KafkaConsumerConfigProperties#getConsumerConfig(String)} map
+     * conforms to the expected format.
      */
     @Test
-    public void testThatClientIdIsApplied() {
-        final String clientId = "the-client";
+    public void testThatCreatedClientIdConformsToExpectedFormat() {
+        final String componentUid = "hono-adapter-amqp-vertx-7548cc6c66-4qhqh_ed7c6ab9cc27";
 
-        config.setConsumerConfig(Map.of());
-        config.setDefaultClientIdPrefix(clientId);
-
-        final Map<String, String> consumerConfig = config.getConsumerConfig("consumerName");
-        assertThat(consumerConfig.get("client.id")).startsWith(clientId + "-consumerName-");
-    }
-
-    /**
-     * Verifies that the client ID set with {@link KafkaConsumerConfigProperties#setDefaultClientIdPrefix(String)} is
-     * NOT applied when it is present in the configuration.
-     */
-    @Test
-    public void testThatClientIdIsNotAppliedIfAlreadyPresent() {
-        final String userProvidedClientId = "custom-client";
-
-        config.setConsumerConfig(Map.of("client.id", userProvidedClientId));
-        config.setDefaultClientIdPrefix("other-client");
+        config.setConsumerConfig(Map.of("client.id", "configuredId"));
+        config.overrideComponentUidUsedForClientId(componentUid);
 
         final Map<String, String> consumerConfig = config.getConsumerConfig("consumerName");
-        assertThat(consumerConfig.get("client.id")).startsWith(userProvidedClientId + "-consumerName-");
+        assertThat(consumerConfig.get("client.id")).matches("configuredId-consumerName-" + componentUid + "_\\d+");
     }
 
 }

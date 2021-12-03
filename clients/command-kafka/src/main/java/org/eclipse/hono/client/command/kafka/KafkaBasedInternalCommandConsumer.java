@@ -70,7 +70,6 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
     private static final Logger LOG = LoggerFactory.getLogger(KafkaBasedInternalCommandConsumer.class);
 
     private static final int NUM_PARTITIONS = 1;
-    private static final String CLIENT_NAME = "internal-cmd";
     private static final long CREATE_TOPIC_RETRY_INTERVAL = 1000L;
 
     private final Supplier<Future<KafkaConsumer<String, Buffer>>> consumerCreator;
@@ -122,7 +121,7 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
         this.commandHandlers = Objects.requireNonNull(commandHandlers);
         this.tracer = Objects.requireNonNull(tracer);
 
-        final Map<String, String> adminClientConfig = adminClientConfigProperties.getAdminClientConfig(CLIENT_NAME);
+        final Map<String, String> adminClientConfig = adminClientConfigProperties.getAdminClientConfig("internal-cmd-admin");
         // Vert.x KafkaAdminClient doesn't support creating topics using the broker default replication factor,
         // therefore use Kafka Admin client directly here
         final String bootstrapServersConfig = adminClientConfig.get(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG);
@@ -132,7 +131,7 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
                 bootstrapServersConfig,
                 KafkaClientFactory.UNLIMITED_RETRIES_DURATION);
 
-        final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig(CLIENT_NAME);
+        final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig("internal-cmd");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, adapterInstanceId);
         // no commits of partition offsets needed - topic only used during lifetime of this consumer
         consumerConfig.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
