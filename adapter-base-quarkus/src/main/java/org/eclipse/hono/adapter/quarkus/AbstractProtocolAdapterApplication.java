@@ -235,19 +235,10 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             @ConfigMapping(prefix = "hono.kafka.commandInternal") final KafkaAdminClientOptions commandInternalOptions) {
 
         kafkaTelemetryConfig = new MessagingKafkaProducerConfigProperties(commonOptions, telemetryOptions);
-        Optional.ofNullable(getComponentName()).ifPresent(kafkaTelemetryConfig::setDefaultClientIdPrefix);
-
         kafkaEventConfig = new MessagingKafkaProducerConfigProperties(commonOptions, eventOptions);
-        Optional.ofNullable(getComponentName()).ifPresent(kafkaEventConfig::setDefaultClientIdPrefix);
-
         kafkaCommandResponseConfig = new MessagingKafkaProducerConfigProperties(commonOptions, commandResponseOptions);
-        Optional.ofNullable(getComponentName()).ifPresent(kafkaCommandResponseConfig::setDefaultClientIdPrefix);
-
         kafkaCommandConfig = new MessagingKafkaConsumerConfigProperties(commonOptions, commandOptions);
-        Optional.ofNullable(getComponentName()).ifPresent(kafkaCommandConfig::setDefaultClientIdPrefix);
-
         kafkaCommandInternalConfig = new KafkaAdminClientConfigProperties(commonOptions, commandInternalOptions);
-        Optional.ofNullable(getComponentName()).ifPresent(kafkaCommandInternalConfig::setDefaultClientIdPrefix);
     }
 
     @Override

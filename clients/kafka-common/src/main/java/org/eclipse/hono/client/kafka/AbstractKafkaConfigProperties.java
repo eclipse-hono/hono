@@ -18,8 +18,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.kafka.clients.CommonClientConfigs;
+import org.eclipse.hono.util.KubernetesContainerUtil;
 import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,16 +36,34 @@ public abstract class AbstractKafkaConfigProperties {
      */
     public static final String PROPERTY_BOOTSTRAP_SERVERS = "bootstrap.servers";
 
+    private static final AtomicInteger ID_COUNTER = new AtomicInteger();
+
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
     /**
-     * Client id prefix to be applied if no {@code client.id} property is set in the common
-     * or specific client config properties.
+     * If set, this ID along with the incremented idCounter value will be used as client ID suffix.
      */
-    protected String defaultClientIdPrefix;
+    private String componentUId;
 
     private Map<String, String> commonClientConfig;
     private Map<String, String> specificClientConfig;
+
+    /**
+     * Creates a new instance.
+     */
+    protected AbstractKafkaConfigProperties() {
+        this.componentUId = getComponentUIdFromEnv();
+    }
+
+    private String getComponentUIdFromEnv() {
+        final String k8sContainerId = KubernetesContainerUtil.getContainerId();
+        if (k8sContainerId != null && k8sContainerId.length() >= 12) {
+            // running in Kubernetes: use HOSTNAME env var containing the pod name
+            final String podName = System.getenv("HOSTNAME");
+            return String.format("%s_%s", podName, k8sContainerId.substring(0, 12));
+        }
+        return null;
+    }
 
     /**
      * Sets the common Kafka client config to be used.
@@ -67,17 +87,20 @@ public abstract class AbstractKafkaConfigProperties {
     }
 
     /**
-     * Sets the prefix for the client ID that is passed to the Kafka server to allow application specific server-side
-     * request logging.
+     * Sets the component unique ID to be included in the client ID along with a counter value.
      * <p>
-     * If the common or specific client config already contains a value for key {@code client.id}, that one
-     * will be used and the parameter here will be ignored.
+     * This overrides the unique ID determined automatically in case this application is running in Kubernetes
+     * (consisting of Pod/Container ID then).
+     * <p>
+     * Setting {@code null} here means that a UUID will be used in the client ID instead of component unique ID and
+     * counter value.
+     * <p>
+     * This method is mainly intended for usage in non-Kubernetes environments and unit tests.
      *
-     * @param clientId The client ID prefix to set.
-     * @throws NullPointerException if the client ID is {@code null}.
+     * @param componentUId The component ID to use.
      */
-    public final void setDefaultClientIdPrefix(final String clientId) {
-        this.defaultClientIdPrefix = Objects.requireNonNull(clientId);
+    public final void overrideComponentUidUsedForClientId(final String componentUId) {
+        this.componentUId = componentUId;
     }
 
     /**
@@ -93,9 +116,10 @@ public abstract class AbstractKafkaConfigProperties {
     /**
      * Gets the Kafka client configuration. This is the common configuration on which the client specific configuration
      * has been applied.
-     *
-     * An already set client id property or alternatively the value set via {@link #setDefaultClientIdPrefix(String)}
-     * will be used as a prefix, to which the given clientName and a UUID will be added.
+     * <p>
+     * It is ensured that the returned map contains a unique {@code client.id}. The client ID will be created from the
+     * given client name, followed by a unique ID (containing component identifiers if running in Kubernetes).
+     * An already set {@code client.id} property value will be used as prefix for the client ID.
      *
      * @param clientName A name for the client to include in the added {@code client.id} property.
      * @return a copy of the client configuration with the applied properties.
@@ -142,16 +166,15 @@ public abstract class AbstractKafkaConfigProperties {
     }
 
     private void setUniqueClientId(final Map<String, String> config, final String clientName) {
+        final String uniqueClientIdSuffix = Optional.ofNullable(componentUId)
+                .map(uid -> String.format("%s_%s", uid, ID_COUNTER.getAndIncrement()))
+                .orElseGet(() -> UUID.randomUUID().toString());
 
-        final UUID uuid = UUID.randomUUID();
-        final String clientIdPrefix = Optional.ofNullable(config.get(CommonClientConfigs.CLIENT_ID_CONFIG))
-                .orElse(defaultClientIdPrefix);
-        if (clientIdPrefix == null) {
-            config.put(CommonClientConfigs.CLIENT_ID_CONFIG, String.format("%s-%s", clientName, uuid));
-        } else {
-            config.put(CommonClientConfigs.CLIENT_ID_CONFIG,
-                    String.format("%s-%s-%s", clientIdPrefix, clientName, uuid));
-        }
+        final String uniqueClientId = Optional.ofNullable(config.get(CommonClientConfigs.CLIENT_ID_CONFIG))
+                .map(clientIdPrefix -> String.format("%s-%s-%s", clientIdPrefix, clientName, uniqueClientIdSuffix))
+                .orElseGet(() -> String.format("%s-%s", clientName, uniqueClientIdSuffix));
+
+        config.put(CommonClientConfigs.CLIENT_ID_CONFIG, uniqueClientId);
     }
 
     /**

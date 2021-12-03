@@ -163,7 +163,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
         commandHandler = new KafkaBasedMappingAndDelegatingCommandHandler(vertx, tenantClient, commandQueue,
                 commandTargetMapper, internalCommandSender, kafkaBasedCommandResponseSender, metrics, tracer);
 
-        final Map<String, String> consumerConfig = kafkaConsumerConfig.getConsumerConfig("consumer");
+        final Map<String, String> consumerConfig = kafkaConsumerConfig.getConsumerConfig("command");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
         consumerConfig.putIfAbsent(ConsumerConfig.PARTITION_ASSIGNMENT_STRATEGY_CONFIG, CooperativeStickyAssignor.class.getName());
         consumerConfig.putIfAbsent(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");

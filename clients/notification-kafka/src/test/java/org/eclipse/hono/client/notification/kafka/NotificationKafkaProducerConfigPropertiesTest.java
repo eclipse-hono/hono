@@ -39,15 +39,6 @@ public class NotificationKafkaProducerConfigPropertiesTest {
     }
 
     /**
-     * Verifies that trying to set a {@code null} client ID throws a {@link NullPointerException}.
-     */
-    @Test
-    public void testThatClientIdCanNotBeSetToNull() {
-        assertThrows(NullPointerException.class,
-                () -> new NotificationKafkaProducerConfigProperties().setDefaultClientIdPrefix(null));
-    }
-
-    /**
      * Verifies that properties provided with {@link NotificationKafkaProducerConfigProperties#setProducerConfig(Map)}
      * are returned in {@link NotificationKafkaProducerConfigProperties#getProducerConfig(String)}.
      */
@@ -120,37 +111,18 @@ public class NotificationKafkaProducerConfigPropertiesTest {
     }
 
     /**
-     * Verifies that the client ID set with
-     * {@link NotificationKafkaProducerConfigProperties#setDefaultClientIdPrefix(String)} is applied when it is NOT
-     * present in the configuration.
+     * Verifies that the client ID set in the {@link NotificationKafkaProducerConfigProperties#getProducerConfig(String)}
+     * map conforms to the expected format.
      */
     @Test
-    public void testThatClientIdIsApplied() {
-        final String clientId = "the-client";
+    public void testThatCreatedClientIdConformsToExpectedFormat() {
+        final String componentUid = "hono-adapter-amqp-vertx-7548cc6c66-4qhqh_ed7c6ab9cc27";
 
         final NotificationKafkaProducerConfigProperties config = new NotificationKafkaProducerConfigProperties();
-        config.setProducerConfig(Map.of());
-        config.setDefaultClientIdPrefix(clientId);
+        config.setProducerConfig(Map.of("client.id", "configuredId"));
+        config.overrideComponentUidUsedForClientId(componentUid);
 
         final Map<String, String> producerConfig = config.getProducerConfig("producerName");
-        assertThat(producerConfig.get("client.id")).startsWith(clientId + "-producerName-");
+        assertThat(producerConfig.get("client.id")).matches("^configuredId-producerName-" + componentUid + "_\\d+");
     }
-
-    /**
-     * Verifies that the client ID set with
-     * {@link NotificationKafkaProducerConfigProperties#setDefaultClientIdPrefix(String)} is NOT applied when it is
-     * present in the configuration.
-     */
-    @Test
-    public void testThatClientIdIsNotAppliedIfAlreadyPresent() {
-        final String userProvidedClientId = "custom-client";
-
-        final NotificationKafkaProducerConfigProperties config = new NotificationKafkaProducerConfigProperties();
-        config.setProducerConfig(Map.of("client.id", userProvidedClientId));
-        config.setDefaultClientIdPrefix("other-client");
-
-        final Map<String, String> producerConfig = config.getProducerConfig("producerName");
-        assertThat(producerConfig.get("client.id")).startsWith(userProvidedClientId + "-producerName-");
-    }
-
 }

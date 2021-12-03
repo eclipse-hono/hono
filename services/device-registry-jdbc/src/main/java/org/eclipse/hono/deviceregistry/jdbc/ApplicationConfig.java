@@ -436,7 +436,6 @@ public class ApplicationConfig {
     public MessagingKafkaProducerConfigProperties kafkaEventConfig() {
         final MessagingKafkaProducerConfigProperties configProperties = new MessagingKafkaProducerConfigProperties();
         configProperties.setCommonClientConfig(commonKafkaClientConfig());
-        configProperties.setDefaultClientIdPrefix("device-registry");
         return configProperties;
     }
 
@@ -777,7 +776,6 @@ public class ApplicationConfig {
     public NotificationKafkaProducerConfigProperties notificationKafkaProducerConfig() {
         final var configProperties = new NotificationKafkaProducerConfigProperties();
         configProperties.setCommonClientConfig(commonKafkaClientConfig());
-        configProperties.setDefaultClientIdPrefix("device-registry");
         return configProperties;
     }
 

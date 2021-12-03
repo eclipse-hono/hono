@@ -137,9 +137,6 @@ public abstract class AbstractMessagingClientConfig implements ComponentNameProv
     public MessagingKafkaProducerConfigProperties kafkaTelemetryConfig() {
         final MessagingKafkaProducerConfigProperties configProperties = new MessagingKafkaProducerConfigProperties();
         configProperties.setCommonClientConfig(commonKafkaClientConfig());
-        if (getComponentName() != null) {
-            configProperties.setDefaultClientIdPrefix(getComponentName());
-        }
         return configProperties;
     }
 
@@ -153,9 +150,6 @@ public abstract class AbstractMessagingClientConfig implements ComponentNameProv
     public MessagingKafkaProducerConfigProperties kafkaEventConfig() {
         final MessagingKafkaProducerConfigProperties configProperties = new MessagingKafkaProducerConfigProperties();
         configProperties.setCommonClientConfig(commonKafkaClientConfig());
-        if (getComponentName() != null) {
-            configProperties.setDefaultClientIdPrefix(getComponentName());
-        }
         return configProperties;
     }
 
@@ -169,9 +163,6 @@ public abstract class AbstractMessagingClientConfig implements ComponentNameProv
     public MessagingKafkaProducerConfigProperties kafkaCommandResponseConfig() {
         final MessagingKafkaProducerConfigProperties configProperties = new MessagingKafkaProducerConfigProperties();
         configProperties.setCommonClientConfig(commonKafkaClientConfig());
-        if (getComponentName() != null) {
-            configProperties.setDefaultClientIdPrefix(getComponentName());
-        }
         return configProperties;
     }
 
@@ -185,9 +176,6 @@ public abstract class AbstractMessagingClientConfig implements ComponentNameProv
     public MessagingKafkaConsumerConfigProperties kafkaCommandConfig() {
         final MessagingKafkaConsumerConfigProperties configProperties = new MessagingKafkaConsumerConfigProperties();
         configProperties.setCommonClientConfig(commonKafkaClientConfig());
-        if (getComponentName() != null) {
-            configProperties.setDefaultClientIdPrefix(getComponentName());
-        }
         return configProperties;
     }
 

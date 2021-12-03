@@ -47,6 +47,12 @@ description = "Information about changes in recent Hono releases. Includes new f
   For the Command Router component [remote data grid configuration]({{% doclink "/admin-guide/command-router-config/#remote-cache" %}})
   this can be done by setting the `hono.commandRouter.cache.remote.sslCiphers` property.
 
+## API Changes
+
+* The `hono.kafka.defaultClientIdPrefix` configuration property needs to be removed from existing configurations.
+  Configuring parts of the created Kafka client identifiers should usually not be needed any more. To still set a custom
+  part, the `client.id` property value may be used instead. It is adopted as prefix for created client identifiers.
+
 ## 1.10.0
 
 ### New Features

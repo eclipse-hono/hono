@@ -258,9 +258,6 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
     public KafkaAdminClientConfigProperties kafkaCommandInternalConfig() {
         final KafkaAdminClientConfigProperties configProperties = new KafkaAdminClientConfigProperties();
         configProperties.setCommonClientConfig(commonKafkaClientConfig());
-        if (getComponentName() != null) {
-            configProperties.setDefaultClientIdPrefix(getComponentName());
-        }
         return configProperties;
     }
 

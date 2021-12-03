@@ -69,8 +69,6 @@ public class HonoExampleApplicationBase {
     public static final Boolean USE_KAFKA = Boolean.valueOf(System.getProperty("kafka", "false"));
 
     private static final Logger LOG = LoggerFactory.getLogger(HonoExampleApplicationBase.class);
-    // used by Kafka for request logging
-    private static final String KAFKA_CLIENT_ID_PREFIX = "example.application";
     private static final String KAFKA_CONSUMER_GROUP_ID = "hono-example-application";
     private static final String COMMAND_SEND_LIFECYCLE_INFO = "sendLifecycleInfo";
     private static final Random RAND = new Random();
@@ -153,12 +151,10 @@ public class HonoExampleApplicationBase {
         commonClientConfig.setCommonClientConfig(properties);
         final MessagingKafkaConsumerConfigProperties consumerConfig = new MessagingKafkaConsumerConfigProperties();
         consumerConfig.setCommonClientConfig(commonClientConfig);
-        consumerConfig.setDefaultClientIdPrefix(KAFKA_CLIENT_ID_PREFIX);
         consumerConfig.setConsumerConfig(Map.of("group.id", KAFKA_CONSUMER_GROUP_ID));
 
         final MessagingKafkaProducerConfigProperties producerConfig = new MessagingKafkaProducerConfigProperties();
         producerConfig.setCommonClientConfig(commonClientConfig);
-        producerConfig.setDefaultClientIdPrefix(KAFKA_CLIENT_ID_PREFIX);
 
         final KafkaProducerFactory<String, Buffer> producerFactory = CachingKafkaProducerFactory.sharedFactory(vertx);
         return new KafkaApplicationClientImpl(vertx, consumerConfig, producerFactory, producerConfig);

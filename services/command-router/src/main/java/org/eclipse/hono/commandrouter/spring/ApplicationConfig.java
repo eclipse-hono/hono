@@ -107,7 +107,7 @@ public class ApplicationConfig {
     public static final String PROFILE_ENABLE_DEVICE_CONNECTION_ENDPOINT = "enable-device-connection-endpoint";
 
     private static final String BEAN_NAME_AMQP_SERVER = "amqpServer";
-    private static final String COMPONENT_NAME = "Command Router";
+    private static final String COMPONENT_NAME = "Hono Command Router";
 
     /**
      * Exposes an OpenTracing {@code Tracer} as a Spring Bean.
@@ -467,7 +467,6 @@ public class ApplicationConfig {
     public MessagingKafkaConsumerConfigProperties messagingKafkaConsumerConfig() {
         final MessagingKafkaConsumerConfigProperties configProperties = new MessagingKafkaConsumerConfigProperties();
         configProperties.setCommonClientConfig(commonKafkaClientConfig());
-        configProperties.setDefaultClientIdPrefix("cmd-router");
         return configProperties;
     }
 
@@ -482,7 +481,6 @@ public class ApplicationConfig {
     public MessagingKafkaProducerConfigProperties messagingCommandInternalKafkaProducerConfig() {
         final MessagingKafkaProducerConfigProperties configProperties = new MessagingKafkaProducerConfigProperties();
         configProperties.setCommonClientConfig(commonKafkaClientConfig());
-        configProperties.setDefaultClientIdPrefix("cmd-router");
         return configProperties;
     }
 
@@ -496,7 +494,6 @@ public class ApplicationConfig {
     public MessagingKafkaProducerConfigProperties messagingCommandResponseKafkaProducerConfig() {
         final MessagingKafkaProducerConfigProperties configProperties = new MessagingKafkaProducerConfigProperties();
         configProperties.setCommonClientConfig(commonKafkaClientConfig());
-        configProperties.setDefaultClientIdPrefix("cmd-router");
         return configProperties;
     }
 
@@ -523,7 +520,6 @@ public class ApplicationConfig {
     public KafkaAdminClientConfigProperties kafkaAdminClientConfig() {
         final KafkaAdminClientConfigProperties configProperties = new KafkaAdminClientConfigProperties();
         configProperties.setCommonClientConfig(commonKafkaClientConfig());
-        configProperties.setDefaultClientIdPrefix("cmd-router");
         return configProperties;
     }
 

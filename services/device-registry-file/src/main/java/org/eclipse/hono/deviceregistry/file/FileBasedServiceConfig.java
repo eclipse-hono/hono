@@ -230,7 +230,6 @@ public class FileBasedServiceConfig {
     public MessagingKafkaProducerConfigProperties kafkaEventConfig() {
         final MessagingKafkaProducerConfigProperties configProperties = new MessagingKafkaProducerConfigProperties();
         configProperties.setCommonClientConfig(commonKafkaClientConfig());
-        configProperties.setDefaultClientIdPrefix("device-registry");
         return configProperties;
     }
 
