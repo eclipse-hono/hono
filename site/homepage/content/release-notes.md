@@ -13,6 +13,11 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The JDBC DB based registry now also supports enforcement of registration limits configured at the tenant level.
   In particular, the maximum number of devices and the maximum number of credentials per device can be set in
   a tenant's registration-limits property. Please refer to the User Guide for details.
+* Kafka clients used by a component can now be configured individually instead of all clients of a type using the same
+  configuration. The prefixes that are prepended to the configuration properties of the native Kafka client have
+  changed. For existing configuration properties prefixed with `hono.kafka.commonClientConfig` properties, no change is
+  needed. Other configurations with specific consumer/producer/admin client properties have to be adapted. Please refer
+  to [Hono Kafka Client Configuration]({{% doclink "/admin-guide/hono-kafka-client-configuration" %}}) for details.
 
 ### Fixes & Enhancements
 

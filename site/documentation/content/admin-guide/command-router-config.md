@@ -198,3 +198,19 @@ In addition to the standard client configuration properties, following propertie
 ## Metrics Configuration
 
 See [Monitoring & Tracing Admin Guide]({{< ref "monitoring-tracing-config.md" >}}) for details on how to configure the reporting of metrics.
+
+## Kafka Client Configuration
+
+The Command Router component can be configured to use Kafka for messaging instead of or in addition to AMQP. This
+requires configuring the connection to the Kafka cluster according to 
+[Hono Kafka Client Configuration]({{< relref "hono-kafka-client-configuration.md" >}}).
+
+The following table provides an overview of the prefixes to be used to individually configure the Kafka clients used by
+the component.
+
+| OS Environment Variable Prefix<br>Java System Property Prefix | Description                  |
+| :---------------------------------------------- | :----------------------------------------- |
+| `HONO_KAFKA_CLEANUP_ADMINCLIENTCONFIG_`<br>`hono.kafka.cleanup.adminClientConfig.` | Configures the Kafka admin client that removes Hono internal topics. |
+| `HONO_KAFKA_COMMAND_CONSUMERCONFIG_`<br>`hono.kafka.command.consumerConfig.` | Configures the Kafka consumer that receives command messages. |
+| `HONO_KAFKA_COMMANDINTERNAL_PRODUCERCONFIG_`<br>`hono.kafka.commandInternal.producerConfig.` | Configures the Kafka producer that publishes command messages to Hono internal topics. |
+| `HONO_KAFKA_COMMANDRESPONSE_PRODUCERCONFIG_`<br>`hono.kafka.commandResponse.producerConfig.` | Configures the Kafka producer that publishes command response messages. |

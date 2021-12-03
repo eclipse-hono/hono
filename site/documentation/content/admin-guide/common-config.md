@@ -55,12 +55,20 @@ configuring response caching can be ignored.
 ### Kafka based Messaging Configuration
 
 Protocol adapters can be configured to allow publishing messages to an *Apache Kafka&reg; cluster* instead of an
-AMQP Messaging Network.
-Which messaging to be used, can be configured at the tenant _or_ for all tenants if a protocol adapter is only
-configured with one messaging system. For details refer to
-[Hono Kafka Client Configuration]({{< relref "hono-kafka-client-configuration.md/#configure-for-kafka-based-messaging" >}}).
+AMQP Messaging Network. Which messaging to be used, can be configured at the tenant _or_ for all tenants if a protocol
+adapter is only configured with one messaging system. The connection to the Kafka cluster is configured according
+to [Hono Kafka Client Configuration]({{< relref "hono-kafka-client-configuration.md" >}}).
 
-The Kafka client is configured according to [Hono Kafka Client Configuration]({{< relref "hono-kafka-client-configuration.md" >}}).
+The following table provides an overview of the prefixes to be used to individually configure the Kafka clients used by
+a protocol adapter.
+
+| OS Environment Variable Prefix<br>Java System Property Prefix | Description                  |
+| :---------------------------------------------- | :----------------------------------------- |
+| `HONO_KAFKA_COMMAND_CONSUMERCONFIG_`<br>`hono.kafka.command.consumerConfig.` | Configures the Kafka consumer that receives command messages. |
+| `HONO_KAFKA_COMMANDINTERNAL_ADMINCLIENTCONFIG_`<br>`hono.kafka.commandInternal.adminClientConfig.` | Configures the Kafka admin client that creates Hono internal topics. |
+| `HONO_KAFKA_COMMANDRESPONSE_PRODUCERCONFIG_`<br>`hono.kafka.commandResponse.producerConfig.` | Configures the Kafka producer that publishes command response messages. |
+| `HONO_KAFKA_EVENT_PRODUCERCONFIG_`<br>`hono.kafka.event.producerConfig.` | Configures the Kafka producer that publishes event messages. |
+| `HONO_KAFKA_TELEMETRY_PRODUCERCONFIG_`<br>`hono.kafka.telemetry.producerConfig.` | Configures the Kafka producer that publishes telemetry messages. |
 
 ### Command & Control Connection Configuration
 
