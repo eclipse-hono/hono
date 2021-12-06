@@ -72,4 +72,11 @@ public class AllDevicesOfTenantDeletedNotification extends AbstractNotification 
         return TYPE;
     }
 
+    @Override
+    public String toString() {
+        return "AllDevicesOfTenantDeletedNotification{" +
+                "tenantId='" + tenantId + '\'' +
+                ", creationTime='" + getCreationTime() + '\'' +
+                '}';
+    }
 }

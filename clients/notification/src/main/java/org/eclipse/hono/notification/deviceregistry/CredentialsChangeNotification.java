@@ -92,4 +92,12 @@ public class CredentialsChangeNotification extends AbstractNotification {
         return TYPE;
     }
 
+    @Override
+    public String toString() {
+        return "CredentialsChangeNotification{" +
+                "tenantId='" + tenantId + '\'' +
+                ", deviceId='" + deviceId + '\'' +
+                ", creationTime='" + getCreationTime() + '\'' +
+                '}';
+    }
 }

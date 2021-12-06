@@ -103,4 +103,13 @@ public class TenantChangeNotification extends AbstractNotification {
         return TYPE;
     }
 
+    @Override
+    public String toString() {
+        return "TenantChangeNotification{" +
+                "change=" + change +
+                ", tenantId='" + tenantId + '\'' +
+                ", enabled=" + enabled +
+                ", creationTime='" + getCreationTime() + '\'' +
+                '}';
+    }
 }
