@@ -118,4 +118,14 @@ public class DeviceChangeNotification extends AbstractNotification {
         return TYPE;
     }
 
+    @Override
+    public String toString() {
+        return "DeviceChangeNotification{" +
+                "change=" + change +
+                ", tenantId='" + tenantId + '\'' +
+                ", deviceId='" + deviceId + '\'' +
+                ", enabled=" + enabled +
+                ", creationTime='" + getCreationTime() + '\'' +
+                '}';
+    }
 }
