@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
@@ -285,10 +286,14 @@ public abstract class AbstractCredentialsManagementService implements Credential
     private static Future<List<CommonCredential>> applyAuthIdTemplateForX509CertificateCredentials(
             final Tenant tenant,
             final List<CommonCredential> credentials) {
-        credentials.stream()
-                .filter(X509CertificateCredential.class::isInstance)
-                .map(X509CertificateCredential.class::cast)
-                .forEach(c -> c.applyAuthIdTemplate(tenant));
-        return Future.succeededFuture(credentials);
+        final List<CommonCredential> creds = credentials.stream()
+                .map(cred -> {
+                    if (cred instanceof X509CertificateCredential) {
+                        return ((X509CertificateCredential) cred).applyAuthIdTemplate(tenant);
+                    }
+                    return cred;
+                })
+                .collect(Collectors.toUnmodifiableList());
+        return Future.succeededFuture(creds);
     }
 }

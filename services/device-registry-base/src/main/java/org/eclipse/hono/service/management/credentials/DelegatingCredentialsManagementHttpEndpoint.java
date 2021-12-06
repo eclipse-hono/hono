@@ -27,6 +27,7 @@ import org.eclipse.hono.service.management.AbstractDelegatingRegistryHttpEndpoin
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.RegistryManagementConstants;
+import org.eclipse.hono.util.Strings;
 
 import io.opentracing.Span;
 import io.vertx.core.CompositeFuture;
@@ -207,7 +208,19 @@ public class DelegatingCredentialsManagementHttpEndpoint<S extends CredentialsMa
         return array.stream()
                 .filter(JsonObject.class::isInstance)
                 .map(JsonObject.class::cast)
+                .map(DelegatingCredentialsManagementHttpEndpoint::checkForGeneratedAuthId)
                 .map(json -> json.mapTo(CommonCredential.class))
                 .collect(Collectors.toList());
+    }
+
+    private static JsonObject checkForGeneratedAuthId(final JsonObject credential) {
+        final String type = credential.getString(RegistryManagementConstants.FIELD_TYPE);
+        if (!Strings.isNullOrEmpty(type) && type.equals(RegistryManagementConstants.SECRETS_TYPE_X509_CERT)) {
+            if (credential.containsKey(RegistryManagementConstants.FIELD_GENERATED_AUTH_ID)) {
+                throw new IllegalArgumentException(
+                        "credentials object contains an invalid attribute [generated-auth-id]");
+            }
+        }
+        return credential;
     }
 }

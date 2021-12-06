@@ -29,6 +29,7 @@ import org.eclipse.hono.deviceregistry.service.credentials.CredentialKey;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.base.jdbc.store.device.TableAdapterStore;
+import org.eclipse.hono.service.management.credentials.X509CertificateCredential;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
@@ -77,6 +78,12 @@ public class CredentialsServiceImpl extends AbstractCredentialsService {
 
                     final var secrets = result.getCredentials()
                             .stream()
+                            .map(credential -> {
+                                if (credential instanceof X509CertificateCredential) {
+                                    return ((X509CertificateCredential) credential).overrideAuthIdWithGeneratedAuthId();
+                                }
+                                return credential;
+                            })
                             .map(JsonObject::mapFrom)
                             .filter(filter(key.getType(), key.getAuthId()))
                             .filter(credential -> DeviceRegistryUtils.matchesWithClientContext(credential, clientContext))

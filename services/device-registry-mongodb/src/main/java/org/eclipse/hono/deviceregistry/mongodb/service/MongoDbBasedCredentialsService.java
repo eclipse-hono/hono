@@ -24,6 +24,8 @@ import org.eclipse.hono.deviceregistry.service.credentials.AbstractCredentialsSe
 import org.eclipse.hono.deviceregistry.service.credentials.CredentialKey;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
+import org.eclipse.hono.service.management.credentials.CommonCredential;
+import org.eclipse.hono.service.management.credentials.X509CertificateCredential;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
@@ -99,14 +101,18 @@ public final class MongoDbBasedCredentialsService extends AbstractCredentialsSer
         return dao.getByAuthIdAndType(tenant.getTenantId(), key.getAuthId(), key.getType(), span.context())
                 .map(dto -> {
                     LOG.trace("found credentials matching criteria");
-                    final var json = JsonObject.mapFrom(dto.getCredentials().get(0));
+                    CommonCredential credential = dto.getCredentials().get(0);
+                    if (credential instanceof X509CertificateCredential) {
+                        credential = ((X509CertificateCredential) credential).overrideAuthIdWithGeneratedAuthId();
+                    }
+                    final var json = JsonObject.mapFrom(credential);
                     json.put(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID, dto.getDeviceId());
                     return Optional.of(json)
                             .filter(MongoDbBasedCredentialsService::isCredentialEnabled)
-                            .filter(credential -> DeviceRegistryUtils.matchesWithClientContext(credential, clientContext))
-                            .map(credential -> CredentialsResult.from(
+                            .filter(cred -> DeviceRegistryUtils.matchesWithClientContext(cred, clientContext))
+                            .map(cred -> CredentialsResult.from(
                                     HttpURLConnection.HTTP_OK,
-                                    credential,
+                                    cred,
                                     getCacheDirective(key.getType())))
                             .orElseThrow(() -> new ClientErrorException(
                                     tenant.getTenantId(),

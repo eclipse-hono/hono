@@ -29,7 +29,6 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.Lifecycle;
-import org.eclipse.hono.util.RegistryManagementConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -181,7 +180,6 @@ public abstract class AbstractCredentialsService implements CredentialsService, 
                             }
                         });
                 })
-                .map(AbstractCredentialsService::overrideAuthIdWithGeneratedAuthIdIfExists)
                 .recover(error -> {
                     LOG.debug("error getting credentials [tenant: {}, type: {}, auth-id: {}]", tenantId, type, authId, error);
                     TracingHelper.logError(span, error);
@@ -192,20 +190,8 @@ public abstract class AbstractCredentialsService implements CredentialsService, 
                 });
     }
 
-    private static CredentialsResult<JsonObject> overrideAuthIdWithGeneratedAuthIdIfExists(
-            final CredentialsResult<JsonObject> credentialsResult) {
-        if (!credentialsResult.isError()) {
-            final JsonObject credential = credentialsResult.getPayload();
-            Optional.ofNullable(credential)
-                    .map(c -> c.getString(RegistryManagementConstants.FIELD_TYPE))
-                    .filter(RegistryManagementConstants.SECRETS_TYPE_X509_CERT::equals)
-                    .map(ok -> credential.getString(RegistryManagementConstants.FIELD_GENERATED_AUTH_ID))
-                    .ifPresent(id -> credential.put(RegistryManagementConstants.FIELD_AUTH_ID, id));
-        }
-        return credentialsResult;
-    }
-
     private boolean isAutoProvisioningConfigured() {
         return this.deviceAndGatewayAutoProvisioner != null;
     }
+
 }
