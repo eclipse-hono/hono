@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.client.notification;
+package org.eclipse.hono.client.notification.kafka;
 
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.notification.AbstractNotification;
