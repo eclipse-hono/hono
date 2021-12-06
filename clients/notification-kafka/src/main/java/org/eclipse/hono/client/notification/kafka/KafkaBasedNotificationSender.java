@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.client.notification;
+package org.eclipse.hono.client.notification.kafka;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
