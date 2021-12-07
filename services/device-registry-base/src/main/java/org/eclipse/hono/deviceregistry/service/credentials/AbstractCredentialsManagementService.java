@@ -37,6 +37,7 @@ import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.service.management.credentials.X509CertificateCredential;
+import org.eclipse.hono.service.management.credentials.X509CertificateCredentialWithGeneratedAuthId;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.util.Futures;
 import org.eclipse.hono.util.Lifecycle;
@@ -289,7 +290,8 @@ public abstract class AbstractCredentialsManagementService implements Credential
         final List<CommonCredential> creds = credentials.stream()
                 .map(cred -> {
                     if (cred instanceof X509CertificateCredential) {
-                        return ((X509CertificateCredential) cred).applyAuthIdTemplate(tenant);
+                        return X509CertificateCredentialWithGeneratedAuthId.applyAuthIdTemplate(
+                                (X509CertificateCredential) cred, tenant);
                     }
                     return cred;
                 })

@@ -117,6 +117,35 @@ public final class MongoDbDocumentBuilder {
 
     /**
      * Sets the json object with the given credentials type and auth id.
+     * <p>
+     * If the type equals {@value RegistryManagementConstants#SECRETS_TYPE_X509_CERT},
+     * the MongoDB query is framed to match the given auth id
+     * <ul>
+     * <li>with the field <em>generated-auth-id</em>.</li>
+     * <li>if no match found and the <em>generated-auth-id</em> is {@code null}, the field <em>auth-id</em> is used.
+     * </li>
+     * </ul>
+     * Example query with type as {@value RegistryManagementConstants#SECRETS_TYPE_X509_CERT}
+     * and auth id as "Device1-Hono-Eclipse":
+     * <pre>
+     * {
+     *     "credentials": {
+     *         "$elemMatch": {
+     *             "type": {@value RegistryManagementConstants#SECRETS_TYPE_X509_CERT},
+     *             "$or": [
+     *                 {
+     *                     "generated-auth-id": "Device1-Hono-Eclipse"
+     *                 },
+     *                 {
+     *                     "generated-auth-id": null,
+     *                     "auth-id": "Device1-Hono-Eclipse"
+     *                 }
+     *             ]
+     *         }
+     *     }
+     * }
+     * </pre>
+     * Else the given auth-id is matched with the field <em>auth-id</em>.
      *
      * @param type The credentials type.
      * @param authId The authentication identifier
