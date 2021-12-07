@@ -27,6 +27,7 @@ import org.apache.kafka.common.TopicPartition;
 import org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties;
 import org.eclipse.hono.kafka.test.KafkaMockConsumer;
 import org.eclipse.hono.notification.AbstractNotification;
+import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
 import org.eclipse.hono.notification.deviceregistry.CredentialsChangeNotification;
 import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
 import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
@@ -138,11 +139,14 @@ public class KafkaBasedNotificationReceiverTest {
 
             mockConsumer.addRecord(createKafkaRecord(
                     new CredentialsChangeNotification(tenantId, deviceId, creationTime), 1L));
+
+            mockConsumer.addRecord(createKafkaRecord(
+                    new AllDevicesOfTenantDeletedNotification(tenantId, creationTime), 2L));
         });
 
         final var receiver = createReceiver();
 
-        final Checkpoint handlerInvokedCheckpoint = ctx.checkpoint(3);
+        final Checkpoint handlerInvokedCheckpoint = ctx.checkpoint(4);
 
         receiver.registerConsumer(TenantChangeNotification.class,
                 notification -> ctx.verify(() -> {
@@ -159,6 +163,12 @@ public class KafkaBasedNotificationReceiverTest {
         receiver.registerConsumer(CredentialsChangeNotification.class,
                 notification -> ctx.verify(() -> {
                     assertThat(notification).isInstanceOf(CredentialsChangeNotification.class);
+                    handlerInvokedCheckpoint.flag();
+                }));
+
+        receiver.registerConsumer(AllDevicesOfTenantDeletedNotification.class,
+                notification -> ctx.verify(() -> {
+                    assertThat(notification).isInstanceOf(AllDevicesOfTenantDeletedNotification.class);
                     handlerInvokedCheckpoint.flag();
                 }));
 

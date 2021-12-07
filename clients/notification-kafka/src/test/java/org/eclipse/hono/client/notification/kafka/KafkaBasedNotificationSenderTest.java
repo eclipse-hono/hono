@@ -29,6 +29,7 @@ import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
 import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationConstants;
+import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
 import org.eclipse.hono.notification.deviceregistry.CredentialsChangeNotification;
 import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
 import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
@@ -89,27 +90,9 @@ public class KafkaBasedNotificationSenderTest {
     @Test
     public void testProducerRecordForTenantNotification(final VertxTestContext ctx) {
 
-        // GIVEN a sender
-        final MockProducer<String, JsonObject> mockProducer = newMockProducer();
-        final KafkaBasedNotificationSender sender = newSender(mockProducer);
-
-        // WHEN publishing a notification
         final TenantChangeNotification notification = new TenantChangeNotification(CHANGE, TENANT_ID, CREATION_TIME,
                 ENABLED);
-        sender.publish(notification)
-                .onComplete(ctx.succeeding(v -> {
-                    // THEN the producer record is created from the given values
-                    ctx.verify(() -> {
-                        final ProducerRecord<String, JsonObject> record = mockProducer.history().get(0);
-
-                        assertThat(record.topic())
-                                .isEqualTo(NotificationTopicHelper.getTopicName(notification.getClass()));
-                        assertThat(record.key()).isEqualTo(TENANT_ID);
-                        assertThat(record.value().getString(NotificationConstants.JSON_FIELD_TYPE))
-                                .isEqualTo(((AbstractNotification) notification).getType());
-                    });
-                    ctx.completeNow();
-                }));
+        testProducerRecordForNotification(ctx, notification, TENANT_ID);
     }
 
     /**
@@ -120,27 +103,9 @@ public class KafkaBasedNotificationSenderTest {
     @Test
     public void testProducerRecordForDeviceNotification(final VertxTestContext ctx) {
 
-        // GIVEN a sender
-        final MockProducer<String, JsonObject> mockProducer = newMockProducer();
-        final KafkaBasedNotificationSender sender = newSender(mockProducer);
-
-        // WHEN publishing a notification
         final DeviceChangeNotification notification = new DeviceChangeNotification(CHANGE, TENANT_ID, DEVICE_ID,
                 CREATION_TIME, ENABLED);
-        sender.publish(notification)
-                .onComplete(ctx.succeeding(v -> {
-                    // THEN the producer record is created from the given values
-                    ctx.verify(() -> {
-                        final ProducerRecord<String, JsonObject> record = mockProducer.history().get(0);
-
-                        assertThat(record.topic())
-                                .isEqualTo(NotificationTopicHelper.getTopicName(notification.getClass()));
-                        assertThat(record.key()).isEqualTo(DEVICE_ID);
-                        assertThat(record.value().getString(NotificationConstants.JSON_FIELD_TYPE))
-                                .isEqualTo(((AbstractNotification) notification).getType());
-                    });
-                    ctx.completeNow();
-                }));
+        testProducerRecordForNotification(ctx, notification, DEVICE_ID);
     }
 
     /**
@@ -151,24 +116,45 @@ public class KafkaBasedNotificationSenderTest {
     @Test
     public void testProducerRecordForCredentialsNotification(final VertxTestContext ctx) {
 
+        final CredentialsChangeNotification notification = new CredentialsChangeNotification(TENANT_ID, DEVICE_ID,
+                CREATION_TIME);
+        testProducerRecordForNotification(ctx, notification, DEVICE_ID);
+    }
+
+    /**
+     * Verifies that the expected Kafka record is created when publishing a {@link AllDevicesOfTenantDeletedNotification}.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testProducerRecordForAllDevicesOfTenantDeletedNotification(final VertxTestContext ctx) {
+
+        final AllDevicesOfTenantDeletedNotification notification = new AllDevicesOfTenantDeletedNotification(TENANT_ID,
+                CREATION_TIME);
+        testProducerRecordForNotification(ctx, notification, TENANT_ID);
+    }
+
+    private void testProducerRecordForNotification(
+            final VertxTestContext ctx,
+            final AbstractNotification notificationToSend,
+            final String expectedRecordKey) {
+
         // GIVEN a sender
         final MockProducer<String, JsonObject> mockProducer = newMockProducer();
         final KafkaBasedNotificationSender sender = newSender(mockProducer);
 
-        // WHEN publishing a notification
-        final CredentialsChangeNotification notification = new CredentialsChangeNotification(TENANT_ID, DEVICE_ID,
-                CREATION_TIME);
-        sender.publish(notification)
+        // WHEN publishing the notification
+        sender.publish(notificationToSend)
                 .onComplete(ctx.succeeding(v -> {
                     // THEN the producer record is created from the given values
                     ctx.verify(() -> {
                         final ProducerRecord<String, JsonObject> record = mockProducer.history().get(0);
 
                         assertThat(record.topic())
-                                .isEqualTo(NotificationTopicHelper.getTopicName(notification.getClass()));
-                        assertThat(record.key()).isEqualTo(DEVICE_ID);
+                                .isEqualTo(NotificationTopicHelper.getTopicName(notificationToSend.getClass()));
+                        assertThat(record.key()).isEqualTo(expectedRecordKey);
                         assertThat(record.value().getString(NotificationConstants.JSON_FIELD_TYPE))
-                                .isEqualTo(((AbstractNotification) notification).getType());
+                                .isEqualTo(notificationToSend.getType());
                     });
                     ctx.completeNow();
                 }));
