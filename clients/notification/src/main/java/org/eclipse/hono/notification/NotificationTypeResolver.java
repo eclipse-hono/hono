@@ -26,8 +26,8 @@ import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
 /**
  * Type resolver for notifications.
  * <p>
- * This type resolver knows the types {@link TenantChangeNotification}, {@link DeviceChangeNotification} and
- * {@link CredentialsChangeNotification}.
+ * This type resolver knows the types {@link TenantChangeNotification}, {@link DeviceChangeNotification},
+ * {@link CredentialsChangeNotification} and {@link AllDevicesOfTenantDeletedNotification}.
  */
 public final class NotificationTypeResolver extends TypeIdResolverBase {
 

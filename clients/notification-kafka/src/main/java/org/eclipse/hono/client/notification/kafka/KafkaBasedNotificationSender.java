@@ -20,15 +20,16 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationSender;
+import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
 import org.eclipse.hono.notification.deviceregistry.CredentialsChangeNotification;
 import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
 import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 import io.vertx.kafka.client.producer.KafkaProducerRecord;
-import io.vertx.kafka.client.producer.RecordMetadata;
 
 /**
  * A client for publishing notifications with Kafka.
@@ -36,6 +37,9 @@ import io.vertx.kafka.client.producer.RecordMetadata;
 public class KafkaBasedNotificationSender implements NotificationSender {
 
     public static final String PRODUCER_NAME = "notification";
+
+    private static final Logger LOG = LoggerFactory.getLogger(KafkaBasedNotificationSender.class);
+
     private final NotificationKafkaProducerConfigProperties config;
     private final KafkaProducerFactory<String, JsonObject> producerFactory;
     private boolean stopped = false;
@@ -49,11 +53,8 @@ public class KafkaBasedNotificationSender implements NotificationSender {
      */
     public KafkaBasedNotificationSender(final KafkaProducerFactory<String, JsonObject> producerFactory,
             final NotificationKafkaProducerConfigProperties config) {
-        Objects.requireNonNull(producerFactory);
-        Objects.requireNonNull(config);
-
-        this.producerFactory = producerFactory;
-        this.config = config;
+        this.producerFactory = Objects.requireNonNull(producerFactory);
+        this.config = Objects.requireNonNull(config);
     }
 
     @Override
@@ -66,21 +67,27 @@ public class KafkaBasedNotificationSender implements NotificationSender {
                     new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "sender already stopped"));
         }
 
-        try {
+        return createProducerRecord(notification)
+                .compose(record -> {
+                    final var producer = producerFactory.getOrCreateProducer(PRODUCER_NAME, config);
+                    return producer.send(record)
+                            .recover(t -> {
+                                LOG.debug("error publishing notification [{}]", notification, t);
+                                return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, t));
+                            });
+                }).mapEmpty();
+    }
 
+    private Future<KafkaProducerRecord<String, JsonObject>> createProducerRecord(final AbstractNotification notification) {
+        try {
             final String topic = NotificationTopicHelper.getTopicName(notification.getClass());
             final String key = getKey(notification);
             final JsonObject value = JsonObject.mapFrom(notification);
-            final KafkaProducerRecord<String, JsonObject> record = KafkaProducerRecord.create(topic, key, value);
 
-            final Promise<RecordMetadata> sendPromise = Promise.promise();
-            producerFactory.getOrCreateProducer(PRODUCER_NAME, config).send(record, sendPromise);
-
-            return sendPromise.future()
-                    .recover(t -> Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, t)))
-                    .mapEmpty();
-        } catch (RuntimeException ex) {
-            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, ex));
+            return Future.succeededFuture(KafkaProducerRecord.create(topic, key, value));
+        } catch (final RuntimeException ex) {
+            LOG.error("error creating producer record for notification [{}]", notification, ex);
+            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, ex));
         }
     }
 
@@ -91,6 +98,8 @@ public class KafkaBasedNotificationSender implements NotificationSender {
             return ((DeviceChangeNotification) notification).getDeviceId();
         } else if (notification instanceof CredentialsChangeNotification) {
             return ((CredentialsChangeNotification) notification).getDeviceId();
+        } else if (notification instanceof AllDevicesOfTenantDeletedNotification) {
+            return ((AllDevicesOfTenantDeletedNotification) notification).getTenantId();
         } else {
             throw new IllegalArgumentException("unknown notification type");
         }
