@@ -18,11 +18,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.kafka.KafkaClientFactory;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
+import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.MessageHelper;
@@ -41,6 +44,8 @@ import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.EncodeException;
 import io.vertx.core.json.Json;
+import io.vertx.ext.healthchecks.HealthCheckHandler;
+import io.vertx.ext.healthchecks.Status;
 import io.vertx.kafka.client.producer.KafkaHeader;
 import io.vertx.kafka.client.producer.KafkaProducer;
 import io.vertx.kafka.client.producer.KafkaProducerRecord;
@@ -49,7 +54,7 @@ import io.vertx.kafka.client.producer.RecordMetadata;
 /**
  * A client for publishing messages to a Kafka cluster.
  */
-public abstract class AbstractKafkaBasedMessageSender implements MessagingClient, Lifecycle {
+public abstract class AbstractKafkaBasedMessageSender implements MessagingClient, ServiceClient, Lifecycle {
 
     private static final String DEFAULT_SPAN_NAME = "send message";
     /**
@@ -63,6 +68,7 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
     private final String producerName;
 
     private boolean stopped = false;
+    private boolean producerCreated = false;
 
     /**
      * Creates a new Kafka-based message sender.
@@ -102,8 +108,20 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
     @Override
     public Future<Void> start() {
         stopped = false;
-        getOrCreateProducer();
-        return Future.succeededFuture();
+
+        return Future.succeededFuture()
+                .map(v -> getOrCreateProducer()) // enclosed in map() to catch exceptions
+                .onSuccess(v -> producerCreated = true)
+                .recover(thr -> {
+                    if (KafkaClientFactory.isRetriableClientCreationError(thr, config.getBootstrapServers())) {
+                        // retry client creation in the background
+                        getOrCreateProducerWithRetries()
+                                .onSuccess(v -> producerCreated = true);
+                        return Future.succeededFuture();
+                    }
+                    return Future.failedFuture(thr);
+                })
+                .mapEmpty();
     }
 
     /**
@@ -209,6 +227,29 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
 
     private KafkaProducer<String, Buffer> getOrCreateProducer() {
         return producerFactory.getOrCreateProducer(producerName, config);
+    }
+
+    private Future<KafkaProducer<String, Buffer>> getOrCreateProducerWithRetries() {
+        return producerFactory.getOrCreateProducerWithRetries(producerName, config,
+                KafkaClientFactory.UNLIMITED_RETRIES_DURATION);
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Registers a procedure for checking if this client's initial Kafka client creation succeeded.
+     */
+    @Override
+    public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
+        // verify that client creation succeeded
+        readinessHandler.register(
+                String.format("%s-kafka-client-creation-%s", producerName, UUID.randomUUID()),
+                status -> status.tryComplete(producerCreated ? Status.OK() : Status.KO()));
+    }
+
+    @Override
+    public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
+        // no liveness checks to be added
     }
 
     /**

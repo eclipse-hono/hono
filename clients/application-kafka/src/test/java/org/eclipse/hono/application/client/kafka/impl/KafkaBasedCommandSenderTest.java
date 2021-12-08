@@ -110,7 +110,7 @@ public class KafkaBasedCommandSenderTest {
 
         mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         final var producerFactory = CachingKafkaProducerFactory
-                .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+                .testFactory(vertx, (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
         commandSender = new KafkaBasedCommandSender(
                 vertx,
                 consumerConfig,
@@ -326,7 +326,7 @@ public class KafkaBasedCommandSenderTest {
             }
         };
         final var producerFactory = CachingKafkaProducerFactory
-                .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+                .testFactory(vertx, (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
         commandSender = new KafkaBasedCommandSender(
                 vertx,
                 consumerConfig,

@@ -15,6 +15,7 @@ package org.eclipse.hono.client.telemetry.kafka;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -38,6 +39,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -49,6 +51,7 @@ import io.vertx.junit5.VertxTestContext;
 public class KafkaBasedTelemetrySenderTest {
 
     private final RegistrationAssertion device = new RegistrationAssertion("the-device");
+    private final Vertx vertxMock = mock(Vertx.class);
 
     private MessagingKafkaProducerConfigProperties kafkaProducerConfig;
     private TenantObject tenant;
@@ -91,7 +94,7 @@ public class KafkaBasedTelemetrySenderTest {
 
         final var mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         final var factory = CachingKafkaProducerFactory
-                .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+                .testFactory(vertxMock, (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
         final var sender = new KafkaBasedTelemetrySender(factory, kafkaProducerConfig, true, tracer);
 
         // WHEN sending telemetry data
@@ -128,7 +131,7 @@ public class KafkaBasedTelemetrySenderTest {
     public void testThatConstructorThrowsOnMissingParameter() {
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         final CachingKafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory
-                .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+                .testFactory(vertxMock, (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
         final Tracer tracer = NoopTracerFactory.create();
 
         assertThrows(NullPointerException.class,
@@ -151,7 +154,7 @@ public class KafkaBasedTelemetrySenderTest {
         final QoS qos = QoS.AT_LEAST_ONCE;
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         final CachingKafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory
-                .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+                .testFactory(vertxMock, (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
         final Tracer tracer = NoopTracerFactory.create();
 
         final KafkaBasedTelemetrySender sender = new KafkaBasedTelemetrySender(factory, kafkaProducerConfig,

@@ -14,6 +14,8 @@
 
 package org.eclipse.hono.client.kafka.producer;
 
+import static org.mockito.Mockito.mock;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.util.HashMap;
@@ -33,13 +35,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopSpan;
 import io.opentracing.noop.NoopTracerFactory;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
 
 /**
- * Verifies generic behavior of {@linkAbstractKafkaBasedMessageSender}.
+ * Verifies generic behavior of {@link AbstractKafkaBasedMessageSender}.
  *
  */
 @ExtendWith(VertxExtension.class)
@@ -48,6 +51,7 @@ public class AbstractKafkaBasedMessageSenderTest {
     private static final String PRODUCER_NAME = "test-producer";
 
     private final Tracer tracer = NoopTracerFactory.create();
+    private final Vertx vertxMock = mock(Vertx.class);
     private MessagingKafkaProducerConfigProperties config;
 
     /**
@@ -62,7 +66,7 @@ public class AbstractKafkaBasedMessageSenderTest {
     private CachingKafkaProducerFactory<String, Buffer> newProducerFactory(
             final MockProducer<String, Buffer> mockProducer) {
         return CachingKafkaProducerFactory
-                .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+                .testFactory(vertxMock, (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
     }
 
     private AbstractKafkaBasedMessageSender newSender(final MockProducer<String, Buffer> mockProducer) {

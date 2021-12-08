@@ -14,6 +14,7 @@
 package org.eclipse.hono.client.notification.kafka;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -38,6 +39,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -56,6 +58,7 @@ public class KafkaBasedNotificationSenderTest {
     private static final boolean ENABLED = false;
 
     private final NotificationKafkaProducerConfigProperties config = new NotificationKafkaProducerConfigProperties();
+    private final Vertx vertxMock = mock(Vertx.class);
 
     /**
      * Sets up the fixture.
@@ -224,7 +227,7 @@ public class KafkaBasedNotificationSenderTest {
     private CachingKafkaProducerFactory<String, JsonObject> newProducerFactory(
             final MockProducer<String, JsonObject> mockProducer) {
         return CachingKafkaProducerFactory
-                .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+                .testFactory(vertxMock, (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
     }
 
     private KafkaBasedNotificationSender newSender(final MockProducer<String, JsonObject> mockProducer) {

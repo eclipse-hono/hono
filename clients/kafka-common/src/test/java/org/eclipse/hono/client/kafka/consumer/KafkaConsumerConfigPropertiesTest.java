@@ -19,6 +19,7 @@ import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Map;
 
+import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties;
 import org.eclipse.hono.client.kafka.CommonKafkaClientConfigProperties;
@@ -94,7 +95,7 @@ public class KafkaConsumerConfigPropertiesTest {
 
         assertThat(config.isConfigured()).isFalse();
 
-        config.setConsumerConfig(Map.of(AbstractKafkaConfigProperties.PROPERTY_BOOTSTRAP_SERVERS, "kafka"));
+        config.setConsumerConfig(Map.of(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, "kafka"));
         assertThat(config.isConfigured()).isTrue();
     }
 

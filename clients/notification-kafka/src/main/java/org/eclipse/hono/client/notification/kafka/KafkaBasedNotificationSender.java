@@ -17,6 +17,7 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.kafka.KafkaClientFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationSender;
@@ -113,8 +114,9 @@ public class KafkaBasedNotificationSender implements NotificationSender {
     @Override
     public Future<Void> start() {
         stopped = false;
-        producerFactory.getOrCreateProducer(PRODUCER_NAME, config);
-        return Future.succeededFuture();
+        return producerFactory
+                .getOrCreateProducerWithRetries(PRODUCER_NAME, config, KafkaClientFactory.UNLIMITED_RETRIES_DURATION)
+                .mapEmpty();
     }
 
     /**
