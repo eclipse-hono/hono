@@ -14,6 +14,7 @@
 package org.eclipse.hono.client.telemetry.kafka;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import static com.google.common.truth.Truth.assertThat;
@@ -35,6 +36,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -47,6 +49,7 @@ public class KafkaBasedEventSenderTest {
 
     private final TenantObject tenant = new TenantObject("the-tenant", true);
     private final RegistrationAssertion device = new RegistrationAssertion("the-device");
+    private final Vertx vertxMock = mock(Vertx.class);
 
     private MessagingKafkaProducerConfigProperties kafkaProducerConfig;
 
@@ -63,7 +66,8 @@ public class KafkaBasedEventSenderTest {
     private CachingKafkaProducerFactory<String, Buffer> newProducerFactory(
             final MockProducer<String, Buffer> mockProducer) {
 
-        return CachingKafkaProducerFactory.testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+        return CachingKafkaProducerFactory.testFactory(vertxMock,
+                (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
     }
 
     /**
@@ -121,7 +125,7 @@ public class KafkaBasedEventSenderTest {
     public void testThatConstructorThrowsOnMissingParameter() {
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         final CachingKafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory
-                .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+                .testFactory(vertxMock, (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
         final Tracer tracer = NoopTracerFactory.create();
 
         assertThrows(NullPointerException.class,
@@ -143,7 +147,7 @@ public class KafkaBasedEventSenderTest {
     public void testThatSendEventThrowsOnMissingMandatoryParameter() {
         final MockProducer<String, Buffer> mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         final CachingKafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory
-                .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+                .testFactory(vertxMock, (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
         final Tracer tracer = NoopTracerFactory.create();
 
         final KafkaBasedEventSender sender = new KafkaBasedEventSender(factory, kafkaProducerConfig, true, tracer);

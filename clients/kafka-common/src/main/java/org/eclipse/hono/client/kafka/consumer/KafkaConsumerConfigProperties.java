@@ -16,6 +16,7 @@ package org.eclipse.hono.client.kafka.consumer;
 import java.util.Map;
 import java.util.Optional;
 
+import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties;
@@ -124,6 +125,9 @@ public class KafkaConsumerConfigProperties extends AbstractKafkaConfigProperties
      * <p>
      * Subclasses may overwrite this method to set expected configuration values.
      * This default implementation does nothing.
+     * <p>
+     * Subclasses overwriting this method and adapting the {@value CommonClientConfigs#BOOTSTRAP_SERVERS_CONFIG} property
+     * in it need to also override {@link #getBootstrapServers()}.
      *
      * @param config The consumer configuration to be adapted.
      */

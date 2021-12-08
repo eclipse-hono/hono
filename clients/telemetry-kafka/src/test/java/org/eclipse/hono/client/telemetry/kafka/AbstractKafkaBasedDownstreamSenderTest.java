@@ -14,6 +14,7 @@
 package org.eclipse.hono.client.telemetry.kafka;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -38,6 +39,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
@@ -60,6 +62,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
     private final Tracer tracer = NoopTracerFactory.create();
     private final TenantObject tenant = new TenantObject(TENANT_ID, true);
     private final RegistrationAssertion device = new RegistrationAssertion(DEVICE_ID);
+    private final Vertx vertxMock = mock(Vertx.class);
 
     private MessagingKafkaProducerConfigProperties config;
     private AbstractKafkaBasedDownstreamSender sender;
@@ -317,7 +320,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
     private CachingKafkaProducerFactory<String, Buffer> newProducerFactory(
             final MockProducer<String, Buffer> mockProducer) {
         return CachingKafkaProducerFactory
-                .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+                .testFactory(vertxMock, (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
     }
 
     private AbstractKafkaBasedDownstreamSender newSender(final MockProducer<String, Buffer> mockProducer) {

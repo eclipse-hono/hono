@@ -31,11 +31,6 @@ import org.slf4j.LoggerFactory;
  */
 public abstract class AbstractKafkaConfigProperties {
 
-    /**
-     * The name of the Kafka configuration property containing the servers to bootstrap from.
-     */
-    public static final String PROPERTY_BOOTSTRAP_SERVERS = "bootstrap.servers";
-
     private static final AtomicInteger ID_COUNTER = new AtomicInteger();
 
     protected final Logger log = LoggerFactory.getLogger(getClass());
@@ -106,11 +101,28 @@ public abstract class AbstractKafkaConfigProperties {
     /**
      * Checks if a configuration has been set.
      *
-     * @return {@code true} if the {@value #PROPERTY_BOOTSTRAP_SERVERS} property has been configured with a non-null
-     *         value.
+     * @return {@code true} if the {@value CommonClientConfigs#BOOTSTRAP_SERVERS_CONFIG} property has been configured
+     *         with a non-null value.
      */
     public final boolean isConfigured() {
         return containsMinimalConfiguration(commonClientConfig) || containsMinimalConfiguration(specificClientConfig);
+    }
+
+    /**
+     * Gets the value of the {@value CommonClientConfigs#BOOTSTRAP_SERVERS_CONFIG} property containing the servers to
+     * bootstrap from.
+     *
+     * @return The servers or {@code null} if not set.
+     */
+    public String getBootstrapServers() {
+        String result = null;
+        if (specificClientConfig != null) {
+            result = specificClientConfig.get(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG);
+        }
+        if (result == null && commonClientConfig != null) {
+            result = commonClientConfig.get(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG);
+        }
+        return result;
     }
 
     /**
@@ -181,11 +193,11 @@ public abstract class AbstractKafkaConfigProperties {
      * Checks if a given set of properties contains the minimal required configuration.
      *
      * @param properties The properties to check.
-     * @return {@code true} if the properties contain a non-null value for key {@value #PROPERTY_BOOTSTRAP_SERVERS}.
+     * @return {@code true} if the properties contain a non-null value for key {@value CommonClientConfigs#BOOTSTRAP_SERVERS_CONFIG}.
      */
     protected final boolean containsMinimalConfiguration(final Map<String, String> properties) {
         return Optional.ofNullable(properties)
-                .map(props -> !Strings.isNullOrEmpty(props.get(PROPERTY_BOOTSTRAP_SERVERS)))
+                .map(props -> !Strings.isNullOrEmpty(props.get(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG)))
                 .orElse(false);
     }
 }

@@ -16,6 +16,7 @@ package org.eclipse.hono.client.kafka.producer;
 import java.util.Map;
 import java.util.Optional;
 
+import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.Serializer;
 import org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties;
@@ -116,6 +117,9 @@ public class KafkaProducerConfigProperties extends AbstractKafkaConfigProperties
      * <p>
      * Subclasses may overwrite this method to set expected configuration values.
      * This default implementation does nothing.
+     * <p>
+     * Subclasses overwriting this method and adapting the {@value CommonClientConfigs#BOOTSTRAP_SERVERS_CONFIG} property
+     * in it need to also override {@link #getBootstrapServers()}.
      *
      * @param config The producer configuration to be adapted.
      */

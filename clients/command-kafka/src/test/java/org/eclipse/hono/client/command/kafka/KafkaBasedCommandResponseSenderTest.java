@@ -39,6 +39,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopSpan;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.Json;
 import io.vertx.junit5.VertxExtension;
@@ -62,7 +63,7 @@ public class KafkaBasedCommandResponseSenderTest {
     }
 
     @Test
-    void testIfValidCommandResponseKafkaRecordIsSent(final VertxTestContext ctx) {
+    void testIfValidCommandResponseKafkaRecordIsSent(final VertxTestContext ctx, final Vertx vertx) {
         // GIVEN a command response sender
         final String tenantId = "test-tenant";
         final String deviceId = "test-device";
@@ -89,7 +90,7 @@ public class KafkaBasedCommandResponseSenderTest {
         final Tracer tracer = TracingMockSupport.mockTracer(span);
         final var mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         final var factory = CachingKafkaProducerFactory
-                .testFactory((n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+                .testFactory(vertx, (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
         final var sender = new KafkaBasedCommandResponseSender(factory, kafkaProducerConfig, tracer);
 
         // WHEN sending a command response

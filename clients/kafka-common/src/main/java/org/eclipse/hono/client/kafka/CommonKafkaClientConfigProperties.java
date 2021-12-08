@@ -17,6 +17,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import org.apache.kafka.clients.CommonClientConfigs;
+
 /**
  * Common Kafka client configuration properties.
  */
@@ -55,11 +57,11 @@ public class CommonKafkaClientConfigProperties {
     /**
      * Checks if a configuration has been set.
      *
-     * @return {@code true} if the {@value AbstractKafkaConfigProperties#PROPERTY_BOOTSTRAP_SERVERS} property has been
+     * @return {@code true} if the {@value CommonClientConfigs#BOOTSTRAP_SERVERS_CONFIG} property has been
      *         configured with a non-null value.
      */
     public final boolean isConfigured() {
-        return commonClientConfig.containsKey(AbstractKafkaConfigProperties.PROPERTY_BOOTSTRAP_SERVERS);
+        return commonClientConfig.containsKey(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG);
     }
 
     Map<String, String> getCommonClientConfig() {

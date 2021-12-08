@@ -216,7 +216,22 @@ public class KafkaClientFactory {
         }
     }
 
-    private boolean isBootstrapServersConfigException(final Throwable ex) {
+    /**
+     * Checks if the given client creation error is the kind of error for which the client creation methods of this
+     * factory would perform a retry, i.e. whether the error is due to the {@value CommonClientConfigs#BOOTSTRAP_SERVERS_CONFIG}
+     * config property containing a (non-empty) list of URLs that are not (yet) resolvable,
+     *
+     * @param exception The error to check.
+     * @param bootstrapServersConfig The {@value CommonClientConfigs#BOOTSTRAP_SERVERS_CONFIG} config property value.
+     * @return {@code true} if client creation may be retried.
+     */
+    public static boolean isRetriableClientCreationError(final Throwable exception, final String bootstrapServersConfig) {
+        return exception instanceof KafkaException
+                && isBootstrapServersConfigException(exception.getCause())
+                && containsValidServerEntries(bootstrapServersConfig);
+    }
+
+    private static boolean isBootstrapServersConfigException(final Throwable ex) {
         return ex instanceof ConfigException
                 && ex.getMessage() != null
                 && ex.getMessage().contains(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG);

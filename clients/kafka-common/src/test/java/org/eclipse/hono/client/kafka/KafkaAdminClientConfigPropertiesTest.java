@@ -19,6 +19,7 @@ import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Map;
 
+import org.apache.kafka.clients.CommonClientConfigs;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -77,7 +78,7 @@ public class KafkaAdminClientConfigPropertiesTest {
         assertThat(new KafkaAdminClientConfigProperties().isConfigured()).isFalse();
 
         final KafkaAdminClientConfigProperties config = new KafkaAdminClientConfigProperties();
-        config.setAdminClientConfig(Map.of(AbstractKafkaConfigProperties.PROPERTY_BOOTSTRAP_SERVERS, "kafka"));
+        config.setAdminClientConfig(Map.of(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, "kafka"));
         assertThat(config.isConfigured()).isTrue();
     }
 

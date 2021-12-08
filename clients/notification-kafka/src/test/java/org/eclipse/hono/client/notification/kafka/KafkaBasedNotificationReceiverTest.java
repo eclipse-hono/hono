@@ -21,10 +21,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.OffsetResetStrategy;
 import org.apache.kafka.common.TopicPartition;
-import org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties;
 import org.eclipse.hono.kafka.test.KafkaMockConsumer;
 import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
@@ -69,7 +69,7 @@ public class KafkaBasedNotificationReceiverTest {
         mockConsumer = new KafkaMockConsumer(OffsetResetStrategy.EARLIEST);
 
         consumerConfig = new NotificationKafkaConsumerConfigProperties();
-        consumerConfig.setConsumerConfig(Map.of(AbstractKafkaConfigProperties.PROPERTY_BOOTSTRAP_SERVERS, "dummy"));
+        consumerConfig.setConsumerConfig(Map.of(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, "dummy"));
 
     }
 

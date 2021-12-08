@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.client.kafka.producer;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,6 +26,7 @@ import org.apache.kafka.common.errors.OutOfOrderSequenceException;
 import org.apache.kafka.common.errors.ProducerFencedException;
 import org.apache.kafka.common.errors.UnsupportedForMessageFormatException;
 import org.apache.kafka.common.errors.UnsupportedVersionException;
+import org.eclipse.hono.client.kafka.KafkaClientFactory;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,6 +57,7 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
     private static final Logger LOG = LoggerFactory.getLogger(CachingKafkaProducerFactory.class);
 
     private final Map<String, KafkaProducer<K, V>> activeProducers = new ConcurrentHashMap<>();
+    private final KafkaClientFactory kafkaClientFactory;
     private final BiFunction<String, Map<String, String>, KafkaProducer<K, V>> producerInstanceSupplier;
 
     private KafkaClientMetricsSupport metricsSupport;
@@ -64,12 +67,14 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
      * <p>
      * Use {@link #sharedFactory(Vertx)} to create producers that can safely be shared between verticle instances.
      *
+     * @param vertx The Vert.x instance to use.
      * @param producerInstanceSupplier The function that provides new producer instances. Parameters are the producer
      *            name and the producer configuration.
      */
-    private CachingKafkaProducerFactory(
+    private CachingKafkaProducerFactory(final Vertx vertx,
             final BiFunction<String, Map<String, String>, KafkaProducer<K, V>> producerInstanceSupplier) {
         this.producerInstanceSupplier = producerInstanceSupplier;
+        this.kafkaClientFactory = new KafkaClientFactory(vertx);
     }
 
     /**
@@ -87,7 +92,7 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
      * @return An instance of the factory.
      */
     public static <K, V> CachingKafkaProducerFactory<K, V> sharedFactory(final Vertx vertx) {
-        return new CachingKafkaProducerFactory<>((name, config) -> KafkaProducer.createShared(vertx, name, config));
+        return new CachingKafkaProducerFactory<>(vertx, (name, config) -> KafkaProducer.createShared(vertx, name, config));
     }
 
     /**
@@ -109,7 +114,7 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
      * @return An instance of the factory.
      */
     public static <K, V> CachingKafkaProducerFactory<K, V> nonSharedFactory(final Vertx vertx) {
-        return new CachingKafkaProducerFactory<>((name, config) -> KafkaProducer.create(vertx, config));
+        return new CachingKafkaProducerFactory<>(vertx, (name, config) -> KafkaProducer.create(vertx, config));
     }
 
     /**
@@ -117,6 +122,7 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
      *
      * This provides the flexibility to control how the producers are created and is intended for unit tests.
      *
+     * @param vertx The Vert.x instance to use.
      * @param producerInstanceSupplier The function that provides new producer instances. Parameters are the producer
      *            name and the producer configuration.
      * @param <K> The type for the record key serialization.
@@ -124,8 +130,9 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
      * @return An instance of the factory.
      */
     public static <K, V> CachingKafkaProducerFactory<K, V> testFactory(
+            final Vertx vertx,
             final BiFunction<String, Map<String, String>, KafkaProducer<K, V>> producerInstanceSupplier) {
-        return new CachingKafkaProducerFactory<>(producerInstanceSupplier);
+        return new CachingKafkaProducerFactory<>(vertx, producerInstanceSupplier);
     }
 
     /**
@@ -149,6 +156,8 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
      * @param producerName The name to identify the producer.
      * @param config The Kafka configuration with which the producer is to be created.
      * @return an existing or new producer.
+     * @throws org.apache.kafka.common.KafkaException If creating the producer failed because of an invalid config or
+     *             because bootstrap servers could not be resolved.
      */
     @Override
     public KafkaProducer<K, V> getOrCreateProducer(final String producerName,
@@ -168,6 +177,19 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
         }
 
         return kafkaProducer;
+    }
+
+    @Override
+    public Future<KafkaProducer<K, V>> getOrCreateProducerWithRetries(
+            final String producerName,
+            final KafkaProducerConfigProperties config,
+            final Duration retriesTimeout) {
+
+        final String bootstrapServersConfig = config.getBootstrapServers();
+        return kafkaClientFactory.createClientWithRetries(
+                () -> getOrCreateProducer(producerName, config),
+                bootstrapServersConfig,
+                retriesTimeout);
     }
 
     private Handler<Throwable> getExceptionHandler(final String producerName, final KafkaProducer<K, V> producer, final String clientId) {

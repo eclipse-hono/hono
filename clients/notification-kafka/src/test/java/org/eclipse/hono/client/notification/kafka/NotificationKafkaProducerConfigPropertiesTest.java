@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.kafka.clients.CommonClientConfigs;
 import org.eclipse.hono.client.kafka.AbstractKafkaConfigProperties;
 import org.eclipse.hono.client.kafka.CommonKafkaClientConfigProperties;
 import org.junit.jupiter.api.Test;
@@ -81,7 +82,7 @@ public class NotificationKafkaProducerConfigPropertiesTest {
         assertThat(new NotificationKafkaProducerConfigProperties().isConfigured()).isFalse();
 
         final NotificationKafkaProducerConfigProperties config = new NotificationKafkaProducerConfigProperties();
-        config.setProducerConfig(Map.of(AbstractKafkaConfigProperties.PROPERTY_BOOTSTRAP_SERVERS, "kafka"));
+        config.setProducerConfig(Map.of(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, "kafka"));
         assertThat(config.isConfigured()).isTrue();
     }
 
