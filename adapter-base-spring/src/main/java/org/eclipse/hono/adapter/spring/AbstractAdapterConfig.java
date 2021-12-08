@@ -50,6 +50,8 @@ import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.metrics.KafkaMetricsConfig;
 import org.eclipse.hono.client.kafka.metrics.MicrometerKafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.metrics.NoopKafkaClientMetricsSupport;
+import org.eclipse.hono.client.notification.kafka.KafkaBasedNotificationReceiver;
+import org.eclipse.hono.client.notification.kafka.NotificationKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
@@ -60,6 +62,8 @@ import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.VertxProperties;
+import org.eclipse.hono.notification.NoOpNotificationReceiver;
+import org.eclipse.hono.notification.NotificationReceiver;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
 import org.eclipse.hono.service.cache.Caches;
@@ -132,7 +136,8 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
         final KafkaAdminClientConfigProperties kafkaCommandInternalConfig = kafkaCommandInternalConfig();
         final MessagingKafkaConsumerConfigProperties kafkaCommandConfig = kafkaCommandConfig();
         final KafkaClientMetricsSupport kafkaClientMetricsSupport = kafkaClientMetricsSupport(kafkaMetricsConfig());
-        final TenantClient tenantClient = tenantClient(samplerFactory);
+        final NotificationReceiver notificationReceiver = notificationReceiver();
+        final TenantClient tenantClient = tenantClient(samplerFactory, notificationReceiver);
         final MessagingClientProviders messagingClientProviders = messagingClientProviders(
                 samplerFactory,
                 getTracer(),
@@ -141,7 +146,7 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
                 kafkaClientMetricsSupport,
                 tenantClient);
 
-        final DeviceRegistrationClient registrationClient = registrationClient(samplerFactory);
+        final DeviceRegistrationClient registrationClient = registrationClient(samplerFactory, notificationReceiver);
         try {
             // look up client via bean factory in order to take advantage of conditional bean instantiation based
             // on config properties
@@ -184,7 +189,7 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
         adapter.setMessagingClientProviders(messagingClientProviders);
         Optional.ofNullable(connectionEventProducer())
             .ifPresent(adapter::setConnectionEventProducer);
-        adapter.setCredentialsClient(credentialsClient(samplerFactory));
+        adapter.setCredentialsClient(credentialsClient(samplerFactory, notificationReceiver));
         adapter.setHealthCheckServer(healthCheckServer());
         adapter.setRegistrationClient(registrationClient);
         adapter.setTenantClient(tenantClient);
@@ -306,17 +311,20 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
      * Exposes a client for accessing the <em>Device Registration</em> API as a Spring bean.
      *
      * @param samplerFactory The sampler factory to use.
+     * @param notificationReceiver The notification receiver to use.
      * @return The client.
      */
     @Bean
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Scope("prototype")
     public DeviceRegistrationClient registrationClient(
-            final SendMessageSampler.Factory samplerFactory) {
+            final SendMessageSampler.Factory samplerFactory,
+            final NotificationReceiver notificationReceiver) {
 
         return new ProtonBasedDeviceRegistrationClient(
                 registrationServiceConnection(),
                 samplerFactory,
+                notificationReceiver,
                 registrationCache());
     }
 
@@ -376,17 +384,20 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
      * Exposes a client for accessing the <em>Credentials</em> API as a Spring bean.
      *
      * @param samplerFactory The sampler factory to use.
+     * @param notificationReceiver The notification receiver to use.
      * @return The client.
      */
     @Bean
     @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
     @Scope("prototype")
     public CredentialsClient credentialsClient(
-            final SendMessageSampler.Factory samplerFactory) {
+            final SendMessageSampler.Factory samplerFactory,
+            final NotificationReceiver notificationReceiver) {
 
         return new ProtonBasedCredentialsClient(
                 credentialsServiceConnection(),
                 samplerFactory,
+                notificationReceiver,
                 credentialsCache());
     }
 
@@ -446,17 +457,20 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
      * Exposes a client for accessing the <em>Tenant</em> API as a Spring bean.
      *
      * @param samplerFactory The sampler factory to use.
+     * @param notificationReceiver The notification receiver to use.
      * @return The client.
      */
     @Bean
     @Qualifier(TenantConstants.TENANT_ENDPOINT)
     @Scope("prototype")
     public TenantClient tenantClient(
-            final SendMessageSampler.Factory samplerFactory) {
+            final SendMessageSampler.Factory samplerFactory,
+            final NotificationReceiver notificationReceiver) {
 
         return new ProtonBasedTenantClient(
                 tenantServiceConnection(),
                 samplerFactory,
+                notificationReceiver,
                 tenantCache());
     }
 
@@ -750,4 +764,34 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
     public KafkaMetricsConfig kafkaMetricsConfig() {
         return new KafkaMetricsConfig();
     }
+
+    /**
+     * Exposes configuration properties for the Kafka consumer that receives notifications as a Spring bean.
+     *
+     * @return The properties.
+     */
+    @ConfigurationProperties(prefix = "hono.kafka.notification")
+    public NotificationKafkaConsumerConfigProperties notificationKafkaConsumerConfig() {
+        final var configProperties = new NotificationKafkaConsumerConfigProperties();
+        configProperties.setCommonClientConfig(commonKafkaClientConfig());
+        return configProperties;
+    }
+
+    /**
+     * Exposes a notification receiver as a Spring bean.
+     *
+     * @return The bean instance.
+     */
+    @Bean
+    @Scope("prototype")
+    public NotificationReceiver notificationReceiver() {
+        final var kafkaConsumerConfig = notificationKafkaConsumerConfig();
+        if (kafkaConsumerConfig.isConfigured()) {
+            return new KafkaBasedNotificationReceiver(vertx(), kafkaConsumerConfig);
+        } else {
+            // TODO provide AMQP based notification receiver
+            return new NoOpNotificationReceiver();
+        }
+    }
+
 }

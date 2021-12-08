@@ -63,6 +63,8 @@ import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerOptions;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
+import org.eclipse.hono.client.notification.kafka.KafkaBasedNotificationReceiver;
+import org.eclipse.hono.client.notification.kafka.NotificationKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
@@ -79,6 +81,8 @@ import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.config.quarkus.ClientOptions;
 import org.eclipse.hono.config.quarkus.RequestResponseClientOptions;
+import org.eclipse.hono.notification.NoOpNotificationReceiver;
+import org.eclipse.hono.notification.NotificationReceiver;
 import org.eclipse.hono.service.cache.Caches;
 import org.eclipse.hono.service.quarkus.AbstractServiceApplication;
 import org.eclipse.hono.util.CredentialsObject;
@@ -139,6 +143,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     private MessagingKafkaProducerConfigProperties kafkaCommandResponseConfig;
     private MessagingKafkaConsumerConfigProperties kafkaCommandConfig;
     private KafkaAdminClientConfigProperties kafkaCommandInternalConfig;
+    private NotificationKafkaConsumerConfigProperties kafkaNotificationConfig;
 
     private Cache<Object, TenantResult<TenantObject>> tenantResponseCache;
     private Cache<Object, RegistrationResult> registrationResponseCache;
@@ -232,13 +237,15 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             @ConfigMapping(prefix = "hono.kafka.event") final KafkaProducerOptions eventOptions,
             @ConfigMapping(prefix = "hono.kafka.commandResponse") final KafkaProducerOptions commandResponseOptions,
             @ConfigMapping(prefix = "hono.kafka.command") final KafkaConsumerOptions commandOptions,
-            @ConfigMapping(prefix = "hono.kafka.commandInternal") final KafkaAdminClientOptions commandInternalOptions) {
+            @ConfigMapping(prefix = "hono.kafka.commandInternal") final KafkaAdminClientOptions commandInternalOptions,
+            @ConfigMapping(prefix = "hono.kafka.notification") final KafkaConsumerOptions notificationOptions) {
 
         kafkaTelemetryConfig = new MessagingKafkaProducerConfigProperties(commonOptions, telemetryOptions);
         kafkaEventConfig = new MessagingKafkaProducerConfigProperties(commonOptions, eventOptions);
         kafkaCommandResponseConfig = new MessagingKafkaProducerConfigProperties(commonOptions, commandResponseOptions);
         kafkaCommandConfig = new MessagingKafkaConsumerConfigProperties(commonOptions, commandOptions);
         kafkaCommandInternalConfig = new KafkaAdminClientConfigProperties(commonOptions, commandInternalOptions);
+        kafkaNotificationConfig = new NotificationKafkaConsumerConfigProperties(commonOptions, notificationOptions);
     }
 
     @Override
@@ -271,13 +278,14 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
         Objects.requireNonNull(adapter);
 
-        final DeviceRegistrationClient registrationClient = registrationClient();
+        final NotificationReceiver notificationReceiver = notificationReceiver();
+        final DeviceRegistrationClient registrationClient = registrationClient(notificationReceiver);
 
         final MessagingClientProvider<TelemetrySender> telemetrySenderProvider = new MessagingClientProvider<>();
         final MessagingClientProvider<EventSender> eventSenderProvider = new MessagingClientProvider<>();
         final MessagingClientProvider<CommandResponseSender> commandResponseSenderProvider = new MessagingClientProvider<>();
         final KafkaClientMetricsSupport kafkaClientMetricsSupport = kafkaClientMetricsSupport(kafkaMetricsOptions);
-        final var tenantClient = tenantClient();
+        final var tenantClient = tenantClient(notificationReceiver);
 
         if (kafkaEventConfig.isConfigured()) {
             LOG.info("Kafka client configuration present, adding Kafka messaging clients");
@@ -343,7 +351,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         adapter.setMessagingClientProviders(messagingClientProviders);
         Optional.ofNullable(connectionEventProducer())
             .ifPresent(adapter::setConnectionEventProducer);
-        adapter.setCredentialsClient(credentialsClient());
+        adapter.setCredentialsClient(credentialsClient(notificationReceiver));
         adapter.setHealthCheckServer(healthCheckServer);
         adapter.setRegistrationClient(registrationClient);
         adapter.setResourceLimitChecks(prometheusResourceLimitChecks(resourceLimitChecksConfig, tenantClient));
@@ -378,12 +386,14 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     /**
      * Creates a new client for Hono's Tenant service.
      *
+     * @param notificationReceiver The notification receiver to use.
      * @return The client.
      */
-    protected TenantClient tenantClient() {
+    protected TenantClient tenantClient(final NotificationReceiver notificationReceiver) {
         return new ProtonBasedTenantClient(
                 HonoConnection.newConnection(vertx, tenantClientConfig, tracer),
                 messageSamplerFactory,
+                notificationReceiver,
                 tenantResponseCache());
     }
 
@@ -397,12 +407,14 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     /**
      * Creates a new client for Hono's Device Registration service.
      *
+     * @param notificationReceiver The notification receiver to use.
      * @return The client.
      */
-    protected DeviceRegistrationClient registrationClient() {
+    protected DeviceRegistrationClient registrationClient(final NotificationReceiver notificationReceiver) {
         return new ProtonBasedDeviceRegistrationClient(
                 HonoConnection.newConnection(vertx, deviceRegistrationClientConfig, tracer),
                 messageSamplerFactory,
+                notificationReceiver,
                 registrationResponseCache());
     }
 
@@ -416,12 +428,14 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     /**
      * Creates a new client for Hono's Credentials service.
      *
+     * @param notificationReceiver The notification receiver to use.
      * @return The client.
      */
-    protected CredentialsClient credentialsClient() {
+    protected CredentialsClient credentialsClient(final NotificationReceiver notificationReceiver) {
         return new ProtonBasedCredentialsClient(
                 HonoConnection.newConnection(vertx, credentialsClientConfig, tracer),
                 messageSamplerFactory,
+                notificationReceiver,
                 credentialsResponseCache());
     }
 
@@ -570,4 +584,19 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             return NoopKafkaClientMetricsSupport.INSTANCE;
         }
     }
+
+    /**
+     * Creates the notification receiver.
+     *
+     * @return The bean instance.
+     */
+    public NotificationReceiver notificationReceiver() {
+        if (kafkaNotificationConfig.isConfigured()) {
+            return new KafkaBasedNotificationReceiver(vertx, kafkaNotificationConfig);
+        } else {
+            // TODO provide AMQP based notification receiver
+            return new NoOpNotificationReceiver();
+        }
+    }
+
 }

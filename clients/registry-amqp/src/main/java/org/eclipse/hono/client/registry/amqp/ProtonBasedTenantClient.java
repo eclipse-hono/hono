@@ -32,9 +32,13 @@ import org.eclipse.hono.client.amqp.AbstractRequestResponseServiceClient;
 import org.eclipse.hono.client.amqp.RequestResponseClient;
 import org.eclipse.hono.client.impl.CachingClientFactory;
 import org.eclipse.hono.client.registry.TenantClient;
+import org.eclipse.hono.client.util.AnnotatedCacheKey;
+import org.eclipse.hono.notification.NoOpNotificationReceiver;
+import org.eclipse.hono.notification.NotificationReceiver;
+import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
+import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.Pair;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantConstants.TenantAction;
@@ -58,13 +62,40 @@ import io.vertx.core.json.JsonObject;
 
 /**
  * A vertx-proton based client of Hono's Tenant service.
- *
+ * <p>
+ * If a response cache has been provided, a notification receiver can be used to receive notifications about changes in
+ * tenants from Hono's Device Registry. The notifications are used to invalidate the corresponding entries in the
+ * response cache.
  */
 public final class ProtonBasedTenantClient extends AbstractRequestResponseServiceClient<TenantObject, TenantResult<TenantObject>> implements TenantClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(ProtonBasedTenantClient.class);
     private static final StringTag TAG_SUBJECT_DN = new StringTag("subject_dn");
+    private static final String ATTRIBUTE_KEY_TENANT_ID = "tenant-id";
     private final Map<Object, Future<TenantResult<TenantObject>>> pendingRequests = new HashMap<>();
+    private final NotificationReceiver notificationReceiver;
+
+    /**
+     * Creates a new client for a connection.
+     *
+     * @param connection The connection to the service.
+     * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
+     * @param notificationReceiver The client to receive notifications from the device registry. The receiver will be
+     *            started and stopped by the lifecycle of this client ({@link #start()} and {@link #stop()}).
+     * @param responseCache The cache to use for service responses or {@code null} if responses should not be cached.
+     * @throws NullPointerException if any of the parameters other than the response cache are {@code null}.
+     */
+    public ProtonBasedTenantClient(
+            final HonoConnection connection,
+            final SendMessageSampler.Factory samplerFactory,
+            final NotificationReceiver notificationReceiver,
+            final Cache<Object, TenantResult<TenantObject>> responseCache) {
+        super(connection,
+                samplerFactory,
+                new CachingClientFactory<>(connection.getVertx(), RequestResponseClient::isOpen),
+                responseCache);
+        this.notificationReceiver = Objects.requireNonNull(notificationReceiver);
+    }
 
     /**
      * Creates a new client for a connection.
@@ -78,10 +109,7 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseServic
             final HonoConnection connection,
             final SendMessageSampler.Factory samplerFactory,
             final Cache<Object, TenantResult<TenantObject>> responseCache) {
-        super(connection,
-                samplerFactory,
-                new CachingClientFactory<>(connection.getVertx(), RequestResponseClient::isOpen),
-                responseCache);
+        this(connection, samplerFactory, new NoOpNotificationReceiver(), responseCache);
     }
 
     /**
@@ -144,7 +172,7 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseServic
 
         Objects.requireNonNull(tenantId);
 
-        final var responseCacheKey = Pair.of(TenantAction.get, tenantId);
+        final AnnotatedCacheKey<String> responseCacheKey = new AnnotatedCacheKey<>(tenantId);
         final Span span = newChildSpan(parent, "get Tenant by ID");
         span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         return get(
@@ -162,7 +190,7 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseServic
         Objects.requireNonNull(subjectDn);
 
         final String subjectDnRfc2253 = subjectDn.getName(X500Principal.RFC2253);
-        final var responseCacheKey = Pair.of(TenantAction.get, subjectDn);
+        final AnnotatedCacheKey<X500Principal> responseCacheKey = new AnnotatedCacheKey<>(subjectDn);
         final Span span = newChildSpan(parent, "get Tenant by subject DN");
         TAG_SUBJECT_DN.set(span, subjectDnRfc2253);
         return get(
@@ -172,7 +200,7 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseServic
     }
 
     private Future<TenantObject> get(
-            final Pair<TenantAction, ?> responseCacheKey,
+            final AnnotatedCacheKey<?> responseCacheKey,
             final Supplier<JsonObject> payloadSupplier,
             final Span currentSpan) {
 
@@ -199,7 +227,7 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseServic
     }
 
     private Future<TenantResult<TenantObject>> executeOrUsePendingRequestResult(
-            final Object responseCacheKey,
+            final AnnotatedCacheKey<?> responseCacheKey,
             final Supplier<Future<TenantResult<TenantObject>>> serviceRequest) {
 
         final Promise<TenantResult<TenantObject>> resultPromise = Promise.promise();
@@ -210,10 +238,63 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseServic
                         // otherwise execute the request
                         () -> serviceRequest.get()
                                 // make sure to put the response to the cache (if applicable)
-                                .onSuccess(tenantResult -> addToCache(responseCacheKey, tenantResult))
+                                .onSuccess(tenantResult -> addResultToCache(responseCacheKey, tenantResult))
                                 // and again remove the result promise so that a subsequent request will be executed again
                                 .onComplete(ar -> pendingRequests.remove(responseCacheKey))
                                 .onComplete(resultPromise));
         return resultPromise.future();
     }
+
+    private void addResultToCache(final AnnotatedCacheKey<?> responseCacheKey,
+            final TenantResult<TenantObject> tenantResult) {
+
+        if (isCachingEnabled()) {
+            // add tenant ID to all cache keys so that they can be found in a consistent way when removing them
+            if (tenantResult.getPayload() != null) {
+                // payload will be null if tenant not found, in this case the result will not be cached
+                responseCacheKey.putAttribute(ATTRIBUTE_KEY_TENANT_ID, tenantResult.getPayload().getTenantId());
+            }
+
+            addToCache(responseCacheKey, tenantResult);
+        }
+    }
+
+    private void removeResultFromCache(final String tenantId) {
+        // this matches all entries for the tenant, regardless of the cache key
+        removeFromCacheByPattern(key -> ((AnnotatedCacheKey<?>) key)
+                .getAttribute(ATTRIBUTE_KEY_TENANT_ID)
+                .map(id -> id.equals(tenantId))
+                .orElse(false));
+    }
+
+    @Override
+    public Future<Void> start() {
+        if (isCachingEnabled()) {
+            notificationReceiver.registerConsumer(TenantChangeNotification.class,
+                    n -> {
+                        if (LifecycleChange.DELETE.equals(n.getChange())
+                                || (LifecycleChange.UPDATE.equals(n.getChange()) && !n.isEnabled())) {
+                            removeResultFromCache(n.getTenantId());
+                        }
+                    });
+
+            return notificationReceiver.start()
+                    .compose(v -> super.start());
+        } else {
+            return super.start();
+        }
+    }
+
+    @Override
+    public Future<Void> stop() {
+        return super.stop()
+                .compose(v -> {
+                    if (isCachingEnabled()) {
+                        return notificationReceiver.stop();
+                    } else {
+                        return Future.succeededFuture();
+                    }
+                });
+    }
+
 }

@@ -14,15 +14,17 @@
 package org.eclipse.hono.notification;
 
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 
 /**
- * A no-op implementation for the notification sender.
+ * A no-op implementation for the notification receiver.
  */
-public final class NoOpNotificationSender implements NotificationSender {
+public final class NoOpNotificationReceiver implements NotificationReceiver {
 
     @Override
-    public Future<Void> publish(final AbstractNotification notification) {
-        return Future.succeededFuture();
+    public <T extends AbstractNotification> void registerConsumer(final Class<T> notificationType,
+            final Handler<T> consumer) {
+
     }
 
     @Override

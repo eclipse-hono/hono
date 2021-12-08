@@ -17,6 +17,7 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
+import org.eclipse.hono.notification.NoOpNotificationReceiver;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -51,6 +52,7 @@ public class DeviceRegistrationAmqpIT extends DeviceRegistrationApiTests {
                                 IntegrationTestSupport.TENANT_ADMIN_USER,
                                 IntegrationTestSupport.TENANT_ADMIN_PWD)),
                 SendMessageSampler.Factory.noop(),
+                new NoOpNotificationReceiver(),
                 null);
         registrationClient.start().onComplete(ctx.succeedingThenComplete());
     }

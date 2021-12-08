@@ -38,6 +38,10 @@
       <artifactId>hono-client</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-notification</artifactId>
+    </dependency>
+    <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-core</artifactId>
     </dependency>

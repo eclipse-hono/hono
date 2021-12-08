@@ -29,6 +29,12 @@ import org.eclipse.hono.client.amqp.AbstractRequestResponseServiceClient;
 import org.eclipse.hono.client.amqp.RequestResponseClient;
 import org.eclipse.hono.client.impl.CachingClientFactory;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
+import org.eclipse.hono.client.util.AnnotatedCacheKey;
+import org.eclipse.hono.notification.NoOpNotificationReceiver;
+import org.eclipse.hono.notification.NotificationReceiver;
+import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
+import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
+import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.Constants;
@@ -36,7 +42,6 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
-import org.eclipse.hono.util.TriTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,12 +58,42 @@ import io.vertx.core.json.JsonObject;
 
 /**
  * A vertx-proton based client of Hono's Device Registration service.
- *
+ * <p>
+ * If a response cache has been provided, a notification receiver can be used to receive notifications about changes in
+ * tenants and device registrations from Hono's Device Registry. The notifications are used to invalidate the
+ * corresponding entries in the response cache.
  */
 public class ProtonBasedDeviceRegistrationClient extends AbstractRequestResponseServiceClient<JsonObject, RegistrationResult>
         implements DeviceRegistrationClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(ProtonBasedDeviceRegistrationClient.class);
+    private final NotificationReceiver notificationReceiver;
+
+    /**
+     * Creates a new client for a connection.
+     *
+     * @param connection The connection to the Device Registration service.
+     * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
+     * @param notificationReceiver The client to receive notifications from the device registry. The receiver will be
+     *            started and stopped by the lifecycle of this client ({@link #start()} and {@link #stop()}).
+     * @param responseCache The cache to use for service responses or {@code null} if responses should not be cached.
+     * @throws NullPointerException if any of the parameters other than the response cache are {@code null}.
+     */
+    public ProtonBasedDeviceRegistrationClient(
+            final HonoConnection connection,
+            final SendMessageSampler.Factory samplerFactory,
+            final NotificationReceiver notificationReceiver,
+            final Cache<Object, RegistrationResult> responseCache) {
+
+        super(connection,
+                samplerFactory,
+                new CachingClientFactory<>(connection.getVertx(), RequestResponseClient::isOpen),
+                responseCache);
+        connection.getVertx().eventBus().consumer(
+                Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
+                this::handleTenantTimeout);
+        this.notificationReceiver = Objects.requireNonNull(notificationReceiver);
+    }
 
     /**
      * Creates a new client for a connection.
@@ -72,14 +107,7 @@ public class ProtonBasedDeviceRegistrationClient extends AbstractRequestResponse
             final HonoConnection connection,
             final SendMessageSampler.Factory samplerFactory,
             final Cache<Object, RegistrationResult> responseCache) {
-
-        super(connection,
-                samplerFactory,
-                new CachingClientFactory<>(connection.getVertx(), RequestResponseClient::isOpen),
-                responseCache);
-        connection.getVertx().eventBus().consumer(
-                Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
-                this::handleTenantTimeout);
+        this(connection, samplerFactory, new NoOpNotificationReceiver(), responseCache);
     }
 
     @Override
@@ -139,12 +167,8 @@ public class ProtonBasedDeviceRegistrationClient extends AbstractRequestResponse
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
 
-        Objects.requireNonNull(deviceId);
-
-        final TriTuple<String, String, String> responseCacheKey = TriTuple.of(
-                RegistrationConstants.ACTION_ASSERT,
-                String.format("%s@%s", deviceId, tenantId),
-                gatewayId);
+        final AnnotatedCacheKey<CacheKey> responseCacheKey = new AnnotatedCacheKey<>(
+                new CacheKey(tenantId, deviceId, gatewayId));
         final Span span = newChildSpan(context, "assert Device Registration");
         TracingHelper.setDeviceTags(span, tenantId, deviceId);
         TracingHelper.TAG_GATEWAY_ID.set(span, gatewayId);
@@ -205,4 +229,99 @@ public class ProtonBasedDeviceRegistrationClient extends AbstractRequestResponse
                 })
                 .onComplete(o -> span.finish());
     }
+
+    @SuppressWarnings("unchecked")
+    private void removeResultsForTenantFromCache(final String tenantId) {
+        removeFromCacheByPattern(k -> ((AnnotatedCacheKey<CacheKey>) k).getKey().tenantId.equals(tenantId));
+    }
+
+    @SuppressWarnings("unchecked")
+    private void removeResultsForDeviceFromCache(final String tenantId, final String deviceId) {
+        removeFromCacheByPattern(key -> {
+            final CacheKey cacheKey = ((AnnotatedCacheKey<CacheKey>) key).getKey();
+            final boolean tenantMatches = cacheKey.tenantId.equals(tenantId);
+            final boolean deviceOrGatewayMatches = cacheKey.deviceId.equals(deviceId)
+                    || Objects.equals(cacheKey.gatewayId, deviceId);
+            return tenantMatches && deviceOrGatewayMatches;
+        });
+    }
+
+    @Override
+    public Future<Void> start() {
+        if (isCachingEnabled()) {
+
+            notificationReceiver.registerConsumer(AllDevicesOfTenantDeletedNotification.class,
+                    n -> removeResultsForTenantFromCache(n.getTenantId()));
+
+            notificationReceiver.registerConsumer(DeviceChangeNotification.class,
+                    n -> {
+                        if (LifecycleChange.DELETE.equals(n.getChange())
+                                || (LifecycleChange.UPDATE.equals(n.getChange()) && !n.isEnabled())) {
+                            removeResultsForDeviceFromCache(n.getTenantId(), n.getDeviceId());
+                        }
+                    });
+
+            return notificationReceiver.start()
+                    .compose(v -> super.start());
+        } else {
+            return super.start();
+        }
+    }
+
+    @Override
+    public Future<Void> stop() {
+        return super.stop()
+                .compose(v -> {
+                    if (isCachingEnabled()) {
+                        return notificationReceiver.stop();
+                    } else {
+                        return Future.succeededFuture();
+                    }
+                });
+    }
+
+    private static class CacheKey {
+
+        final String tenantId;
+        final String deviceId;
+        final String gatewayId;
+
+        CacheKey(final String tenantId, final String deviceId, final String gatewayId) {
+            Objects.requireNonNull(tenantId);
+            Objects.requireNonNull(deviceId);
+
+            this.tenantId = tenantId;
+            this.deviceId = deviceId;
+            this.gatewayId = gatewayId;
+        }
+
+        @Override
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            final CacheKey cacheKey = (CacheKey) o;
+            return tenantId.equals(cacheKey.tenantId)
+                    && deviceId.equals(cacheKey.deviceId)
+                    && Objects.equals(gatewayId, cacheKey.gatewayId);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(tenantId, deviceId, gatewayId);
+        }
+
+        @Override
+        public String toString() {
+            return "CacheKey{" +
+                    "tenantId='" + tenantId + '\'' +
+                    ", deviceId='" + deviceId + '\'' +
+                    ", gatewayId='" + gatewayId + '\'' +
+                    '}';
+        }
+    }
+
 }
