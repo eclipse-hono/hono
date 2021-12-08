@@ -24,6 +24,7 @@ import org.eclipse.hono.client.kafka.CommonKafkaClientConfigProperties;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
+import org.eclipse.hono.client.notification.amqp.ProtonBasedNotificationSender;
 import org.eclipse.hono.client.notification.kafka.KafkaBasedNotificationSender;
 import org.eclipse.hono.client.notification.kafka.NotificationKafkaProducerConfigProperties;
 import org.eclipse.hono.client.telemetry.EventSender;
@@ -52,7 +53,6 @@ import org.eclipse.hono.deviceregistry.service.device.EdgeDeviceAutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.tenant.DefaultTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.util.ServiceClientAdapter;
-import org.eclipse.hono.notification.NoOpNotificationSender;
 import org.eclipse.hono.notification.NotificationSender;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
@@ -102,7 +102,6 @@ import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.authentication.AuthenticationProvider;
 import io.vertx.ext.auth.jdbc.JDBCAuthentication;
 import io.vertx.ext.auth.jdbc.JDBCAuthenticationOptions;
@@ -703,7 +702,7 @@ public class ApplicationConfig {
     @Scope("prototype")
     @ConditionalOnBean(CredentialsManagementService.class)
     public HttpEndpoint credentialsHttpEndpoint() throws IOException {
-        return new DelegatingCredentialsManagementHttpEndpoint<>(vertx(),  credentialsManagementService());
+        return new DelegatingCredentialsManagementHttpEndpoint<>(vertx(), credentialsManagementService());
     }
 
     /**
@@ -788,15 +787,21 @@ public class ApplicationConfig {
     @Scope("prototype")
     @Profile(Profiles.PROFILE_REGISTRY_MANAGEMENT)
     public NotificationSender notificationSender() {
+        final NotificationSender notificationSender;
         final var kafkaProducerConfig = notificationKafkaProducerConfig();
         if (kafkaProducerConfig.isConfigured()) {
-            final KafkaProducerFactory<String, JsonObject> factory = CachingKafkaProducerFactory.sharedFactory(vertx());
-            return new KafkaBasedNotificationSender(factory, kafkaProducerConfig);
+            notificationSender = new KafkaBasedNotificationSender(CachingKafkaProducerFactory.sharedFactory(vertx()),
+                    kafkaProducerConfig);
         } else {
-            // TODO create AMQP based notification sender
-            // TODO register health check for AMQP based notification sender
-            return new NoOpNotificationSender();
+            notificationSender = new ProtonBasedNotificationSender(
+                    HonoConnection.newConnection(vertx(), downstreamSenderConfig(), tracer()));
         }
+// TODO enable once number of notificationSender beans has been reduced to the needed minimum and all get properly started
+//        if (notificationSender instanceof ServiceClient) {
+//            healthCheckServer()
+//                    .registerHealthCheckResources(ServiceClientAdapter.forClient((ServiceClient) notificationSender));
+//        }
+        return notificationSender;
     }
 
 }

@@ -164,6 +164,12 @@
         "resource": "command_response/DEFAULT_TENANT",
         "activities": [ "READ" ]
       }
+    ],
+    "notification-test": [
+      {
+        "resource": "notification/*",
+        "activities": [ "READ" ]
+      }
     ]
   },
   "users": {
@@ -247,6 +253,13 @@
       "password": "pw",
       "authorities": [
         "DEFAULT_TENANT-application"
+      ]
+    },
+    "notification-test": {
+      "mechanism": "PLAIN",
+      "password": "pw",
+      "authorities": [
+        "notification-test"
       ]
     }
   }

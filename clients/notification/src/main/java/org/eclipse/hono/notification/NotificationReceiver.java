@@ -25,10 +25,13 @@ public interface NotificationReceiver extends Lifecycle {
 
     /**
      * Registers a notification consumer for a specific type of notifications.
+     * <p>
+     * Has to be invoked before the {@link #start()} method is called.
      *
      * @param notificationType The class of the notifications to consume.
      * @param consumer The handler to be invoked with the received notification.
      * @param <T> The type of notifications to consume.
+     * @throws IllegalStateException If invoked after the {@link #start()} method was called.
      */
     <T extends AbstractNotification> void registerConsumer(Class<T> notificationType, Handler<T> consumer);
 }
