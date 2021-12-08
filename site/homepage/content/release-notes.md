@@ -60,6 +60,10 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The `hono.kafka.defaultClientIdPrefix` configuration property needs to be removed from existing configurations.
   Configuring parts of the created Kafka client identifiers should usually not be needed any more. To still set a custom
   part, the `client.id` property value may be used instead. It is adopted as prefix for created client identifiers.
+* A new API for notifications among Hono components has been introduced. For Hono deployments using an AMQP messaging
+  network, it has to be made sure that addresses with the `notification/` prefix are configured to use multicast.
+  See the `tests/src/test/resources/qpid/qdrouterd-with-broker.json` file for an example Qpid Dispatch Router
+  configuration.
 
 ## 1.10.0
 

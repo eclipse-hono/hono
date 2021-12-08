@@ -20,6 +20,11 @@ import org.eclipse.hono.util.Constants;
  */
 public class NotificationConstants {
 
+    /**
+     * The name of the notification API endpoint.
+     */
+    public static final String NOTIFICATION_ENDPOINT = "notification";
+
     public static final String CONTENT_TYPE = "application/json";
     /**
      * The field name of the JSON object that indicates the class into the object can be decoded.

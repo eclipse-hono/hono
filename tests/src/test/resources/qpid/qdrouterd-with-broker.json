@@ -89,6 +89,11 @@
     "distribution": "balanced"
   }],
 
+  ["address", {
+    "prefix": "notification/",
+    "distribution": "multicast"
+  }],
+
   ["policy", {
     "maxConnections": 1000,
     "enableVhostPolicy": true,
@@ -119,8 +124,8 @@
           "maxMessageSize": 131072,
           "allowUserIdProxy": true,
           "allowAnonymousSender": true,
-          "sources": "command_internal/*, command/*",
-          "targets": "telemetry/*, event/*, command_internal/*, command_response/*"
+          "sources": "command_internal/*, command/*, notification/*",
+          "targets": "telemetry/*, event/*, command_internal/*, command_response/*, notification/*"
         }
       }
   }],
