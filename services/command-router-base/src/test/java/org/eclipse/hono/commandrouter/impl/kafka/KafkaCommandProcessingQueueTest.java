@@ -153,7 +153,7 @@ public class KafkaCommandProcessingQueueTest {
         when(consumerRecord.partition()).thenReturn(0);
 
         final KafkaBasedCommand cmd = KafkaBasedCommand.from(consumerRecord);
-        return new KafkaBasedCommandContext(cmd, mock(Span.class), mock(CommandResponseSender.class)) {
+        return new KafkaBasedCommandContext(cmd, mock(CommandResponseSender.class), mock(Span.class)) {
             @Override
             public String toString() {
                 return "Command " + offset;

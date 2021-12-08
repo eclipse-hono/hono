@@ -359,7 +359,12 @@ public abstract class ProtocolAdapterMockSupport {
      * @return The sender that the factory will create.
      */
     protected CommandResponseSender givenACommandResponseSenderForAnyTenant(final Promise<Void> outcome) {
-        when(commandResponseSender.sendCommandResponse(any(CommandResponse.class), (SpanContext) any())).thenReturn(outcome.future());
+        when(commandResponseSender.sendCommandResponse(
+                any(TenantObject.class),
+                any(RegistrationAssertion.class),
+                any(CommandResponse.class),
+                (SpanContext) any()))
+            .thenReturn(outcome.future());
         return commandResponseSender;
     }
 
@@ -571,6 +576,10 @@ public abstract class ProtocolAdapterMockSupport {
      * @throws AssertionError if a message has been sent.
      */
     protected void assertNoCommandResponseHasBeenSentDownstream() {
-        verify(commandResponseSender, never()).sendCommandResponse(any(CommandResponse.class), any());
+        verify(commandResponseSender, never()).sendCommandResponse(
+                any(TenantObject.class),
+                any(RegistrationAssertion.class),
+                any(CommandResponse.class),
+                any());
     }
 }

@@ -697,8 +697,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * This method opens a new link for sending the response, tries to send the
      * response message and then closes the link again.
      *
-     * @param response The response message.
      * @param tenant The tenant to send the response for.
+     * @param device The registration assertion for the device that the data originates from.
+     * @param response The response message.
      * @param context The currently active OpenTracing span. An implementation
      *         should use this as the parent for any span it creates for tracing
      *         the execution of this operation.
@@ -707,16 +708,17 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @throws NullPointerException if any of the parameters other than context are {@code null}.
      */
     protected final Future<Void> sendCommandResponse(
-            final CommandResponse response,
             final TenantObject tenant,
+            final RegistrationAssertion device,
+            final CommandResponse response,
             final SpanContext context) {
 
         Objects.requireNonNull(response);
         Objects.requireNonNull(tenant);
+        Objects.requireNonNull(device);
 
-        final CommandResponseSender sender = messagingClientProviders
-                .getCommandResponseSender(response.getMessagingType(), tenant);
-        return sender.sendCommandResponse(response, context);
+        return messagingClientProviders.getCommandResponseSender(response.getMessagingType(), tenant)
+                .sendCommandResponse(tenant, device, response, context);
     }
 
     @Override

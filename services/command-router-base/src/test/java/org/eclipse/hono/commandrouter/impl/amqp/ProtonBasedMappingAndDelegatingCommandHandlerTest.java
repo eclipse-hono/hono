@@ -51,6 +51,7 @@ import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.micrometer.core.instrument.Timer;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Context;
@@ -108,6 +109,7 @@ public class ProtonBasedMappingAndDelegatingCommandHandlerTest {
         commandTargetMapper = mock(CommandTargetMapper.class);
 
         final CommandRouterMetrics metrics = mock(CommandRouterMetrics.class);
+        when(metrics.startTimer()).thenReturn(Timer.start());
         mappingAndDelegatingCommandHandler = new ProtonBasedMappingAndDelegatingCommandHandler(tenantClient,
                 connection, commandTargetMapper, metrics);
     }

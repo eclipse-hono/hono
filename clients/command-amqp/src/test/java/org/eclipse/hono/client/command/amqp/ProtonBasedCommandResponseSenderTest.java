@@ -16,7 +16,6 @@ package org.eclipse.hono.client.command.amqp;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -24,6 +23,7 @@ import static org.mockito.Mockito.when;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
+import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.qpid.proton.message.Message;
@@ -37,10 +37,14 @@ import org.eclipse.hono.client.command.Commands;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
+import org.eclipse.hono.util.RegistrationAssertion;
+import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 
 import io.opentracing.Span;
 import io.opentracing.Tracer;
@@ -90,7 +94,10 @@ public class ProtonBasedCommandResponseSenderTest {
         when(connection.isConnected(anyLong())).thenReturn(Future.succeededFuture());
         when(connection.createSender(anyString(), any(), any())).thenReturn(Future.succeededFuture(protonSender));
 
-        sender = new ProtonBasedCommandResponseSender(connection, SendMessageSampler.Factory.noop(), false);
+        sender = new ProtonBasedCommandResponseSender(
+                connection,
+                SendMessageSampler.Factory.noop(),
+                false);
     }
 
     /**
@@ -114,16 +121,19 @@ public class ProtonBasedCommandResponseSenderTest {
                 null,
                 null,
                 HttpURLConnection.HTTP_OK);
-        sender.sendCommandResponse(commandResponse, span.context())
-                .onComplete(ctx.failing(thr -> {
-                    ctx.verify(() -> {
-                        // THEN the invocation is failed with a server error
-                        assertThat(thr).isInstanceOf(ServiceInvocationException.class);
-                        assertThat(((ServiceInvocationException) thr).getErrorCode())
-                                .isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
-                    });
-                    ctx.completeNow();
-                }));
+        sender.sendCommandResponse(
+                TenantObject.from(TENANT_ID),
+                new RegistrationAssertion(DEVICE_ID),
+                commandResponse, span.context())
+            .onComplete(ctx.failing(thr -> {
+                ctx.verify(() -> {
+                    // THEN the invocation is failed with a server error
+                    assertThat(thr).isInstanceOf(ServiceInvocationException.class);
+                    assertThat(((ServiceInvocationException) thr).getErrorCode())
+                            .isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -131,6 +141,9 @@ public class ProtonBasedCommandResponseSenderTest {
      */
     @Test
     public void testCommandResponseMessageHasCreationTime() {
+
+        final var now = Instant.now();
+        final TenantObject tenant = TenantObject.from(TENANT_ID);
 
         when(protonSender.sendQueueFull()).thenReturn(Boolean.FALSE);
         when(protonSender.send(any(Message.class), VertxMockSupport.anyHandler())).thenReturn(mock(ProtonDelivery.class));
@@ -143,9 +156,20 @@ public class ProtonBasedCommandResponseSenderTest {
                 null,
                 null,
                 HttpURLConnection.HTTP_OK);
-        sender.sendCommandResponse(commandResponse, span.context());
 
+        sender.sendCommandResponse(
+                tenant,
+                new RegistrationAssertion(DEVICE_ID),
+                commandResponse,
+                span.context());
+
+        final ArgumentCaptor<Message> downstreamMessage = ArgumentCaptor.forClass(Message.class);
+        verify(protonSender).send(
+                downstreamMessage.capture(),
+                VertxMockSupport.anyHandler());
         // THEN the message being sent contains a creation-time
-        verify(protonSender).send(argThat(msg -> msg.getCreationTime() > 0), VertxMockSupport.anyHandler());
+        assertThat(downstreamMessage.getValue().getCreationTime()).isAtLeast(now.toEpochMilli());
+        // and a 200 status code
+        assertThat(MessageHelper.getStatus(downstreamMessage.getValue())).isEqualTo(HttpURLConnection.HTTP_OK);
     }
 }

@@ -1288,7 +1288,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                             .map(success -> tenantTracker.result());
 
                     return CompositeFuture.all(tenantValidationTracker, tokenFuture)
-                            .compose(success -> sendCommandResponse(commandResponse, tenantTracker.result(),
+                            .compose(success -> sendCommandResponse(
+                                    tenantTracker.result(),
+                                    tokenFuture.result(),
+                                    commandResponse,
                                     currentSpan.context()));
                 }).map(delivery -> {
 

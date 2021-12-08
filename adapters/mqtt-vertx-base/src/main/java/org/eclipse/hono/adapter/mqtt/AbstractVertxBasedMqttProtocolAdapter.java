@@ -811,10 +811,13 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                             isAdapterEnabled(tenantTracker.result()),
                             checkMessageLimit(tenantTracker.result(), payloadSize, currentSpan.context()))
                             .mapEmpty();
-                    return CompositeFuture.all(deviceRegistrationTracker, tenantValidationTracker);
+                    return CompositeFuture.all(deviceRegistrationTracker, tenantValidationTracker)
+                            .compose(ok -> sendCommandResponse(
+                                    tenantTracker.result(),
+                                    deviceRegistrationTracker.result(),
+                                    commandResponseTracker.result(),
+                                    currentSpan.context()));
                 })
-                .compose(ok -> sendCommandResponse(commandResponseTracker.result(), tenantTracker.result(),
-                        currentSpan.context()))
                 .compose(delivery -> {
                     log.trace("successfully forwarded command response from device [tenant-id: {}, device-id: {}]",
                             targetAddress.getTenantId(), targetAddress.getResourceId());

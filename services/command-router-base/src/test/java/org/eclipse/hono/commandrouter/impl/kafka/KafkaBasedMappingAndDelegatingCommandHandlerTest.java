@@ -17,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -53,6 +54,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
+import io.micrometer.core.instrument.Timer;
 import io.opentracing.Tracer;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
@@ -98,7 +100,10 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
                 .thenReturn(Future.succeededFuture(createTargetAdapterInstanceJson(deviceId, adapterInstanceId)));
 
         internalCommandSender = mock(KafkaBasedInternalCommandSender.class);
-        when(internalCommandSender.sendCommand(any(), any())).thenReturn(Future.succeededFuture());
+        when(internalCommandSender.sendCommand(
+                any(CommandContext.class),
+                anyString()))
+            .thenReturn(Future.succeededFuture());
 
         final KafkaBasedCommandResponseSender kafkaBasedCommandResponseSender = mock(KafkaBasedCommandResponseSender.class);
 
@@ -106,13 +111,14 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
         final Context context = VertxMockSupport.mockContext(vertx);
         final KafkaCommandProcessingQueue commandQueue = new KafkaCommandProcessingQueue(context);
         final CommandRouterMetrics metrics = mock(CommandRouterMetrics.class);
+        when(metrics.startTimer()).thenReturn(Timer.start());
         final Tracer tracer = TracingMockSupport.mockTracer(TracingMockSupport.mockSpan());
         cmdHandler = new KafkaBasedMappingAndDelegatingCommandHandler(vertx, tenantClient, commandQueue, commandTargetMapper,
                 internalCommandSender, kafkaBasedCommandResponseSender, metrics, tracer);
     }
 
     /**
-     * Verifies the behaviour of the 
+     * Verifies the behavior of the 
      * {@link KafkaBasedMappingAndDelegatingCommandHandler#mapAndDelegateIncomingCommandMessage(KafkaConsumerRecord)}
      * method in a scenario with a valid command record.
      */
@@ -127,7 +133,8 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
         final ArgumentCaptor<KafkaBasedCommandContext> commandContextArgumentCaptor = ArgumentCaptor
                 .forClass(KafkaBasedCommandContext.class);
         // THEN the message is properly delegated
-        verify(internalCommandSender, times(1)).sendCommand(commandContextArgumentCaptor.capture(),
+        verify(internalCommandSender, times(1)).sendCommand(
+                commandContextArgumentCaptor.capture(),
                 eq(adapterInstanceId));
 
         final KafkaBasedCommandContext commandContext = commandContextArgumentCaptor.getValue();
@@ -139,7 +146,7 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
     }
 
     /**
-     * Verifies the behaviour of the 
+     * Verifies the behavior of the 
      * {@link KafkaBasedMappingAndDelegatingCommandHandler#mapAndDelegateIncomingCommandMessage(KafkaConsumerRecord)}
      * method in a scenario with an invalid command record.
      */
@@ -152,7 +159,9 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
         cmdHandler.mapAndDelegateIncomingCommandMessage(commandRecord);
 
         // THEN the message is not delegated
-        verify(internalCommandSender, never()).sendCommand(any(), any());
+        verify(internalCommandSender, never()).sendCommand(
+                any(CommandContext.class),
+                anyString());
     }
 
     /**
@@ -171,7 +180,9 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
         final Future<Void> resultFuture = cmdHandler.mapAndDelegateIncomingCommandMessage(commandRecord);
 
         // THEN the message is not delegated
-        verify(internalCommandSender, never()).sendCommand(any(), any());
+        verify(internalCommandSender, never()).sendCommand(
+                any(CommandContext.class),
+                anyString());
         // and the resultFuture is failed
         assertThat(resultFuture.failed()).isTrue();
     }
@@ -194,7 +205,10 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(tenantId, deviceId, "cmd-subject", 0, 0);
 
         final Promise<Void> sendCommandPromise = Promise.promise();
-        when(internalCommandSender.sendCommand(any(), any())).thenReturn(sendCommandPromise.future());
+        when(internalCommandSender.sendCommand(
+                any(CommandContext.class),
+                anyString()))
+            .thenReturn(sendCommandPromise.future());
 
         // WHEN mapping and delegating the command (with no timeout triggered yet)
         final Future<Void> resultFuture = cmdHandler.mapAndDelegateIncomingCommandMessage(commandRecord);
@@ -202,7 +216,8 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
         final ArgumentCaptor<KafkaBasedCommandContext> commandContextArgumentCaptor = ArgumentCaptor
                 .forClass(KafkaBasedCommandContext.class);
         // THEN the message is properly delegated
-        verify(internalCommandSender, times(1)).sendCommand(commandContextArgumentCaptor.capture(),
+        verify(internalCommandSender, times(1)).sendCommand(
+                commandContextArgumentCaptor.capture(),
                 eq(adapterInstanceId));
 
         final KafkaBasedCommandContext commandContext = commandContextArgumentCaptor.getValue();
@@ -237,7 +252,9 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
         cmdHandler.mapAndDelegateIncomingCommandMessage(commandRecord);
 
         // THEN the message is not delegated
-        verify(internalCommandSender, never()).sendCommand(any(), any());
+        verify(internalCommandSender, never()).sendCommand(
+                any(CommandContext.class),
+                anyString());
     }
 
     /**
@@ -291,7 +308,9 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
                 .onComplete(ctx.succeeding(r -> {
                     ctx.verify(() -> {
                         final ArgumentCaptor<CommandContext> commandContextCaptor = ArgumentCaptor.forClass(CommandContext.class);
-                        verify(internalCommandSender, times(4)).sendCommand(commandContextCaptor.capture(), any());
+                        verify(internalCommandSender, times(4)).sendCommand(
+                                commandContextCaptor.capture(),
+                                anyString());
                         final List<CommandContext> capturedCommandContexts = commandContextCaptor.getAllValues();
                         assertThat(capturedCommandContexts.get(0).getCommand().getDeviceId()).isEqualTo(deviceId1);
                         assertThat(capturedCommandContexts.get(1).getCommand().getDeviceId()).isEqualTo(deviceId2);
@@ -355,7 +374,9 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
                     ctx.verify(() -> {
                         assertThat(cmd1Future.failed()).isTrue();
                         final ArgumentCaptor<CommandContext> commandContextCaptor = ArgumentCaptor.forClass(CommandContext.class);
-                        verify(internalCommandSender, times(3)).sendCommand(commandContextCaptor.capture(), any());
+                        verify(internalCommandSender, times(3)).sendCommand(
+                                commandContextCaptor.capture(),
+                                anyString());
                         final List<CommandContext> capturedCommandContexts = commandContextCaptor.getAllValues();
                         assertThat(capturedCommandContexts.get(0).getCommand().getDeviceId()).isEqualTo(deviceId2);
                         assertThat(capturedCommandContexts.get(1).getCommand().getDeviceId()).isEqualTo(deviceId3);
@@ -379,7 +400,9 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
         cmdHandler.mapAndDelegateIncomingCommandMessage(commandRecord);
 
         // THEN the message is not delegated
-        verify(internalCommandSender, never()).sendCommand(any(), any());
+        verify(internalCommandSender, never()).sendCommand(
+                any(CommandContext.class),
+                anyString());
     }
 
     private JsonObject createTargetAdapterInstanceJson(final String deviceId, final String otherAdapterInstance) {

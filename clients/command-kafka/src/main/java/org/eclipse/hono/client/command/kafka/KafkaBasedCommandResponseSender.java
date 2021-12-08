@@ -25,6 +25,8 @@ import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RegistrationAssertion;
+import org.eclipse.hono.util.TenantObject;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
@@ -56,9 +58,13 @@ public class KafkaBasedCommandResponseSender extends AbstractKafkaBasedMessageSe
 
     @Override
     public Future<Void> sendCommandResponse(
+            final TenantObject tenant,
+            final RegistrationAssertion device,
             final CommandResponse response,
             final SpanContext context) {
 
+        Objects.requireNonNull(tenant);
+        Objects.requireNonNull(device);
         Objects.requireNonNull(response);
 
         if (log.isTraceEnabled()) {
