@@ -221,7 +221,7 @@ public class CommandRouterCommandConsumerFactory implements CommandConsumerFacto
                     commandHandlers.removeCommandHandler(tenantId, deviceId);
                 })
                 .map(v -> {
-                    return (CommandConsumer) new CommandConsumer() {
+                    return new CommandConsumer() {
                         @Override
                         public Future<Void> close(final SpanContext spanContext) {
                             return removeCommandConsumer(commandHandlerWrapper, sanitizedLifespan,

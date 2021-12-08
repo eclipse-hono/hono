@@ -133,6 +133,11 @@ public class CommandResponseResource extends AbstractHonoResource {
                 .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
                 .start();
 
+        final Future<RegistrationAssertion> deviceRegistrationTracker = getAdapter().getRegistrationAssertion(
+                device.getTenantId(),
+                device.getDeviceId(),
+                authenticatedDevice,
+                currentSpan.context());
         final Future<TenantObject> tenantTracker = getAdapter().getTenantClient().get(device.getTenantId(), currentSpan.context());
         final Optional<CommandResponse> cmdResponse = Optional.ofNullable(CommandResponse.fromRequestId(
                 commandRequestId,
@@ -148,23 +153,18 @@ public class CommandResponseResource extends AbstractHonoResource {
                         String.format("command-request-id [%s] or status code [%s] is missing/invalid",
                                 commandRequestId, responseStatus))));
 
-        return CompositeFuture.all(tenantTracker, commandResponseTracker)
-                .compose(ok -> {
-                    final Future<RegistrationAssertion> deviceRegistrationTracker = getAdapter().getRegistrationAssertion(
-                            device.getTenantId(),
-                            device.getDeviceId(),
-                            authenticatedDevice,
-                            currentSpan.context());
-                    final Future<Void> tenantValidationTracker = CompositeFuture.all(
+        return CompositeFuture.all(tenantTracker, commandResponseTracker, deviceRegistrationTracker)
+                .compose(ok -> CompositeFuture.all(
                             getAdapter().isAdapterEnabled(tenantTracker.result()),
                             getAdapter().checkMessageLimit(tenantTracker.result(), payload.length(), currentSpan.context()))
-                            .mapEmpty();
-
-                    return CompositeFuture.all(tenantValidationTracker, deviceRegistrationTracker);
-                })
+                            .mapEmpty())
                 .compose(ok -> getAdapter()
                         .getCommandResponseSender(commandResponseTracker.result().getMessagingType(), tenantTracker.result())
-                        .sendCommandResponse(commandResponseTracker.result(), currentSpan.context()))
+                        .sendCommandResponse(
+                                tenantTracker.result(),
+                                deviceRegistrationTracker.result(),
+                                commandResponseTracker.result(),
+                                currentSpan.context()))
                 .onSuccess(ok -> {
                     LOG.trace("forwarded command response [command-request-id: {}] to downstream application",
                             commandRequestId);

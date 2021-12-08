@@ -222,9 +222,8 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
                 })
                 .compose(v -> deviceConnectionInfo
                         .setCommandHandlingAdapterInstance(tenantId, deviceId, adapterInstanceId, getSanitizedLifespan(lifespan), span)
-                        .recover(thr -> {
+                        .onFailure(thr -> {
                             LOG.info("error setting command handling adapter instance [tenant: {}, device: {}]", tenantId, deviceId, thr);
-                            return Future.failedFuture(thr);
                         }))
                 .map(v -> CommandRouterResult.from(HttpURLConnection.HTTP_NO_CONTENT))
                 .otherwise(t -> CommandRouterResult.from(ServiceInvocationException.extractStatusCode(t)));

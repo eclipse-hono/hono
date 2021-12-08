@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,8 @@ package org.eclipse.hono.client.command;
 
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.MessagingClient;
+import org.eclipse.hono.util.RegistrationAssertion;
+import org.eclipse.hono.util.TenantObject;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
@@ -26,6 +28,8 @@ public interface CommandResponseSender extends MessagingClient, Lifecycle {
     /**
      * Sends a device's response to a command.
      *
+     * @param tenant The tenant that the device belongs to.
+     * @param device The registration assertion for the device that the data originates from.
      * @param response The response.
      * @param context The currently active OpenTracing span or {@code null} if no
      *         span is currently active. An implementation should use this as the
@@ -37,7 +41,11 @@ public interface CommandResponseSender extends MessagingClient, Lifecycle {
      *         <p>
      *         The future will be failed with a {@code org.eclipse.hono.client.ServiceInvocationException}
      *         if the response could not be sent.
-     * @throws NullPointerException if response is {@code null}.
+     * @throws NullPointerException if tenant, device or response are {@code null}.
      */
-    Future<Void> sendCommandResponse(CommandResponse response, SpanContext context);
+    Future<Void> sendCommandResponse(
+            TenantObject tenant,
+            RegistrationAssertion device,
+            CommandResponse response,
+            SpanContext context);
 }

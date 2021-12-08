@@ -32,6 +32,8 @@ import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
+import org.eclipse.hono.util.RegistrationAssertion;
+import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -64,6 +66,7 @@ public class KafkaBasedCommandResponseSenderTest {
 
     @Test
     void testIfValidCommandResponseKafkaRecordIsSent(final VertxTestContext ctx, final Vertx vertx) {
+
         // GIVEN a command response sender
         final String tenantId = "test-tenant";
         final String deviceId = "test-device";
@@ -75,7 +78,8 @@ public class KafkaBasedCommandResponseSenderTest {
         final String additionalHeader1Value = "testHeader1Value";
         final String additionalHeader2Name = "testHeader2";
         final String additionalHeader2Value = "testHeader2Value";
-        final Map<String, Object> additionalProperties = Map.of(additionalHeader1Name, additionalHeader1Value,
+        final Map<String, Object> additionalProperties = Map.of(
+                additionalHeader1Name, additionalHeader1Value,
                 additionalHeader2Name, additionalHeader2Value);
         final CommandResponse commandResponse = CommandResponse.fromAddressAndCorrelationId(
                 String.format("%s/%s/%s", CommandConstants.COMMAND_RESPONSE_ENDPOINT, tenantId,
@@ -92,9 +96,13 @@ public class KafkaBasedCommandResponseSenderTest {
         final var factory = CachingKafkaProducerFactory
                 .testFactory(vertx, (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
         final var sender = new KafkaBasedCommandResponseSender(factory, kafkaProducerConfig, tracer);
+        final TenantObject tenant = TenantObject.from(tenantId);
 
         // WHEN sending a command response
-        sender.sendCommandResponse(commandResponse, NoopSpan.INSTANCE.context())
+        sender.sendCommandResponse(
+                tenant,
+                new RegistrationAssertion(deviceId),
+                commandResponse, NoopSpan.INSTANCE.context())
                 .onComplete(ctx.succeeding(t -> {
                     ctx.verify(() -> {
                         // THEN the producer record is created from the given values...
@@ -134,7 +142,6 @@ public class KafkaBasedCommandResponseSenderTest {
                                 Buffer.buffer(creationTimeHeader.iterator().next().value()),
                                 Long.class);
                         assertThat(creationTimeMillis).isGreaterThan(0L);
-
                         KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
                                 headers,
                                 additionalHeader1Name,

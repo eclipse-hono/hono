@@ -28,6 +28,8 @@ import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RegistrationAssertion;
+import org.eclipse.hono.util.TenantObject;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
@@ -93,7 +95,11 @@ public class ProtonBasedCommandResponseSender extends AbstractServiceClient impl
     }
 
     @Override
-    public Future<Void> sendCommandResponse(final CommandResponse response, final SpanContext context) {
+    public Future<Void> sendCommandResponse(
+            final TenantObject tenant,
+            final RegistrationAssertion device,
+            final CommandResponse response,
+            final SpanContext context) {
 
         Objects.requireNonNull(response);
 

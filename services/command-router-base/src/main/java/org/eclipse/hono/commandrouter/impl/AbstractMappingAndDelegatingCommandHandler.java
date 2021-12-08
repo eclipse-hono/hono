@@ -114,25 +114,33 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
      *
      * @param commandContext The context of the command to send.
      * @param timer The timer indicating the amount of time used for processing the command message.
-     * @return A future indicating the output of the operation.
-     * @throws NullPointerException if the commandContext is {@code null}.
+     * @return A future indicating the outcome of the operation.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    protected final Future<Void> mapAndDelegateIncomingCommand(final CommandContext commandContext,
+    protected final Future<Void> mapAndDelegateIncomingCommand(
+            final CommandContext commandContext,
             final Timer.Sample timer) {
+
+        Objects.requireNonNull(commandContext);
+        Objects.requireNonNull(timer);
+
         final Command command = commandContext.getCommand();
 
         // determine last used gateway device id
-        log.trace("determine command target gateway/adapter for [{}]", command);
+        if (log.isTraceEnabled()) {
+            log.trace("determine command target gateway/adapter for [{}]", command);
+        }
 
-        final Future<TenantObject> tenantObjectFuture = tenantClient
-                .get(command.getTenant(), commandContext.getTracingContext());
+        final Future<TenantObject> tenantObjectFuture = tenantClient.get(
+                command.getTenant(),
+                commandContext.getTracingContext());
+
         return tenantObjectFuture
-                .map(tenantObject -> {
+                .compose(tenantObject -> {
                     TenantTraceSamplingHelper.applyTraceSamplingPriority(tenantObject, null,
                             commandContext.getTracingSpan());
-                    return tenantObject;
-                })
-                .compose(tenantObject -> {
+                    commandContext.put(CommandContext.KEY_TENANT_CONFIG, tenantObject);
+
                     // check whether the handler messaging type is equal to the messaging type of the tenant (if set)
                     final MessagingType tenantMessagingType = Optional
                             .ofNullable(tenantObject.getProperty(TenantConstants.FIELD_EXT, JsonObject.class))
@@ -141,11 +149,14 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
                     if (tenantMessagingType != null && getMessagingType() != tenantMessagingType) {
                         log.info("command received via {} but tenant is configured to use {} [{}]", getMessagingType(),
                                 tenantMessagingType, commandContext.getCommand());
-                        commandContext.getTracingSpan().log(String.format("command received via %s but tenant is configured to use %s",
+                        commandContext.getTracingSpan().log(String.format(
+                                "command received via %s but tenant is configured to use %s",
                                 getMessagingType(), tenantMessagingType));
                     }
-                    return commandTargetMapper.getTargetGatewayAndAdapterInstance(command.getTenant(),
-                            command.getDeviceId(), commandContext.getTracingContext());
+                    return commandTargetMapper.getTargetGatewayAndAdapterInstance(
+                            command.getTenant(),
+                            command.getDeviceId(),
+                            commandContext.getTracingContext());
                 })
                 .recover(cause -> {
                     final Throwable error;
@@ -184,8 +195,8 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
                                 targetAdapterInstanceId, command);
                     } else {
                         command.setGatewayId(targetGatewayId);
-                        log.trace("determined target gateway [{}] and adapter instance [{}] for [{}]", targetGatewayId,
-                                targetAdapterInstanceId, command);
+                        log.trace("determined target gateway [{}] and adapter instance [{}] for [{}]",
+                                targetGatewayId, targetAdapterInstanceId, command);
                         commandContext.getTracingSpan().log("determined target gateway [" + targetGatewayId + "]");
                     }
                     return sendCommand(commandContext, targetAdapterInstanceId, tenantObjectFuture.result(), timer);
@@ -206,9 +217,19 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
      * @param tenantObject The tenant of the command target device.
      * @param timer The timer indicating the amount of time used for processing the command message.
      * @return A future indicating the output of the operation.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    protected Future<Void> sendCommand(final CommandContext commandContext, final String targetAdapterInstanceId,
-            final TenantObject tenantObject, final Timer.Sample timer) {
+    protected Future<Void> sendCommand(
+            final CommandContext commandContext,
+            final String targetAdapterInstanceId,
+            final TenantObject tenantObject,
+            final Timer.Sample timer) {
+
+        Objects.requireNonNull(commandContext);
+        Objects.requireNonNull(targetAdapterInstanceId);
+        Objects.requireNonNull(tenantObject);
+        Objects.requireNonNull(timer);
+
         return internalCommandSender.sendCommand(commandContext, targetAdapterInstanceId)
                 .onFailure(thr -> reportCommandProcessingError(commandContext.getCommand(), tenantObject, thr, timer));
     }

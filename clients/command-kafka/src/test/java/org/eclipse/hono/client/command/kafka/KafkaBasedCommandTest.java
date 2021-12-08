@@ -16,8 +16,6 @@ package org.eclipse.hono.client.command.kafka;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -27,6 +25,7 @@ import java.util.Map;
 
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
+import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.Test;
@@ -274,12 +273,11 @@ public class KafkaBasedCommandTest {
         return headers;
     }
 
-    @SuppressWarnings("unchecked")
-    private KafkaConsumerRecord<String, Buffer> getCommandRecord(final String topic, final String key, final List<KafkaHeader> headers) {
-        final KafkaConsumerRecord<String, Buffer> consumerRecord = mock(KafkaConsumerRecord.class);
-        when(consumerRecord.headers()).thenReturn(headers);
-        when(consumerRecord.topic()).thenReturn(topic);
-        when(consumerRecord.key()).thenReturn(key);
-        return consumerRecord;
+    private KafkaConsumerRecord<String, Buffer> getCommandRecord(
+            final String topic,
+            final String key,
+            final List<KafkaHeader> headers) {
+
+        return KafkaClientUnitTestHelper.newMockConsumerRecord(topic, key, headers);
     }
 }

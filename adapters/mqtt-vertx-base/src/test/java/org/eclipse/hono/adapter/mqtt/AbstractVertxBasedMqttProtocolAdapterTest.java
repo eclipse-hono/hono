@@ -59,6 +59,7 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.QoS;
+import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.AfterAll;
@@ -745,7 +746,11 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         adapter.uploadCommandResponseMessage(newMqttContext(messageFromDevice, endpoint, span), address)
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
-                        verify(sender).sendCommandResponse(any(CommandResponse.class), any());
+                        verify(sender).sendCommandResponse(
+                                any(TenantObject.class),
+                                any(RegistrationAssertion.class),
+                                any(CommandResponse.class),
+                                any());
                         // then it is forwarded successfully
                         verify(metrics).reportCommand(
                                 eq(MetricsTags.Direction.RESPONSE),
@@ -1309,7 +1314,11 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
                         assertThat(((ClientErrorException) t).getErrorCode())
                                 .isEqualTo(HttpUtils.HTTP_TOO_MANY_REQUESTS);
                         // AND the response is not being forwarded
-                        verify(sender, never()).sendCommandResponse(any(CommandResponse.class), (SpanContext) any());
+                        verify(sender, never()).sendCommandResponse(
+                                any(TenantObject.class),
+                                any(RegistrationAssertion.class),
+                                any(CommandResponse.class),
+                                (SpanContext) any());
                         // AND has reported the message as unprocessable
                         verify(metrics).reportCommand(
                                 eq(MetricsTags.Direction.RESPONSE),

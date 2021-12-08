@@ -15,10 +15,12 @@ package org.eclipse.hono.kafka.test;
 
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import static com.google.common.truth.Truth.assertThat;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Objects;
 
 import org.apache.kafka.clients.producer.MockProducer;
@@ -34,6 +36,8 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.impl.ContextInternal;
 import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.json.Json;
+import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
+import io.vertx.kafka.client.producer.KafkaHeader;
 import io.vertx.kafka.client.producer.KafkaProducer;
 import io.vertx.kafka.client.producer.RecordMetadata;
 import io.vertx.kafka.client.serialization.BufferSerializer;
@@ -44,6 +48,29 @@ import io.vertx.kafka.client.serialization.BufferSerializer;
 public class KafkaClientUnitTestHelper {
 
     private KafkaClientUnitTestHelper() {
+    }
+
+    /**
+     * Creates a consumer record for a topic, key and headers.
+     *
+     * @param <K> The type of the record's key.
+     * @param <P> The type of the record's payload.
+     * @param topic The record's topic.
+     * @param key The record's key.
+     * @param headers The record's headers.
+     * @return The record.
+     */
+    public static <K, P> KafkaConsumerRecord<K, P> newMockConsumerRecord(
+            final String topic,
+            final K key,
+            final List<KafkaHeader> headers) {
+
+        @SuppressWarnings("unchecked")
+        final KafkaConsumerRecord<K, P> consumerRecord = mock(KafkaConsumerRecord.class);
+        when(consumerRecord.headers()).thenReturn(headers);
+        when(consumerRecord.topic()).thenReturn(topic);
+        when(consumerRecord.key()).thenReturn(key);
+        return consumerRecord;
     }
 
     /**

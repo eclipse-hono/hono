@@ -76,6 +76,7 @@ import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.QoS;
+import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantObject;
@@ -665,7 +666,12 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         // GIVEN an AMQP adapter
         givenAnAdapter(properties);
         final CommandResponseSender responseSender = givenACommandResponseSenderForAnyTenant();
-        when(responseSender.sendCommandResponse(any(CommandResponse.class), (SpanContext) any())).thenReturn(Future.succeededFuture());
+        when(responseSender.sendCommandResponse(
+                any(TenantObject.class),
+                any(RegistrationAssertion.class),
+                any(CommandResponse.class),
+                (SpanContext) any()))
+            .thenReturn(Future.succeededFuture());
         // which is enabled for the test tenant
         final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, true);
 
@@ -685,7 +691,11 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         adapter.onMessageReceived(AmqpContext.fromMessage(delivery, message, span, null)).onComplete(ctx.succeeding(ok -> {
             ctx.verify(() -> {
                 // THEN the adapter forwards the command response message downstream
-                verify(responseSender).sendCommandResponse((CommandResponse) any(), (SpanContext) any());
+                verify(responseSender).sendCommandResponse(
+                        eq(tenantObject),
+                        any(RegistrationAssertion.class),
+                        any(CommandResponse.class),
+                        (SpanContext) any());
                 // and reports the forwarded message
                 verify(metrics).reportCommand(
                     eq(Direction.RESPONSE),
@@ -710,8 +720,12 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         // GIVEN an AMQP adapter
         givenAnAdapter(properties);
         final CommandResponseSender responseSender = givenACommandResponseSenderForAnyTenant();
-        when(responseSender.sendCommandResponse(any(CommandResponse.class), (SpanContext) any()))
-                .thenReturn(Future.succeededFuture());
+        when(responseSender.sendCommandResponse(
+                any(TenantObject.class),
+                any(RegistrationAssertion.class),
+                any(CommandResponse.class),
+                (SpanContext) any()))
+            .thenReturn(Future.succeededFuture());
         // which is enabled for the test tenant
         final TenantObject tenantObject = givenAConfiguredTenant(TEST_TENANT_ID, true);
 
@@ -730,7 +744,11 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         adapter.onMessageReceived(AmqpContext.fromMessage(delivery, message, span, null)).onComplete(ctx.succeeding(ok -> {
             ctx.verify(() -> {
                 // THEN the adapter forwards the command response message downstream
-                verify(responseSender).sendCommandResponse((CommandResponse) any(), (SpanContext) any());
+                verify(responseSender).sendCommandResponse(
+                        eq(tenantObject),
+                        any(RegistrationAssertion.class),
+                        any(CommandResponse.class),
+                        (SpanContext) any());
                 // and reports the forwarded message
                 verify(metrics).reportCommand(
                         eq(Direction.RESPONSE),

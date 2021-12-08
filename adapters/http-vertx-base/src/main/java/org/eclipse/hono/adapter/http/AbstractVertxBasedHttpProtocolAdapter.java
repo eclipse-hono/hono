@@ -1256,7 +1256,10 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             .map(ok -> null);
 
                     return CompositeFuture.all(tenantValidationTracker, deviceRegistrationTracker)
-                            .compose(ok -> sendCommandResponse(commandResponseTracker.result(), tenantTracker.result(),
+                            .compose(ok -> sendCommandResponse(
+                                    tenantTracker.result(),
+                                    deviceRegistrationTracker.result(),
+                                    commandResponseTracker.result(),
                                     currentSpan.context()))
                             .map(delivery -> {
                                 log.trace("delivered command response [command-request-id: {}] to application",

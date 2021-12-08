@@ -13,6 +13,7 @@
 package org.eclipse.hono.tests.commandrouter;
 
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -61,6 +62,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.micrometer.core.instrument.Timer;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
@@ -435,6 +437,8 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
         kafkaConsumerConfig.setConsumerConfig(Map.of(
                 ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS));
         final CommandRouterMetrics metrics = mock(CommandRouterMetrics.class);
+        when(metrics.startTimer()).thenReturn(Timer.start());
+
         final var kafkaBasedCommandConsumerFactoryImpl = new KafkaBasedCommandConsumerFactoryImpl(
                 vertx,
                 tenantClient,

@@ -748,12 +748,21 @@ public class AbstractProtocolAdapterBaseTest {
                 null,
                 HttpURLConnection.HTTP_OK);
         final TenantObject tenant = new TenantObject("tenant", true);
+        final var device = new RegistrationAssertion("4711");
 
         tenant.setProperty(TenantConstants.FIELD_EXT,
                 Map.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE, MessagingType.amqp.name()));
-        adapter.sendCommandResponse(kafkaResponse, tenant, null);
-        verify(kafkaCommandResponseSender).sendCommandResponse(any(), any());
-        verify(amqpCommandResponseSender, never()).sendCommandResponse(any(), any());
+        adapter.sendCommandResponse(tenant, device, kafkaResponse, null);
+        verify(kafkaCommandResponseSender).sendCommandResponse(
+                eq(tenant),
+                eq(device),
+                eq(kafkaResponse),
+                any());
+        verify(amqpCommandResponseSender, never()).sendCommandResponse(
+                any(TenantObject.class),
+                any(RegistrationAssertion.class),
+                any(CommandResponse.class),
+                any());
 
         final CommandResponse amqpResponse = CommandResponse.fromRequestId(
                 Commands.encodeRequestIdParameters("", "replyTo", "4711", MessagingType.amqp),
@@ -765,8 +774,12 @@ public class AbstractProtocolAdapterBaseTest {
 
         tenant.setProperty(TenantConstants.FIELD_EXT,
                 Map.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE, MessagingType.kafka.name()));
-        adapter.sendCommandResponse(amqpResponse, tenant, null);
-        verify(amqpCommandResponseSender).sendCommandResponse(any(), any());
+        adapter.sendCommandResponse(tenant, device, amqpResponse, null);
+        verify(amqpCommandResponseSender).sendCommandResponse(
+                eq(tenant),
+                eq(device),
+                eq(amqpResponse),
+                any());
     }
 
     /**
@@ -785,7 +798,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter = newProtocolAdapter(properties, ADAPTER_NAME);
         setCollaborators(adapter);
 
-        final CommandResponse kafkaResponse = CommandResponse.fromRequestId(
+        final CommandResponse response = CommandResponse.fromRequestId(
                 Commands.encodeRequestIdParameters("", "replyTo", "4711", MessagingType.kafka),
                 Constants.DEFAULT_TENANT,
                 "4711",
@@ -793,11 +806,16 @@ public class AbstractProtocolAdapterBaseTest {
                 null,
                 HttpURLConnection.HTTP_OK);
         final TenantObject tenant = new TenantObject("tenant", true);
+        final var device = new RegistrationAssertion("4711");
 
         tenant.setProperty(TenantConstants.FIELD_EXT,
                 Map.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE, MessagingType.amqp.name()));
-        adapter.sendCommandResponse(kafkaResponse, tenant, null);
-        verify(amqpCommandResponseSender).sendCommandResponse(any(), any());
+        adapter.sendCommandResponse(tenant, device, response, null);
+        verify(amqpCommandResponseSender).sendCommandResponse(
+                eq(tenant),
+                eq(device),
+                eq(response),
+                any());
     }
 
     private AbstractProtocolAdapterBase<ProtocolAdapterProperties> newProtocolAdapter(

@@ -43,6 +43,7 @@ import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessagingType;
+import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -104,7 +105,11 @@ public class CommandResponseResourceTest extends ResourceTestBase {
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     // THEN the command response has not been forwarded downstream
-                    verify(sender, never()).sendCommandResponse(any(CommandResponse.class), any(SpanContext.class));
+                    verify(sender, never()).sendCommandResponse(
+                            any(TenantObject.class),
+                            any(RegistrationAssertion.class),
+                            any(CommandResponse.class),
+                            any(SpanContext.class));
                     // and the device gets a 4.03 response
                     assertThat(t).isInstanceOf(ClientErrorException.class);
                     assertThat(((ClientErrorException) t).getErrorCode())
@@ -156,7 +161,11 @@ public class CommandResponseResourceTest extends ResourceTestBase {
         result.onComplete(ctx.failing(t -> {
             ctx.verify(() -> {
                 // THEN the command response is being forwarded downstream
-                verify(sender).sendCommandResponse(any(CommandResponse.class), any(SpanContext.class));
+                verify(sender).sendCommandResponse(
+                        any(TenantObject.class),
+                        any(RegistrationAssertion.class),
+                        any(CommandResponse.class),
+                        any(SpanContext.class));
                 // and the device gets a 4.00 response
                 assertThat(t).isInstanceOf(ClientErrorException.class);
                 assertThat(((ClientErrorException) t).getErrorCode())
@@ -204,7 +213,11 @@ public class CommandResponseResourceTest extends ResourceTestBase {
         final Future<Void> result = resource.uploadCommandResponseMessage(context);
 
         // THEN the command response is being forwarded downstream
-        verify(sender).sendCommandResponse(any(CommandResponse.class), any(SpanContext.class));
+        verify(sender).sendCommandResponse(
+                any(TenantObject.class),
+                any(RegistrationAssertion.class),
+                any(CommandResponse.class),
+                any(SpanContext.class));
         // but the device does not get a response
         verify(coapExchange, never()).respond(any(Response.class));
         // and the response has not been reported as forwarded

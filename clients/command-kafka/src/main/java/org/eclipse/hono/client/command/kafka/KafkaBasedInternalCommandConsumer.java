@@ -386,7 +386,7 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
         final Span currentSpan = CommandContext.createSpan(tracer, command, spanContext, followsFromSpanContext);
         currentSpan.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
 
-        final CommandContext commandContext = new KafkaBasedCommandContext(command, currentSpan, commandResponseSender);
+        final CommandContext commandContext = new KafkaBasedCommandContext(command, commandResponseSender, currentSpan);
 
         if (commandHandler != null) {
             // partition index and offset here are related to the *tenant-based* topic the command was originally received in
