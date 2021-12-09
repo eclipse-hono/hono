@@ -87,8 +87,7 @@ public class KafkaDownstreamMessage implements DownstreamMessage<KafkaMessageCon
     }
 
     private Instant getCreationTimeHeaderValue(final List<KafkaHeader> headers) {
-        return KafkaRecordHelper.getHeaderValue(headers, MessageHelper.SYS_PROPERTY_CREATION_TIME, Long.class)
-                .map(Instant::ofEpochMilli)
+        return KafkaRecordHelper.getCreationTime(headers)
                 .orElse(null);
     }
 

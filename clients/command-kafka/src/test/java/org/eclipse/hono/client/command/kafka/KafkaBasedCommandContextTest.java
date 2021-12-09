@@ -32,7 +32,6 @@ import org.eclipse.hono.client.kafka.HonoTopic.Type;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,7 +42,6 @@ import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
-import io.vertx.kafka.client.producer.KafkaHeader;
 
 
 /**
@@ -71,10 +69,10 @@ class KafkaBasedCommandContextTest {
                 Type.COMMAND.prefix + tenantId,
                 deviceId,
                 List.of(
-                        KafkaHeader.header(MessageHelper.SYS_PROPERTY_CORRELATION_ID, "corrId"),
-                        KafkaHeader.header(KafkaRecordHelper.HEADER_RESPONSE_REQUIRED, Boolean.TRUE.toString()),
-                        KafkaHeader.header(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId),
-                        KafkaHeader.header(MessageHelper.SYS_PROPERTY_SUBJECT, "go")));
+                        KafkaRecordHelper.createCorrelationIdHeader("corrId"),
+                        KafkaRecordHelper.createResponseRequiredHeader(true),
+                        KafkaRecordHelper.createDeviceIdHeader(deviceId),
+                        KafkaRecordHelper.createSubjectHeader("go")));
         return KafkaBasedCommand.from(record);
     }
 

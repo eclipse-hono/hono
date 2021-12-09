@@ -25,7 +25,6 @@ import org.eclipse.hono.client.command.Commands;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.tracing.TracingHelper;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
@@ -143,13 +142,12 @@ public final class KafkaBasedCommand implements Command {
     public static KafkaBasedCommand fromRoutedCommandRecord(final KafkaConsumerRecord<String, Buffer> record) {
         Objects.requireNonNull(record);
 
-        final String tenantId = KafkaRecordHelper
-                .getHeaderValue(record.headers(), MessageHelper.APP_PROPERTY_TENANT_ID, String.class)
+        final String tenantId = KafkaRecordHelper.getTenantId(record.headers())
                 .filter(id -> !id.isEmpty())
                 .orElseThrow(() -> new IllegalArgumentException("tenant is not set"));
         final KafkaBasedCommand command = from(record, tenantId);
 
-        KafkaRecordHelper.getHeaderValue(record.headers(), MessageHelper.APP_PROPERTY_CMD_VIA, String.class)
+        KafkaRecordHelper.getViaHeader(record.headers())
                 .filter(id -> !id.isEmpty())
                 .ifPresent(command::setGatewayId);
 
@@ -158,8 +156,8 @@ public final class KafkaBasedCommand implements Command {
 
     private static KafkaBasedCommand from(final KafkaConsumerRecord<String, Buffer> record,
             final String tenantId) {
-        final String deviceId = KafkaRecordHelper
-                .getHeaderValue(record.headers(), MessageHelper.APP_PROPERTY_DEVICE_ID, String.class)
+
+        final String deviceId = KafkaRecordHelper.getDeviceId(record.headers())
                 .filter(id -> !id.isEmpty())
                 .orElseThrow(() -> new IllegalArgumentException("device identifier is not set"));
         if (!deviceId.equals(record.key())) {
@@ -167,18 +165,14 @@ public final class KafkaBasedCommand implements Command {
         }
 
         final StringJoiner validationErrorJoiner = new StringJoiner(", ");
-        final String subject = KafkaRecordHelper
-                .getHeaderValue(record.headers(), MessageHelper.SYS_PROPERTY_SUBJECT, String.class)
+        final String subject = KafkaRecordHelper.getSubject(record.headers())
                 .orElseGet(() -> {
                     validationErrorJoiner.add("subject not set");
                     return null;
                 });
-        final String contentType = KafkaRecordHelper
-                .getHeaderValue(record.headers(), MessageHelper.SYS_PROPERTY_CONTENT_TYPE, String.class).orElse(null);
-        final boolean responseRequired = KafkaRecordHelper
-                .getHeaderValue(record.headers(), KafkaRecordHelper.HEADER_RESPONSE_REQUIRED, Boolean.class).orElse(false);
-        final String correlationId = KafkaRecordHelper
-                .getHeaderValue(record.headers(), MessageHelper.SYS_PROPERTY_CORRELATION_ID, String.class)
+        final String contentType = KafkaRecordHelper.getContentType(record.headers()).orElse(null);
+        final boolean responseRequired = KafkaRecordHelper.isResponseRequired(record.headers());
+        final String correlationId = KafkaRecordHelper.getCorrelationId(record.headers())
                 .filter(id -> !id.isEmpty())
                 .orElseGet(() -> {
                     if (responseRequired) {

@@ -346,11 +346,9 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
     void handleCommandMessage(final KafkaConsumerRecord<String, Buffer> record) {
 
         // get partition/offset of the command record - related to the tenant-based topic the command was originally received in
-        final Integer commandPartition = KafkaRecordHelper
-                .getHeaderValue(record.headers(), KafkaRecordHelper.HEADER_ORIGINAL_PARTITION, Integer.class)
+        final Integer commandPartition = KafkaRecordHelper.getOriginalPartitionHeader(record.headers())
                 .orElse(null);
-        final Long commandOffset = KafkaRecordHelper
-                .getHeaderValue(record.headers(), KafkaRecordHelper.HEADER_ORIGINAL_OFFSET, Long.class)
+        final Long commandOffset = KafkaRecordHelper.getOriginalOffsetHeader(record.headers())
                 .orElse(null);
         if (commandPartition == null || commandOffset == null) {
             LOG.warn("command record is invalid - missing required original partition/offset headers");
@@ -362,12 +360,8 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
             command = KafkaBasedCommand.fromRoutedCommandRecord(record);
         } catch (final IllegalArgumentException e) {
             LOG.warn("command record is invalid [tenant-id: {}, device-id: {}]",
-                    KafkaRecordHelper
-                            .getHeaderValue(record.headers(), MessageHelper.APP_PROPERTY_TENANT_ID, String.class)
-                            .orElse(""),
-                    KafkaRecordHelper
-                            .getHeaderValue(record.headers(), MessageHelper.APP_PROPERTY_DEVICE_ID, String.class)
-                            .orElse(""),
+                    KafkaRecordHelper.getTenantId(record.headers()).orElse(null),
+                    KafkaRecordHelper.getDeviceId(record.headers()).orElse(null),
                     e);
             return;
         }

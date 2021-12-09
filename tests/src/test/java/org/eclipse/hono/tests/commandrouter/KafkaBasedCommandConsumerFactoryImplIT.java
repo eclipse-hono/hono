@@ -51,7 +51,6 @@ import org.eclipse.hono.tests.AssumeMessagingSystem;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.Lifecycle;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.AfterAll;
@@ -194,8 +193,7 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
         final Handler<KafkaConsumerRecord<String, Buffer>> recordHandler = record -> {
             receivedRecords.add(record);
             LOG.trace("received {}", record);
-            receivedCommandSubjects.add(KafkaRecordHelper
-                    .getHeaderValue(record.headers(), MessageHelper.SYS_PROPERTY_SUBJECT, String.class).orElse(""));
+            receivedCommandSubjects.add(KafkaRecordHelper.getSubject(record.headers()).orElse(""));
             if (receivedRecords.size() == numTestCommands) {
                 allRecordsReceivedPromise.tryComplete();
             }
@@ -290,8 +288,7 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
         final Handler<KafkaConsumerRecord<String, Buffer>> recordHandler = record -> {
             receivedRecords.add(record);
             LOG.trace("received {}", record);
-            receivedCommandSubjects.add(KafkaRecordHelper
-                    .getHeaderValue(record.headers(), MessageHelper.SYS_PROPERTY_SUBJECT, String.class).orElse(""));
+            receivedCommandSubjects.add(KafkaRecordHelper.getSubject(record.headers()).orElse(""));
             if (receivedRecords.size() == 1) {
                 firstRecordReceivedPromise.complete();
             }
@@ -472,11 +469,12 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
     private static KafkaProducerRecord<String, Buffer> getOneWayCommandRecord(final String tenantId,
             final String deviceId, final String subject) {
         final List<KafkaHeader> headers = List.of(
-                KafkaHeader.header(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId),
-                KafkaHeader.header(MessageHelper.SYS_PROPERTY_SUBJECT, subject)
+                KafkaRecordHelper.createDeviceIdHeader(deviceId),
+                KafkaRecordHelper.createSubjectHeader(subject)
         );
         final String commandTopic = new HonoTopic(HonoTopic.Type.COMMAND, tenantId).toString();
-        final KafkaProducerRecord<String, Buffer> record = KafkaProducerRecord.create(commandTopic, deviceId, Buffer.buffer(subject + "_payload"));
+        final KafkaProducerRecord<String, Buffer> record = KafkaProducerRecord.create(
+                commandTopic, deviceId, Buffer.buffer(subject + "_payload"));
         record.addHeaders(headers);
         return record;
     }

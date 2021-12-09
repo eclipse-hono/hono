@@ -31,8 +31,8 @@ import org.eclipse.hono.client.command.CommandToBeReprocessedException;
 import org.eclipse.hono.client.command.kafka.KafkaBasedCommand;
 import org.eclipse.hono.client.command.kafka.KafkaBasedCommandContext;
 import org.eclipse.hono.client.kafka.HonoTopic;
+import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -141,9 +141,9 @@ public class KafkaCommandProcessingQueueTest {
     private KafkaBasedCommandContext getTestCommandContext(final int offset) {
         final String deviceId = "deviceId";
         final List<KafkaHeader> headers = new ArrayList<>(List.of(
-                KafkaHeader.header(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId),
-                KafkaHeader.header(MessageHelper.SYS_PROPERTY_SUBJECT, "subject_" + offset),
-                KafkaHeader.header(MessageHelper.SYS_PROPERTY_CORRELATION_ID, "correlationId")
+                KafkaRecordHelper.createDeviceIdHeader(deviceId),
+                KafkaRecordHelper.createSubjectHeader("subject_" + offset),
+                KafkaRecordHelper.createCorrelationIdHeader("correlationId")
         ));
         final KafkaConsumerRecord<String, Buffer> consumerRecord = mock(KafkaConsumerRecord.class);
         when(consumerRecord.headers()).thenReturn(headers);

@@ -27,7 +27,6 @@ import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
-import org.eclipse.hono.util.MessageHelper;
 
 import io.opentracing.Span;
 import io.opentracing.Tracer;
@@ -101,14 +100,12 @@ public class KafkaBasedInternalCommandSender extends AbstractKafkaBasedMessageSe
     private static List<KafkaHeader> getHeaders(final KafkaBasedCommand command) {
         final List<KafkaHeader> headers = new ArrayList<>(command.getRecord().headers());
 
-        headers.add(KafkaRecordHelper.createKafkaHeader(MessageHelper.APP_PROPERTY_TENANT_ID, command.getTenant()));
+        headers.add(KafkaRecordHelper.createTenantIdHeader(command.getTenant()));
         Optional.ofNullable(command.getGatewayId())
-                .ifPresent(id -> headers.add(KafkaRecordHelper.createKafkaHeader(MessageHelper.APP_PROPERTY_CMD_VIA, id)));
+                .ifPresent(id -> headers.add(KafkaRecordHelper.createViaHeader(id)));
 
-        headers.add(KafkaRecordHelper.createKafkaHeader(KafkaRecordHelper.HEADER_ORIGINAL_PARTITION,
-                command.getRecord().partition()));
-        headers.add(KafkaRecordHelper.createKafkaHeader(KafkaRecordHelper.HEADER_ORIGINAL_OFFSET,
-                command.getRecord().offset()));
+        headers.add(KafkaRecordHelper.createOriginalPartitionHeader(command.getRecord().partition()));
+        headers.add(KafkaRecordHelper.createOriginalOffsetHeader(command.getRecord().offset()));
         return headers;
     }
 }

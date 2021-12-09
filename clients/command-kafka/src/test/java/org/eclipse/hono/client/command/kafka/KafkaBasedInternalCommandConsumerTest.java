@@ -33,7 +33,6 @@ import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
-import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -94,10 +93,10 @@ public class KafkaBasedInternalCommandConsumerTest {
         final String deviceId = "4711";
 
         final List<KafkaHeader> headers = List.of(
-                KafkaHeader.header(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId),
-                KafkaHeader.header(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId),
-                KafkaRecordHelper.createKafkaHeader(KafkaRecordHelper.HEADER_ORIGINAL_PARTITION, 0),
-                KafkaRecordHelper.createKafkaHeader(KafkaRecordHelper.HEADER_ORIGINAL_OFFSET, 0L));
+                KafkaRecordHelper.createTenantIdHeader(tenantId),
+                KafkaRecordHelper.createDeviceIdHeader(deviceId),
+                KafkaRecordHelper.createOriginalPartitionHeader(0),
+                KafkaRecordHelper.createOriginalOffsetHeader(0L));
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(deviceId, headers);
 
         final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
@@ -182,7 +181,7 @@ public class KafkaBasedInternalCommandConsumerTest {
         final String subject = "subject";
 
         final List<KafkaHeader> headers = new ArrayList<>(getHeaders(tenantId, deviceId, subject, 0L));
-        headers.add(KafkaHeader.header(MessageHelper.APP_PROPERTY_CMD_VIA, gatewayId));
+        headers.add(KafkaRecordHelper.createViaHeader(gatewayId));
 
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(deviceId, headers);
 
@@ -230,11 +229,11 @@ public class KafkaBasedInternalCommandConsumerTest {
 
     private List<KafkaHeader> getHeaders(final String tenantId, final String deviceId, final String subject, final long originalPartitionOffset) {
         return List.of(
-                KafkaHeader.header(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId),
-                KafkaHeader.header(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId),
-                KafkaHeader.header(MessageHelper.SYS_PROPERTY_SUBJECT, subject),
-                KafkaRecordHelper.createKafkaHeader(KafkaRecordHelper.HEADER_ORIGINAL_PARTITION, 0),
-                KafkaRecordHelper.createKafkaHeader(KafkaRecordHelper.HEADER_ORIGINAL_OFFSET, originalPartitionOffset)
+                KafkaRecordHelper.createTenantIdHeader(tenantId),
+                KafkaRecordHelper.createDeviceIdHeader(deviceId),
+                KafkaRecordHelper.createSubjectHeader(subject),
+                KafkaRecordHelper.createOriginalPartitionHeader(0),
+                KafkaRecordHelper.createOriginalOffsetHeader(originalPartitionOffset)
         );
     }
 

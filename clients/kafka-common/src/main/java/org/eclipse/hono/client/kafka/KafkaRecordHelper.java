@@ -41,12 +41,12 @@ public final class KafkaRecordHelper {
      * The name of the Integer Kafka record header that contains the index of the tenant topic partition
      * that a command record was originally stored in.
      */
-    public static final String HEADER_ORIGINAL_PARTITION = "orig-partition";
+    private static final String HEADER_ORIGINAL_PARTITION = "orig-partition";
     /**
      * The name of the Long Kafka record header that contains the offset in the tenant topic partition
      * that a command record was originally stored in.
      */
-    public static final String HEADER_ORIGINAL_OFFSET = "orig-offset";
+    private static final String HEADER_ORIGINAL_OFFSET = "orig-offset";
 
     private KafkaRecordHelper() {
     }
@@ -122,16 +122,192 @@ public final class KafkaRecordHelper {
     }
 
     /**
-     * Gets the {@link MessageHelper#SYS_PROPERTY_CREATION_TIME creation-time} header from the given list of Kafka
-     * headers.
+     * Gets the point in time represented by the value of the {@value MessageHelper#SYS_PROPERTY_CREATION_TIME}
+     * header.
      * <p>
-     * If the list contains multiple occurrences of the header, the value of its first occurrence is returned.
+     * If the list contains multiple occurrences of the header, the value of its first occurrence is used.
      *
      * @param headers The headers to get the creation time from.
-     * @return The creation-time (may be empty).
+     * @return The point in time.
      */
     public static Optional<Instant> getCreationTime(final List<KafkaHeader> headers) {
         return getHeaderValue(headers, MessageHelper.SYS_PROPERTY_CREATION_TIME, Long.class).map(Instant::ofEpochMilli);
+    }
+
+    /**
+     * Gets the value of the {@value MessageHelper#APP_PROPERTY_TENANT_ID} header.
+     * <p>
+     * If the list contains multiple occurrences of the header, the value of its first occurrence is returned.
+     *
+     * @param headers The headers to get the value from.
+     * @return The header value.
+     */
+    public static Optional<String> getTenantId(final List<KafkaHeader> headers) {
+        return getHeaderValue(headers, MessageHelper.APP_PROPERTY_TENANT_ID, String.class);
+    }
+
+    /**
+     * Creates a {@value MessageHelper#APP_PROPERTY_TENANT_ID} header for a value.
+     *
+     * @param value The header value to set.
+     * @return The header.
+     */
+    public static KafkaHeader createTenantIdHeader(final String value) {
+        return createKafkaHeader(MessageHelper.APP_PROPERTY_TENANT_ID, value);
+    }
+
+    /**
+     * Gets the value of the {@value MessageHelper#APP_PROPERTY_DEVICE_ID} header.
+     * <p>
+     * If the list contains multiple occurrences of the header, the value of its first occurrence is returned.
+     *
+     * @param headers The headers to get the value from.
+     * @return The header value.
+     */
+    public static Optional<String> getDeviceId(final List<KafkaHeader> headers) {
+        return getHeaderValue(headers, MessageHelper.APP_PROPERTY_DEVICE_ID, String.class);
+    }
+
+    /**
+     * Creates a {@value MessageHelper#APP_PROPERTY_DEVICE_ID} header for a value.
+     *
+     * @param value The header value to set.
+     * @return The header.
+     */
+    public static KafkaHeader createDeviceIdHeader(final String value) {
+        return createKafkaHeader(MessageHelper.APP_PROPERTY_DEVICE_ID, value);
+    }
+
+    /**
+     * Gets the value of the {@value MessageHelper#SYS_PROPERTY_SUBJECT} header.
+     * <p>
+     * If the list contains multiple occurrences of the header, the value of its first occurrence is returned.
+     *
+     * @param headers The headers to get the value from.
+     * @return The header value.
+     */
+    public static Optional<String> getSubject(final List<KafkaHeader> headers) {
+        return getHeaderValue(headers, MessageHelper.SYS_PROPERTY_SUBJECT, String.class);
+    }
+
+    /**
+     * Creates a {@value MessageHelper#SYS_PROPERTY_SUBJECT} header for a value.
+     *
+     * @param value The header value to set.
+     * @return The header.
+     */
+    public static KafkaHeader createSubjectHeader(final String value) {
+        return createKafkaHeader(MessageHelper.SYS_PROPERTY_SUBJECT, value);
+    }
+
+    /**
+     * Gets the value of the {@value MessageHelper#SYS_PROPERTY_CORRELATION_ID} header.
+     * <p>
+     * If the list contains multiple occurrences of the header, the value of its first occurrence is returned.
+     *
+     * @param headers The headers to get the value from.
+     * @return The header value.
+     */
+    public static Optional<String> getCorrelationId(final List<KafkaHeader> headers) {
+        return getHeaderValue(headers, MessageHelper.SYS_PROPERTY_CORRELATION_ID, String.class);
+    }
+
+    /**
+     * Creates a {@value MessageHelper#SYS_PROPERTY_CORRELATION_ID} header for a value.
+     *
+     * @param value The header value to set.
+     * @return The header.
+     */
+    public static KafkaHeader createCorrelationIdHeader(final String value) {
+        return createKafkaHeader(MessageHelper.SYS_PROPERTY_CORRELATION_ID, value);
+    }
+
+    /**
+     * Gets the value of the {@value MessageHelper#APP_PROPERTY_CMD_VIA} header.
+     * <p>
+     * If the list contains multiple occurrences of the header, the value of its first occurrence is returned.
+     *
+     * @param headers The headers to get the value from.
+     * @return The header value.
+     */
+    public static Optional<String> getViaHeader(final List<KafkaHeader> headers) {
+        return getHeaderValue(headers, MessageHelper.APP_PROPERTY_CMD_VIA, String.class);
+    }
+
+    /**
+     * Creates a {@value MessageHelper#APP_PROPERTY_CMD_VIA} header for a value.
+     *
+     * @param value The header value to set.
+     * @return The header.
+     */
+    public static KafkaHeader createViaHeader(final String value) {
+        return createKafkaHeader(MessageHelper.APP_PROPERTY_CMD_VIA, value);
+    }
+
+    /**
+     * Gets the value of the {@value #HEADER_ORIGINAL_PARTITION} header.
+     * <p>
+     * If the list contains multiple occurrences of the header, the value of its first occurrence is returned.
+     *
+     * @param headers The headers to get the value from.
+     * @return The header value.
+     */
+    public static Optional<Integer> getOriginalPartitionHeader(final List<KafkaHeader> headers) {
+        return getHeaderValue(headers, HEADER_ORIGINAL_PARTITION, Integer.class);
+    }
+
+    /**
+     * Creates a {@value #HEADER_ORIGINAL_PARTITION} header for a value.
+     *
+     * @param value The header value to set.
+     * @return The header.
+     */
+    public static KafkaHeader createOriginalPartitionHeader(final int value) {
+        return createKafkaHeader(HEADER_ORIGINAL_PARTITION, value);
+    }
+
+    /**
+     * Gets the value of the {@value #HEADER_ORIGINAL_OFFSET} header.
+     * <p>
+     * If the list contains multiple occurrences of the header, the value of its first occurrence is returned.
+     *
+     * @param headers The headers to get the value from.
+     * @return The header value.
+     */
+    public static Optional<Long> getOriginalOffsetHeader(final List<KafkaHeader> headers) {
+        return getHeaderValue(headers, HEADER_ORIGINAL_OFFSET, Long.class);
+    }
+
+    /**
+     * Creates a {@value #HEADER_ORIGINAL_OFFSET} header for a value.
+     *
+     * @param value The header value to set.
+     * @return The header.
+     */
+    public static KafkaHeader createOriginalOffsetHeader(final long value) {
+        return createKafkaHeader(HEADER_ORIGINAL_OFFSET, value);
+    }
+
+    /**
+     * Gets the value of the {@value #HEADER_RESPONSE_REQUIRED} header.
+     * <p>
+     * If the list contains multiple occurrences of the header, the value of its first occurrence is returned.
+     *
+     * @param headers The headers to get the value from.
+     * @return The header value or {@code false} if the list does not contain the header.
+     */
+    public static boolean isResponseRequired(final List<KafkaHeader> headers) {
+        return getHeaderValue(headers, HEADER_RESPONSE_REQUIRED, Boolean.class).orElse(false);
+    }
+
+    /**
+     * Creates a {@value #HEADER_RESPONSE_REQUIRED} header for a value.
+     *
+     * @param value The header value to set.
+     * @return The header.
+     */
+    public static KafkaHeader createResponseRequiredHeader(final boolean value) {
+        return createKafkaHeader(HEADER_RESPONSE_REQUIRED, value);
     }
 
     /**

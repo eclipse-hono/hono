@@ -41,13 +41,13 @@ import org.eclipse.hono.client.command.kafka.KafkaBasedCommandContext;
 import org.eclipse.hono.client.command.kafka.KafkaBasedCommandResponseSender;
 import org.eclipse.hono.client.command.kafka.KafkaBasedInternalCommandSender;
 import org.eclipse.hono.client.kafka.HonoTopic;
+import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.commandrouter.CommandRouterMetrics;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.DeviceConnectionConstants;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -422,9 +422,9 @@ public class KafkaBasedMappingAndDelegatingCommandHandlerTest {
         final KafkaConsumerRecord<String, Buffer> consumerRecord = mock(KafkaConsumerRecord.class);
 
         Optional.ofNullable(deviceId)
-                .ifPresent(ok -> headers.add(KafkaHeader.header(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId)));
+                .ifPresent(ok -> headers.add(KafkaRecordHelper.createDeviceIdHeader(deviceId)));
         Optional.ofNullable(subject)
-                .ifPresent(ok -> headers.add(KafkaHeader.header(MessageHelper.SYS_PROPERTY_SUBJECT, subject)));
+                .ifPresent(ok -> headers.add(KafkaRecordHelper.createSubjectHeader(subject)));
         when(consumerRecord.headers()).thenReturn(headers);
         when(consumerRecord.topic()).thenReturn(topic);
         when(consumerRecord.key()).thenReturn(deviceId);

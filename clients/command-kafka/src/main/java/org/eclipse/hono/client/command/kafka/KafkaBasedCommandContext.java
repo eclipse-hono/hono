@@ -30,7 +30,6 @@ import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MapBasedExecutionContext;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.TenantObject;
@@ -229,9 +228,7 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
     private String getCorrelationId() {
         // extract correlation id from headers; command could be invalid in which case
         // command.getCorrelationId() throws an exception
-        return KafkaRecordHelper
-                .getHeaderValue(command.getRecord().headers(), MessageHelper.SYS_PROPERTY_CORRELATION_ID, String.class)
-                .orElse(null);
+        return KafkaRecordHelper.getCorrelationId(command.getRecord().headers()).orElse(null);
     }
 
     private boolean setCompleted(final String outcome) {

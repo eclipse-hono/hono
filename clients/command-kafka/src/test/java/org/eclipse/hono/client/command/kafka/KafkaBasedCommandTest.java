@@ -27,7 +27,6 @@ import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.buffer.Buffer;
@@ -73,7 +72,7 @@ public class KafkaBasedCommandTest {
         final String subject = "doThis";
 
         final List<KafkaHeader> headers = new ArrayList<>(getHeaders(deviceId, subject, correlationId));
-        headers.add(KafkaHeader.header(KafkaRecordHelper.HEADER_RESPONSE_REQUIRED, "true"));
+        headers.add(KafkaRecordHelper.createResponseRequiredHeader(true));
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(topic, deviceId, headers);
         final KafkaBasedCommand cmd = KafkaBasedCommand.from(commandRecord);
         assertTrue(cmd.isValid());
@@ -98,8 +97,8 @@ public class KafkaBasedCommandTest {
         final String subject = "doThis";
 
         final List<KafkaHeader> headers = new ArrayList<>(getHeaders(targetDeviceId, subject, correlationId));
-        headers.add(KafkaHeader.header(MessageHelper.APP_PROPERTY_CMD_VIA, gatewayId));
-        headers.add(KafkaHeader.header(MessageHelper.APP_PROPERTY_TENANT_ID, Constants.DEFAULT_TENANT));
+        headers.add(KafkaRecordHelper.createViaHeader(gatewayId));
+        headers.add(KafkaRecordHelper.createTenantIdHeader(Constants.DEFAULT_TENANT));
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(topic, targetDeviceId, headers);
         final KafkaBasedCommand cmd = KafkaBasedCommand.fromRoutedCommandRecord(commandRecord);
         assertTrue(cmd.isValid());
@@ -124,7 +123,7 @@ public class KafkaBasedCommandTest {
         final String subject = "doThis";
 
         final List<KafkaHeader> headers = new ArrayList<>(getHeaders(targetDeviceId, subject, correlationId));
-        headers.add(KafkaHeader.header(MessageHelper.APP_PROPERTY_CMD_VIA, gatewayId));
+        headers.add(KafkaRecordHelper.createViaHeader(gatewayId));
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(topic, targetDeviceId, headers);
         assertThrows(IllegalArgumentException.class, () -> {
             KafkaBasedCommand.fromRoutedCommandRecord(commandRecord);
@@ -164,7 +163,7 @@ public class KafkaBasedCommandTest {
         final String subject = "doThis";
 
         final List<KafkaHeader> headers = new ArrayList<>(getHeaders(deviceId, subject));
-        headers.add(KafkaHeader.header(KafkaRecordHelper.HEADER_RESPONSE_REQUIRED, "true"));
+        headers.add(KafkaRecordHelper.createResponseRequiredHeader(true));
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(topic, deviceId, headers);
         final KafkaBasedCommand cmd = KafkaBasedCommand.from(commandRecord);
         assertFalse(cmd.isValid());
@@ -180,7 +179,7 @@ public class KafkaBasedCommandTest {
         final String deviceId = "4711";
         final String subject = "doThis";
 
-        final List<KafkaHeader> headers = List.of(KafkaHeader.header(MessageHelper.SYS_PROPERTY_SUBJECT, subject));
+        final List<KafkaHeader> headers = List.of(KafkaRecordHelper.createSubjectHeader(subject));
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(topic, deviceId, headers);
         assertThrows(IllegalArgumentException.class, () -> {
             KafkaBasedCommand.from(commandRecord);
@@ -195,7 +194,7 @@ public class KafkaBasedCommandTest {
         final String topic = new HonoTopic(HonoTopic.Type.COMMAND, Constants.DEFAULT_TENANT).toString();
         final String deviceId = "4711";
 
-        final List<KafkaHeader> headers = List.of(KafkaHeader.header(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId));
+        final List<KafkaHeader> headers = List.of(KafkaRecordHelper.createDeviceIdHeader(deviceId));
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(topic, deviceId, headers);
         final KafkaBasedCommand command = KafkaBasedCommand.from(commandRecord);
         assertFalse(command.isValid());
@@ -211,7 +210,7 @@ public class KafkaBasedCommandTest {
         final String topic = new HonoTopic(HonoTopic.Type.COMMAND, Constants.DEFAULT_TENANT).toString();
         final String deviceId = "4711";
 
-        final List<KafkaHeader> headers = List.of(KafkaHeader.header(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId));
+        final List<KafkaHeader> headers = List.of(KafkaRecordHelper.createDeviceIdHeader(deviceId));
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(topic, "other_key", headers);
         assertThrows(IllegalArgumentException.class, () -> {
             KafkaBasedCommand.from(commandRecord);
@@ -228,7 +227,7 @@ public class KafkaBasedCommandTest {
         final String deviceId = "4711";
 
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(topic, deviceId,
-                List.of(KafkaHeader.header(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId)));
+                List.of(KafkaRecordHelper.createDeviceIdHeader(deviceId)));
         final KafkaBasedCommand command = KafkaBasedCommand.from(commandRecord);
         assertFalse(command.isValid());
         // verify the returned validation error contains all missing/invalid fields
@@ -262,14 +261,14 @@ public class KafkaBasedCommandTest {
 
     private List<KafkaHeader> getHeaders(final String deviceId, final String subject) {
         return List.of(
-                KafkaHeader.header(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId),
-                KafkaHeader.header(MessageHelper.SYS_PROPERTY_SUBJECT, subject)
+                KafkaRecordHelper.createDeviceIdHeader(deviceId),
+                KafkaRecordHelper.createSubjectHeader(subject)
         );
     }
 
     private List<KafkaHeader> getHeaders(final String deviceId, final String subject, final String correlationId) {
         final List<KafkaHeader> headers = new ArrayList<>(getHeaders(deviceId, subject));
-        headers.add(KafkaHeader.header(MessageHelper.SYS_PROPERTY_CORRELATION_ID, correlationId));
+        headers.add(KafkaRecordHelper.createCorrelationIdHeader(correlationId));
         return headers;
     }
 
