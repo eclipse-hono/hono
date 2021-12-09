@@ -343,14 +343,15 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                         currentSpan.log("gateway has no command endpoint defined, skipping command consumer creation");
                         return Future.succeededFuture((Void) null);
                     }
-                    return createCommandConsumer(
+                    return getCommandConsumerFactory().createCommandConsumer(
                             tenantId,
                             gatewayId,
                             this::handleCommand,
+                            null,
                             currentSpan.context())
-                            .onFailure(thr -> TracingHelper.logError(currentSpan, thr))
-                            .map(commandConsumer -> commandSubscriptions.put(key, Pair.of(commandConsumer, provider)))
-                            .mapEmpty();
+                        .onFailure(thr -> TracingHelper.logError(currentSpan, thr))
+                        .map(commandConsumer -> commandSubscriptions.put(key, Pair.of(commandConsumer, provider)))
+                        .mapEmpty();
                 }).onComplete(ar -> currentSpan.finish());
     }
 

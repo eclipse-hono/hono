@@ -27,7 +27,6 @@ import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.command.CommandConsumerFactory;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandResponse;
@@ -61,11 +60,9 @@ import org.eclipse.hono.util.TenantObject;
 import io.micrometer.core.instrument.Timer.Sample;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.opentracing.SpanContext;
-import io.opentracing.tag.Tags;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -662,32 +659,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
             log.warn("{} client [{}] failed to connect", serviceName, serviceClient, t);
             return Future.failedFuture(t);
         });
-    }
-
-    /**
-     * Creates a command consumer for a specific device.
-     *
-     * @param tenantId The tenant of the command receiver.
-     * @param deviceId The device of the command receiver.
-     * @param commandConsumer The handler to invoke for each command destined to the device.
-     * @param context The currently active OpenTracing span context or {@code null} if no span is currently active.
-     * @return Result of the receiver creation.
-     */
-    public final Future<CommandConsumer> createCommandConsumer(
-            final String tenantId,
-            final String deviceId,
-            final Handler<CommandContext> commandConsumer,
-            final SpanContext context) {
-
-        return commandConsumerFactory.createCommandConsumer(
-                tenantId,
-                deviceId,
-                commandContext -> {
-                    Tags.COMPONENT.set(commandContext.getTracingSpan(), getTypeName());
-                    commandConsumer.handle(commandContext);
-                },
-                null,
-                context);
     }
 
     /**
