@@ -59,6 +59,13 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * The default timeout in milliseconds to send a separate ACK.
      */
     public static final int DEFAULT_TIMEOUT_TO_ACK = 500;
+    /**
+     * The default blockwise status lifetime in milliseconds.
+     *
+     * Time the blockwise status is kept with further message exchanges. If a blockwise transfer is not continued for
+     * that time, the status gets removed and a new request will fail.
+     */
+    public static final int DEFAULT_BLOCKWISE_STATUS_LIFETIME = 300000;
 
     private String idSplitRegex = DEFAULT_ID_SPLIT_REGEX;
     private String networkConfig = null;
@@ -69,6 +76,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
     private int dtlsThreads = DEFAULT_DTLS_THREADS;
     private int dtlsRetransmissionTimeout = DEFAULT_DTLS_RETRANSMISSION_TIMEOUT;
     private int exchangeLifetime = DEFAULT_EXCHANGE_LIFETIME;
+    private int blockwiseStatusLifetime = DEFAULT_BLOCKWISE_STATUS_LIFETIME;
     private boolean messageOffloadingEnabled = DEFAULT_MESSAGE_OFFLOADING;
     private int timeoutToAck = DEFAULT_TIMEOUT_TO_ACK;
 
@@ -349,9 +357,40 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      */
     public final void setExchangeLifetime(final int exchangeLifetime) {
         if (exchangeLifetime < 1) {
-            throw new IllegalArgumentException("exchange lifetime must be at least -1");
+            throw new IllegalArgumentException("exchange lifetime must be at least 1");
         }
         this.exchangeLifetime = exchangeLifetime;
+    }
+
+    /**
+     * Gets the blockwise status lifetime.
+     * <p>
+     * Time to keep a blockwise status for follow up block requests.
+     * <p>
+     * The default value of this property is {@value #DEFAULT_BLOCKWISE_STATUS_LIFETIME} milliseconds.
+     *
+     * @return The blockwise status lifetime in milliseconds.
+     */
+    public final int getBlockwiseStatusLifetime() {
+        return blockwiseStatusLifetime;
+    }
+
+    /**
+     * Gets the blockwise status lifetime.
+     * <p>
+     * Time to keep blockwise status for follow up block requests.
+     * <p>
+     * The default value of this property is {@value #DEFAULT_BLOCKWISE_STATUS_LIFETIME} milliseconds.
+     *
+     * @param blockwiseStatusLifetime the blockwise status lifetime in milliseconds to keep the blockwise status for
+     *            follow up block requests.
+     * @throws IllegalArgumentException if blockwise status lifetime is &lt; 1.
+     */
+    public final void setBlockwiseStatusLifetime(final int blockwiseStatusLifetime) {
+        if (blockwiseStatusLifetime < 1) {
+            throw new IllegalArgumentException("blockwise status lifetime must be at least 1");
+        }
+        this.blockwiseStatusLifetime = blockwiseStatusLifetime;
     }
 
     /**

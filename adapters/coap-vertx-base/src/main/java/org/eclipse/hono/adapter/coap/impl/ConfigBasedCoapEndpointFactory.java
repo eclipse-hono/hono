@@ -204,6 +204,7 @@ public class ConfigBasedCoapEndpointFactory implements CoapEndpointFactory {
     protected Future<NetworkConfig> getSecureNetworkConfig() {
 
         final NetworkConfig networkConfig = newDefaultNetworkConfig();
+        networkConfig.setInt(Keys.BLOCKWISE_STATUS_LIFETIME, config.getBlockwiseStatusLifetime());
         networkConfig.setInt(Keys.NETWORK_STAGE_SENDER_THREAD_COUNT, config.getDtlsThreads());
         return loadNetworkConfig(config.getNetworkConfig(), networkConfig)
                 .compose(c -> loadNetworkConfig(config.getSecureNetworkConfig(), c));
@@ -222,6 +223,7 @@ public class ConfigBasedCoapEndpointFactory implements CoapEndpointFactory {
     protected Future<NetworkConfig> getInsecureNetworkConfig() {
 
         final NetworkConfig networkConfig = newDefaultNetworkConfig();
+        networkConfig.setInt(Keys.BLOCKWISE_STATUS_LIFETIME, config.getBlockwiseStatusLifetime());
         return loadNetworkConfig(config.getNetworkConfig(), networkConfig)
                 .compose(c -> loadNetworkConfig(config.getInsecureNetworkConfig(), c));
     }
