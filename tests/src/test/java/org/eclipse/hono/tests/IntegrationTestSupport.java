@@ -385,7 +385,6 @@ public final class IntegrationTestSupport {
      * The port number that the Device Registry listens on for HTTP requests.
      */
     public static final int HONO_DEVICEREGISTRY_HTTP_PORT = Integer.getInteger(PROPERTY_DEVICEREGISTRY_HTTP_PORT, DEFAULT_DEVICEREGISTRY_HTTP_PORT);
-
     /**
      * The type of Device Registry being used.
      */
@@ -624,6 +623,15 @@ public final class IntegrationTestSupport {
      * @return {@code true} if the registry supports searching.
      */
     public static boolean isSearchTenantsSupportedByRegistry() {
+        return HONO_DEVICEREGISTRY_TYPE.equals(DEVICEREGISTRY_TYPE_MONGODB);
+    }
+
+    /**
+     * Checks if the Device Registry supports sharing of CAs across trust anchor groups.
+     *
+     * @return {@code true} if the registry supports sharing CAs.
+     */
+    public static boolean isTrustAnchorGroupsSupported() {
         return HONO_DEVICEREGISTRY_TYPE.equals(DEVICEREGISTRY_TYPE_MONGODB);
     }
 

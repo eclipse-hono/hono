@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,6 +28,7 @@ import org.eclipse.hono.service.management.tenant.TenantDto;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.json.pointer.JsonPointer;
 
@@ -37,11 +38,19 @@ import io.vertx.core.json.pointer.JsonPointer;
 public final class MongoDbDocumentBuilder {
 
     private static final JsonPointer FIELD_ID = JsonPointer.from("/id");
-    private static final String TENANT_TRUSTED_CA_SUBJECT_PATH = String.format("%s.%s.%s",
+    private static final String TENANT_TRUST_ANCHOR_GROUP_PATH = String.format("%s.%s", TenantDto.FIELD_TENANT,
+            RegistryManagementConstants.FIELD_TRUST_ANCHOR_GROUP);
+    private static final String TENANT_TRUSTED_CA_PATH = String.format("%s.%s",
             TenantDto.FIELD_TENANT,
-            RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA,
+            RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA);
+    private static final String TENANT_TRUSTED_CA_SUBJECT_PATH = String.format("%s.%s",
+            TENANT_TRUSTED_CA_PATH,
             AuthenticationConstants.FIELD_SUBJECT_DN);
     private static final String MONGODB_OPERATOR_ELEM_MATCH = "$elemMatch";
+    private static final String MONGODB_OPERATOR_EXISTS = "$exists";
+    private static final String MONGODB_OPERATOR_IN = "$in";
+    private static final String MONGODB_OPERATOR_NOT_EQUALS = "$ne";
+    private static final String MONGODB_OPERATOR_OR = "$or";
 
     private final JsonObject document;
 
@@ -59,7 +68,16 @@ public final class MongoDbDocumentBuilder {
     }
 
     /**
-     * Sets the json object with the given tenant id.
+     * Gets the document containing the filter criteria that have been added.
+     *
+     * @return The document.
+     */
+    public JsonObject document() {
+        return document;
+    }
+
+    /**
+     * Adds filter criteria that matches documents containing a given tenant ID.
      *
      * @param tenantId The tenant id.
      * @return a reference to this for fluent use.
@@ -70,7 +88,18 @@ public final class MongoDbDocumentBuilder {
     }
 
     /**
-     * Sets the json object with the given device id.
+     * Adds filter criteria that matches documents not containing a given tenant ID.
+     *
+     * @param tenantId The tenant ID.
+     * @return a reference to this for fluent use.
+     */
+    public MongoDbDocumentBuilder withOtherTenantId(final String tenantId) {
+        document.put(BaseDto.FIELD_TENANT_ID, new JsonObject().put(MONGODB_OPERATOR_NOT_EQUALS, tenantId));
+        return this;
+    }
+
+    /**
+     * Adds filter criteria that matches documents containing a given device ID.
      *
      * @param deviceId The device id.
      * @return a reference to this for fluent use.
@@ -81,13 +110,31 @@ public final class MongoDbDocumentBuilder {
     }
 
     /**
-     * Sets the json object with the given subject DN.
+     * Adds filter criteria that matches documents containing a trust anchor with a given subject DN.
      *
      * @param subjectDn The subject DN.
      * @return a reference to this for fluent use.
      */
     public MongoDbDocumentBuilder withCa(final String subjectDn) {
         document.put(TENANT_TRUSTED_CA_SUBJECT_PATH, new JsonObject().put("$eq", subjectDn));
+        return this;
+    }
+
+    /**
+     * Adds filter criteria that matches documents containing a trust anchor with any of a given set of subject DNs.
+     * Sets the json object with the given subject DNs.
+     *
+     * @param subjectDns The list of subject DNs.
+     * @return a reference to this for fluent use.
+     */
+    public MongoDbDocumentBuilder withAnyCa(final List<String> subjectDns) {
+        document.put(
+                TENANT_TRUSTED_CA_PATH,
+                new JsonObject().put(
+                        MONGODB_OPERATOR_ELEM_MATCH,
+                        new JsonObject().put(
+                                RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN,
+                                new JsonObject().put(MONGODB_OPERATOR_IN, new JsonArray(subjectDns)))));
         return this;
     }
 
@@ -102,15 +149,6 @@ public final class MongoDbDocumentBuilder {
         Objects.requireNonNull(version);
         version.ifPresent(ver -> document.put(BaseDto.FIELD_VERSION, ver));
         return this;
-    }
-
-    /**
-     * Returns the json document.
-     *
-     * @return the json document.
-     */
-    public JsonObject document() {
-        return document;
     }
 
     /**
@@ -133,12 +171,22 @@ public final class MongoDbDocumentBuilder {
         return withCredentialsPredicate(RegistryManagementConstants.FIELD_AUTH_ID, authId);
     }
 
-    private MongoDbDocumentBuilder withCredentialsPredicate(final String field, final String value) {
-        final var credentialsArraySpec = document.getJsonObject(CredentialsDto.FIELD_CREDENTIALS, new JsonObject());
-        final var elementMatchSpec = credentialsArraySpec.getJsonObject(MONGODB_OPERATOR_ELEM_MATCH, new JsonObject());
-        elementMatchSpec.put(field, value);
-        credentialsArraySpec.put(MONGODB_OPERATOR_ELEM_MATCH, elementMatchSpec);
-        document.put(CredentialsDto.FIELD_CREDENTIALS, credentialsArraySpec);
+    /**
+     * Sets the json object with the given trust anchor group.
+     *
+     * @param trustAnchorGroup The trust anchor group name.
+     * @return a reference to this for fluent use.
+     */
+    public MongoDbDocumentBuilder withTrustAnchorGroup(final String trustAnchorGroup) {
+        document.put(
+                MONGODB_OPERATOR_OR,
+                new JsonArray()
+                        .add(new JsonObject().put(
+                                TENANT_TRUST_ANCHOR_GROUP_PATH,
+                                new JsonObject().put(MONGODB_OPERATOR_EXISTS, false)))
+                        .add(new JsonObject().put(
+                                TENANT_TRUST_ANCHOR_GROUP_PATH,
+                                new JsonObject().put(MONGODB_OPERATOR_NOT_EQUALS, trustAnchorGroup))));
         return this;
     }
 
@@ -156,7 +204,7 @@ public final class MongoDbDocumentBuilder {
     }
 
     /**
-     * Sets the json object with the given filters for tenants search operation..
+     * Sets the json object with the given filters for tenants search operation.
      *
      * @param filters The device filters list.
      * @return a reference to this for fluent use.
@@ -209,6 +257,15 @@ public final class MongoDbDocumentBuilder {
     private void applySortingOptions(final List<Sort> sortOptions, final Function<JsonPointer, String> fieldMapper) {
         sortOptions.forEach(sortOption -> document.put(fieldMapper.apply(sortOption.getField()),
                 mapSortingDirection(sortOption.getDirection())));
+    }
+
+    private MongoDbDocumentBuilder withCredentialsPredicate(final String field, final String value) {
+        final var credentialsArraySpec = document.getJsonObject(CredentialsDto.FIELD_CREDENTIALS, new JsonObject());
+        final var elementMatchSpec = credentialsArraySpec.getJsonObject(MONGODB_OPERATOR_ELEM_MATCH, new JsonObject());
+        elementMatchSpec.put(field, value);
+        credentialsArraySpec.put(MONGODB_OPERATOR_ELEM_MATCH, elementMatchSpec);
+        document.put(CredentialsDto.FIELD_CREDENTIALS, credentialsArraySpec);
+        return this;
     }
 
     private static String mapDeviceField(final JsonPointer field) {

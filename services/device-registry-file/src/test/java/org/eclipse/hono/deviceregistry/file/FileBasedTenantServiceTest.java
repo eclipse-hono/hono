@@ -381,4 +381,27 @@ public class FileBasedTenantServiceTest implements AbstractTenantServiceTest {
                 ctx.completeNow();
             }));
     }
+
+    @Override
+    public void testAddTenantWithTrustAnchorGroupAndDuplicateTrustAnchorFails(
+            final VertxTestContext ctx) {
+        //This feature is not implemented
+    }
+
+    @Override
+    public void testAddTenantWithTrustAnchorGroupAndDuplicateTrustAnchorSucceeds(
+            final VertxTestContext ctx) {
+        //This feature is not implemented
+    }
+
+    @Override
+    public void testUpdateTenantWithTrustAnchorGroupAndDuplicateTrustAnchorFails(final VertxTestContext ctx) {
+        //This feature is not implemented
+    }
+
+    @Override
+    public void testUpdateTenantWithTrustAnchorGroupAndDuplicateTrustAnchorSucceeds(
+            final VertxTestContext ctx) {
+        //This feature is not implemented
+    }
 }

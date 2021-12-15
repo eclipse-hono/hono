@@ -24,6 +24,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -117,6 +118,73 @@ public interface AbstractTenantServiceTest {
                 ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_CONFLICT));
                 ctx.completeNow();
             }));
+    }
+
+    /**
+     * Verifies that a tenant cannot be added if it uses a trusted certificate authority with the same subject DN
+     * as an already existing tenant and both the tenants do not belong to the same trust anchor group.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    default void testAddTenantWithTrustAnchorGroupAndDuplicateTrustAnchorFails(final VertxTestContext ctx) {
+        final String trustAnchorGroup1 = UUID.randomUUID().toString();
+        final String trustAnchorGroup2 = UUID.randomUUID().toString();
+        final TrustedCertificateAuthority trustedCa = new TrustedCertificateAuthority()
+                .setSubjectDn("CN=taken")
+                .setPublicKey("NOTAKEY".getBytes(StandardCharsets.UTF_8));
+
+        final Tenant tenant1 = new Tenant()
+                .setEnabled(true)
+                .setTrustAnchorGroup(trustAnchorGroup1)
+                .setTrustedCertificateAuthorities(Collections.singletonList(trustedCa));
+        final Tenant tenant2 = new Tenant()
+                .setEnabled(true)
+                .setTrustAnchorGroup(trustAnchorGroup2)
+                .setTrustedCertificateAuthorities(Collections.singletonList(trustedCa));
+
+        addTenant("tenant1", tenant1)
+                .compose(ok -> getTenantManagementService().createTenant(
+                        Optional.of("newTenant"),
+                        tenant2,
+                        NoopSpan.INSTANCE))
+                .onComplete(ctx.failing(t -> {
+                    ctx.verify(() -> Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_CONFLICT));
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
+     * Verifies that a tenant can be added if it uses a trusted certificate authority with the same subject DN
+     * as an already existing tenant and both the tenants belong to the same trust anchor group.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    default void testAddTenantWithTrustAnchorGroupAndDuplicateTrustAnchorSucceeds(final VertxTestContext ctx) {
+        final String trustAnchorGroup = UUID.randomUUID().toString();
+        final TrustedCertificateAuthority trustedCa = new TrustedCertificateAuthority()
+                .setSubjectDn("CN=taken")
+                .setPublicKey("NOTAKEY".getBytes(StandardCharsets.UTF_8));
+
+        final Tenant tenant = new Tenant()
+                .setEnabled(true)
+                .setTrustAnchorGroup(trustAnchorGroup)
+                .setTrustedCertificateAuthorities(Collections.singletonList(trustedCa));
+
+        addTenant("tenant", tenant)
+                .compose(ok -> getTenantManagementService().createTenant(
+                        Optional.of("newTenant"),
+                        tenant,
+                        NoopSpan.INSTANCE))
+                .onComplete(ctx.succeeding(s -> {
+                    ctx.verify(() -> {
+                        final String id = s.getPayload().getId();
+                        assertNotNull(id);
+                        assertEquals(HttpURLConnection.HTTP_CREATED, s.getStatus());
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**
@@ -562,6 +630,84 @@ public interface AbstractTenantServiceTest {
                 });
                 ctx.completeNow();
             }));
+    }
+
+    /**
+     * Verifies that a tenant cannot be updated to use a trusted certificate authority with the same subject DN
+     * as another tenant, if both the tenants do not belong to the same trust anchor group.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    default void testUpdateTenantWithTrustAnchorGroupAndDuplicateTrustAnchorFails(final VertxTestContext ctx) {
+
+        final String trustAnchorGroup1 = UUID.randomUUID().toString();
+        final String trustAnchorGroup2 = UUID.randomUUID().toString();
+        final TrustedCertificateAuthority trustedCa = new TrustedCertificateAuthority();
+        trustedCa.setSubjectDn("CN=taken");
+        trustedCa.setPublicKey("NOTAKEY".getBytes(StandardCharsets.UTF_8));
+
+        // GIVEN two tenants, one with a CA configured, the other with no CA
+        addTenant("tenantOne",
+                new Tenant().setEnabled(true).setTrustAnchorGroup(trustAnchorGroup1)
+                        .setTrustedCertificateAuthorities(List.of(trustedCa)))
+                .compose(ok -> addTenant("tenantTwo", new Tenant().setEnabled(true)))
+                .compose(ok -> {
+                    // WHEN updating the second tenant to use the same CA as the first tenant
+                    // and both tenants do not belong to the same trust anchor group
+                    final Tenant updatedTenantTwo = new Tenant().setEnabled(true)
+                            .setTrustAnchorGroup(trustAnchorGroup2)
+                            .setTrustedCertificateAuthorities(List.of(trustedCa));
+                    return getTenantManagementService().updateTenant(
+                            "tenantTwo",
+                            updatedTenantTwo,
+                            Optional.empty(),
+                            NoopSpan.INSTANCE);
+                }).onComplete(ctx.failing(t -> {
+                    ctx.verify(() -> {
+                        // THEN the update fails with a 409
+                        Assertions.assertServiceInvocationException(t, HttpURLConnection.HTTP_CONFLICT);
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
+     * Verifies that a tenant can be updated to use a trusted certificate authority with the same subject DN
+     * as another tenant, if both the tenants belong to the same trust anchor group.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    default void testUpdateTenantWithTrustAnchorGroupAndDuplicateTrustAnchorSucceeds(final VertxTestContext ctx) {
+
+        final String trustAnchorGroup = UUID.randomUUID().toString();
+        final TrustedCertificateAuthority trustedCa = new TrustedCertificateAuthority();
+        trustedCa.setSubjectDn("CN=taken");
+        trustedCa.setPublicKey("NOTAKEY".getBytes(StandardCharsets.UTF_8));
+
+        // GIVEN two tenants, one with a CA configured, the other with no CA
+        addTenant("tenantOne",
+                new Tenant().setEnabled(true).setTrustAnchorGroup(trustAnchorGroup)
+                        .setTrustedCertificateAuthorities(List.of(trustedCa)))
+                                .compose(ok -> addTenant("tenantTwo", new Tenant().setEnabled(true)))
+                                .compose(ok -> {
+                                    // WHEN updating the second tenant to use the same CA as the first tenant
+                                    // and both tenants belong to the same trust anchor group
+                                    final Tenant updatedTenantTwo = new Tenant().setEnabled(true)
+                                            .setTrustAnchorGroup(trustAnchorGroup)
+                                            .setTrustedCertificateAuthorities(List.of(trustedCa));
+                                    return getTenantManagementService().updateTenant(
+                                            "tenantTwo",
+                                            updatedTenantTwo,
+                                            Optional.empty(),
+                                            NoopSpan.INSTANCE);
+                                }).onComplete(ctx.succeeding(updateResult -> {
+                                    ctx.verify(() -> {
+                                        assertEquals(HttpURLConnection.HTTP_NO_CONTENT, updateResult.getStatus());
+                                    });
+                                    ctx.completeNow();
+                                }));
     }
 
     /**
