@@ -11,9 +11,9 @@ The Dispatch Router component exposes service endpoints implementing the *north 
 
 ## Dispatch Router Configuration
 
-The Dispatch Router is part of the [Apache Qpid project](https://qpid.apache.org). Hono uses Dispatch Router by means of the [EnMasse](https://enmasseproject.github.io) project's [Dispatch Router Docker image](https://quay.io/repository/enmasse/qdrouterd-base) created from the Qpid project source code.
+The Dispatch Router is part of the [Apache Qpid project](https://qpid.apache.org). Hono uses the Dispatch Router by means of the [EnMasse](https://enmasseproject.github.io) project's [Dispatch Router Docker image](https://quay.io/repository/enmasse/qdrouterd-base) created from the Qpid project source code.
 
-The Dispatch Router can be configured by means of configuration files. Hono includes an example configuration in the `deploy/src/main/config/qpid` folder which is used by the example deployment scripts. Please refer to the [Dispatch Router documentation](https://qpid.apache.org/components/dispatch-router/index.html) for details regarding the configuration file format and options.
+The Dispatch Router can be configured by means of configuration files. The [Eclipse IoT Packages](https://www.eclipse.org/packages/) project hosts an [example configuration](https://github.com/eclipse/packages/blob/master/charts/hono/config/router/qdrouterd.json). Please refer to the [Dispatch Router documentation](https://qpid.apache.org/components/dispatch-router/index.html) for details regarding the configuration file format and options.
 
 ## Artemis Broker Configuration
 
