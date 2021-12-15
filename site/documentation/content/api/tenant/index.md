@@ -264,7 +264,8 @@ Protocol adapters SHOULD use the *max-ttl-telemetry-qos0* and *max-ttl-telemetry
      smaller than the *effective ttl*, then use the *ttl* value provided by the device as the new *effective ttl*.
    * does not contain a *ttl* header but a default property with name *ttl-telemetry-qos0* is configured for the device
      (with the device level taking precedence over the tenant level) and either *effective ttl* is `-1` or the default
-     property's value is smaller than the *effective ttl*, then use the configured default *ttl* value as the new *effective ttl*.
+     property's value is smaller than the *effective ttl*, then use the configured default *ttl* value as the
+     new *effective ttl*.
 1. If *effective ttl* is not `-1`, then set the downstream message's *ttl* header to its value (in milliseconds).
 
 Protocol adapters SHOULD use the *max-ttl-command-response* property to determine the *effective time-to-live* for
@@ -276,9 +277,10 @@ Protocol adapters SHOULD use the *max-ttl-command-response* property to determin
 1. If the message published by the device
    * contains a *ttl* header and either *effective ttl* is `-1` or the *ttl* value (in seconds) provided by the device is
      smaller than the *effective ttl*, then use the *ttl* value provided by the device as the new *effective ttl*.
-   * does not contain a *ttl* header but a default property with name *ttl-command-response* is configured at the device's
-     tenant level and either *effective ttl* is `-1` or the default property's value is smaller than the *effective ttl*,
-     then use the configured default *ttl* value as the new *effective ttl*.
+   * does not contain a *ttl* header but a default property with name *ttl-command-response* is configured for the device
+     (with the device level taking precedence over the tenant level) and either *effective ttl* is `-1` or the default
+     property's value is smaller than the *effective ttl*, then use the configured default *ttl* value as the
+     new *effective ttl*.
 1. If *effective ttl* is not `-1`, then set the downstream message's *ttl* header to its value (in milliseconds).
 
 The JSON object MAY contain an arbitrary number of additional members with arbitrary names of either scalar or complex type.
