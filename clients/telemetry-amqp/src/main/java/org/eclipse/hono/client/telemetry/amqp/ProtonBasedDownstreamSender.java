@@ -23,6 +23,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.StatusCodeMapper;
+import org.eclipse.hono.client.amqp.DownstreamAmqpMessageFactory;
 import org.eclipse.hono.client.amqp.SenderCachingServiceClient;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.TelemetrySender;
@@ -137,19 +138,18 @@ public class ProtonBasedDownstreamSender extends SenderCachingServiceClient impl
             final Buffer payload,
             final Map<String, Object> properties) {
 
-        final Map<String, Object> props = Optional.ofNullable(properties)
-                .orElseGet(HashMap::new);
+        final Map<String, Object> props = Optional.ofNullable(properties).orElseGet(HashMap::new);
         props.put(MessageHelper.APP_PROPERTY_QOS, qos.ordinal());
         props.put(MessageHelper.APP_PROPERTY_DEVICE_ID, device.getDeviceId());
 
-        return MessageHelper.newMessage(
+        return DownstreamAmqpMessageFactory.newMessage(
                 target,
                 contentType,
                 payload,
                 tenant,
+                deviceDefaultsEnabled ? tenant.getDefaults().getMap() : null,
+                deviceDefaultsEnabled ? device.getDefaults() : null,
                 props,
-                device.getDefaults(),
-                deviceDefaultsEnabled,
                 jmsVendorPropsEnabled);
     }
 

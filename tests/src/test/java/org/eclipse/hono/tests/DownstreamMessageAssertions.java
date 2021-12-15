@@ -14,6 +14,8 @@ package org.eclipse.hono.tests;
 
 import static com.google.common.truth.Truth.assertWithMessage;
 
+import java.time.Duration;
+
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.application.client.amqp.AmqpMessageContext;
@@ -39,6 +41,20 @@ public final class DownstreamMessageAssertions {
             final AmqpMessageContext amqpMessageContext = (AmqpMessageContext) msg.getMessageContext();
             assertWithMessage("message is durable").that(amqpMessageContext.getRawMessage().isDurable()).isTrue();
         }
+    }
+
+    /**
+     * Verifies that a downstream message contains a time-to-live.
+     *
+     * @param msg The message to check.
+     * @param expectedTtl The expected time-to-live.
+     * @throws AssertionError if the message does not contain the expected ttl.
+     */
+    public static void assertMessageContainsTimeToLive(
+            final DownstreamMessage<? extends MessageContext> msg,
+            final Duration expectedTtl) {
+        assertWithMessage("message contains ttl").that(msg.getTimeToLive()).isNotNull();
+        assertWithMessage("message contains expected ttl").that(msg.getTimeToLive()).isEqualTo(expectedTtl);
     }
 
     /**

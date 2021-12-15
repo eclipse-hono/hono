@@ -27,6 +27,7 @@ import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
 import org.eclipse.hono.test.TracingMockSupport;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.TenantObject;
@@ -47,7 +48,7 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 public class KafkaBasedEventSenderTest {
 
-    private final TenantObject tenant = new TenantObject("the-tenant", true);
+    private TenantObject tenant = new TenantObject("the-tenant", true);
     private final RegistrationAssertion device = new RegistrationAssertion("the-device");
     private final Vertx vertxMock = mock(Vertx.class);
 
@@ -81,7 +82,9 @@ public class KafkaBasedEventSenderTest {
         // GIVEN a sender
         final String contentType = "text/plain";
         final String payload = "the-payload";
-        final Map<String, Object> properties = Map.of("foo", "bar");
+        final Map<String, Object> properties = Map.of(
+                "foo", "bar",
+                MessageHelper.SYS_HEADER_PROPERTY_TTL, 5);
 
         final var span = TracingMockSupport.mockSpan();
         final var tracer = TracingMockSupport.mockTracer(span);
@@ -103,6 +106,10 @@ public class KafkaBasedEventSenderTest {
                         assertThat(producerRecord.value().toString()).isEqualTo(payload);
 
                         KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(producerRecord.headers(), "foo", "bar");
+                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                                producerRecord.headers(),
+                                MessageHelper.SYS_HEADER_PROPERTY_TTL,
+                                5000L);
 
                         // ...AND contains the standard headers
                         KafkaClientUnitTestHelper.assertStandardHeaders(

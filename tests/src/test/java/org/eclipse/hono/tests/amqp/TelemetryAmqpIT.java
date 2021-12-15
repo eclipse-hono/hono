@@ -12,12 +12,16 @@
  *******************************************************************************/
 package org.eclipse.hono.tests.amqp;
 
+import java.time.Duration;
 import java.util.stream.Stream;
 
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.DownstreamMessageAssertions;
+import org.eclipse.hono.util.QoS;
+import org.eclipse.hono.util.ResourceLimits;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Future;
@@ -32,9 +36,18 @@ import io.vertx.proton.ProtonQoS;
 public class TelemetryAmqpIT extends AmqpUploadTestBase {
 
     private static final String TELEMETRY_ENDPOINT = "telemetry";
+    private static final Duration TTL_QOS0 = Duration.ofSeconds(10L);
+    private static final Duration TTL_QOS1 = Duration.ofSeconds(20L);
 
     static Stream<ProtonQoS> senderQoSTypes() {
         return Stream.of(ProtonQoS.AT_LEAST_ONCE, ProtonQoS.AT_MOST_ONCE);
+    }
+
+    @Override
+    protected void prepareTenantConfig(final Tenant config) {
+        config.setResourceLimits(new ResourceLimits()
+                .setMaxTtlTelemetryQoS0(TTL_QOS0.toSeconds())
+                .setMaxTtlTelemetryQoS1(TTL_QOS1.toSeconds()));
     }
 
     @Override
@@ -52,5 +65,7 @@ public class TelemetryAmqpIT extends AmqpUploadTestBase {
     @Override
     protected void assertAdditionalMessageProperties(final DownstreamMessage<? extends MessageContext> msg) {
         DownstreamMessageAssertions.assertMessageContainsCreationTime(msg);
+        final Duration expectedTtl = msg.getQos() == QoS.AT_MOST_ONCE ? TTL_QOS0 : TTL_QOS1;
+        DownstreamMessageAssertions.assertMessageContainsTimeToLive(msg, expectedTtl);
     }
 }

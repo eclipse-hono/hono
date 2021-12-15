@@ -123,10 +123,14 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
         this.tracer = Objects.requireNonNull(tracer);
         this.internalKafkaTopicCleanupService = internalKafkaTopicCleanupService;
 
-        internalCommandSender = new KafkaBasedInternalCommandSender(kafkaProducerFactory, internalCommandProducerConfig,
+        internalCommandSender = new KafkaBasedInternalCommandSender(
+                kafkaProducerFactory,
+                internalCommandProducerConfig,
                 tracer);
-        kafkaBasedCommandResponseSender = new KafkaBasedCommandResponseSender(kafkaProducerFactory,
-                commandResponseProducerConfig, tracer);
+        kafkaBasedCommandResponseSender = new KafkaBasedCommandResponseSender(
+                kafkaProducerFactory,
+                commandResponseProducerConfig,
+                tracer);
     }
 
     /**

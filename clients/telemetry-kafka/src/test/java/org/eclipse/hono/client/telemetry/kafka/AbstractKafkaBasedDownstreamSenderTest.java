@@ -20,7 +20,6 @@ import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Collections;
 import java.util.Map;
-import java.util.Optional;
 
 import org.apache.kafka.clients.producer.MockProducer;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
@@ -31,7 +30,6 @@ import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
-import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,7 +41,6 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
-import io.vertx.junit5.VertxTestContext;
 
 /**
  * Verifies behavior of {@link AbstractKafkaBasedDownstreamSender}.
@@ -56,16 +53,15 @@ public class AbstractKafkaBasedDownstreamSenderTest {
     private static final String TENANT_ID = "the-tenant";
     private static final String DEVICE_ID = "the-device";
     private static final QoS qos = QoS.AT_LEAST_ONCE;
-    private static final String CONTENT_TYPE = EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION;
     private static final String PRODUCER_NAME = "test-producer";
 
     private final Tracer tracer = NoopTracerFactory.create();
-    private final TenantObject tenant = new TenantObject(TENANT_ID, true);
     private final RegistrationAssertion device = new RegistrationAssertion(DEVICE_ID);
     private final Vertx vertxMock = mock(Vertx.class);
 
     private MessagingKafkaProducerConfigProperties config;
     private AbstractKafkaBasedDownstreamSender sender;
+    private TenantObject tenant;
 
     /**
      * Sets up the fixture.
@@ -74,6 +70,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
     public void setUp() {
         config = new MessagingKafkaProducerConfigProperties();
         config.setProducerConfig(Map.of("hono.kafka.producerConfig.bootstrap.servers", "localhost:9092"));
+        tenant = new TenantObject(TENANT_ID, true);
 
         final var mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         sender = newSender(mockProducer);
@@ -88,6 +85,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
         assertContentType(
                 MessageHelper.CONTENT_TYPE_OCTET_STREAM,
                 null,
+                Buffer.buffer("hello"),
                 null,
                 device,
                 tenant);
@@ -105,6 +103,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
         assertContentType(
                 contentTypeTenant,
                 null,
+                Buffer.buffer("hello"),
                 null,
                 device,
                 tenant);
@@ -124,6 +123,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
         assertContentType(
                 expected,
                 null,
+                Buffer.buffer("hello"),
                 null,
                 device,
                 tenant);
@@ -142,6 +142,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
         assertContentType(
                 expected,
                 null,
+                Buffer.buffer("hello"),
                 Map.of(CONTENT_TYPE_KEY, expected),
                 device,
                 tenant);
@@ -158,6 +159,7 @@ public class AbstractKafkaBasedDownstreamSenderTest {
         assertContentType(
                 contentType,
                 contentType,
+                Buffer.buffer("hello"),
                 Map.of(CONTENT_TYPE_KEY, "text/english"),
                 device,
                 tenant);
@@ -166,134 +168,25 @@ public class AbstractKafkaBasedDownstreamSenderTest {
     private void assertContentType(
             final String expectedContentType,
             final String messageContentType,
+            final Buffer payload,
             final Map<String, Object> messageProperties,
             final RegistrationAssertion device,
             final TenantObject tenant) {
 
         final var propsWithDefaults = sender.addDefaults(
+                EventConstants.EVENT_ENDPOINT,
                 tenant,
                 device,
                 qos,
                 messageContentType,
+                payload,
                 messageProperties);
 
         assertThat(propsWithDefaults.get(CONTENT_TYPE_KEY)).isEqualTo(expectedContentType);
     }
 
-    private void assertTtlValue(
-            final Map<String, Object> messageProperties,
-            final Long expectedTtl,
-            final VertxTestContext ctx) {
-
-        Optional.ofNullable(expectedTtl)
-            .ifPresent(v -> ctx.verify(() -> assertThat(messageProperties.get(MessageHelper.SYS_HEADER_PROPERTY_TTL))
-                    .isEqualTo(expectedTtl)));
-        ctx.completeNow();
-    }
-
     /**
-     * Verifies that if the properties contain a <em>ttl</em> property that is below the <em>max-ttl</em> of the tenant,
-     * it is set as a Kafka header and the value in corresponding Kafka header is converted from seconds to
-     * milliseconds.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testThatTtlFromDeviceIsPreserved(final VertxTestContext ctx) {
-
-        // GIVEN a tenant with maximum TTL configured and a lower one in the properties
-        tenant.setResourceLimits(new ResourceLimits().setMaxTtl(30));
-        tenant.setDefaults(new JsonObject().put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 15));
-        final Map<String, Object> properties = Map.of(MessageHelper.SYS_HEADER_PROPERTY_TTL, 10);
-
-        // WHEN creating the properties to include in the downstream message
-        final var propsWithDefaults = sender.addDefaults(tenant, device, qos, CONTENT_TYPE, properties);
-
-        assertTtlValue(propsWithDefaults, 10_000L, ctx);
-    }
-
-    /**
-     * Verifies that if the properties do not contain a <em>ttl</em> property but the tenant has a default value
-     * configured, the latter one is used.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testThatTtlFromDefaultsIsUsed(final VertxTestContext ctx) {
-
-        // GIVEN a tenant with maximum TTL configured and a lower one configured in the defaults
-        tenant.setResourceLimits(new ResourceLimits().setMaxTtl(30));
-        tenant.setDefaults(new JsonObject().put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 10));
-
-        // WHEN creating the properties to include in the downstream message
-        final var propsWithDefaults = sender.addDefaults(tenant, device, qos, CONTENT_TYPE, null);
-
-        assertTtlValue(propsWithDefaults, 10_000L, ctx);
-    }
-
-    /**
-     * Verifies that defaults defined at the device level take precedence over properties defined at the tenant level.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testThatTtlFromDeviceDefaultsTakesPrecendenceOverTenantDefaults(final VertxTestContext ctx) {
-
-        // GIVEN a tenant with default TTL configured and a device with another default TTL
-        device.setDefaults(Map.of(MessageHelper.SYS_HEADER_PROPERTY_TTL, 20));
-        tenant.setDefaults(new JsonObject().put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 10));
-
-        // WHEN creating the properties to include in the downstream message
-        final var propsWithDefaults = sender.addDefaults(tenant, device, qos, CONTENT_TYPE, null);
-
-        // THEN the TTL from the device's defaults is used
-        assertTtlValue(propsWithDefaults, 20_000L, ctx);
-    }
-
-    /**
-     * Verifies that if the properties contain a <em>ttl</em> property, the value in corresponding Kafka header is
-     * limited by the <em>max-ttl</em> specified for a tenant, if the <em>time-to-live</em> provided by the device
-     * exceeds the <em>max-ttl</em>.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testThatTtlIsLimitedToMaxValue(final VertxTestContext ctx) {
-
-        // GIVEN a tenant with max TTL configured...
-        tenant.setResourceLimits(new ResourceLimits().setMaxTtl(10));
-        // ...AND properties that contain a higher TTL
-        tenant.setDefaults(new JsonObject().put(MessageHelper.SYS_HEADER_PROPERTY_TTL, 15));
-        final Map<String, Object> properties = Map.of(MessageHelper.SYS_HEADER_PROPERTY_TTL, 30);
-
-        // WHEN creating the properties to include in the downstream message
-        final var propsWithDefaults = sender.addDefaults(tenant, device, qos, CONTENT_TYPE, properties);
-
-        // THEN the TTL is limited to the max TTL
-        assertTtlValue(propsWithDefaults, 10_000L, ctx);
-    }
-
-    /**
-     * Verifies that if the properties do not contain a <em>ttl</em> property, the <em>max-ttl</em> is used as the
-     * effective TTL.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testThatMaxValueIsUsedByDefault(final VertxTestContext ctx) {
-
-        // GIVEN a tenant with max TTL configured but no TTL set in the properties
-        tenant.setResourceLimits(new ResourceLimits().setMaxTtl(30));
-
-        // WHEN creating the properties to include in the downstream message
-        final var propsWithDefaults = sender.addDefaults(tenant, device, qos, CONTENT_TYPE, null);
-
-        // THEN the max TTL is used
-        assertTtlValue(propsWithDefaults, 30_000L, ctx);
-    }
-
-    /**
-     * Verifies that the constructor throws a nullpointer exception if a parameter is {@code null}.
+     * Verifies that the constructor throws an NPE if a parameter is {@code null}.
      */
     @Test
     public void testThatConstructorThrowsOnMissingParameter() {

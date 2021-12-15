@@ -180,6 +180,24 @@ public final class TenantConstants extends RequestResponseApiConstants {
      * a {@link TracingSamplingMode} value.
      */
     public static final String FIELD_TRACING_SAMPLING_MODE_PER_AUTH_ID = "sampling-mode-per-auth-id";
+    /**
+     * The name of the property that contains the <em>time to live</em> (seconds) for
+     * downstream QoS 0 telemetry messages that protocol adapters should use for a tenant
+     * if a device does not specify a TTL explicitly.
+     */
+    public static final String FIELD_TTL_TELEMETRY_QOS0 = "ttl-telemetry-qos0";
+    /**
+     * The name of the property that contains the <em>time to live</em> (seconds) for
+     * downstream QoS 1 telemetry messages that protocol adapters should use for a tenant
+     * if a device does not specify a TTL explicitly.
+     */
+    public static final String FIELD_TTL_TELEMETRY_QOS1 = "ttl-telemetry-qos1";
+    /**
+     * The name of the property that contains the <em>time to live</em> (seconds) for
+     * downstream command response messages that protocol adapters should use for a tenant
+     * if a device does not specify a TTL explicitly.
+     */
+    public static final String FIELD_TTL_COMMAND_RESPONSE = "ttl-command-response";
 
     /**
      * The name of the property that defines the messaging type to be used for a tenant.

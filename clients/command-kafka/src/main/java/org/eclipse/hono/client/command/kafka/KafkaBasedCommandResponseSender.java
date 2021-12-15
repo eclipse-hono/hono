@@ -12,10 +12,8 @@
  */
 package org.eclipse.hono.client.command.kafka;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 
 import org.eclipse.hono.client.command.CommandResponse;
 import org.eclipse.hono.client.command.CommandResponseSender;
@@ -23,6 +21,7 @@ import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
+import org.eclipse.hono.client.util.DownstreamMessageProperties;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
@@ -82,26 +81,39 @@ public class KafkaBasedCommandResponseSender extends AbstractKafkaBasedMessageSe
             span.log(String.format("using messaging type %s instead of type %s used for the original command",
                     getMessagingType(), response.getMessagingType()));
         }
+
         return sendAndWaitForOutcome(
-                topic,
-                response.getTenantId(),
-                response.getDeviceId(),
-                response.getPayload(),
-                getHeaders(response),
-                span)
-            .onComplete(ar -> span.finish());
+                    topic,
+                    response.getTenantId(),
+                    response.getDeviceId(),
+                    response.getPayload(),
+                    getHeaders(response, tenant, device),
+                    span)
+                .onComplete(ar -> span.finish());
     }
 
-    private Map<String, Object> getHeaders(final CommandResponse response) {
-        final Map<String, Object> headers = new HashMap<>(response.getAdditionalProperties());
+    private Map<String, Object> getHeaders(
+            final CommandResponse response,
+            final TenantObject tenant,
+            final RegistrationAssertion device) {
+
+        final var headers = new DownstreamMessageProperties(
+                CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT,
+                tenant.getDefaults().getMap(),
+                device.getDefaults(),
+                response.getAdditionalProperties(),
+                tenant.getResourceLimits())
+            .asMap();
+
         headers.put(MessageHelper.SYS_PROPERTY_CORRELATION_ID, response.getCorrelationId());
         headers.put(MessageHelper.APP_PROPERTY_TENANT_ID, response.getTenantId());
         headers.put(MessageHelper.APP_PROPERTY_DEVICE_ID, response.getDeviceId());
         headers.put(MessageHelper.APP_PROPERTY_STATUS, response.getStatus());
-        if (response.getPayload() != null) {
-            headers.put(
-                    MessageHelper.SYS_PROPERTY_CONTENT_TYPE,
-                    Optional.ofNullable(response.getContentType()).orElse(MessageHelper.CONTENT_TYPE_OCTET_STREAM));
+
+        if (response.getContentType() != null) {
+            headers.put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, response.getContentType());
+        } else if (response.getPayload() != null) {
+            headers.put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, MessageHelper.CONTENT_TYPE_OCTET_STREAM);
         }
         return headers;
     }

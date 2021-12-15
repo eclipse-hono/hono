@@ -103,7 +103,8 @@ public class ProtonBasedMappingAndDelegatingCommandHandler extends AbstractMappi
         final ResourceIdentifier targetAddress = ResourceIdentifier.fromString(message.getAddress());
         final String deviceId = targetAddress.getResourceId();
         if (!tenantId.equals(targetAddress.getTenantId())) {
-            log.debug("command message address contains invalid tenant [expected: {}, found: {}]", tenantId, targetAddress.getTenantId());
+            log.debug("command message address contains invalid tenant [expected: {}, found: {}]",
+                    tenantId, targetAddress.getTenantId());
             final Rejected rejected = new Rejected();
             rejected.setError(new ErrorCondition(AmqpError.UNAUTHORIZED_ACCESS, "unauthorized to send command to tenant"));
             messageDelivery.disposition(rejected, true);

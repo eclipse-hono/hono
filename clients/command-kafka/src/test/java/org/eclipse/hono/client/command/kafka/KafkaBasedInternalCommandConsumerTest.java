@@ -14,6 +14,10 @@
 package org.eclipse.hono.client.command.kafka;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -22,25 +26,35 @@ import static org.mockito.Mockito.when;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.kafka.clients.admin.Admin;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandHandlers;
+import org.eclipse.hono.client.command.CommandResponse;
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
+import org.eclipse.hono.client.registry.TenantClient;
+import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
+import org.eclipse.hono.util.RegistrationAssertion;
+import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 
 import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.vertx.core.Context;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -57,6 +71,8 @@ public class KafkaBasedInternalCommandConsumerTest {
     private KafkaBasedInternalCommandConsumer internalCommandConsumer;
     private CommandHandlers commandHandlers;
     private Context context;
+    private TenantClient tenantClient;
+    private CommandResponseSender commandResponseSender;
 
     /**
      * Sets up fixture.
@@ -71,16 +87,58 @@ public class KafkaBasedInternalCommandConsumerTest {
         final Tracer tracer = TracingMockSupport.mockTracer(span);
         context = VertxMockSupport.mockContext(mock(Vertx.class));
         commandHandlers = new CommandHandlers();
-        final CommandResponseSender commandResponseSender = mock(CommandResponseSender.class);
+        tenantClient = mock(TenantClient.class);
+        doAnswer(invocation -> {
+            final String tenantId = invocation.getArgument(0);
+            return Future.succeededFuture(TenantObject.from(tenantId));
+        }).when(tenantClient).get(anyString(), any());
+        commandResponseSender = mock(CommandResponseSender.class);
+        when(commandResponseSender.sendCommandResponse(
+                any(TenantObject.class),
+                any(RegistrationAssertion.class),
+                any(CommandResponse.class),
+                any()))
+            .thenReturn(Future.succeededFuture());
         internalCommandConsumer = new KafkaBasedInternalCommandConsumer(
                 context,
                 kafkaAdminClient,
                 kafkaConsumer,
                 "testClientId",
+                tenantClient,
                 commandResponseSender,
                 adapterInstanceId,
                 commandHandlers,
                 tracer);
+    }
+
+    /**
+     * Verifies that an error response is sent to the application if the tenant of the target device
+     * is unknown or cannot be retrieved.
+     */
+    @ParameterizedTest
+    @ValueSource(ints = { HttpURLConnection.HTTP_NOT_FOUND, HttpURLConnection.HTTP_UNAVAILABLE })
+    void testHandleCommandMessageSendErrorResponse(final int tenantServiceErrorCode) {
+
+        final String tenantId = "myTenant";
+        final String deviceId = "4711";
+        final String subject = "subject";
+
+        final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
+        commandHandlers.putCommandHandler(tenantId, deviceId, null, commandHandler, context);
+        when(tenantClient.get(eq("myTenant"), any())).thenReturn(
+                Future.failedFuture(ServiceInvocationException.create(tenantServiceErrorCode)));
+
+        final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(deviceId,
+                getHeaders(tenantId, deviceId, subject, 0L));
+
+        internalCommandConsumer.handleCommandMessage(commandRecord);
+
+        verify(commandHandler, never()).handle(any(KafkaBasedCommandContext.class));
+        verify(commandResponseSender).sendCommandResponse(
+                argThat(t -> t.getTenantId().equals("myTenant")),
+                argThat(r -> r.getDeviceId().equals("4711")),
+                argThat(cr -> cr.getStatus() == tenantServiceErrorCode),
+                any());
     }
 
     /**
@@ -227,24 +285,26 @@ public class KafkaBasedInternalCommandConsumerTest {
         assertThat(commandContextCaptor.getValue().getCommand().getDeviceId()).isEqualTo(deviceId);
     }
 
-    private List<KafkaHeader> getHeaders(final String tenantId, final String deviceId, final String subject, final long originalPartitionOffset) {
+    private List<KafkaHeader> getHeaders(
+            final String tenantId,
+            final String deviceId,
+            final String subject,
+            final long originalPartitionOffset) {
+
         return List.of(
                 KafkaRecordHelper.createTenantIdHeader(tenantId),
                 KafkaRecordHelper.createDeviceIdHeader(deviceId),
                 KafkaRecordHelper.createSubjectHeader(subject),
+                KafkaRecordHelper.createCorrelationIdHeader("corrId"),
+                KafkaRecordHelper.createResponseRequiredHeader(true),
                 KafkaRecordHelper.createOriginalPartitionHeader(0),
                 KafkaRecordHelper.createOriginalOffsetHeader(originalPartitionOffset)
         );
     }
 
-    @SuppressWarnings("unchecked")
     private KafkaConsumerRecord<String, Buffer> getCommandRecord(final String key, final List<KafkaHeader> headers) {
         final String adapterInstanceId = "the-adapter-instance-id";
         final String topic = new HonoTopic(HonoTopic.Type.COMMAND_INTERNAL, adapterInstanceId).toString();
-        final KafkaConsumerRecord<String, Buffer> consumerRecord = mock(KafkaConsumerRecord.class);
-        when(consumerRecord.headers()).thenReturn(headers);
-        when(consumerRecord.topic()).thenReturn(topic);
-        when(consumerRecord.key()).thenReturn(key);
-        return consumerRecord;
+        return KafkaClientUnitTestHelper.newMockConsumerRecord(topic, key, headers);
     }
 }

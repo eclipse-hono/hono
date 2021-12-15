@@ -17,6 +17,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
 import java.net.HttpURLConnection;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
@@ -44,8 +45,10 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.amqp.GenericSenderLink;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.AssumeMessagingSystem;
 import org.eclipse.hono.tests.CommandEndpointConfiguration.SubscriberRole;
+import org.eclipse.hono.tests.DownstreamMessageAssertions;
 import org.eclipse.hono.tests.GenericKafkaSender;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
@@ -53,6 +56,7 @@ import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
+import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -85,8 +89,8 @@ import io.vertx.proton.ProtonSender;
 public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
     private static final String REJECTED_COMMAND_ERROR_MESSAGE = "rejected command error message";
-
     private static final int COMMANDS_TO_SEND = 60;
+    private static final Duration TTL_COMMAND_RESPONSE = Duration.ofSeconds(20L);
 
     private String tenantId;
     private String deviceId;
@@ -102,6 +106,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
     /**
      * Creates a random tenant.
+     * <p>
+     * The tenant will be configured with a max TTL for command responses.
      *
      * @param ctx The vert.x test context.
      */
@@ -110,10 +116,14 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
         tenantId = helper.getRandomTenantId();
         deviceId = helper.getRandomDeviceId(tenantId);
-        helper.registry.addTenant(tenantId).onComplete(ctx.succeedingThenComplete());
+        final Tenant tenantConfig = new Tenant().setResourceLimits(new ResourceLimits()
+                .setMaxTtlCommandResponse(TTL_COMMAND_RESPONSE.toSeconds()));
+        helper.registry.addTenant(tenantId, tenantConfig).onComplete(ctx.succeedingThenComplete());
     }
 
-    private Future<MessageConsumer> createEventConsumer(final String tenantId, final Handler<DownstreamMessage<? extends MessageContext>> messageConsumer) {
+    private Future<MessageConsumer> createEventConsumer(
+            final String tenantId,
+            final Handler<DownstreamMessage<? extends MessageContext>> messageConsumer) {
         return helper.applicationClient.createEventConsumer(tenantId, (Handler) messageConsumer, remoteClose -> {});
     }
 
@@ -430,7 +440,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                             ctx.verify(() -> {
                                 assertThat(response.getDeviceId()).isEqualTo(commandTargetDeviceId);
                                 assertThat(response.getTenantId()).isEqualTo(tenantId);
-                                assertThat(response.getCreationTime()).isNotNull();
+                                DownstreamMessageAssertions.assertMessageContainsCreationTime(response);
+                                DownstreamMessageAssertions.assertMessageContainsTimeToLive(response, TTL_COMMAND_RESPONSE);
                             });
                             return (Void) null;
                         });
@@ -565,20 +576,22 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         messageWithoutSubject.setAddress(endpointConfig.getCommandMessageAddress(tenantId, commandTargetDeviceId));
         messageWithoutSubject.setMessageId("message-id");
         messageWithoutSubject.setReplyTo("reply/to/address");
-        amqpCmdSenderRef.get().sendAndWaitForOutcome(messageWithoutSubject, NoopSpan.INSTANCE).onComplete(ctx.failing(t -> {
-            ctx.verify(() -> assertThat(t).isInstanceOf(ClientErrorException.class));
-            expectedFailures.flag();
-        }));
+        amqpCmdSenderRef.get().sendAndWaitForOutcome(messageWithoutSubject, NoopSpan.INSTANCE)
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> assertThat(t).isInstanceOf(ClientErrorException.class));
+                expectedFailures.flag();
+            }));
 
         log.debug("sending command message lacking message ID and correlation ID");
         final Message messageWithoutId = ProtonHelper.message("input data");
         messageWithoutId.setAddress(endpointConfig.getCommandMessageAddress(tenantId, commandTargetDeviceId));
         messageWithoutId.setSubject("setValue");
         messageWithoutId.setReplyTo("reply/to/address");
-        amqpCmdSenderRef.get().sendAndWaitForOutcome(messageWithoutId, NoopSpan.INSTANCE).onComplete(ctx.failing(t -> {
-            ctx.verify(() -> assertThat(t).isInstanceOf(ClientErrorException.class));
-            expectedFailures.flag();
-        }));
+        amqpCmdSenderRef.get().sendAndWaitForOutcome(messageWithoutId, NoopSpan.INSTANCE)
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> assertThat(t).isInstanceOf(ClientErrorException.class));
+                expectedFailures.flag();
+            }));
     }
 
     /**
@@ -613,7 +626,12 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 ctx,
                 tenantId,
                 HttpURLConnection.HTTP_BAD_REQUEST,
-                response -> expectedCommandResponses.countDown(),
+                response -> {
+                    ctx.verify(() -> {
+                        DownstreamMessageAssertions.assertMessageContainsTimeToLive(response, TTL_COMMAND_RESPONSE);
+                    });
+                    expectedCommandResponses.countDown();
+                },
                 null);
 
         connectToAdapter(
@@ -883,9 +901,16 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
         final VertxTestContext setup = new VertxTestContext();
         final Future<MessageConsumer> kafkaAsyncErrorResponseConsumer = IntegrationTestSupport.isUsingKafkaMessaging()
-                ? helper.createDeliveryFailureCommandResponseConsumer(ctx, tenantId,
+                ? helper.createDeliveryFailureCommandResponseConsumer(
+                        ctx,
+                        tenantId,
                         HttpURLConnection.HTTP_BAD_REQUEST,
-                        response -> failureNotificationReceivedHandler.handle(null),
+                        response -> {
+                            ctx.verify(() -> {
+                                DownstreamMessageAssertions.assertMessageContainsTimeToLive(response, TTL_COMMAND_RESPONSE);
+                            });
+                            failureNotificationReceivedHandler.handle(null);
+                        },
                         REJECTED_COMMAND_ERROR_MESSAGE::equals)
                 : Future.succeededFuture(null);
         kafkaAsyncErrorResponseConsumer.onComplete(setup.succeedingThenComplete());

@@ -95,16 +95,19 @@ public final class KafkaBasedCommand implements Command {
      * In addition, the record is expected to contain
      * <ul>
      * <li>a <em>subject</em> header</li>
-     * <li>a non-empty <em>correlation-id</em> header if the <em>response-required</em> header is set to {@code true}.</li>
+     * <li>a non-empty <em>correlation-id</em> header if the <em>response-required</em> header is
+     * set to {@code true}.</li>
      * </ul>
      * or otherwise the returned command's {@link #isValid()} method will return {@code false}.
      *
      * @param record The record containing the command.
      * @return The command.
      * @throws NullPointerException if record is {@code null}.
-     * @throws IllegalArgumentException if the record doesn't correctly reference a target device.
+     * @throws IllegalArgumentException if the record's topic is not a proper command topic or if the record's
+     *                                  headers do not contain a target device identifier matching the record's key.
      */
     public static KafkaBasedCommand from(final KafkaConsumerRecord<String, Buffer> record) {
+
         Objects.requireNonNull(record);
 
         if (Strings.isNullOrEmpty(record.topic())) {
@@ -128,7 +131,8 @@ public final class KafkaBasedCommand implements Command {
      * In addition, the record is expected to contain
      * <ul>
      * <li>a <em>subject</em> header</li>
-     * <li>a non-empty <em>correlation-id</em> header if the <em>response-expected</em> header is set to {@code true}.</li>
+     * <li>a non-empty <em>correlation-id</em> header if the <em>response-expected</em> header is
+     * set to {@code true}.</li>
      * </ul>
      * or otherwise the returned command's {@link #isValid()} method will return {@code false}.
      * <p>
@@ -137,7 +141,8 @@ public final class KafkaBasedCommand implements Command {
      * @param record The record containing the command.
      * @return The command.
      * @throws NullPointerException if record is {@code null}.
-     * @throws IllegalArgumentException if the record doesn't correctly reference a target device.
+     * @throws IllegalArgumentException if the record's headers do not contain a tenant identifier and a target
+     *                                  device identifier matching the record's key.
      */
     public static KafkaBasedCommand fromRoutedCommandRecord(final KafkaConsumerRecord<String, Buffer> record) {
         Objects.requireNonNull(record);
@@ -154,7 +159,8 @@ public final class KafkaBasedCommand implements Command {
         return command;
     }
 
-    private static KafkaBasedCommand from(final KafkaConsumerRecord<String, Buffer> record,
+    private static KafkaBasedCommand from(
+            final KafkaConsumerRecord<String, Buffer> record,
             final String tenantId) {
 
         final String deviceId = KafkaRecordHelper.getDeviceId(record.headers())

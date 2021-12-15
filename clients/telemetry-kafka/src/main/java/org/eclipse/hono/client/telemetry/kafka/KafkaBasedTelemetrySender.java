@@ -75,7 +75,14 @@ public class KafkaBasedTelemetrySender extends AbstractKafkaBasedDownstreamSende
         }
 
         final HonoTopic topic = new HonoTopic(HonoTopic.Type.TELEMETRY, tenant.getTenantId());
-        final Map<String, Object> propsWithDefaults = addDefaults(tenant, device, qos, contentType, properties);
+        final Map<String, Object> propsWithDefaults = addDefaults(
+                topic.getType().endpoint,
+                tenant,
+                device,
+                qos,
+                contentType,
+                payload,
+                properties);
         final String topicName = topic.toString();
 
         final Span currentSpan = startSpan(

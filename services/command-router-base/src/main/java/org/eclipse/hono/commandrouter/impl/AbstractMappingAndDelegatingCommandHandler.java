@@ -52,8 +52,8 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
      * A logger to be shared with subclasses.
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
+    protected final TenantClient tenantClient;
 
-    private final TenantClient tenantClient;
     private final CommandTargetMapper commandTargetMapper;
     private final InternalCommandSender internalCommandSender;
     private final CommandRouterMetrics metrics;
