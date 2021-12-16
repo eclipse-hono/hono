@@ -16,7 +16,6 @@ package org.eclipse.hono.deviceregistry.service.credentials;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -76,38 +75,6 @@ public class AbstractCredentialsManagementServiceTest {
     @Test
     public void setNotificationSender() {
         assertThrows(NullPointerException.class, () -> credentialsManagementService.setNotificationSender(null));
-    }
-
-    /**
-     * Verifies that {@link AbstractCredentialsManagementService#start()} starts the notification sender.
-     *
-     * @param context The vert.x test context.
-     */
-    @Test
-    public void start(final VertxTestContext context) {
-        when(notificationSender.start()).thenReturn(Future.succeededFuture());
-
-        credentialsManagementService.start()
-                .onComplete(context.succeeding(result -> context.verify(() -> {
-                    verify(notificationSender).start();
-                    context.completeNow();
-                })));
-    }
-
-    /**
-     * Verifies that {@link AbstractCredentialsManagementService#stop()} stops the notification sender.
-     *
-     * @param context The vert.x test context.
-     */
-    @Test
-    public void stop(final VertxTestContext context) {
-        when(notificationSender.stop()).thenReturn(Future.succeededFuture());
-
-        credentialsManagementService.stop()
-                .onComplete(context.succeeding(result -> context.verify(() -> {
-                    verify(notificationSender).stop();
-                    context.completeNow();
-                })));
     }
 
     /**

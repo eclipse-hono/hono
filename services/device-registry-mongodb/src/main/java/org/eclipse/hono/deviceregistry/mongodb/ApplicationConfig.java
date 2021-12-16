@@ -14,7 +14,9 @@
 package org.eclipse.hono.deviceregistry.mongodb;
 
 import java.io.FileInputStream;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 import java.util.Optional;
 
 import org.eclipse.hono.auth.HonoPasswordEncoder;
@@ -32,6 +34,7 @@ import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.client.telemetry.kafka.KafkaBasedEventSender;
 import org.eclipse.hono.client.util.MessagingClientProvider;
+import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ServerConfig;
@@ -48,7 +51,6 @@ import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedCredentialsDao;
 import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedDeviceDao;
 import org.eclipse.hono.deviceregistry.mongodb.model.MongoDbBasedTenantDao;
 import org.eclipse.hono.deviceregistry.mongodb.model.TenantDao;
-import org.eclipse.hono.deviceregistry.mongodb.service.DaoBasedTenantInformationService;
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedCredentialsManagementService;
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedCredentialsService;
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedDeviceManagementService;
@@ -57,8 +59,13 @@ import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedTenantManagem
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedTenantService;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryAmqpServer;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
+import org.eclipse.hono.deviceregistry.service.credentials.AbstractCredentialsManagementService;
+import org.eclipse.hono.deviceregistry.service.device.AbstractDeviceManagementService;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 import org.eclipse.hono.deviceregistry.service.device.EdgeDeviceAutoProvisioner;
+import org.eclipse.hono.deviceregistry.service.tenant.AbstractTenantManagementService;
+import org.eclipse.hono.deviceregistry.service.tenant.DefaultTenantInformationService;
+import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.util.CryptVaultBasedFieldLevelEncryption;
 import org.eclipse.hono.deviceregistry.util.FieldLevelEncryption;
@@ -66,10 +73,9 @@ import org.eclipse.hono.deviceregistry.util.ServiceClientAdapter;
 import org.eclipse.hono.notification.NotificationSender;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
-import org.eclipse.hono.service.amqp.AmqpEndpoint;
-import org.eclipse.hono.service.credentials.CredentialsService;
+import org.eclipse.hono.service.amqp.AbstractAmqpEndpoint;
 import org.eclipse.hono.service.credentials.DelegatingCredentialsAmqpEndpoint;
-import org.eclipse.hono.service.http.HttpEndpoint;
+import org.eclipse.hono.service.http.AbstractHttpEndpoint;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.DelegatingCredentialsManagementHttpEndpoint;
 import org.eclipse.hono.service.management.device.DelegatingDeviceManagementHttpEndpoint;
@@ -80,7 +86,6 @@ import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.spring.PrometheusSupport;
 import org.eclipse.hono.service.registration.DelegatingRegistrationAmqpEndpoint;
-import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.service.tenant.DelegatingTenantAmqpEndpoint;
 import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.util.Constants;
@@ -331,12 +336,101 @@ public class ApplicationConfig {
      * Creates a new server for exposing the device registry's AMQP 1.0 based
      * endpoints.
      *
+     * @param tenantService The tenant service instance.
+     * @param registrationService The device registration service instance.
+     * @param credentialsService The credentials service instance.
+     * @param tenantManagementService The tenant management service instance.
+     * @param deviceManagementService The device management service instance.
+     * @param credentialsManagementService The credentials management service instance.
+     * @param notificationSender The notification sender instance.
      * @return The server.
      */
     @Bean(name = BEAN_NAME_AMQP_SERVER)
     @Scope("prototype")
-    public DeviceRegistryAmqpServer amqpServer() {
-        return new DeviceRegistryAmqpServer();
+    public DeviceRegistryAmqpServer amqpServer(
+            final TenantService tenantService,
+            final MongoDbBasedRegistrationService registrationService,
+            final MongoDbBasedCredentialsService credentialsService,
+            final TenantManagementService tenantManagementService,
+            final DeviceManagementService deviceManagementService,
+            final CredentialsManagementService credentialsManagementService,
+            final NotificationSender notificationSender) {
+
+        final DeviceRegistryAmqpServer amqpServer = new DeviceRegistryAmqpServer();
+
+        amqpServer.setNotificationSender(notificationSender);
+        applyNotificationSender(notificationSender, tenantManagementService, deviceManagementService,
+                credentialsManagementService);
+
+        final TenantInformationService tenantInformationService = createAndApplyTenantInformationService(
+                tenantManagementService, deviceManagementService, credentialsManagementService);
+
+        final var eventSenderProvider = eventSenderProvider();
+        final EdgeDeviceAutoProvisioner edgeDeviceAutoProvisioner = new EdgeDeviceAutoProvisioner(
+                vertx(),
+                deviceManagementService,
+                eventSenderProvider,
+                autoProvisionerConfigProperties(),
+                tracer());
+        registrationService.setEdgeDeviceAutoProvisioner(edgeDeviceAutoProvisioner);
+
+        final DeviceAndGatewayAutoProvisioner deviceAndGatewayAutoProvisioner = new DeviceAndGatewayAutoProvisioner(
+                vertx(),
+                deviceManagementService,
+                credentialsManagementService,
+                eventSenderProvider);
+        credentialsService.setDeviceAndGatewayAutoProvisioner(deviceAndGatewayAutoProvisioner);
+
+        registrationService.setTenantInformationService(tenantInformationService);
+        credentialsService.setTenantInformationService(tenantInformationService);
+
+        // add endpoints
+        final List<AbstractAmqpEndpoint<ServiceConfigProperties>> endpoints = new ArrayList<>();
+        Optional.ofNullable(tenantService)
+                .ifPresent(svc -> endpoints.add(new DelegatingTenantAmqpEndpoint<>(vertx(), svc)));
+        endpoints.add(new DelegatingRegistrationAmqpEndpoint<>(vertx(), registrationService));
+        endpoints.add(new DelegatingCredentialsAmqpEndpoint<>(vertx(), credentialsService));
+        endpoints.forEach(ep -> {
+            ep.setTracer(tracer());
+            ep.setConfiguration(amqpServerProperties());
+            amqpServer.addEndpoint(ep);
+        });
+        return amqpServer;
+    }
+
+    private void applyNotificationSender(
+            final NotificationSender notificationSender,
+            final TenantManagementService tenantManagementService,
+            final DeviceManagementService deviceManagementService,
+            final CredentialsManagementService credentialsManagementService) {
+
+        if (tenantManagementService instanceof AbstractTenantManagementService) {
+            ((AbstractTenantManagementService) tenantManagementService).setNotificationSender(notificationSender);
+        }
+        if (deviceManagementService instanceof AbstractDeviceManagementService) {
+            ((AbstractDeviceManagementService) deviceManagementService).setNotificationSender(notificationSender);
+        }
+        if (credentialsManagementService instanceof AbstractCredentialsManagementService) {
+            ((AbstractCredentialsManagementService) credentialsManagementService).setNotificationSender(
+                    notificationSender);
+        }
+    }
+
+    private TenantInformationService createAndApplyTenantInformationService(
+            final TenantManagementService tenantManagementService,
+            final DeviceManagementService deviceManagementService,
+            final CredentialsManagementService credentialsManagementService) {
+
+        final TenantInformationService tenantInformationService = Optional.ofNullable(tenantManagementService)
+                .map(svc -> (TenantInformationService) new DefaultTenantInformationService(svc))
+                .orElseGet(NoopTenantInformationService::new);
+        if (deviceManagementService instanceof AbstractDeviceManagementService) {
+            ((AbstractDeviceManagementService) deviceManagementService).setTenantInformationService(tenantInformationService);
+        }
+        if (credentialsManagementService instanceof AbstractCredentialsManagementService) {
+            ((AbstractCredentialsManagementService) credentialsManagementService).setTenantInformationService(tenantInformationService);
+        }
+        return tenantInformationService;
     }
 
     /**
@@ -456,18 +550,8 @@ public class ApplicationConfig {
      */
     @Bean
     @Scope("prototype")
-    public RegistrationService registrationService() {
-
-        final EdgeDeviceAutoProvisioner edgeDeviceAutoProvisioner = new EdgeDeviceAutoProvisioner(
-                vertx(),
-                deviceManagementService(),
-                eventSenderProvider(),
-                autoProvisionerConfigProperties(),
-                tracer());
-
-        final var service = new MongoDbBasedRegistrationService(deviceDao());
-        service.setEdgeDeviceAutoProvisioner(edgeDeviceAutoProvisioner);
-        return service;
+    public MongoDbBasedRegistrationService registrationService() {
+        return new MongoDbBasedRegistrationService(deviceDao());
     }
 
     /**
@@ -477,10 +561,7 @@ public class ApplicationConfig {
      */
     @Bean
     public DeviceManagementService deviceManagementService() {
-        final MongoDbBasedDeviceManagementService service = new MongoDbBasedDeviceManagementService(deviceDao(),
-                credentialsDao(), registrationServiceProperties());
-        service.setNotificationSender(notificationSender());
-        return service;
+        return new MongoDbBasedDeviceManagementService(deviceDao(), credentialsDao(), registrationServiceProperties());
     }
 
     /**
@@ -519,19 +600,7 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public MongoDbBasedCredentialsService credentialsService() {
-
-        final var provisioner = new DeviceAndGatewayAutoProvisioner(
-                vertx(),
-                deviceManagementService(),
-                credentialsManagementService(),
-                eventSenderProvider());
-
-        final var service = new MongoDbBasedCredentialsService(
-                credentialsDao(),
-                credentialsServiceProperties());
-        service.setTenantInformationService(tenantInformationService());
-        service.setDeviceAndGatewayAutoProvisioner(provisioner);
-        return service;
+        return new MongoDbBasedCredentialsService(credentialsDao(), credentialsServiceProperties());
     }
     /**
      * Creates a Mongo DB based credentials management service.
@@ -540,13 +609,11 @@ public class ApplicationConfig {
      */
     @Bean
     public CredentialsManagementService credentialsManagementService() {
-        final MongoDbBasedCredentialsManagementService service = new MongoDbBasedCredentialsManagementService(
+        return new MongoDbBasedCredentialsManagementService(
                 vertx(),
                 credentialsDao(),
                 credentialsServiceProperties(),
                 passwordEncoder());
-        service.setNotificationSender(notificationSender());
-        return service;
     }
 
     /**
@@ -571,8 +638,7 @@ public class ApplicationConfig {
      */
     @Bean
     public TenantService tenantService() {
-        return new MongoDbBasedTenantService(tenantDao(), tenantServiceProperties()
-        );
+        return new MongoDbBasedTenantService(tenantDao(), tenantServiceProperties());
     }
 
     /**
@@ -582,54 +648,7 @@ public class ApplicationConfig {
      */
     @Bean
     public TenantManagementService tenantManagementService() {
-        final MongoDbBasedTenantManagementService service = new MongoDbBasedTenantManagementService(
-                tenantDao(),
-                tenantServiceProperties());
-        service.setNotificationSender(notificationSender());
-        return service;
-    }
-
-    /**
-     * Exposes a tenant information service instance as a Spring Bean.
-     *
-     * @return The service instance.
-     */
-    @Bean
-    public TenantInformationService tenantInformationService() {
-        return new DaoBasedTenantInformationService(tenantDao());
-    }
-
-    /**
-     * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Device Registration</em> API.
-     *
-     * @return The handler.
-     */
-    @Bean
-    @Scope("prototype")
-    public AmqpEndpoint registrationAmqpEndpoint() {
-        return new DelegatingRegistrationAmqpEndpoint<RegistrationService>(vertx(), registrationService());
-    }
-
-    /**
-     * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Credentials</em> API.
-     *
-     * @return The handler.
-     */
-    @Bean
-    @Scope("prototype")
-    public AmqpEndpoint credentialsAmqpEndpoint() {
-        return new DelegatingCredentialsAmqpEndpoint<CredentialsService>(vertx(), credentialsService());
-    }
-
-    /**
-     * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Tenant</em> API.
-     *
-     * @return The handler.
-     */
-    @Bean
-    @Scope("prototype")
-    public AmqpEndpoint tenantAmqpEndpoint() {
-        return new DelegatingTenantAmqpEndpoint<TenantService>(vertx(), tenantService());
+        return new MongoDbBasedTenantManagementService(tenantDao(), tenantServiceProperties());
     }
 
     //
@@ -654,12 +673,39 @@ public class ApplicationConfig {
      * Creates a new server for exposing the device registry's AMQP 1.0 based
      * endpoints.
      *
+     * @param tenantManagementService The tenant management service instance.
+     * @param deviceManagementService The device management service instance.
+     * @param credentialsManagementService The credentials management service instance.
+     * @param notificationSender The notification sender instance.
      * @return The server.
      */
     @Bean(name = BEAN_NAME_HTTP_SERVER)
     @Scope("prototype")
-    public DeviceRegistryHttpServer httpServer() {
-        return new DeviceRegistryHttpServer();
+    public DeviceRegistryHttpServer httpServer(
+            final TenantManagementService tenantManagementService,
+            final DeviceManagementService deviceManagementService,
+            final CredentialsManagementService credentialsManagementService,
+            final NotificationSender notificationSender) {
+
+        final DeviceRegistryHttpServer httpServer = new DeviceRegistryHttpServer();
+
+        httpServer.setNotificationSender(notificationSender);
+        applyNotificationSender(notificationSender, tenantManagementService, deviceManagementService,
+                credentialsManagementService);
+        createAndApplyTenantInformationService(tenantManagementService, deviceManagementService,
+                credentialsManagementService);
+
+        final List<AbstractHttpEndpoint<ServiceConfigProperties>> endpoints = new ArrayList<>();
+        Optional.ofNullable(tenantManagementService)
+                .ifPresent(svc -> endpoints.add(new DelegatingTenantManagementHttpEndpoint<>(vertx(), svc)));
+        endpoints.add(new DelegatingDeviceManagementHttpEndpoint<>(vertx(), deviceManagementService));
+        endpoints.add(new DelegatingCredentialsManagementHttpEndpoint<>(vertx(), credentialsManagementService));
+        endpoints.forEach(ep -> {
+            ep.setTracer(tracer());
+            ep.setConfiguration(httpServerProperties());
+            httpServer.addEndpoint(ep);
+        });
+        return httpServer;
     }
 
     /**
@@ -722,45 +768,6 @@ public class ApplicationConfig {
     }
 
     /**
-     * Creates a new instance of an HTTP protocol handler for the <em>devices</em> resources
-     * of Hono's Device Registry Management API's.
-     *
-     * @return The handler.
-     */
-    @Bean
-    @Scope("prototype")
-    public HttpEndpoint deviceHttpEndpoint() {
-        return new DelegatingDeviceManagementHttpEndpoint<DeviceManagementService>(vertx(), deviceManagementService());
-    }
-
-    /**
-     * Creates a new instance of an HTTP protocol handler for the <em>credentials</em> resources
-     * of Hono's Device Registry Management API's.
-     *
-     * @return The handler.
-     */
-    @Bean
-    @Scope("prototype")
-    public HttpEndpoint credentialsHttpEndpoint() {
-        return new DelegatingCredentialsManagementHttpEndpoint<CredentialsManagementService>(
-                vertx(),
-                credentialsManagementService());
-    }
-
-    /**
-     * Creates a new instance of an HTTP protocol handler for the <em>tenants</em> resources
-     * of Hono's Device Registry Management API's.
-     *
-     * @return The handler.
-     */
-    @Bean
-    public HttpEndpoint tenantHttpEndpoint() {
-        return new DelegatingTenantManagementHttpEndpoint<TenantManagementService>(
-                vertx(),
-                tenantManagementService());
-    }
-
-    /**
      * Exposes configuration properties for the Kafka producer that publishes notifications as a Spring bean.
      *
      * @return The properties.
@@ -789,11 +796,10 @@ public class ApplicationConfig {
         } else {
             notificationSender = new ProtonBasedNotificationSender(HonoConnection.newConnection(vertx(), downstreamSenderConfig(), tracer()));
         }
-// TODO enable once number of notificationSender beans has been reduced to the needed minimum and all get properly started
-//        if (notificationSender instanceof ServiceClient) {
-//            healthCheckServer()
-//                    .registerHealthCheckResources(ServiceClientAdapter.forClient((ServiceClient) notificationSender));
-//        }
+        if (notificationSender instanceof ServiceClient) {
+            healthCheckServer()
+                    .registerHealthCheckResources(ServiceClientAdapter.forClient((ServiceClient) notificationSender));
+        }
         return notificationSender;
     }
 

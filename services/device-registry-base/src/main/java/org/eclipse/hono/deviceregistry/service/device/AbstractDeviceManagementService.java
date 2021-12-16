@@ -39,7 +39,6 @@ import org.eclipse.hono.service.management.Sort;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.device.DeviceWithId;
-import org.eclipse.hono.util.Lifecycle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,7 +53,7 @@ import io.vertx.core.Future;
  * <p>
  * It checks the parameters, validate tenant using {@link TenantInformationService} and creates {@link DeviceKey} for device operations.
  */
-public abstract class AbstractDeviceManagementService implements DeviceManagementService, Lifecycle {
+public abstract class AbstractDeviceManagementService implements DeviceManagementService {
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractDeviceManagementService.class);
 
@@ -81,16 +80,6 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
      */
     public void setNotificationSender(final NotificationSender notificationSender) {
         this.notificationSender = Objects.requireNonNull(notificationSender);
-    }
-
-    @Override
-    public Future<Void> start() {
-        return notificationSender.start();
-    }
-
-    @Override
-    public Future<Void> stop() {
-        return notificationSender.stop();
     }
 
     /**

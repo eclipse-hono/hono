@@ -416,9 +416,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
     protected final Future<Void> stopInternal() {
 
         return preShutdown()
-                .compose(s -> {
-                    return CompositeFuture.all(stopServer(), stopInsecureServer());
-                })
+                .compose(s -> CompositeFuture.all(stopServer(), stopInsecureServer()))
                 .compose(s -> stopEndpoints())
                 .compose(v -> postShutdown());
     }

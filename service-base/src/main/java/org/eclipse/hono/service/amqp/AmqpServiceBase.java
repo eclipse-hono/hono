@@ -254,7 +254,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
         }
         return CompositeFuture.all(endpointFutures)
                 .map(ok -> (Void) null)
-                .recover(t -> Future.failedFuture(t));
+                .recover(Future::failedFuture);
     }
 
     private Future<Void> stopEndpoints() {
@@ -268,7 +268,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
         }
         return CompositeFuture.all(endpointFutures)
                 .map(ok -> (Void) null)
-                .recover(t -> Future.failedFuture(t));
+                .recover(Future::failedFuture);
     }
 
     private Future<Void> startInsecureServer() {
@@ -377,8 +377,10 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     @Override
     public final Future<Void> stopInternal() {
 
-        return CompositeFuture.all(stopServer(), stopInsecureServer())
-                .compose(s -> stopEndpoints());
+        return preShutdown()
+                .compose(s -> CompositeFuture.all(stopServer(), stopInsecureServer()))
+                .compose(s -> stopEndpoints())
+                .compose(s -> postShutdown());
     }
 
     private Future<Void> stopServer() {
@@ -405,6 +407,28 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
             insecureTracker.complete();
         }
         return insecureTracker.future();
+    }
+
+    /**
+     * Invoked before the servers are shut down.
+     * <p>
+     * Subclasses may override this method.
+     *
+     * @return A future indicating the outcome of the operation.
+     */
+    protected Future<Void> preShutdown() {
+        return Future.succeededFuture();
+    }
+
+    /**
+     * Invoked after the servers have been shutdown successfully.
+     * <p>
+     * May be overridden by sub-classes.
+     *
+     * @return A future that has to be completed when this operation is finished.
+     */
+    protected Future<Void> postShutdown() {
+        return Future.succeededFuture();
     }
 
     @Override
