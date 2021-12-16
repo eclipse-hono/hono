@@ -36,7 +36,6 @@ import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.service.management.tenant.TenantWithId;
 import org.eclipse.hono.tracing.TracingHelper;
-import org.eclipse.hono.util.Lifecycle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +46,7 @@ import io.vertx.core.Promise;
 /**
  * An abstract base class implementation for {@link TenantManagementService}.
  */
-public abstract class AbstractTenantManagementService implements TenantManagementService, Lifecycle {
+public abstract class AbstractTenantManagementService implements TenantManagementService {
 
     protected NotificationSender notificationSender = new NoOpNotificationSender();
     private final Logger log = LoggerFactory.getLogger(getClass());
@@ -60,16 +59,6 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
      */
     public void setNotificationSender(final NotificationSender notificationSender) {
         this.notificationSender = Objects.requireNonNull(notificationSender);
-    }
-
-    @Override
-    public Future<Void> start() {
-        return notificationSender.start();
-    }
-
-    @Override
-    public Future<Void> stop() {
-        return notificationSender.stop();
     }
 
     /**

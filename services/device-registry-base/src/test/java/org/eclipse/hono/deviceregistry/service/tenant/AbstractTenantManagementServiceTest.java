@@ -17,7 +17,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -71,38 +70,6 @@ public class AbstractTenantManagementServiceTest {
     @Test
     public void setNotificationSender() {
         assertThrows(NullPointerException.class, () -> tenantManagementService.setNotificationSender(null));
-    }
-
-    /**
-     * Verifies that {@link AbstractTenantManagementService#start()} starts the notification sender.
-     *
-     * @param context The vert.x test context.
-     */
-    @Test
-    public void start(final VertxTestContext context) {
-        when(notificationSender.start()).thenReturn(Future.succeededFuture());
-
-        tenantManagementService.start()
-                .onComplete(context.succeeding(result -> context.verify(() -> {
-                    verify(notificationSender).start();
-                    context.completeNow();
-                })));
-    }
-
-    /**
-     * Verifies that {@link AbstractTenantManagementService#stop()} stops the notification sender.
-     *
-     * @param context The vert.x test context.
-     */
-    @Test
-    public void stop(final VertxTestContext context) {
-        when(notificationSender.stop()).thenReturn(Future.succeededFuture());
-
-        tenantManagementService.stop()
-                .onComplete(context.succeeding(result -> context.verify(() -> {
-                    verify(notificationSender).stop();
-                    context.completeNow();
-                })));
     }
 
     /**

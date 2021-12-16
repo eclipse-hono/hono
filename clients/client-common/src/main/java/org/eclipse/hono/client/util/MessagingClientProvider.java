@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.util.Lifecycle;
@@ -45,6 +46,8 @@ public final class MessagingClientProvider<T extends MessagingClient & Lifecycle
     public static final MessagingType DEFAULT_MESSAGING_TYPE = MessagingType.amqp;
 
     private final Map<MessagingType, T> clientImplementations = new HashMap<>();
+    private final AtomicBoolean startCalled = new AtomicBoolean();
+    private final AtomicBoolean stopCalled = new AtomicBoolean();
 
     private void requireClientsConfigured() {
         if (!containsImplementations()) {
@@ -167,6 +170,9 @@ public final class MessagingClientProvider<T extends MessagingClient & Lifecycle
 
     @Override
     public Future<Void> start() {
+        if (!startCalled.compareAndSet(false, true)) {
+            return Future.succeededFuture();
+        }
         requireClientsConfigured();
 
         @SuppressWarnings("rawtypes")
@@ -179,6 +185,9 @@ public final class MessagingClientProvider<T extends MessagingClient & Lifecycle
 
     @Override
     public Future<Void> stop() {
+        if (!stopCalled.compareAndSet(false, true)) {
+            return Future.succeededFuture();
+        }
         @SuppressWarnings("rawtypes")
         final List<Future> futures = clientImplementations.values()
                 .stream()

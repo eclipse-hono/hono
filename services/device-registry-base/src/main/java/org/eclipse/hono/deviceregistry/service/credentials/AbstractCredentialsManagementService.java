@@ -36,7 +36,6 @@ import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.util.Futures;
-import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -49,7 +48,7 @@ import io.vertx.core.Vertx;
  * <p>
  * It checks the parameters, validate tenant using {@link TenantInformationService} and creates {@link DeviceKey} for looking up the credentials.
  */
-public abstract class AbstractCredentialsManagementService implements CredentialsManagementService, Lifecycle {
+public abstract class AbstractCredentialsManagementService implements CredentialsManagementService {
 
     protected TenantInformationService tenantInformationService = new NoopTenantInformationService();
 
@@ -103,16 +102,6 @@ public abstract class AbstractCredentialsManagementService implements Credential
      */
     public void setNotificationSender(final NotificationSender notificationSender) {
         this.notificationSender = Objects.requireNonNull(notificationSender);
-    }
-
-    @Override
-    public Future<Void> start() {
-        return notificationSender.start();
-    }
-
-    @Override
-    public Future<Void> stop() {
-        return notificationSender.stop();
     }
 
     /**

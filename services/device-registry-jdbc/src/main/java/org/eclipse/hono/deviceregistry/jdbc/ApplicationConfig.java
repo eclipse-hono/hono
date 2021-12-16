@@ -14,6 +14,8 @@
 package org.eclipse.hono.deviceregistry.jdbc;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import org.eclipse.hono.auth.HonoPasswordEncoder;
@@ -31,6 +33,7 @@ import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.client.telemetry.kafka.KafkaBasedEventSender;
 import org.eclipse.hono.client.util.MessagingClientProvider;
+import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ServerConfig;
@@ -48,15 +51,19 @@ import org.eclipse.hono.deviceregistry.jdbc.impl.TenantManagementServiceImpl;
 import org.eclipse.hono.deviceregistry.jdbc.impl.TenantServiceImpl;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryAmqpServer;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
+import org.eclipse.hono.deviceregistry.service.credentials.AbstractCredentialsManagementService;
+import org.eclipse.hono.deviceregistry.service.device.AbstractDeviceManagementService;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 import org.eclipse.hono.deviceregistry.service.device.EdgeDeviceAutoProvisioner;
+import org.eclipse.hono.deviceregistry.service.tenant.AbstractTenantManagementService;
 import org.eclipse.hono.deviceregistry.service.tenant.DefaultTenantInformationService;
+import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.util.ServiceClientAdapter;
 import org.eclipse.hono.notification.NotificationSender;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
-import org.eclipse.hono.service.amqp.AmqpEndpoint;
+import org.eclipse.hono.service.amqp.AbstractAmqpEndpoint;
 import org.eclipse.hono.service.base.jdbc.config.JdbcDeviceStoreProperties;
 import org.eclipse.hono.service.base.jdbc.config.JdbcProperties;
 import org.eclipse.hono.service.base.jdbc.config.JdbcTenantStoreProperties;
@@ -66,9 +73,8 @@ import org.eclipse.hono.service.base.jdbc.store.device.TableManagementStore;
 import org.eclipse.hono.service.base.jdbc.store.tenant.AdapterStore;
 import org.eclipse.hono.service.base.jdbc.store.tenant.ManagementStore;
 import org.eclipse.hono.service.base.jdbc.store.tenant.Stores;
-import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.credentials.DelegatingCredentialsAmqpEndpoint;
-import org.eclipse.hono.service.http.HttpEndpoint;
+import org.eclipse.hono.service.http.AbstractHttpEndpoint;
 import org.eclipse.hono.service.http.HttpServiceConfigProperties;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.DelegatingCredentialsManagementHttpEndpoint;
@@ -80,14 +86,13 @@ import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.spring.PrometheusSupport;
 import org.eclipse.hono.service.registration.DelegatingRegistrationAmqpEndpoint;
-import org.eclipse.hono.service.registration.RegistrationService;
 import org.eclipse.hono.service.tenant.DelegatingTenantAmqpEndpoint;
 import org.eclipse.hono.service.tenant.TenantService;
 import org.eclipse.hono.util.Constants;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean;
 import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -340,13 +345,105 @@ public class ApplicationConfig {
      * Creates a new server for exposing the device registry's AMQP 1.0 based
      * endpoints.
      *
+     * @param tenantService The tenant service instance.
+     * @param registrationService The device registration service instance.
+     * @param credentialsService The credentials service instance.
+     * @param tenantManagementService The tenant management service instance.
+     * @param deviceManagementService The device management service instance.
+     * @param credentialsManagementService The credentials management service instance.
+     * @param notificationSender The notification sender instance.
      * @return The server.
      */
     @Bean(name = BEAN_NAME_AMQP_SERVER)
     @Scope("prototype")
     @Profile(Profiles.PROFILE_REGISTRY_ADAPTER)
-    public DeviceRegistryAmqpServer amqpServer() {
-        return new DeviceRegistryAmqpServer();
+    public DeviceRegistryAmqpServer amqpServer(
+            @Autowired(required = false) final TenantService tenantService,
+            final RegistrationServiceImpl registrationService,
+            final CredentialsServiceImpl credentialsService,
+            @Autowired(required = false) final TenantManagementService tenantManagementService,
+            @Autowired(required = false) final DeviceManagementService deviceManagementService,
+            @Autowired(required = false) final CredentialsManagementService credentialsManagementService,
+            @Autowired(required = false) final NotificationSender notificationSender) {
+
+        final DeviceRegistryAmqpServer amqpServer = new DeviceRegistryAmqpServer();
+
+        Optional.ofNullable(notificationSender).ifPresent(sender -> {
+            amqpServer.setNotificationSender(sender);
+            applyNotificationSender(sender, tenantManagementService, deviceManagementService, credentialsManagementService);
+        });
+        final TenantInformationService tenantInformationService = createAndApplyTenantInformationService(
+                tenantManagementService, deviceManagementService, credentialsManagementService);
+
+        if (deviceManagementService != null) {
+            final var eventSenderProvider = eventSenderProvider();
+            final EdgeDeviceAutoProvisioner edgeDeviceAutoProvisioner = new EdgeDeviceAutoProvisioner(
+                    vertx(),
+                    deviceManagementService,
+                    eventSenderProvider,
+                    autoProvisionerConfigProperties(),
+                    tracer());
+            registrationService.setEdgeDeviceAutoProvisioner(edgeDeviceAutoProvisioner);
+
+            if (credentialsManagementService != null) {
+                final DeviceAndGatewayAutoProvisioner deviceAndGatewayAutoProvisioner = new DeviceAndGatewayAutoProvisioner(
+                        vertx(),
+                        deviceManagementService,
+                        credentialsManagementService,
+                        eventSenderProvider);
+                credentialsService.setDeviceAndGatewayAutoProvisioner(deviceAndGatewayAutoProvisioner);
+            }
+        }
+        registrationService.setTenantInformationService(tenantInformationService);
+        credentialsService.setTenantInformationService(tenantInformationService);
+
+        // add endpoints
+        final List<AbstractAmqpEndpoint<ServiceConfigProperties>> endpoints = new ArrayList<>();
+        Optional.ofNullable(tenantService)
+                .ifPresent(svc -> endpoints.add(new DelegatingTenantAmqpEndpoint<>(vertx(), svc)));
+        endpoints.add(new DelegatingRegistrationAmqpEndpoint<>(vertx(), registrationService));
+        endpoints.add(new DelegatingCredentialsAmqpEndpoint<>(vertx(), credentialsService));
+        endpoints.forEach(ep -> {
+            ep.setTracer(tracer());
+            ep.setConfiguration(amqpServerProperties());
+            amqpServer.addEndpoint(ep);
+        });
+        return amqpServer;
+    }
+
+    private void applyNotificationSender(
+            final NotificationSender notificationSender,
+            final TenantManagementService tenantManagementService,
+            final DeviceManagementService deviceManagementService,
+            final CredentialsManagementService credentialsManagementService) {
+
+        if (tenantManagementService instanceof AbstractTenantManagementService) {
+            ((AbstractTenantManagementService) tenantManagementService).setNotificationSender(notificationSender);
+        }
+        if (deviceManagementService instanceof AbstractDeviceManagementService) {
+            ((AbstractDeviceManagementService) deviceManagementService).setNotificationSender(notificationSender);
+        }
+        if (credentialsManagementService instanceof AbstractCredentialsManagementService) {
+            ((AbstractCredentialsManagementService) credentialsManagementService).setNotificationSender(
+                    notificationSender);
+        }
+    }
+
+    private TenantInformationService createAndApplyTenantInformationService(
+            final TenantManagementService tenantManagementService,
+            final DeviceManagementService deviceManagementService,
+            final CredentialsManagementService credentialsManagementService) {
+
+        final TenantInformationService tenantInformationService = Optional.ofNullable(tenantManagementService)
+                .map(svc -> (TenantInformationService) new DefaultTenantInformationService(svc))
+                .orElseGet(NoopTenantInformationService::new);
+        if (deviceManagementService instanceof AbstractDeviceManagementService) {
+            ((AbstractDeviceManagementService) deviceManagementService).setTenantInformationService(tenantInformationService);
+        }
+        if (credentialsManagementService instanceof AbstractCredentialsManagementService) {
+            ((AbstractCredentialsManagementService) credentialsManagementService).setTenantInformationService(tenantInformationService);
+        }
+        return tenantInformationService;
     }
 
     /**
@@ -355,6 +452,7 @@ public class ApplicationConfig {
      * @return The factory bean.
      */
     @Bean
+    @Profile(Profiles.PROFILE_REGISTRY_ADAPTER)
     public ObjectFactoryCreatingFactoryBean amqpServerFactory() {
         final ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
         factory.setTargetBeanName(BEAN_NAME_AMQP_SERVER);
@@ -448,19 +546,8 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     @Profile(Profiles.PROFILE_REGISTRY_ADAPTER)
-    public RegistrationService registrationService(final SchemaCreator schemaCreator) throws IOException {
-
-        final RegistrationServiceImpl registrationService = new RegistrationServiceImpl(devicesAdapterStore(), schemaCreator);
-        final EdgeDeviceAutoProvisioner edgeDeviceAutoProvisioner = new EdgeDeviceAutoProvisioner(
-                vertx(),
-                registrationManagementService(),
-                eventSenderProvider(),
-                autoProvisionerConfigProperties(),
-                tracer());
-
-        registrationService.setEdgeDeviceAutoProvisioner(edgeDeviceAutoProvisioner);
-
-        return registrationService;
+    public RegistrationServiceImpl registrationService(final SchemaCreator schemaCreator) throws IOException {
+        return new RegistrationServiceImpl(devicesAdapterStore(), schemaCreator);
     }
 
     /**
@@ -472,16 +559,8 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     @Profile(Profiles.PROFILE_REGISTRY_ADAPTER)
-    public CredentialsService credentialsService() throws IOException {
-        final CredentialsServiceImpl credentialsService = new CredentialsServiceImpl(devicesAdapterStore(),
-                deviceRegistryServiceProperties());
-        final DeviceAndGatewayAutoProvisioner deviceAndGatewayAutoProvisioner = new DeviceAndGatewayAutoProvisioner(
-                vertx(),
-                registrationManagementService(),
-                credentialsManagementService(),
-                eventSenderProvider());
-        credentialsService.setDeviceAndGatewayAutoProvisioner(deviceAndGatewayAutoProvisioner);
-        return credentialsService;
+    public CredentialsServiceImpl credentialsService() throws IOException {
+        return new CredentialsServiceImpl(devicesAdapterStore(), deviceRegistryServiceProperties());
     }
 
     /**
@@ -498,18 +577,6 @@ public class ApplicationConfig {
     }
 
     /**
-     * Provide a tenant information service, backed by the JDBC tenant management service instance.
-     *
-     * @return The bean instance.
-     * @throws IOException if reading the SQL configuration fails.
-     */
-    @Bean
-    @Scope("prototype")
-    public TenantInformationService tenantInformationService() throws IOException {
-        return new DefaultTenantInformationService(tenantManagementService());
-    }
-
-    /**
      * Provide a registration management service.
      *
      * @return The bean instance.
@@ -519,10 +586,7 @@ public class ApplicationConfig {
     @Scope("prototype")
     @Profile(Profiles.PROFILE_REGISTRY_MANAGEMENT)
     public DeviceManagementService registrationManagementService() throws IOException {
-        final DeviceManagementServiceImpl service = new DeviceManagementServiceImpl(devicesManagementStore(),
-                deviceRegistryServiceProperties());
-        service.setNotificationSender(notificationSender());
-        return service;
+        return new DeviceManagementServiceImpl(devicesManagementStore(), deviceRegistryServiceProperties());
     }
 
     /**
@@ -535,10 +599,8 @@ public class ApplicationConfig {
     @Scope("prototype")
     @Profile(Profiles.PROFILE_REGISTRY_MANAGEMENT)
     public CredentialsManagementService credentialsManagementService() throws IOException {
-        final CredentialsManagementServiceImpl service = new CredentialsManagementServiceImpl(vertx(),
-                passwordEncoder(), devicesManagementStore(), deviceRegistryServiceProperties());
-        service.setNotificationSender(notificationSender());
-        return service;
+        return new CredentialsManagementServiceImpl(vertx(), passwordEncoder(), devicesManagementStore(),
+                deviceRegistryServiceProperties());
     }
 
     /**
@@ -551,49 +613,7 @@ public class ApplicationConfig {
     @Scope("prototype")
     @Profile(Profiles.PROFILE_REGISTRY_MANAGEMENT + " & " + Profiles.PROFILE_TENANT_SERVICE)
     public TenantManagementService tenantManagementService() throws IOException {
-        final TenantManagementServiceImpl service = new TenantManagementServiceImpl(tenantManagementStore());
-        service.setNotificationSender(notificationSender());
-        return service;
-    }
-
-    /**
-     * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Device Registration</em> API.
-     *
-     * @param registrationService The registration service.
-     * @return The handler.
-     * @throws IOException if reading the SQL configuration fails.
-     */
-    @Bean
-    @Scope("prototype")
-    @ConditionalOnBean(RegistrationService.class)
-    public AmqpEndpoint registrationAmqpEndpoint(final RegistrationService registrationService) throws IOException {
-        return new DelegatingRegistrationAmqpEndpoint<>(vertx(), registrationService);
-    }
-
-    /**
-     * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Credentials</em> API.
-     *
-     * @return The handler.
-     * @throws IOException if reading the SQL configuration fails.
-     */
-    @Bean
-    @Scope("prototype")
-    @ConditionalOnBean(CredentialsService.class)
-    public AmqpEndpoint credentialsAmqpEndpoint() throws IOException {
-        return new DelegatingCredentialsAmqpEndpoint<>(vertx(), credentialsService());
-    }
-
-    /**
-     * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Tenant</em> API.
-     *
-     * @return The handler.
-     * @throws IOException if reading the SQL configuration fails.
-     */
-    @Bean
-    @Scope("prototype")
-    @ConditionalOnBean(TenantService.class)
-    public AmqpEndpoint tenantAmqpEndpoint() throws IOException {
-        return new DelegatingTenantAmqpEndpoint<>(vertx(), tenantService());
+        return new TenantManagementServiceImpl(tenantManagementStore());
     }
 
     //
@@ -619,13 +639,40 @@ public class ApplicationConfig {
      * Creates a new server for exposing the device registry's AMQP 1.0 based
      * endpoints.
      *
+     * @param tenantManagementService The tenant management service instance.
+     * @param deviceManagementService The device management service instance.
+     * @param credentialsManagementService The credentials management service instance.
+     * @param notificationSender The notification sender instance.
      * @return The server.
      */
     @Bean(name = BEAN_NAME_HTTP_SERVER)
     @Profile(Profiles.PROFILE_REGISTRY_MANAGEMENT)
     @Scope("prototype")
-    public DeviceRegistryHttpServer httpServer() {
-        return new DeviceRegistryHttpServer();
+    public DeviceRegistryHttpServer httpServer(
+            @Autowired(required = false) final TenantManagementService tenantManagementService,
+            final DeviceManagementService deviceManagementService,
+            final CredentialsManagementService credentialsManagementService,
+            final NotificationSender notificationSender) {
+
+        final DeviceRegistryHttpServer httpServer = new DeviceRegistryHttpServer();
+
+        httpServer.setNotificationSender(notificationSender);
+        applyNotificationSender(notificationSender, tenantManagementService, deviceManagementService,
+                credentialsManagementService);
+        createAndApplyTenantInformationService(tenantManagementService, deviceManagementService,
+                credentialsManagementService);
+
+        final List<AbstractHttpEndpoint<ServiceConfigProperties>> endpoints = new ArrayList<>();
+        Optional.ofNullable(tenantManagementService)
+                .ifPresent(svc -> endpoints.add(new DelegatingTenantManagementHttpEndpoint<>(vertx(), svc)));
+        endpoints.add(new DelegatingDeviceManagementHttpEndpoint<>(vertx(), deviceManagementService));
+        endpoints.add(new DelegatingCredentialsManagementHttpEndpoint<>(vertx(), credentialsManagementService));
+        endpoints.forEach(ep -> {
+            ep.setTracer(tracer());
+            ep.setConfiguration(httpServerProperties());
+            httpServer.addEndpoint(ep);
+        });
+        return httpServer;
     }
 
     /**
@@ -634,6 +681,7 @@ public class ApplicationConfig {
      * @return The factory bean.
      */
     @Bean
+    @Profile(Profiles.PROFILE_REGISTRY_MANAGEMENT)
     public ObjectFactoryCreatingFactoryBean httpServerFactory() {
         final ObjectFactoryCreatingFactoryBean factory = new ObjectFactoryCreatingFactoryBean();
         factory.setTargetBeanName(BEAN_NAME_HTTP_SERVER);
@@ -675,48 +723,6 @@ public class ApplicationConfig {
                     httpServerProperties().getRealm());
         }
         return null;
-    }
-
-    /**
-     * Creates a new instance of an HTTP protocol handler for the <em>devices</em> resources
-     * of Hono's Device Registry Management API's.
-     *
-     * @return The handler.
-     * @throws IOException if reading the SQL configuration fails.
-     */
-    @Bean
-    @Scope("prototype")
-    @ConditionalOnBean(DeviceManagementService.class)
-    public HttpEndpoint deviceHttpEndpoint() throws IOException {
-        return new DelegatingDeviceManagementHttpEndpoint<>(vertx(), registrationManagementService());
-    }
-
-    /**
-     * Creates a new instance of an HTTP protocol handler for the <em>credentials</em> resources
-     * of Hono's Device Registry Management API's.
-     *
-     * @return The handler.
-     * @throws IOException if reading the SQL configuration fails.
-     */
-    @Bean
-    @Scope("prototype")
-    @ConditionalOnBean(CredentialsManagementService.class)
-    public HttpEndpoint credentialsHttpEndpoint() throws IOException {
-        return new DelegatingCredentialsManagementHttpEndpoint<>(vertx(), credentialsManagementService());
-    }
-
-    /**
-     * Creates a new instance of an HTTP protocol handler for the <em>tenants</em> resources
-     * of Hono's Device Registry Management API's.
-     *
-     * @return The handler.
-     * @throws IOException if reading the SQL configuration fails.
-     */
-    @Bean
-    @Scope("prototype")
-    @ConditionalOnBean(TenantManagementService.class)
-    public HttpEndpoint tenantHttpEndpoint() throws IOException {
-        return new DelegatingTenantManagementHttpEndpoint<>(vertx(), tenantManagementService());
     }
 
     /**
@@ -796,11 +802,10 @@ public class ApplicationConfig {
             notificationSender = new ProtonBasedNotificationSender(
                     HonoConnection.newConnection(vertx(), downstreamSenderConfig(), tracer()));
         }
-// TODO enable once number of notificationSender beans has been reduced to the needed minimum and all get properly started
-//        if (notificationSender instanceof ServiceClient) {
-//            healthCheckServer()
-//                    .registerHealthCheckResources(ServiceClientAdapter.forClient((ServiceClient) notificationSender));
-//        }
+        if (notificationSender instanceof ServiceClient) {
+            healthCheckServer()
+                    .registerHealthCheckResources(ServiceClientAdapter.forClient((ServiceClient) notificationSender));
+        }
         return notificationSender;
     }
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,17 +14,49 @@
 package org.eclipse.hono.deviceregistry.server;
 
 
+import java.util.Objects;
+
 import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.notification.NoOpNotificationSender;
+import org.eclipse.hono.notification.NotificationSender;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
 import org.eclipse.hono.util.Constants;
+
+import io.vertx.core.Future;
 
 /**
  * Default AMQP server for Hono's example device registry.
  */
 public final class DeviceRegistryAmqpServer extends AmqpServiceBase<ServiceConfigProperties> {
 
+    private NotificationSender notificationSender = new NoOpNotificationSender();
+
+    /**
+     * Sets the client to publish notifications about changes on devices.
+     * <p>
+     * The {@link org.eclipse.hono.util.Lifecycle#start()} method of the given client will be invoked during startup
+     * of the server, and the {@link org.eclipse.hono.util.Lifecycle#stop()} method will be called on server shutdown.
+     * The outcome of these methods is tied to the outcome of the server start/shutdown.
+     *
+     * @param notificationSender The client.
+     * @throws NullPointerException if notificationSender is {@code null}.
+     */
+    public void setNotificationSender(final NotificationSender notificationSender) {
+        this.notificationSender = Objects.requireNonNull(notificationSender);
+    }
+
     @Override
     protected String getServiceName() {
         return Constants.SERVICE_NAME_DEVICE_REGISTRY;
+    }
+
+    @Override
+    protected Future<Void> preStartServers() {
+        return notificationSender.start();
+    }
+
+    @Override
+    protected Future<Void> postShutdown() {
+        return notificationSender.stop();
     }
 }
