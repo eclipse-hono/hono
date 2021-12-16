@@ -57,6 +57,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.impl.VertxInternal;
 import io.vertx.proton.ProtonClientOptions;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonHelper;
@@ -1135,7 +1136,13 @@ public class HonoConnectionImpl implements HonoConnection {
             if (connectionFailureCause != null) {
                 logConnectionError(connectionFailureCause);
             }
-            if (clientConfigProperties.getReconnectAttempts() - connectAttempts.get() == 0) {
+            if (vertx instanceof VertxInternal && ((VertxInternal) vertx).closeFuture().isClosed()) {
+                log.info("stopping attempts to re-connect to server [{}:{}, role: {}], vertx instance is closed",
+                        connectionFactory.getHost(),
+                        connectionFactory.getPort(),
+                        connectionFactory.getServerRole());
+                connectionHandler.handle(Future.failedFuture(mapConnectionAttemptFailure(connectionFailureCause)));
+            } else if (clientConfigProperties.getReconnectAttempts() - connectAttempts.get() == 0) {
                 log.info("max number of attempts [{}] to re-connect to server [{}:{}, role: {}] have been made, giving up",
                         clientConfigProperties.getReconnectAttempts(),
                         connectionFactory.getHost(),
