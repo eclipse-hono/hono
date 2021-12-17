@@ -34,7 +34,7 @@
     <dispatch-router.image.name>quay.io/interconnectedcloud/qdrouterd:1.17.1</dispatch-router.image.name>
     <guava.version>30.1-jre</guava.version>
     <gson.version>2.8.6</gson.version>
-    <infinispan-image.name>infinispan/server-native:11.0.7.Final-2</infinispan-image.name>
+    <infinispan-image.name>quay.io/infinispan/server-native:13.0</infinispan-image.name>
     <jaeger.image.name>jaegertracing/all-in-one:1.29</jaeger.image.name>
     <jaeger.version>1.6.0</jaeger.version>
     <!-- 

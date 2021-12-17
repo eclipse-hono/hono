@@ -11,22 +11,17 @@
    
     SPDX-License-Identifier: EPL-2.0
  -->
-<infinispan>
-  <cache-container default-cache="device-connection">
-    <global-state>
-      <persistent-location path="/var/lib/hono"/>
-    </global-state>
-    <local-cache name="device-connection">
-      <persistence passivation="false">
-        <file-store
-            shared="false"
-            preload="true"
-            fetch-state="false"
-            read-only="false"
-            purge="false"
-            path="device-connection">
-        </file-store>
-      </persistence>
+ <!-- 
+  The embedded cache configuration is based on the Infinispan client version used by Quarkus.
+  -->
+<infinispan
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="urn:infinispan:config:12.1 https://infinispan.org/schemas/infinispan-config-12.1.xsd"
+        xmlns="urn:infinispan:config:12.1">
+  <cache-container default-cache="command-router">
+    <local-cache name="command-router" simple-cache="true">
+      <encoding media-type="application/x-protostream" />
+      <memory max-count="200" storage="OFF_HEAP" when-full="REMOVE"></memory>
     </local-cache>
   </cache-container>
 </infinispan>
