@@ -120,13 +120,13 @@ public class ProtonBasedCommandResponseSender extends AbstractServiceClient impl
         Objects.requireNonNull(device);
         Objects.requireNonNull(response);
 
-        final Span span = newChildSpan(context, "forward Command response");
         final var sender = createSender(response.getTenantId(), response.getReplyToId());
 
         return sender
                 .recover(thr -> Future.failedFuture(StatusCodeMapper.toServerError(thr)))
                 .compose(s -> {
                     final Message msg = createDownstreamMessage(response, tenant, device, response.getAdditionalProperties());
+                    final Span span = newChildSpan(context, "forward Command response");
                     if (response.getMessagingType() != getMessagingType()) {
                         span.log(String.format("using messaging type %s instead of type %s used for the original command",
                                 getMessagingType(), response.getMessagingType()));
@@ -134,7 +134,6 @@ public class ProtonBasedCommandResponseSender extends AbstractServiceClient impl
                     return s.sendAndWaitForOutcome(msg, span);
                 })
                 .onSuccess(delivery -> sender.result().close())
-                .onComplete(ar -> span.finish())
                 .mapEmpty();
     }
 }
