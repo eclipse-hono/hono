@@ -12,7 +12,11 @@
  *******************************************************************************/
 package org.eclipse.hono.service.base.jdbc.store.model;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
 import org.eclipse.hono.service.management.device.Device;
@@ -77,9 +81,16 @@ public class JdbcBasedDeviceDto extends DeviceDto {
                 device,
                 recordJson.getBoolean("auto_provisioned"),
                 recordJson.getBoolean("auto_provisioning_notification_sent"),
-                recordJson.getInstant("created"),
-                recordJson.getInstant("updated_on"),
+                readInstant(recordJson.getString("created")),
+                readInstant(recordJson.getString("updated_on")),
                 recordJson.getString("version"));
+    }
+
+    private static Instant readInstant(final String value) {
+        return Optional.ofNullable(value)
+                .map(LocalDateTime::parse)
+                .map(ldt -> ldt.toInstant(ZoneOffset.UTC))
+                .orElse(null);
     }
 
     /**
