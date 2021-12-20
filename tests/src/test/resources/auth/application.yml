@@ -27,6 +27,8 @@ quarkus:
     level: INFO
     min-level: TRACE
     category:
+      "io.quarkus.vertx.core.runtime":
+        level: DEBUG
       "org.eclipse.hono":
         level: INFO
       "org.eclipse.hono.authentication":

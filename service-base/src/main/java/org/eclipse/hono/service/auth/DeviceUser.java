@@ -64,4 +64,13 @@ public class DeviceUser extends Device implements User {
     public void setAuthProvider(final AuthProvider authProvider) {
         // nothing to do
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public User merge(final User other) {
+        // the device has no attributes that would need to be merged
+        return this;
+    }
 }

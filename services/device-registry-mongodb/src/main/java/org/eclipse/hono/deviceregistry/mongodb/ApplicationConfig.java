@@ -741,15 +741,7 @@ public class ApplicationConfig {
             final var mongoAuthOptions = new MongoAuthenticationOptions();
             mongoAuthOptions.setCollectionName(authConfig.getCollectionName());
             mongoAuthOptions.setUsernameField(authConfig.getUsernameField());
-            // this is a fix for what I believe is a bug in the MongoAuthenticationImpl class
-            // where the usernameField and usernameCredentialField properties are used
-            // inconsistently (and interchangeably)
-            mongoAuthOptions.setUsernameCredentialField(authConfig.getUsernameField());
             mongoAuthOptions.setPasswordField(authConfig.getPasswordField());
-            // this is a fix for what I believe is a bug in the MongoAuthenticationImpl class
-            // where the passwordField and passwordCredentialField properties are used
-            // inconsistently (and interchangeably)
-            mongoAuthOptions.setPasswordCredentialField(authConfig.getPasswordField());
             final var hashStrategy = new DefaultHashStrategy();
             Optional.ofNullable(authConfig.getHashAlgorithm())
                 .ifPresent(hashStrategy::setAlgorithm);

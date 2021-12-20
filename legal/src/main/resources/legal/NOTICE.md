@@ -64,11 +64,11 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/apache/commons-logging).
 
-### Apache Log4j2
+### Apache Log4j2 API
 
 This product includes software developed by the [Apache Software Foundation](http://www.apache.org/).
 
-Your use of *Apache Log4j 2* is subject to the terms and conditions of the Apache Software License 2.0.
+Your use of *Apache Log4j2 API* is subject to the terms and conditions of the Apache Software License 2.0.
 A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
@@ -103,7 +103,7 @@ Your use of *Apache Thrift* is subject to the terms and conditions defined in
 
 The source code is available from [GitHub](https://github.com/cs-au-dk/dk.brics.automaton).
 
-### Google Guava ${guava.version}
+### Google Guava
 
 This product includes software developed by the [Guava project](https://github.com/google/guava).
 
@@ -113,7 +113,7 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/google/guava).
 
-### Google Gson ${gson.version}
+### Google Gson
 
 This product includes software developed by the [Gson project](https://github.com/google/gson).
 
@@ -121,7 +121,7 @@ Your use of *Gson* is subject to the terms and conditions of the Apache Software
 A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [GitHub](https://github.com/google/gson/tree/gson-parent-${guava.version}).
+The source code is available from [GitHub](https://github.com/google/gson).
 
 ### c3p0
 
@@ -172,16 +172,6 @@ A copy of the license is contained in the file [LICENSE.Graal-SDK.md](LICENSE.Gr
 
 The source code is available from [GitHub](https://github.com/oracle/graal).
 
-### Gson ${gson.version}
-
-This product includes software developed by the [GSON project](https://github.com/google/gson).
-
-Your use of *Gson* is subject to the terms and conditions of the Apache Software License 2.0.
-A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
-http://www.apache.org/licenses/LICENSE-2.0.html.
-
-The source code is available from [GitHub](https://github.com/google/gson/tree/gson-parent-${gson.version}).
-
 ### H2 Database
 
 This product includes software developed by the [H2 Database project](https://h2database.com).
@@ -202,7 +192,7 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/infinispan/infinispan).
 
-### Jackson ${jackson.version}
+### Jackson
 
 This product includes software developed by [FasterXML, LLC](http://fasterxml.com/).
 
@@ -212,7 +202,7 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/FasterXML).
 
-### Jaeger Client Java ${jaeger.version}
+### Jaeger Client Java
 
 This product includes software developed by the [Jaeger project](https://jaegertracing.io).
 
@@ -263,7 +253,7 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/jbossas/jboss-threads).
 
-### JCL-over-SLF4J ${slf4j.version}
+### JCL-over-SLF4J
 
 This product includes software developed by the [Apache Software Foundation](http://www.apache.org/).
 
@@ -283,7 +273,7 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/belaban/JGroups/).
 
-### JUL-to-SLF4J ${slf4j.version}
+### JUL-to-SLF4J
 
 This product includes software developed by [Quality Open Software](http://www.qos.ch/).
 
@@ -332,7 +322,7 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/fabric8io/kubernetes-client).
 
-### LOG4J-over-SLF4J ${slf4j.version}
+### LOG4J-over-SLF4J
 
 This product includes software developed by the [Apache Software Foundation](http://www.apache.org/).
 
@@ -342,7 +332,7 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/qos-ch/slf4j).
 
-### Logback ${logback.version}
+### Logback
 
 This product includes software developed by [Quality Open Software](http://www.qos.ch/).
 
@@ -373,7 +363,7 @@ https://www.eclipse.org/legal/.
 
 The source code is available from [GitHub](https://github.com/swaldman/mchange-commons-java)
 
-### Micrometer ${micrometer.version}
+### Micrometer
 
 This product includes software developed by the [Micrometer project](http://micrometer.io/).
 
@@ -419,7 +409,7 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 The source code is available from [GitHub](https://github.com/square/okhttp) and
 [GitHub](https://github.com/square/okio).
 
-### OpenTracing for Java ${opentracing.version}
+### OpenTracing for Java
 
 This product includes software developed by the [OpenTracing project](http://opentracing.io/).
 
@@ -429,7 +419,7 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/opentracing/opentracing-java).
 
-### OpenTracing Java Tracer Resolver ${opentracing-resolver.version}
+### OpenTracing Java Tracer Resolver
 
 This product includes software developed by the [OpenTracing Java Tracer Resolver project](https://github.com/opentracing-contrib/java-tracerresolver).
 
@@ -467,7 +457,7 @@ Your use of *protobuf* is subject to the terms and conditions defined in the fil
 
 The source code is available from [GitHub](https://github.com/protocolbuffers/protobuf/).
 
-### Proton-j ${proton.version}
+### Proton-j
 
 This product includes software developed by the [Apache Software Foundation](http://www.apache.org/).
 
@@ -497,7 +487,7 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/infinispan/protostream/tree/${protostream.version}).
 
-### Quarkus ${quarkus.platform.version}
+### Quarkus
 
 This product includes software developed by the [Quarkus project](https://quarkus.io).
 
@@ -505,9 +495,9 @@ Your use of *Quarkus* is subject to the terms and conditions of the Apache Softw
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [GitHub](https://github.com/quarkusio/quarkus/tree/${quarkus.platform.version}).
+The source code is available from [GitHub](https://github.com/quarkusio/quarkus).
 
-### run-java.sh ${run-java-sh.version}
+### run-java.sh
 
 This product includes software developed by the [run-java.sh project](https://github.com/fabric8io-images/run-java-sh).
 
@@ -515,7 +505,7 @@ Your use of *run-java.sh* is subject to the terms and conditions of the Apache S
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [GitHub](https://github.com/fabric8io-images/run-java-sh/tree/${run-java-sh.version}).
+The source code is available from [GitHub](https://github.com/fabric8io-images/run-java-sh).
 
 ### RxJava
 
@@ -527,7 +517,7 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/ReactiveX/RxJava).
 
-### SLF4J API ${slf4j.version}
+### SLF4J API
 
 This product includes software developed by [Quality Open Software](http://www.qos.ch/).
 

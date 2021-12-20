@@ -1,13 +1,13 @@
 maven/mavencentral/ch.qos.logback/logback-classic/1.2.9, EPL-1.0, approved, CQ13636
 maven/mavencentral/ch.qos.logback/logback-core/1.2.9, EPL-1.0, approved, CQ13635
 maven/mavencentral/com.bol/cryptvault/1.0.2, Apache-2.0, approved, clearlydefined
-maven/mavencentral/com.fasterxml.jackson.core/jackson-annotations/2.12.5, Apache-2.0, approved, CQ23844
-maven/mavencentral/com.fasterxml.jackson.core/jackson-core/2.12.5, Apache-2.0, approved, CQ23845
-maven/mavencentral/com.fasterxml.jackson.core/jackson-databind/2.12.5, Apache-2.0, approved, CQ23725
-maven/mavencentral/com.fasterxml.jackson.dataformat/jackson-dataformat-yaml/2.12.5, Apache-2.0, approved, CQ23726
-maven/mavencentral/com.fasterxml.jackson.datatype/jackson-datatype-jdk8/2.12.5, Apache-2.0, approved, CQ23208
-maven/mavencentral/com.fasterxml.jackson.datatype/jackson-datatype-jsr310/2.12.5, Apache-2.0, approved, CQ23727
-maven/mavencentral/com.fasterxml.jackson.module/jackson-module-parameter-names/2.12.5, Apache-2.0, approved, clearlydefined
+maven/mavencentral/com.fasterxml.jackson.core/jackson-annotations/2.12.6, Apache-2.0, approved, CQ23844
+maven/mavencentral/com.fasterxml.jackson.core/jackson-core/2.12.6, Apache-2.0, approved, CQ23845
+maven/mavencentral/com.fasterxml.jackson.core/jackson-databind/2.12.6, Apache-2.0, approved, CQ23725
+maven/mavencentral/com.fasterxml.jackson.dataformat/jackson-dataformat-yaml/2.12.6, Apache-2.0, approved, CQ23726
+maven/mavencentral/com.fasterxml.jackson.datatype/jackson-datatype-jdk8/2.12.6, Apache-2.0, approved, CQ23208
+maven/mavencentral/com.fasterxml.jackson.datatype/jackson-datatype-jsr310/2.12.6, Apache-2.0, approved, CQ23727
+maven/mavencentral/com.fasterxml.jackson.module/jackson-module-parameter-names/2.12.6, , restricted, clearlydefined
 maven/mavencentral/com.github.ben-manes.caffeine/caffeine/2.9.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.github.luben/zstd-jni/1.4.9-1, BSD-2-Clause, approved, CQ22420
 maven/mavencentral/com.github.mifmif/generex/1.0.2, Apache-2.0, approved, clearlydefined
@@ -15,34 +15,33 @@ maven/mavencentral/com.google.code.gson/gson/2.8.6, Apache-2.0, approved, CQ2310
 maven/mavencentral/com.google.errorprone/error_prone_annotations/2.2.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.google.guava/guava/30.1-jre, Apache-2.0 AND CC0-1.0 AND LicenseRef-Public-Domain, approved, CQ23244
 maven/mavencentral/com.h2database/h2/1.4.197, EPL-1.0, approved, CQ11693
-maven/mavencentral/com.mchange/c3p0/0.9.5.4, LGPL-2.1-only OR EPL-1.0, approved, clearlydefined
-maven/mavencentral/com.mchange/mchange-commons-java/0.2.15, LGPL-2.1-only OR EPL-1.0, approved, clearlydefined
+maven/mavencentral/com.mchange/c3p0/0.9.5.5, LGPL-2.1, restricted, clearlydefined
+maven/mavencentral/com.mchange/mchange-commons-java/0.2.19, LGPL-2.1, restricted, clearlydefined
 maven/mavencentral/com.squareup.okhttp3/logging-interceptor/3.14.9, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.squareup.okhttp3/okhttp/3.14.9, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.squareup.okio/okio/1.17.2, Apache-2.0, approved, clearlydefined
-maven/mavencentral/com.sun.activation/jakarta.activation/1.2.1, EPL-2.0 OR BSD-3-Clause OR GPL-2.0-with-classpath-exception, approved, ee4j.jaf
 maven/mavencentral/dk.brics.automaton/automaton/1.11-8, BSD-2-Clause, approved, clearlydefined
-maven/mavencentral/io.fabric8/kubernetes-client/5.7.3, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.fabric8/kubernetes-model-admissionregistration/5.7.3, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.fabric8/kubernetes-model-apiextensions/5.7.3, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.fabric8/kubernetes-model-apps/5.7.3, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.fabric8/kubernetes-model-autoscaling/5.7.3, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.fabric8/kubernetes-model-batch/5.7.3, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.fabric8/kubernetes-model-certificates/5.7.3, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.fabric8/kubernetes-model-common/5.7.3, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.fabric8/kubernetes-model-coordination/5.7.3, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.fabric8/kubernetes-model-core/5.7.3, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.fabric8/kubernetes-model-discovery/5.7.3, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.fabric8/kubernetes-model-events/5.7.3, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.fabric8/kubernetes-model-extensions/5.7.3, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.fabric8/kubernetes-model-flowcontrol/5.7.3, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.fabric8/kubernetes-model-metrics/5.7.3, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.fabric8/kubernetes-model-networking/5.7.3, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.fabric8/kubernetes-model-node/5.7.3, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.fabric8/kubernetes-model-policy/5.7.3, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.fabric8/kubernetes-model-rbac/5.7.3, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.fabric8/kubernetes-model-scheduling/5.7.3, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.fabric8/kubernetes-model-storageclass/5.7.3, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.fabric8/kubernetes-client/5.10.1, Apache-2.0, approved, CQ23829
+maven/mavencentral/io.fabric8/kubernetes-model-admissionregistration/5.10.1, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.fabric8/kubernetes-model-apiextensions/5.10.1, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.fabric8/kubernetes-model-apps/5.10.1, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.fabric8/kubernetes-model-autoscaling/5.10.1, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.fabric8/kubernetes-model-batch/5.10.1, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.fabric8/kubernetes-model-certificates/5.10.1, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.fabric8/kubernetes-model-common/5.10.1, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.fabric8/kubernetes-model-coordination/5.10.1, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.fabric8/kubernetes-model-core/5.10.1, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.fabric8/kubernetes-model-discovery/5.10.1, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.fabric8/kubernetes-model-events/5.10.1, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.fabric8/kubernetes-model-extensions/5.10.1, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.fabric8/kubernetes-model-flowcontrol/5.10.1, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.fabric8/kubernetes-model-metrics/5.10.1, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.fabric8/kubernetes-model-networking/5.10.1, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.fabric8/kubernetes-model-node/5.10.1, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.fabric8/kubernetes-model-policy/5.10.1, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.fabric8/kubernetes-model-rbac/5.10.1, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.fabric8/kubernetes-model-scheduling/5.10.1, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.fabric8/kubernetes-model-storageclass/5.10.1, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.fabric8/zjsonpatch/0.3.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.jaegertracing/jaeger-client/1.6.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.jaegertracing/jaeger-core/1.6.0, Apache-2.0, approved, clearlydefined
@@ -52,26 +51,30 @@ maven/mavencentral/io.jaegertracing/jaeger-tracerresolver/1.6.0, Apache-2.0, app
 maven/mavencentral/io.jsonwebtoken/jjwt-api/0.11.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.jsonwebtoken/jjwt-impl/0.11.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.jsonwebtoken/jjwt-jackson/0.11.2, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.micrometer/micrometer-core/1.7.4, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.micrometer/micrometer-registry-prometheus/1.7.4, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.netty/netty-buffer/4.1.68.Final, Apache-2.0, approved, CQ21842
-maven/mavencentral/io.netty/netty-codec/4.1.68.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
-maven/mavencentral/io.netty/netty-codec-dns/4.1.68.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
-maven/mavencentral/io.netty/netty-codec-haproxy/4.1.68.Final, Apache-2.0 AND MIT AND BSD-3-Clause AND CC0-1.0 AND LicenseRef-Public-Domain, approved, CQ21553
-maven/mavencentral/io.netty/netty-codec-http2/4.1.68.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
-maven/mavencentral/io.netty/netty-codec-http/4.1.68.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
-maven/mavencentral/io.netty/netty-codec-mqtt/4.1.68.Final, Apache-2.0 OR LicenseRef-Public-Domain OR BSD-2-Clause OR MIT, approved, CQ15280
-maven/mavencentral/io.netty/netty-codec-socks/4.1.68.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
-maven/mavencentral/io.netty/netty-common/4.1.68.Final, Apache-2.0 AND MIT AND CC0-1.0, approved, CQ21843
-maven/mavencentral/io.netty/netty-handler/4.1.68.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
-maven/mavencentral/io.netty/netty-handler-proxy/4.1.68.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
-maven/mavencentral/io.netty/netty-resolver/4.1.68.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
-maven/mavencentral/io.netty/netty-resolver-dns/4.1.68.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
-maven/mavencentral/io.netty/netty-tcnative/2.0.42.Final, Apache-2.0, approved, CQ16909
-maven/mavencentral/io.netty/netty-transport/4.1.68.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
-maven/mavencentral/io.netty/netty-transport-native-epoll/4.1.68.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
-maven/mavencentral/io.netty/netty-transport-native-kqueue/4.1.68.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
-maven/mavencentral/io.netty/netty-transport-native-unix-common/4.1.68.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
+maven/mavencentral/io.micrometer/micrometer-core/1.7.5, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.micrometer/micrometer-registry-prometheus/1.7.5, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.netty/netty-buffer/4.1.72.Final, Apache-2.0, approved, CQ21842
+maven/mavencentral/io.netty/netty-codec/4.1.72.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
+maven/mavencentral/io.netty/netty-codec-dns/4.1.72.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
+maven/mavencentral/io.netty/netty-codec-haproxy/4.1.72.Final, Apache-2.0 AND MIT AND BSD-3-Clause AND CC0-1.0 AND LicenseRef-Public-Domain, approved, CQ21553
+maven/mavencentral/io.netty/netty-codec-http2/4.1.72.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
+maven/mavencentral/io.netty/netty-codec-http/4.1.72.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
+maven/mavencentral/io.netty/netty-codec-mqtt/4.1.72.Final, Apache-2.0 OR LicenseRef-Public-Domain OR BSD-2-Clause OR MIT, approved, CQ15280
+maven/mavencentral/io.netty/netty-codec-socks/4.1.72.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
+maven/mavencentral/io.netty/netty-common/4.1.72.Final, Apache-2.0 AND MIT AND CC0-1.0, approved, CQ21843
+maven/mavencentral/io.netty/netty-handler/4.1.72.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
+maven/mavencentral/io.netty/netty-handler-proxy/4.1.72.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
+maven/mavencentral/io.netty/netty-resolver/4.1.72.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
+maven/mavencentral/io.netty/netty-resolver-dns/4.1.72.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
+maven/mavencentral/io.netty/netty-tcnative/2.0.46.Final, Apache-2.0, approved, CQ16909
+maven/mavencentral/io.netty/netty-tcnative-boringssl-static/2.0.46.Final, Apache-2.0 OR LicenseRef-Public-Domain OR BSD-2-Clause OR MIT, approved, CQ15280
+maven/mavencentral/io.netty/netty-tcnative-classes/2.0.46.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.netty/netty-transport/4.1.72.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
+maven/mavencentral/io.netty/netty-transport-classes-epoll/4.1.72.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.netty/netty-transport-classes-kqueue/4.1.72.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.netty/netty-transport-native-epoll/4.1.72.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
+maven/mavencentral/io.netty/netty-transport-native-kqueue/4.1.72.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
+maven/mavencentral/io.netty/netty-transport-native-unix-common/4.1.72.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
 maven/mavencentral/io.opentracing.contrib/opentracing-tracerresolver/0.1.8, Apache-2.0, approved, CQ20950
 maven/mavencentral/io.opentracing/opentracing-api/0.33.0, Apache-2.0, approved, CQ20944
 maven/mavencentral/io.opentracing/opentracing-noop/0.33.0, Apache-2.0, approved, CQ20949
@@ -79,60 +82,60 @@ maven/mavencentral/io.opentracing/opentracing-util/0.33.0, Apache-2.0, approved,
 maven/mavencentral/io.projectreactor/reactor-core/3.2.22.RELEASE, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.prometheus/simpleclient/0.10.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.prometheus/simpleclient_common/0.10.0, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.quarkus.arc/arc/2.3.1.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.quarkus/quarkus-arc/2.3.1.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.quarkus/quarkus-bootstrap-runner/2.3.1.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.quarkus/quarkus-caffeine/2.3.1.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.quarkus/quarkus-config-yaml/2.3.1.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.quarkus/quarkus-core/2.3.1.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.quarkus/quarkus-development-mode-spi/2.3.1.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.quarkus/quarkus-jackson/2.3.1.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.quarkus/quarkus-jaeger/2.3.1.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.quarkus/quarkus-kafka-client/2.3.1.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.quarkus/quarkus-kubernetes-client/2.3.1.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.quarkus/quarkus-kubernetes-client-internal/2.3.1.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.quarkus/quarkus-mutiny/2.3.1.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.quarkus/quarkus-netty/2.3.1.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.quarkus/quarkus-smallrye-context-propagation/2.3.1.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.quarkus/quarkus-vertx/2.3.1.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.quarkus.arc/arc/2.5.4.Final, , restricted, clearlydefined
+maven/mavencentral/io.quarkus/quarkus-arc/2.5.4.Final, , restricted, clearlydefined
+maven/mavencentral/io.quarkus/quarkus-bootstrap-runner/2.5.4.Final, , restricted, clearlydefined
+maven/mavencentral/io.quarkus/quarkus-caffeine/2.5.4.Final, , restricted, clearlydefined
+maven/mavencentral/io.quarkus/quarkus-config-yaml/2.5.4.Final, , restricted, clearlydefined
+maven/mavencentral/io.quarkus/quarkus-core/2.5.4.Final, , restricted, clearlydefined
+maven/mavencentral/io.quarkus/quarkus-development-mode-spi/2.5.4.Final, , restricted, clearlydefined
+maven/mavencentral/io.quarkus/quarkus-jackson/2.5.4.Final, , restricted, clearlydefined
+maven/mavencentral/io.quarkus/quarkus-jaeger/2.5.4.Final, , restricted, clearlydefined
+maven/mavencentral/io.quarkus/quarkus-kafka-client/2.5.4.Final, , restricted, clearlydefined
+maven/mavencentral/io.quarkus/quarkus-kubernetes-client/2.5.4.Final, , restricted, clearlydefined
+maven/mavencentral/io.quarkus/quarkus-kubernetes-client-internal/2.5.4.Final, , restricted, clearlydefined
+maven/mavencentral/io.quarkus/quarkus-mutiny/2.5.4.Final, , restricted, clearlydefined
+maven/mavencentral/io.quarkus/quarkus-netty/2.5.4.Final, , restricted, clearlydefined
+maven/mavencentral/io.quarkus/quarkus-smallrye-context-propagation/2.5.4.Final, , restricted, clearlydefined
+maven/mavencentral/io.quarkus/quarkus-vertx/2.5.4.Final, , restricted, clearlydefined
 maven/mavencentral/io.reactivex.rxjava3/rxjava/3.0.4, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.smallrye.common/smallrye-common-annotation/1.6.0, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.smallrye.common/smallrye-common-classloader/1.6.0, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.smallrye.common/smallrye-common-constraint/1.6.0, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.smallrye.common/smallrye-common-expression/1.6.0, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.smallrye.common/smallrye-common-function/1.6.0, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.smallrye.common/smallrye-common-io/1.6.0, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.smallrye.config/smallrye-config/2.5.1, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.smallrye.config/smallrye-config-common/2.5.1, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.smallrye.config/smallrye-config-core/2.5.1, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.smallrye.config/smallrye-config-source-yaml/2.5.1, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.smallrye.reactive/mutiny/1.1.1, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.smallrye.reactive/mutiny-smallrye-context-propagation/1.1.1, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.smallrye.reactive/smallrye-mutiny-vertx-core/2.13.0, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.smallrye.reactive/smallrye-mutiny-vertx-runtime/2.13.0, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.smallrye.reactive/vertx-mutiny-generator/2.13.0, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.smallrye/smallrye-context-propagation/1.2.0, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.smallrye/smallrye-context-propagation-api/1.2.0, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.smallrye/smallrye-context-propagation-storage/1.2.0, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.smallrye.common/smallrye-common-annotation/1.8.0, , restricted, clearlydefined
+maven/mavencentral/io.smallrye.common/smallrye-common-classloader/1.8.0, , restricted, clearlydefined
+maven/mavencentral/io.smallrye.common/smallrye-common-constraint/1.8.0, , restricted, clearlydefined
+maven/mavencentral/io.smallrye.common/smallrye-common-expression/1.8.0, , restricted, clearlydefined
+maven/mavencentral/io.smallrye.common/smallrye-common-function/1.8.0, , restricted, clearlydefined
+maven/mavencentral/io.smallrye.common/smallrye-common-io/1.8.0, , restricted, clearlydefined
+maven/mavencentral/io.smallrye.config/smallrye-config/2.7.0, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.smallrye.config/smallrye-config-common/2.7.0, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.smallrye.config/smallrye-config-core/2.7.0, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.smallrye.config/smallrye-config-source-yaml/2.7.0, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.smallrye.reactive/mutiny/1.1.2, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.smallrye.reactive/mutiny-smallrye-context-propagation/1.1.2, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.smallrye.reactive/smallrye-mutiny-vertx-core/2.15.1, , restricted, clearlydefined
+maven/mavencentral/io.smallrye.reactive/smallrye-mutiny-vertx-runtime/2.15.1, , restricted, clearlydefined
+maven/mavencentral/io.smallrye.reactive/vertx-mutiny-generator/2.15.1, , restricted, clearlydefined
+maven/mavencentral/io.smallrye/smallrye-context-propagation/1.2.2, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.smallrye/smallrye-context-propagation-api/1.2.2, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.smallrye/smallrye-context-propagation-storage/1.2.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.smallrye/smallrye-fault-tolerance-vertx/5.2.1, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.smallrye/smallrye-metrics/2.4.0, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.vertx/vertx-auth-common/4.1.4, , approved, eclipse
-maven/mavencentral/io.vertx/vertx-auth-jdbc/4.1.4, , approved, eclipse
-maven/mavencentral/io.vertx/vertx-auth-mongo/4.1.4, , approved, eclipse
-maven/mavencentral/io.vertx/vertx-bridge-common/4.1.4, , approved, eclipse
-maven/mavencentral/io.vertx/vertx-codegen/4.1.4, , approved, eclipse
-maven/mavencentral/io.vertx/vertx-core/4.1.4, , approved, eclipse
-maven/mavencentral/io.vertx/vertx-health-check/4.1.4, , approved, eclipse
-maven/mavencentral/io.vertx/vertx-jdbc-client/4.1.4, , approved, eclipse
-maven/mavencentral/io.vertx/vertx-kafka-client/4.1.4, , approved, eclipse
-maven/mavencentral/io.vertx/vertx-micrometer-metrics/4.1.4, , approved, eclipse
-maven/mavencentral/io.vertx/vertx-mongo-client/4.1.4, , approved, eclipse
-maven/mavencentral/io.vertx/vertx-mqtt/4.1.4, , approved, eclipse
-maven/mavencentral/io.vertx/vertx-proton/4.1.4, , approved, eclipse
-maven/mavencentral/io.vertx/vertx-sql-client/4.1.4, , approved, eclipse
-maven/mavencentral/io.vertx/vertx-web/4.1.4, , approved, eclipse
-maven/mavencentral/io.vertx/vertx-web-client/4.1.4, , approved, eclipse
-maven/mavencentral/io.vertx/vertx-web-common/4.1.4, , approved, eclipse
+maven/mavencentral/io.vertx/vertx-auth-common/4.2.2, , approved, eclipse
+maven/mavencentral/io.vertx/vertx-auth-jdbc/4.2.2, , approved, eclipse
+maven/mavencentral/io.vertx/vertx-auth-mongo/4.2.2, , approved, eclipse
+maven/mavencentral/io.vertx/vertx-bridge-common/4.2.2, , approved, eclipse
+maven/mavencentral/io.vertx/vertx-codegen/4.2.2, , approved, eclipse
+maven/mavencentral/io.vertx/vertx-core/4.2.2, , approved, eclipse
+maven/mavencentral/io.vertx/vertx-health-check/4.2.2, , approved, eclipse
+maven/mavencentral/io.vertx/vertx-jdbc-client/4.2.2, , approved, eclipse
+maven/mavencentral/io.vertx/vertx-kafka-client/4.2.2, , approved, eclipse
+maven/mavencentral/io.vertx/vertx-micrometer-metrics/4.2.2, , approved, eclipse
+maven/mavencentral/io.vertx/vertx-mongo-client/4.2.2, , approved, eclipse
+maven/mavencentral/io.vertx/vertx-mqtt/4.2.2, , approved, eclipse
+maven/mavencentral/io.vertx/vertx-proton/4.2.2, , approved, eclipse
+maven/mavencentral/io.vertx/vertx-sql-client/4.2.2, , approved, eclipse
+maven/mavencentral/io.vertx/vertx-web/4.2.2, , approved, eclipse
+maven/mavencentral/io.vertx/vertx-web-client/4.2.2, , approved, eclipse
+maven/mavencentral/io.vertx/vertx-web-common/4.2.2, , approved, eclipse
 maven/mavencentral/jakarta.activation/jakarta.activation-api/1.2.1, EPL-2.0 OR BSD-3-Clause OR GPL-2.0-with-classpath-exception, approved, ee4j.jaf
 maven/mavencentral/jakarta.annotation/jakarta.annotation-api/1.3.5, EPL-2.0 OR GPL-2.0-with-classpath-exception, approved, ee4j.ca
 maven/mavencentral/jakarta.el/jakarta.el-api/3.0.3, EPL-2.0 OR GPL-2.0-with-classpath-exception, approved, ee4j.el
@@ -147,17 +150,17 @@ maven/mavencentral/net.i2p.crypto/eddsa/0.3.0, CC0-1.0, approved, CQ22537
 maven/mavencentral/org.apache.commons/commons-collections4/4.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.apache.commons/commons-compress/1.21, Apache-2.0 AND BSD-3-Clause AND bzip2-1.0.6 AND LicenseRef-Public-Domain, approved, CQ23710
 maven/mavencentral/org.apache.kafka/kafka-clients/2.8.1, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.apache.logging.log4j/log4j-api/2.14.0, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.apache.logging.log4j/log4j-api/2.14.1, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.apache.logging.log4j/log4j-api/2.16.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.apache.logging.log4j/log4j-to-slf4j/2.14.1, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.apache.qpid/proton-j/0.33.9, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.apache.qpid/proton-j/0.33.10, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.apache.sshd/sshd-common/2.3.0, Apache-2.0 AND ISC, approved, CQ23604
 maven/mavencentral/org.apache.thrift/libthrift/0.14.1, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.graalvm.sdk/graal-sdk/21.2.0, UPL-1.0, approved, clearlydefined
+maven/mavencentral/org.graalvm.sdk/graal-sdk/21.3.0, NOASSERTION, restricted, clearlydefined
 maven/mavencentral/org.hdrhistogram/HdrHistogram/2.1.12, , approved, CQ13192
-maven/mavencentral/org.infinispan/infinispan-client-hotrod/12.1.7.Final, Apache-2.0, approved, CQ23718
-maven/mavencentral/org.infinispan/infinispan-commons/12.1.7.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.infinispan/infinispan-core/12.1.7.Final, Apache-2.0, approved, #1178
-maven/mavencentral/org.infinispan/infinispan-query-dsl/12.1.7.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.infinispan/infinispan-client-hotrod/13.0.0.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.infinispan/infinispan-commons/13.0.0.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.infinispan/infinispan-core/13.0.0.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.infinispan/infinispan-query-dsl/13.0.0.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.infinispan.protostream/protostream/4.4.1.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.infinispan.protostream/protostream-types/4.4.1.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.jboss.logging/commons-logging-jboss-logging/1.0.0.Final, Apache-2.0, approved, clearlydefined
@@ -166,15 +169,14 @@ maven/mavencentral/org.jboss.logging/jboss-logging-annotations/2.2.1.Final, Apac
 maven/mavencentral/org.jboss.logmanager/jboss-logmanager-embedded/1.0.9, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.jboss.logmanager/log4j2-jboss-logmanager/1.0.0.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.jboss.slf4j/slf4j-jboss-logmanager/1.1.0.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.jboss.spec.javax.transaction/jboss-transaction-api_1.2_spec/1.1.1.Final, GPL-2.0-only WITH Classpath-exception-2.0 OR CDDL-1.0, approved, clearlydefined
 maven/mavencentral/org.jboss.threads/jboss-threads/3.4.2.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.jgroups/jgroups/4.2.12.Final, Apache-2.0 AND CC-BY-2.5 AND LicenseRef-Public-Domain, approved, CQ23049
+maven/mavencentral/org.jgroups/jgroups/4.2.17.Final, Apache-2.0 AND CC-BY-2.5 AND LicenseRef-Public-Domain, approved, CQ23049
 maven/mavencentral/org.latencyutils/LatencyUtils/2.0.3, BSD-2-Clause, approved, CQ17408
 maven/mavencentral/org.lz4/lz4-java/1.7.1, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.mongodb/bson/4.3.3, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.mongodb/mongodb-driver-core/4.3.3, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.mongodb/mongodb-driver-reactivestreams/4.3.3, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.postgresql/postgresql/42.2.23, BSD-2-Clause, approved, clearlydefined
+maven/mavencentral/org.mongodb/bson/4.3.4, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.mongodb/mongodb-driver-core/4.3.4, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.mongodb/mongodb-driver-reactivestreams/4.3.4, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.postgresql/postgresql/42.3.1, BSD-2-Clause, approved, clearlydefined
 maven/mavencentral/org.reactivestreams/reactive-streams/1.0.3, CC0-1.0, approved, CQ16332
 maven/mavencentral/org.slf4j/jul-to-slf4j/1.7.30, MIT, approved, CQ12842
 maven/mavencentral/org.slf4j/slf4j-api/1.7.30, MIT, approved, CQ13368
@@ -191,32 +193,34 @@ maven/mavencentral/org.springframework/spring-core/5.3.14, Apache-2.0 AND BSD-3-
 maven/mavencentral/org.springframework/spring-expression/5.3.14, Apache-2.0, approved, CQ23155
 maven/mavencentral/org.springframework/spring-jcl/5.3.14, Apache-2.0, approved, CQ23156
 maven/mavencentral/org.wildfly.common/wildfly-common/1.5.4.Final-format-001, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.wildfly.security/wildfly-elytron-asn1/1.17.0.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.wildfly.security/wildfly-elytron-auth/1.17.0.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.wildfly.security/wildfly-elytron-auth-server/1.17.0.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.wildfly.security/wildfly-elytron-base/1.17.0.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.wildfly.security/wildfly-elytron-credential/1.17.0.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.wildfly.security/wildfly-elytron-http/1.17.0.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.wildfly.security/wildfly-elytron-keystore/1.17.0.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.wildfly.security/wildfly-elytron-mechanism/1.17.0.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.wildfly.security/wildfly-elytron-mechanism-digest/1.17.0.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.wildfly.security/wildfly-elytron-mechanism-gssapi/1.17.0.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.wildfly.security/wildfly-elytron-mechanism-oauth2/1.17.0.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.wildfly.security/wildfly-elytron-mechanism-scram/1.17.0.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.wildfly.security/wildfly-elytron-password-impl/1.17.0.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.wildfly.security/wildfly-elytron-permission/1.17.0.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.wildfly.security/wildfly-elytron-provider-util/1.17.0.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.wildfly.security/wildfly-elytron-sasl/1.17.0.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.wildfly.security/wildfly-elytron-sasl-digest/1.17.0.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.wildfly.security/wildfly-elytron-sasl-external/1.17.0.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.wildfly.security/wildfly-elytron-sasl-gs2/1.17.0.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.wildfly.security/wildfly-elytron-sasl-gssapi/1.17.0.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.wildfly.security/wildfly-elytron-sasl-oauth2/1.17.0.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.wildfly.security/wildfly-elytron-sasl-plain/1.17.0.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.wildfly.security/wildfly-elytron-sasl-scram/1.17.0.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.wildfly.security/wildfly-elytron-security-manager-action/1.17.0.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.wildfly.security/wildfly-elytron-ssl/1.17.0.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.wildfly.security/wildfly-elytron-util/1.17.0.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.wildfly.security/wildfly-elytron-x500/1.17.0.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.wildfly.security/wildfly-elytron-asn1/1.17.2.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.wildfly.security/wildfly-elytron-auth/1.17.2.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.wildfly.security/wildfly-elytron-auth-server/1.17.2.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.wildfly.security/wildfly-elytron-base/1.17.2.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.wildfly.security/wildfly-elytron-credential/1.17.2.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.wildfly.security/wildfly-elytron-http/1.17.2.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.wildfly.security/wildfly-elytron-keystore/1.17.2.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.wildfly.security/wildfly-elytron-mechanism/1.17.2.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.wildfly.security/wildfly-elytron-mechanism-digest/1.17.2.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.wildfly.security/wildfly-elytron-mechanism-gssapi/1.17.2.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.wildfly.security/wildfly-elytron-mechanism-oauth2/1.17.2.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.wildfly.security/wildfly-elytron-mechanism-scram/1.17.2.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.wildfly.security/wildfly-elytron-password-impl/1.17.2.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.wildfly.security/wildfly-elytron-permission/1.17.2.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.wildfly.security/wildfly-elytron-provider-util/1.17.2.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.wildfly.security/wildfly-elytron-sasl/1.17.2.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.wildfly.security/wildfly-elytron-sasl-digest/1.17.2.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.wildfly.security/wildfly-elytron-sasl-external/1.17.2.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.wildfly.security/wildfly-elytron-sasl-gs2/1.17.2.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.wildfly.security/wildfly-elytron-sasl-gssapi/1.17.2.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.wildfly.security/wildfly-elytron-sasl-oauth2/1.17.2.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.wildfly.security/wildfly-elytron-sasl-plain/1.17.2.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.wildfly.security/wildfly-elytron-sasl-scram/1.17.2.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.wildfly.security/wildfly-elytron-security-manager-action/1.17.2.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.wildfly.security/wildfly-elytron-ssl/1.17.2.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.wildfly.security/wildfly-elytron-util/1.17.2.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.wildfly.security/wildfly-elytron-x500/1.17.2.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.wildfly.security/wildfly-elytron-x500-cert/1.17.2.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.wildfly.security/wildfly-elytron-x500-cert-util/1.17.2.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.xerial.snappy/snappy-java/1.1.8.1, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.yaml/snakeyaml/1.29, Apache-2.0, approved, clearlydefined
