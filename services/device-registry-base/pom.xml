@@ -83,6 +83,15 @@
       <groupId>io.vertx</groupId>
       <artifactId>vertx-junit5</artifactId>
     </dependency>
+    <!--
+      use BC for creating self-signed certs instead of sun.security.x509
+      which has been removed in OpenJDK 15
+    -->
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk15on</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
