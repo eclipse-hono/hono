@@ -34,6 +34,8 @@ import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerOptions;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
+import org.eclipse.hono.client.notification.kafka.KafkaBasedNotificationReceiver;
+import org.eclipse.hono.client.notification.kafka.NotificationKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
@@ -54,6 +56,8 @@ import org.eclipse.hono.config.quarkus.ClientOptions;
 import org.eclipse.hono.config.quarkus.RequestResponseClientOptions;
 import org.eclipse.hono.config.quarkus.ServiceOptions;
 import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
+import org.eclipse.hono.notification.NoOpNotificationReceiver;
+import org.eclipse.hono.notification.NotificationReceiver;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.service.auth.AuthenticationService;
@@ -134,6 +138,7 @@ public class Application extends AbstractServiceApplication {
     private MessagingKafkaProducerConfigProperties commandResponseKafkaProducerConfig;
     private MessagingKafkaConsumerConfigProperties kafkaConsumerConfig;
     private KafkaAdminClientConfigProperties kafkaAdminClientConfig;
+    private NotificationKafkaConsumerConfigProperties kafkaNotificationConfig;
     private InternalKafkaTopicCleanupService internalKafkaTopicCleanupService;
 
     private Cache<Object, RegistrationResult> registrationResponseCache;
@@ -191,12 +196,15 @@ public class Application extends AbstractServiceApplication {
             @ConfigMapping(prefix = "hono.kafka.commandInternal") final KafkaProducerOptions commandInternalProducerOptions,
             @ConfigMapping(prefix = "hono.kafka.commandResponse") final KafkaProducerOptions commandResponseProducerOptions,
             @ConfigMapping(prefix = "hono.kafka.command") final KafkaConsumerOptions consumerOptions,
-            @ConfigMapping(prefix = "hono.kafka.cleanup") final KafkaAdminClientOptions adminClientOptions) {
+            @ConfigMapping(prefix = "hono.kafka.cleanup") final KafkaAdminClientOptions adminClientOptions,
+            @ConfigMapping(prefix = "hono.kafka.notification") final KafkaConsumerOptions notificationOptions) {
 
         this.commandInternalKafkaProducerConfig = new MessagingKafkaProducerConfigProperties(commonOptions, commandInternalProducerOptions);
         this.commandResponseKafkaProducerConfig = new MessagingKafkaProducerConfigProperties(commonOptions, commandResponseProducerOptions);
         this.kafkaConsumerConfig = new MessagingKafkaConsumerConfigProperties(commonOptions, consumerOptions);
         this.kafkaAdminClientConfig = new KafkaAdminClientConfigProperties(commonOptions, adminClientOptions);
+        this.kafkaNotificationConfig = new NotificationKafkaConsumerConfigProperties(commonOptions,
+                notificationOptions);
     }
 
     @Override
@@ -269,8 +277,9 @@ public class Application extends AbstractServiceApplication {
     }
 
     private CommandRouterService commandRouterService() {
-        final DeviceRegistrationClient registrationClient = registrationClient();
-        final TenantClient tenantClient = tenantClient();
+        final NotificationReceiver notificationReceiver = notificationReceiver();
+        final DeviceRegistrationClient registrationClient = registrationClient(notificationReceiver);
+        final TenantClient tenantClient = tenantClient(notificationReceiver);
 
         final CommandTargetMapper commandTargetMapper = CommandTargetMapper.create(registrationClient, deviceConnectionInfo, tracer);
         return new CommandRouterServiceImpl(
@@ -338,24 +347,43 @@ public class Application extends AbstractServiceApplication {
     /**
      * Creates a new client for Hono's Device Registration service.
      *
+     * @param notificationReceiver The notification receiver to use.
      * @return The client.
      */
-    protected DeviceRegistrationClient registrationClient() {
+    protected DeviceRegistrationClient registrationClient(final NotificationReceiver notificationReceiver) {
         return new ProtonBasedDeviceRegistrationClient(
                 HonoConnection.newConnection(vertx, deviceRegistrationClientConfig, tracer),
                 SendMessageSampler.Factory.noop(),
+                notificationReceiver,
                 registrationResponseCache());
     }
 
     /**
      * Creates a new client for Hono's Tenant service.
      *
+     * @param notificationReceiver The notification receiver to use.
      * @return The client.
      */
-    protected TenantClient tenantClient() {
+    protected TenantClient tenantClient(final NotificationReceiver notificationReceiver) {
         return new ProtonBasedTenantClient(
                 HonoConnection.newConnection(vertx, tenantClientConfig, tracer),
                 SendMessageSampler.Factory.noop(),
+                notificationReceiver,
                 tenantResponseCache());
     }
+
+    /**
+     * Creates the notification receiver.
+     *
+     * @return The bean instance.
+     */
+    public NotificationReceiver notificationReceiver() {
+        if (kafkaNotificationConfig.isConfigured()) {
+            return new KafkaBasedNotificationReceiver(vertx, kafkaNotificationConfig);
+        } else {
+            // TODO provide AMQP based notification receiver
+            return new NoOpNotificationReceiver();
+        }
+    }
+
 }

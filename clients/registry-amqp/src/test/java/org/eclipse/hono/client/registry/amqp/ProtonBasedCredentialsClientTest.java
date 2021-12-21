@@ -18,15 +18,22 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
+import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.qpid.proton.amqp.messaging.Rejected;
@@ -36,6 +43,14 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
+import org.eclipse.hono.client.util.AnnotatedCacheKey;
+import org.eclipse.hono.notification.AbstractNotification;
+import org.eclipse.hono.notification.NotificationReceiver;
+import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
+import org.eclipse.hono.notification.deviceregistry.CredentialsChangeNotification;
+import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
+import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
+import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.CacheDirective;
@@ -44,7 +59,6 @@ import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RequestResponseApiConstants;
-import org.eclipse.hono.util.TriTuple;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -86,6 +100,8 @@ class ProtonBasedCredentialsClientTest {
     private Cache<Object, CredentialsResult<CredentialsObject>> cache;
     private Span span;
     private Vertx vertx;
+    private NotificationReceiver notificationReceiver;
+    private final ConcurrentMap<Object, CredentialsResult<CredentialsObject>> cacheBackingMap = new ConcurrentHashMap<>();
 
     /**
      * Sets up the fixture.
@@ -100,11 +116,13 @@ class ProtonBasedCredentialsClientTest {
         final EventBus eventBus = mock(EventBus.class);
         vertx = mock(Vertx.class);
         when(vertx.eventBus()).thenReturn(eventBus);
+        VertxMockSupport.executeBlockingCodeImmediately(vertx);
         receiver = AmqpClientUnitTestHelper.mockProtonReceiver();
         sender = AmqpClientUnitTestHelper.mockProtonSender();
 
         final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
         connection = AmqpClientUnitTestHelper.mockHonoConnection(vertx, config, tracer);
+        when(connection.connect()).thenReturn(Future.succeededFuture());
         when(connection.isConnected(anyLong())).thenReturn(Future.succeededFuture());
         when(connection.createReceiver(anyString(), any(ProtonQoS.class), any(ProtonMessageHandler.class), VertxMockSupport.anyHandler()))
                 .thenReturn(Future.succeededFuture(receiver));
@@ -112,6 +130,10 @@ class ProtonBasedCredentialsClientTest {
             .thenReturn(Future.succeededFuture(sender));
 
         cache = mock(Cache.class);
+        when(cache.asMap()).thenReturn(cacheBackingMap);
+
+        notificationReceiver = mock(NotificationReceiver.class);
+        when(notificationReceiver.start()).thenReturn(Future.succeededFuture());
     }
 
 
@@ -128,6 +150,7 @@ class ProtonBasedCredentialsClientTest {
         client = new ProtonBasedCredentialsClient(
                 connection,
                 SendMessageSampler.Factory.noop(),
+                notificationReceiver,
                 cache);
     }
 
@@ -200,7 +223,7 @@ class ProtonBasedCredentialsClientTest {
         client.get("tenant", credentialsType, authId, clientContext, span.context())
                 .onComplete(ctx.succeeding(credentials -> {
                     ctx.verify(() -> {
-                        final var responseCacheKey = ArgumentCaptor.forClass(TriTuple.class);
+                        final var responseCacheKey = ArgumentCaptor.forClass(AnnotatedCacheKey.class);
                         verify(cache).getIfPresent(responseCacheKey.capture());
                         assertThat(credentials.getDeviceId()).isEqualTo("device");
                         // THEN the credentials result has been added to the cache.
@@ -284,7 +307,7 @@ class ProtonBasedCredentialsClientTest {
                 null);
         when(cache.getIfPresent(any())).thenReturn(credentialsResult);
 
-        final ArgumentCaptor<TriTuple<?, ?, ?>> cacheKey = ArgumentCaptor.forClass(TriTuple.class);
+        final var cacheKey = ArgumentCaptor.forClass(AnnotatedCacheKey.class);
         // WHEN getting credentials with a client context that contains a raw byte array
         final var contextWithByteArray = new JsonObject().put("bytes", bytes);
         client.get("tenant", credentialsType, authId, contextWithByteArray, span.context())
@@ -375,6 +398,185 @@ class ProtonBasedCredentialsClientTest {
                     });
                     ctx.completeNow();
                 }));
+    }
+
+    /**
+     * Verifies that when a client with a cache is started, the notification receiver registers for notifications of the
+     * types {@link TenantChangeNotification}, {@link AllDevicesOfTenantDeletedNotification},
+     * {@link DeviceChangeNotification} and {@link CredentialsChangeNotification}.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testThatNotificationConsumersAreRegistered(final VertxTestContext ctx) {
+
+        // GIVEN a client with a cache
+        givenAClient(cache);
+
+        // WHEN starting the client
+        client.start()
+                .onComplete(ctx.succeeding(ok -> ctx.verify(() -> {
+
+                    // THEN the expected consumers for notifications are registered
+                    ctx.verify(() -> {
+                        verify(notificationReceiver).registerConsumer(eq(AllDevicesOfTenantDeletedNotification.class),
+                                VertxMockSupport.anyHandler());
+                        verify(notificationReceiver).registerConsumer(eq(DeviceChangeNotification.class),
+                                VertxMockSupport.anyHandler());
+                        verify(notificationReceiver).registerConsumer(eq(CredentialsChangeNotification.class),
+                                VertxMockSupport.anyHandler());
+
+                        verify(notificationReceiver).start();
+                        verifyNoMoreInteractions(notificationReceiver);
+                    });
+                    ctx.completeNow();
+                })));
+    }
+
+    /**
+     * Verifies that the client removes all credentials of a tenant from the cache if it receives a notification that
+     * tenant all devices of the tenant have been deleted.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testAllDevicesOfTenantDeletedNotificationRemovesValueFromCache(final VertxTestContext ctx) {
+        final String tenantId = "the-tenant-id";
+        final String deviceId = "the-device-id";
+
+        givenAClient(cache);
+
+        final var notificationHandlerCaptor = getHandlerArgumentCaptor(AllDevicesOfTenantDeletedNotification.class);
+
+        final Set<AnnotatedCacheKey<?>> expectedCacheRemovals = new HashSet<>();
+
+        // GIVEN a client with a cache containing credentials of two tenants
+        // the client is started to register for notifications
+        client.start()
+                .compose(v -> addResultToCache("other-tenant", deviceId, "other"))
+                .compose(v -> addResultToCache(tenantId, deviceId, "auth-id1"))
+                .map(expectedCacheRemovals::add)
+                .compose(v -> addResultToCache(tenantId, deviceId, "auth-id2"))
+                .map(expectedCacheRemovals::add)
+                .onComplete(ctx.succeeding(ok -> ctx.verify(() -> {
+
+                    // WHEN receiving a notification that all devices of a tenant have been deleted
+                    notificationHandlerCaptor.getValue()
+                            .handle(new AllDevicesOfTenantDeletedNotification(tenantId, Instant.now()));
+
+                    // THEN the cache is invalidated for all credentials of the tenant and not for other tenants
+                    ctx.verify(() -> verify(cache).invalidateAll(expectedCacheRemovals));
+                    ctx.completeNow();
+                })));
+    }
+
+    /**
+     * Verifies that the client removes credentials of a device from the cache if it receives a notification about a
+     * change in that device.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testDeviceChangeNotificationRemovesValueFromCache(final VertxTestContext ctx) {
+        final String tenantId = "the-tenant-id";
+        final String deviceId = "the-device-id";
+
+        givenAClient(cache);
+
+        final var notificationHandlerCaptor = getHandlerArgumentCaptor(DeviceChangeNotification.class);
+
+        final Set<AnnotatedCacheKey<?>> expectedCacheRemovals = new HashSet<>();
+
+        // GIVEN a client with a cache containing credentials of two tenants
+        // the client is started to register for notifications
+        client.start()
+                .compose(v -> addResultToCache("other-tenant", deviceId, "other"))
+                .compose(v -> addResultToCache(tenantId, "other-device", "other"))
+                .compose(v -> addResultToCache(tenantId, deviceId, "auth-id1"))
+                .map(expectedCacheRemovals::add)
+                .compose(v -> addResultToCache(tenantId, deviceId, "auth-id2"))
+                .map(expectedCacheRemovals::add)
+                .onComplete(ctx.succeeding(ok -> ctx.verify(() -> {
+
+                    // WHEN receiving a notification about a change on the device
+                    notificationHandlerCaptor.getValue()
+                            .handle(new DeviceChangeNotification(LifecycleChange.UPDATE, tenantId, deviceId,
+                                    Instant.now(), false));
+
+                    // THEN the cache is invalidated for all credentials of the changed device and not for other devices
+                    ctx.verify(() -> verify(cache).invalidateAll(expectedCacheRemovals));
+                    ctx.completeNow();
+                })));
+    }
+
+    /**
+     * Verifies that the client removes credentials of a device from the cache if it receives a notification about a
+     * change in the credentials of that device.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testCredentialsChangeNotificationRemovesValueFromCache(final VertxTestContext ctx) {
+        final String tenantId = "the-tenant-id";
+        final String deviceId = "the-device-id";
+
+        givenAClient(cache);
+
+        final var notificationHandlerCaptor = getHandlerArgumentCaptor(CredentialsChangeNotification.class);
+
+        final Set<AnnotatedCacheKey<?>> expectedCacheRemovals = new HashSet<>();
+
+        // GIVEN a client with a cache containing credentials of two tenants
+        // the client is started to register for notifications
+        client.start()
+                .compose(v -> addResultToCache("other-tenant", deviceId, "other"))
+                .compose(v -> addResultToCache(tenantId, deviceId, "auth-id1"))
+                .map(expectedCacheRemovals::add)
+                .compose(v -> addResultToCache(tenantId, deviceId, "auth-id2"))
+                .map(expectedCacheRemovals::add)
+                .onComplete(ctx.succeeding(ok -> ctx.verify(() -> {
+
+                    // WHEN receiving a notification about a change on the credentials
+                    notificationHandlerCaptor.getValue()
+                            .handle(new CredentialsChangeNotification(tenantId, deviceId, Instant.now()));
+
+                    // THEN the cache is invalidated for all credentials of the changed device and not for other devices
+                    ctx.verify(() -> verify(cache).invalidateAll(expectedCacheRemovals));
+                    ctx.completeNow();
+                })));
+    }
+
+    private <T extends AbstractNotification> ArgumentCaptor<Handler<T>> getHandlerArgumentCaptor(
+            final Class<T> notificationClass) {
+
+        final ArgumentCaptor<Handler<T>> notificationHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+
+        doNothing().when(notificationReceiver)
+                .registerConsumer(eq(notificationClass), notificationHandlerCaptor.capture());
+
+        return notificationHandlerCaptor;
+    }
+
+    private Future<AnnotatedCacheKey<?>> addResultToCache(final String tenantId, final String deviceId,
+            final String authId) {
+
+        final String credentialsType = CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD;
+
+        final CredentialsResult<CredentialsObject> credentialsResult = CredentialsResult.from(HttpURLConnection.HTTP_OK,
+                new CredentialsObject(deviceId, authId, credentialsType));
+
+        final ArgumentCaptor<AnnotatedCacheKey<?>> responseCacheKey = ArgumentCaptor.forClass(AnnotatedCacheKey.class);
+        when(cache.getIfPresent(responseCacheKey.capture())).thenReturn(credentialsResult);
+
+        return client.get(tenantId, credentialsType, authId, new JsonObject(), null)
+                .map(credentialsObject -> {
+
+                    final AnnotatedCacheKey<?> cacheKey = responseCacheKey.getValue();
+                    cacheKey.putAttribute("device-id", deviceId);
+                    cacheBackingMap.put(cacheKey, credentialsResult);
+
+                    return cacheKey;
+                });
     }
 
 }

@@ -26,6 +26,7 @@ import org.mockito.invocation.InvocationOnMock;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -131,6 +132,12 @@ public final class VertxMockSupport {
 
         doAnswer(VertxMockSupport::handleExecuteBlockingInvocation)
                 .when(context).executeBlocking(anyHandler(), any());
+
+        when(vertx.executeBlocking(anyHandler()))
+                .thenAnswer(VertxMockSupport::handleExecuteBlockingInvocationReturningFuture);
+
+        when(context.executeBlocking(anyHandler()))
+                .thenAnswer(VertxMockSupport::handleExecuteBlockingInvocationReturningFuture);
     }
 
     private static Void handleExecuteBlockingInvocation(final InvocationOnMock invocation) {
@@ -142,6 +149,13 @@ public final class VertxMockSupport {
             resultHandler.handle(result.future());
         }
         return null;
+    }
+
+    private static <T> Future<T> handleExecuteBlockingInvocationReturningFuture(final InvocationOnMock invocation) {
+        final Promise<T> result = Promise.promise();
+        final Handler<Promise<?>> blockingCodeHandler = invocation.getArgument(0);
+        blockingCodeHandler.handle(result);
+        return result.future();
     }
 
     /**

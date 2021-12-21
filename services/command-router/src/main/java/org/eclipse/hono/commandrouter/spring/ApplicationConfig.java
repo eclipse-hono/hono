@@ -28,6 +28,8 @@ import org.eclipse.hono.client.kafka.metrics.NoopKafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
+import org.eclipse.hono.client.notification.kafka.KafkaBasedNotificationReceiver;
+import org.eclipse.hono.client.notification.kafka.NotificationKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
@@ -54,6 +56,8 @@ import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.deviceconnection.infinispan.client.BasicCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.CacheBasedDeviceConnectionInfo;
 import org.eclipse.hono.deviceconnection.infinispan.client.CommonCacheConfig;
+import org.eclipse.hono.notification.NoOpNotificationReceiver;
+import org.eclipse.hono.notification.NotificationReceiver;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
@@ -250,8 +254,9 @@ public class ApplicationConfig {
             final MeterRegistry meterRegistry,
             final CommandRouterMetrics metrics) {
 
-        final DeviceRegistrationClient registrationClient = registrationClient();
-        final TenantClient tenantClient = tenantClient();
+        final NotificationReceiver notificationReceiver = notificationReceiver();
+        final DeviceRegistrationClient registrationClient = registrationClient(notificationReceiver);
+        final TenantClient tenantClient = tenantClient(notificationReceiver);
 
         final CommandTargetMapper commandTargetMapper = CommandTargetMapper.create(registrationClient, deviceConnectionInfo, getTracer());
         final MessagingClientProvider<CommandConsumerFactory> commandConsumerFactoryProvider = new MessagingClientProvider<>();
@@ -377,16 +382,18 @@ public class ApplicationConfig {
     /**
      * Exposes a client for accessing the <em>Device Registration</em> API as a Spring bean.
      *
+     * @param notificationReceiver The notification receiver to use.
      * @return The client.
      */
     @Bean
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Scope("prototype")
-    public DeviceRegistrationClient registrationClient() {
+    public DeviceRegistrationClient registrationClient(final NotificationReceiver notificationReceiver) {
 
         return new ProtonBasedDeviceRegistrationClient(
                 registrationServiceConnection(),
                 SendMessageSampler.Factory.noop(),
+                notificationReceiver,
                 Caches.newCaffeineCache(registrationClientConfig()));
     }
 
@@ -420,16 +427,18 @@ public class ApplicationConfig {
     /**
      * Exposes a client for accessing the <em>Tenant</em> API as a Spring bean.
      *
+     * @param notificationReceiver The notification receiver to use.
      * @return The client.
      */
     @Bean
     @Qualifier(TenantConstants.TENANT_ENDPOINT)
     @Scope("prototype")
-    public TenantClient tenantClient() {
+    public TenantClient tenantClient(final NotificationReceiver notificationReceiver) {
 
         return new ProtonBasedTenantClient(
                 tenantServiceConnection(),
                 SendMessageSampler.Factory.noop(),
+                notificationReceiver,
                 Caches.newCaffeineCache(tenantClientConfig()));
     }
 
@@ -633,4 +642,34 @@ public class ApplicationConfig {
     public CacheBasedDeviceConnectionService deviceConnectionService(final CacheBasedDeviceConnectionInfo deviceConnectionInfo) {
         return new CacheBasedDeviceConnectionService(deviceConnectionInfo);
     }
+
+    /**
+     * Exposes configuration properties for the Kafka consumer that receives notifications as a Spring bean.
+     *
+     * @return The properties.
+     */
+    @ConfigurationProperties(prefix = "hono.kafka.notification")
+    public NotificationKafkaConsumerConfigProperties notificationKafkaConsumerConfig() {
+        final var configProperties = new NotificationKafkaConsumerConfigProperties();
+        configProperties.setCommonClientConfig(commonKafkaClientConfig());
+        return configProperties;
+    }
+
+    /**
+     * Exposes a notification receiver as a Spring bean.
+     *
+     * @return The bean instance.
+     */
+    @Bean
+    @Scope("prototype")
+    public NotificationReceiver notificationReceiver() {
+        final var kafkaConsumerConfig = notificationKafkaConsumerConfig();
+        if (kafkaConsumerConfig.isConfigured()) {
+            return new KafkaBasedNotificationReceiver(vertx(), kafkaConsumerConfig);
+        } else {
+            // TODO provide AMQP based notification receiver
+            return new NoOpNotificationReceiver();
+        }
+    }
+
 }

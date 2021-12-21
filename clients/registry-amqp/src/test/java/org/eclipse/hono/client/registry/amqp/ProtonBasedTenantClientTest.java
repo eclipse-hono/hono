@@ -20,15 +20,21 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
+import java.time.Instant;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -40,6 +46,11 @@ import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
+import org.eclipse.hono.client.util.AnnotatedCacheKey;
+import org.eclipse.hono.notification.AbstractNotification;
+import org.eclipse.hono.notification.NotificationReceiver;
+import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
+import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.CacheDirective;
@@ -89,6 +100,8 @@ class ProtonBasedTenantClientTest {
     private ProtonBasedTenantClient client;
     private Cache<Object, TenantResult<TenantObject>> cache;
     private Span span;
+    private NotificationReceiver notificationReceiver;
+    private final ConcurrentMap<Object, TenantResult<TenantObject>> cacheBackingMap = new ConcurrentHashMap<>();
 
     /**
      * Sets up the fixture.
@@ -101,11 +114,13 @@ class ProtonBasedTenantClientTest {
         final Tracer tracer = TracingMockSupport.mockTracer(span);
 
         final Vertx vertx = mock(Vertx.class);
+        VertxMockSupport.executeBlockingCodeImmediately(vertx);
         receiver = AmqpClientUnitTestHelper.mockProtonReceiver();
         sender = AmqpClientUnitTestHelper.mockProtonSender();
 
         final RequestResponseClientConfigProperties config = new RequestResponseClientConfigProperties();
         connection = AmqpClientUnitTestHelper.mockHonoConnection(vertx, config, tracer);
+        when(connection.connect()).thenReturn(Future.succeededFuture());
         when(connection.isConnected(anyLong())).thenReturn(Future.succeededFuture());
         when(connection.createReceiver(anyString(), any(ProtonQoS.class), any(ProtonMessageHandler.class), VertxMockSupport.anyHandler()))
                 .thenReturn(Future.succeededFuture(receiver));
@@ -113,6 +128,10 @@ class ProtonBasedTenantClientTest {
             .thenReturn(Future.succeededFuture(sender));
 
         cache = mock(Cache.class);
+        when(cache.asMap()).thenReturn(cacheBackingMap);
+
+        notificationReceiver = mock(NotificationReceiver.class);
+        when(notificationReceiver.start()).thenReturn(Future.succeededFuture());
     }
 
     private static JsonObject newTenantResult(final String tenantId) {
@@ -127,6 +146,7 @@ class ProtonBasedTenantClientTest {
         client = new ProtonBasedTenantClient(
                 connection,
                 SendMessageSampler.Factory.noop(),
+                notificationReceiver,
                 cache);
     }
 
@@ -433,4 +453,95 @@ class ProtonBasedTenantClientTest {
         assertThat(sentMessage.getSubject()).isEqualTo(TenantConstants.TenantAction.get.toString());
         assertThat(MessageHelper.getJsonPayload(sentMessage).getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID)).isEqualTo("tenant");
     }
+
+    /**
+     * Verifies that when a client with a cache is started, the notification receiver registers for notifications of the
+     * type {@link TenantChangeNotification}.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testThatNotificationConsumersAreRegistered(final VertxTestContext ctx) {
+
+        // GIVEN a client with a cache
+        givenAClient(cache);
+
+        // WHEN starting the client
+        client.start()
+                .onComplete(ctx.succeeding(ok -> ctx.verify(() -> {
+
+                    // THEN the expected consumers for notifications are registered
+                    ctx.verify(() -> {
+                        verify(notificationReceiver).registerConsumer(eq(TenantChangeNotification.class),
+                                VertxMockSupport.anyHandler());
+
+                        verify(notificationReceiver).start();
+                        verifyNoMoreInteractions(notificationReceiver);
+                    });
+                    ctx.completeNow();
+                })));
+
+    }
+
+    /**
+     * Verifies that the client removes all credentials of a tenant from the cache if it receives a notification about a
+     * change in that tenant.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testTenantChangeNotificationRemovesValueFromCache(final VertxTestContext ctx) {
+        final String tenantId = "the-tenant-id";
+
+        givenAClient(cache);
+
+        final var notificationHandlerCaptor = getHandlerArgumentCaptor(TenantChangeNotification.class);
+
+        // GIVEN a client with a cache containing two tenants
+        // the client is started to register for notifications
+        client.start()
+                .compose(v -> addResultToCache("other-tenant"))
+                .compose(v -> addResultToCache(tenantId))
+                .onComplete(ctx.succeeding(keyOfChangedTenant -> ctx.verify(() -> {
+
+                    // WHEN receiving a notification about a change on a tenant
+                    notificationHandlerCaptor.getValue().handle(
+                            new TenantChangeNotification(LifecycleChange.DELETE, tenantId, Instant.now(), false));
+
+                    // THEN the cache is invalidated for the changed tenant
+                    ctx.verify(() -> verify(cache).invalidateAll(Set.of(keyOfChangedTenant)));
+                    ctx.completeNow();
+                })));
+
+    }
+
+    private <T extends AbstractNotification> ArgumentCaptor<Handler<T>> getHandlerArgumentCaptor(
+            final Class<T> notificationClass) {
+
+        final ArgumentCaptor<Handler<T>> notificationHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+
+        doNothing().when(notificationReceiver)
+                .registerConsumer(eq(notificationClass), notificationHandlerCaptor.capture());
+
+        return notificationHandlerCaptor;
+    }
+
+    private Future<AnnotatedCacheKey<?>> addResultToCache(final String tenantId) {
+
+        final TenantResult<TenantObject> tenantResult = TenantResult.from(HttpURLConnection.HTTP_OK,
+                new TenantObject(tenantId, false));
+
+        final ArgumentCaptor<AnnotatedCacheKey<?>> responseCacheKey = ArgumentCaptor.forClass(AnnotatedCacheKey.class);
+        when(cache.getIfPresent(responseCacheKey.capture())).thenReturn(tenantResult);
+
+        return client.get(tenantId, null)
+                .map(tenantObject -> {
+                    final AnnotatedCacheKey<?> cacheKey = responseCacheKey.getValue();
+                    cacheKey.putAttribute("tenant-id", tenantId);
+                    cacheBackingMap.put(cacheKey, tenantResult);
+                    return cacheKey;
+                });
+
+    }
+
 }

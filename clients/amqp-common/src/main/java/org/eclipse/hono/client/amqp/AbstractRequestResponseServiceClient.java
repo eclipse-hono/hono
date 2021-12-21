@@ -19,6 +19,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.message.Message;
@@ -38,6 +40,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import io.opentracing.Span;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 
 /**
@@ -296,6 +299,48 @@ public abstract class AbstractRequestResponseServiceClient<T, R extends RequestR
             if (resultCanBeCached) {
                 responseCache.put(key, response);
             }
+        }
+    }
+
+    /**
+     * Removes a response from the cache.
+     * <p>
+     * If no cache is configured then this method does nothing.
+     *
+     * @param key The key to be removed.
+     * @throws NullPointerException if key is {@code null}.
+     */
+    protected final void removeFromCache(final Object key) {
+        if (isCachingEnabled()) {
+            Objects.requireNonNull(key);
+            responseCache.invalidate(key);
+        }
+    }
+
+    /**
+     * Removes responses from the cache where the keys match the given predicate.
+     * <p>
+     * The operation is executed on a worker thread (using {@link io.vertx.core.Vertx#executeBlocking(Handler)}).
+     * <p>
+     * If no cache is configured then this method does nothing.
+     *
+     * @param keyPredicate The predicate to filter the affected keys.
+     * @throws NullPointerException if keyPredicate is {@code null}.
+     */
+    protected final void removeFromCacheByPattern(final Predicate<Object> keyPredicate) {
+        if (isCachingEnabled()) {
+            Objects.requireNonNull(keyPredicate);
+
+            connection.getVertx().executeBlocking(p -> {
+                final var matchingKeys = responseCache.asMap()
+                        .keySet()
+                        .stream()
+                        .filter(keyPredicate)
+                        .collect(Collectors.toSet());
+
+                log.debug("removing {} responses from the cache", matchingKeys.size());
+                responseCache.invalidateAll(matchingKeys);
+            });
         }
     }
 

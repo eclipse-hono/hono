@@ -74,7 +74,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
     }
 
     /**
-     * Adds a property to this tenant.
+     * Adds a property to these credentials.
      *
      * @param name The property name.
      * @param value The property value.

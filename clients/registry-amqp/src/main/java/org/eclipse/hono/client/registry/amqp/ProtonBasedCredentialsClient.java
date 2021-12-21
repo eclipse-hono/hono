@@ -26,6 +26,13 @@ import org.eclipse.hono.client.amqp.AbstractRequestResponseServiceClient;
 import org.eclipse.hono.client.amqp.RequestResponseClient;
 import org.eclipse.hono.client.impl.CachingClientFactory;
 import org.eclipse.hono.client.registry.CredentialsClient;
+import org.eclipse.hono.client.util.AnnotatedCacheKey;
+import org.eclipse.hono.notification.NoOpNotificationReceiver;
+import org.eclipse.hono.notification.NotificationReceiver;
+import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
+import org.eclipse.hono.notification.deviceregistry.CredentialsChangeNotification;
+import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
+import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -33,7 +40,6 @@ import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RequestResponseApiConstants;
-import org.eclipse.hono.util.TriTuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,13 +56,45 @@ import io.vertx.core.json.JsonObject;
 
 /**
  * A vertx-proton based client of Hono's Credentials service.
- *
+ * <p>
+ * If a response cache has been provided, a notification receiver can be used to receive notifications about changes in
+ * tenants, device registrations and credentials from Hono's Device Registry. The notifications are used to invalidate
+ * the corresponding entries in the response cache.
  */
 public class ProtonBasedCredentialsClient extends AbstractRequestResponseServiceClient<CredentialsObject, CredentialsResult<CredentialsObject>> implements CredentialsClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(ProtonBasedCredentialsClient.class);
     private static final String TAG_AUTH_ID = "auth_id";
     private static final String TAG_CREDENTIALS_TYPE = "credentials_type";
+    private static final String ATTRIBUTE_KEY_DEVICE_ID = "device-id";
+
+    private final NotificationReceiver notificationReceiver;
+
+    /**
+     * Creates a new client for a connection.
+     *
+     * @param connection The connection to the Credentials service.
+     * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
+     * @param notificationReceiver The client to receive notifications from the device registry. The receiver will be
+     *            started and stopped by the lifecycle of this client ({@link #start()} and {@link #stop()}).
+     * @param responseCache The cache to use for service responses or {@code null} if responses should not be cached.
+     * @throws NullPointerException if any of the parameters other than the response cache are {@code null}.
+     */
+    public ProtonBasedCredentialsClient(
+            final HonoConnection connection,
+            final SendMessageSampler.Factory samplerFactory,
+            final NotificationReceiver notificationReceiver,
+            final Cache<Object, CredentialsResult<CredentialsObject>> responseCache) {
+
+        super(connection,
+                samplerFactory,
+                new CachingClientFactory<>(connection.getVertx(), RequestResponseClient::isOpen),
+                responseCache);
+        connection.getVertx().eventBus().consumer(
+                Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
+                this::handleTenantTimeout);
+        this.notificationReceiver = Objects.requireNonNull(notificationReceiver);
+    }
 
     /**
      * Creates a new client for a connection.
@@ -70,14 +108,7 @@ public class ProtonBasedCredentialsClient extends AbstractRequestResponseService
             final HonoConnection connection,
             final SendMessageSampler.Factory samplerFactory,
             final Cache<Object, CredentialsResult<CredentialsObject>> responseCache) {
-
-        super(connection,
-                samplerFactory,
-                new CachingClientFactory<>(connection.getVertx(), RequestResponseClient::isOpen),
-                responseCache);
-        connection.getVertx().eventBus().consumer(
-                Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
-                this::handleTenantTimeout);
+        this(connection, samplerFactory, new NoOpNotificationReceiver(), responseCache);
     }
 
     @Override
@@ -167,10 +198,8 @@ public class ProtonBasedCredentialsClient extends AbstractRequestResponseService
             clientContextHashCode = new JsonObject(clientContext.encode()).hashCode();
         }
 
-        final var responseCacheKey = TriTuple.of(
-                CredentialsConstants.CredentialsAction.get,
-                String.format("%s-%s-%s", tenantId, type, authId),
-                clientContextHashCode);
+        final AnnotatedCacheKey<CacheKey> responseCacheKey = new AnnotatedCacheKey<>(
+                new CacheKey(tenantId, type, authId, clientContextHashCode));
 
         final Span span = newChildSpan(spanContext, "get Credentials");
         span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
@@ -197,7 +226,7 @@ public class ProtonBasedCredentialsClient extends AbstractRequestResponseService
                                     span);
                         })
                         .map(credentialsResult -> {
-                            addToCache(responseCacheKey, credentialsResult);
+                            addResultToCache(responseCacheKey, credentialsResult);
                             return credentialsResult;
                         }));
 
@@ -212,5 +241,123 @@ public class ProtonBasedCredentialsClient extends AbstractRequestResponseService
                 throw StatusCodeMapper.from(result);
             }
         }, span);
+    }
+
+    private void addResultToCache(final AnnotatedCacheKey<CacheKey> responseCacheKey,
+            final CredentialsResult<CredentialsObject> credentialsResult) {
+
+        if (isCachingEnabled()) {
+            // add device ID to cache keys so that they can be found when removing them
+            if (credentialsResult.getPayload() != null) {
+                // payload will be null if credentials not found, in this case the result will not be cached
+                responseCacheKey.putAttribute(ATTRIBUTE_KEY_DEVICE_ID, credentialsResult.getPayload().getDeviceId());
+            }
+
+            addToCache(responseCacheKey, credentialsResult);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void removeResultsForTenantFromCache(final String tenantId) {
+        removeFromCacheByPattern(k -> ((AnnotatedCacheKey<CacheKey>) k).getKey().tenantId.equals(tenantId));
+    }
+
+    @SuppressWarnings("unchecked")
+    private void removeResultsForDeviceFromCache(final String tenantId, final String deviceId) {
+        removeFromCacheByPattern(key -> {
+            final AnnotatedCacheKey<CacheKey> annotatedCacheKey = (AnnotatedCacheKey<CacheKey>) key;
+            final boolean tenantMatches = annotatedCacheKey.getKey().tenantId.equals(tenantId);
+            final Boolean deviceMatches = annotatedCacheKey.getAttribute(ATTRIBUTE_KEY_DEVICE_ID)
+                    .map(id -> id.equals(deviceId))
+                    .orElse(false);
+            return tenantMatches && deviceMatches;
+        });
+    }
+
+    @Override
+    public Future<Void> start() {
+        if (isCachingEnabled()) {
+
+            notificationReceiver.registerConsumer(AllDevicesOfTenantDeletedNotification.class,
+                    n -> removeResultsForTenantFromCache(n.getTenantId()));
+
+            notificationReceiver.registerConsumer(DeviceChangeNotification.class,
+                    n -> {
+                        if (LifecycleChange.DELETE.equals(n.getChange())
+                                || (LifecycleChange.UPDATE.equals(n.getChange()) && !n.isEnabled())) {
+
+                            removeResultsForDeviceFromCache(n.getTenantId(), n.getDeviceId());
+                        }
+                    });
+
+            notificationReceiver.registerConsumer(CredentialsChangeNotification.class,
+                    n -> removeResultsForDeviceFromCache(n.getTenantId(), n.getDeviceId()));
+
+            return notificationReceiver.start()
+                    .compose(v -> super.start());
+        } else {
+            return super.start();
+        }
+    }
+
+    @Override
+    public Future<Void> stop() {
+        return super.stop()
+                .compose(v -> {
+                    if (isCachingEnabled()) {
+                        return notificationReceiver.stop();
+                    } else {
+                        return Future.succeededFuture();
+                    }
+                });
+    }
+
+    private static class CacheKey {
+
+        final String tenantId;
+        final String type;
+        final String authId;
+        final int clientContextHashCode;
+
+        CacheKey(final String tenantId, final String type, final String authId, final int clientContextHashCode) {
+            Objects.requireNonNull(tenantId);
+            Objects.requireNonNull(type);
+            Objects.requireNonNull(authId);
+
+            this.tenantId = tenantId;
+            this.type = type;
+            this.authId = authId;
+            this.clientContextHashCode = clientContextHashCode;
+        }
+
+        @Override
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            final CacheKey cacheKey = (CacheKey) o;
+            return clientContextHashCode == cacheKey.clientContextHashCode
+                    && tenantId.equals(cacheKey.tenantId)
+                    && type.equals(cacheKey.type)
+                    && authId.equals(cacheKey.authId);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(tenantId, type, authId, clientContextHashCode);
+        }
+
+        @Override
+        public String toString() {
+            return "CacheKey{" +
+                    "tenantId='" + tenantId + '\'' +
+                    ", type='" + type + '\'' +
+                    ", authId='" + authId + '\'' +
+                    ", clientContextHashCode=" + clientContextHashCode +
+                    '}';
+        }
     }
 }
