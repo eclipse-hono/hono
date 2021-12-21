@@ -67,6 +67,7 @@ public class LoriotProvider extends JsonBasedLoraProvider {
     private static final String COMMAND_FIELD_LORIOT_CONFIRMED = "confirmed";
     private static final String COMMAND_FIELD_LORIOT_DATA = "data";
     private static final String COMMAND_FIELD_LORIOT_EUI = "EUI";
+    private static final String COMMAND_FIELD_LORIOT_PORT = "port";
     private static final String COMMAND_VALUE_LORIOT_TX = "tx";
 
     private static final String OBJECTS_LORIOT_GATEWAYS = "gws";
@@ -163,12 +164,15 @@ public class LoriotProvider extends JsonBasedLoraProvider {
     }
 
     @Override
-    protected JsonObject getCommandPayload(final Buffer payload, final String deviceId) {
+    protected JsonObject getCommandPayload(final Buffer payload, final String deviceId, final String subject) {
         final JsonObject json = new JsonObject();
         json.put(COMMAND_FIELD_LORIOT_CMD, COMMAND_VALUE_LORIOT_TX);
         json.put(COMMAND_FIELD_LORIOT_CONFIRMED, false);
         json.put(COMMAND_FIELD_LORIOT_DATA, BaseEncoding.base16().encode(payload.getBytes()));
         json.put(COMMAND_FIELD_LORIOT_EUI, deviceId);
+        try {
+            json.put(COMMAND_FIELD_LORIOT_PORT, Integer.parseInt(subject));
+        } catch (final NumberFormatException ignored) { }
         return json;
     }
 

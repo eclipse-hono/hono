@@ -25,6 +25,8 @@ import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.eclipse.hono.adapter.lora.LoraMetaData;
 import org.springframework.stereotype.Component;
 
+import com.google.common.io.BaseEncoding;
+
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -39,7 +41,9 @@ public class TheThingsStackProvider extends JsonBasedLoraProvider {
     private static final String FIELD_THE_THINGS_STACK_ALTITUDE = "altitude";
     private static final String FIELD_THE_THINGS_STACK_BANDWIDTH = "bandwidth";
     private static final String FIELD_THE_THINGS_STACK_CODING_RATE = "coding_rate";
+    private static final String FIELD_THE_THINGS_STACK_CONFIRMED = "confirmed";
     private static final String FIELD_THE_THINGS_STACK_DATA_RATE = "data_rate";
+    private static final String FIELD_THE_THINGS_STACK_DECODED_PAYLOAD = "decoded_payload";
     private static final String FIELD_THE_THINGS_STACK_DEV_EUI = "dev_eui";
     private static final String FIELD_THE_THINGS_STACK_DOWNLINKS = "downlinks";
     private static final String FIELD_THE_THINGS_STACK_END_DEVICE_IDS = "end_device_ids";
@@ -54,6 +58,8 @@ public class TheThingsStackProvider extends JsonBasedLoraProvider {
     private static final String FIELD_THE_THINGS_STACK_LOCATIONS = "locations";
     private static final String FIELD_THE_THINGS_STACK_LONGITUDE = "longitude";
     private static final String FIELD_THE_THINGS_STACK_LORA = "lora";
+    private static final String FIELD_THE_THINGS_STACK_PORT = "f_port";
+    private static final String FIELD_THE_THINGS_STACK_PRIORITY = "priority";
     private static final String FIELD_THE_THINGS_STACK_RSSI = "rssi";
     private static final String FIELD_THE_THINGS_STACK_RX_METADATA = "rx_metadata";
     private static final String FIELD_THE_THINGS_STACK_SETTINGS = "settings";
@@ -61,6 +67,7 @@ public class TheThingsStackProvider extends JsonBasedLoraProvider {
     private static final String FIELD_THE_THINGS_STACK_SPREADING_FACTOR = "spreading_factor";
     private static final String FIELD_THE_THINGS_STACK_UPLINK = "uplink_message";
     private static final String FIELD_THE_THINGS_STACK_USER = "user";
+    private static final String VALUE_THE_THINGS_STACK_NORMAL = "normal";
 
     @Override
     public String getProviderName() {
@@ -178,5 +185,22 @@ public class TheThingsStackProvider extends JsonBasedLoraProvider {
         );
 
         return data;
+    }
+
+    @Override
+    protected JsonObject getCommandPayload(final Buffer payload, final String deviceId, final String subject) {
+        int port;
+        try {
+            port = Integer.parseInt(subject);
+        } catch (final NumberFormatException e) {
+            port = 2;
+        }
+
+        final JsonObject json = new JsonObject();
+        json.put(FIELD_THE_THINGS_STACK_DECODED_PAYLOAD, BaseEncoding.base16().encode(payload.getBytes()));
+        json.put(FIELD_THE_THINGS_STACK_CONFIRMED, false);
+        json.put(FIELD_THE_THINGS_STACK_PRIORITY, VALUE_THE_THINGS_STACK_NORMAL);
+        json.put(FIELD_THE_THINGS_STACK_PORT, port);
+        return json;
     }
 }

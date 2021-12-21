@@ -428,7 +428,8 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
         final Command command = commandContext.getCommand();
         final Promise<Void> sendPromise = Promise.promise();
         final Buffer payload = Optional.ofNullable(command.getPayload()).orElseGet(Buffer::buffer);
-        final LoraCommand loraCommand = loraProvider.getCommand(commandEndpoint, command.getDeviceId(), payload);
+        final String subject = command.getName();
+        final LoraCommand loraCommand = loraProvider.getCommand(commandEndpoint, command.getDeviceId(), payload, subject);
         commandContext.getTracingSpan().log(String.format("sending loraCommand to LNS [%s]", loraCommand.getUri()));
         LOG.debug("sending loraCommand to LNS [{}]", loraCommand.getUri());
         if (LOG.isTraceEnabled()) {

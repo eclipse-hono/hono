@@ -61,14 +61,15 @@ abstract class JsonBasedLoraProvider implements LoraProvider {
     }
 
     @Override
-    public LoraCommand getCommand(final CommandEndpoint commandEndpoint, final String deviceId, final Buffer payload) {
+    public LoraCommand getCommand(final CommandEndpoint commandEndpoint, final String deviceId, final Buffer payload, final String subject) {
         Objects.requireNonNull(commandEndpoint);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(payload);
+        Objects.requireNonNull(subject);
         if (Strings.isNullOrEmpty(commandEndpoint.getUri())) {
             throw new IllegalArgumentException("command endpoint uri is empty");
         }
-        final JsonObject commandPayload = getCommandPayload(payload, deviceId);
+        final JsonObject commandPayload = getCommandPayload(payload, deviceId, subject);
         commandEndpoint.getPayloadProperties().forEach(commandPayload::put);
         return new LoraCommand(commandPayload, commandEndpoint.getFormattedUri(deviceId));
     }
@@ -95,9 +96,12 @@ abstract class JsonBasedLoraProvider implements LoraProvider {
      * <p>
      * Subclasses should override this method to return an alternative JSON structure.
      *
+     * @param payload The payload to be sent to the lorawan device.
+     * @param deviceId The deviceId to which the lorawan network should forward the payload.
+     * @param subject The subject which can contain some settings for the command.
      * @return The JSON payload.
      */
-    protected JsonObject getCommandPayload(final Buffer payload, final String deviceId) {
+    protected JsonObject getCommandPayload(final Buffer payload, final String deviceId, final String subject) {
         final JsonObject json = new JsonObject();
         json.put(FIELD_PAYLOAD, BaseEncoding.base16().encode(payload.getBytes()));
         return json;

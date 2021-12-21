@@ -258,7 +258,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<HttpProt
 
         final JsonObject json = new JsonObject().put("my-payload", "bumlux");
         final LoraCommand loraCommand = new LoraCommand(json, "https://my-server.com/commands/deviceId/send");
-        when(providerMock.getCommand(any(), any(), any())).thenReturn(loraCommand);
+        when(providerMock.getCommand(any(), any(), any(), any())).thenReturn(loraCommand);
         when(providerMock.getDefaultHeaders()).thenReturn(Map.of("my-provider-header", "my-provider-header-value"));
 
         final HttpRequest<Buffer> httpClientRequest = mock(HttpRequest.class, withSettings().defaultAnswer(RETURNS_SELF));
