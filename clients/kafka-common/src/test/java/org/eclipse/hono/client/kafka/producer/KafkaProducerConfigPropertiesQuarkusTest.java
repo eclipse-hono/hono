@@ -19,7 +19,6 @@ import javax.inject.Inject;
 
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.eclipse.hono.client.kafka.CommonKafkaClientOptions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
@@ -32,20 +31,35 @@ import io.smallrye.config.ConfigMapping;
 @QuarkusTest
 public class KafkaProducerConfigPropertiesQuarkusTest {
 
-    @Inject
-    @ConfigMapping(prefix = "hono.kafka")
-    CommonKafkaClientOptions commonOptions;
+    private KafkaProducerConfigProperties commandResponseConfig;
+    private KafkaProducerConfigProperties commandInternalConfig;
 
     @Inject
-    @ConfigMapping(prefix = "hono.kafka.producerTest")
-    KafkaProducerOptions producerOptions;
+    void setCommandResponseClientOptions(
+            @ConfigMapping(prefix = "hono.kafka")
+            final CommonKafkaClientOptions commonOptions,
+            @ConfigMapping(prefix = "hono.kafka.producerTest")
+            final KafkaProducerOptions commandResponseProducerOptions) {
 
-    private KafkaProducerConfigProperties config;
+        commandResponseConfig = new KafkaProducerConfigProperties(
+                StringSerializer.class,
+                StringSerializer.class,
+                commonOptions,
+                commandResponseProducerOptions);
+    }
 
-    @BeforeEach
-    void setUp() {
-        config = new KafkaProducerConfigProperties(StringSerializer.class, StringSerializer.class, commonOptions,
-                producerOptions);
+    @Inject
+    void setCommandInternalClientOptions(
+            @ConfigMapping(prefix = "hono.kafka")
+            final CommonKafkaClientOptions commonOptions,
+            @ConfigMapping(prefix = "hono.kafka.commandInternal")
+            final KafkaProducerOptions commandInternalProducerOptions) {
+
+        commandInternalConfig = new KafkaProducerConfigProperties(
+                StringSerializer.class,
+                StringSerializer.class,
+                commonOptions,
+                commandInternalProducerOptions);
     }
 
     /**
@@ -53,7 +67,15 @@ public class KafkaProducerConfigPropertiesQuarkusTest {
      */
     @Test
     public void testThatCommonConfigIsPresent() {
-        assertThat(config.getProducerConfig("test").get("common.property")).isEqualTo("present");
+        assertThat(commandResponseConfig.getProducerConfig("test").get("common.property")).isEqualTo("present");
+    }
+
+    /**
+     * Asserts that command internal producer properties are present.
+     */
+    @Test
+    public void testThatCommandInternalProducerConfigIsPresent() {
+        assertThat(commandInternalConfig.getProducerConfig("one")).isNotNull();
     }
 
     /**
@@ -61,7 +83,8 @@ public class KafkaProducerConfigPropertiesQuarkusTest {
      */
     @Test
     public void testThatProducerConfigIsPresent() {
-        assertThat(config.getProducerConfig("test").get("producer.property")).isEqualTo("producer");
+        assertThat(commandResponseConfig.getProducerConfig("test").get("producer.property")).isEqualTo("producer");
+        assertThat(commandInternalConfig.getProducerConfig("one")).isNotNull();
     }
 
     /**
@@ -69,7 +92,7 @@ public class KafkaProducerConfigPropertiesQuarkusTest {
      */
     @Test
     public void testThatNumbersArePresentAsStrings() {
-        assertThat(config.getProducerConfig("test").get("number")).isEqualTo("123");
+        assertThat(commandResponseConfig.getProducerConfig("test").get("number")).isEqualTo("123");
     }
 
     /**
@@ -77,7 +100,7 @@ public class KafkaProducerConfigPropertiesQuarkusTest {
      */
     @Test
     public void testThatEmptyValuesAreMaintained() {
-        assertThat(config.getProducerConfig("test").get("empty")).isEqualTo("");
+        assertThat(commandResponseConfig.getProducerConfig("test").get("empty")).isEqualTo("");
     }
 
 }

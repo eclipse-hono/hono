@@ -191,19 +191,54 @@ public class Application extends AbstractServiceApplication {
     }
 
     @Inject
-    void setKafkaClientOptions(
+    void setCommandInternalKafkaClientOptions(
+            @ConfigMapping(prefix = "hono.kafka")
+            final CommonKafkaClientOptions commonOptions,
+            @ConfigMapping(prefix = "hono.kafka.commandInternal")
+            final KafkaProducerOptions commandInternalProducerOptions) {
+
+        this.commandInternalKafkaProducerConfig = new MessagingKafkaProducerConfigProperties(
+                commonOptions,
+                commandInternalProducerOptions);
+    }
+
+    @Inject
+    void setCommandResponseKafkaClientOptions(
+            @ConfigMapping(prefix = "hono.kafka")
+            final CommonKafkaClientOptions commonOptions,
+            @ConfigMapping(prefix = "hono.kafka.commandResponse")
+            final KafkaProducerOptions commandResponseProducerOptions) {
+
+        this.commandResponseKafkaProducerConfig = new MessagingKafkaProducerConfigProperties(
+                commonOptions,
+                commandResponseProducerOptions);
+    }
+
+    @Inject
+    void setCommandConsumerKafkaClientOptions(
+            @ConfigMapping(prefix = "hono.kafka")
+            final CommonKafkaClientOptions commonOptions,
+            @ConfigMapping(prefix = "hono.kafka.command")
+            final KafkaConsumerOptions consumerOptions) {
+
+        this.kafkaConsumerConfig = new MessagingKafkaConsumerConfigProperties(commonOptions, consumerOptions);
+    }
+
+    @Inject
+    void setAdminKafkaClientOptions(
             @ConfigMapping(prefix = "hono.kafka") final CommonKafkaClientOptions commonOptions,
-            @ConfigMapping(prefix = "hono.kafka.commandInternal") final KafkaProducerOptions commandInternalProducerOptions,
-            @ConfigMapping(prefix = "hono.kafka.commandResponse") final KafkaProducerOptions commandResponseProducerOptions,
-            @ConfigMapping(prefix = "hono.kafka.command") final KafkaConsumerOptions consumerOptions,
-            @ConfigMapping(prefix = "hono.kafka.cleanup") final KafkaAdminClientOptions adminClientOptions,
+            @ConfigMapping(prefix = "hono.kafka.cleanup") final KafkaAdminClientOptions adminClientOptions) {
+
+        this.kafkaAdminClientConfig = new KafkaAdminClientConfigProperties(commonOptions, adminClientOptions);
+    }
+
+    @Inject
+    void setNotificationKafkaClientOptions(
+            @ConfigMapping(prefix = "hono.kafka") final CommonKafkaClientOptions commonOptions,
             @ConfigMapping(prefix = "hono.kafka.notification") final KafkaConsumerOptions notificationOptions) {
 
-        this.commandInternalKafkaProducerConfig = new MessagingKafkaProducerConfigProperties(commonOptions, commandInternalProducerOptions);
-        this.commandResponseKafkaProducerConfig = new MessagingKafkaProducerConfigProperties(commonOptions, commandResponseProducerOptions);
-        this.kafkaConsumerConfig = new MessagingKafkaConsumerConfigProperties(commonOptions, consumerOptions);
-        this.kafkaAdminClientConfig = new KafkaAdminClientConfigProperties(commonOptions, adminClientOptions);
-        this.kafkaNotificationConfig = new NotificationKafkaConsumerConfigProperties(commonOptions,
+        this.kafkaNotificationConfig = new NotificationKafkaConsumerConfigProperties(
+                commonOptions,
                 notificationOptions);
     }
 
