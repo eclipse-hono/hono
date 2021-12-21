@@ -352,19 +352,6 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
     }
 
     /**
-     * Verifies that a request for registration information fails for
-     * a request that does not contain a device ID.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testGetDeviceFailsForMissingDeviceId(final VertxTestContext ctx) {
-
-        registry.getRegistrationInfo(tenantId, null, HttpURLConnection.HTTP_NOT_FOUND)
-            .onComplete(ctx.succeedingThenComplete());
-    }
-
-    /**
      * Verifies that the registration information provided when updating
      * a device replaces the existing information.
      *
@@ -467,18 +454,6 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
     }
 
     /**
-     * Verifies that an update request fails if it doesn't contain a device ID.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testUpdateDeviceFailsForMissingDeviceId(final VertxTestContext ctx) {
-
-        registry.updateDevice(tenantId, null, new JsonObject(), CrudHttpClient.CONTENT_TYPE_JSON, HttpURLConnection.HTTP_NOT_FOUND)
-            .onComplete(ctx.succeedingThenComplete());
-    }
-
-    /**
      * Verifies that an update request fails if it contains no content type.
      *
      * @param ctx The vert.x test context.
@@ -544,18 +519,6 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
             .compose(ok -> registry.deregisterDevice(tenantId, deviceId))
             .compose(ok -> registry.getCredentials(tenantId, deviceId, HttpURLConnection.HTTP_NOT_FOUND))
             .compose(ok -> registry.getRegistrationInfo(tenantId, deviceId, HttpURLConnection.HTTP_NOT_FOUND))
-            .onComplete(ctx.succeedingThenComplete());
-    }
-
-    /**
-     * Verifies that a request to deregister a device fails if it doesn't contain a device ID.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testDeregisterDeviceFailsForMissingDeviceId(final VertxTestContext ctx) {
-
-        registry.deregisterDevice(tenantId, null, HttpURLConnection.HTTP_NOT_FOUND)
             .onComplete(ctx.succeedingThenComplete());
     }
 
