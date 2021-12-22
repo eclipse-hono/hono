@@ -100,12 +100,10 @@ public final class HotrodCache<K, V> extends BasicCache<K, V> {
 
         final var configBuilder = properties.getConfigurationBuilder();
         configBuilder.marshaller(new ProtoStreamMarshaller());
-        // make sure that put() and remove() methods return previous values
-        // because they are required by the
-        // org.eclipse.hono.deviceconnection.infinispan.client.Cache API.
-        configBuilder.remoteCache(commonCacheConfig.getCacheName()).forceReturnValues(true);
         final var configuration = configBuilder.build();
-        LOG.info("creating HotrodCache using configuration: {}", configuration);
+        if (LOG.isInfoEnabled()) {
+            LOG.info("creating HotrodCache using configuration: {}", configuration);
+        }
         return new HotrodCache<>(
                 vertx,
                 new RemoteCacheManager(configuration, false),

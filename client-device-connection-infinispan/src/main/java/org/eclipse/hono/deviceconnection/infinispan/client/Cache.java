@@ -44,12 +44,11 @@ public interface Cache<K, V> {
      *
      * @param key The key.
      * @param value The value.
-     * @return A succeeded future containing the previous value or {@code null} if the
-     *         cache didn't contain the key yet.
+     * @return A succeeded future if the value has been stored successfully.
      *         A failed future if the value could not be stored in the cache.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    Future<V> put(K key, V value);
+    Future<Void> put(K key, V value);
 
     /**
      * Puts a value to the cache.
@@ -58,12 +57,11 @@ public interface Cache<K, V> {
      * @param value The value.
      * @param lifespan The lifespan of the entry. A negative value is interpreted as an unlimited lifespan.
      * @param lifespanUnit The time unit for the lifespan.
-     * @return A succeeded future containing the previous value or {@code null} if the
-     *         cache didn't contain the key yet.
+     * @return A succeeded future if the value has been stored successfully.
      *         A failed future if the value could not be stored in the cache.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    Future<V> put(K key, V value, long lifespan, TimeUnit lifespanUnit);
+    Future<Void> put(K key, V value, long lifespan, TimeUnit lifespanUnit);
 
     /**
      * Puts all values of the given map to the cache.
@@ -105,7 +103,7 @@ public interface Cache<K, V> {
      * @param value The value.
      * @return A succeeded future containing {@code true} if the key was
      *         mapped to the value, {@code false} otherwise.
-     *         A failed future if the value could not be remove from the cache.
+     *         A failed future if the value could not be removed from the cache.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     Future<Boolean> remove(K key, V value);

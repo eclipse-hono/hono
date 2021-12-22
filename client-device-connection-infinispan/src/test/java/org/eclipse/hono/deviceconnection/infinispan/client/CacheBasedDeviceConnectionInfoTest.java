@@ -111,7 +111,7 @@ public class CacheBasedDeviceConnectionInfoTest {
     @Test
     public void testSetLastKnownGatewaySucceedsForSingleEntry(final VertxTestContext ctx) {
 
-        when(cache.put(anyString(), anyString(), anyLong(), any(TimeUnit.class))).thenReturn(Future.succeededFuture("oldValue"));
+        when(cache.put(anyString(), anyString(), anyLong(), any(TimeUnit.class))).thenReturn(Future.succeededFuture());
 
         info.setLastKnownGatewayForDevice(Constants.DEFAULT_TENANT, "device-id", "gw-id", span)
             .onComplete(ctx.succeeding(ok -> {
@@ -254,7 +254,7 @@ public class CacheBasedDeviceConnectionInfoTest {
     @Test
     public void testSetCommandHandlingAdapterInstanceSucceeds(final VertxTestContext ctx) {
 
-        when(cache.put(anyString(), anyString(), anyLong(), any())).thenReturn(Future.succeededFuture("oldValue"));
+        when(cache.put(anyString(), anyString(), anyLong(), any())).thenReturn(Future.succeededFuture());
 
         info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, "testDevice", "adapterInstance", null, span)
                 .onComplete(ctx.succeeding(ok -> {
@@ -278,7 +278,7 @@ public class CacheBasedDeviceConnectionInfoTest {
     @Test
     public void testSetCommandHandlingAdapterInstanceWithLifespanSucceeds(final VertxTestContext ctx) {
 
-        when(cache.put(anyString(), anyString(), anyLong(), any(TimeUnit.class))).thenReturn(Future.succeededFuture("oldValue"));
+        when(cache.put(anyString(), anyString(), anyLong(), any(TimeUnit.class))).thenReturn(Future.succeededFuture());
 
         info.setCommandHandlingAdapterInstance(Constants.DEFAULT_TENANT, "testDevice", "adapterInstance", Duration.ofSeconds(10), span)
                 .onComplete(ctx.succeeding(ok -> {
