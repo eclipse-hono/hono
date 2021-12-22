@@ -383,6 +383,8 @@ public class KubernetesBasedAdapterInstanceStatusService implements AdapterInsta
      */
     private static class LRUMap extends LinkedHashMap<String, Boolean> {
 
+        private static final long serialVersionUID = 1L;
+
         private final int maxEntries;
 
         LRUMap(final int maxEntries) {
