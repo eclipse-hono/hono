@@ -112,8 +112,12 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
      * If this method is invoked from a vert.x Context, then the returned future will be completed on that context.
      */
     @Override
-    public Future<Void> setLastKnownGatewayForDevice(final String tenantId, final String deviceId,
-            final String gatewayId, final Span span) {
+    public Future<Void> setLastKnownGatewayForDevice(
+            final String tenantId,
+            final String deviceId,
+            final String gatewayId,
+            final Span span) {
+
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(gatewayId);
@@ -121,22 +125,22 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
 
         final long lifespanMillis = LAST_KNOWN_GATEWAY_CACHE_ENTRY_LIFESPAN.toMillis();
         return cache.put(getGatewayEntryKey(tenantId, deviceId), gatewayId, lifespanMillis, TimeUnit.MILLISECONDS)
-            .map(replacedValue -> {
-                LOG.debug("set last known gateway [tenant: {}, device-id: {}, gateway: {}]", tenantId, deviceId,
-                        gatewayId);
-                return (Void) null;
-            })
-            .recover(t -> {
+            .onSuccess(ok -> LOG.debug("set last known gateway [tenant: {}, device-id: {}, gateway: {}]",
+                    tenantId, deviceId, gatewayId))
+            .otherwise(t -> {
                 LOG.debug("failed to set last known gateway [tenant: {}, device-id: {}, gateway: {}]",
                         tenantId, deviceId, gatewayId, t);
                 TracingHelper.logError(span, "failed to set last known gateway", t);
-                return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, t));
+                throw new ServerErrorException(tenantId, HttpURLConnection.HTTP_INTERNAL_ERROR, t);
             });
     }
 
     @Override
-    public Future<Void> setLastKnownGatewayForDevice(final String tenantId,
-            final Map<String, String> deviceIdToGatewayIdMap, final Span span) {
+    public Future<Void> setLastKnownGatewayForDevice(
+            final String tenantId,
+            final Map<String, String> deviceIdToGatewayIdMap,
+            final Span span) {
+
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceIdToGatewayIdMap);
         Objects.requireNonNull(span);
@@ -149,30 +153,32 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
         final Map<String, String> mapToBePut = deviceIdToGatewayIdMap.entrySet().stream()
                 .collect(Collectors.toMap(entry -> getGatewayEntryKey(tenantId, entry.getKey()), Map.Entry::getValue));
         return cache.putAll(mapToBePut, lifespanMillis, TimeUnit.MILLISECONDS)
-                .map(v -> {
-                    LOG.debug("set {} last known gateway entries [tenant: {}]", deviceIdToGatewayIdMap.size(), tenantId);
-                    return (Void) null;
-                })
-                .recover(t -> {
-                    LOG.debug("failed to set {} last known gateway entries [tenant: {}]", deviceIdToGatewayIdMap.size(),
-                            tenantId, t);
+                .onSuccess(ok -> LOG.debug("set {} last known gateway entries [tenant: {}]",
+                        deviceIdToGatewayIdMap.size(), tenantId))
+                .otherwise(t -> {
+                    LOG.debug("failed to set {} last known gateway entries [tenant: {}]",
+                            deviceIdToGatewayIdMap.size(), tenantId, t);
                     TracingHelper.logError(span, "failed to set last known gateway entries", t);
-                    return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, t));
+                    throw new ServerErrorException(tenantId, HttpURLConnection.HTTP_INTERNAL_ERROR, t);
                 });
     }
 
     @Override
-    public Future<JsonObject> getLastKnownGatewayForDevice(final String tenantId, final String deviceId, final Span span) {
+    public Future<JsonObject> getLastKnownGatewayForDevice(
+            final String tenantId,
+            final String deviceId,
+            final Span span) {
+
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(span);
 
         return cache.get(getGatewayEntryKey(tenantId, deviceId))
-                .recover(t -> {
+                .otherwise(t -> {
                     LOG.debug("failed to find last known gateway for device [tenant: {}, device-id: {}]",
                             tenantId, deviceId, t);
                     TracingHelper.logError(span, "failed to find last known gateway for device", t);
-                    return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, t));
+                    throw new ServerErrorException(tenantId, HttpURLConnection.HTTP_INTERNAL_ERROR, t);
                 })
                 .compose(gatewayId -> {
                     if (gatewayId == null) {
@@ -188,8 +194,13 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
     }
 
     @Override
-    public Future<Void> setCommandHandlingAdapterInstance(final String tenantId, final String deviceId,
-            final String adapterInstanceId, final Duration lifespan, final Span span) {
+    public Future<Void> setCommandHandlingAdapterInstance(
+            final String tenantId,
+            final String deviceId,
+            final String adapterInstanceId,
+            final Duration lifespan,
+            final Span span) {
+
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(adapterInstanceId);
@@ -199,22 +210,24 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
         final long lifespanMillis = lifespan == null || lifespan.isNegative()
                 || lifespan.getSeconds() > (Long.MAX_VALUE / 1000L) ? -1 : lifespan.toMillis();
         return cache.put(getAdapterInstanceEntryKey(tenantId, deviceId), adapterInstanceId, lifespanMillis, TimeUnit.MILLISECONDS)
-                .map(replacedValue -> {
-                    LOG.debug("set command handling adapter instance [tenant: {}, device-id: {}, adapter-instance: {}, lifespan: {}ms]",
-                            tenantId, deviceId, adapterInstanceId, lifespanMillis);
-                    return (Void) null;
-                })
-                .recover(t -> {
+                .onSuccess(ok -> LOG.debug(
+                        "set command handling adapter instance [tenant: {}, device-id: {}, adapter-instance: {}, lifespan: {}ms]",
+                        tenantId, deviceId, adapterInstanceId, lifespanMillis))
+                .otherwise(t -> {
                     LOG.debug("failed to set command handling adapter instance [tenant: {}, device-id: {}, adapter-instance: {}, lifespan: {}ms]",
                             tenantId, deviceId, adapterInstanceId, lifespanMillis, t);
                     TracingHelper.logError(span, "failed to set command handling adapter instance cache entry", t);
-                    return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, t));
+                    throw new ServerErrorException(tenantId, HttpURLConnection.HTTP_INTERNAL_ERROR, t);
                 });
     }
 
     @Override
-    public Future<Void> removeCommandHandlingAdapterInstance(final String tenantId, final String deviceId,
-            final String adapterInstanceId, final Span span) {
+    public Future<Void> removeCommandHandlingAdapterInstance(
+            final String tenantId,
+            final String deviceId,
+            final String adapterInstanceId,
+            final Span span) {
+
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(adapterInstanceId);
@@ -222,11 +235,11 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
 
         return cache
                 .remove(getAdapterInstanceEntryKey(tenantId, deviceId), adapterInstanceId)
-                .recover(t -> {
+                .otherwise(t -> {
                     LOG.debug("failed to remove the cache entry for the command handling adapter instance [tenant: {}, device-id: {}, adapter-instance: {}]",
                             tenantId, deviceId, adapterInstanceId, t);
                     TracingHelper.logError(span, "failed to remove cache entry for the command handling adapter instance", t);
-                    return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, t));
+                    throw new ServerErrorException(tenantId, HttpURLConnection.HTTP_INTERNAL_ERROR, t);
                 })
                 .compose(removed -> {
                     if (!removed) {
@@ -243,8 +256,12 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
     }
 
     @Override
-    public Future<JsonObject> getCommandHandlingAdapterInstances(final String tenantId, final String deviceId,
-            final Set<String> viaGateways, final Span span) {
+    public Future<JsonObject> getCommandHandlingAdapterInstances(
+            final String tenantId,
+            final String deviceId,
+            final Set<String> viaGateways,
+            final Span span) {
+
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(viaGateways);
@@ -363,8 +380,12 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
         span.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
     }
 
-    private Future<JsonObject> getInstancesGettingLastKnownGatewayFirst(final String tenantId, final String deviceId,
-            final Set<String> viaGateways, final Span span) {
+    private Future<JsonObject> getInstancesGettingLastKnownGatewayFirst(
+            final String tenantId,
+            final String deviceId,
+            final Set<String> viaGateways,
+            final Span span) {
+
         return cache.get(getGatewayEntryKey(tenantId, deviceId))
                 .recover(t -> failedToGetEntriesWhenGettingInstances(tenantId, deviceId, t, span))
                 .compose(lastKnownGateway -> {
@@ -406,8 +427,12 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
                 });
     }
 
-    private Future<JsonObject> getAdapterInstancesWithoutLastKnownGatewayCheck(final String tenantId,
-            final String deviceId, final Set<String> viaGateways, final Span span) {
+    private Future<JsonObject> getAdapterInstancesWithoutLastKnownGatewayCheck(
+            final String tenantId,
+            final String deviceId,
+            final Set<String> viaGateways,
+            final Span span) {
+
         return cache.getAll(getAdapterInstanceEntryKeys(tenantId, deviceId, viaGateways))
                 .recover(t -> failedToGetEntriesWhenGettingInstances(tenantId, deviceId, t, span))
                 .map(getAllMap -> checkAdapterInstanceIds(tenantId, convertAdapterInstanceEntryKeys(getAllMap), span))
@@ -431,8 +456,12 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
                 });
     }
 
-    private Future<JsonObject> getAdapterInstanceFoundForDeviceItselfResult(final String tenantId,
-            final String deviceId, final String adapterInstanceId, final Span span) {
+    private Future<JsonObject> getAdapterInstanceFoundForDeviceItselfResult(
+            final String tenantId,
+            final String deviceId,
+            final String adapterInstanceId,
+            final Span span) {
+
         LOG.debug("returning command handling adapter instance '{}' for device itself [tenant: {}, device-id: {}]",
                 adapterInstanceId, tenantId, deviceId);
         span.log("returning command handling adapter instance for device itself");
@@ -440,7 +469,12 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
         return Future.succeededFuture(getAdapterInstancesResultJson(deviceId, adapterInstanceId));
     }
 
-    private <T> Future<T> failedToGetEntriesWhenGettingInstances(final String tenantId, final String deviceId, final Throwable t, final Span span) {
+    private <T> Future<T> failedToGetEntriesWhenGettingInstances(
+            final String tenantId,
+            final String deviceId,
+            final Throwable t,
+            final Span span) {
+
         LOG.debug("failed to get cache entries when trying to get command handling adapter instances [tenant: {}, device-id: {}]",
                 tenantId, deviceId, t);
         TracingHelper.logError(span, "failed to get cache entries when trying to get command handling adapter instances", t);
@@ -455,9 +489,12 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
         return KEY_PREFIX_ADAPTER_INSTANCE_VALUES + KEY_SEPARATOR + tenantId + KEY_SEPARATOR + deviceId;
     }
 
-    static Set<String> getAdapterInstanceEntryKeys(final String tenantId, final String deviceIdA,
+    static Set<String> getAdapterInstanceEntryKeys(
+            final String tenantId,
+            final String deviceIdA,
             final String deviceIdB) {
-        final HashSet<String> keys = new HashSet<>(2);
+
+        final Set<String> keys = new HashSet<>(2);
         keys.add(getAdapterInstanceEntryKey(tenantId, deviceIdA));
         keys.add(getAdapterInstanceEntryKey(tenantId, deviceIdB));
         return keys;
@@ -472,7 +509,8 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
      */
     private static Map<String, String> convertAdapterInstanceEntryKeys(final Map<String, String> map) {
         return map.entrySet().stream()
-                .collect(Collectors.toMap(entry -> getDeviceIdFromAdapterInstanceEntryKey(entry.getKey()), Map.Entry::getValue));
+                .collect(Collectors.toMap(entry -> getDeviceIdFromAdapterInstanceEntryKey(
+                        entry.getKey()), Map.Entry::getValue));
     }
 
     private static String getDeviceIdFromAdapterInstanceEntryKey(final String key) {
@@ -480,9 +518,12 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
         return key.substring(pos + KEY_SEPARATOR.length());
     }
 
-    static Set<String> getAdapterInstanceEntryKeys(final String tenantId, final String deviceIdA,
+    static Set<String> getAdapterInstanceEntryKeys(
+            final String tenantId,
+            final String deviceIdA,
             final Set<String> additionalDeviceIds) {
-        final HashSet<String> keys = new HashSet<>(additionalDeviceIds.size() + 1);
+
+        final Set<String> keys = new HashSet<>(additionalDeviceIds.size() + 1);
         keys.add(getAdapterInstanceEntryKey(tenantId, deviceIdA));
         additionalDeviceIds.forEach(id -> keys.add(getAdapterInstanceEntryKey(tenantId, id)));
         return keys;
@@ -517,8 +558,12 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
-    private String checkAdapterInstanceId(final String adapterInstanceId, final String tenantId, final String deviceId,
+    private String checkAdapterInstanceId(
+            final String adapterInstanceId,
+            final String tenantId,
+            final String deviceId,
             final Span span) {
+
         if (adapterInstanceId != null) {
             final AdapterInstanceStatus status = adapterInstanceStatusProvider.getStatus(adapterInstanceId);
             if (status == AdapterInstanceStatus.DEAD) {
@@ -532,15 +577,15 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
                                         adapterInstanceId, tenantId, deviceId);
                             }
                         })
-                        .onFailure(thr -> {
-                            LOG.debug("error removing entry with obsolete adapter instance id '{}' [tenant: {}, device-id: {}]",
-                                    adapterInstanceId, tenantId, deviceId, thr);
-                        });
+                        .onFailure(thr -> LOG.debug(
+                                "error removing entry with obsolete adapter instance id '{}' [tenant: {}, device-id: {}]",
+                                adapterInstanceId, tenantId, deviceId, thr));
                 return null;
             } else if (status == AdapterInstanceStatus.SUSPECTED_DEAD) {
                 LOG.debug("ignoring found adapter instance id, belongs to container with state 'SUSPECTED_DEAD' [tenant: {}, device-id: {}, adapter-instance-id: {}]",
                         tenantId, deviceId, adapterInstanceId);
-                span.log("ignoring found adapter instance id [" + adapterInstanceId + "], belongs to container with state 'SUSPECTED_DEAD'");
+                span.log("ignoring found adapter instance id [" + adapterInstanceId +
+                        "], belongs to container with state 'SUSPECTED_DEAD'");
                 return null;
             }
         }
