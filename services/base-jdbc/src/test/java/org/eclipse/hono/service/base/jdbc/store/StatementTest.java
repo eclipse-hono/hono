@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,18 +13,18 @@
 
 package org.eclipse.hono.service.base.jdbc.store;
 
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import static com.google.common.truth.Truth.assertThat;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import org.hamcrest.core.IsInstanceOf;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.yaml.snakeyaml.constructor.ConstructorException;
@@ -132,7 +132,7 @@ public class StatementTest {
 
         assertFalse(Files.isRegularFile(markerFile), "Marker file must not exist");
         assertNotNull(expected);
-        assertThat(expected, IsInstanceOf.instanceOf(ConstructorException.class));
+        assertThat(expected).isInstanceOf(ConstructorException.class);
     }
 
 }

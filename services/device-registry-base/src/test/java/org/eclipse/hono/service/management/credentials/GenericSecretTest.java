@@ -13,12 +13,7 @@
 package org.eclipse.hono.service.management.credentials;
 
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.aMapWithSize;
-import static org.hamcrest.Matchers.hasEntry;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
+import static com.google.common.truth.Truth.assertThat;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -47,7 +42,7 @@ public class GenericSecretTest {
 
         final JsonObject json = JsonObject.mapFrom(secret);
         CommonSecretTest.assertCommonProperties(json);
-        assertThat(json.getString("foo"), is("bar"));
+        assertThat(json.getString("foo")).isEqualTo("bar");
     }
 
     /**
@@ -69,22 +64,22 @@ public class GenericSecretTest {
                                 .put("quote", "setec astronomy")))
                 .mapTo(CommonCredential.class);
 
-        assertThat(credential, notNullValue());
-        assertThat(credential, instanceOf(GenericCredential.class));
+        assertThat(credential).isNotNull();
+        assertThat(credential).isInstanceOf(GenericCredential.class);
 
-        assertThat(credential.getSecrets(), notNullValue());
-        assertThat(credential.getSecrets().size(), is(1));
-        assertThat(credential.getSecrets().get(0), instanceOf(GenericSecret.class));
+        assertThat(credential.getSecrets()).isNotNull();
+        assertThat(credential.getSecrets()).hasSize(1);
+        assertThat(credential.getSecrets().get(0)).isInstanceOf(GenericSecret.class);
 
         final var secret = (GenericSecret) credential.getSecrets().get(0);
-        assertThat(secret.getAdditionalProperties(), notNullValue());
-        assertThat(secret.getAdditionalProperties(), aMapWithSize(1));
-        assertThat(secret.getAdditionalProperties(), hasEntry("quote", "setec astronomy"));
-        assertThat(secret.getNotBefore().atOffset(ZoneOffset.ofHours(-4)), is(notBefore));
-        assertThat(secret.getNotAfter().atOffset(ZoneOffset.ofHours(0)), is(notAfter));
+        assertThat(secret.getAdditionalProperties()).isNotNull();
+        assertThat(secret.getAdditionalProperties()).hasSize(1);
+        assertThat(secret.getAdditionalProperties()).containsEntry("quote", "setec astronomy");
+        assertThat(secret.getNotBefore().atOffset(ZoneOffset.ofHours(-4))).isEqualTo(notBefore);
+        assertThat(secret.getNotAfter().atOffset(ZoneOffset.ofHours(0))).isEqualTo(notAfter);
 
-        assertThat(credential.getAuthId(), is("authId1"));
-        assertThat(((GenericCredential) credential).getType(), is("foo"));
+        assertThat(credential.getAuthId()).isEqualTo("authId1");
+        assertThat(((GenericCredential) credential).getType()).isEqualTo("foo");
 
     }
 }

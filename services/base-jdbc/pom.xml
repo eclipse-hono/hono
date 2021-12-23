@@ -78,8 +78,8 @@
 
     <!-- testing -->
     <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-core</artifactId>
+      <groupId>com.google.truth</groupId>
+      <artifactId>truth</artifactId>
     </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>

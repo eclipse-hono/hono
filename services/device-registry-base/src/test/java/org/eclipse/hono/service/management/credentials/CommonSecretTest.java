@@ -14,9 +14,6 @@ package org.eclipse.hono.service.management.credentials;
 
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.spy;
 
 import static com.google.common.truth.Truth.assertThat;
@@ -71,10 +68,10 @@ public class CommonSecretTest {
      *                        of {@link #addCommonProperties(CommonSecret)}.
      */
     protected static void assertCommonProperties(final JsonObject json) {
-        assertThat(json.getString(RegistryManagementConstants.FIELD_ID), is("1234"));
-        assertThat(json.getString(RegistryManagementConstants.FIELD_COMMENT), is("a comment"));
-        assertThat(json.getString(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE), is("2017-05-01T13:00:00Z"));
-        assertThat(json.getString(RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER), is("2018-01-01T00:00:00Z"));
+        assertThat(json.getString(RegistryManagementConstants.FIELD_ID)).isEqualTo("1234");
+        assertThat(json.getString(RegistryManagementConstants.FIELD_COMMENT)).isEqualTo("a comment");
+        assertThat(json.getString(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE)).isEqualTo("2017-05-01T13:00:00Z");
+        assertThat(json.getString(RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER)).isEqualTo("2018-01-01T00:00:00Z");
     }
 
     /**
@@ -93,12 +90,11 @@ public class CommonSecretTest {
 
         final PasswordSecret secret = json.mapTo(PasswordSecret.class);
         final LocalDateTime before = LocalDateTime.of(2017, 05, 01, 14, 00, 00);
-        assertEquals(before.toInstant(ZoneOffset.of("+01:00")), secret.getNotBefore());
+        assertThat(before.toInstant(ZoneOffset.of("+01:00"))).isEqualTo(secret.getNotBefore());
 
         final JsonObject decodedSecret = JsonObject.mapFrom(secret);
-        assertEquals("2017-05-01T13:00:00Z", decodedSecret.getValue("not-before"));
-        assertEquals("2037-06-01T14:00:00Z", decodedSecret.getValue("not-after"));
-
+        assertThat(decodedSecret.getValue("not-before")).isEqualTo("2017-05-01T13:00:00Z");
+        assertThat(decodedSecret.getValue("not-after")).isEqualTo("2037-06-01T14:00:00Z");
     }
 
     /**

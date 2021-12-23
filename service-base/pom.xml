@@ -162,10 +162,6 @@
       <artifactId>truth</artifactId>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-core</artifactId>
-    </dependency>
   </dependencies>
 
   <build>

@@ -14,15 +14,14 @@
 package org.eclipse.hono.service.management.tenant;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.emptyIterable;
-import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import static com.google.common.truth.Truth.assertThat;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -338,7 +337,7 @@ public class TenantTest {
         final JsonObject json = JsonObject.mapFrom(limits);
         assertFalse(json.containsKey(RegistryManagementConstants.FIELD_MAX_CONNECTIONS));
         final ResourceLimits deserializedLimits = json.mapTo(ResourceLimits.class);
-        assertThat(deserializedLimits.getMaxConnections(), is(-1));
+        assertThat(deserializedLimits.getMaxConnections()).isEqualTo(-1);
     }
 
     /**
@@ -505,7 +504,7 @@ public class TenantTest {
     @Test
     public void testEncodeDefault() {
         final var json = JsonObject.mapFrom(new Tenant());
-        assertThat(json, is(emptyIterable()));
+        assertThat(json).isEmpty();
     }
 
     /**

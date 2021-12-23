@@ -149,11 +149,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-core</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>core-test-utils</artifactId>
       <scope>test</scope>
