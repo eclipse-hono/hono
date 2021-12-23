@@ -103,7 +103,6 @@ public class MongoDbBasedTenantServiceTest implements AbstractTenantServiceTest 
                 return vertxCloseHandler.future();
             })
             .onComplete(testContext.succeedingThenComplete());
-        dao.close();
     }
 
     @Override
