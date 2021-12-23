@@ -41,12 +41,12 @@
     <jaeger.image.name>jaegertracing/all-in-one:1.29</jaeger.image.name>
     <jaeger.version>1.6.0</jaeger.version>
     <!-- 
-      We want to allow users to run containers in a rootless Docker environnment.
+      We want to allow users to run containers in a rootless Docker environment.
       For that purpose, the JVM needs to support cgroups v2 based resource limits
       specified on the containers. OpenJDK supports this starting with version 15:
       https://bugs.openjdk.java.net/browse/JDK-8230305
      -->
-    <java-base-image.name>docker.io/eclipse-temurin:17-focal</java-base-image.name>
+    <java-base-image.name>docker.io/eclipse-temurin:17-jre-focal</java-base-image.name>
     <jaxb.api.version>2.2.12</jaxb.api.version>
     <javax.annotation.api.version>1.3.2</javax.annotation.api.version>
     <jjwt.version>0.11.2</jjwt.version>
