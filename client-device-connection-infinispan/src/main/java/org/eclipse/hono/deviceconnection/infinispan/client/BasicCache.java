@@ -154,20 +154,20 @@ public abstract class BasicCache<K, V> implements Cache<K, V>, Lifecycle {
     }
 
     @Override
-    public Future<V> put(final K key, final V value) {
+    public Future<Void> put(final K key, final V value) {
         Objects.requireNonNull(key);
         Objects.requireNonNull(value);
 
-        return withCache(aCache -> aCache.putAsync(key, value));
+        return withCache(aCache -> aCache.putAsync(key, value).thenApply(v -> (Void) null));
     }
 
     @Override
-    public Future<V> put(final K key, final V value, final long lifespan, final TimeUnit lifespanUnit) {
+    public Future<Void> put(final K key, final V value, final long lifespan, final TimeUnit lifespanUnit) {
         Objects.requireNonNull(key);
         Objects.requireNonNull(value);
         Objects.requireNonNull(lifespanUnit);
 
-        return withCache(aCache -> aCache.putAsync(key, value, lifespan, lifespanUnit));
+        return withCache(aCache -> aCache.putAsync(key, value, lifespan, lifespanUnit).thenApply(v -> (Void) null));
     }
 
     @Override

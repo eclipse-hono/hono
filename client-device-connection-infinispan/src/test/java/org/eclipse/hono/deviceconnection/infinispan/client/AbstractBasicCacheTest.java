@@ -125,13 +125,12 @@ abstract class AbstractBasicCacheTest {
     @Test
     void testPutSucceeds(final VertxTestContext ctx) {
         final var grid = givenAConnectedInfinispanCache();
-        when(grid.putAsync(anyString(), anyString())).thenReturn(CompletableFuture.completedFuture("oldValue"));
+        when(grid.putAsync(anyString(), anyString())).thenReturn(CompletableFuture.completedFuture((Void) null));
         getCache().start()
             .compose(ok -> getCache().put("key", "value"))
-            .onComplete(ctx.succeeding(v -> {
+            .onComplete(ctx.succeeding(ok -> {
                 ctx.verify(() -> {
                     verify(grid).putAsync("key", "value");
-                    assertThat(v).isEqualTo("oldValue");
                 });
                 ctx.completeNow();
             }));
@@ -147,13 +146,12 @@ abstract class AbstractBasicCacheTest {
     void testPutWithLifespanSucceeds(final VertxTestContext ctx) {
         final var grid = givenAConnectedInfinispanCache();
         when(grid.putAsync(anyString(), anyString(), anyLong(), any(TimeUnit.class)))
-                .thenReturn(CompletableFuture.completedFuture("oldValue"));
+                .thenReturn(CompletableFuture.completedFuture((Void) null));
         getCache().start()
                 .compose(ok -> getCache().put("key", "value", 1, TimeUnit.SECONDS))
                 .onComplete(ctx.succeeding(v -> {
                     ctx.verify(() -> {
                         verify(grid).putAsync("key", "value", 1, TimeUnit.SECONDS);
-                        assertThat(v).isEqualTo("oldValue");
                     });
                     ctx.completeNow();
                 }));
