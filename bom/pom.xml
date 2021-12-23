@@ -45,7 +45,6 @@
       https://bugs.openjdk.java.net/browse/JDK-8230305
      -->
     <java-base-image.name>docker.io/eclipse-temurin:17-jre-focal</java-base-image.name>
-    <jaxb.api.version>2.2.12</jaxb.api.version>
     <javax.annotation.api.version>1.3.2</javax.annotation.api.version>
     <jjwt.version>0.11.2</jjwt.version>
     <junit.jupiter.version>5.7.2</junit.jupiter.version>
@@ -766,15 +765,9 @@
         <version>${jjwt.version}</version>
       </dependency>
       <dependency>
-        <!-- required as a (missing) transient dependency for JJWT -->
-        <groupId>javax.xml.bind</groupId>
-        <artifactId>jaxb-api</artifactId>
-        <version>${jaxb.api.version}</version>
-      </dependency>
-      <dependency>
-          <groupId>javax.annotation</groupId>
-          <artifactId>javax.annotation-api</artifactId>
-          <version>${javax.annotation.api.version}</version>
+        <groupId>javax.annotation</groupId>
+        <artifactId>javax.annotation-api</artifactId>
+        <version>${javax.annotation.api.version}</version>
       </dependency>
       <dependency>
         <groupId>com.google.guava</groupId>

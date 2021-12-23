@@ -52,12 +52,6 @@
       <scope>runtime</scope>
     </dependency>
     <dependency>
-      <!-- required as a (missing) transient dependency for JJWT -->
-      <groupId>javax.xml.bind</groupId>
-      <artifactId>jaxb-api</artifactId>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-web</artifactId>
       <exclusions>

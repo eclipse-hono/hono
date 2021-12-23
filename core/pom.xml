@@ -83,12 +83,6 @@
       <optional>true</optional>
     </dependency>
     <dependency>
-      <!-- required as a (missing) transient dependency for JJWT -->
-      <groupId>javax.xml.bind</groupId>
-      <artifactId>jaxb-api</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
       <groupId>io.smallrye.config</groupId>
       <artifactId>smallrye-config</artifactId>
       <optional>true</optional>

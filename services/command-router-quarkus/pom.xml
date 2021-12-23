@@ -27,6 +27,12 @@
     <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-service-command-router-base</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>javax.annotation</groupId>
+          <artifactId>javax.annotation-api</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
@@ -48,17 +54,10 @@
         </exclusion>
       </exclusions>
     </dependency>
-<!--     <dependency> -->
-<!--       <groupId>io.quarkus</groupId> -->
-<!--       <artifactId>quarkus-elytron-security-common</artifactId> -->
-<!--       <exclusions> -->
-<!--         <exclusion> -->
-<!--           <groupId>io.quarkus</groupId> -->
-<!--           <artifactId>quarkus-ide-launcher</artifactId> -->
-<!--         </exclusion> -->
-<!--       </exclusions> -->
-<!--     </dependency> -->
-
+    <dependency>
+      <groupId>jakarta.xml.bind</groupId>
+      <artifactId>jakarta.xml.bind-api</artifactId>
+    </dependency>
   </dependencies>
 
   <build>
