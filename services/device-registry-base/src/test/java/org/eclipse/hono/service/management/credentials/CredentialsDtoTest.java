@@ -14,7 +14,7 @@
 
 package org.eclipse.hono.service.management.credentials;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -54,8 +54,8 @@ class CredentialsDtoTest {
 
         existingCred.setSecrets(List.of(existingSecret, dup));
 
-        assertThatThrownBy(() -> CredentialsDto.forCreation(CredentialsDto::new, List.of(existingCred), "1"))
-            .isInstanceOf(ClientErrorException.class);
+        assertThrows(ClientErrorException.class,
+                () -> CredentialsDto.forCreation(CredentialsDto::new, List.of(existingCred), "1"));
     }
 
     @Test
@@ -80,7 +80,7 @@ class CredentialsDtoTest {
 
         final CredentialsDto updatedDto = CredentialsDto.forUpdate(CredentialsDto::new, List.of(updatedCred), "1");
         assertThat(updatedDto.requiresMerging()).isTrue();
-        assertThatThrownBy(() -> updatedDto.merge(existingDto)).isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class, () -> updatedDto.merge(existingDto));
     }
 
     /**

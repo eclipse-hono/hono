@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.service.management.tenant;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -89,8 +88,7 @@ public class TenantTest {
      */
     @Test
     public void testDecodeFailsForUnknownProperties() {
-        assertThatThrownBy(() -> Json.decodeValue("{\"unexpected\": \"property\"}", Tenant.class))
-            .isInstanceOf(DecodeException.class);
+        assertThrows(DecodeException.class, () -> Json.decodeValue("{\"unexpected\": \"property\"}", Tenant.class));
     }
 
     /**
@@ -176,7 +174,7 @@ public class TenantTest {
                         .put(RegistryManagementConstants.FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED, false));
         final JsonObject tenant = new JsonObject()
                 .put(RegistryManagementConstants.FIELD_ADAPTERS, adapterJson);
-        assertThatThrownBy(() -> tenant.mapTo(Tenant.class)).isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class, () -> tenant.mapTo(Tenant.class));
     }
 
     /**

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,7 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.util;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -264,8 +264,7 @@ public class ResourceIdentifierTest {
      */
     @Test
     public void testFromPathFailsForEmptyPathArray() {
-        assertThatThrownBy(() -> ResourceIdentifier.fromPath(new String[] {}))
-                .isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class, () -> ResourceIdentifier.fromPath(new String[] {}));
     }
 
     /**
@@ -274,8 +273,8 @@ public class ResourceIdentifierTest {
      */
     @Test
     public void testFromPathFailsForPathStartingWithNullSegment() {
-        assertThatThrownBy(() -> ResourceIdentifier.fromPath(new String[] { null, "second", "last" }))
-            .isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class,
+                () -> ResourceIdentifier.fromPath(new String[] { null, "second", "last" }));
     }
 
     /**
@@ -284,8 +283,8 @@ public class ResourceIdentifierTest {
      */
     @Test
     public void testFromPathFailsForPathStartingWithEmptySegment() {
-        assertThatThrownBy(() -> ResourceIdentifier.fromPath(new String[] { "", "second", "last" }))
-                .isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class,
+                () -> ResourceIdentifier.fromPath(new String[] { "", "second", "last" }));
     }
 
     /**
@@ -294,8 +293,7 @@ public class ResourceIdentifierTest {
      */
     @Test
     public void testFromIndividualParametersFailsForEmptyEndpoint() {
-        assertThatThrownBy(() -> ResourceIdentifier.from("", "myTenant", "myDevice"))
-                .isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class, () -> ResourceIdentifier.from("", "myTenant", "myDevice"));
     }
 
     /**
@@ -305,8 +303,7 @@ public class ResourceIdentifierTest {
     @Test
     public void testFromStringFailsForEmptyString() {
         assertThat(ResourceIdentifier.isValid("")).isFalse();
-        assertThatThrownBy(() -> ResourceIdentifier.fromString(""))
-                .isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class, () -> ResourceIdentifier.fromString(""));
     }
 
     /**
@@ -316,11 +313,9 @@ public class ResourceIdentifierTest {
     @Test
     public void testFromStringFailsForStringWithEmptyFirstSegment() {
         assertThat(ResourceIdentifier.isValid("/")).isFalse();
-        assertThatThrownBy(() -> ResourceIdentifier.fromString("/"))
-                .isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class, () -> ResourceIdentifier.fromString("/"));
 
         assertThat(ResourceIdentifier.isValid("/test")).isFalse();
-        assertThatThrownBy(() -> ResourceIdentifier.fromString("/test"))
-                .isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class, () -> ResourceIdentifier.fromString("/test"));
     }
 }

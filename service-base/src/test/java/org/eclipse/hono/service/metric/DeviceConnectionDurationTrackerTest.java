@@ -12,8 +12,8 @@
  */
 package org.eclipse.hono.service.metric;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -86,10 +86,9 @@ public class DeviceConnectionDurationTrackerTest {
      */
     @Test
     public void testWithNegativeRecordingInterval() {
-        assertThatThrownBy(() -> DeviceConnectionDurationTracker.Builder
+        assertThrows(IllegalArgumentException.class, () -> DeviceConnectionDurationTracker.Builder
                 .forTenant("TEST_TENANT")
-                .withRecordingInterval(-100))
-                        .isInstanceOf(IllegalArgumentException.class);
+                .withRecordingInterval(-100));
     }
 
     /**
@@ -97,9 +96,8 @@ public class DeviceConnectionDurationTrackerTest {
      */
     @Test
     public void testWithNegativeNumberOfDeviceConnections() {
-        assertThatThrownBy(() -> DeviceConnectionDurationTracker.Builder
+        assertThrows(IllegalArgumentException.class, () -> DeviceConnectionDurationTracker.Builder
                 .forTenant("TEST_TENANT")
-                .withNumberOfDeviceConnections(-100))
-                        .isInstanceOf(IllegalArgumentException.class);
+                .withNumberOfDeviceConnections(-100));
     }
 }

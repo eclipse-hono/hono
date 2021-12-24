@@ -12,8 +12,8 @@
  *******************************************************************************/
 package org.eclipse.hono.config;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -110,7 +110,7 @@ public class PemReaderTest {
      */
     @Test
     public void testError1() throws IOException {
-        assertThatThrownBy(() -> PemReader.readAll(this.basePath2.resolve("error1.pem"))).isInstanceOf(IOException.class);
+        assertThrows(IOException.class, () -> PemReader.readAll(this.basePath2.resolve("error1.pem")));
     }
 
     /**
@@ -120,7 +120,7 @@ public class PemReaderTest {
      */
     @Test
     public void testError2() throws IOException {
-        assertThatThrownBy(() -> PemReader.readAll(this.basePath2.resolve("error2.pem"))).isInstanceOf(IOException.class);
+        assertThrows(IOException.class, () -> PemReader.readAll(this.basePath2.resolve("error2.pem")));
     }
 
     /**
@@ -130,7 +130,7 @@ public class PemReaderTest {
      */
     @Test
     public void testError3() throws IOException {
-        assertThatThrownBy(() -> PemReader.readAll(this.basePath2.resolve("error3.pem"))).isInstanceOf(IOException.class);
+        assertThrows(IOException.class, () -> PemReader.readAll(this.basePath2.resolve("error3.pem")));
     }
 
     /**
@@ -140,7 +140,7 @@ public class PemReaderTest {
      */
     @Test
     public void testError4() throws IOException {
-        assertThatThrownBy(() -> PemReader.readAll(this.basePath2.resolve("error4.pem"))).isInstanceOf(IOException.class);
+        assertThrows(IOException.class, () -> PemReader.readAll(this.basePath2.resolve("error4.pem")));
     }
 
     /**
@@ -150,6 +150,6 @@ public class PemReaderTest {
      */
     @Test
     public void testError5() throws IOException {
-        assertThatThrownBy(() -> PemReader.readAll(this.basePath2.resolve("error5.pem"))).isInstanceOf(IOException.class);
+        assertThrows(IOException.class, () -> PemReader.readAll(this.basePath2.resolve("error5.pem")));
     }
 }

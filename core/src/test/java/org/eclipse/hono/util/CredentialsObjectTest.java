@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.util;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -62,7 +62,7 @@ public class CredentialsObjectTest {
     @Test
     public void testCheckSecretsDetectsMissingSecrets() {
         final CredentialsObject creds = new CredentialsObject("tenant", "device", "x509-cert");
-        assertThatThrownBy(() -> creds.checkSecrets()).isInstanceOf(IllegalStateException.class);
+        assertThrows(IllegalStateException.class, () -> creds.checkSecrets());
     }
 
     /**
@@ -87,7 +87,7 @@ public class CredentialsObjectTest {
         creds.addSecret(new JsonObject()
                 .put(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE, "malformed"));
 
-        assertThatThrownBy(() -> creds.checkSecrets()).isInstanceOf(IllegalStateException.class);
+        assertThrows(IllegalStateException.class, () -> creds.checkSecrets());
     }
 
     /**
@@ -101,7 +101,7 @@ public class CredentialsObjectTest {
         creds.addSecret(new JsonObject()
                 .put(CredentialsConstants.FIELD_SECRETS_NOT_AFTER, "malformed"));
 
-        assertThatThrownBy(() -> creds.checkSecrets()).isInstanceOf(IllegalStateException.class);
+        assertThrows(IllegalStateException.class, () -> creds.checkSecrets());
     }
 
     /**
@@ -116,7 +116,7 @@ public class CredentialsObjectTest {
                 .put(CredentialsConstants.FIELD_SECRETS_NOT_BEFORE, "2018-10-10T00:00:00+00:00")
                 .put(CredentialsConstants.FIELD_SECRETS_NOT_AFTER, "2018-10-01T00:00:00+00:00"));
 
-        assertThatThrownBy(() -> creds.checkSecrets()).isInstanceOf(IllegalStateException.class);
+        assertThrows(IllegalStateException.class, () -> creds.checkSecrets());
     }
 
     /**
@@ -128,7 +128,8 @@ public class CredentialsObjectTest {
         final CredentialsObject creds = new CredentialsObject("tenant", "device", "x509-cert");
         creds.setType(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD);
         creds.addSecret(new JsonObject().put(CredentialsConstants.FIELD_SECRETS_PWD_HASH, "hash"));
-        assertThatThrownBy(() -> creds.checkSecrets()).isInstanceOf(IllegalStateException.class);
+
+        assertThrows(IllegalStateException.class, () -> creds.checkSecrets());
     }
 
     /**
@@ -140,7 +141,8 @@ public class CredentialsObjectTest {
         final CredentialsObject creds = new CredentialsObject("tenant", "device", "x509-cert");
         creds.setType(CredentialsConstants.SECRETS_TYPE_HASHED_PASSWORD);
         creds.addSecret(new JsonObject().put(CredentialsConstants.FIELD_SECRETS_HASH_FUNCTION, CredentialsConstants.HASH_FUNCTION_SHA256));
-        assertThatThrownBy(() -> creds.checkSecrets()).isInstanceOf(IllegalStateException.class);
+
+        assertThrows(IllegalStateException.class, () -> creds.checkSecrets());
     }
 
     /**

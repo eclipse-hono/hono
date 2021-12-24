@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020,2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,11 +14,10 @@
 
 package org.eclipse.hono.service.management;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.Filter.Operator;
 import org.junit.jupiter.api.Test;
 
@@ -57,41 +56,36 @@ class FilterTest {
     @Test
     void testDecodingFailsForMissingField() {
 
-        assertThatThrownBy(() -> Json.decodeValue("{\"value\":\"ACME*\"}", Filter.class))
-            .isInstanceOf(DecodeException.class);
+        assertThrows(DecodeException.class, () -> Json.decodeValue("{\"value\":\"ACME*\"}", Filter.class));
     }
 
     @Test
     void testDecodingFailsForMissingValue() {
 
-        assertThatThrownBy(() -> Json.decodeValue("{\"field\":\"/manufacturer\"}", Filter.class))
-            .isInstanceOf(DecodeException.class);
+        assertThrows(DecodeException.class, () -> Json.decodeValue("{\"field\":\"/manufacturer\"}", Filter.class));
     }
 
     @Test
     void testDecodingFailsForUnknownField() {
 
-        assertThatThrownBy(() -> Json.decodeValue(
+        assertThrows(DecodeException.class, () -> Json.decodeValue(
                 "{\"field\":\"/manufacturer\",\"value\":\"ACME*\",\"unknown\":10}",
-                Filter.class))
-            .isInstanceOf(DecodeException.class);
+                Filter.class));
     }
 
     @Test
     void testDecodingFailsForUnknownOperator() {
 
-        assertThatThrownBy(() -> Json.decodeValue(
+        assertThrows(DecodeException.class, () -> Json.decodeValue(
                 "{\"field\":\"/manufacturer\",\"value\":\"ACME*\",\"op\":\"unknown\"}",
-                Filter.class))
-            .isInstanceOf(DecodeException.class);
+                Filter.class));
     }
 
     @Test
     void testDecodingFailsForNonJsonPointer() {
 
-        assertThatThrownBy(() -> Json.decodeValue(
+        assertThrows(DecodeException.class, () -> Json.decodeValue(
                 "{\"field\":\"manufacturer\",\"value\":\"ACME*\"}",
-                Filter.class))
-            .isInstanceOf(DecodeException.class);
+                Filter.class));
     }
 }

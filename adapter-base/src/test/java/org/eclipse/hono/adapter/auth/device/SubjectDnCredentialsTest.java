@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,7 +14,7 @@
 
 package org.eclipse.hono.adapter.auth.device;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -62,8 +62,7 @@ public class SubjectDnCredentialsTest {
     @Test
     public void testCreateDoesNotAllowNullClientContext() {
 
-        assertThatThrownBy(() -> SubjectDnCredentials.create("tenant", "CN=eclipse.org", null))
-            .isInstanceOf(NullPointerException.class);
+        assertThrows(NullPointerException.class, () -> SubjectDnCredentials.create("tenant", "CN=eclipse.org", null));
     }
 
     /**
@@ -74,8 +73,7 @@ public class SubjectDnCredentialsTest {
     public void testCreateDoesNotAllowNullClientContextWithPrincipal() {
 
         final var subjectDn = new X500Principal("CN=eclipse.org");
-        assertThatThrownBy(() -> SubjectDnCredentials.create("tenant", subjectDn, null))
-            .isInstanceOf(NullPointerException.class);
+        assertThrows(NullPointerException.class, () -> SubjectDnCredentials.create("tenant", subjectDn, null));
     }
 
 }

@@ -12,7 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.client.kafka.consumer;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
@@ -123,9 +123,8 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         };
         final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig("test");
 
-        assertThatThrownBy(() -> {
-            new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of("test"), handler, consumerConfig);
-        }).isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class,
+                () -> new AsyncHandlingAutoCommitKafkaConsumer(vertx, Set.of("test"), handler, consumerConfig));
     }
 
     /**

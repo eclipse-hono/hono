@@ -13,7 +13,7 @@
 package org.eclipse.hono.service.management.credentials;
 
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.spy;
 
 import static com.google.common.truth.Truth.assertThat;
@@ -109,7 +109,7 @@ public class CommonSecretTest {
         final PasswordSecret otherSecret = new PasswordSecret();
         otherSecret.setId("one");
 
-        assertThatThrownBy(() -> updatedSecret.merge(otherSecret)).isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class, () -> updatedSecret.merge(otherSecret));
     }
 
     /**
@@ -124,7 +124,7 @@ public class CommonSecretTest {
         final CommonSecret otherSecret = spy(CommonSecret.class);
         otherSecret.setId("two");
 
-        assertThatThrownBy(() -> updatedSecret.merge(otherSecret)).isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class, () -> updatedSecret.merge(otherSecret));
     }
 
     /**

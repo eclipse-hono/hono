@@ -12,10 +12,10 @@
  *******************************************************************************/
 package org.eclipse.hono.config;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -51,8 +51,8 @@ public class KeyLoaderTest {
     @Test
     public void testLoaderFailsForNonExistingKeyStore() {
 
-        assertThatThrownBy(() -> KeyLoader.fromKeyStore(vertx, "non-existing.p12", "secret".toCharArray()))
-            .isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class,
+                () -> KeyLoader.fromKeyStore(vertx, "non-existing.p12", "secret".toCharArray()));
     }
 
     /**
@@ -102,8 +102,8 @@ public class KeyLoaderTest {
     @Test
     public void testLoaderFailsForNonExistingKeyFile() {
 
-        assertThatThrownBy(() -> KeyLoader.fromFiles(vertx, "non-existing-key.pem", PREFIX_KEY_PATH + "auth-server-cert.pem"))
-            .isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class,
+                () -> KeyLoader.fromFiles(vertx, "non-existing-key.pem", PREFIX_KEY_PATH + "auth-server-cert.pem"));
     }
 
     /**
@@ -113,8 +113,8 @@ public class KeyLoaderTest {
     @Test
     public void testLoaderFailsForNonExistingCertFile() {
 
-        assertThatThrownBy(() -> KeyLoader.fromFiles(vertx, PREFIX_KEY_PATH + "auth-server-key.pem", "non-existing-cert.pem"))
-            .isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class,
+                () -> KeyLoader.fromFiles(vertx, PREFIX_KEY_PATH + "auth-server-key.pem", "non-existing-cert.pem"));
     }
 
     /**

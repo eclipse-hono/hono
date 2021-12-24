@@ -14,7 +14,7 @@
 
 package org.eclipse.hono.auth;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -32,7 +32,7 @@ public class BCryptHelperTest {
      */
     @Test
     public void testGetCostFactorFailsForInvalidHash() {
-        assertThatThrownBy(() -> BCryptHelper.getCostFactor("invalid-hash")).isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class, () -> BCryptHelper.getCostFactor("invalid-hash"));
     }
 
     /**
@@ -40,8 +40,8 @@ public class BCryptHelperTest {
      */
     @Test
     public void testGetCostFactorFailsForUnsupportedVersion() {
-        assertThatThrownBy(() -> BCryptHelper.getCostFactor("$2y$10$LgDCAvCL1IVbWrIty6RV4.NunlK67mAsj/0d6QXwW4VGD.9qnzU6q"))
-            .isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class,
+                () -> BCryptHelper.getCostFactor("$2y$10$LgDCAvCL1IVbWrIty6RV4.NunlK67mAsj/0d6QXwW4VGD.9qnzU6q"));
     }
 
     /**

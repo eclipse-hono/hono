@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.util;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -75,7 +75,7 @@ public class MessageHelperTest {
 
         final Message msg = ProtonHelper.message();
         msg.setBody(new Data(new Binary(new byte[] { 0x01, 0x02, 0x03, 0x04 }))); // not JSON
-        assertThatThrownBy(() -> MessageHelper.getJsonPayload(msg)).isInstanceOf(DecodeException.class);
+        assertThrows(DecodeException.class, () -> MessageHelper.getJsonPayload(msg));
     }
 
     /**

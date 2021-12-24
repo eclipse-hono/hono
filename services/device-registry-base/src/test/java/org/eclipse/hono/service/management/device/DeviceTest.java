@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.service.management.device;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -48,8 +48,8 @@ public class DeviceTest {
      */
     @Test
     public void testDecodeFailsForUnknownProperties() {
-        assertThatThrownBy(() -> Json.decodeValue("{\"unexpected\": \"property\"}", Device.class))
-            .isInstanceOf(DecodeException.class);
+        assertThrows(DecodeException.class,
+                () -> Json.decodeValue("{\"unexpected\": \"property\"}", Device.class));
     }
 
     /**

@@ -31,7 +31,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
-import org.assertj.core.api.Assertions;
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 import org.eclipse.hono.auth.Device;
@@ -203,10 +202,9 @@ public class HttpBasedMessageMappingTest {
         final ArgumentCaptor<MultiMap> headersCaptor = ArgumentCaptor.forClass(MultiMap.class);
         verify(httpRequest).putHeaders(headersCaptor.capture());
         final MultiMap addedHeaders = headersCaptor.getValue();
-        Assertions.assertThat(addedHeaders)
-                .anyMatch(header -> header.getKey().equals(MessageHelper.APP_PROPERTY_ORIG_ADDRESS) && header.getValue().equals(topic));
-        Assertions.assertThat(addedHeaders)
-                .anyMatch(header -> header.getKey().equals(HttpHeaders.CONTENT_TYPE.toString()) && header.getValue().equals("text/plain"));
+
+        assertThat(addedHeaders.contains(MessageHelper.APP_PROPERTY_ORIG_ADDRESS, topic, false)).isTrue();
+        assertThat(addedHeaders.contains(HttpHeaders.CONTENT_TYPE.toString(), "text/plain", false));
     }
 
     /**

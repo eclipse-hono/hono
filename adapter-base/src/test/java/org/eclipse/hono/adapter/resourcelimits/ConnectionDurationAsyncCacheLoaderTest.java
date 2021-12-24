@@ -14,7 +14,7 @@
 
 package org.eclipse.hono.adapter.resourcelimits;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.verify;
 
@@ -25,7 +25,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.ConnectionDuration;
@@ -160,8 +159,6 @@ public class ConnectionDurationAsyncCacheLoaderTest extends AsyncCacheLoaderTest
                 getExpectedConnectionDurationQuery(TENANT_ID, 10 * 24 * 60), QUERY_TIMEOUT, REQUEST_TIMEOUT);
         verify(jsonRequest).send(VertxMockSupport.anyHandler());
 
-        assertThatThrownBy(() -> result.get())
-            .isInstanceOf(ExecutionException.class)
-            .hasCauseInstanceOf(TimeoutException.class);
+        assertThrows(ExecutionException.class, () -> result.get());
     }
 }

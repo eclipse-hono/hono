@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.util;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -191,7 +191,7 @@ public class TenantObjectTest {
     public void testAddingAdapterOfSameTypeFails() {
         final TenantObject tenantConfig = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE);
         tenantConfig.addAdapter(new Adapter("type-1"));
-        assertThatThrownBy(() -> tenantConfig.addAdapter(new Adapter("type-1"))).isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class, () -> tenantConfig.addAdapter(new Adapter("type-1")));
     }
 
     /**
@@ -203,7 +203,7 @@ public class TenantObjectTest {
         final TenantObject tenantConfig = TenantObject.from(Constants.DEFAULT_TENANT, Boolean.TRUE);
         tenantConfig.addAdapter(new Adapter("type-1"));
         final List<Adapter> adapters = Arrays.asList(new Adapter("type-2"), new Adapter("type-2"));
-        assertThatThrownBy(() -> tenantConfig.setAdapters(adapters)).isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class, () -> tenantConfig.setAdapters(adapters));
         assertThat(tenantConfig.getAdapters().get(0).getType()).isEqualTo("type-1");
     }
 
@@ -218,7 +218,7 @@ public class TenantObjectTest {
         final List<Adapter> adapterConfigurations = new ArrayList<>();
         adapterConfigurations.add(new Adapter("type-2"));
         adapterConfigurations.add(new Adapter("type-2"));
-        assertThatThrownBy(() -> tenantConfig.setAdapters(adapterConfigurations)).isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class, () -> tenantConfig.setAdapters(adapterConfigurations));
         assertThat(tenantConfig.getAdapters().size()).isEqualTo(1);
         assertThat(tenantConfig.getAdapter("type-1")).isNotNull();
     }

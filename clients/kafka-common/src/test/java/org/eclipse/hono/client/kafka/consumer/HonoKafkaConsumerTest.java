@@ -12,7 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.client.kafka.consumer;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -109,9 +109,8 @@ public class HonoKafkaConsumerTest {
         final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig("test");
         consumerConfig.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
 
-        assertThatThrownBy(() -> {
-            new HonoKafkaConsumer(vertx, Set.of("test"), handler, consumerConfig);
-        }).isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class,
+                () -> new HonoKafkaConsumer(vertx, Set.of("test"), handler, consumerConfig));
     }
 
     /**

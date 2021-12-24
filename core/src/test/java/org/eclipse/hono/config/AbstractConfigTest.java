@@ -12,7 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.config;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -109,8 +109,7 @@ public class AbstractConfigTest {
 
         cfg.setKeyStorePath(PREFIX_KEY_PATH + "does-not-exist");
         cfg.setKeyStorePassword("authkeys");
-        assertThatThrownBy(() -> cfg.getKeyCertOptions())
-            .isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class, () -> cfg.getKeyCertOptions());
     }
 
     /**
@@ -122,8 +121,7 @@ public class AbstractConfigTest {
         cfg.setKeyPath(PREFIX_KEY_PATH + "does-not-exist");
         cfg.setCertPath(PREFIX_KEY_PATH + "auth-server-cert.pem");
 
-        assertThatThrownBy(() -> cfg.getKeyCertOptions())
-            .isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class, () -> cfg.getKeyCertOptions());
     }
 
     /**
@@ -135,8 +133,7 @@ public class AbstractConfigTest {
         cfg.setKeyPath(PREFIX_KEY_PATH + "auth-server-key.pem");
         cfg.setCertPath(PREFIX_KEY_PATH + "does-not-exist");
 
-        assertThatThrownBy(() -> cfg.getKeyCertOptions())
-            .isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class, () -> cfg.getKeyCertOptions());
     }
 
     /**
@@ -146,8 +143,7 @@ public class AbstractConfigTest {
     public void testNonExistingTrustStore() {
 
         cfg.setTrustStorePath(PREFIX_KEY_PATH + "doest-not-exist");
-        assertThatThrownBy(() -> cfg.getTrustOptions())
-            .isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class, () -> cfg.getTrustOptions());
     }
 
     /**

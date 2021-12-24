@@ -12,9 +12,9 @@
  *******************************************************************************/
 package org.eclipse.hono.service.management.credentials;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -411,18 +411,15 @@ public class CredentialsTest {
      */
     @Test
     public void testDecodeFailsForUnknownProperties() {
-        assertThatThrownBy(() -> Json.decodeValue(
+        assertThrows(DecodeException.class, () -> Json.decodeValue(
                 "{\"type\": \"psk\", \"auth-id\": \"device1\", \"unexpected\": \"property\"}",
-                CommonCredential.class))
-        .isInstanceOf(DecodeException.class);
-        assertThatThrownBy(() -> Json.decodeValue(
+                CommonCredential.class));
+        assertThrows(DecodeException.class, () -> Json.decodeValue(
                 "{\"type\": \"hashed-password\", \"auth-id\": \"device1\", \"unexpected\": \"property\"}",
-                CommonCredential.class))
-        .isInstanceOf(DecodeException.class);
-        assertThatThrownBy(() -> Json.decodeValue(
+                CommonCredential.class));
+        assertThrows(DecodeException.class, () -> Json.decodeValue(
                 "{\"type\": \"x509-cert\", \"auth-id\": \"CN=foo\", \"unexpected\": \"property\"}",
-                CommonCredential.class))
-        .isInstanceOf(DecodeException.class);
+                CommonCredential.class));
     }
 
     /**
@@ -437,52 +434,44 @@ public class CredentialsTest {
                 .put(RegistryManagementConstants.FIELD_AUTH_ID, "foo_ID-ext.4563=F")
                 .put(RegistryManagementConstants.FIELD_ENABLED, true);
 
-        assertThatThrownBy(() -> pwdCreds.mapTo(PasswordCredential.class))
-            .isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class, () -> pwdCreds.mapTo(PasswordCredential.class));
 
         pwdCreds.put(RegistryManagementConstants.FIELD_SECRETS, new JsonArray());
 
-        assertThatThrownBy(() -> pwdCreds.mapTo(PasswordCredential.class))
-            .isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class, () -> pwdCreds.mapTo(PasswordCredential.class));
 
         final JsonObject pskCreds = new JsonObject()
                 .put(RegistryManagementConstants.FIELD_TYPE, RegistryManagementConstants.SECRETS_TYPE_PRESHARED_KEY)
                 .put(RegistryManagementConstants.FIELD_AUTH_ID, "foo_ID-ext.4563=F")
                 .put(RegistryManagementConstants.FIELD_ENABLED, true);
 
-        assertThatThrownBy(() -> pskCreds.mapTo(PasswordCredential.class))
-            .isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class, () -> pskCreds.mapTo(PasswordCredential.class));
 
         pskCreds.put(RegistryManagementConstants.FIELD_SECRETS, new JsonArray());
 
-        assertThatThrownBy(() -> pskCreds.mapTo(PasswordCredential.class))
-            .isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class, () -> pskCreds.mapTo(PasswordCredential.class));
 
         final JsonObject x509Creds = new JsonObject()
                 .put(RegistryManagementConstants.FIELD_TYPE, RegistryManagementConstants.SECRETS_TYPE_X509_CERT)
                 .put(RegistryManagementConstants.FIELD_AUTH_ID, "CN=Acme")
                 .put(RegistryManagementConstants.FIELD_ENABLED, true);
 
-        assertThatThrownBy(() -> x509Creds.mapTo(PasswordCredential.class))
-            .isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class, () -> x509Creds.mapTo(PasswordCredential.class));
 
         x509Creds.put(RegistryManagementConstants.FIELD_SECRETS, new JsonArray());
 
-        assertThatThrownBy(() -> x509Creds.mapTo(PasswordCredential.class))
-            .isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class, () -> x509Creds.mapTo(PasswordCredential.class));
 
         final JsonObject genericCreds = new JsonObject()
                 .put(RegistryManagementConstants.FIELD_TYPE, "custom")
                 .put(RegistryManagementConstants.FIELD_AUTH_ID, "foo_ID-ext.4563=F")
                 .put(RegistryManagementConstants.FIELD_ENABLED, true);
 
-        assertThatThrownBy(() -> genericCreds.mapTo(GenericCredential.class))
-            .isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class, () -> genericCreds.mapTo(GenericCredential.class));
 
         genericCreds.put(RegistryManagementConstants.FIELD_SECRETS, new JsonArray());
 
-        assertThatThrownBy(() -> genericCreds.mapTo(GenericCredential.class))
-            .isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class, () -> genericCreds.mapTo(GenericCredential.class));
 
     }
 
@@ -530,8 +519,8 @@ public class CredentialsTest {
     public void testMergeFailsForDifferentType() {
 
         final PasswordCredential pwdCredentials = Credentials.createPasswordCredential("foo", "bar");
-        assertThatThrownBy(() -> pwdCredentials.merge(Credentials.createPSKCredential("acme", "key")))
-            .isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class,
+                () -> pwdCredentials.merge(Credentials.createPSKCredential("acme", "key")));
     }
 
     /**
@@ -549,8 +538,7 @@ public class CredentialsTest {
         newSecret.setId("one");
         final PasswordCredential newCredentials = new PasswordCredential("foo", List.of(newSecret));
 
-        assertThatThrownBy(() -> newCredentials.merge(existingCredentials))
-            .isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class, () -> newCredentials.merge(existingCredentials));
         verify(existingSecret, never()).merge(any(PasswordSecret.class));
         verify(newSecret, never()).merge(any(PasswordSecret.class));
     }
@@ -589,12 +577,12 @@ public class CredentialsTest {
     public void testInstantiationFailsForIllegalAuthId() {
 
         illegalPasswordCredentialAuthIds().forEach(authId -> {
-            assertThatThrownBy(() -> new PasswordCredential(authId, List.of(new PasswordSecret())))
-                .isInstanceOf(IllegalArgumentException.class);
+            assertThrows(IllegalArgumentException.class,
+                    () -> new PasswordCredential(authId, List.of(new PasswordSecret())));
         });
 
-        assertThatThrownBy(() -> X509CertificateCredential.fromSubjectDn("not-a-subject-DN", List.of(new X509CertificateSecret())))
-            .isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class,
+                () -> X509CertificateCredential.fromSubjectDn("not-a-subject-DN", List.of(new X509CertificateSecret())));
     }
 
     /**
@@ -611,15 +599,13 @@ public class CredentialsTest {
                     .put(RegistryManagementConstants.FIELD_TYPE, RegistryManagementConstants.SECRETS_TYPE_HASHED_PASSWORD)
                     .put(RegistryManagementConstants.FIELD_AUTH_ID, illegalAuthId)
                     .put(RegistryManagementConstants.FIELD_SECRETS, new JsonArray().add(pwdSecret));
-            assertThatThrownBy(() -> jsonCredential.mapTo(PasswordCredential.class))
-                .isInstanceOf(IllegalArgumentException.class);
+            assertThrows(IllegalArgumentException.class, () -> jsonCredential.mapTo(PasswordCredential.class));
         });
         final JsonObject jsonCredential = new JsonObject()
                 .put(RegistryManagementConstants.FIELD_TYPE, RegistryManagementConstants.SECRETS_TYPE_X509_CERT)
                 .put(RegistryManagementConstants.FIELD_AUTH_ID, "not-a-subject-DN")
                 .put(RegistryManagementConstants.FIELD_SECRETS, new JsonArray().add(new JsonObject()));
-        assertThatThrownBy(() -> jsonCredential.mapTo(X509CertificateCredential.class))
-            .isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class, () -> jsonCredential.mapTo(X509CertificateCredential.class));
     }
 
     /**
@@ -631,7 +617,6 @@ public class CredentialsTest {
         final JsonObject jsonCredential = new JsonObject()
                 .put(RegistryManagementConstants.FIELD_AUTH_ID, "device1")
                 .put(RegistryManagementConstants.FIELD_SECRETS, new JsonArray().add(new JsonObject()));
-        assertThatThrownBy(() -> jsonCredential.mapTo(CommonCredential.class))
-            .isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class, () -> jsonCredential.mapTo(CommonCredential.class));
     }
 }

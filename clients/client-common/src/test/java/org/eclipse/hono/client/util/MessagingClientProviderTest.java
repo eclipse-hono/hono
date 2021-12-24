@@ -14,6 +14,7 @@
 
 package org.eclipse.hono.client.util;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -21,7 +22,6 @@ import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Map;
 
-import org.assertj.core.api.Assertions;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.MessagingClient;
 import org.eclipse.hono.util.MessagingType;
@@ -127,7 +127,7 @@ public class MessagingClientProviderTest {
      */
     @Test
     public void testGetClientFailsIfNoClientHasBeenSet() {
-        Assertions.assertThatIllegalStateException().isThrownBy(() -> underTest.getClient(TenantObject.from(tenant, true)));
+        assertThrows(IllegalStateException.class, () -> underTest.getClient(TenantObject.from(tenant, true)));
     }
 
     abstract static class TestClient implements MessagingClient, Lifecycle {
