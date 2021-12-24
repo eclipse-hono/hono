@@ -49,7 +49,6 @@
     <junit.jupiter.version>5.7.2</junit.jupiter.version>
     <kafka.image.name>confluentinc/cp-kafka:6.2.2</kafka.image.name>
     <logback.version>1.2.9</logback.version>
-    <micrometer.version>1.7.4</micrometer.version>
     <mongodb-image.name>mongo:4.4.9</mongodb-image.name>
     <mongodb-driver.version>4.3.3</mongodb-driver.version>
     <native.image.name>registry.access.redhat.com/ubi8/ubi-minimal:8.4</native.image.name>
@@ -289,19 +288,6 @@
         <groupId>org.eclipse.californium</groupId>
         <artifactId>scandium</artifactId>
         <version>${californium.version}</version>
-      </dependency>
-
-      <!-- Micrometer -->
-      <dependency>
-        <groupId>io.micrometer</groupId>
-        <artifactId>micrometer-core</artifactId>
-        <version>${micrometer.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.micrometer</groupId>
-        <artifactId>micrometer-registry-prometheus</artifactId>
-        <version>${micrometer.version}</version>
-        <scope>runtime</scope>
       </dependency>
 
       <!-- Spring -->
