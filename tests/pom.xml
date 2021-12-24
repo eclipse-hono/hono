@@ -75,6 +75,12 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <!-- use minimum cost factor in order to speed up test execution -->
     <max.bcrypt.costFactor>4</max.bcrypt.costFactor>
 
+    <default.java-options>
+      -XX:MinRAMPercentage=80
+      -XX:MaxRAMPercentage=90
+      -DenableForcedCommandRerouting=true
+    </default.java-options>
+
     <!--
      Properties defining whether the Device Connection service (now deprecated) or the Command Router service
      shall be used for Command & Control. The default here lets the Command Router service be used.
@@ -88,6 +94,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <hono.command-router.disabled>false</hono.command-router.disabled>
     <hono.command-router.image>hono-service-command-router</hono.command-router.image>
     <hono.command-router.max-mem>300000000</hono.command-router.max-mem>
+    <hono.command-router.java-options>${default.java-options}</hono.command-router.java-options>
+    <hono.command-router.native-image-args></hono.command-router.native-image-args>
 
     <hono.device-connection.disabled>true</hono.device-connection.disabled>
 
@@ -118,6 +126,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <hono.deviceregistry.resources.folder>deviceregistry-mongodb</hono.deviceregistry.resources.folder>
     <!-- default memory limit of the device registry container is 400MB -->
     <hono.deviceregistry.containerMemoryLimit>400000000</hono.deviceregistry.containerMemoryLimit>
+    <hono.deviceregistry.java-options>${default.java-options}</hono.deviceregistry.java-options>
     <!-- Spring application profiles to activate for the registry -->
     <hono.deviceregistry.spring.profiles>${logging.profile}</hono.deviceregistry.spring.profiles>
     <!--  accept requests with a body size of up to 2000 bytes -->
@@ -146,33 +155,33 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <hono.amqp-adapter.image>hono-adapter-amqp-vertx</hono.amqp-adapter.image>
     <hono.amqp-adapter.config-dir>etc/hono</hono.amqp-adapter.config-dir>
     <hono.amqp-adapter.max-mem>314572800</hono.amqp-adapter.max-mem>
+    <hono.amqp-adapter.java-options>${default.java-options}</hono.amqp-adapter.java-options>
+    <hono.amqp-adapter.native-image-args></hono.amqp-adapter.native-image-args>
 
     <hono.coap-adapter.image>hono-adapter-coap-vertx</hono.coap-adapter.image>
     <hono.coap-adapter.config-dir>etc/hono</hono.coap-adapter.config-dir>
     <hono.coap-adapter.max-mem>314572800</hono.coap-adapter.max-mem>
+    <hono.coap-adapter.java-options>${default.java-options}</hono.coap-adapter.java-options>
+    <hono.coap-adapter.native-image-args></hono.coap-adapter.native-image-args>
 
     <hono.http-adapter.image>hono-adapter-http-vertx</hono.http-adapter.image>
     <hono.http-adapter.config-dir>etc/hono</hono.http-adapter.config-dir>
     <hono.http-adapter.max-mem>314572800</hono.http-adapter.max-mem>
     <hono.http-adapter.nativeTlsRequired>true</hono.http-adapter.nativeTlsRequired>
+    <hono.http-adapter.java-options>${default.java-options}</hono.http-adapter.java-options>
+    <hono.http-adapter.native-image-args></hono.http-adapter.native-image-args>
 
     <hono.mqtt-adapter.image>hono-adapter-mqtt-vertx</hono.mqtt-adapter.image>
     <hono.mqtt-adapter.config-dir>etc/hono</hono.mqtt-adapter.config-dir>
     <hono.mqtt-adapter.max-mem>314572800</hono.mqtt-adapter.max-mem>
+    <hono.mqtt-adapter.java-options>${default.java-options}</hono.mqtt-adapter.java-options>
+    <hono.mqtt-adapter.native-image-args></hono.mqtt-adapter.native-image-args>
 
     <hono.auth-server.image>hono-service-auth</hono.auth-server.image>
     <hono.auth-server.config-dir>etc/hono</hono.auth-server.config-dir>
     <hono.auth-server.max-mem>205520896</hono.auth-server.max-mem>
-
-    <default.java.options>
-      -XX:MinRAMPercentage=80
-      -XX:MaxRAMPercentage=90
-      -DenableForcedCommandRerouting=true
-    </default.java.options>
-    <amqp.java.options></amqp.java.options>
-    <coap.java.options></coap.java.options>
-    <http.java.options></http.java.options>
-    <mqtt.java.options></mqtt.java.options>
+    <hono.auth-server.java-options>${default.java-options}</hono.auth-server.java-options>
+    <hono.auth-server.native-image-args></hono.auth-server.native-image-args>
 
     <trace.frames>0</trace.frames>
     <jaeger.disabled>true</jaeger.disabled>
@@ -877,13 +886,16 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                      -->
                     <memorySwap>${hono.auth-server.max-mem}</memorySwap>
                     <memory>${hono.auth-server.max-mem}</memory>
+                    <cmd>
+                      <exec>
+                        <arg>${hono.auth-server.native-image-args}</arg>
+                      </exec>
+                    </cmd>
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>authentication-impl,${logging.profile}</SPRING_PROFILES_ACTIVE>
-                      <JDK_JAVA_OPTIONS>
-                        ${default.java.options}
-                      </JDK_JAVA_OPTIONS>
+                      <JDK_JAVA_OPTIONS>${hono.auth-server.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                     </env>
                     <log>
@@ -1147,7 +1159,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>${hono.deviceregistry.spring.profiles}</SPRING_PROFILES_ACTIVE>
-                      <JDK_JAVA_OPTIONS>${default.java.options}</JDK_JAVA_OPTIONS>
+                      <JDK_JAVA_OPTIONS>${hono.deviceregistry.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <JAEGER_SERVICE_NAME>device-registry</JAEGER_SERVICE_NAME>
                       <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
@@ -1220,7 +1232,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>${logging.profile},embedded-cache</SPRING_PROFILES_ACTIVE>
-                      <JDK_JAVA_OPTIONS>${default.java.options}</JDK_JAVA_OPTIONS>
+                      <JDK_JAVA_OPTIONS>${default.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <JAEGER_SERVICE_NAME>device-connection</JAEGER_SERVICE_NAME>
                       <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
@@ -1296,11 +1308,16 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </network>
                     <memorySwap>${hono.command-router.max-mem}</memorySwap>
                     <memory>${hono.command-router.max-mem}</memory>
+                    <cmd>
+                      <exec>
+                        <arg>${hono.command-router.native-image-args}</arg>
+                      </exec>
+                    </cmd>
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>${logging.profile},embedded-cache,enable-device-connection-endpoint</SPRING_PROFILES_ACTIVE>
-                      <JDK_JAVA_OPTIONS>${default.java.options}</JDK_JAVA_OPTIONS>
+                      <JDK_JAVA_OPTIONS>${hono.command-router.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <JAEGER_SERVICE_NAME>command-router</JAEGER_SERVICE_NAME>
                       <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
@@ -1377,11 +1394,16 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </network>
                     <memorySwap>${hono.http-adapter.max-mem}</memorySwap>
                     <memory>${hono.http-adapter.max-mem}</memory>
+                    <cmd>
+                      <exec>
+                        <arg>${hono.http-adapter.native-image-args}</arg>
+                      </exec>
+                    </cmd>
                     <env>
                       <LOGGING_CONFIG>file:/etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:/etc/hono/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
-                      <JDK_JAVA_OPTIONS>${default.java.options} ${http.java.options}</JDK_JAVA_OPTIONS>
+                      <JDK_JAVA_OPTIONS>${hono.http-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <JAEGER_SERVICE_NAME>hono-adapter-http</JAEGER_SERVICE_NAME>
                       <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
@@ -1448,16 +1470,16 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </network>
                     <memorySwap>${hono.mqtt-adapter.max-mem}</memorySwap>
                     <memory>${hono.mqtt-adapter.max-mem}</memory>
+                    <cmd>
+                      <exec>
+                        <arg>${hono.mqtt-adapter.native-image-args}</arg>
+                      </exec>
+                    </cmd>
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
-                      <JDK_JAVA_OPTIONS>${default.java.options} ${mqtt.java.options}</JDK_JAVA_OPTIONS>
-                      <!--
-                        disable -Xmx calculation done by the runJava.sh script
-                        used by the Quarkus based images
-                      -->
-                      <JAVA_MAX_MEM_RATIO>0</JAVA_MAX_MEM_RATIO>
+                      <JDK_JAVA_OPTIONS>${hono.mqtt-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <JAEGER_SERVICE_NAME>hono-adapter-mqtt</JAEGER_SERVICE_NAME>
                       <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
@@ -1524,11 +1546,16 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </network>
                     <memorySwap>${hono.amqp-adapter.max-mem}</memorySwap>
                     <memory>${hono.amqp-adapter.max-mem}</memory>
+                    <cmd>
+                      <exec>
+                        <arg>${hono.amqp-adapter.native-image-args}</arg>
+                      </exec>
+                    </cmd>
                     <env>
                       <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
-                      <JDK_JAVA_OPTIONS>${default.java.options} ${amqp.java.options}</JDK_JAVA_OPTIONS>
+                      <JDK_JAVA_OPTIONS>${hono.amqp-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <JAEGER_SERVICE_NAME>hono-adapter-amqp</JAEGER_SERVICE_NAME>
                       <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
@@ -1595,11 +1622,16 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     </network>
                     <memorySwap>${hono.coap-adapter.max-mem}</memorySwap>
                     <memory>${hono.coap-adapter.max-mem}</memory>
+                    <cmd>
+                      <exec>
+                        <arg>${hono.coap-adapter.native-image-args}</arg>
+                      </exec>
+                    </cmd>
                     <env>
                       <LOGGING_CONFIG>file:/etc/hono/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:/etc/hono/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
-                      <JDK_JAVA_OPTIONS>${default.java.options} ${coap.java.options}</JDK_JAVA_OPTIONS>
+                      <JDK_JAVA_OPTIONS>${hono.coap-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <JAEGER_SERVICE_NAME>hono-adapter-coap</JAEGER_SERVICE_NAME>
                       <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
