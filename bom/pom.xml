@@ -56,7 +56,6 @@
     <native.image.name>registry.access.redhat.com/ubi8/ubi-minimal:8.4</native.image.name>
     <netty.version>4.1.68.Final</netty.version>
     <netty.tcnative.version>2.0.42.Final</netty.tcnative.version>
-    <okhttp.version>3.14.9</okhttp.version>
     <opentracing.version>0.33.0</opentracing.version>
     <opentracing-resolver.version>0.1.8</opentracing-resolver.version>
     <postgresql-image.name>postgres:12-alpine</postgresql-image.name>
@@ -721,24 +720,6 @@
         <artifactId>jaeger-micrometer</artifactId>
         <version>${jaeger.version}</version>
         <scope>runtime</scope>
-      </dependency>
-      <dependency>
-        <groupId>com.squareup.okhttp3</groupId>
-        <artifactId>okhttp</artifactId>
-        <version>${okhttp.version}</version>
-        <scope>runtime</scope>
-      </dependency>
-      <dependency>
-        <groupId>com.squareup.okhttp3</groupId>
-        <artifactId>logging-interceptor</artifactId>
-        <version>${okhttp.version}</version>
-        <scope>runtime</scope>
-        <exclusions>
-          <exclusion>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-stdlib-jdk8</artifactId>
-          </exclusion>
-        </exclusions>
       </dependency>
       <dependency>
         <groupId>com.google.code.gson</groupId>

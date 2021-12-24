@@ -134,6 +134,7 @@ maven/mavencentral/io.vertx/vertx-sql-client/4.1.4, , approved, eclipse
 maven/mavencentral/io.vertx/vertx-web/4.1.4, , approved, eclipse
 maven/mavencentral/io.vertx/vertx-web-client/4.1.4, , approved, eclipse
 maven/mavencentral/io.vertx/vertx-web-common/4.1.4, , approved, eclipse
+maven/mavencentral/jakarta.activation/jakarta.activation-api/1.2.1, EPL-2.0 OR BSD-3-Clause OR GPL-2.0-with-classpath-exception, approved, ee4j.jaf
 maven/mavencentral/jakarta.annotation/jakarta.annotation-api/1.3.5, EPL-2.0 OR GPL-2.0-with-classpath-exception, approved, ee4j.ca
 maven/mavencentral/jakarta.el/jakarta.el-api/3.0.3, EPL-2.0 OR GPL-2.0-with-classpath-exception, approved, ee4j.el
 maven/mavencentral/jakarta.enterprise/jakarta.enterprise.cdi-api/2.0.2, , approved, eclipse
@@ -141,8 +142,8 @@ maven/mavencentral/jakarta.inject/jakarta.inject-api/1.0, , approved, eclipse
 maven/mavencentral/jakarta.interceptor/jakarta.interceptor-api/1.2.5, , approved, eclipse
 maven/mavencentral/jakarta.json/jakarta.json-api/1.1.6, , approved, eclipse
 maven/mavencentral/jakarta.transaction/jakarta.transaction-api/1.3.3, EPL-1.0, approved, modeling.emf.transaction
+maven/mavencentral/jakarta.xml.bind/jakarta.xml.bind-api/2.3.3, BSD-3-Clause, approved, ee4j.jaxb
 maven/mavencentral/javax.annotation/javax.annotation-api/1.3.2, CDDL-1.1 OR GPL-2.0, approved, CQ16910
-maven/mavencentral/javax.xml.bind/jaxb-api/2.2.12, CDDL-1.0, approved, CQ8374
 maven/mavencentral/net.i2p.crypto/eddsa/0.3.0, CC0-1.0, approved, CQ22537
 maven/mavencentral/org.apache.commons/commons-collections4/4.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.apache.commons/commons-compress/1.21, Apache-2.0 AND BSD-3-Clause AND bzip2-1.0.6 AND LicenseRef-Public-Domain, approved, CQ23710
