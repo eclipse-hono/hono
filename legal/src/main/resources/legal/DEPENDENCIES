@@ -68,7 +68,6 @@ maven/mavencentral/io.netty/netty-handler-proxy/4.1.68.Final, Apache-2.0 AND BSD
 maven/mavencentral/io.netty/netty-resolver/4.1.68.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
 maven/mavencentral/io.netty/netty-resolver-dns/4.1.68.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
 maven/mavencentral/io.netty/netty-tcnative/2.0.42.Final, Apache-2.0, approved, CQ16909
-maven/mavencentral/io.netty/netty-tcnative-boringssl-static/2.0.42.Final, Apache-2.0 OR LicenseRef-Public-Domain OR BSD-2-Clause OR MIT, approved, CQ15280
 maven/mavencentral/io.netty/netty-transport/4.1.68.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
 maven/mavencentral/io.netty/netty-transport-native-epoll/4.1.68.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926
 maven/mavencentral/io.netty/netty-transport-native-kqueue/4.1.68.Final, Apache-2.0 AND BSD-3-Clause AND MIT, approved, CQ20926

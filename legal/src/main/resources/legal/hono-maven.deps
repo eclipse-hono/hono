@@ -67,7 +67,6 @@ io.netty:netty-handler:jar:4.1.68.Final
 io.netty:netty-handler-proxy:jar:4.1.68.Final
 io.netty:netty-resolver-dns:jar:4.1.68.Final
 io.netty:netty-resolver:jar:4.1.68.Final
-io.netty:netty-tcnative-boringssl-static:jar:2.0.42.Final
 io.netty:netty-tcnative:jar:2.0.42.Final
 io.netty:netty-transport:jar:4.1.68.Final
 io.netty:netty-transport-native-epoll:jar:linux-x86_64:4.1.68.Final
