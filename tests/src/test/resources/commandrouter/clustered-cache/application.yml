@@ -79,6 +79,8 @@ quarkus:
         level: INFO
       "org.eclipse.hono.commandrouter.impl.amqp":
         level: INFO
+      "org.eclipse.hono.commandrouter.impl.kafka":
+        level: INFO
       "org.eclipse.hono.deviceconnection.infinispan.client":
         level: INFO
       "org.infinispan":

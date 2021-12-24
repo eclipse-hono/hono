@@ -21,7 +21,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -699,39 +698,42 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 ? helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5)
                 : deviceId;
         final String firstCommandSubject = "firstCommandSubject";
-        final AtomicBoolean firstCommandReceived = new AtomicBoolean();
+        final Promise<Void> firstCommandReceived = Promise.promise();
 
         final VertxTestContext setup = new VertxTestContext();
         final Checkpoint setupDone = setup.checkpoint();
         final Checkpoint preconditions = setup.checkpoint(1);
 
-        connectToAdapter(tenantId, deviceId, password, () -> createEventConsumer(tenantId, msg -> {
-            // expect empty notification with TTD -1
-            setup.verify(() -> assertThat(msg.getContentType())
-                    .isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
-            final TimeUntilDisconnectNotification notification = msg.getTimeUntilDisconnectNotification().orElse(null);
-            log.debug("received notification [{}]", notification);
-            setup.verify(() -> assertThat(notification).isNotNull());
-            if (notification.getTtd() == -1) {
-                preconditions.flag();
-            }
-        }))
-        .compose(con -> subscribeToCommands(endpointConfig, tenantId, commandTargetDeviceId)
-            .map(recv -> {
+        connectToAdapter(
+                tenantId,
+                deviceId,
+                password,
+                () -> createEventConsumer(tenantId, msg -> {
+                    // expect empty notification with TTD -1
+                    setup.verify(() -> assertThat(msg.getContentType())
+                            .isEqualTo(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
+                    final TimeUntilDisconnectNotification notification = msg.getTimeUntilDisconnectNotification().orElse(null);
+                    log.info("received notification [{}]", notification);
+                    setup.verify(() -> assertThat(notification).isNotNull());
+                    if (notification.getTtd() == -1) {
+                        preconditions.flag();
+                    }
+                }))
+            .compose(con -> subscribeToCommands(endpointConfig, tenantId, commandTargetDeviceId))
+            .onSuccess(recv -> {
                 recv.handler((delivery, msg) -> {
-                    log.debug("received command [name: {}, reply-to: {}, correlation-id: {}]", msg.getSubject(), msg.getReplyTo(),
-                            msg.getCorrelationId());
+                    log.info("received command [name: {}, reply-to: {}, correlation-id: {}]",
+                            msg.getSubject(), msg.getReplyTo(), msg.getCorrelationId());
                     ctx.verify(() -> {
                         assertThat(msg.getSubject()).isEqualTo(firstCommandSubject);
                     });
-                    firstCommandReceived.setPlain(true);
+                    firstCommandReceived.complete();
                     ProtonHelper.accepted(delivery, true);
                     // don't send credits
                 });
                 recv.flow(1); // just give 1 initial credit
-                return null;
-            }))
-        .onComplete(setup.succeeding(v -> setupDone.flag()));
+            })
+            .onComplete(setup.succeeding(v -> setupDone.flag()));
 
         assertWithMessage("setup of adapter finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
                 .that(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS))
@@ -741,38 +743,43 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             return;
         }
 
-        final Checkpoint expectedSteps = ctx.checkpoint(2);
-
         // send first command
-        helper.sendOneWayCommand(tenantId, commandTargetDeviceId, firstCommandSubject, "text/plain",
-                Buffer.buffer("cmd"), null, IntegrationTestSupport.getSendCommandTimeout())
-        // first command shall succeed because there's one initial credit
-        .onComplete(ctx.succeeding(v -> {
-            expectedSteps.flag();
-            // send second command
-            helper.sendCommand(
+        helper.sendOneWayCommand(
+                tenantId,
+                commandTargetDeviceId,
+                firstCommandSubject,
+                "text/plain",
+                Buffer.buffer("cmd"),
+                null,
+                IntegrationTestSupport.getSendCommandTimeout())
+            // first command shall succeed because there's one initial credit
+            .onFailure(ctx::failNow)
+            .compose(ok -> {
+                log.info("sent first command [subject: {}]", firstCommandSubject);
+                return firstCommandReceived.future();
+            })
+            // send second command after first (one-way) command has been received
+            .compose(ok -> helper.sendCommand(
                     tenantId,
                     commandTargetDeviceId,
                     "secondCommandSubject",
                     "text/plain",
                     Buffer.buffer("cmd"),
                     null,
-                    IntegrationTestSupport.getSendCommandTimeout())
-                // second command shall fail because there's no credit left
-                .onComplete(ctx.failing(t -> {
-                    ctx.verify(() -> {
-                        // relevant for Kafka case: assert first command was actually received
-                        assertWithMessage("first command received").that(firstCommandReceived.getPlain()).isTrue();
-                        assertThat(t).isInstanceOf(ServerErrorException.class);
-                        assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
-                        // with no explicit credit check, the AMQP adapter would just run into the "waiting for delivery update" timeout (after 1s)
-                        // and the error here would be caused by a request timeout in the sendOneWayCommand() method above
-                        assertThat(t).isNotInstanceOf(SendMessageTimeoutException.class);
-                        assertThat(t.getMessage()).doesNotContain("timed out");
-                    });
-                    expectedSteps.flag();
-                }));
-        }));
+                    IntegrationTestSupport.getSendCommandTimeout()))
+            // sending of second command is supposed to fail due to no credit
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    assertThat(t).isInstanceOf(ServerErrorException.class);
+                    assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+                    // with no explicit credit check, the AMQP adapter would just run into the
+                    // "waiting for delivery update" timeout (after 1s) and the error here would be caused
+                    // by a request timeout in the sendOneWayCommand() method above
+                    assertThat(t).isNotInstanceOf(SendMessageTimeoutException.class);
+                    assertThat(t.getMessage()).doesNotContain("timed out");
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
