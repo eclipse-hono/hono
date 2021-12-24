@@ -177,8 +177,8 @@ maven/mavencentral/org.mongodb/mongodb-driver-core/4.3.3, Apache-2.0, approved, 
 maven/mavencentral/org.mongodb/mongodb-driver-reactivestreams/4.3.3, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.postgresql/postgresql/42.2.23, BSD-2-Clause, approved, clearlydefined
 maven/mavencentral/org.reactivestreams/reactive-streams/1.0.3, CC0-1.0, approved, CQ16332
-maven/mavencentral/org.slf4j/jul-to-slf4j/1.7.28, MIT, approved, CQ12842
-maven/mavencentral/org.slf4j/slf4j-api/1.7.28, MIT, approved, CQ13368
+maven/mavencentral/org.slf4j/jul-to-slf4j/1.7.30, MIT, approved, CQ12842
+maven/mavencentral/org.slf4j/slf4j-api/1.7.30, MIT, approved, CQ13368
 maven/mavencentral/org.springframework.boot/spring-boot/2.5.7, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.springframework.boot/spring-boot-actuator/2.5.7, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.springframework.boot/spring-boot-actuator-autoconfigure/2.5.7, Apache-2.0, approved, clearlydefined

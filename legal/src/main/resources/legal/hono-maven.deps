@@ -177,8 +177,8 @@ org.mongodb:mongodb-driver-core:jar:4.3.3
 org.mongodb:mongodb-driver-reactivestreams:jar:4.3.3
 org.postgresql:postgresql:jar:42.2.23
 org.reactivestreams:reactive-streams:jar:1.0.3
-org.slf4j:jul-to-slf4j:jar:1.7.28
-org.slf4j:slf4j-api:jar:1.7.28
+org.slf4j:jul-to-slf4j:jar:1.7.30
+org.slf4j:slf4j-api:jar:1.7.30
 org.springframework.boot:spring-boot-actuator-autoconfigure:jar:2.5.7
 org.springframework.boot:spring-boot-actuator:jar:2.5.7
 org.springframework.boot:spring-boot-autoconfigure:jar:2.5.7
