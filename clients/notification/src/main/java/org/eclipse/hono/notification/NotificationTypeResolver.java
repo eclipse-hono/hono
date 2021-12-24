@@ -1,4 +1,4 @@
-/*
+/*******************************************************************************
  * Copyright (c) 2021 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
@@ -9,7 +9,7 @@
  * http://www.eclipse.org/legal/epl-2.0
  *
  * SPDX-License-Identifier: EPL-2.0
- */
+ *******************************************************************************/
 
 package org.eclipse.hono.notification;
 
@@ -32,6 +32,13 @@ import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
 public final class NotificationTypeResolver extends TypeIdResolverBase {
 
     private JavaType baseType;
+
+    /**
+     * Creates a resolver.
+     */
+    public NotificationTypeResolver() {
+        super();
+    }
 
     @Override
     public void init(final JavaType baseType) {

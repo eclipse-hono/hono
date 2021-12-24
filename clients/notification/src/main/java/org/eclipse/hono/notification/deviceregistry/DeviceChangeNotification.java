@@ -21,6 +21,7 @@ import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationConstants;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -33,26 +34,26 @@ public class DeviceChangeNotification extends AbstractNotification {
     public static final String TYPE = "device-change-v1";
     public static final String ADDRESS = "registry-device";
 
-    @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_CHANGE, required = true)
     private final LifecycleChange change;
-
-    @JsonProperty(value = NotificationConstants.JSON_FIELD_TENANT_ID, required = true)
     private final String tenantId;
-
-    @JsonProperty(value = NotificationConstants.JSON_FIELD_DEVICE_ID, required = true)
     private final String deviceId;
-
-    @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_ENABLED, required = true)
     private final boolean enabled;
 
     @JsonCreator
     DeviceChangeNotification(
-            @JsonProperty(value = NotificationConstants.JSON_FIELD_SOURCE, required = true) final String source,
-            @JsonProperty(value = NotificationConstants.JSON_FIELD_CREATION_TIME, required = true) @HonoTimestamp final Instant creationTime,
-            @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_CHANGE, required = true) final LifecycleChange change,
-            @JsonProperty(value = NotificationConstants.JSON_FIELD_TENANT_ID, required = true) final String tenantId,
-            @JsonProperty(value = NotificationConstants.JSON_FIELD_DEVICE_ID, required = true) final String deviceId,
-            @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_ENABLED, required = true) final boolean enabled) {
+            @JsonProperty(value = NotificationConstants.JSON_FIELD_SOURCE, required = true)
+            final String source,
+            @JsonProperty(value = NotificationConstants.JSON_FIELD_CREATION_TIME, required = true)
+            @HonoTimestamp
+            final Instant creationTime,
+            @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_CHANGE, required = true)
+            final LifecycleChange change,
+            @JsonProperty(value = NotificationConstants.JSON_FIELD_TENANT_ID, required = true)
+            final String tenantId,
+            @JsonProperty(value = NotificationConstants.JSON_FIELD_DEVICE_ID, required = true)
+            final String deviceId,
+            @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_ENABLED, required = true)
+            final boolean enabled) {
 
         super(source, creationTime);
 
@@ -72,8 +73,12 @@ public class DeviceChangeNotification extends AbstractNotification {
      * @param enabled {@code true} if the device is enabled.
      * @throws NullPointerException If any of the parameters are {@code null}.
      */
-    public DeviceChangeNotification(final LifecycleChange change, final String tenantId, final String deviceId,
-            final Instant creationTime, final boolean enabled) {
+    public DeviceChangeNotification(
+            final LifecycleChange change,
+            final String tenantId,
+            final String deviceId,
+            final Instant creationTime,
+            final boolean enabled) {
         this(NotificationConstants.SOURCE_DEVICE_REGISTRY, creationTime, change, tenantId, deviceId, enabled);
     }
 
@@ -82,6 +87,7 @@ public class DeviceChangeNotification extends AbstractNotification {
      *
      * @return The change.
      */
+    @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_CHANGE)
     public final LifecycleChange getChange() {
         return change;
     }
@@ -91,6 +97,7 @@ public class DeviceChangeNotification extends AbstractNotification {
      *
      * @return The tenant ID.
      */
+    @JsonProperty(value = NotificationConstants.JSON_FIELD_TENANT_ID)
     public final String getTenantId() {
         return tenantId;
     }
@@ -100,6 +107,7 @@ public class DeviceChangeNotification extends AbstractNotification {
      *
      * @return The device ID.
      */
+    @JsonProperty(value = NotificationConstants.JSON_FIELD_DEVICE_ID)
     public final String getDeviceId() {
         return deviceId;
     }
@@ -109,11 +117,13 @@ public class DeviceChangeNotification extends AbstractNotification {
      *
      * @return {@code true} if this device is enabled.
      */
+    @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_ENABLED)
     public final boolean isEnabled() {
         return enabled;
     }
 
     @Override
+    @JsonIgnore
     public final String getType() {
         return TYPE;
     }

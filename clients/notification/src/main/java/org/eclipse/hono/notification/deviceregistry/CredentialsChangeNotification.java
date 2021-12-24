@@ -21,6 +21,7 @@ import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationConstants;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -38,18 +39,20 @@ public class CredentialsChangeNotification extends AbstractNotification {
     public static final String TYPE = "credentials-change-v1";
     public static final String ADDRESS = DeviceChangeNotification.ADDRESS;
 
-    @JsonProperty(value = NotificationConstants.JSON_FIELD_TENANT_ID, required = true)
     private final String tenantId;
-
-    @JsonProperty(value = NotificationConstants.JSON_FIELD_DEVICE_ID, required = true)
     private final String deviceId;
 
     @JsonCreator
     CredentialsChangeNotification(
-            @JsonProperty(value = NotificationConstants.JSON_FIELD_SOURCE, required = true) final String source,
-            @JsonProperty(value = NotificationConstants.JSON_FIELD_CREATION_TIME, required = true) @HonoTimestamp final Instant creationTime,
-            @JsonProperty(value = NotificationConstants.JSON_FIELD_TENANT_ID, required = true) final String tenantId,
-            @JsonProperty(value = NotificationConstants.JSON_FIELD_DEVICE_ID, required = true) final String deviceId) {
+            @JsonProperty(value = NotificationConstants.JSON_FIELD_SOURCE, required = true)
+            final String source,
+            @JsonProperty(value = NotificationConstants.JSON_FIELD_CREATION_TIME, required = true)
+            @HonoTimestamp
+            final Instant creationTime,
+            @JsonProperty(value = NotificationConstants.JSON_FIELD_TENANT_ID, required = true)
+            final String tenantId,
+            @JsonProperty(value = NotificationConstants.JSON_FIELD_DEVICE_ID, required = true)
+            final String deviceId) {
 
         super(source, creationTime);
 
@@ -74,6 +77,7 @@ public class CredentialsChangeNotification extends AbstractNotification {
      *
      * @return The tenant ID.
      */
+    @JsonProperty(value = NotificationConstants.JSON_FIELD_TENANT_ID)
     public final String getTenantId() {
         return tenantId;
     }
@@ -83,11 +87,13 @@ public class CredentialsChangeNotification extends AbstractNotification {
      *
      * @return The device ID.
      */
+    @JsonProperty(value = NotificationConstants.JSON_FIELD_DEVICE_ID)
     public final String getDeviceId() {
         return deviceId;
     }
 
     @Override
+    @JsonIgnore
     public final String getType() {
         return TYPE;
     }

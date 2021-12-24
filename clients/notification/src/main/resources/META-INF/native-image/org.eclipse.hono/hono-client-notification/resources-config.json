@@ -1,0 +1,13 @@
+{
+  "resources": {
+    "includes": [
+    ],
+    "excludes": [
+      {
+        "pattern": "META-INF\\/maven\\/.*$"
+      },{
+        "pattern": "META-INF\\/native-image\\/.*$"
+      }
+    ]
+  }
+}

@@ -24,9 +24,16 @@ import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
  * This type resolver knows the types Password, PSK and X509 Certificate. All other credentials are encoded in a
  * {@link CommonCredential}.
  */
-public class CredentialTypeResolver extends TypeIdResolverBase {
+public final class CredentialTypeResolver extends TypeIdResolverBase {
 
     private JavaType baseType;
+
+    /**
+     * Creates a resolver.
+     */
+    public CredentialTypeResolver() {
+        super();
+    }
 
     @Override
     public void init(final JavaType baseType) {

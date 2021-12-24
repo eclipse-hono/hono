@@ -21,6 +21,7 @@ import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationConstants;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -33,14 +34,17 @@ public class AllDevicesOfTenantDeletedNotification extends AbstractNotification 
     public static final String TYPE = "all-devices-of-tenant-deleted-v1";
     public static final String ADDRESS = DeviceChangeNotification.ADDRESS;
 
-    @JsonProperty(value = NotificationConstants.JSON_FIELD_TENANT_ID, required = true)
     private final String tenantId;
 
     @JsonCreator
     AllDevicesOfTenantDeletedNotification(
-            @JsonProperty(value = NotificationConstants.JSON_FIELD_SOURCE, required = true) final String source,
-            @JsonProperty(value = NotificationConstants.JSON_FIELD_CREATION_TIME, required = true) @HonoTimestamp final Instant creationTime,
-            @JsonProperty(value = NotificationConstants.JSON_FIELD_TENANT_ID, required = true) final String tenantId) {
+            @JsonProperty(value = NotificationConstants.JSON_FIELD_SOURCE, required = true)
+            final String source,
+            @JsonProperty(value = NotificationConstants.JSON_FIELD_CREATION_TIME, required = true)
+            @HonoTimestamp
+            final Instant creationTime,
+            @JsonProperty(value = NotificationConstants.JSON_FIELD_TENANT_ID, required = true)
+            final String tenantId) {
 
         super(source, creationTime);
 
@@ -63,11 +67,13 @@ public class AllDevicesOfTenantDeletedNotification extends AbstractNotification 
      *
      * @return The tenant ID.
      */
+    @JsonProperty(value = NotificationConstants.JSON_FIELD_TENANT_ID)
     public final String getTenantId() {
         return tenantId;
     }
 
     @Override
+    @JsonIgnore
     public final String getType() {
         return TYPE;
     }

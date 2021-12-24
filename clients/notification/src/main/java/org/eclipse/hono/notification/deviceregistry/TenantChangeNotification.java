@@ -21,6 +21,7 @@ import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationConstants;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -33,22 +34,23 @@ public class TenantChangeNotification extends AbstractNotification {
     public static final String TYPE = "tenant-change-v1";
     public static final String ADDRESS = "registry-tenant";
 
-    @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_CHANGE, required = true)
     private final LifecycleChange change;
-
-    @JsonProperty(value = NotificationConstants.JSON_FIELD_TENANT_ID, required = true)
     private final String tenantId;
-
-    @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_ENABLED, required = true)
     private final boolean enabled;
 
     @JsonCreator
     TenantChangeNotification(
-            @JsonProperty(value = NotificationConstants.JSON_FIELD_SOURCE, required = true) final String source,
-            @JsonProperty(value = NotificationConstants.JSON_FIELD_CREATION_TIME, required = true) @HonoTimestamp final Instant creationTime,
-            @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_CHANGE, required = true) final LifecycleChange change,
-            @JsonProperty(value = NotificationConstants.JSON_FIELD_TENANT_ID, required = true) final String tenantId,
-            @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_ENABLED, required = true) final boolean enabled) {
+            @JsonProperty(value = NotificationConstants.JSON_FIELD_SOURCE, required = true)
+            final String source,
+            @JsonProperty(value = NotificationConstants.JSON_FIELD_CREATION_TIME, required = true)
+            @HonoTimestamp
+            final Instant creationTime,
+            @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_CHANGE, required = true)
+            final LifecycleChange change,
+            @JsonProperty(value = NotificationConstants.JSON_FIELD_TENANT_ID, required = true)
+            final String tenantId,
+            @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_ENABLED, required = true)
+            final boolean enabled) {
 
         super(source, creationTime);
 
@@ -76,6 +78,7 @@ public class TenantChangeNotification extends AbstractNotification {
      *
      * @return The change.
      */
+    @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_CHANGE)
     public final LifecycleChange getChange() {
         return change;
     }
@@ -85,6 +88,7 @@ public class TenantChangeNotification extends AbstractNotification {
      *
      * @return The tenant ID.
      */
+    @JsonProperty(value = NotificationConstants.JSON_FIELD_TENANT_ID)
     public final String getTenantId() {
         return tenantId;
     }
@@ -94,11 +98,13 @@ public class TenantChangeNotification extends AbstractNotification {
      *
      * @return {@code true} if this tenant is enabled.
      */
+    @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_ENABLED)
     public final boolean isEnabled() {
         return enabled;
     }
 
     @Override
+    @JsonIgnore
     public final String getType() {
         return TYPE;
     }

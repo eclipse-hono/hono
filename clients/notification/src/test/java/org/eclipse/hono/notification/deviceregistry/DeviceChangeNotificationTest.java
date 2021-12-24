@@ -98,8 +98,15 @@ public class DeviceChangeNotificationTest {
     @Test
     public void testDeserialization() {
 
-        final AbstractNotification abstractNotification = Json
-                .decodeValue(JsonObject.mapFrom(notification).toBuffer(), AbstractNotification.class);
+        final JsonObject json = new JsonObject()
+                .put(NotificationConstants.JSON_FIELD_TYPE, "device-change-v1")
+                .put(NotificationConstants.JSON_FIELD_SOURCE, NotificationConstants.SOURCE_DEVICE_REGISTRY)
+                .put(NotificationConstants.JSON_FIELD_CREATION_TIME, CREATION_TIME)
+                .put(NotificationConstants.JSON_FIELD_DATA_CHANGE, LifecycleChange.DELETE)
+                .put(NotificationConstants.JSON_FIELD_TENANT_ID, TENANT_ID)
+                .put(NotificationConstants.JSON_FIELD_DEVICE_ID, DEVICE_ID)
+                .put(NotificationConstants.JSON_FIELD_DATA_ENABLED, true);
+        final AbstractNotification abstractNotification = Json.decodeValue(json.toBuffer(), AbstractNotification.class);
 
         assertThat(abstractNotification).isNotNull();
         assertThat(abstractNotification).isInstanceOf(DeviceChangeNotification.class);
@@ -108,10 +115,10 @@ public class DeviceChangeNotificationTest {
         assertThat(newNotification.getSource()).isEqualTo(NotificationConstants.SOURCE_DEVICE_REGISTRY);
         assertThat(newNotification.getCreationTime()).isEqualTo(Instant.parse(CREATION_TIME));
 
-        assertThat(newNotification.getChange()).isEqualTo(CHANGE);
+        assertThat(newNotification.getChange()).isEqualTo(LifecycleChange.DELETE);
         assertThat(newNotification.getTenantId()).isEqualTo(TENANT_ID);
         assertThat(newNotification.getDeviceId()).isEqualTo(DEVICE_ID);
-        assertThat(newNotification.isEnabled()).isEqualTo(ENABLED);
+        assertThat(newNotification.isEnabled()).isTrue();
     }
 
 }

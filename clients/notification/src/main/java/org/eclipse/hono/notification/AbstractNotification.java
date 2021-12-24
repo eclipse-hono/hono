@@ -19,7 +19,6 @@ import java.util.Objects;
 import org.eclipse.hono.annotation.HonoTimestamp;
 
 import com.fasterxml.jackson.annotation.JsonGetter;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
@@ -56,7 +55,6 @@ public abstract class AbstractNotification {
      *
      * @return The type name.
      */
-    @JsonIgnore
     public abstract String getType();
 
     /**
@@ -65,7 +63,7 @@ public abstract class AbstractNotification {
      * @return The name of the component.
      */
     @JsonGetter(NotificationConstants.JSON_FIELD_SOURCE)
-    public String getSource() {
+    public final String getSource() {
         return source;
     }
 
@@ -76,7 +74,7 @@ public abstract class AbstractNotification {
      */
     @JsonGetter(NotificationConstants.JSON_FIELD_CREATION_TIME)
     @HonoTimestamp
-    public Instant getCreationTime() {
+    public final Instant getCreationTime() {
         return creationTime;
     }
 
