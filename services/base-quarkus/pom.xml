@@ -123,13 +123,11 @@
           <groupId>io.netty</groupId>
           <artifactId>netty-transport-native-epoll</artifactId>
           <classifier>linux-x86_64</classifier>
-          <scope>runtime</scope>
         </dependency>
         <dependency>
           <groupId>io.netty</groupId>
           <artifactId>netty-transport-native-kqueue</artifactId>
           <classifier>osx-x86_64</classifier>
-          <scope>runtime</scope>
         </dependency>
       </dependencies>
       <build>
@@ -196,7 +194,11 @@
         <!--  include all JSSE related classes -->
         <quarkus.native.enable-all-security-services>true</quarkus.native.enable-all-security-services>
         <!-- allow incomplete class path in order to not require (optional) compression codec dependencies of Netty -->
-        <quarkus.native.additional-build-args>--allow-incomplete-classpath</quarkus.native.additional-build-args>
+        <!-- use Base64 encoder/decoder that is compatible with vert.x 3 -->
+        <quarkus.native.additional-build-args>
+          --allow-incomplete-classpath,
+          -Dvertx.json.base64=legacy
+        </quarkus.native.additional-build-args>
       </properties>
 
       <dependencies>
@@ -232,8 +234,6 @@
                       <workdir>/opt/hono</workdir>
                       <entryPoint>
                         <arg>/opt/hono/${project.artifactId}-${project.version}-runner</arg>
-                        <!-- use Base64 encoder/decoder that is compatible with vert.x 3 -->
-                        <arg>-Dvertx.json.base64=legacy</arg>
                         <arg>-Djava.util.logging.manager=org.jboss.logmanager.LogManager</arg>
                       </entryPoint>
                       <assembly>
