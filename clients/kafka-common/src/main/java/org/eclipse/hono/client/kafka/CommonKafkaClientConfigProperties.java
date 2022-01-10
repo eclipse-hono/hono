@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.apache.kafka.clients.CommonClientConfigs;
+import org.eclipse.hono.util.Strings;
 
 /**
  * Common Kafka client configuration properties.
@@ -58,10 +59,10 @@ public class CommonKafkaClientConfigProperties {
      * Checks if a configuration has been set.
      *
      * @return {@code true} if the {@value CommonClientConfigs#BOOTSTRAP_SERVERS_CONFIG} property has been
-     *         configured with a non-null value.
+     *         configured with a non-empty value.
      */
     public final boolean isConfigured() {
-        return commonClientConfig.containsKey(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG);
+        return !Strings.isNullOrEmpty(commonClientConfig.get(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG));
     }
 
     Map<String, String> getCommonClientConfig() {

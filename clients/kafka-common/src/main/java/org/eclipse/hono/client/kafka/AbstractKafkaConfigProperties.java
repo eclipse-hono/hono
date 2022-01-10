@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -102,7 +102,7 @@ public abstract class AbstractKafkaConfigProperties {
      * Checks if a configuration has been set.
      *
      * @return {@code true} if the {@value CommonClientConfigs#BOOTSTRAP_SERVERS_CONFIG} property has been configured
-     *         with a non-null value.
+     *         with a non-empty value.
      */
     public final boolean isConfigured() {
         return containsMinimalConfiguration(commonClientConfig) || containsMinimalConfiguration(specificClientConfig);
@@ -193,7 +193,7 @@ public abstract class AbstractKafkaConfigProperties {
      * Checks if a given set of properties contains the minimal required configuration.
      *
      * @param properties The properties to check.
-     * @return {@code true} if the properties contain a non-null value for key {@value CommonClientConfigs#BOOTSTRAP_SERVERS_CONFIG}.
+     * @return {@code true} if the properties contain a non-empty value for key {@value CommonClientConfigs#BOOTSTRAP_SERVERS_CONFIG}.
      */
     protected final boolean containsMinimalConfiguration(final Map<String, String> properties) {
         return Optional.ofNullable(properties)
