@@ -655,13 +655,6 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                             <include>*</include>
                           </includes>
                         </fileSet>
-                        <fileSet>
-                          <directory>${project.build.directory}/certs</directory>
-                          <outputDirectory>opt/infinispan/server/conf</outputDirectory>
-                          <includes>
-                            <include>infinispanKeyStore.p12</include>
-                          </includes>
-                        </fileSet>
                       </inline>
                     </assembly>
                   </build>
@@ -673,6 +666,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                     <cmd>
                       <arg>-c</arg>
                       <arg>hono-data-grid.xml</arg>
+                      <arg>-Dquarkus.log.category."org.infinispan.AUDIT".level=WARN</arg>
                       <arg>-Dquarkus.log.category."org.infinispan.CONFIG".level=INFO</arg>
                       <arg>-Dquarkus.log.category."org.infinispan.CONTAINER".level=INFO</arg>
                       <arg>-Dquarkus.log.category."org.infinispan.SECURITY".level=INFO</arg>
@@ -688,7 +682,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                         enforcing resource limits, and because the Infinispan native server image has been
                         created using Java 11 (which doesn't support cgroups v2), we need to (also) explicitly limit
                         memory using Java options here. Otherwise the VM would use a max heap space of 1/4 of the
-                        host's memory which is probably much more than the 100mb we specify for the container ...
+                        host's memory which is probably much more than the 120mb we specify for the container ...
                        -->
                       <JAVA_OPTIONS>-Xms70m -Xmx80m</JAVA_OPTIONS>
                     </env>
@@ -697,8 +691,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>${custom.network.name}</name>
                       <alias>${hono.infinispan.host}</alias>
                     </network>
-                    <memorySwap>100000000</memorySwap>
-                    <memory>100000000</memory>
+                    <memorySwap>120000000</memorySwap>
+                    <memory>120000000</memory>
                     <log>
                       <prefix>INFINISPAN</prefix>
                       <color>${log.color.hono-services}</color>

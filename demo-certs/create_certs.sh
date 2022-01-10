@@ -1,6 +1,6 @@
 #!/bin/bash
 #*******************************************************************************
-# Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+# Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -24,8 +24,6 @@ DEVCON_SERVER_KEY_STORE=deviceConnectionKeyStore.p12
 DEVCON_SERVER_KEY_STORE_PWD=deviceconnectionkeys
 CMD_ROUTER_KEY_STORE=commandRouterKeyStore.p12
 CMD_ROUTER_KEY_STORE_PWD=commandrouterkeys
-INFINISPAN_KEY_STORE=infinispanKeyStore.p12
-INFINISPAN_KEY_STORE_PWD=infinispanKeys
 DEVREG_SERVER_KEY_STORE=deviceRegistryKeyStore.p12
 DEVREG_SERVER_KEY_STORE_PWD=deviceregistrykeys
 MQTT_ADAPTER_KEY_STORE=mqttKeyStore.p12
@@ -53,12 +51,17 @@ function create_key {
   echo ""
   if [ $KEY_ALG == "EC" ]
   then
-    openssl ecparam -name prime256v1 -genkey -noout | openssl pkcs8 -topk8 -nocrypt -inform PEM -outform PEM -out $DIR/$1
+    openssl ecparam -name secp384r1 -genkey -noout | openssl pkcs8 -topk8 -nocrypt -inform PEM -outform PEM -out $DIR/$1
   else
     openssl genrsa 4096 | openssl pkcs8 -topk8 -nocrypt -inform PEM -outform PEM -out $DIR/$1
   fi
 }
 
+#
+# parameters:
+# name of key/cert
+# key store name (optional)
+# key store password (optional)
 function create_cert {
 
   echo ""
@@ -137,7 +140,6 @@ create_cert auth-server $AUTH_SERVER_KEY_STORE $AUTH_SERVER_KEY_STORE_PWD
 create_cert device-registry $DEVREG_SERVER_KEY_STORE $DEVREG_SERVER_KEY_STORE_PWD
 create_cert device-connection $DEVCON_SERVER_KEY_STORE $DEVCON_SERVER_KEY_STORE_PWD
 create_cert command-router $CMD_ROUTER_KEY_STORE $CMD_ROUTER_KEY_STORE_PWD
-create_cert infinispan $INFINISPAN_KEY_STORE $INFINISPAN_KEY_STORE_PWD
 create_cert http-adapter $HTTP_ADAPTER_KEY_STORE $HTTP_ADAPTER_KEY_STORE_PWD
 create_cert lora-adapter $LORA_ADAPTER_KEY_STORE $LORA_ADAPTER_KEY_STORE_PWD
 create_cert mqtt-adapter $MQTT_ADAPTER_KEY_STORE $MQTT_ADAPTER_KEY_STORE_PWD

@@ -1,43 +1,33 @@
 <infinispan
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="urn:infinispan:config:11.0 https://infinispan.org/schemas/infinispan-config-11.0.xsd
-                            urn:infinispan:server:11.0 https://infinispan.org/schemas/infinispan-server-11.0.xsd"
-        xmlns="urn:infinispan:config:11.0"
-        xmlns:server="urn:infinispan:server:11.0">
+        xsi:schemaLocation="urn:infinispan:config:13.0 https://infinispan.org/schemas/infinispan-config-13.0.xsd
+                            urn:infinispan:server:13.0 https://infinispan.org/schemas/infinispan-server-13.0.xsd"
+        xmlns="urn:infinispan:config:13.0"
+        xmlns:server="urn:infinispan:server:13.0">
 
   <cache-container name="routing-info">
     <security>
       <authorization>
-        <identity-role-mapper /> 
-        <role name="admin" permissions="ALL" /> 
-        <role name="adapter" permissions="READ WRITE BULK_READ" />
+        <identity-role-mapper />
+        <roles>
+          <role name="admin" permissions="ALL" /> 
+          <role name="adapter" permissions="READ WRITE BULK_READ" />
+        </roles>
       </authorization>
     </security>
-    <local-cache name="command-router">
-      <encoding>
-        <key media-type="text/plain" />
-        <value media-type="text/plain" />
-      </encoding>
-      <persistence passivation="false">
-        <file-store
-            shared="false"
-            preload="true"
-            fetch-state="false"
-            read-only="false"
-            purge="false"
-            path="command-router">
-        </file-store>
-      </persistence>
+    <local-cache name="command-router" simple-cache="true">
+      <encoding media-type="application/x-protostream" />
+      <memory max-count="200" storage="OFF_HEAP" when-full="REMOVE"></memory>
       <security>
         <authorization enabled="true" />
       </security>
     </local-cache>
   </cache-container>
 
-  <server xmlns="urn:infinispan:server:11.0">
+  <server xmlns="urn:infinispan:server:13.0">
     <interfaces>
       <interface name="public">
-        <non-loopback />
+        <inet-address value="0.0.0.0" />
       </interface>
       <interface name="local">
         <loopback />
@@ -61,15 +51,6 @@
           </properties-realm>
         </security-realm>
         <security-realm name="ApplicationRealm">
-          <server-identities>
-            <ssl>
-              <keystore path="infinispanKeyStore.p12"
-                        relative-to="infinispan.server.config.path"
-                        alias="infinispan"
-                        keystore-password="infinispanKeys" />
-              <engine enabled-protocols="TLSv1.2"/>
-            </ssl>
-          </server-identities>
           <properties-realm groups-attribute="Roles">
             <user-properties path="users.properties"
                              relative-to="infinispan.server.config.path"
@@ -81,17 +62,19 @@
       </security-realms>
     </security>
 
-    <endpoints socket-binding="external" security-realm="ApplicationRealm">
-      <hotrod-connector name="hotrod">
-        <authentication>
-          <sasl mechanisms="SCRAM-SHA-512 SCRAM-SHA-384 DIGEST-SHA-512 DIGEST-SHA-384"
-                server-name="${hono.infinispan.host}"
-                qop="auth-conf" />
-        </authentication>
-      </hotrod-connector>
-      <rest-connector name="rest">
-        <authentication mechanisms="DIGEST BASIC" />
-      </rest-connector>
+    <endpoints>
+      <endpoint socket-binding="external" security-realm="ApplicationRealm">
+        <hotrod-connector name="hotrod">
+          <authentication>
+            <sasl mechanisms="SCRAM-SHA-512 SCRAM-SHA-384 DIGEST-SHA-512 DIGEST-SHA-384"
+                  server-name="${hono.infinispan.host}"
+                  qop="auth" />
+          </authentication>
+        </hotrod-connector>
+        <rest-connector name="rest">
+          <authentication mechanisms="DIGEST BASIC" />
+        </rest-connector>
+      </endpoint>
     </endpoints>
 
   </server>
