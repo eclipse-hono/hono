@@ -27,7 +27,7 @@
   <server xmlns="urn:infinispan:server:13.0">
     <interfaces>
       <interface name="public">
-        <server:inet-address value="0.0.0.0" />
+        <inet-address value="0.0.0.0" />
       </interface>
       <interface name="local">
         <loopback />
