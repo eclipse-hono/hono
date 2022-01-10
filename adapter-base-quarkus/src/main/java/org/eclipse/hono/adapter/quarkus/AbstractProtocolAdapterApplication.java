@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -63,6 +63,7 @@ import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerOptions;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
+import org.eclipse.hono.client.notification.amqp.ProtonBasedNotificationReceiver;
 import org.eclipse.hono.client.notification.kafka.KafkaBasedNotificationReceiver;
 import org.eclipse.hono.client.notification.kafka.NotificationKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.registry.CredentialsClient;
@@ -81,7 +82,6 @@ import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.config.quarkus.ClientOptions;
 import org.eclipse.hono.config.quarkus.RequestResponseClientOptions;
-import org.eclipse.hono.notification.NoOpNotificationReceiver;
 import org.eclipse.hono.notification.NotificationReceiver;
 import org.eclipse.hono.service.cache.Caches;
 import org.eclipse.hono.service.quarkus.AbstractServiceApplication;
@@ -513,8 +513,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
     private ClientConfigProperties commandResponseSenderConfig() {
         final ClientConfigProperties props = new ClientConfigProperties(downstreamSenderConfig);
-        props.setServerRoleIfUnknown("Command Response");
-        props.setNameIfNotSet(getComponentName());
+        props.setServerRole("Command Response");
         return props;
     }
 
@@ -594,8 +593,9 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         if (kafkaNotificationConfig.isConfigured()) {
             return new KafkaBasedNotificationReceiver(vertx, kafkaNotificationConfig);
         } else {
-            // TODO provide AMQP based notification receiver
-            return new NoOpNotificationReceiver();
+            final ClientConfigProperties notificationConfig = new ClientConfigProperties(downstreamSenderConfig);
+            notificationConfig.setServerRole("Notification");
+            return new ProtonBasedNotificationReceiver(HonoConnection.newConnection(vertx, notificationConfig, tracer));
         }
     }
 

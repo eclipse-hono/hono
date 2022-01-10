@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -330,14 +330,13 @@ class ProtonBasedDeviceRegistrationClientTest {
     public void testAllDevicesOfTenantDeletedNotificationRemovesValueFromCache(final VertxTestContext ctx) {
         final String tenantId = "the-tenant-id";
 
-        givenAClient(cache);
-
         final var notificationHandlerCaptor = getHandlerArgumentCaptor(AllDevicesOfTenantDeletedNotification.class);
+
+        givenAClient(cache);
 
         final Set<AnnotatedCacheKey<?>> expectedCacheRemovals = new HashSet<>();
 
         // GIVEN a client with a cache containing device registrations of two tenants
-        // the client is started to register for notifications
         client.start()
                 .compose(v -> addResultToCache("other-tenant", "device-id1", "gateway-id"))
                 .compose(v -> addResultToCache(tenantId, "device-id1", "gateway-id"))
@@ -367,14 +366,13 @@ class ProtonBasedDeviceRegistrationClientTest {
         final String tenantId = "the-tenant-id";
         final String deviceId = "the-device-id";
 
-        givenAClient(cache);
-
         final var notificationHandlerCaptor = getHandlerArgumentCaptor(DeviceChangeNotification.class);
+
+        givenAClient(cache);
 
         final Set<AnnotatedCacheKey<?>> expectedCacheRemovals = new HashSet<>();
 
         // GIVEN a client with a cache containing device registrations of two tenants
-        // the client is started to register for notifications
         client.start()
                 .compose(v -> addResultToCache("other-tenant", deviceId, "gateway-id"))
                 .compose(v -> addResultToCache(tenantId, "other-device", "gateway-id"))
@@ -407,14 +405,13 @@ class ProtonBasedDeviceRegistrationClientTest {
         final String deviceId = "the-device-id";
         final String gatewayId = "the-device-id";
 
-        givenAClient(cache);
-
         final var notificationHandlerCaptor = getHandlerArgumentCaptor(DeviceChangeNotification.class);
+
+        givenAClient(cache);
 
         final Set<AnnotatedCacheKey<?>> expectedCacheRemovals = new HashSet<>();
 
         // GIVEN a client with a cache containing device registrations of two tenants
-        // the client is started to register for notifications
         client.start()
                 .compose(v -> addResultToCache("other-tenant", deviceId, "gateway-id"))
                 .compose(v -> addResultToCache(tenantId, "other-device", "gateway-id"))

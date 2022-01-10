@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,6 +28,7 @@ import org.eclipse.hono.client.kafka.metrics.NoopKafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
+import org.eclipse.hono.client.notification.amqp.ProtonBasedNotificationReceiver;
 import org.eclipse.hono.client.notification.kafka.KafkaBasedNotificationReceiver;
 import org.eclipse.hono.client.notification.kafka.NotificationKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
@@ -56,7 +57,6 @@ import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.deviceconnection.infinispan.client.BasicCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.CacheBasedDeviceConnectionInfo;
 import org.eclipse.hono.deviceconnection.infinispan.client.CommonCacheConfig;
-import org.eclipse.hono.notification.NoOpNotificationReceiver;
 import org.eclipse.hono.notification.NotificationReceiver;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.HealthCheckServer;
@@ -276,7 +276,7 @@ public class ApplicationConfig {
                     getTracer(),
                     internalKafkaTopicCleanupService(adapterInstanceStatusService).orElse(null)));
         }
-        if (commandConsumerFactoryConfig().isHostConfigured()) {
+        if (commandConsumerConnectionConfig().isHostConfigured()) {
             commandConsumerFactoryProvider.setClient(new ProtonBasedCommandConsumerFactoryImpl(
                     commandConsumerConnection(),
                     tenantClient,
@@ -339,14 +339,15 @@ public class ApplicationConfig {
     }
 
     /**
-     * Exposes configuration properties for the command consumer factory.
+     * Exposes configuration properties for the connection to the AMQP Messaging Network's Command &amp; Control
+     * endpoint.
      *
-     * @return The Properties.
+     * @return The properties.
      */
     @Qualifier(CommandConstants.COMMAND_ENDPOINT)
     @ConfigurationProperties(prefix = "hono.command")
     @Bean
-    public ClientConfigProperties commandConsumerFactoryConfig() {
+    public ClientConfigProperties commandConsumerConnectionConfig() {
         final ClientConfigProperties config = new ClientConfigProperties();
         config.setServerRoleIfUnknown("Command & Control");
         config.setNameIfNotSet(COMPONENT_NAME);
@@ -361,7 +362,7 @@ public class ApplicationConfig {
     @Bean
     @Scope("prototype")
     public HonoConnection commandConsumerConnection() {
-        return HonoConnection.newConnection(vertx(), commandConsumerFactoryConfig());
+        return HonoConnection.newConnection(vertx(), commandConsumerConnectionConfig());
     }
 
     /**
@@ -667,8 +668,9 @@ public class ApplicationConfig {
         if (kafkaConsumerConfig.isConfigured()) {
             return new KafkaBasedNotificationReceiver(vertx(), kafkaConsumerConfig);
         } else {
-            // TODO provide AMQP based notification receiver
-            return new NoOpNotificationReceiver();
+            final ClientConfigProperties notificationConfig = new ClientConfigProperties(commandConsumerConnectionConfig());
+            notificationConfig.setServerRole("Notification");
+            return new ProtonBasedNotificationReceiver(HonoConnection.newConnection(vertx(), notificationConfig, getTracer()));
         }
     }
 

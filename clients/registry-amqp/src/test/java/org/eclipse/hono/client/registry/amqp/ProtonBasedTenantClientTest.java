@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -493,12 +493,11 @@ class ProtonBasedTenantClientTest {
     public void testTenantChangeNotificationRemovesValueFromCache(final VertxTestContext ctx) {
         final String tenantId = "the-tenant-id";
 
-        givenAClient(cache);
-
         final var notificationHandlerCaptor = getHandlerArgumentCaptor(TenantChangeNotification.class);
 
+        givenAClient(cache);
+
         // GIVEN a client with a cache containing two tenants
-        // the client is started to register for notifications
         client.start()
                 .compose(v -> addResultToCache("other-tenant"))
                 .compose(v -> addResultToCache(tenantId))

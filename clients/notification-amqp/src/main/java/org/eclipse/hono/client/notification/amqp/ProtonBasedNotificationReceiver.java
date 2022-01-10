@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -54,8 +54,8 @@ public class ProtonBasedNotificationReceiver extends AbstractServiceClient imple
     private final AtomicBoolean tryAgainRecreatingConsumers = new AtomicBoolean(false);
     private final Map<Class<? extends AbstractNotification>, Handler<? extends AbstractNotification>> handlerPerType = new HashMap<>();
     private final Set<String> addresses = new HashSet<>();
-
-    private boolean started = false;
+    private final AtomicBoolean startCalled = new AtomicBoolean();
+    private final AtomicBoolean stopCalled = new AtomicBoolean();
 
     /**
      * Creates a client for consuming notifications.
@@ -70,6 +70,9 @@ public class ProtonBasedNotificationReceiver extends AbstractServiceClient imple
 
     @Override
     public Future<Void> start() {
+        if (!startCalled.compareAndSet(false, true)) {
+            return Future.succeededFuture();
+        }
         return super.start()
                 .onComplete(v -> {
                     if (addresses.isEmpty()) {
@@ -79,15 +82,16 @@ public class ProtonBasedNotificationReceiver extends AbstractServiceClient imple
                         // trigger creation of notification consumer links (with retry if failed)
                         recreateConsumers();
                     }
-                })
-                .onSuccess(ok -> started = true);
+                });
     }
 
     @Override
     public Future<Void> stop() {
+        if (!stopCalled.compareAndSet(false, true)) {
+            return Future.succeededFuture();
+        }
         addresses.clear();
         handlerPerType.clear();
-        started = false;
         return super.stop();
     }
 
@@ -100,7 +104,7 @@ public class ProtonBasedNotificationReceiver extends AbstractServiceClient imple
     public <T extends AbstractNotification> void registerConsumer(final Class<T> notificationType,
             final Handler<T> consumer) {
 
-        if (started) {
+        if (startCalled.get()) {
             throw new IllegalStateException("consumers cannot be added when consumer is already started");
         }
 
