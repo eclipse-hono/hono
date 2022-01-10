@@ -66,6 +66,7 @@ public class ChirpStackProvider extends JsonBasedLoraProvider {
     private static final String COMMAND_FIELD_CHIRPSTACK_CONFIRMED = "confirmed";
     private static final String COMMAND_FIELD_CHIRPSTACK_DATA = "data";
     private static final String COMMAND_FIELD_CHIRPSTACK_DEVICE_QUEUE_ITEM = "deviceQueueItem";
+    private static final String COMMAND_FIELD_CHIRPSTACK_PORT = "fPort";
 
     @Override
     public String getProviderName() {
@@ -173,10 +174,13 @@ public class ChirpStackProvider extends JsonBasedLoraProvider {
     }
 
     @Override
-    protected JsonObject getCommandPayload(final Buffer payload, final String deviceId) {
+    protected JsonObject getCommandPayload(final Buffer payload, final String deviceId, final String subject) {
         final JsonObject deviceQueueItem = new JsonObject();
         deviceQueueItem.put(COMMAND_FIELD_CHIRPSTACK_CONFIRMED, false);
         deviceQueueItem.put(COMMAND_FIELD_CHIRPSTACK_DATA, payload.getBytes());
+        try {
+            deviceQueueItem.put(COMMAND_FIELD_CHIRPSTACK_PORT, Integer.parseInt(subject));
+        } catch (final NumberFormatException ignored) { }
 
         final JsonObject json = new JsonObject();
         json.put(COMMAND_FIELD_CHIRPSTACK_DEVICE_QUEUE_ITEM, deviceQueueItem);

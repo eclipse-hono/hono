@@ -18,6 +18,8 @@ import static com.google.common.truth.Truth.assertThat;
 import org.eclipse.hono.adapter.lora.LoraMetaData;
 import org.eclipse.hono.adapter.lora.UplinkLoraMessage;
 
+import io.vertx.core.json.JsonObject;
+
 /**
  * Verifies behavior of {@link TheThingsStackProvider}.
  */
@@ -53,5 +55,20 @@ public class TheThingsStackProviderTest extends LoraProviderTestBase<TheThingsSt
         assertThat(metaData.getGatewayInfo().get(0).getGatewayId()).isEqualTo("0203040506070809");
         assertThat(metaData.getGatewayInfo().get(0).getSnr()).isEqualTo(5);
         assertThat(metaData.getGatewayInfo().get(0).getRssi()).isEqualTo(-35);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void assertCommandFormat(final JsonObject command) {
+        assertThat(command.containsKey("decoded_payload")).isTrue();
+        assertThat(command.getValue("decoded_payload")).isEqualTo("62756D6C7578");
+        assertThat(command.containsKey("confirmed")).isTrue();
+        assertThat((boolean) command.getValue("confirmed")).isFalse();
+        assertThat(command.containsKey("priority")).isTrue();
+        assertThat(command.getValue("priority")).isEqualTo("normal");
+        assertThat(command.containsKey("f_port")).isTrue();
+        assertThat(command.getValue("f_port")).isEqualTo(2);
     }
 }

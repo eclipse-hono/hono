@@ -131,7 +131,7 @@ public abstract class LoraProviderTestBase<T extends LoraProvider> {
         commandEndpoint.setPayloadProperties(Map.of("py-property", "my-property-value"));
         commandEndpoint.setUri("https://my-lns.io/{{deviceId}}/command");
         final LoraCommand command = provider.getCommand(commandEndpoint, TEST_DEVICE_ID,
-            Buffer.buffer("bumlux".getBytes(StandardCharsets.UTF_8)));
+            Buffer.buffer("bumlux".getBytes(StandardCharsets.UTF_8)), "2");
         assertThat(command.getUri()).isEqualTo("https://my-lns.io/" + TEST_DEVICE_ID + "/command");
         assertCommandFormat(command.getPayload());
     }
