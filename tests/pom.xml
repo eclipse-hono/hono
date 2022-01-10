@@ -90,7 +90,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <hono.command-router.config-src>clustered-cache</hono.command-router.config-src>
     <hono.command-router.disabled>false</hono.command-router.disabled>
     <hono.command-router.image>hono-service-command-router</hono.command-router.image>
-    <hono.command-router.max-mem>300000000</hono.command-router.max-mem>
+    <hono.command-router.max-mem>350000000</hono.command-router.max-mem>
     <hono.command-router.java-options>${default.java-options}</hono.command-router.java-options>
     <hono.command-router.native-image-args></hono.command-router.native-image-args>
 
@@ -122,7 +122,7 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
     <hono.deviceregistry.image>hono-service-device-registry-mongodb</hono.deviceregistry.image>
     <hono.deviceregistry.resources.folder>deviceregistry-mongodb</hono.deviceregistry.resources.folder>
     <!-- default memory limit of the device registry container is 400MB -->
-    <hono.deviceregistry.containerMemoryLimit>400000000</hono.deviceregistry.containerMemoryLimit>
+    <hono.deviceregistry.containerMemoryLimit>600000000</hono.deviceregistry.containerMemoryLimit>
     <hono.deviceregistry.java-options>${default.java-options}</hono.deviceregistry.java-options>
     <!-- Spring application profiles to activate for the registry -->
     <hono.deviceregistry.spring.profiles>${logging.profile}</hono.deviceregistry.spring.profiles>
@@ -151,32 +151,32 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
 
     <hono.amqp-adapter.image>hono-adapter-amqp-vertx</hono.amqp-adapter.image>
     <hono.amqp-adapter.config-dir>etc/hono</hono.amqp-adapter.config-dir>
-    <hono.amqp-adapter.max-mem>314572800</hono.amqp-adapter.max-mem>
+    <hono.amqp-adapter.max-mem>500000000</hono.amqp-adapter.max-mem>
     <hono.amqp-adapter.java-options>${default.java-options}</hono.amqp-adapter.java-options>
     <hono.amqp-adapter.native-image-args></hono.amqp-adapter.native-image-args>
 
     <hono.coap-adapter.image>hono-adapter-coap-vertx</hono.coap-adapter.image>
     <hono.coap-adapter.config-dir>etc/hono</hono.coap-adapter.config-dir>
-    <hono.coap-adapter.max-mem>314572800</hono.coap-adapter.max-mem>
+    <hono.coap-adapter.max-mem>500000000</hono.coap-adapter.max-mem>
     <hono.coap-adapter.java-options>${default.java-options}</hono.coap-adapter.java-options>
     <hono.coap-adapter.native-image-args></hono.coap-adapter.native-image-args>
 
     <hono.http-adapter.image>hono-adapter-http-vertx</hono.http-adapter.image>
     <hono.http-adapter.config-dir>etc/hono</hono.http-adapter.config-dir>
-    <hono.http-adapter.max-mem>314572800</hono.http-adapter.max-mem>
+    <hono.http-adapter.max-mem>500000000</hono.http-adapter.max-mem>
     <hono.http-adapter.nativeTlsRequired>true</hono.http-adapter.nativeTlsRequired>
     <hono.http-adapter.java-options>${default.java-options}</hono.http-adapter.java-options>
     <hono.http-adapter.native-image-args></hono.http-adapter.native-image-args>
 
     <hono.mqtt-adapter.image>hono-adapter-mqtt-vertx</hono.mqtt-adapter.image>
     <hono.mqtt-adapter.config-dir>etc/hono</hono.mqtt-adapter.config-dir>
-    <hono.mqtt-adapter.max-mem>314572800</hono.mqtt-adapter.max-mem>
+    <hono.mqtt-adapter.max-mem>500000000</hono.mqtt-adapter.max-mem>
     <hono.mqtt-adapter.java-options>${default.java-options}</hono.mqtt-adapter.java-options>
     <hono.mqtt-adapter.native-image-args></hono.mqtt-adapter.native-image-args>
 
     <hono.auth-server.image>hono-service-auth</hono.auth-server.image>
     <hono.auth-server.config-dir>etc/hono</hono.auth-server.config-dir>
-    <hono.auth-server.max-mem>205520896</hono.auth-server.max-mem>
+    <hono.auth-server.max-mem>250000000</hono.auth-server.max-mem>
     <hono.auth-server.java-options>${default.java-options}</hono.auth-server.java-options>
     <hono.auth-server.native-image-args></hono.auth-server.native-image-args>
 
@@ -1063,6 +1063,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>hono</name>
                       <alias>zookeeper.hono</alias>
                     </network>
+                    <memorySwap>268435456</memorySwap>
+                    <memory>268435456</memory>
                     <log>
                       <prefix>Zookeeper</prefix>
                       <color>${log.color.kafka}</color>
@@ -1095,6 +1097,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <prefix>Kafka</prefix>
                       <color>${log.color.kafka}</color>
                     </log>
+                    <memorySwap>600000000</memorySwap>
+                    <memory>600000000</memory>
                     <wait>
                       <time>${service.startup.timeout}</time>
                       <log>.*(\[KafkaServer id=1\] started).*</log>
