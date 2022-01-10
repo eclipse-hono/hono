@@ -95,6 +95,16 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseServic
                 new CachingClientFactory<>(connection.getVertx(), RequestResponseClient::isOpen),
                 responseCache);
         this.notificationReceiver = Objects.requireNonNull(notificationReceiver);
+
+        if (isCachingEnabled()) {
+            notificationReceiver.registerConsumer(TenantChangeNotification.class,
+                    n -> {
+                        if (LifecycleChange.DELETE.equals(n.getChange())
+                                || (LifecycleChange.UPDATE.equals(n.getChange()) && !n.isEnabled())) {
+                            removeResultFromCache(n.getTenantId());
+                        }
+                    });
+        }
     }
 
     /**
@@ -269,32 +279,14 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseServic
 
     @Override
     public Future<Void> start() {
-        if (isCachingEnabled()) {
-            notificationReceiver.registerConsumer(TenantChangeNotification.class,
-                    n -> {
-                        if (LifecycleChange.DELETE.equals(n.getChange())
-                                || (LifecycleChange.UPDATE.equals(n.getChange()) && !n.isEnabled())) {
-                            removeResultFromCache(n.getTenantId());
-                        }
-                    });
-
-            return notificationReceiver.start()
-                    .compose(v -> super.start());
-        } else {
-            return super.start();
-        }
+        final Future<Void> future = isCachingEnabled() ? notificationReceiver.start() : Future.succeededFuture();
+        return future.compose(v -> super.start());
     }
 
     @Override
     public Future<Void> stop() {
         return super.stop()
-                .compose(v -> {
-                    if (isCachingEnabled()) {
-                        return notificationReceiver.stop();
-                    } else {
-                        return Future.succeededFuture();
-                    }
-                });
+                .compose(v -> isCachingEnabled() ? notificationReceiver.stop() : Future.succeededFuture());
     }
 
 }

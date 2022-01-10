@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -49,7 +49,7 @@ import io.vertx.junit5.VertxTestContext;
  *
  */
 @ExtendWith(VertxExtension.class)
-@Timeout(timeUnit = TimeUnit.SECONDS, value = 5)
+@Timeout(timeUnit = TimeUnit.SECONDS, value = 7)
 public class AmqpConnectionIT extends AmqpAdapterTestBase {
 
     /**
@@ -294,9 +294,48 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
             .compose(device -> helper.registry.deregisterDevice(tenantId, deviceId))
             .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
             .onComplete(ctx.failing(t -> {
-                // THEN the connection is refused
+                ctx.verify(() -> assertThat(t).isInstanceOf(AuthenticationException.class));
                 ctx.completeNow();
             }));
+    }
+
+    /**
+     * Verifies that after a device has already connected successfully to the adapter, the deletion of device
+     * registration data causes the adapter to refuse any following connection attempts.
+     * <p>
+     * This test relies upon the registration client cache data in the adapter getting deleted when the device is
+     * deleted (triggered via a corresponding notification from the device registry).
+     *
+     * @param ctx The test context.
+     */
+    @Test
+    public void testConnectFailsAfterDeviceDeleted(final VertxTestContext ctx) {
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final String password = "secret";
+        final Tenant tenant = new Tenant();
+
+        helper.registry
+                .addDeviceForTenant(tenantId, tenant, deviceId, password)
+                .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
+                .compose(con -> {
+                    // first connection attempt successful
+                    con.close();
+                    // now remove device
+                    return helper.registry.deregisterDevice(tenantId, deviceId);
+                })
+                .compose(ok -> {
+                    final Promise<Void> resultPromise = Promise.promise();
+                    // device deleted, now wait a bit for the device registry notifications to trigger registration cache invalidation
+                    vertx.setTimer(500, tid -> resultPromise.complete());
+                    return resultPromise.future();
+                })
+                .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
+                .onComplete(ctx.failing(t -> {
+                    ctx.verify(() -> assertThat(t).isInstanceOf(AuthenticationException.class));
+                    ctx.completeNow();
+                }));
     }
 
     /**

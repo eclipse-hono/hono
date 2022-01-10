@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -444,14 +444,13 @@ class ProtonBasedCredentialsClientTest {
         final String tenantId = "the-tenant-id";
         final String deviceId = "the-device-id";
 
-        givenAClient(cache);
-
         final var notificationHandlerCaptor = getHandlerArgumentCaptor(AllDevicesOfTenantDeletedNotification.class);
+
+        givenAClient(cache);
 
         final Set<AnnotatedCacheKey<?>> expectedCacheRemovals = new HashSet<>();
 
         // GIVEN a client with a cache containing credentials of two tenants
-        // the client is started to register for notifications
         client.start()
                 .compose(v -> addResultToCache("other-tenant", deviceId, "other"))
                 .compose(v -> addResultToCache(tenantId, deviceId, "auth-id1"))
@@ -481,14 +480,13 @@ class ProtonBasedCredentialsClientTest {
         final String tenantId = "the-tenant-id";
         final String deviceId = "the-device-id";
 
-        givenAClient(cache);
-
         final var notificationHandlerCaptor = getHandlerArgumentCaptor(DeviceChangeNotification.class);
+
+        givenAClient(cache);
 
         final Set<AnnotatedCacheKey<?>> expectedCacheRemovals = new HashSet<>();
 
         // GIVEN a client with a cache containing credentials of two tenants
-        // the client is started to register for notifications
         client.start()
                 .compose(v -> addResultToCache("other-tenant", deviceId, "other"))
                 .compose(v -> addResultToCache(tenantId, "other-device", "other"))
@@ -520,14 +518,13 @@ class ProtonBasedCredentialsClientTest {
         final String tenantId = "the-tenant-id";
         final String deviceId = "the-device-id";
 
-        givenAClient(cache);
-
         final var notificationHandlerCaptor = getHandlerArgumentCaptor(CredentialsChangeNotification.class);
+
+        givenAClient(cache);
 
         final Set<AnnotatedCacheKey<?>> expectedCacheRemovals = new HashSet<>();
 
         // GIVEN a client with a cache containing credentials of two tenants
-        // the client is started to register for notifications
         client.start()
                 .compose(v -> addResultToCache("other-tenant", deviceId, "other"))
                 .compose(v -> addResultToCache(tenantId, deviceId, "auth-id1"))

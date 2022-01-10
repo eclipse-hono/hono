@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -50,6 +50,7 @@ import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.metrics.KafkaMetricsConfig;
 import org.eclipse.hono.client.kafka.metrics.MicrometerKafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.metrics.NoopKafkaClientMetricsSupport;
+import org.eclipse.hono.client.notification.amqp.ProtonBasedNotificationReceiver;
 import org.eclipse.hono.client.notification.kafka.KafkaBasedNotificationReceiver;
 import org.eclipse.hono.client.notification.kafka.NotificationKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.registry.CredentialsClient;
@@ -59,10 +60,10 @@ import org.eclipse.hono.client.registry.amqp.ProtonBasedCredentialsClient;
 import org.eclipse.hono.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
 import org.eclipse.hono.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.config.ApplicationConfigProperties;
+import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.VertxProperties;
-import org.eclipse.hono.notification.NoOpNotificationReceiver;
 import org.eclipse.hono.notification.NotificationReceiver;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
@@ -789,8 +790,9 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
         if (kafkaConsumerConfig.isConfigured()) {
             return new KafkaBasedNotificationReceiver(vertx(), kafkaConsumerConfig);
         } else {
-            // TODO provide AMQP based notification receiver
-            return new NoOpNotificationReceiver();
+            final ClientConfigProperties notificationConfig = new ClientConfigProperties(downstreamSenderConfig());
+            notificationConfig.setServerRole("Notification");
+            return new ProtonBasedNotificationReceiver(HonoConnection.newConnection(vertx(), notificationConfig, getTracer()));
         }
     }
 

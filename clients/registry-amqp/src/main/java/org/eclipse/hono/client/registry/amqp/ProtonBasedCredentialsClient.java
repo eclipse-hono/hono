@@ -94,6 +94,20 @@ public class ProtonBasedCredentialsClient extends AbstractRequestResponseService
                 Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
                 this::handleTenantTimeout);
         this.notificationReceiver = Objects.requireNonNull(notificationReceiver);
+
+        if (isCachingEnabled()) {
+            notificationReceiver.registerConsumer(AllDevicesOfTenantDeletedNotification.class,
+                    n -> removeResultsForTenantFromCache(n.getTenantId()));
+            notificationReceiver.registerConsumer(DeviceChangeNotification.class,
+                    n -> {
+                        if (LifecycleChange.DELETE.equals(n.getChange())
+                                || (LifecycleChange.UPDATE.equals(n.getChange()) && !n.isEnabled())) {
+                            removeResultsForDeviceFromCache(n.getTenantId(), n.getDeviceId());
+                        }
+                    });
+            notificationReceiver.registerConsumer(CredentialsChangeNotification.class,
+                    n -> removeResultsForDeviceFromCache(n.getTenantId(), n.getDeviceId()));
+        }
     }
 
     /**
@@ -276,40 +290,14 @@ public class ProtonBasedCredentialsClient extends AbstractRequestResponseService
 
     @Override
     public Future<Void> start() {
-        if (isCachingEnabled()) {
-
-            notificationReceiver.registerConsumer(AllDevicesOfTenantDeletedNotification.class,
-                    n -> removeResultsForTenantFromCache(n.getTenantId()));
-
-            notificationReceiver.registerConsumer(DeviceChangeNotification.class,
-                    n -> {
-                        if (LifecycleChange.DELETE.equals(n.getChange())
-                                || (LifecycleChange.UPDATE.equals(n.getChange()) && !n.isEnabled())) {
-
-                            removeResultsForDeviceFromCache(n.getTenantId(), n.getDeviceId());
-                        }
-                    });
-
-            notificationReceiver.registerConsumer(CredentialsChangeNotification.class,
-                    n -> removeResultsForDeviceFromCache(n.getTenantId(), n.getDeviceId()));
-
-            return notificationReceiver.start()
-                    .compose(v -> super.start());
-        } else {
-            return super.start();
-        }
+        final Future<Void> future = isCachingEnabled() ? notificationReceiver.start() : Future.succeededFuture();
+        return future.compose(v -> super.start());
     }
 
     @Override
     public Future<Void> stop() {
         return super.stop()
-                .compose(v -> {
-                    if (isCachingEnabled()) {
-                        return notificationReceiver.stop();
-                    } else {
-                        return Future.succeededFuture();
-                    }
-                });
+                .compose(v -> isCachingEnabled() ? notificationReceiver.stop() : Future.succeededFuture());
     }
 
     private static class CacheKey {
