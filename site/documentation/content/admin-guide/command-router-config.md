@@ -107,19 +107,48 @@ This can be used to narrow the visibility of the insecure port to a local networ
 
 Both the secure as well as the insecure port numbers may be explicitly set to `0`. The Command Router component will then use arbitrary (unused) port numbers determined by the operating system during startup.
 
-## Command & Control Connection Configuration
+## Messaging Configuration
 
-The Command Router component requires a connection to the *AMQP 1.0 Messaging Network* in order to receive
-commands from downstream applications and forward them on a specific link on which the target protocol adapter will receive them.
+The Command Router component uses a connection to an *AMQP 1.0 Messaging Network* and/or an *Apache Kafka cluster* to
+* receive command & control messages sent by downstream applications and to forward these commands on a specific
+  address/topic so that they can be received by protocol adapters,
+* send delivery failure command response messages in case no consumer exists for a received command (only with Kafka messaging),
+* receive notification messages about changes to tenant/device/credentials data sent from the device registry.
 
-The connection is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
-with `HONO_COMMAND` being used as `${PREFIX}`. The properties for configuring response caching can be ignored.
+Command messages are received on each configured messaging system.
+
+For notification messages, the Kafka connection is used by default, if configured. Otherwise the *AMQP messaging network*
+is used.
+
+### AMQP 1.0 Messaging Network Connection Configuration
+
+The connection to the *AMQP 1.0 Messaging Network* is configured according to the 
+[Hono Client Configuration]({{< relref "hono-client-configuration.md" >}}) with `HONO_COMMAND` being used as `${PREFIX}`.
+The properties for configuring response caching can be ignored.
+
+### Kafka based Messaging Configuration
+
+The connection to an *Apache Kafka cluster* can be configured according to the
+[Hono Kafka Client Configuration]({{< relref "hono-kafka-client-configuration.md" >}}).
+
+The following table provides an overview of the prefixes to be used to individually configure the Kafka clients used by
+the component. The individual client configuration is optional, a minimal configuration may only contain a common client
+configuration consisting of properties prefixed with `HONO_KAFKA_COMMONCLIENTCONFIG_` and `hono.kafka.commonClientConfig.`
+respectively.
+
+| OS Environment Variable Prefix<br>Java System Property Prefix                                | Description                                                                                                        |
+|:---------------------------------------------------------------------------------------------|:-------------------------------------------------------------------------------------------------------------------|
+| `HONO_KAFKA_CLEANUP_ADMINCLIENTCONFIG_`<br>`hono.kafka.cleanup.adminClientConfig.`           | Configures the Kafka admin client that removes Hono internal topics.                                               |
+| `HONO_KAFKA_COMMAND_CONSUMERCONFIG_`<br>`hono.kafka.command.consumerConfig.`                 | Configures the Kafka consumer that receives command messages.                                                      |
+| `HONO_KAFKA_COMMANDINTERNAL_PRODUCERCONFIG_`<br>`hono.kafka.commandInternal.producerConfig.` | Configures the Kafka producer that publishes command messages to Hono internal topics.                             |
+| `HONO_KAFKA_COMMANDRESPONSE_PRODUCERCONFIG_`<br>`hono.kafka.commandResponse.producerConfig.` | Configures the Kafka producer that publishes command response messages.                                            |
+| `HONO_KAFKA_NOTIFICATION_CONSUMERCONFIG_`<br>`hono.kafka.notification.consumerConfig.`       | Configures the Kafka consumer that receives notification messages about changes to tenant/device/credentials data. |
 
 ## Tenant Service Connection Configuration
 
 The Command Router component requires a connection to an implementation of Hono's [Tenant API]({{< ref "/api/tenant" >}}) in order to retrieve information for a tenant.
 
-The connection to the Tenant Service is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
+The connection to the Tenant Service is configured according to the [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
 where the `${PREFIX}` is set to `HONO_TENANT` and the additional values for response caching apply.
 
 The adapter caches the responses from the service according to the *cache directive* included in the response.
@@ -129,7 +158,7 @@ If the response doesn't contain a *cache directive* no data will be cached.
 
 The Command Router component requires a connection to an implementation of Hono's [Device Registration API]({{< relref "/api/device-registration" >}}) in order to retrieve registration status assertions for the target devices of incoming command messages.
 
-The connection to the Device Registration Service is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
+The connection to the Device Registration Service is configured according to the [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
 where the `${PREFIX}` is set to `HONO_REGISTRATION`.
 
 The adapter caches the responses from the service according to the *cache directive* included in the response.
@@ -184,7 +213,7 @@ The following table provides an overview of the configuration variables and corr
 
 The Command Router component requires a connection to an implementation of Hono's Authentication API in order to authenticate and authorize client requests.
 
-The connection is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
+The connection is configured according to the [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
 where the `${PREFIX}` is set to `HONO_AUTH`. Since Hono's Authentication Service does not allow caching of the responses, the cache properties
 can be ignored.
 
@@ -198,19 +227,3 @@ In addition to the standard client configuration properties, following propertie
 ## Metrics Configuration
 
 See [Monitoring & Tracing Admin Guide]({{< ref "monitoring-tracing-config.md" >}}) for details on how to configure the reporting of metrics.
-
-## Kafka Client Configuration
-
-The Command Router component can be configured to use Kafka for messaging instead of or in addition to AMQP. This
-requires configuring the connection to the Kafka cluster according to 
-[Hono Kafka Client Configuration]({{< relref "hono-kafka-client-configuration.md" >}}).
-
-The following table provides an overview of the prefixes to be used to individually configure the Kafka clients used by
-the component.
-
-| OS Environment Variable Prefix<br>Java System Property Prefix | Description                  |
-| :---------------------------------------------- | :----------------------------------------- |
-| `HONO_KAFKA_CLEANUP_ADMINCLIENTCONFIG_`<br>`hono.kafka.cleanup.adminClientConfig.` | Configures the Kafka admin client that removes Hono internal topics. |
-| `HONO_KAFKA_COMMAND_CONSUMERCONFIG_`<br>`hono.kafka.command.consumerConfig.` | Configures the Kafka consumer that receives command messages. |
-| `HONO_KAFKA_COMMANDINTERNAL_PRODUCERCONFIG_`<br>`hono.kafka.commandInternal.producerConfig.` | Configures the Kafka producer that publishes command messages to Hono internal topics. |
-| `HONO_KAFKA_COMMANDRESPONSE_PRODUCERCONFIG_`<br>`hono.kafka.commandResponse.producerConfig.` | Configures the Kafka producer that publishes command response messages. |

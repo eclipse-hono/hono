@@ -43,47 +43,56 @@ In order to use *epoll*, the `HONO_VERTX_PREFERNATIVE` environment variable need
 
 ## Protocol Adapter Options
 
-### AMQP 1.0 Messaging Network Connection Configuration
+### Messaging Configuration
 
-Protocol adapters require a connection to the *AMQP 1.0 Messaging Network* in order to forward telemetry data and
-events received from devices to downstream consumers.
+Protocol adapters use a connection to an *AMQP 1.0 Messaging Network* and/or an *Apache Kafka cluster* to
+* forward telemetry data and events received from devices so that they can be received by downstream consumers,
+* receive command & control messages sent from downstream applications (and forwarded by the command router component),
+* forward command response messages to be received by downstream applications,
+* receive notification messages about changes to tenant/device/credentials data sent from the device registry.
 
-The connection to the messaging network is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
-with `HONO_MESSAGING` being used as `${PREFIX}`. Since there are no responses being received, the properties for
-configuring response caching can be ignored.
+For telemetry and event messages a connection to an *AMQP 1.0 Messaging Network* is used by default, if configured. 
+If both kinds of messaging are configured, the decision which one to use is done according to the 
+[Tenant Configuration]({{< relref "admin-guide/hono-kafka-client-configuration#configuring-tenants-to-use-kafka-based-messaging" >}}).
 
-### Kafka based Messaging Configuration
+Command messages are received on each configured messaging system. Command response messages are sent on the kind of
+messaging system that was used for the corresponding command message.
 
-Protocol adapters can be configured to allow publishing messages to an *Apache Kafka&reg; cluster* instead of an
-AMQP Messaging Network. Which messaging to be used, can be configured at the tenant _or_ for all tenants if a protocol
-adapter is only configured with one messaging system. The connection to the Kafka cluster is configured according
-to [Hono Kafka Client Configuration]({{< relref "hono-kafka-client-configuration.md" >}}).
+For notification messages, the Kafka connection is used by default, if configured. Otherwise the *AMQP messaging network*
+is used.
+
+#### AMQP 1.0 Messaging Network Connection Configuration
+
+The connection to the *AMQP 1.0 Messaging Network* is configured according to the 
+[Hono Client Configuration]({{< relref "hono-client-configuration.md" >}}) with `HONO_MESSAGING` (for telemetry and
+event messages and notification messages) and `HONO_COMMAND` (for command and command response messages) being used as
+`${PREFIX}`. Since there are no responses being received, the properties for configuring response caching can be ignored.
+
+#### Kafka based Messaging Configuration
+
+The connection to an *Apache Kafka cluster* can be configured according to the 
+[Hono Kafka Client Configuration]({{< relref "hono-kafka-client-configuration.md" >}}).
 
 The following table provides an overview of the prefixes to be used to individually configure the Kafka clients used by
-a protocol adapter.
+a protocol adapter. The individual client configuration is optional, a minimal configuration may only contain a common client
+configuration consisting of properties prefixed with `HONO_KAFKA_COMMONCLIENTCONFIG_` and `hono.kafka.commonClientConfig.`
+respectively.
 
-| OS Environment Variable Prefix<br>Java System Property Prefix | Description                  |
-| :---------------------------------------------- | :----------------------------------------- |
-| `HONO_KAFKA_COMMAND_CONSUMERCONFIG_`<br>`hono.kafka.command.consumerConfig.` | Configures the Kafka consumer that receives command messages. |
-| `HONO_KAFKA_COMMANDINTERNAL_ADMINCLIENTCONFIG_`<br>`hono.kafka.commandInternal.adminClientConfig.` | Configures the Kafka admin client that creates Hono internal topics. |
-| `HONO_KAFKA_COMMANDRESPONSE_PRODUCERCONFIG_`<br>`hono.kafka.commandResponse.producerConfig.` | Configures the Kafka producer that publishes command response messages. |
-| `HONO_KAFKA_EVENT_PRODUCERCONFIG_`<br>`hono.kafka.event.producerConfig.` | Configures the Kafka producer that publishes event messages. |
-| `HONO_KAFKA_TELEMETRY_PRODUCERCONFIG_`<br>`hono.kafka.telemetry.producerConfig.` | Configures the Kafka producer that publishes telemetry messages. |
-
-### Command & Control Connection Configuration
-
-Protocol adapters require an additional connection to the *AMQP 1.0 Messaging Network* in order to receive
-commands from downstream applications and send responses to commands back to applications.
-
-The connection is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
-with `HONO_COMMAND` being used as `${PREFIX}`. The properties for configuring response caching can be ignored.
+| OS Environment Variable Prefix<br>Java System Property Prefix                                      | Description                                                                                                        |
+|:---------------------------------------------------------------------------------------------------|:-------------------------------------------------------------------------------------------------------------------|
+| `HONO_KAFKA_COMMAND_CONSUMERCONFIG_`<br>`hono.kafka.command.consumerConfig.`                       | Configures the Kafka consumer that receives command messages.                                                      |
+| `HONO_KAFKA_COMMANDINTERNAL_ADMINCLIENTCONFIG_`<br>`hono.kafka.commandInternal.adminClientConfig.` | Configures the Kafka admin client that creates Hono internal topics.                                               |
+| `HONO_KAFKA_COMMANDRESPONSE_PRODUCERCONFIG_`<br>`hono.kafka.commandResponse.producerConfig.`       | Configures the Kafka producer that publishes command response messages.                                            |
+| `HONO_KAFKA_EVENT_PRODUCERCONFIG_`<br>`hono.kafka.event.producerConfig.`                           | Configures the Kafka producer that publishes event messages.                                                       |
+| `HONO_KAFKA_NOTIFICATION_CONSUMERCONFIG_`<br>`hono.kafka.notification.consumerConfig.`             | Configures the Kafka consumer that receives notification messages about changes to tenant/device/credentials data. |
+| `HONO_KAFKA_TELEMETRY_PRODUCERCONFIG_`<br>`hono.kafka.telemetry.producerConfig.`                   | Configures the Kafka producer that publishes telemetry messages.                                                   |
 
 ### Tenant Service Connection Configuration
 
 Protocol adapters require a connection to an implementation of Hono's [Tenant API]({{< ref "/api/tenant" >}})
 in order to retrieve information for a tenant.
 
-The connection to the Tenant Service is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
+The connection to the Tenant Service is configured according to the [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
 where the `${PREFIX}` is set to `HONO_TENANT` and the additional values for response caching apply.
 
 The adapter caches the responses from the service according to the *cache directive* included in the response.
@@ -94,7 +103,7 @@ If the response doesn't contain a *cache directive* no data will be cached.
 Protocol adapters require a connection to an implementation of Hono's [Device Registration API]({{< relref "/api/device-registration" >}})
 in order to retrieve registration status assertions for connected devices.
 
-The connection to the Device Registration Service is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
+The connection to the Device Registration Service is configured according to the [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
 where the `${PREFIX}` is set to `HONO_REGISTRATION`.
 
 The adapter caches the responses from the service according to the *cache directive* included in the response.
@@ -111,7 +120,7 @@ in order to retrieve credentials stored for devices that needs to be authenticat
 the adapter uses the Credentials API to retrieve the credentials on record for the device and matches that with the
 credentials provided by a device.
 
-The connection to the Credentials Service is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
+The connection to the Credentials Service is configured according to the [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
 where the `${PREFIX}` is set to `HONO_CREDENTIALS`.
 
 The adapter caches the responses from the service according to the *cache directive* included in the response.
@@ -178,7 +187,7 @@ Protocol adapters connect to an implementation of Hono's [Command Router API]({{
 in order to supply information with which a Command Router service component can route command & control messages to
 the protocol adapters that the target devices are connected to.
 
-The connection to the Command Router service is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
+The connection to the Command Router service is configured according to the [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
 where the `${PREFIX}` is set to `HONO_COMMANDROUTER`.
 
 Responses from the Command Router service are never cached, so the properties for configuring the cache are ignored.

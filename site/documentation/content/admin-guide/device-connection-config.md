@@ -151,7 +151,7 @@ The following table provides an overview of the configuration variables and corr
 
 The Device Connection component requires a connection to an implementation of Hono's Authentication API in order to authenticate and authorize client requests.
 
-The connection is configured according to [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
+The connection is configured according to the [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
 where the `${PREFIX}` is set to `HONO_AUTH`. Since Hono's Authentication Service does not allow caching of the responses, the cache properties
 can be ignored.
 
