@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,12 +13,9 @@
 
 package org.eclipse.hono.tests.mqtt;
 
-import java.util.Optional;
+import java.util.Objects;
 import java.util.Set;
-import java.util.function.Supplier;
 
-import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -82,17 +79,17 @@ public abstract class MqttTestBase {
         defaultOptions.setSsl(true)
             .setTrustOptions(new PemTrustOptions().addCertPath(IntegrationTestSupport.TRUST_STORE_PATH))
             .setHostnameVerificationAlgorithm("")
-            .setEnabledSecureTransportProtocols(Set.of("TLSv1.2"));
+            .setEnabledSecureTransportProtocols(Set.of(IntegrationTestSupport.TLS_VERSION_1_2));
     }
 
     /**
-     * Sets up the fixture.
+     * Create integration test helper.
      *
      * @param testInfo The JUnit test info.
      * @param ctx The vert.x context.
      */
     @BeforeEach
-    public void setUp(final TestInfo testInfo, final VertxTestContext ctx) {
+    public void createHelper(final TestInfo testInfo, final VertxTestContext ctx) {
         LOGGER.info("running {}", testInfo.getDisplayName());
         helper = new IntegrationTestSupport(vertx);
         helper.init().onComplete(ctx.succeedingThenComplete());
@@ -145,39 +142,6 @@ public abstract class MqttTestBase {
     }
 
     /**
-     * Registers a device and opens a connection to the MQTT adapter using the device's credentials.
-     *
-     * @param tenantId The id of the tenant that the device belongs to.
-     * @param tenant The tenant that the device belongs to.
-     * @param deviceId The identifier of the device.
-     * @param password The password to use for authentication.
-     * @param consumerFactory The factory for creating the consumer of messages published by the device or {@code null}
-     *            if no consumer should be created.
-     * @return A future that will be completed with the CONNACK packet received from the adapter or failed if the
-     *         connection could not be established.
-     */
-    protected final Future<MqttConnAckMessage> connectToAdapter(
-            final String tenantId,
-            final Tenant tenant,
-            final String deviceId,
-            final String password,
-            final Supplier<Future<MessageConsumer>> consumerFactory) {
-
-        return helper.registry
-                .addDeviceForTenant(tenantId, tenant, deviceId, password)
-                .compose(ok -> Optional.ofNullable(consumerFactory)
-                        .map(factory -> factory.get())
-                        .orElseGet(() -> Future.succeededFuture()))
-                .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
-                .recover(t -> {
-                    LOGGER.info("failed to establish connection to MQTT adapter [host: {}, port: {}]",
-                            IntegrationTestSupport.MQTT_HOST, IntegrationTestSupport.MQTT_PORT, t);
-                    return Future.failedFuture(t);
-                });
-
-    }
-
-    /**
      * Opens a connection to the MQTT adapter using given credentials.
      *
      * @param username The username to use for authentication.
@@ -189,7 +153,7 @@ public abstract class MqttTestBase {
     protected final Future<MqttConnAckMessage> connectToAdapter(
             final String username,
             final String password) {
-        return connectToAdapter("TLSv1.2", username, password);
+        return connectToAdapter(IntegrationTestSupport.TLS_VERSION_1_2, username, password);
     }
 
     /**
@@ -232,9 +196,28 @@ public abstract class MqttTestBase {
      * @return A future that will be completed with the CONNACK packet received
      *         from the adapter or failed with a {@link io.vertx.mqtt.MqttConnectionException}
      *         if the connection could not be established.
+     * @throws NullPointerException if client certificate is {@code null}.
+     */
+    protected final Future<MqttConnAckMessage> connectToAdapter(final SelfSignedCertificate cert) {
+        return connectToAdapter(cert, IntegrationTestSupport.MQTT_HOST);
+    }
+
+    /**
+     * Opens a connection to the MQTT adapter using an X.509 client certificate.
+     *
+     * @param cert The client certificate to use for authentication.
+     * @param hostname The name of the host to connect to.
+     * @return A future that will be completed with the CONNACK packet received
+     *         from the adapter or failed with a {@link io.vertx.mqtt.MqttConnectionException}
+     *         if the connection could not be established.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     protected final Future<MqttConnAckMessage> connectToAdapter(
-            final SelfSignedCertificate cert) {
+            final SelfSignedCertificate cert,
+            final String hostname) {
+
+        Objects.requireNonNull(cert);
+        Objects.requireNonNull(hostname);
 
         final Promise<MqttConnAckMessage> result = Promise.promise();
         vertx.runOnContext(connect -> {
@@ -242,12 +225,15 @@ public abstract class MqttTestBase {
             options.setKeyCertOptions(cert.keyCertOptions());
 
             mqttClient = MqttClient.create(vertx, options);
-            mqttClient.connect(IntegrationTestSupport.MQTTS_PORT, IntegrationTestSupport.MQTT_HOST, result);
+            mqttClient.connect(
+                    IntegrationTestSupport.MQTTS_PORT,
+                    hostname,
+                    result);
         });
         return result.future().map(conAck -> {
             LOGGER.info(
                     "MQTTS connection to adapter [host: {}, port: {}] established",
-                    IntegrationTestSupport.MQTT_HOST, IntegrationTestSupport.MQTTS_PORT);
+                    hostname, IntegrationTestSupport.MQTTS_PORT);
             this.context = Vertx.currentContext();
             return conAck;
         });

@@ -291,22 +291,28 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                 .withTag(TracingHelper.TAG_SUBJECT_DN, dn)
                 .start();
 
-        return mongoClient.findOne(
+        return mongoClient.findWithOptions(
                 collectionName,
                 MongoDbDocumentBuilder.builder().withCa(dn).document(),
-                new JsonObject())
-            .map(tenantJsonResult -> {
-                if (tenantJsonResult == null) {
-                    LOG.debug("could not find tenant [subject DN: {}]", dn);
+                new FindOptions().setLimit(2))
+            .map(matchingDocuments -> {
+                if (matchingDocuments.size() == 0) {
+                    LOG.debug("could not find tenant with matching trust anchor [subject DN: {}]", dn);
                     throw new ClientErrorException(
                             HttpURLConnection.HTTP_NOT_FOUND,
                             "no such tenant");
-                } else {
+                } else if (matchingDocuments.size() == 1) {
+                    final JsonObject tenantJsonResult = matchingDocuments.get(0);
                     return TenantDto.forRead(tenantJsonResult.getString(Constants.JSON_FIELD_TENANT_ID),
                             tenantJsonResult.getJsonObject(TenantDto.FIELD_TENANT).mapTo(Tenant.class),
                             tenantJsonResult.getInstant(TenantDto.FIELD_CREATED),
                             tenantJsonResult.getInstant(TenantDto.FIELD_UPDATED_ON),
                             tenantJsonResult.getString(TenantDto.FIELD_VERSION));
+                } else {
+                    LOG.debug("found multiple tenants with matching trust anchor [subject DN: {}]", dn);
+                    throw new ClientErrorException(
+                            HttpURLConnection.HTTP_NOT_FOUND,
+                            "found multiple tenants with matching trust anchor");
                 }
             })
             .onFailure(t -> TracingHelper.logError(span, "error retrieving tenant", t))

@@ -109,7 +109,7 @@ public class DeviceRegistryBasedCertificateVerifier implements NewAdvancedCertif
         final Certificate[] certChain = list.toArray(new Certificate[list.size()]);
         final Promise<AdditionalInfo> authResult = Promise.promise();
 
-        auth.validateClientCertificate(certChain, span.context())
+        auth.validateClientCertificate(certChain, List.of(), span.context())
                 .onSuccess(ar -> {
                     final SubjectDnCredentials credentials = authProvider.getCredentials(ar);
                     if (credentials == null) {

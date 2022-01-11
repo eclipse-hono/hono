@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,6 +26,7 @@ import org.eclipse.hono.adapter.auth.device.PreCredentialsValidationHandler;
 import org.eclipse.hono.adapter.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.adapter.auth.device.X509Authentication;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.service.auth.SniExtensionHelper;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
@@ -84,10 +85,11 @@ public class X509AuthHandler extends ExecutionContextAuthHandler<MqttConnectCont
      * The JSON object returned will contain
      * <ul>
      * <li>the subject DN of the validated client certificate in the
-     * {@link org.eclipse.hono.util.RequestResponseApiConstants#FIELD_PAYLOAD_SUBJECT_DN} property,</li>
-     * <li>the tenant that the device belongs to in the {@link org.eclipse.hono.util.RequestResponseApiConstants#FIELD_PAYLOAD_TENANT_ID}
-     * property and</li>
-     * <li>the device's MQTT client identifier in the {@link ExecutionContextAuthHandler#PROPERTY_CLIENT_IDENTIFIER} property</li>
+     * {@value org.eclipse.hono.util.RequestResponseApiConstants#FIELD_PAYLOAD_SUBJECT_DN} property,</li>
+     * <li>the tenant that the device belongs to in the
+     * {@value org.eclipse.hono.util.RequestResponseApiConstants#FIELD_PAYLOAD_TENANT_ID} property and</li>
+     * <li>the device's MQTT client identifier in the {@value ExecutionContextAuthHandler#PROPERTY_CLIENT_IDENTIFIER}
+     * property</li>
      * </ul>
      *
      * @param context The MQTT context for the client's CONNECT packet.
@@ -108,9 +110,12 @@ public class X509AuthHandler extends ExecutionContextAuthHandler<MqttConnectCont
         } else if (context.deviceEndpoint().isSsl()) {
             try {
                 final Certificate[] path = context.deviceEndpoint().sslSession().getPeerCertificates();
+                final var requestedHostNames = SniExtensionHelper.getHostNames(context.deviceEndpoint().sslSession());
                 final SpanContext currentSpan = context.getTracingContext();
-                return auth.validateClientCertificate(path, currentSpan)
-                        .map(authInfo -> authInfo.put(PROPERTY_CLIENT_IDENTIFIER, context.deviceEndpoint().clientIdentifier()));
+                return auth.validateClientCertificate(path, requestedHostNames, currentSpan)
+                        .map(authInfo -> authInfo.put(
+                                PROPERTY_CLIENT_IDENTIFIER,
+                                context.deviceEndpoint().clientIdentifier()));
             } catch (SSLPeerUnverifiedException e) {
                 // client certificate has not been validated
                 log.debug("could not retrieve client certificate from device endpoint: {}", e.getMessage());

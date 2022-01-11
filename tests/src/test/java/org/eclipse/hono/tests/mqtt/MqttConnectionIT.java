@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,6 +12,8 @@
  *******************************************************************************/
 
 package org.eclipse.hono.tests.mqtt;
+
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -34,7 +36,6 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -64,15 +65,11 @@ public class MqttConnectionIT extends MqttTestBase {
      * Sets up the fixture.
      */
     @BeforeEach
-    @Override
-    public void setUp(final TestInfo testInfo, final VertxTestContext ctx) {
-        LOGGER.info("running {}", testInfo.getDisplayName());
-        helper = new IntegrationTestSupport(vertx);
+    public void setUp() {
         tenantId = helper.getRandomTenantId();
         deviceId = helper.getRandomDeviceId(tenantId);
         password = "secret";
         deviceCert = SelfSignedCertificate.create(UUID.randomUUID().toString());
-        helper.init().onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -81,8 +78,8 @@ public class MqttConnectionIT extends MqttTestBase {
      * @param tlsVersion The TLS protocol version to use for connecting to the adapter.
      * @param ctx The test context
      */
-    @ParameterizedTest
-    @ValueSource(strings = { "TLSv1.2", "TLSv1.3" })
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
+    @ValueSource(strings = { IntegrationTestSupport.TLS_VERSION_1_2, IntegrationTestSupport.TLS_VERSION_1_3 })
     public void testConnectSucceedsForRegisteredDevice(final String tlsVersion, final VertxTestContext ctx) {
 
         final Tenant tenant = new Tenant();
@@ -116,6 +113,117 @@ public class MqttConnectionIT extends MqttTestBase {
                     ctx.verify(() -> assertThat(conAckMsg.code()).isEqualTo(MqttConnectReturnCode.CONNECTION_ACCEPTED));
                     ctx.completeNow();
                 }));
+    }
+
+    /**
+     * Verifies that an attempt to open a connection using a valid X.509 client certificate succeeds
+     * for a device belonging to a tenant that uses the same trust anchor as another tenant.
+     *
+     * @param ctx The test context
+     */
+    @Test
+    public void testConnectX509SucceedsUsingSni(final VertxTestContext ctx) {
+
+        assumeTrue(IntegrationTestSupport.isTrustAnchorGroupsSupported(),
+                "device registry does not support trust anchor groups");
+
+        helper.getCertificate(deviceCert.certificatePath())
+            .compose(cert -> {
+                // GIVEN two tenants belonging to the same trust anchor group
+                final var tenant = Tenants.createTenantForTrustAnchor(cert)
+                        .setTrustAnchorGroup("test-group");
+                // which both use the same CA
+                return helper.registry.addTenant(helper.getRandomTenantId(), tenant)
+                        // and a device belonging to one of the tenants
+                        .compose(ok -> helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert));
+            })
+            // WHEN the device connects to the adapter including its tenant ID in the host name
+            .compose(ok -> connectToAdapter(deviceCert, tenantId + "." + IntegrationTestSupport.MQTT_HOST))
+            .onComplete(ctx.succeeding(conAckMsg -> {
+                // THEN the connection attempt succeeds
+                ctx.verify(() -> assertThat(conAckMsg.code()).isEqualTo(MqttConnectReturnCode.CONNECTION_ACCEPTED));
+                ctx.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that an attempt to open a connection using a valid X.509 client certificate succeeds
+     * for a device belonging to a tenant with a tenant alias.
+     *
+     * @param ctx The test context
+     */
+    @Test
+    public void testConnectX509SucceedsUsingSniWithTenantAlias(final VertxTestContext ctx) {
+
+        assumeTrue(IntegrationTestSupport.isTrustAnchorGroupsSupported(),
+                "device registry does not support trust anchor groups");
+        assumeTrue(IntegrationTestSupport.isTenantAliasSupported(),
+                "device registry does not support tenant aliases");
+
+        helper.getCertificate(deviceCert.certificatePath())
+            // GIVEN two tenants belonging to the same trust anchor group
+            // which both use the same CA
+            .compose(cert -> helper.registry.addTenant(
+                    helper.getRandomTenantId(),
+                    Tenants.createTenantForTrustAnchor(cert).setTrustAnchorGroup("test-group"))
+                .map(cert))
+            // and a device belonging to one of the tenants which has an alias configured
+            .compose(cert -> helper.registry.addDeviceForTenant(
+                    tenantId,
+                    Tenants.createTenantForTrustAnchor(cert)
+                        .setTrustAnchorGroup("test-group")
+                        .setAlias("test-alias"),
+                    deviceId,
+                    cert))
+            // WHEN the device connects to the adapter including the tenant alias in the host name
+            .compose(ok -> connectToAdapter(deviceCert, "test-alias." + IntegrationTestSupport.MQTT_HOST))
+            .onComplete(ctx.succeeding(conAckMsg -> {
+                // THEN the connection attempt succeeds
+                ctx.verify(() -> assertThat(conAckMsg.code()).isEqualTo(MqttConnectReturnCode.CONNECTION_ACCEPTED));
+                ctx.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that an attempt to open a connection using a valid X.509 client certificate fails
+     * for a device belonging to a tenant using a non-existing tenant alias.
+     *
+     * @param ctx The test context
+     */
+    @Test
+    public void testConnectX509FailsUsingSniWithNonExistingTenantAlias(final VertxTestContext ctx) {
+
+        assumeTrue(IntegrationTestSupport.isTrustAnchorGroupsSupported(),
+                "device registry does not support trust anchor groups");
+        assumeTrue(IntegrationTestSupport.isTenantAliasSupported(),
+                "device registry does not support tenant aliases");
+
+        helper.getCertificate(deviceCert.certificatePath())
+            // GIVEN two tenants belonging to the same trust anchor group
+            // which both use the same CA
+            .compose(cert -> helper.registry.addTenant(
+                        helper.getRandomTenantId(),
+                        Tenants.createTenantForTrustAnchor(cert).setTrustAnchorGroup("test-group"))
+                    .map(cert))
+            // and a device belonging to one of the tenants which has an alias configured
+            .compose(cert -> helper.registry.addDeviceForTenant(
+                    tenantId,
+                    Tenants.createTenantForTrustAnchor(cert)
+                        .setTrustAnchorGroup("test-group")
+                        .setAlias("test-alias"),
+                    deviceId,
+                    cert))
+            // WHEN the device connects to the adapter including a wrong tenant alias in the host name
+            .compose(ok -> connectToAdapter(deviceCert, "wrong-alias." + IntegrationTestSupport.MQTT_HOST))
+            .onComplete(ctx.failing(t -> {
+                // THEN the connection is refused
+                ctx.verify(() -> {
+                    assertThat(t).isInstanceOf(MqttConnectionException.class);
+                    assertThat(((MqttConnectionException) t).code())
+                        .isEqualTo(MqttConnectReturnCode.CONNECTION_REFUSED_BAD_USER_NAME_OR_PASSWORD);
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**

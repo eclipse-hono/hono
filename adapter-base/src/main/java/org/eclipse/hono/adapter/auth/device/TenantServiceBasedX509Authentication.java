@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,10 +25,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.service.auth.X509CertificateChainValidator;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -40,6 +42,7 @@ import org.slf4j.LoggerFactory;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
+import io.opentracing.log.Fields;
 import io.opentracing.noop.NoopTracerFactory;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
@@ -108,8 +111,17 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
     /**
      * Validates a certificate path using a trust anchor retrieved from
      * the Tenant service.
+     * <p>
+     * This method uses the tenant client to determine the tenant that the client belongs to.
+     * <p>
+     * First, the {@link TenantClient#get(X500Principal, SpanContext)} method is invoked with the
+     * the issuer DN of the first element of the certificate path.
+     * <p>
+     * If that fails, then the {@link TenantClient#get(String, SpanContext)} method is invoked with
+     * the first label of the first requested host name.
      *
      * @param path The certificate path to validate.
+     * @param requestedHostNames The host names conveyed by the client in a TLS SNI extension.
      * @param spanContext The <em>OpenTracing</em> context in which the
      *                    validation should be executed, or {@code null}
      *                    if no context exists (yet).
@@ -135,72 +147,113 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
     @Override
     public Future<JsonObject> validateClientCertificate(
             final Certificate[] path,
+            final List<String> requestedHostNames,
             final SpanContext spanContext) {
 
         Objects.requireNonNull(path);
 
-        final Span span = TracingHelper.buildChildSpan(tracer, spanContext, "validate device certificate", getClass().getSimpleName())
-                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
-                .start();
+        final Span span = TracingHelper.buildChildSpan(
+                tracer,
+                spanContext,
+                "validate device certificate",
+                getClass().getSimpleName())
+            .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
+            .start();
 
-        return getX509CertificatePath(path).compose(x509chain -> {
+        return getX509CertificatePath(path)
+                .compose(x509chain -> {
 
-            final X509Certificate deviceCert = x509chain.get(0);
-            final Map<String, String> detail = new HashMap<>(4);
-            detail.put("subject DN", deviceCert.getSubjectX500Principal().getName(X500Principal.RFC2253));
-            detail.put("issuer DN", deviceCert.getIssuerX500Principal().getName(X500Principal.RFC2253));
-            detail.put("not before", deviceCert.getNotBefore().toString());
-            detail.put("not after", deviceCert.getNotAfter().toString());
-            span.log(detail);
+                    final X509Certificate deviceCert = x509chain.get(0);
+                    final Map<String, String> detail = new HashMap<>(4);
+                    detail.put("subject DN", deviceCert.getSubjectX500Principal().getName(X500Principal.RFC2253));
+                    detail.put("issuer DN", deviceCert.getIssuerX500Principal().getName(X500Principal.RFC2253));
+                    detail.put("not before", deviceCert.getNotBefore().toString());
+                    detail.put("not after", deviceCert.getNotAfter().toString());
+                    span.log(detail);
 
-            final Future<TenantObject> tenantTracker = getTenant(deviceCert, span);
-            return tenantTracker
-                    .compose(tenant -> {
-                        final Set<TrustAnchor> trustAnchors = tenant.getTrustAnchors();
-                        if (trustAnchors.isEmpty()) {
-                            return Future.failedFuture(new ClientErrorException(
-                                    tenant.getTenantId(),
-                                    HttpURLConnection.HTTP_UNAUTHORIZED,
-                                    "no valid trust anchors defined for tenant"));
-                        } else {
-                            if (log.isTraceEnabled()) {
-                                final var b = new StringBuilder("found tenant [tenant-id: ")
-                                        .append(tenant.getTenantId()).append("]")
-                                        .append(" for client certificate [subject-dn: ")
-                                        .append(deviceCert.getSubjectX500Principal().getName(X500Principal.RFC2253))
-                                        .append(", issuer-dn: ")
-                                        .append(deviceCert.getIssuerX500Principal().getName(X500Principal.RFC2253))
-                                        .append("]").append(System.lineSeparator())
-                                        .append("with trust anchors:").append(System.lineSeparator());
-                                trustAnchors.stream().forEach(ta -> {
-                                    b.append("Trust Anchor [subject-dn: ").append(ta.getCAName()).append("]");
-                                });
-                                log.trace(b.toString());
-                            }
-                            final List<X509Certificate> chainToValidate = List.of(deviceCert);
-                            return certPathValidator.validate(chainToValidate, trustAnchors)
-                                    .recover(t -> Future.failedFuture(new ClientErrorException(
+                    final Future<TenantObject> tenantTracker = getTenant(deviceCert, requestedHostNames, span);
+                    return tenantTracker
+                            .compose(tenant -> {
+                                final Set<TrustAnchor> trustAnchors = tenant.getTrustAnchors();
+                                if (trustAnchors.isEmpty()) {
+                                    return Future.failedFuture(new ClientErrorException(
                                             tenant.getTenantId(),
                                             HttpURLConnection.HTTP_UNAUTHORIZED,
-                                            t.getMessage(),
-                                            t)));
-                        }
-                    }).compose(ok -> getCredentials(x509chain, tenantTracker.result()));
-        }).map(authInfo -> {
-            span.log("certificate validated successfully");
-            span.finish();
-            return authInfo;
-        }).recover(t -> {
-            log.debug("validation of client certificate failed", t);
-            TracingHelper.logError(span, t);
-            span.finish();
-            return Future.failedFuture(t);
-        });
+                                            "no valid trust anchors defined for tenant"));
+                                } else {
+                                    if (log.isTraceEnabled()) {
+                                        final var b = new StringBuilder("found tenant [tenant-id: ")
+                                                .append(tenant.getTenantId()).append("]")
+                                                .append(" for client certificate [subject-dn: ")
+                                                .append(deviceCert.getSubjectX500Principal().getName(X500Principal.RFC2253))
+                                                .append(", issuer-dn: ")
+                                                .append(deviceCert.getIssuerX500Principal().getName(X500Principal.RFC2253))
+                                                .append("]").append(System.lineSeparator())
+                                                .append("with trust anchors:").append(System.lineSeparator());
+                                        trustAnchors.stream().forEach(ta -> {
+                                            b.append("Trust Anchor [subject-dn: ").append(ta.getCAName()).append("]");
+                                        });
+                                        log.trace(b.toString());
+                                    }
+                                    final List<X509Certificate> chainToValidate = List.of(deviceCert);
+                                    return certPathValidator.validate(chainToValidate, trustAnchors)
+                                            .recover(t -> Future.failedFuture(new ClientErrorException(
+                                                    tenant.getTenantId(),
+                                                    HttpURLConnection.HTTP_UNAUTHORIZED,
+                                                    t.getMessage(),
+                                                    t)));
+                                }
+                            })
+                            .compose(ok -> getCredentials(x509chain, tenantTracker.result()));
+                })
+                .onSuccess(authInfo -> span.log("certificate validated successfully"))
+                .onFailure(t -> {
+                    log.debug("validation of client certificate failed", t);
+                    TracingHelper.logError(span, t);
+                })
+                .onComplete(ar -> span.finish());
     }
 
-    private Future<TenantObject> getTenant(final X509Certificate clientCert, final Span span) {
+    private Future<TenantObject> getTenant(
+            final X509Certificate clientCert,
+            final List<String> requestedHostNames,
+            final Span span) {
 
-        return tenantClient.get(clientCert.getIssuerX500Principal(), span.context());
+        return tenantClient.get(clientCert.getIssuerX500Principal(), span.context())
+                .recover(t -> {
+                    final int statusCode = ServiceInvocationException.extractStatusCode(t);
+                    if (log.isDebugEnabled()) {
+                        log.debug("failed to look up tenant using trust anchor [subject DN: {}, status code: {}]",
+                                clientCert.getIssuerX500Principal().getName(X500Principal.RFC2253),
+                                statusCode);
+                    }
+                    span.log("failed to look up tenant using trust anchor");
+
+                    if (statusCode == HttpURLConnection.HTTP_NOT_FOUND && requestedHostNames.size() > 0) {
+
+                        final String hostName = requestedHostNames.get(0);
+                        final int idx = hostName.indexOf('.');
+
+                        if (idx < 0) {
+                            final String hostNames = requestedHostNames.stream().collect(Collectors.joining(", "));
+                            final String msg = "could not determine tenant ID from SNI extension";
+                            log.debug("{}: {}", msg, hostNames);
+                            span.log(Map.of("SNI host names", hostNames));
+                            return Future.failedFuture(new ClientErrorException(
+                                    HttpURLConnection.HTTP_BAD_REQUEST,
+                                    msg));
+                        } else {
+                            final String tenantId = hostName.substring(0, idx);
+                            log.debug("looking up tenant using host name from SNI extension: {}", hostName);
+                            span.log(Map.of(
+                                    Fields.EVENT, "looking up tenant using host name from SNI extension",
+                                    "host name", hostName));
+                            return tenantClient.get(tenantId, span.context());
+                        }
+                    } else {
+                        return Future.failedFuture(t);
+                    }
+                });
     }
 
     private Future<List<X509Certificate>> getX509CertificatePath(final Certificate[] clientPath) {

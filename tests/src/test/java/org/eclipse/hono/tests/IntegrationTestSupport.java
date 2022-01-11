@@ -428,7 +428,7 @@ public final class IntegrationTestSupport {
     /**
      * The IP address of the CoAP protocol adapter.
      */
-    public static final String COAP_HOST = System.getProperty(PROPERTY_COAP_HOST, DEFAULT_HOST);
+    public static final String COAP_HOST = IntegrationTestSupport.getResolvableHostname(PROPERTY_COAP_HOST);
     /**
      * The  port number that the CoAP adapter listens on for requests.
      */
@@ -440,7 +440,7 @@ public final class IntegrationTestSupport {
     /**
      * The IP address of the HTTP protocol adapter.
      */
-    public static final String HTTP_HOST = System.getProperty(PROPERTY_HTTP_HOST, DEFAULT_HOST);
+    public static final String HTTP_HOST = IntegrationTestSupport.getResolvableHostname(PROPERTY_HTTP_HOST);
     /**
      * The  port number that the HTTP adapter listens on for requests.
      */
@@ -452,7 +452,7 @@ public final class IntegrationTestSupport {
     /**
      * The IP address of the MQTT protocol adapter.
      */
-    public static final String MQTT_HOST = System.getProperty(PROPERTY_MQTT_HOST, DEFAULT_HOST);
+    public static final String MQTT_HOST = IntegrationTestSupport.getResolvableHostname(PROPERTY_MQTT_HOST);
     /**
      * The  port number that the MQTT adapter listens on for connections.
      */
@@ -464,7 +464,7 @@ public final class IntegrationTestSupport {
     /**
      * The IP address of the AMQP protocol adapter.
      */
-    public static final String AMQP_HOST = System.getProperty(PROPERTY_AMQP_HOST, DEFAULT_HOST);
+    public static final String AMQP_HOST = IntegrationTestSupport.getResolvableHostname(PROPERTY_AMQP_HOST);
     /**
      * The  port number that the AMQP adapter listens on for connections.
      */
@@ -498,6 +498,15 @@ public final class IntegrationTestSupport {
      * The absolute path to the trust store to use for establishing secure connections with Hono.
      */
     public static final String TRUST_STORE_PATH = System.getProperty("trust-store.path");
+
+    /**
+     * The identifier of the TLS 1.2 protocol.
+     */
+    public static final String TLS_VERSION_1_2 = "TLSv1.2";
+    /**
+     * The identifier of the TLS 1.3 protocol.
+     */
+    public static final String TLS_VERSION_1_3 = "TLSv1.3";
 
     /**
      * Pattern used for the <em>name</em> field of the {@code @ParameterizedTest} annotation.
@@ -556,6 +565,19 @@ public final class IntegrationTestSupport {
      */
     public IntegrationTestSupport(final Vertx vertx) {
         this.vertx = Objects.requireNonNull(vertx);
+    }
+
+    /**
+     * Gets a host name/IP address that can be resolved via DNS from the value of a Java system property.
+     *
+     * @param systemPropertyName The name of the property to read.
+     * @return The host name.
+     */
+    private static String getResolvableHostname(final String systemPropertyName) {
+        return Optional.of(System.getProperty(systemPropertyName, DEFAULT_HOST))
+                .map(host -> "localhost".equals(host) ? DEFAULT_HOST : host)
+                .map(ipAddress -> ipAddress + ".nip.io")
+                .get();
     }
 
     private static ClientConfigProperties getClientConfigProperties(
