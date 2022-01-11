@@ -129,3 +129,38 @@ for more information.
 
 See [Monitoring & Tracing Admin Guide]({{< relref "monitoring-tracing-config.md" >}}) for details on how to configure
 the reporting of metrics.
+
+## Messaging Configuration
+
+The Device Registry uses a connection to an *AMQP 1.0 Messaging Network* and/or an *Apache Kafka cluster* to
+* send [Device Provisioning Notification]({{< relref "/api/event#device-provisioning-notification" >}}) event messages
+  to convey provisioning related changes regarding a device, to be received by downstream applications,
+* send notification messages about changes to tenant/device/credentials data, to be processed by other Hono components.
+
+For the event messages a connection to an *AMQP 1.0 Messaging Network* is used by default, if configured.
+If both kinds of messaging are configured, the decision which one to use is done according to the
+[Tenant Configuration]({{< relref "admin-guide/hono-kafka-client-configuration#configuring-tenants-to-use-kafka-based-messaging" >}}).
+
+For notification messages, the Kafka connection is used by default, if configured. Otherwise the *AMQP messaging network*
+is used.
+
+### AMQP 1.0 Messaging Network Connection Configuration
+
+The connection to the *AMQP 1.0 Messaging Network* is configured according to the
+[Hono Client Configuration]({{< relref "hono-client-configuration.md" >}}) with `HONO_MESSAGING` being used as `${PREFIX}`.
+Since there are no responses being received, the properties for configuring response caching can be ignored.
+
+### Kafka based Messaging Configuration
+
+The connection to an *Apache Kafka cluster* can be configured according to the
+[Hono Kafka Client Configuration]({{< relref "hono-kafka-client-configuration.md" >}}).
+
+The following table shows the prefixes to be used to individually configure the Kafka clients used by the Device Registry.
+The individual client configuration is optional, a minimal configuration may only contain a common client
+configuration consisting of properties prefixed with `HONO_KAFKA_COMMONCLIENTCONFIG_` and `hono.kafka.commonClientConfig.`
+respectively.
+
+| OS Environment Variable Prefix<br>Java System Property Prefix                          | Description                                                                                                         |
+|:---------------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------|
+| `HONO_KAFKA_EVENT_PRODUCERCONFIG_`<br>`hono.kafka.event.producerConfig.`               | Configures the Kafka producer that publishes event messages.                                                        |
+| `HONO_KAFKA_NOTIFICATION_PRODUCERCONFIG_`<br>`hono.kafka.notification.producerConfig.` | Configures the Kafka producer that publishes notification messages about changes to tenant/device/credentials data. |
