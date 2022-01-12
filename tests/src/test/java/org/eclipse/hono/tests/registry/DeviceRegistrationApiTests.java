@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,8 +12,6 @@
  */
 
 package org.eclipse.hono.tests.registry;
-
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -67,10 +65,6 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
      * @return The client.
      */
     protected abstract DeviceRegistrationClient getClient();
-
-    private Boolean isGatewayModeSupported() {
-        return getHelper().isGatewayModeSupported();
-    }
 
     /**
      * Verifies that the registry succeeds a request to assert a device's registration status.
@@ -236,8 +230,6 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
     @Test
     public void testAssertRegistrationFailsForDisabledGateway(final VertxTestContext ctx) {
 
-        assumeTrue(isGatewayModeSupported());
-
         final String deviceId = getHelper().getRandomDeviceId(tenantId);
         final String gatewayId = getHelper().getRandomDeviceId(tenantId);
 
@@ -266,8 +258,6 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
     @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
     @Test
     public void testAssertRegistrationFailsForUnauthorizedGateway(final VertxTestContext ctx) {
-
-        assumeTrue(isGatewayModeSupported());
 
         // Prepare the identities to insert
         final String deviceId = getHelper().getRandomDeviceId(tenantId);
