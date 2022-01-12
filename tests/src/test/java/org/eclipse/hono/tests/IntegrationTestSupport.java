@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -170,6 +170,11 @@ public final class IntegrationTestSupport {
     public static final long DEFAULT_TEST_SETUP_TIMEOUT_SECONDS = 5;
 
     /**
+     * The device registry type using Mongo DB.
+     */
+    public static final String DEVICEREGISTRY_TYPE_MONGODB = "mongodb";
+
+    /**
      * The name of the system property to use for setting the time to wait for a response
      * to an AMQP 1.0 performative.
      */
@@ -241,10 +246,9 @@ public final class IntegrationTestSupport {
      */
     public static final String PROPERTY_DEVICEREGISTRY_HTTP_PORT = "deviceregistry.http.port";
     /**
-     * The name of the system property to use for indicating whether the Device Registry supports
-     * gateway mode.
+     * The name of the system property to use for indicating the type of Device Registry used.
      */
-    public static final String PROPERTY_DEVICEREGISTRY_SUPPORTS_GW_MODE = "deviceregistry.supportsGatewayMode";
+    public static final String PROPERTY_DEVICEREGISTRY_TYPE = "deviceregistry.type";
     /**
      * The name of the system property to use for setting the IP address of the AMQP Messaging Network.
      */
@@ -381,6 +385,11 @@ public final class IntegrationTestSupport {
      * The port number that the Device Registry listens on for HTTP requests.
      */
     public static final int HONO_DEVICEREGISTRY_HTTP_PORT = Integer.getInteger(PROPERTY_DEVICEREGISTRY_HTTP_PORT, DEFAULT_DEVICEREGISTRY_HTTP_PORT);
+
+    /**
+     * The type of Device Registry being used.
+     */
+    public static final String HONO_DEVICEREGISTRY_TYPE = System.getProperty(PROPERTY_DEVICEREGISTRY_TYPE, DEVICEREGISTRY_TYPE_MONGODB);
 
     /**
      * The boolean value indicating whether the Device Connection service is enabled.
@@ -531,7 +540,7 @@ public final class IntegrationTestSupport {
     private final Set<String> tenantsToDelete = new HashSet<>();
     private final Map<String, Set<String>> devicesToDelete = new HashMap<>();
     private final Vertx vertx;
-    private final boolean gatewayModeSupported;
+
     private HonoConnection protonBasedHonoConnection;
     private KafkaProducerFactory<String, Buffer> kafkaProducerFactory;
 
@@ -548,8 +557,6 @@ public final class IntegrationTestSupport {
      */
     public IntegrationTestSupport(final Vertx vertx) {
         this.vertx = Objects.requireNonNull(vertx);
-        final String gatewayModeFlag = System.getProperty(PROPERTY_DEVICEREGISTRY_SUPPORTS_GW_MODE, "true");
-        gatewayModeSupported = Boolean.parseBoolean(gatewayModeFlag);
     }
 
     private static ClientConfigProperties getClientConfigProperties(
@@ -593,10 +600,31 @@ public final class IntegrationTestSupport {
 
     /**
      * Checks whether AMQP based messaging is used.
+     *
      * @return {@code true} if AMQP based messaging is used.
      */
     public static boolean isUsingAmqpMessaging() {
         return getConfiguredMessagingType() == MessagingType.amqp;
+    }
+
+    /**
+     * Checks if the device registry being used supports searching for devices using
+     * arbitrary criteria.
+     *
+     * @return {@code true} if the registry supports searching.
+     */
+    public static boolean isSearchDevicesSupportedByRegistry() {
+        return HONO_DEVICEREGISTRY_TYPE.equals(DEVICEREGISTRY_TYPE_MONGODB);
+    }
+
+    /**
+     * Checks if the device registry being used supports searching for tenants using
+     * arbitrary criteria.
+     *
+     * @return {@code true} if the registry supports searching.
+     */
+    public static boolean isSearchTenantsSupportedByRegistry() {
+        return HONO_DEVICEREGISTRY_TYPE.equals(DEVICEREGISTRY_TYPE_MONGODB);
     }
 
     /**
@@ -889,15 +917,6 @@ public final class IntegrationTestSupport {
                 IntegrationTestSupport.HONO_DEVICEREGISTRY_HTTP_PORT,
                 Map.of(TenantConstants.FIELD_EXT_MESSAGING_TYPE, getConfiguredMessagingType().name())
         );
-    }
-
-    /**
-     * Checks if the Device Registry supports devices connecting via gateways.
-     *
-     * @return {@code true} if the registry supports gateway mode.
-     */
-    public boolean isGatewayModeSupported() {
-        return gatewayModeSupported;
     }
 
     /**

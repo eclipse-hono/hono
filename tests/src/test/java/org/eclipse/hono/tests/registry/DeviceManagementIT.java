@@ -39,7 +39,7 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -617,7 +617,9 @@ public class DeviceManagementIT extends DeviceRegistryTestBase {
      *      Device Registry Management API - Search Devices</a>
      */
     @Nested
-    @EnabledIfSystemProperty(named = "deviceregistry.supportsSearchDevices", matches = "true")
+    @EnabledIf(
+            value = "org.eclipse.hono.tests.IntegrationTestSupport#isSearchDevicesSupportedByRegistry",
+            disabledReason = "device registry does not support search Devices operation")
     class SearchDevicesIT {
         /**
          * Verifies that a request to search devices fails with a {@value HttpURLConnection#HTTP_NOT_FOUND}

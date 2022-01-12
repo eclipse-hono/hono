@@ -49,7 +49,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
-import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -621,7 +621,9 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
      *      Device Registry Management API - Search Tenants</a>
      */
     @Nested
-    @EnabledIfSystemProperty(named = "deviceregistry.supportsSearchTenants", matches = "true")
+    @EnabledIf(
+            value = "org.eclipse.hono.tests.IntegrationTestSupport#isSearchTenantsSupportedByRegistry",
+            disabledReason = "device registry does not support search Tenants operation")
     class SearchTenantsIT {
 
         /**
