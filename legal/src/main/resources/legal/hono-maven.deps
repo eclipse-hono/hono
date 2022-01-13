@@ -52,8 +52,8 @@ io.jaegertracing:jaeger-tracerresolver:jar:1.6.0
 io.jsonwebtoken:jjwt-api:jar:0.11.2
 io.jsonwebtoken:jjwt-impl:jar:0.11.2
 io.jsonwebtoken:jjwt-jackson:jar:0.11.2
-io.micrometer:micrometer-core:jar:1.7.4
-io.micrometer:micrometer-registry-prometheus:jar:1.7.4
+io.micrometer:micrometer-core:jar:1.7.6
+io.micrometer:micrometer-registry-prometheus:jar:1.7.6
 io.netty:netty-buffer:jar:4.1.68.Final
 io.netty:netty-codec-dns:jar:4.1.68.Final
 io.netty:netty-codec-haproxy:jar:4.1.68.Final
