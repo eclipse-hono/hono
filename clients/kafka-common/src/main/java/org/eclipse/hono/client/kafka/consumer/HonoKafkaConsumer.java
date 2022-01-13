@@ -30,11 +30,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.apache.kafka.clients.consumer.CooperativeStickyAssignor;
+import org.apache.kafka.common.metrics.Metrics;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.kafka.KafkaClientFactory;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
@@ -74,7 +77,8 @@ public class HonoKafkaConsumer implements Lifecycle {
     /**
      * Timeout used waiting for a rebalance after a subscription was updated.
      */
-    private static final long WAIT_FOR_REBALANCE_TIMEOUT = TimeUnit.SECONDS.toMillis(30);
+    private static final long WAIT_FOR_REBALANCE_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(30);
+    private static final long OBSOLETE_METRICS_REMOVAL_DELAY_MILLIS = TimeUnit.SECONDS.toMillis(30);
     private static final Duration POLL_TIMEOUT = Duration.ofSeconds(1);
     private static final String MSG_CONSUMER_NOT_INITIALIZED_STARTED = "consumer not initialized/started";
 
@@ -525,7 +529,7 @@ public class HonoKafkaConsumer implements Lifecycle {
                     log.debug("partitions assigned: [{}]", HonoKafkaConsumerHelper.getPartitionsDebugString(partitions));
                 }
                 ensurePositionsHaveBeenSetIfNeeded(partitionsSet);
-                updateSubscribedTopicPatternTopics();
+                updateSubscribedTopicPatternTopicsAndRemoveMetrics();
                 if (recordFetchingPaused.get()) {
                     getUnderlyingConsumer().pause(partitions);
                 }
@@ -639,12 +643,27 @@ public class HonoKafkaConsumer implements Lifecycle {
     /**
      * To be invoked on the Kafka polling thread on partition assignment.
      */
-    private void updateSubscribedTopicPatternTopics() {
+    private void updateSubscribedTopicPatternTopicsAndRemoveMetrics() {
         if (topicPattern != null) {
+            final Set<String> oldSubscribedTopicPatternTopics = subscribedTopicPatternTopics;
             try {
                 subscribedTopicPatternTopics = new HashSet<>(getUnderlyingConsumer().subscription());
             } catch (final Exception e) {
                 log.warn("error getting subscription", e);
+            }
+            // check for deleted topics in order to remove corresponding metrics
+            final Set<String> deletedTopics = oldSubscribedTopicPatternTopics.stream()
+                    .filter(t -> !subscribedTopicPatternTopics.contains(t))
+                    .collect(Collectors.toSet());
+            if (!deletedTopics.isEmpty()) {
+                // actual removal to be done with a delay, as there might still be unprocessed fetch response data
+                // regarding these topics, in which case metrics would get re-created after they were removed
+                runOnContext(v -> vertx.setTimer(OBSOLETE_METRICS_REMOVAL_DELAY_MILLIS, tid -> {
+                    runOnKafkaWorkerThread(v2 -> {
+                        removeMetricsForDeletedTopics(deletedTopics.stream()
+                                .filter(t -> !subscribedTopicPatternTopics.contains(t)));
+                    });
+                }));
             }
         }
     }
@@ -683,7 +702,7 @@ public class HonoKafkaConsumer implements Lifecycle {
         if (kafkaConsumerWorker == null) {
             kafkaConsumerWorker = getKafkaConsumerWorker(kafkaConsumer);
         }
-        vertx.setTimer(WAIT_FOR_REBALANCE_TIMEOUT, ar -> {
+        vertx.setTimer(WAIT_FOR_REBALANCE_TIMEOUT_MILLIS, ar -> {
             if (!partitionAssignmentDone.future().isComplete()) {
                 subscriptionUpdatedAndPartitionsAssignedPromiseRef.compareAndSet(promisePair, null);
                 final String errorMsg = "timed out waiting for rebalance and update of subscribed topics";
@@ -971,6 +990,29 @@ public class HonoKafkaConsumer implements Lifecycle {
             topicCheckFuture.onSuccess(v -> resultPromise.tryComplete());
         }
         return resultPromise.future();
+    }
+
+    private void removeMetricsForDeletedTopics(final Stream<String> deletedTopics) {
+        final Metrics metrics = getInternalMetricsObject(kafkaConsumer.unwrap());
+        if (metrics != null) {
+            deletedTopics.forEach(topic -> {
+                metrics.removeSensor("topic." + topic + ".bytes-fetched");
+                metrics.removeSensor("topic." + topic + ".records-fetched");
+            });
+        }
+    }
+
+    private Metrics getInternalMetricsObject(final Consumer<String, Buffer> consumer) {
+        if (consumer instanceof org.apache.kafka.clients.consumer.KafkaConsumer) {
+            try {
+                final Field field = org.apache.kafka.clients.consumer.KafkaConsumer.class.getDeclaredField("metrics");
+                field.setAccessible(true);
+                return (Metrics) field.get(consumer);
+            } catch (final Exception e) {
+                log.warn("failed to get metrics object", e);
+            }
+        }
+        return null;
     }
 
     /**
