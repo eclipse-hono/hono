@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,7 +25,6 @@ import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.eclipse.hono.client.NoConsumerException;
-import org.eclipse.hono.client.command.CommandAlreadyProcessedException;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandHandlerWrapper;
 import org.eclipse.hono.client.command.CommandHandlers;
@@ -36,7 +35,6 @@ import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
-import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
@@ -117,10 +115,9 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
 
         final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig(CLIENT_NAME);
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, adapterInstanceId);
-        // no commits of partition offsets needed - topic only used during lifetime of this consumer
-        consumerConfig.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
-        // there will be no offsets stored for this consumer - so the "auto.offset.reset" config is relevant
-        // - set it to "earliest" just in case records have already been published to it
+        // enable auto-commits of partition offsets; this is needed in case the consumer partition assignment gets lost (e.g. because the group coordinator gets restarted)
+        consumerConfig.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
+        // use "earliest" "auto.offset.reset" setting to include records published before/during consumer start
         consumerConfig.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         this.clientId = consumerConfig.get(ConsumerConfig.CLIENT_ID_CONFIG);
         consumerCreator = () -> KafkaConsumer.create(vertx, consumerConfig, String.class, Buffer.class);
@@ -297,44 +294,46 @@ public class KafkaBasedInternalCommandConsumer implements Lifecycle {
                     e);
             return;
         }
-        final CommandHandlerWrapper commandHandler = commandHandlers.getCommandHandler(command.getTenant(),
-                command.getGatewayOrDeviceId());
-        if (commandHandler != null && commandHandler.getGatewayId() != null) {
-            // Gateway information set in command handler means a gateway has subscribed for commands for a specific device.
-            // This information isn't getting set in the record (by the Command Router) and therefore has to be adopted manually here.
-            command.setGatewayId(commandHandler.getGatewayId());
-        }
-
-        final SpanContext spanContext = KafkaTracingHelper.extractSpanContext(tracer, record);
-        final SpanContext followsFromSpanContext = commandHandler != null
-                ? commandHandler.getConsumerCreationSpanContext()
-                : null;
-        final Span currentSpan = CommandContext.createSpan(tracer, command, spanContext, followsFromSpanContext);
-        currentSpan.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
-
-        final CommandContext commandContext = new KafkaBasedCommandContext(command, currentSpan, commandResponseSender);
-
-        if (commandHandler != null) {
-            // partition index and offset here are related to the *tenant-based* topic the command was originally received in
-            // therefore they are stored with the tenant as key
-            final Map<Integer, Long> lastHandledPartitionOffsets = lastHandledPartitionOffsetsPerTenant
-                    .computeIfAbsent(command.getTenant(), k -> new HashMap<>());
-            final Long lastHandledOffset = lastHandledPartitionOffsets.get(commandPartition);
-            if (lastHandledOffset != null && commandOffset <= lastHandledOffset) {
+        // check whether command has already been received and handled;
+        // partition index and offset here are related to the *tenant-based* topic the command was originally received in
+        // therefore they are stored in a map with the tenant as key
+        final Map<Integer, Long> lastHandledPartitionOffsets = lastHandledPartitionOffsetsPerTenant
+                .computeIfAbsent(command.getTenant(), k -> new HashMap<>());
+        final Long lastHandledOffset = lastHandledPartitionOffsets.get(commandPartition);
+        if (lastHandledOffset != null && commandOffset <= lastHandledOffset) {
+            if (LOG.isDebugEnabled()) {
                 LOG.debug("ignoring command - record partition offset {} <= last handled offset {} [{}]", commandOffset,
                         lastHandledOffset, command);
-                TracingHelper.logError(currentSpan, "command record already handled before");
-                commandContext.release(new CommandAlreadyProcessedException());
-            } else {
-                lastHandledPartitionOffsets.put(commandPartition, commandOffset);
+            }
+        } else {
+            lastHandledPartitionOffsets.put(commandPartition, commandOffset);
+
+            final CommandHandlerWrapper commandHandler = commandHandlers.getCommandHandler(command.getTenant(),
+                    command.getGatewayOrDeviceId());
+            if (commandHandler != null && commandHandler.getGatewayId() != null) {
+                // Gateway information set in command handler means a gateway has subscribed for commands for a specific device.
+                // This information isn't getting set in the record (by the Command Router) and therefore has to be adopted manually here.
+                command.setGatewayId(commandHandler.getGatewayId());
+            }
+
+            final SpanContext spanContext = KafkaTracingHelper.extractSpanContext(tracer, record);
+            final SpanContext followsFromSpanContext = commandHandler != null
+                    ? commandHandler.getConsumerCreationSpanContext()
+                    : null;
+            final Span currentSpan = CommandContext.createSpan(tracer, command, spanContext, followsFromSpanContext);
+            currentSpan.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
+            KafkaTracingHelper.TAG_OFFSET.set(currentSpan, record.offset());
+
+            final CommandContext commandContext = new KafkaBasedCommandContext(command, currentSpan, commandResponseSender);
+
+            if (commandHandler != null) {
                 LOG.trace("using [{}] for received command [{}]", commandHandler, command);
                 // command.isValid() check not done here - it is to be done in the command handler
                 commandHandler.handleCommand(commandContext);
+            } else {
+                LOG.info("no command handler found for command [{}]", command);
+                commandContext.release(new NoConsumerException("no command handler found for command"));
             }
-        } else {
-            LOG.info("no command handler found for command [{}]", command);
-            commandContext.release(new NoConsumerException("no command handler found for command"));
         }
     }
-
 }
