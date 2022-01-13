@@ -18,6 +18,7 @@ import static org.mockito.Mockito.when;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -56,7 +57,9 @@ import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -157,6 +160,16 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
     }
 
     /**
+     * Logs the current test's display name.
+     *
+     * @param testInfo The test meta data.
+     */
+    @BeforeEach
+    public void logTestName(final TestInfo testInfo) {
+        LOG.info("running test {}", testInfo.getDisplayName());
+    }
+
+    /**
      * Closes and removes resources created during the test.
      *
      * @param ctx The vert.x test context.
@@ -198,7 +211,7 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
                 allRecordsReceivedPromise.tryComplete();
             }
         };
-        final LinkedList<Promise<Void>> completionPromisesQueue = new LinkedList<>();
+        final Deque<Promise<Void>> completionPromisesQueue = new LinkedList<>();
         // don't let getting the target adapter instance finish immediately
         // - let the futures complete in the reverse order
         final Supplier<Future<Void>> targetAdapterInstanceGetterCompletionFutureSupplier = () -> {
@@ -236,8 +249,10 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
         });
 
         final long timerId = vertx.setTimer(8000, tid -> {
-            LOG.info("received records:\n{}",
-                    receivedRecords.stream().map(Object::toString).collect(Collectors.joining(",\n")));
+            LOG.info("received records:{}{}", System.lineSeparator(),
+                    receivedRecords.stream()
+                        .map(Object::toString)
+                        .collect(Collectors.joining("," + System.lineSeparator())));
             allRecordsReceivedPromise.tryFail(String.format("only received %d out of %d expected messages after 8s",
                     receivedRecords.size(), numTestCommands));
         });
