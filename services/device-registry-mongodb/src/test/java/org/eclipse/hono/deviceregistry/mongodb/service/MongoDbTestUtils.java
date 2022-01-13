@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -33,7 +33,7 @@ import io.vertx.ext.mongo.MongoClient;
 public final class MongoDbTestUtils {
 
     private static final MongoDBContainer MONGO_DB_CONTAINER;
-    private static final String MONGO_DB_IMAGE_NAME = System.getProperty("mongoDbImageName", "mongo:4.2");
+    private static final String MONGO_DB_IMAGE_NAME = System.getProperty("mongoDbImageName", "mongo:4.4");
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbTestUtils.class);
 
     static {
