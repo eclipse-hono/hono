@@ -56,6 +56,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   deployment.
 * The native image variant of the Command Router component failed to connect to an Infinispan server using SASL
   SCRAM. This has been fixed.
+* The lora adapter supports unconfirmed uplink data for the firefly provider.
 
 ## API Changes
 
