@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+    Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -30,7 +30,7 @@
   <properties>
     <artemis.image.name>quay.io/enmasse/artemis-base:2.13.0</artemis.image.name>
     <assertj-core.version>3.20.2</assertj-core.version>
-    <californium.version>2.6.5</californium.version>
+    <californium.version>2.7.0</californium.version>
     <cryptvault.version>1.0.2</cryptvault.version>
     <dispatch-router.image.name>quay.io/interconnectedcloud/qdrouterd:1.14.0</dispatch-router.image.name>
     <guava.version>30.1-jre</guava.version>
@@ -49,6 +49,7 @@
     site/documentation/content/admin-guide/hono-kafka-client-configuration.md as well -->
     <kafka-clients.version>2.8.1</kafka-clients.version>
     <kafka.image.name>confluentinc/cp-kafka:6.2.2</kafka.image.name>
+    <k8s-client.version>5.7.4</k8s-client.version>
     <log4j-api.version>2.17.1</log4j-api.version>
     <logback.version>1.2.9</logback.version>
     <micrometer.version>1.7.4</micrometer.version>
@@ -87,6 +88,17 @@
 
   <dependencyManagement>
     <dependencies>
+
+      <!--
+        Fix unsafe YAML deserialization configuration in Kubernetes-client
+      -->
+      <dependency>
+        <groupId>io.fabric8</groupId>
+        <artifactId>kubernetes-client-bom</artifactId>
+        <version>${k8s-client.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
 
       <!--
         First we import managed dependencies defined by Quarkus
