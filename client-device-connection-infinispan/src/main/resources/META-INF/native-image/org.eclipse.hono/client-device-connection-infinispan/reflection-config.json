@@ -1,5 +1,11 @@
 [
   {
+    "name" : "io.netty.channel.socket.nio.NioSocketChannel",
+    "methods": [
+      { "name": "<init>", "parameterTypes": [] }
+    ]
+  },
+  {
     "name" : "org.infinispan.CoreModuleImpl",
     "methods": [
       { "name": "<init>", "parameterTypes": [] }
@@ -171,93 +177,174 @@
     "allPublicFields" : true
   },
   {
+    "name" : "org.wildfly.security.password.impl.DigestPasswordAlgorithmParametersSpiImpl",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
+  },
+  {
+    "name" : "org.wildfly.security.password.impl.IteratedSaltedPasswordAlgorithmParametersSpiImpl",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
+  },
+  {
+    "name" : "org.wildfly.security.password.impl.OneTimePasswordAlgorithmParametersSpiImpl",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
+  },
+  {
+    "name" : "org.wildfly.security.password.impl.SaltedPasswordAlgorithmParametersSpiImpl",
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
+  },
+  {
     "name" : "org.wildfly.security.password.impl.PasswordFactorySpiImpl",
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] }
-    ]
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
   },
   {
     "name" : "org.wildfly.security.sasl.digest.DigestClientFactory",
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] }
-    ]
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
   },
   {
     "name" : "org.wildfly.security.sasl.digest.WildFlyElytronSaslDigestProvider",
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] }
-    ]
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
   },
   {
     "name" : "org.wildfly.security.sasl.external.ExternalSaslClientFactory",
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] }
-    ]
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
   },
   {
     "name" : "org.wildfly.security.sasl.external.WildFlyElytronSaslExternalProvider",
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] }
-    ]
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
   },
   {
     "name" : "org.wildfly.security.sasl.gs2.Gs2SaslClientFactory",
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] }
-    ]
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
   },
   {
     "name" : "org.wildfly.security.sasl.gs2.WildFlyElytronSaslGs2Provider",
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] }
-    ]
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
   },
   {
     "name" : "org.wildfly.security.sasl.gssapi.GssapiClientFactory",
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] }
-    ]
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
   },
   {
     "name" : "org.wildfly.security.sasl.gssapi.WildFlyElytronSaslGssapiProvider",
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] }
-    ]
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
   },
   {
     "name" : "org.wildfly.security.sasl.oauth2.OAuth2SaslClientFactory",
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] }
-    ]
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
   },
   {
     "name" : "org.wildfly.security.sasl.oauth2.WildFlyElytronSaslOAuth2Provider",
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] }
-    ]
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
   },
   {
     "name" : "org.wildfly.security.sasl.plain.PlainSaslClientFactory",
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] }
-    ]
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
   },
   {
     "name" : "org.wildfly.security.sasl.plain.WildFlyElytronSaslPlainProvider",
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] }
-    ]
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
   },
   {
     "name" : "org.wildfly.security.sasl.scram.ScramSaslClientFactory",
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] }
-    ]
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
   },
   {
     "name" : "org.wildfly.security.sasl.scram.WildFlyElytronSaslScramProvider",
-    "methods": [
-      { "name": "<init>", "parameterTypes": [] }
-    ]
+    "allDeclaredConstructors" : true,
+    "allPublicConstructors" : true,
+    "allDeclaredMethods" : true,
+    "allPublicMethods" : true,
+    "allDeclaredFields" : true,
+    "allPublicFields" : true
   }
 ]

@@ -26,6 +26,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   this can be done by setting the `hono.commandRouter.cache.remote.sslCiphers` property.
 * When using Kafka messaging, protocol adapters may have shown a prolonged delay in processing command & control messages
   in certain situations in which one Kafka cluster node was shortly unavailable. This has been fixed.
+* The native image variant of the Command Router component failed to connect to an Infinispan server using SASL
+  SCRAM. This has been fixed.
 
 ## 1.10.0
 
