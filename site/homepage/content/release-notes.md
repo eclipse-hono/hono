@@ -24,6 +24,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 * Hono's components now support configuring the ciphers used in the TLS handshake when connecting to Infinispan servers.
   For the Command Router component [remote data grid configuration]({{% doclink "/admin-guide/command-router-config/#remote-cache" %}})
   this can be done by setting the `hono.commandRouter.cache.remote.sslCiphers` property.
+* When using Kafka messaging, protocol adapters may have shown a prolonged delay in processing command & control messages
+  in certain situations in which one Kafka cluster node was shortly unavailable. This has been fixed.
 
 ## 1.10.0
 
