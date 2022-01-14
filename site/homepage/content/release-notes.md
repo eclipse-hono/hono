@@ -54,6 +54,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 * When using Kafka messaging, the Hono components will now retry creating the Kafka clients in case the Kafka bootstrap
   server URLs are not yet resolvable. This will prevent unnecessary restarts of the Hono components during initial
   deployment.
+* The native image variant of the Command Router component failed to connect to an Infinispan server using SASL
+  SCRAM. This has been fixed.
 
 ## API Changes
 
