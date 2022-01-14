@@ -58,6 +58,7 @@ public class FireflyProvider extends JsonBasedLoraProvider {
     private static final String COMMAND_FIELD_FIREFLY_CONFIRMED = "confirmed";
 
     private static final String MESSAGE_TYPE_UPLINK = "confirmed_data_up";
+    private static final String MESSAGE_TYPE_UPLINK_UNCONFIRMED = "unconfirmed_data_up";
 
     private static final String OBJECT_FIREFLY_DEVICE = "device";
     private static final String OBJECT_FIREFLY_GATEWAY_RX = "gwrx";
@@ -102,7 +103,7 @@ public class FireflyProvider extends JsonBasedLoraProvider {
                 .map(serverData -> serverData.getValue(FIELD_FIREFLY_MESSAGE_TYPE))
                 .filter(String.class::isInstance)
                 .map(String.class::cast)
-                .filter(MESSAGE_TYPE_UPLINK::equals)
+                .filter(s -> MESSAGE_TYPE_UPLINK.equals(s) || MESSAGE_TYPE_UPLINK_UNCONFIRMED.equals(s))
                 .map(type -> LoraMessageType.UPLINK)
                 .orElse(LoraMessageType.UNKNOWN);
     }
