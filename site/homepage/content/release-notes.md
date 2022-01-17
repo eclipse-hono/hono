@@ -28,6 +28,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   in certain situations in which one Kafka cluster node was shortly unavailable. This has been fixed.
 * The native image variant of the Command Router component failed to connect to an Infinispan server using SASL
   SCRAM. This has been fixed.
+* The lora adapter supports unconfirmed uplink data for the firefly provider.
 
 ## 1.10.0
 
