@@ -90,35 +90,44 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
         final Promise<Void> result = Promise.promise();
 
         if (creatingIndices.compareAndSet(false, true)) {
+            final String trustedCaField = TenantDto.FIELD_TENANT + "."
+                    + RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA;
             // create unique index on tenant ID
             return createIndex(
                     new JsonObject().put(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, 1),
                     new IndexOptions().unique(true))
+                // create a unique partial index on tenant.alias
+                .compose(ok -> {
+                    final String aliasField = TenantDto.FIELD_TENANT + "." + RegistryManagementConstants.FIELD_ALIAS;
+                    return createIndex(
+                        new JsonObject().put(aliasField, 1),
+                        new IndexOptions().unique(true)
+                                .partialFilterExpression(new JsonObject().put(
+                                        aliasField,
+                                        new JsonObject().put("$exists", true))));
+                })
                 // create a non-unique index on tenant ID, tenant.trust_anchor_group and tenant.trusted-ca.subject-dn
                 // this index is supposed to replace the previously used unique index on tenant.trusted-ca.subject-dn
-                .compose(ok -> createIndex(
+                .compose(ok -> {
+                    return createIndex(
                         new JsonObject()
                                 .put(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, 1)
                                 .put(TenantDto.FIELD_TENANT + "."
                                         + RegistryManagementConstants.FIELD_TRUST_ANCHOR_GROUP, 1)
-                                .put(TenantDto.FIELD_TENANT + "."
-                                        + RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA + "."
-                                        + RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN, 1),
+                                .put(trustedCaField + "." + RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN, 1),
                         new IndexOptions()
                                 .partialFilterExpression(new JsonObject().put(
-                                        TenantDto.FIELD_TENANT + "."
-                                            + RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA,
-                                        new JsonObject().put("$exists", true)))))
+                                        trustedCaField,
+                                        new JsonObject().put("$exists", true))));
+                })
                 // in order to be able to use the same trust anchor for multiple tenants having the same
                 // trust anchor group value, the old unique index on tenant.trusted-ca.subject-dn needs to be dropped
                 .compose(ok -> dropIndex(
-                        new JsonObject().put(TenantDto.FIELD_TENANT + "." +
-                                RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA + "." +
-                                RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN, 1),
+                        new JsonObject().put(trustedCaField + "."
+                                + RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN, 1),
                         new IndexOptions().unique(true)
                             .partialFilterExpression(new JsonObject().put(
-                                    TenantDto.FIELD_TENANT + "." +
-                                            RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA,
+                                    trustedCaField,
                                     new JsonObject().put("$exists", true)))))
                 .onSuccess(ok -> indicesCreated.set(true))
                 .onComplete(r -> {
@@ -176,6 +185,9 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                 .start();
 
         final JsonObject newTenantDtoJson = JsonObject.mapFrom(tenantConfig);
+        if (LOG.isTraceEnabled()) {
+            LOG.trace("creating tenant:{}{}", System.lineSeparator(), newTenantDtoJson.encodePrettily());
+        }
         return validateTrustAnchors(tenantConfig, span)
                 .compose(ok -> mongoClient.insert(collectionName, newTenantDtoJson))
                 .map(tenantObjectIdResult -> {
@@ -211,15 +223,39 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                 .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
                 .start();
 
-        return getById(tenantId, span)
+        return getById(tenantId, false, span)
                 .onComplete(r -> span.finish());
     }
 
-    private Future<TenantDto> getById(final String tenantId, final Span span) {
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<TenantDto> getByIdOrAlias(final String tenantId, final SpanContext tracingContext) {
+
+        Objects.requireNonNull(tenantId);
+
+        final Span span = tracer.buildSpan("get Tenant by ID or alias")
+                .addReference(References.CHILD_OF, tracingContext)
+                .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
+                .start();
+
+        return getById(tenantId, true, span)
+                .onComplete(r -> span.finish());
+    }
+
+    private Future<TenantDto> getById(final String tenantId, final boolean includeAlias, final Span span) {
+
+        final MongoDbDocumentBuilder queryBuilder = MongoDbDocumentBuilder.builder();
+        if (includeAlias) {
+            queryBuilder.withTenantIdOrAlias(tenantId);
+        } else {
+            queryBuilder.withTenantId(tenantId);
+        }
 
         return mongoClient.findOne(
                 collectionName,
-                MongoDbDocumentBuilder.builder().withTenantId(tenantId).document(),
+                queryBuilder.document(),
                 null)
             .map(tenantJsonResult -> {
                 if (tenantJsonResult == null) {
@@ -311,7 +347,7 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                 .compose(updateResult -> {
                     if (updateResult == null) {
                         return MongoDbBasedDao.checkForVersionMismatchAndFail(newTenantConfig.getTenantId(),
-                                resourceVersion, getById(newTenantConfig.getTenantId(), span));
+                                resourceVersion, getById(newTenantConfig.getTenantId(), false, span));
                     } else {
                         LOG.debug("successfully updated tenant [tenant-id: {}]", newTenantConfig.getTenantId());
                         span.log("successfully updated tenant");
@@ -319,8 +355,19 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                     }
                 })
                 .recover(error -> {
+                    if (MongoDbBasedDao.isDuplicateKeyError(error)) {
+                        LOG.debug("failed to update tenant [{}], tenant alias already in use",
+                                newTenantConfig.getTenantId(), error);
+                        final var exception = new ClientErrorException(
+                                newTenantConfig.getTenantId(),
+                                HttpURLConnection.HTTP_CONFLICT,
+                                "tenant alias already in use");
+                        TracingHelper.logError(span, exception);
+                        return Future.failedFuture(exception);
+                    } else {
                         TracingHelper.logError(span, "error updating tenant", error);
                         return mapError(error);
+                    }
                 })
                 .onComplete(r -> span.finish());
     }
@@ -352,7 +399,7 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                 .compose(deleteResult -> {
                     if (deleteResult == null) {
                         return MongoDbBasedDao.checkForVersionMismatchAndFail(tenantId,
-                                resourceVersion, getById(tenantId, span));
+                                resourceVersion, getById(tenantId, false, span));
                     } else {
                         LOG.debug("successfully deleted tenant [tenant-id: {}]", tenantId);
                         span.log("successfully deleted tenant");

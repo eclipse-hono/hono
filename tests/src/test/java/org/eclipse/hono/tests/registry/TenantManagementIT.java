@@ -251,6 +251,33 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
     }
 
     /**
+     * Verifies that the registry rejects an attempt to create a tenant with an alias that is already used
+     * by another tenant.
+     *
+     * @param context The vert.x test context.
+     */
+    @Test
+    public void testAddTenantFailsForDuplicateTenantAlias(final VertxTestContext context)  {
+
+        assumeTrue(IntegrationTestSupport.isTenantAliasSupported(),
+                "device registry does not support tenant aliases");
+
+        final Tenant payload = new Tenant().setAlias("the-alias");
+
+        getHelper().registry.addTenant(tenantId, payload)
+            .onFailure(context::failNow)
+            // now try to add the tenant again
+            .compose(ar -> getHelper().registry.addTenant(
+                    getHelper().getRandomTenantId(),
+                    payload,
+                    HttpURLConnection.HTTP_CONFLICT))
+            .onComplete(context.succeeding(response -> {
+                context.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                context.completeNow();
+            }));
+    }
+
+    /**
      * Verifies that the service returns a 400 status code for an add tenant request with a Content-Type
      * other than application/json.
      *
@@ -619,6 +646,34 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
             .compose(ok -> getHelper().registry.updateTenant(
                     tenantId,
                     tenant,
+                    HttpURLConnection.HTTP_CONFLICT))
+            .onComplete(context.succeeding(response -> {
+                context.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                context.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that the registry rejects an attempt to update a tenant with an alias that is already used
+     * by another tenant.
+     *
+     * @param context The vert.x test context.
+     */
+    @Test
+    public void testUpdateTenantFailsForDuplicateTenantAlias(final VertxTestContext context)  {
+
+        assumeTrue(IntegrationTestSupport.isTenantAliasSupported(),
+                "device registry does not support tenant aliases");
+
+        final Tenant payload = new Tenant().setAlias("the-alias");
+
+        getHelper().registry.addTenant(getHelper().getRandomTenantId(), payload)
+            .onFailure(context::failNow)
+            .compose(ok -> getHelper().registry.addTenant(tenantId, new Tenant()))
+            .onFailure(context::failNow)
+            .compose(ar -> getHelper().registry.updateTenant(
+                    tenantId,
+                    payload,
                     HttpURLConnection.HTTP_CONFLICT))
             .onComplete(context.succeeding(response -> {
                 context.verify(() -> IntegrationTestSupport.assertErrorPayload(response));

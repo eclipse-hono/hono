@@ -271,6 +271,10 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String FIELD_ADAPTERS_DEVICE_AUTHENTICATION_REQUIRED = "device-authentication-required";
     /**
+     * The name of the property that contains a tenant's optional alternative identifier.
+     */
+    public static final String FIELD_ALIAS = "alias";
+    /**
      * The name of the property that indicates whether a unregistered device that authenticates with
      * a client certificate should be auto-provisioned as a gateway. 
      */
