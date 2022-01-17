@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,8 +13,8 @@
 
 package org.eclipse.hono.adapter.mqtt.spring;
 
+import org.eclipse.hono.adapter.spring.AbstractProtocolAdapterApplication;
 import org.eclipse.hono.deviceconnection.infinispan.client.HotrodCacheConfig;
-import org.eclipse.hono.service.spring.AbstractApplication;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.Configuration;
@@ -26,7 +26,7 @@ import org.springframework.context.annotation.Import;
 @Configuration
 @Import({ Config.class, HotrodCacheConfig.class })
 @EnableAutoConfiguration
-public class Application extends AbstractApplication {
+public class Application extends AbstractProtocolAdapterApplication {
 
     /**
      * Starts the MQTT Adapter application.

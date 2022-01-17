@@ -57,6 +57,8 @@ import org.eclipse.hono.config.quarkus.ClientOptions;
 import org.eclipse.hono.config.quarkus.RequestResponseClientOptions;
 import org.eclipse.hono.config.quarkus.ServiceOptions;
 import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
+import org.eclipse.hono.notification.NotificationConstants;
+import org.eclipse.hono.notification.NotificationEventBusSupport;
 import org.eclipse.hono.notification.NotificationReceiver;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
@@ -68,6 +70,7 @@ import org.eclipse.hono.service.quarkus.AbstractServiceApplication;
 import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
+import org.eclipse.hono.util.WrappedLifecycleComponentVerticle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,7 +83,7 @@ import io.opentracing.Tracer;
 import io.smallrye.config.ConfigMapping;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Promise;
+import io.vertx.core.Future;
 import io.vertx.core.Verticle;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
@@ -259,20 +262,21 @@ public class Application extends AbstractServiceApplication {
         final CompletableFuture<Void> startup = new CompletableFuture<>();
 
         // deploy authentication service (once only)
-        final Promise<String> authServiceDeploymentTracker = Promise.promise();
-        vertx.deployVerticle((Verticle) authenticationService, authServiceDeploymentTracker);
+        final Future<String> authServiceDeploymentTracker = vertx.deployVerticle((Verticle) authenticationService);
 
         // deploy AMQP 1.0 server
-        final Promise<String> amqpServerDeploymentTracker = Promise.promise();
-        vertx.deployVerticle(
-                () -> amqpServer(),
-                new DeploymentOptions().setInstances(appConfig.getMaxInstances()),
-                amqpServerDeploymentTracker);
+        final Future<String> amqpServerDeploymentTracker = vertx.deployVerticle(
+                this::amqpServer,
+                new DeploymentOptions().setInstances(appConfig.getMaxInstances()));
 
-        CompositeFuture.all(authServiceDeploymentTracker.future(), amqpServerDeploymentTracker.future())
+        // deploy notification receiver
+        final Future<String> notificationReceiverTracker = vertx.deployVerticle(
+                new WrappedLifecycleComponentVerticle(notificationReceiver()));
+
+        CompositeFuture.all(authServiceDeploymentTracker, amqpServerDeploymentTracker, notificationReceiverTracker)
             .compose(s -> healthCheckServer.start())
             .onSuccess(ok -> startup.complete(null))
-            .onFailure(t -> startup.completeExceptionally(t));
+            .onFailure(startup::completeExceptionally);
         startup.join();
     }
 
@@ -312,9 +316,8 @@ public class Application extends AbstractServiceApplication {
     }
 
     private CommandRouterService commandRouterService() {
-        final NotificationReceiver notificationReceiver = notificationReceiver();
-        final DeviceRegistrationClient registrationClient = registrationClient(notificationReceiver);
-        final TenantClient tenantClient = tenantClient(notificationReceiver);
+        final DeviceRegistrationClient registrationClient = registrationClient();
+        final TenantClient tenantClient = tenantClient();
 
         final CommandTargetMapper commandTargetMapper = CommandTargetMapper.create(registrationClient, deviceConnectionInfo, tracer);
         return new CommandRouterServiceImpl(
@@ -382,28 +385,24 @@ public class Application extends AbstractServiceApplication {
     /**
      * Creates a new client for Hono's Device Registration service.
      *
-     * @param notificationReceiver The notification receiver to use.
      * @return The client.
      */
-    protected DeviceRegistrationClient registrationClient(final NotificationReceiver notificationReceiver) {
+    protected DeviceRegistrationClient registrationClient() {
         return new ProtonBasedDeviceRegistrationClient(
                 HonoConnection.newConnection(vertx, deviceRegistrationClientConfig, tracer),
                 SendMessageSampler.Factory.noop(),
-                notificationReceiver,
                 registrationResponseCache());
     }
 
     /**
      * Creates a new client for Hono's Tenant service.
      *
-     * @param notificationReceiver The notification receiver to use.
      * @return The client.
      */
-    protected TenantClient tenantClient(final NotificationReceiver notificationReceiver) {
+    protected TenantClient tenantClient() {
         return new ProtonBasedTenantClient(
                 HonoConnection.newConnection(vertx, tenantClientConfig, tracer),
                 SendMessageSampler.Factory.noop(),
-                notificationReceiver,
                 tenantResponseCache());
     }
 
@@ -413,13 +412,20 @@ public class Application extends AbstractServiceApplication {
      * @return The bean instance.
      */
     public NotificationReceiver notificationReceiver() {
+        final NotificationReceiver notificationReceiver;
         if (kafkaNotificationConfig.isConfigured()) {
-            return new KafkaBasedNotificationReceiver(vertx, kafkaNotificationConfig);
+            notificationReceiver = new KafkaBasedNotificationReceiver(vertx, kafkaNotificationConfig);
         } else {
             final ClientConfigProperties notificationConfig = new ClientConfigProperties(commandConsumerConnectionConfig);
             notificationConfig.setServerRole("Notification");
-            return new ProtonBasedNotificationReceiver(HonoConnection.newConnection(vertx, notificationConfig, tracer));
+            notificationReceiver = new ProtonBasedNotificationReceiver(HonoConnection.newConnection(vertx, notificationConfig, tracer));
         }
+        NotificationConstants.DEVICE_REGISTRY_NOTIFICATION_TYPES.forEach(notificationType -> {
+            notificationReceiver.registerConsumer(notificationType, notification -> {
+                NotificationEventBusSupport.sendNotification(vertx, notification);
+            });
+        });
+        return notificationReceiver;
     }
 
 }

@@ -19,7 +19,6 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -43,15 +42,15 @@ import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.client.util.AnnotatedCacheKey;
 import org.eclipse.hono.notification.AbstractNotification;
-import org.eclipse.hono.notification.NotificationReceiver;
+import org.eclipse.hono.notification.NotificationEventBusSupport;
 import org.eclipse.hono.notification.NotificationType;
 import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
 import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
 import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
-import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.CacheDirective;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
@@ -95,7 +94,7 @@ class ProtonBasedDeviceRegistrationClientTest {
     private Cache<Object, RegistrationResult> cache;
     private Span span;
     private Vertx vertx;
-    private NotificationReceiver notificationReceiver;
+    private EventBus eventBus;
     private final ConcurrentMap<Object, RegistrationResult> cacheBackingMap = new ConcurrentHashMap<>();
 
     /**
@@ -108,7 +107,7 @@ class ProtonBasedDeviceRegistrationClientTest {
         span = TracingMockSupport.mockSpan();
         final Tracer tracer = TracingMockSupport.mockTracer(span);
 
-        final EventBus eventBus = mock(EventBus.class);
+        eventBus = mock(EventBus.class);
         vertx = mock(Vertx.class);
         when(vertx.eventBus()).thenReturn(eventBus);
         VertxMockSupport.executeBlockingCodeImmediately(vertx);
@@ -126,10 +125,6 @@ class ProtonBasedDeviceRegistrationClientTest {
 
         cache = mock(Cache.class);
         when(cache.asMap()).thenReturn(cacheBackingMap);
-
-        notificationReceiver = mock(NotificationReceiver.class);
-        when(notificationReceiver.start()).thenReturn(Future.succeededFuture());
-
     }
 
     private static JsonObject newRegistrationAssertionResult(final String deviceId) {
@@ -151,7 +146,6 @@ class ProtonBasedDeviceRegistrationClientTest {
         client = new ProtonBasedDeviceRegistrationClient(
                 connection,
                 SendMessageSampler.Factory.noop(),
-                notificationReceiver,
                 cache);
     }
 
@@ -291,9 +285,8 @@ class ProtonBasedDeviceRegistrationClientTest {
     }
 
     /**
-     * Verifies that when a client with a cache is started, the notification receiver registers for notifications of the
-     * types {@link TenantChangeNotification}, {@link AllDevicesOfTenantDeletedNotification} and
-     * {@link DeviceChangeNotification}.
+     * Verifies that when a client with a cache is started, the client registers itself for notifications of the
+     * types {@link AllDevicesOfTenantDeletedNotification} and {@link DeviceChangeNotification}.
      *
      * @param ctx The vert.x test context.
      */
@@ -309,13 +302,15 @@ class ProtonBasedDeviceRegistrationClientTest {
 
                     // THEN the expected consumers for notifications are registered
                     ctx.verify(() -> {
-                        verify(notificationReceiver).registerConsumer(eq(AllDevicesOfTenantDeletedNotification.TYPE),
+                        verify(eventBus).consumer(
+                                eq(NotificationEventBusSupport.getEventBusAddress(AllDevicesOfTenantDeletedNotification.TYPE)),
                                 VertxMockSupport.anyHandler());
-                        verify(notificationReceiver).registerConsumer(eq(DeviceChangeNotification.TYPE),
+                        verify(eventBus).consumer(
+                                eq(NotificationEventBusSupport.getEventBusAddress(DeviceChangeNotification.TYPE)),
                                 VertxMockSupport.anyHandler());
 
-                        verify(notificationReceiver).start();
-                        verifyNoMoreInteractions(notificationReceiver);
+                        verify(eventBus).consumer(eq(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT), VertxMockSupport.anyHandler());
+                        verifyNoMoreInteractions(eventBus);
                     });
                     ctx.completeNow();
                 })));
@@ -331,9 +326,9 @@ class ProtonBasedDeviceRegistrationClientTest {
     public void testAllDevicesOfTenantDeletedNotificationRemovesValueFromCache(final VertxTestContext ctx) {
         final String tenantId = "the-tenant-id";
 
-        final var notificationHandlerCaptor = getHandlerArgumentCaptor(AllDevicesOfTenantDeletedNotification.TYPE);
-
         givenAClient(cache);
+
+        final var notificationHandlerCaptor = getEventBusConsumerHandlerArgumentCaptor(AllDevicesOfTenantDeletedNotification.TYPE);
 
         final Set<AnnotatedCacheKey<?>> expectedCacheRemovals = new HashSet<>();
 
@@ -347,8 +342,8 @@ class ProtonBasedDeviceRegistrationClientTest {
                 .onComplete(ctx.succeeding(ok -> ctx.verify(() -> {
 
                     // WHEN receiving a notification that all devices of a tenant have been deleted
-                    notificationHandlerCaptor.getValue().handle(
-                            new AllDevicesOfTenantDeletedNotification(tenantId, Instant.now()));
+                    sendViaEventBusMock(new AllDevicesOfTenantDeletedNotification(tenantId, Instant.now()),
+                            notificationHandlerCaptor.getValue());
 
                     // THEN the cache is invalidated for all registrations of the tenant
                     ctx.verify(() -> verify(cache).invalidateAll(expectedCacheRemovals));
@@ -367,9 +362,9 @@ class ProtonBasedDeviceRegistrationClientTest {
         final String tenantId = "the-tenant-id";
         final String deviceId = "the-device-id";
 
-        final var notificationHandlerCaptor = getHandlerArgumentCaptor(DeviceChangeNotification.TYPE);
-
         givenAClient(cache);
+
+        final var notificationHandlerCaptor = getEventBusConsumerHandlerArgumentCaptor(DeviceChangeNotification.TYPE);
 
         final Set<AnnotatedCacheKey<?>> expectedCacheRemovals = new HashSet<>();
 
@@ -384,9 +379,9 @@ class ProtonBasedDeviceRegistrationClientTest {
                 .onComplete(ctx.succeeding(ok -> ctx.verify(() -> {
 
                     // WHEN receiving a notification about a change on the device
-                    notificationHandlerCaptor.getValue()
-                            .handle(new DeviceChangeNotification(LifecycleChange.UPDATE, tenantId, deviceId,
-                                    Instant.now(), false));
+                    sendViaEventBusMock(new DeviceChangeNotification(
+                                    LifecycleChange.UPDATE, tenantId, deviceId, Instant.now(), false),
+                            notificationHandlerCaptor.getValue());
 
                     // THEN the cache is invalidated for registrations of the changed device and not for other devices
                     ctx.verify(() -> verify(cache).invalidateAll(expectedCacheRemovals));
@@ -406,9 +401,9 @@ class ProtonBasedDeviceRegistrationClientTest {
         final String deviceId = "the-device-id";
         final String gatewayId = "the-device-id";
 
-        final var notificationHandlerCaptor = getHandlerArgumentCaptor(DeviceChangeNotification.TYPE);
-
         givenAClient(cache);
+
+        final var notificationHandlerCaptor = getEventBusConsumerHandlerArgumentCaptor(DeviceChangeNotification.TYPE);
 
         final Set<AnnotatedCacheKey<?>> expectedCacheRemovals = new HashSet<>();
 
@@ -423,9 +418,9 @@ class ProtonBasedDeviceRegistrationClientTest {
                 .onComplete(ctx.succeeding(ok -> ctx.verify(() -> {
 
                     // WHEN receiving a notification about a change on the gateway device
-                    notificationHandlerCaptor.getValue()
-                            .handle(new DeviceChangeNotification(LifecycleChange.UPDATE, tenantId, gatewayId,
-                                    Instant.now(), false));
+                    sendViaEventBusMock(new DeviceChangeNotification(
+                                    LifecycleChange.UPDATE, tenantId, gatewayId, Instant.now(), false),
+                            notificationHandlerCaptor.getValue());
 
                     // THEN the cache is invalidated for registrations where the device id matches the gateway id or the
                     // device id and no other registrations
@@ -434,15 +429,23 @@ class ProtonBasedDeviceRegistrationClientTest {
                 })));
     }
 
-    private <T extends AbstractNotification> ArgumentCaptor<Handler<T>> getHandlerArgumentCaptor(
+    private <T extends AbstractNotification> ArgumentCaptor<Handler<io.vertx.core.eventbus.Message<T>>> getEventBusConsumerHandlerArgumentCaptor(
             final NotificationType<T> notificationType) {
 
-        final ArgumentCaptor<Handler<T>> notificationHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
-
-        doNothing().when(notificationReceiver)
-                .registerConsumer(eq(notificationType), notificationHandlerCaptor.capture());
-
+        @SuppressWarnings("unchecked")
+        final ArgumentCaptor<Handler<io.vertx.core.eventbus.Message<T>>> notificationHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        verify(eventBus)
+                .consumer(eq(NotificationEventBusSupport.getEventBusAddress(notificationType)), notificationHandlerCaptor.capture());
         return notificationHandlerCaptor;
+    }
+
+    private <T extends AbstractNotification> void sendViaEventBusMock(final T notification,
+            final Handler<io.vertx.core.eventbus.Message<T>> messageHandler) {
+
+        @SuppressWarnings("unchecked")
+        final io.vertx.core.eventbus.Message<T> messageMock = mock(io.vertx.core.eventbus.Message.class);
+        when(messageMock.body()).thenReturn(notification);
+        messageHandler.handle(messageMock);
     }
 
     private Future<AnnotatedCacheKey<?>> addResultToCache(final String tenantId, final String deviceId,
@@ -453,6 +456,7 @@ class ProtonBasedDeviceRegistrationClientTest {
                 registrationAssertion);
         when(cache.getIfPresent(any())).thenReturn(registrationResult);
 
+        @SuppressWarnings("unchecked")
         final ArgumentCaptor<AnnotatedCacheKey<?>> responseCacheKey = ArgumentCaptor.forClass(AnnotatedCacheKey.class);
         when(cache.getIfPresent(responseCacheKey.capture())).thenReturn(registrationResult);
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,7 +17,6 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.registry.amqp.ProtonBasedTenantClient;
-import org.eclipse.hono.notification.NoOpNotificationReceiver;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -56,7 +55,6 @@ public class TenantAmqpIT extends TenantApiTests {
                                 IntegrationTestSupport.TENANT_ADMIN_USER,
                                 IntegrationTestSupport.TENANT_ADMIN_PWD)),
                 SendMessageSampler.Factory.noop(),
-                new NoOpNotificationReceiver(),
                 null);
 
         allTenantClient.start()
@@ -71,7 +69,6 @@ public class TenantAmqpIT extends TenantApiTests {
                                 IntegrationTestSupport.HONO_USER,
                                 IntegrationTestSupport.HONO_PWD)),
                 SendMessageSampler.Factory.noop(),
-                new NoOpNotificationReceiver(),
                 null);
 
         defaultTenantClient.start()

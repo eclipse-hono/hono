@@ -30,8 +30,7 @@ import org.eclipse.hono.client.amqp.RequestResponseClient;
 import org.eclipse.hono.client.impl.CachingClientFactory;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.util.AnnotatedCacheKey;
-import org.eclipse.hono.notification.NoOpNotificationReceiver;
-import org.eclipse.hono.notification.NotificationReceiver;
+import org.eclipse.hono.notification.NotificationEventBusSupport;
 import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
 import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
 import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
@@ -67,22 +66,18 @@ public class ProtonBasedDeviceRegistrationClient extends AbstractRequestResponse
         implements DeviceRegistrationClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(ProtonBasedDeviceRegistrationClient.class);
-    private final NotificationReceiver notificationReceiver;
 
     /**
      * Creates a new client for a connection.
      *
      * @param connection The connection to the Device Registration service.
      * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
-     * @param notificationReceiver The client to receive notifications from the device registry. The receiver will be
-     *            started and stopped by the lifecycle of this client ({@link #start()} and {@link #stop()}).
      * @param responseCache The cache to use for service responses or {@code null} if responses should not be cached.
      * @throws NullPointerException if any of the parameters other than the response cache are {@code null}.
      */
     public ProtonBasedDeviceRegistrationClient(
             final HonoConnection connection,
             final SendMessageSampler.Factory samplerFactory,
-            final NotificationReceiver notificationReceiver,
             final Cache<Object, RegistrationResult> responseCache) {
 
         super(connection,
@@ -92,12 +87,12 @@ public class ProtonBasedDeviceRegistrationClient extends AbstractRequestResponse
         connection.getVertx().eventBus().consumer(
                 Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
                 this::handleTenantTimeout);
-        this.notificationReceiver = Objects.requireNonNull(notificationReceiver);
 
         if (isCachingEnabled()) {
-            notificationReceiver.registerConsumer(AllDevicesOfTenantDeletedNotification.TYPE,
+            NotificationEventBusSupport.registerConsumer(connection.getVertx(), AllDevicesOfTenantDeletedNotification.TYPE,
                     n -> removeResultsForTenantFromCache(n.getTenantId()));
-            notificationReceiver.registerConsumer(DeviceChangeNotification.TYPE,
+
+            NotificationEventBusSupport.registerConsumer(connection.getVertx(), DeviceChangeNotification.TYPE,
                     n -> {
                         if (LifecycleChange.DELETE.equals(n.getChange())
                                 || (LifecycleChange.UPDATE.equals(n.getChange()) && !n.isEnabled())) {
@@ -105,21 +100,6 @@ public class ProtonBasedDeviceRegistrationClient extends AbstractRequestResponse
                         }
                     });
         }
-    }
-
-    /**
-     * Creates a new client for a connection.
-     *
-     * @param connection The connection to the Device Registration service.
-     * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
-     * @param responseCache The cache to use for service responses or {@code null} if responses should not be cached.
-     * @throws NullPointerException if any of the parameters other than the response cache are {@code null}.
-     */
-    public ProtonBasedDeviceRegistrationClient(
-            final HonoConnection connection,
-            final SendMessageSampler.Factory samplerFactory,
-            final Cache<Object, RegistrationResult> responseCache) {
-        this(connection, samplerFactory, new NoOpNotificationReceiver(), responseCache);
     }
 
     @Override
@@ -166,9 +146,6 @@ public class ProtonBasedDeviceRegistrationClient extends AbstractRequestResponse
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<RegistrationAssertion> assertRegistration(
             final String tenantId,
@@ -256,18 +233,6 @@ public class ProtonBasedDeviceRegistrationClient extends AbstractRequestResponse
                     || Objects.equals(cacheKey.gatewayId, deviceId);
             return tenantMatches && deviceOrGatewayMatches;
         });
-    }
-
-    @Override
-    public Future<Void> start() {
-        final Future<Void> future = isCachingEnabled() ? notificationReceiver.start() : Future.succeededFuture();
-        return future.compose(v -> super.start());
-    }
-
-    @Override
-    public Future<Void> stop() {
-        return super.stop()
-                .compose(v -> isCachingEnabled() ? notificationReceiver.stop() : Future.succeededFuture());
     }
 
     private static class CacheKey {

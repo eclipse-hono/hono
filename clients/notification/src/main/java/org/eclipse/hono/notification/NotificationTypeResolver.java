@@ -13,13 +13,6 @@
 
 package org.eclipse.hono.notification;
 
-import java.util.List;
-
-import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
-import org.eclipse.hono.notification.deviceregistry.CredentialsChangeNotification;
-import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
-import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
-
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.DatabindContext;
 import com.fasterxml.jackson.databind.JavaType;
@@ -28,16 +21,9 @@ import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
 /**
  * Type resolver for notifications.
  * <p>
- * This type resolver knows the types {@link TenantChangeNotification}, {@link DeviceChangeNotification},
- * {@link CredentialsChangeNotification} and {@link AllDevicesOfTenantDeletedNotification}.
+ * This type resolver knows the types contained in {@link NotificationConstants#DEVICE_REGISTRY_NOTIFICATION_TYPES}.
  */
 public final class NotificationTypeResolver extends TypeIdResolverBase {
-
-    private static final List<NotificationType<?>> SUPPORTED_TYPES = List.of(
-            TenantChangeNotification.TYPE,
-            DeviceChangeNotification.TYPE,
-            CredentialsChangeNotification.TYPE,
-            AllDevicesOfTenantDeletedNotification.TYPE);
 
     private JavaType baseType;
 
@@ -74,7 +60,7 @@ public final class NotificationTypeResolver extends TypeIdResolverBase {
 
     @Override
     public JavaType typeFromId(final DatabindContext context, final String id) {
-        for (final NotificationType<?> type : SUPPORTED_TYPES) {
+        for (final NotificationType<?> type : NotificationConstants.DEVICE_REGISTRY_NOTIFICATION_TYPES) {
             if (type.getTypeName().equals(id)) {
                 return context.constructSpecializedType(this.baseType, type.getClazz());
             }

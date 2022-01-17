@@ -13,6 +13,12 @@
 
 package org.eclipse.hono.notification;
 
+import java.util.List;
+
+import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
+import org.eclipse.hono.notification.deviceregistry.CredentialsChangeNotification;
+import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
+import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 import org.eclipse.hono.util.Constants;
 
 /**
@@ -59,6 +65,14 @@ public class NotificationConstants {
      * The field name of the JSON object that indicates the device ID.
      */
     public static final String JSON_FIELD_DEVICE_ID = Constants.JSON_FIELD_DEVICE_ID;
+    /**
+     * All device registry notification types.
+     */
+    public static final List<NotificationType<?>> DEVICE_REGISTRY_NOTIFICATION_TYPES = List.of(
+            TenantChangeNotification.TYPE,
+            DeviceChangeNotification.TYPE,
+            CredentialsChangeNotification.TYPE,
+            AllDevicesOfTenantDeletedNotification.TYPE);
 
     private NotificationConstants() {
         // prevent instantiation
