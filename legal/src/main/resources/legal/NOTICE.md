@@ -44,6 +44,16 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/apache/commons-cli/).
 
+### Apache Commons Compress
+
+This product includes software developed by the [Apache Software Foundation](http://www.apache.org/).
+
+Your use of *Apache Commons Compress* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/apache/commons-compress).
+
 ### Apache Commons Collections
 
 This product includes software developed by the [Apache Software Foundation](http://www.apache.org/).
@@ -212,27 +222,6 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/jaegertracing/jaeger-client-java).
 
-### Java Transaction API 1.2
-
-This product includes software developed by Oracle and its affiliates.
-
-The Hono project elects to include the *Java Transaction API* in this distribution under the CDDL 1.0 license.
-Your use of the *Java Transaction API* is thus subject to the terms and conditions of the
-COMMON DEVELOPMENT AND DISTRIBUTION LICENSE (CDDL) Version 1.0.
-A copy of the license is contained in the file [CDDL-1.0.txt](CDDL-1.0.txt).
-
-The source code is available from [Maven Central](http://search.maven.org/remotecontent?filepath=org/jboss/spec/javax/transaction/jboss-transaction-api_1.2_spec/1.1.1.Final/jboss-transaction-api_1.2_spec-1.1.1.Final-sources.jar).
-
-### Javassist
-
-This product includes software developed by the [Javassist project](http://www.javassist.org/).
-
-The Hono project elects to include the *Javassist* library in this distribution under the Apache Software License 2.0.
-A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
-http://www.apache.org/licenses/LICENSE-2.0.html.
-
-The source code is available from [GitHubl](https://github.com/jboss-javassist/javassist).
-
 ### JBoss Logging
 
 This product includes software developed by the [JBoss Logging project](https://github.com/jboss-logging).
@@ -301,16 +290,6 @@ A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/apache/kafka).
-
-### Kotlin Standard Library
-
-This product includes software developed by the [JetBrains](https://kotlinlang.org/).
-
-Your use of the *Kotlin Standard Library* is subject to the terms and conditions of the Apache Software License 2.0
-and others as indicated by the file [README.md](kotlin/README.md). This file contains links to the licenses
-whose terms and conditions apply.
-
-The source code is available from [GitHub](https://github.com/JetBrains/kotlin).
 
 ### Kubernetes Client
 
@@ -448,6 +427,16 @@ Your use of the *PostgreSQL JDBC Driver* is subject to the terms and conditions 
 
 The source code is available from [GitHub](https://github.com/pgjdbc/pgjdbc).
 
+### Prometheus JVM Client
+
+This product includes software developed by the [Prometheus Project](https://prometheus.io/).
+
+Your use of the *Prometheus JVM Client* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
+is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/prometheus/client_java).
+
 ### Protobuf
 
 This product includes software developed by Google Inc's [Protocol Buffers project](https://developers.google.com/protocol-buffers/).
@@ -496,6 +485,16 @@ A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/quarkusio/quarkus).
+
+### Reactor Core
+
+This product includes software developed by [Project Reactor](https://projectreactor.io/).
+
+Your use of *Reactor Core* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
+is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/reactor/reactor-core).
 
 ### run-java.sh
 
@@ -628,16 +627,6 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/vert-x3/vertx-bridge-common).
 
-### vert.x Micrometer Metrics ${vertx.version}
-
-This product includes software developed by the [vert.x project](http://vertx.io).
-
-Your use of *vert.x Micrometer Metrics* is subject to the terms and conditions of the Apache Software License 2.0.
-A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
-is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
-
-The source code is available from [GitHub](https://github.com/vert-x3/vertx-micrometer-metrics).
-
 ### vert.x Health Check ${vertx.version}
 
 This product includes software developed by the [vert.x project](http://vertx.io).
@@ -667,6 +656,16 @@ A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/vert-x3/vertx-kafka-client).
+
+### vert.x Micrometer Metrics ${vertx.version}
+
+This product includes software developed by the [vert.x project](http://vertx.io).
+
+Your use of *vert.x Micrometer Metrics* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
+is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/vert-x3/vertx-micrometer-metrics).
 
 ### vert.x Mongo Client ${vertx.version}
 
@@ -698,15 +697,15 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/vert-x3/vertx-proton).
 
-### vert.x SQL Common ${vertx.version}
+### vert.x SQL Client ${vertx.version}
 
 This product includes software developed by the [vert.x project](http://vertx.io).
 
-Your use of *vert.x SQL Common* is subject to the terms and conditions of the Apache Software License 2.0.
+Your use of *vert.x SQL Client* is subject to the terms and conditions of the Apache Software License 2.0.
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [GitHub](https://github.com/vert-x3/vertx-sql-common).
+The source code is available from [GitHub](https://github.com/eclipse-vertx/vertx-sql-client).
 
 ### vert.x Web ${vertx.version}
 
