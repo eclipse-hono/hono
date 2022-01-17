@@ -1063,8 +1063,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <name>hono</name>
                       <alias>zookeeper.hono</alias>
                     </network>
-                    <memorySwap>268435456</memorySwap>
-                    <memory>268435456</memory>
+                    <memorySwap>400000000</memorySwap>
+                    <memory>400000000</memory>
                     <log>
                       <prefix>Zookeeper</prefix>
                       <color>${log.color.kafka}</color>
@@ -1097,8 +1097,8 @@ Test cases are run against Docker images of Hono server + (Apache Qpid Dispatch 
                       <prefix>Kafka</prefix>
                       <color>${log.color.kafka}</color>
                     </log>
-                    <memorySwap>600000000</memorySwap>
-                    <memory>600000000</memory>
+                    <memorySwap>800000000</memorySwap>
+                    <memory>800000000</memory>
                     <wait>
                       <time>${service.startup.timeout}</time>
                       <log>.*(\[KafkaServer id=1\] started).*</log>
