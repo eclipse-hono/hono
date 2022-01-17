@@ -44,6 +44,16 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/apache/commons-cli/).
 
+### Apache Commons Compress
+
+This product includes software developed by the [Apache Software Foundation](http://www.apache.org/).
+
+Your use of *Apache Commons Compress* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/apache/commons-compress).
+
 ### Apache Commons Collections
 
 This product includes software developed by the [Apache Software Foundation](http://www.apache.org/).
@@ -458,6 +468,16 @@ Your use of the *PostgreSQL JDBC Driver* is subject to the terms and conditions 
 
 The source code is available from [GitHub](https://github.com/pgjdbc/pgjdbc).
 
+### Prometheus JVM Client
+
+This product includes software developed by the [Prometheus Project](https://prometheus.io/).
+
+Your use of the *Prometheus JVM Client* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
+is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/prometheus/client_java).
+
 ### Protobuf
 
 This product includes software developed by Google Inc's [Protocol Buffers project](https://developers.google.com/protocol-buffers/).
@@ -506,6 +526,16 @@ A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/quarkusio/quarkus/tree/${quarkus.platform.version}).
+
+### Reactor Core
+
+This product includes software developed by [Project Reactor](https://projectreactor.io/).
+
+Your use of *Reactor Core* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
+is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/reactor/reactor-core).
 
 ### run-java.sh ${run-java-sh.version}
 

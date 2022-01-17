@@ -12,7 +12,6 @@ maven/mavencentral/com.github.ben-manes.caffeine/caffeine/2.9.2, Apache-2.0, app
 maven/mavencentral/com.github.luben/zstd-jni/1.4.9-1, BSD-2-Clause, approved, CQ22420
 maven/mavencentral/com.github.mifmif/generex/1.0.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.google.code.gson/gson/2.8.6, Apache-2.0, approved, CQ23102
-maven/mavencentral/com.google.errorprone/error_prone_annotations/2.2.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.google.guava/guava/30.1-jre, Apache-2.0 AND CC0-1.0 AND LicenseRef-Public-Domain, approved, CQ23244
 maven/mavencentral/com.h2database/h2/1.4.197, EPL-1.0, approved, CQ11693
 maven/mavencentral/com.mchange/c3p0/0.9.5.4, LGPL-2.1-only OR EPL-1.0, approved, clearlydefined
