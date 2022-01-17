@@ -322,16 +322,6 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/apache/kafka/tree/${kafka-clients.version}).
 
-### Kotlin Standard Library
-
-This product includes software developed by the [JetBrains](https://kotlinlang.org/).
-
-Your use of the *Kotlin Standard Library* is subject to the terms and conditions of the Apache Software License 2.0
-and others as indicated by the file [README.md](kotlin/README.md). This file contains links to the licenses
-whose terms and conditions apply.
-
-The source code is available from [GitHub](https://github.com/JetBrains/kotlin).
-
 ### Kubernetes Client
 
 This product includes software developed by the [fabric8 project](https://fabric8.io/).
