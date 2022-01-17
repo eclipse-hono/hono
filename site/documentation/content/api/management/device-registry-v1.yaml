@@ -726,6 +726,17 @@ components:
             "enabled":
                type: boolean
                default: true
+            "alias":
+               type: string
+               pattern: "[a-z0-9-]+"
+               description: |
+                  An alternative identifier that this tenant may be looked up by. Registry implementations MAY
+                  choose to ignore this property. Otherwise, the alias MUST consist of only lower case letters,
+                  digits and hyphens and thus be a valid LDH-label as defined by
+                  [RFC 5890](https://datatracker.ietf.org/doc/html/rfc5890#section-2.3.1).
+                  If set, the alias MUST be unique among all tenants. Implementations of Hono's Tenant service
+                  MAY consider this property when looking up a tenant by its identifier as defined by the
+                  [get Tenant operation](https://www.eclipse.org/hono/docs/api/tenant/#get-tenant-information).
             "ext":
                $ref: '#/components/schemas/Extensions'
             "adapters":

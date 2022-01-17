@@ -65,6 +65,20 @@ public interface TenantDao {
     Future<TenantDto> getById(String tenantId, SpanContext tracingContext);
 
     /**
+     * Gets a tenant by its identifier or alias.
+     *
+     * @param tenantId The identifier or alias of the tenant to get.
+     * @param tracingContext The context to track the processing of the request in
+     *                       or {@code null} if no such context exists.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will be succeeded if an instance with the given identifier or alias exists, otherwise
+     *         it will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
+     * @throws NullPointerException if tenant identifier is {@code null}.
+     */
+    Future<TenantDto> getByIdOrAlias(String tenantId, SpanContext tracingContext);
+
+    /**
      * Gets a tenant by the subject DN of one of its configured trusted certificate authorities.
      *
      * @param subjectDn The subject DN.

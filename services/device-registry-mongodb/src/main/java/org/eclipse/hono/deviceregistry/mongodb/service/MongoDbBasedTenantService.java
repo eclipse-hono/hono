@@ -60,10 +60,10 @@ public final class MongoDbBasedTenantService extends AbstractTenantService {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(span);
 
-        return dao.getById(tenantId, span.context())
+        return dao.getByIdOrAlias(tenantId, span.context())
                 .map(tenantDto -> TenantResult.from(
                             HttpURLConnection.HTTP_OK,
-                            DeviceRegistryUtils.convertTenant(tenantId, tenantDto.getData(), true),
+                            DeviceRegistryUtils.convertTenant(tenantDto.getTenantId(), tenantDto.getData(), true),
                             DeviceRegistryUtils.getCacheDirective(config.getCacheMaxAge())))
                 .otherwise(t -> TenantResult.from(ServiceInvocationException.extractStatusCode(t)));
     }

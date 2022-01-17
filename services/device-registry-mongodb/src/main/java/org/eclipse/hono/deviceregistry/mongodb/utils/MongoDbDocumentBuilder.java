@@ -38,14 +38,23 @@ import io.vertx.core.json.pointer.JsonPointer;
 public final class MongoDbDocumentBuilder {
 
     private static final JsonPointer FIELD_ID = JsonPointer.from("/id");
-    private static final String TENANT_TRUST_ANCHOR_GROUP_PATH = String.format("%s.%s", TenantDto.FIELD_TENANT,
+    private static final String TENANT_ALIAS_PATH = String.format(
+            "%s.%s",
+            TenantDto.FIELD_TENANT,
+            RegistryManagementConstants.FIELD_ALIAS);
+    private static final String TENANT_TRUST_ANCHOR_GROUP_PATH = String.format(
+            "%s.%s",
+            TenantDto.FIELD_TENANT,
             RegistryManagementConstants.FIELD_TRUST_ANCHOR_GROUP);
-    private static final String TENANT_TRUSTED_CA_PATH = String.format("%s.%s",
+    private static final String TENANT_TRUSTED_CA_PATH = String.format(
+            "%s.%s",
             TenantDto.FIELD_TENANT,
             RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA);
-    private static final String TENANT_TRUSTED_CA_SUBJECT_PATH = String.format("%s.%s",
+    private static final String TENANT_TRUSTED_CA_SUBJECT_PATH = String.format(
+            "%s.%s",
             TENANT_TRUSTED_CA_PATH,
             AuthenticationConstants.FIELD_SUBJECT_DN);
+    private static final String MONGODB_OPERATOR_AND = "$and";
     private static final String MONGODB_OPERATOR_ELEM_MATCH = "$elemMatch";
     private static final String MONGODB_OPERATOR_EXISTS = "$exists";
     private static final String MONGODB_OPERATOR_IN = "$in";
@@ -84,6 +93,30 @@ public final class MongoDbDocumentBuilder {
      */
     public MongoDbDocumentBuilder withTenantId(final String tenantId) {
         document.put(BaseDto.FIELD_TENANT_ID, tenantId);
+        return this;
+    }
+
+    /**
+     * Adds filter criteria that matches documents containing a given tenant ID.
+     * <p>
+     * A tenant will match if its {@value BaseDto#FIELD_TENANT_ID} or its
+     * {@value RegistryManagementConstants#FIELD_ALIAS} property matches the given identifier.
+     *
+     * @param tenantId The tenant id.
+     * @return a reference to this for fluent use.
+     */
+    public MongoDbDocumentBuilder withTenantIdOrAlias(final String tenantId) {
+        document.put(
+                MONGODB_OPERATOR_OR,
+                new JsonArray()
+                        .add(new JsonObject().put(BaseDto.FIELD_TENANT_ID, tenantId))
+                        .add(new JsonObject().put(
+                                MONGODB_OPERATOR_AND,
+                                new JsonArray()
+                                    .add(new JsonObject().put(
+                                            TENANT_ALIAS_PATH,
+                                            new JsonObject().put(MONGODB_OPERATOR_EXISTS, true)))
+                                    .add(new JsonObject().put(TENANT_ALIAS_PATH, tenantId)))));
         return this;
     }
 

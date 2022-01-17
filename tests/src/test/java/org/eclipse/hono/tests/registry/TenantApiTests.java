@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,6 +12,8 @@
  *******************************************************************************/
 
 package org.eclipse.hono.tests.registry;
+
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -117,34 +119,34 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
                         .setExtensions(httpAdapterExtensions));
 
         getHelper().registry
-        .addTenant(tenantId, tenant)
-        .compose(ok -> getAdminClient().get(tenantId, NoopSpan.INSTANCE.context()))
-        .onComplete(ctx.succeeding(tenantObject -> {
-            ctx.verify(() -> {
-                assertThat(tenantObject.getDefaults()).isEqualTo(expectedTenantObject.getDefaults());
-                Assertions.assertThat(tenantObject.getAdapters())
-                    .usingRecursiveFieldByFieldElementComparator()
-                    .containsAll(expectedTenantObject.getAdapters());
-                assertThat(tenantObject.getResourceLimits().getMaxConnections())
-                        .isEqualTo(expectedTenantObject.getResourceLimits().getMaxConnections());
-                assertThat(tenantObject.getResourceLimits().getMaxTtl())
-                .isEqualTo(expectedTenantObject.getResourceLimits().getMaxTtl());
-                assertThat(tenantObject.getResourceLimits().getDataVolume().getMaxBytes())
-                        .isEqualTo(expectedTenantObject.getResourceLimits().getDataVolume().getMaxBytes());
-                assertThat(tenantObject.getResourceLimits().getDataVolume().getEffectiveSince()).isEqualTo(
-                        expectedTenantObject.getResourceLimits().getDataVolume().getEffectiveSince());
-                assertThat(tenantObject.getResourceLimits().getDataVolume().getPeriod().getMode()).isEqualTo(
-                        expectedTenantObject.getResourceLimits().getDataVolume().getPeriod().getMode());
-                assertThat(tenantObject.getResourceLimits().getDataVolume().getPeriod().getNoOfDays())
-                        .isEqualTo(expectedTenantObject.getResourceLimits().getDataVolume().getPeriod().getNoOfDays());
-                final JsonObject extensions = tenantObject.getProperty("ext", JsonObject.class);
-                assertThat(extensions.getString("customer")).isEqualTo("ACME Inc.");
-                // implicitly added by DeviceRegistryHttpClient
-                assertThat(extensions.getString(TenantConstants.FIELD_EXT_MESSAGING_TYPE)).isEqualTo(
-                        IntegrationTestSupport.getConfiguredMessagingType().name());
-            });
-            ctx.completeNow();
-        }));
+            .addTenant(tenantId, tenant)
+            .compose(ok -> getAdminClient().get(tenantId, NoopSpan.INSTANCE.context()))
+            .onComplete(ctx.succeeding(tenantObject -> {
+                ctx.verify(() -> {
+                    assertThat(tenantObject.getDefaults()).isEqualTo(expectedTenantObject.getDefaults());
+                    Assertions.assertThat(tenantObject.getAdapters())
+                        .usingRecursiveFieldByFieldElementComparator()
+                        .containsAll(expectedTenantObject.getAdapters());
+                    assertThat(tenantObject.getResourceLimits().getMaxConnections())
+                            .isEqualTo(expectedTenantObject.getResourceLimits().getMaxConnections());
+                    assertThat(tenantObject.getResourceLimits().getMaxTtl())
+                    .isEqualTo(expectedTenantObject.getResourceLimits().getMaxTtl());
+                    assertThat(tenantObject.getResourceLimits().getDataVolume().getMaxBytes())
+                            .isEqualTo(expectedTenantObject.getResourceLimits().getDataVolume().getMaxBytes());
+                    assertThat(tenantObject.getResourceLimits().getDataVolume().getEffectiveSince()).isEqualTo(
+                            expectedTenantObject.getResourceLimits().getDataVolume().getEffectiveSince());
+                    assertThat(tenantObject.getResourceLimits().getDataVolume().getPeriod().getMode()).isEqualTo(
+                            expectedTenantObject.getResourceLimits().getDataVolume().getPeriod().getMode());
+                    assertThat(tenantObject.getResourceLimits().getDataVolume().getPeriod().getNoOfDays())
+                            .isEqualTo(expectedTenantObject.getResourceLimits().getDataVolume().getPeriod().getNoOfDays());
+                    final JsonObject extensions = tenantObject.getProperty("ext", JsonObject.class);
+                    assertThat(extensions.getString("customer")).isEqualTo("ACME Inc.");
+                    // implicitly added by DeviceRegistryHttpClient
+                    assertThat(extensions.getString(TenantConstants.FIELD_EXT_MESSAGING_TYPE)).isEqualTo(
+                            IntegrationTestSupport.getConfiguredMessagingType().name());
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -162,12 +164,12 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
         tenant.setEnabled(true);
 
         getHelper().registry
-        .addTenant(tenantId, tenant)
-        .compose(r -> getRestrictedClient().get(tenantId, NoopSpan.INSTANCE.context()))
-        .onComplete(ctx.failing(t -> {
-            assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN);
-            ctx.completeNow();
-        }));
+            .addTenant(tenantId, tenant)
+            .compose(r -> getRestrictedClient().get(tenantId, NoopSpan.INSTANCE.context()))
+            .onComplete(ctx.failing(t -> {
+                assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN);
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -181,11 +183,33 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
     public void testGetTenantFailsForNonExistingTenant(final VertxTestContext ctx) {
 
         getAdminClient()
-        .get("non-existing-tenant", NoopSpan.INSTANCE.context())
-        .onComplete(ctx.failing(t -> {
-            assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND);
-            ctx.completeNow();
-        }));
+            .get("non-existing-tenant", NoopSpan.INSTANCE.context())
+            .onComplete(ctx.failing(t -> {
+                assertErrorCode(t, HttpURLConnection.HTTP_NOT_FOUND);
+                ctx.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that an existing tenant can be retrieved by alias.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testGetTenantByAlias(final VertxTestContext ctx) {
+
+        assumeTrue(IntegrationTestSupport.isTenantAliasSupported(),
+                "device registry does not support tenant aliases");
+
+        final String tenantId = getHelper().getRandomTenantId();
+
+        getHelper().registry.addTenant(tenantId, new Tenant().setAlias("test-alias"))
+            .onFailure(ctx::failNow)
+            .compose(response -> getAdminClient().get("test-alias", NoopSpan.INSTANCE.context()))
+            .onComplete(ctx.succeeding(tenantObject -> {
+                ctx.verify(() -> assertThat(tenantObject.getTenantId()).isEqualTo(tenantId));
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -204,18 +228,18 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
         final Tenant tenant = Tenants.createTenantForTrustAnchor(subjectDn, publicKey);
 
         getHelper().registry
-        .addTenant(tenantId, tenant)
-        .compose(r -> getAdminClient().get(subjectDn, NoopSpan.INSTANCE.context()))
-        .onComplete(ctx.succeeding(tenantObject -> {
-            ctx.verify(() -> {
-                assertThat(tenantObject.getTenantId()).isEqualTo(tenantId);
-                assertThat(tenantObject.getTrustAnchors()).hasSize(1);
-                final TrustAnchor trustAnchor = tenantObject.getTrustAnchors().iterator().next();
-                assertThat(trustAnchor.getCA()).isEqualTo(subjectDn);
-                assertThat(trustAnchor.getCAPublicKey()).isEqualTo(publicKey);
-            });
-            ctx.completeNow();
-        }));
+            .addTenant(tenantId, tenant)
+            .compose(r -> getAdminClient().get(subjectDn, NoopSpan.INSTANCE.context()))
+            .onComplete(ctx.succeeding(tenantObject -> {
+                ctx.verify(() -> {
+                    assertThat(tenantObject.getTenantId()).isEqualTo(tenantId);
+                    assertThat(tenantObject.getTrustAnchors()).hasSize(1);
+                    final TrustAnchor trustAnchor = tenantObject.getTrustAnchors().iterator().next();
+                    assertThat(trustAnchor.getCA()).isEqualTo(subjectDn);
+                    assertThat(trustAnchor.getCAPublicKey()).isEqualTo(publicKey);
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -237,12 +261,12 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
         final Tenant tenant = Tenants.createTenantForTrustAnchor(subjectDn, publicKey);
 
         getHelper().registry
-        .addTenant(tenantId, tenant)
-        .compose(r -> getRestrictedClient().get(subjectDn, NoopSpan.INSTANCE.context()))
-        .onComplete(ctx.failing(t -> {
-            assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN);
-            ctx.completeNow();
-        }));
+            .addTenant(tenantId, tenant)
+            .compose(r -> getRestrictedClient().get(subjectDn, NoopSpan.INSTANCE.context()))
+            .onComplete(ctx.failing(t -> {
+                assertErrorCode(t, HttpURLConnection.HTTP_FORBIDDEN);
+                ctx.completeNow();
+            }));
     }
 
     /**

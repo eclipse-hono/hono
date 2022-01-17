@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,6 +26,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.security.auth.x500.X500Principal;
@@ -54,8 +56,13 @@ import io.vertx.core.Future;
 @JsonInclude(value = Include.NON_NULL)
 public class Tenant {
 
+    private static Predicate<String> PREDICATE_LDH_LABEL = Pattern.compile("[a-z0-9-]+").asMatchPredicate();
+
     @JsonProperty(RegistryManagementConstants.FIELD_ENABLED)
     private Boolean enabled;
+
+    @JsonProperty(RegistryManagementConstants.FIELD_ALIAS)
+    private String alias;
 
     @JsonProperty(RegistryManagementConstants.FIELD_EXT)
     @JsonInclude(Include.NON_EMPTY)
@@ -109,6 +116,7 @@ public class Tenant {
         Objects.requireNonNull(other);
 
         this.enabled = other.enabled;
+        this.alias = other.alias;
         if (other.extensions != null) {
             this.extensions = new HashMap<>(other.extensions);
         }
@@ -167,6 +175,35 @@ public class Tenant {
     @JsonIgnore
     public final boolean isEnabled() {
         return Optional.ofNullable(enabled).orElse(true);
+    }
+
+    /**
+     * Sets the alternative identifier that this tenant may be looked up by.
+     *
+     * @param alias The alias.
+     * @return This instance, to allow chained invocations.
+     * @throws NullPointerException if alias is {@code null}.
+     * @throws IllegalArgumentException if the alias is not a valid LDH-label as defined by
+     *                          <a href="https://datatracker.ietf.org/doc/html/rfc5890#section-2.3.1">RFC 5890</a>.
+     */
+    public final Tenant setAlias(final String alias) {
+
+        Objects.requireNonNull(alias);
+        if (PREDICATE_LDH_LABEL.test(alias)) {
+            this.alias = alias;
+            return this;
+        } else {
+            throw new IllegalArgumentException("alias must be a valid LDH label");
+        }
+    }
+
+    /**
+     * Gets the alternative identifier that this tenant may be looked up by.
+     *
+     * @return The alias or {@code null} if not set.
+     */
+    public final String getAlias() {
+        return alias;
     }
 
     /**

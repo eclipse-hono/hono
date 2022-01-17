@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.service.management.tenant;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -497,12 +498,34 @@ public class TenantTest {
     }
 
     /**
-     * Encode with absent "enabled" flag.
+     * Verifies that a serialized default tenant object has no properties.
      */
     @Test
     public void testEncodeDefault() {
         final var json = JsonObject.mapFrom(new Tenant());
         assertThat(json).isEmpty();
+    }
+
+    /**
+     * Encode tenant with alias.
+     */
+    @Test
+    public void testEncodeWithAlias() {
+        final var tenant = new Tenant();
+        tenant.setAlias("the-alias-1");
+        final var json = JsonObject.mapFrom(tenant);
+        assertThat(json.getString(RegistryManagementConstants.FIELD_ALIAS)).isEqualTo("the-alias-1");
+    }
+
+    /**
+     * Verifies that the alias property cannot be set to a non-LDH label.
+     */
+    @Test
+    public void testSetAliasAcceptsLdhLabelOnly() {
+        final var tenant = new Tenant();
+        assertAll(
+                () -> assertThrows(NullPointerException.class, () -> tenant.setAlias(null)),
+                () -> assertThrows(IllegalArgumentException.class, () -> tenant.setAlias("NOT_a-valid=Alias")));
     }
 
     /**

@@ -636,6 +636,15 @@ public final class IntegrationTestSupport {
     }
 
     /**
+     * Checks if the Device Registry supports specifying and using a tenant alias.
+     *
+     * @return {@code true} if the registry supports tenant aliases.
+     */
+    public static boolean isTenantAliasSupported() {
+        return HONO_DEVICEREGISTRY_TYPE.equals(DEVICEREGISTRY_TYPE_MONGODB);
+    }
+
+    /**
      * Creates properties for connecting to the AMQP Messaging Network's secure port.
      *
      * @return The properties.
