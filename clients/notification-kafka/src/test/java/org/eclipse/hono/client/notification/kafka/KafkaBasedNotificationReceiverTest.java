@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -83,7 +83,7 @@ public class KafkaBasedNotificationReceiverTest {
 
         final var receiver = createReceiver();
 
-        receiver.registerConsumer(TenantChangeNotification.class, notification -> {
+        receiver.registerConsumer(TenantChangeNotification.TYPE, notification -> {
                 });
 
         receiver.start()
@@ -91,7 +91,7 @@ public class KafkaBasedNotificationReceiverTest {
                     final Set<String> subscription = mockConsumer.subscription();
                     assertThat(subscription).isNotNull();
                     assertThat(subscription)
-                            .contains(NotificationTopicHelper.getTopicName(TenantChangeNotification.class));
+                            .contains(NotificationTopicHelper.getTopicName(TenantChangeNotification.TYPE));
                     assertThat(mockConsumer.closed()).isFalse();
                     ctx.completeNow();
                 })));
@@ -107,7 +107,7 @@ public class KafkaBasedNotificationReceiverTest {
 
         final var receiver = createReceiver();
 
-        receiver.registerConsumer(TenantChangeNotification.class, notification -> {
+        receiver.registerConsumer(TenantChangeNotification.TYPE, notification -> {
         });
 
         receiver.start()
@@ -148,25 +148,25 @@ public class KafkaBasedNotificationReceiverTest {
 
         final Checkpoint handlerInvokedCheckpoint = ctx.checkpoint(4);
 
-        receiver.registerConsumer(TenantChangeNotification.class,
+        receiver.registerConsumer(TenantChangeNotification.TYPE,
                 notification -> ctx.verify(() -> {
                     assertThat(notification).isInstanceOf(TenantChangeNotification.class);
                     handlerInvokedCheckpoint.flag();
                 }));
 
-        receiver.registerConsumer(DeviceChangeNotification.class,
+        receiver.registerConsumer(DeviceChangeNotification.TYPE,
                 notification -> ctx.verify(() -> {
                     assertThat(notification).isInstanceOf(DeviceChangeNotification.class);
                     handlerInvokedCheckpoint.flag();
                 }));
 
-        receiver.registerConsumer(CredentialsChangeNotification.class,
+        receiver.registerConsumer(CredentialsChangeNotification.TYPE,
                 notification -> ctx.verify(() -> {
                     assertThat(notification).isInstanceOf(CredentialsChangeNotification.class);
                     handlerInvokedCheckpoint.flag();
                 }));
 
-        receiver.registerConsumer(AllDevicesOfTenantDeletedNotification.class,
+        receiver.registerConsumer(AllDevicesOfTenantDeletedNotification.TYPE,
                 notification -> ctx.verify(() -> {
                     assertThat(notification).isInstanceOf(AllDevicesOfTenantDeletedNotification.class);
                     handlerInvokedCheckpoint.flag();
@@ -179,9 +179,9 @@ public class KafkaBasedNotificationReceiverTest {
     private KafkaBasedNotificationReceiver createReceiver() {
 
         final TopicPartition tenantTopicPartition = new TopicPartition(
-                NotificationTopicHelper.getTopicName(TenantChangeNotification.class), 0);
+                NotificationTopicHelper.getTopicName(TenantChangeNotification.TYPE), 0);
         final TopicPartition deviceTopicPartition = new TopicPartition(
-                NotificationTopicHelper.getTopicName(DeviceChangeNotification.class), 0);
+                NotificationTopicHelper.getTopicName(DeviceChangeNotification.TYPE), 0);
 
         mockConsumer.updateBeginningOffsets(Map.of(tenantTopicPartition, 0L, deviceTopicPartition, 0L));
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(tenantTopicPartition, deviceTopicPartition));
@@ -195,7 +195,7 @@ public class KafkaBasedNotificationReceiverTest {
     private ConsumerRecord<String, Buffer> createKafkaRecord(final AbstractNotification notification,
             final long offset) {
         final Buffer json = JsonObject.mapFrom(notification).toBuffer();
-        final String topicName = NotificationTopicHelper.getTopicName(notification.getClass());
+        final String topicName = NotificationTopicHelper.getTopicName(notification.getType());
         return new ConsumerRecord<>(topicName, 0, offset, null, json);
     }
 

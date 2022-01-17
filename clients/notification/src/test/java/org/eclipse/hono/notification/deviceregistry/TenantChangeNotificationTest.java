@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -59,7 +59,7 @@ public class TenantChangeNotificationTest {
                 .isEqualTo(NotificationConstants.SOURCE_DEVICE_REGISTRY);
         assertThat(json.getInstant(NotificationConstants.JSON_FIELD_CREATION_TIME).toString()).isEqualTo(CREATION_TIME);
 
-        assertThat(json.getString(NotificationConstants.JSON_FIELD_TYPE)).isEqualTo(TenantChangeNotification.TYPE);
+        assertThat(json.getString(NotificationConstants.JSON_FIELD_TYPE)).isEqualTo(TenantChangeNotification.TYPE_NAME);
         assertThat(json.getString(NotificationConstants.JSON_FIELD_TENANT_ID)).isEqualTo(TENANT_ID);
         assertThat(json.getBoolean(NotificationConstants.JSON_FIELD_DATA_ENABLED)).isEqualTo(ENABLED);
         assertThat(json.getString(NotificationConstants.JSON_FIELD_DATA_CHANGE)).isEqualTo(CHANGE.toString());

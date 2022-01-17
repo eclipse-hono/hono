@@ -49,6 +49,7 @@ import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.client.util.AnnotatedCacheKey;
 import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationReceiver;
+import org.eclipse.hono.notification.NotificationType;
 import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
 import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 import org.eclipse.hono.test.TracingMockSupport;
@@ -472,7 +473,7 @@ class ProtonBasedTenantClientTest {
 
                     // THEN the expected consumers for notifications are registered
                     ctx.verify(() -> {
-                        verify(notificationReceiver).registerConsumer(eq(TenantChangeNotification.class),
+                        verify(notificationReceiver).registerConsumer(eq(TenantChangeNotification.TYPE),
                                 VertxMockSupport.anyHandler());
 
                         verify(notificationReceiver).start();
@@ -493,7 +494,7 @@ class ProtonBasedTenantClientTest {
     public void testTenantChangeNotificationRemovesValueFromCache(final VertxTestContext ctx) {
         final String tenantId = "the-tenant-id";
 
-        final var notificationHandlerCaptor = getHandlerArgumentCaptor(TenantChangeNotification.class);
+        final var notificationHandlerCaptor = getHandlerArgumentCaptor(TenantChangeNotification.TYPE);
 
         givenAClient(cache);
 
@@ -515,12 +516,12 @@ class ProtonBasedTenantClientTest {
     }
 
     private <T extends AbstractNotification> ArgumentCaptor<Handler<T>> getHandlerArgumentCaptor(
-            final Class<T> notificationClass) {
+            final NotificationType<T> notificationType) {
 
         final ArgumentCaptor<Handler<T>> notificationHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
 
         doNothing().when(notificationReceiver)
-                .registerConsumer(eq(notificationClass), notificationHandlerCaptor.capture());
+                .registerConsumer(eq(notificationType), notificationHandlerCaptor.capture());
 
         return notificationHandlerCaptor;
     }

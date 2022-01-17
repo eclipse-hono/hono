@@ -44,6 +44,7 @@ import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.client.util.AnnotatedCacheKey;
 import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationReceiver;
+import org.eclipse.hono.notification.NotificationType;
 import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
 import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
 import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
@@ -308,9 +309,9 @@ class ProtonBasedDeviceRegistrationClientTest {
 
                     // THEN the expected consumers for notifications are registered
                     ctx.verify(() -> {
-                        verify(notificationReceiver).registerConsumer(eq(AllDevicesOfTenantDeletedNotification.class),
+                        verify(notificationReceiver).registerConsumer(eq(AllDevicesOfTenantDeletedNotification.TYPE),
                                 VertxMockSupport.anyHandler());
-                        verify(notificationReceiver).registerConsumer(eq(DeviceChangeNotification.class),
+                        verify(notificationReceiver).registerConsumer(eq(DeviceChangeNotification.TYPE),
                                 VertxMockSupport.anyHandler());
 
                         verify(notificationReceiver).start();
@@ -330,7 +331,7 @@ class ProtonBasedDeviceRegistrationClientTest {
     public void testAllDevicesOfTenantDeletedNotificationRemovesValueFromCache(final VertxTestContext ctx) {
         final String tenantId = "the-tenant-id";
 
-        final var notificationHandlerCaptor = getHandlerArgumentCaptor(AllDevicesOfTenantDeletedNotification.class);
+        final var notificationHandlerCaptor = getHandlerArgumentCaptor(AllDevicesOfTenantDeletedNotification.TYPE);
 
         givenAClient(cache);
 
@@ -366,7 +367,7 @@ class ProtonBasedDeviceRegistrationClientTest {
         final String tenantId = "the-tenant-id";
         final String deviceId = "the-device-id";
 
-        final var notificationHandlerCaptor = getHandlerArgumentCaptor(DeviceChangeNotification.class);
+        final var notificationHandlerCaptor = getHandlerArgumentCaptor(DeviceChangeNotification.TYPE);
 
         givenAClient(cache);
 
@@ -405,7 +406,7 @@ class ProtonBasedDeviceRegistrationClientTest {
         final String deviceId = "the-device-id";
         final String gatewayId = "the-device-id";
 
-        final var notificationHandlerCaptor = getHandlerArgumentCaptor(DeviceChangeNotification.class);
+        final var notificationHandlerCaptor = getHandlerArgumentCaptor(DeviceChangeNotification.TYPE);
 
         givenAClient(cache);
 
@@ -434,12 +435,12 @@ class ProtonBasedDeviceRegistrationClientTest {
     }
 
     private <T extends AbstractNotification> ArgumentCaptor<Handler<T>> getHandlerArgumentCaptor(
-            final Class<T> notificationClass) {
+            final NotificationType<T> notificationType) {
 
         final ArgumentCaptor<Handler<T>> notificationHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
 
         doNothing().when(notificationReceiver)
-                .registerConsumer(eq(notificationClass), notificationHandlerCaptor.capture());
+                .registerConsumer(eq(notificationType), notificationHandlerCaptor.capture());
 
         return notificationHandlerCaptor;
     }

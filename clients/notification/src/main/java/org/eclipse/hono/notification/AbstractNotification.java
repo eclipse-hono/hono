@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -52,10 +52,22 @@ public abstract class AbstractNotification {
 
     /**
      * Gets the type of the notification.
+     * <p>
+     * Note for implementing classes: The generic type of the returned {@code NotificationType} has to be the class of
+     * the object, this method is invoked on.
      *
-     * @return The type name.
+     * @return The type.
      */
-    public abstract String getType();
+    public abstract NotificationType<? extends AbstractNotification> getType();
+
+    /**
+     * Gets the key identifier of this notification, referring to the resource that this notification is about.
+     * <p>
+     * E.g. for a TenantChangeNotification the key would be the tenant identifier.
+     *
+     * @return The key.
+     */
+    public abstract String getKey();
 
     /**
      * Gets the canonical name of the component that publishes the notification.

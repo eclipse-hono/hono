@@ -46,6 +46,7 @@ import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.client.util.AnnotatedCacheKey;
 import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationReceiver;
+import org.eclipse.hono.notification.NotificationType;
 import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
 import org.eclipse.hono.notification.deviceregistry.CredentialsChangeNotification;
 import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
@@ -419,11 +420,11 @@ class ProtonBasedCredentialsClientTest {
 
                     // THEN the expected consumers for notifications are registered
                     ctx.verify(() -> {
-                        verify(notificationReceiver).registerConsumer(eq(AllDevicesOfTenantDeletedNotification.class),
+                        verify(notificationReceiver).registerConsumer(eq(AllDevicesOfTenantDeletedNotification.TYPE),
                                 VertxMockSupport.anyHandler());
-                        verify(notificationReceiver).registerConsumer(eq(DeviceChangeNotification.class),
+                        verify(notificationReceiver).registerConsumer(eq(DeviceChangeNotification.TYPE),
                                 VertxMockSupport.anyHandler());
-                        verify(notificationReceiver).registerConsumer(eq(CredentialsChangeNotification.class),
+                        verify(notificationReceiver).registerConsumer(eq(CredentialsChangeNotification.TYPE),
                                 VertxMockSupport.anyHandler());
 
                         verify(notificationReceiver).start();
@@ -444,7 +445,7 @@ class ProtonBasedCredentialsClientTest {
         final String tenantId = "the-tenant-id";
         final String deviceId = "the-device-id";
 
-        final var notificationHandlerCaptor = getHandlerArgumentCaptor(AllDevicesOfTenantDeletedNotification.class);
+        final var notificationHandlerCaptor = getHandlerArgumentCaptor(AllDevicesOfTenantDeletedNotification.TYPE);
 
         givenAClient(cache);
 
@@ -480,7 +481,7 @@ class ProtonBasedCredentialsClientTest {
         final String tenantId = "the-tenant-id";
         final String deviceId = "the-device-id";
 
-        final var notificationHandlerCaptor = getHandlerArgumentCaptor(DeviceChangeNotification.class);
+        final var notificationHandlerCaptor = getHandlerArgumentCaptor(DeviceChangeNotification.TYPE);
 
         givenAClient(cache);
 
@@ -518,7 +519,7 @@ class ProtonBasedCredentialsClientTest {
         final String tenantId = "the-tenant-id";
         final String deviceId = "the-device-id";
 
-        final var notificationHandlerCaptor = getHandlerArgumentCaptor(CredentialsChangeNotification.class);
+        final var notificationHandlerCaptor = getHandlerArgumentCaptor(CredentialsChangeNotification.TYPE);
 
         givenAClient(cache);
 
@@ -544,12 +545,12 @@ class ProtonBasedCredentialsClientTest {
     }
 
     private <T extends AbstractNotification> ArgumentCaptor<Handler<T>> getHandlerArgumentCaptor(
-            final Class<T> notificationClass) {
+            final NotificationType<T> notificationType) {
 
         final ArgumentCaptor<Handler<T>> notificationHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
 
         doNothing().when(notificationReceiver)
-                .registerConsumer(eq(notificationClass), notificationHandlerCaptor.capture());
+                .registerConsumer(eq(notificationType), notificationHandlerCaptor.capture());
 
         return notificationHandlerCaptor;
     }
