@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,16 +15,19 @@ package org.eclipse.hono.commandrouter.spring;
 
 import java.util.Objects;
 
+import org.eclipse.hono.notification.NotificationReceiver;
 import org.eclipse.hono.service.AbstractServiceBase;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.service.spring.AbstractApplication;
+import org.eclipse.hono.util.WrappedLifecycleComponentVerticle;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Verticle;
@@ -41,6 +44,7 @@ import io.vertx.core.Verticle;
 public class Application extends AbstractApplication {
 
     private AuthenticationService authService;
+    private NotificationReceiver notificationReceiver;
 
     /**
      * Sets the service to use for authenticating clients.
@@ -59,6 +63,17 @@ public class Application extends AbstractApplication {
     }
 
     /**
+     * Sets the notification receiver to use.
+     *
+     * @param notificationReceiver The notification receiver.
+     * @throws NullPointerException if notificationReceiver is {@code null}.
+     */
+    @Autowired
+    public void setNotificationReceiver(final NotificationReceiver notificationReceiver) {
+        this.notificationReceiver = Objects.requireNonNull(notificationReceiver);
+    }
+
+    /**
      * Invoked before the service instances are being deployed.
      * <p>
      * Deploys the authentication service verticle.
@@ -66,7 +81,9 @@ public class Application extends AbstractApplication {
     @Override
     protected Future<Void> deployRequiredVerticles(final int maxInstances) {
 
-        return deployVerticle(authService).mapEmpty();
+        return CompositeFuture
+                .all(deployVerticle(authService), deployVerticle(new WrappedLifecycleComponentVerticle(notificationReceiver)))
+                .mapEmpty();
     }
 
     private Future<String> deployVerticle(final Object component) {

@@ -33,8 +33,7 @@ import org.eclipse.hono.client.amqp.RequestResponseClient;
 import org.eclipse.hono.client.impl.CachingClientFactory;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.util.AnnotatedCacheKey;
-import org.eclipse.hono.notification.NoOpNotificationReceiver;
-import org.eclipse.hono.notification.NotificationReceiver;
+import org.eclipse.hono.notification.NotificationEventBusSupport;
 import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
 import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 import org.eclipse.hono.util.CacheDirective;
@@ -73,31 +72,26 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseServic
     private static final StringTag TAG_SUBJECT_DN = new StringTag("subject_dn");
     private static final String ATTRIBUTE_KEY_TENANT_ID = "tenant-id";
     private final Map<Object, Future<TenantResult<TenantObject>>> pendingRequests = new HashMap<>();
-    private final NotificationReceiver notificationReceiver;
 
     /**
      * Creates a new client for a connection.
      *
      * @param connection The connection to the service.
      * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
-     * @param notificationReceiver The client to receive notifications from the device registry. The receiver will be
-     *            started and stopped by the lifecycle of this client ({@link #start()} and {@link #stop()}).
      * @param responseCache The cache to use for service responses or {@code null} if responses should not be cached.
      * @throws NullPointerException if any of the parameters other than the response cache are {@code null}.
      */
     public ProtonBasedTenantClient(
             final HonoConnection connection,
             final SendMessageSampler.Factory samplerFactory,
-            final NotificationReceiver notificationReceiver,
             final Cache<Object, TenantResult<TenantObject>> responseCache) {
         super(connection,
                 samplerFactory,
                 new CachingClientFactory<>(connection.getVertx(), RequestResponseClient::isOpen),
                 responseCache);
-        this.notificationReceiver = Objects.requireNonNull(notificationReceiver);
 
         if (isCachingEnabled()) {
-            notificationReceiver.registerConsumer(TenantChangeNotification.TYPE,
+            NotificationEventBusSupport.registerConsumer(connection.getVertx(), TenantChangeNotification.TYPE,
                     n -> {
                         if (LifecycleChange.DELETE.equals(n.getChange())
                                 || (LifecycleChange.UPDATE.equals(n.getChange()) && !n.isEnabled())) {
@@ -107,24 +101,6 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseServic
         }
     }
 
-    /**
-     * Creates a new client for a connection.
-     *
-     * @param connection The connection to the service.
-     * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
-     * @param responseCache The cache to use for service responses or {@code null} if responses should not be cached.
-     * @throws NullPointerException if any of the parameters other than the response cache are {@code null}.
-     */
-    public ProtonBasedTenantClient(
-            final HonoConnection connection,
-            final SendMessageSampler.Factory samplerFactory,
-            final Cache<Object, TenantResult<TenantObject>> responseCache) {
-        this(connection, samplerFactory, new NoOpNotificationReceiver(), responseCache);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected String getKey(final String tenantId) {
         // there is one client for all tenant IDs only
@@ -174,9 +150,6 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseServic
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<TenantObject> get(final String tenantId, final SpanContext parent) {
 
@@ -191,9 +164,6 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseServic
                 span);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<TenantObject> get(final X500Principal subjectDn, final SpanContext parent) {
 
@@ -275,18 +245,6 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseServic
                 .getAttribute(ATTRIBUTE_KEY_TENANT_ID)
                 .map(id -> id.equals(tenantId))
                 .orElse(false));
-    }
-
-    @Override
-    public Future<Void> start() {
-        final Future<Void> future = isCachingEnabled() ? notificationReceiver.start() : Future.succeededFuture();
-        return future.compose(v -> super.start());
-    }
-
-    @Override
-    public Future<Void> stop() {
-        return super.stop()
-                .compose(v -> isCachingEnabled() ? notificationReceiver.stop() : Future.succeededFuture());
     }
 
 }

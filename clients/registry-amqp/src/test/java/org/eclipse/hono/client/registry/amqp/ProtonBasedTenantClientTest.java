@@ -20,7 +20,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -48,7 +47,7 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.client.util.AnnotatedCacheKey;
 import org.eclipse.hono.notification.AbstractNotification;
-import org.eclipse.hono.notification.NotificationReceiver;
+import org.eclipse.hono.notification.NotificationEventBusSupport;
 import org.eclipse.hono.notification.NotificationType;
 import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
 import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
@@ -74,6 +73,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.Timeout;
@@ -101,7 +101,8 @@ class ProtonBasedTenantClientTest {
     private ProtonBasedTenantClient client;
     private Cache<Object, TenantResult<TenantObject>> cache;
     private Span span;
-    private NotificationReceiver notificationReceiver;
+    private Vertx vertx;
+    private EventBus eventBus;
     private final ConcurrentMap<Object, TenantResult<TenantObject>> cacheBackingMap = new ConcurrentHashMap<>();
 
     /**
@@ -114,8 +115,11 @@ class ProtonBasedTenantClientTest {
         span = TracingMockSupport.mockSpan();
         final Tracer tracer = TracingMockSupport.mockTracer(span);
 
-        final Vertx vertx = mock(Vertx.class);
+        eventBus = mock(EventBus.class);
+        vertx = mock(Vertx.class);
+        when(vertx.eventBus()).thenReturn(eventBus);
         VertxMockSupport.executeBlockingCodeImmediately(vertx);
+
         receiver = AmqpClientUnitTestHelper.mockProtonReceiver();
         sender = AmqpClientUnitTestHelper.mockProtonSender();
 
@@ -130,9 +134,6 @@ class ProtonBasedTenantClientTest {
 
         cache = mock(Cache.class);
         when(cache.asMap()).thenReturn(cacheBackingMap);
-
-        notificationReceiver = mock(NotificationReceiver.class);
-        when(notificationReceiver.start()).thenReturn(Future.succeededFuture());
     }
 
     private static JsonObject newTenantResult(final String tenantId) {
@@ -147,7 +148,6 @@ class ProtonBasedTenantClientTest {
         client = new ProtonBasedTenantClient(
                 connection,
                 SendMessageSampler.Factory.noop(),
-                notificationReceiver,
                 cache);
     }
 
@@ -456,7 +456,7 @@ class ProtonBasedTenantClientTest {
     }
 
     /**
-     * Verifies that when a client with a cache is started, the notification receiver registers for notifications of the
+     * Verifies that when a client with a cache is started, the client registers itself for notifications of the
      * type {@link TenantChangeNotification}.
      *
      * @param ctx The vert.x test context.
@@ -473,11 +473,11 @@ class ProtonBasedTenantClientTest {
 
                     // THEN the expected consumers for notifications are registered
                     ctx.verify(() -> {
-                        verify(notificationReceiver).registerConsumer(eq(TenantChangeNotification.TYPE),
+                        verify(eventBus).consumer(
+                                eq(NotificationEventBusSupport.getEventBusAddress(TenantChangeNotification.TYPE)),
                                 VertxMockSupport.anyHandler());
 
-                        verify(notificationReceiver).start();
-                        verifyNoMoreInteractions(notificationReceiver);
+                        verifyNoMoreInteractions(eventBus);
                     });
                     ctx.completeNow();
                 })));
@@ -494,9 +494,9 @@ class ProtonBasedTenantClientTest {
     public void testTenantChangeNotificationRemovesValueFromCache(final VertxTestContext ctx) {
         final String tenantId = "the-tenant-id";
 
-        final var notificationHandlerCaptor = getHandlerArgumentCaptor(TenantChangeNotification.TYPE);
-
         givenAClient(cache);
+
+        final var notificationHandlerCaptor = getEventBusConsumerHandlerArgumentCaptor(TenantChangeNotification.TYPE);
 
         // GIVEN a client with a cache containing two tenants
         client.start()
@@ -505,8 +505,8 @@ class ProtonBasedTenantClientTest {
                 .onComplete(ctx.succeeding(keyOfChangedTenant -> ctx.verify(() -> {
 
                     // WHEN receiving a notification about a change on a tenant
-                    notificationHandlerCaptor.getValue().handle(
-                            new TenantChangeNotification(LifecycleChange.DELETE, tenantId, Instant.now(), false));
+                    sendViaEventBusMock(new TenantChangeNotification(LifecycleChange.DELETE, tenantId, Instant.now(), false),
+                            notificationHandlerCaptor.getValue());
 
                     // THEN the cache is invalidated for the changed tenant
                     ctx.verify(() -> verify(cache).invalidateAll(Set.of(keyOfChangedTenant)));
@@ -515,15 +515,23 @@ class ProtonBasedTenantClientTest {
 
     }
 
-    private <T extends AbstractNotification> ArgumentCaptor<Handler<T>> getHandlerArgumentCaptor(
+    private <T extends AbstractNotification> ArgumentCaptor<Handler<io.vertx.core.eventbus.Message<T>>> getEventBusConsumerHandlerArgumentCaptor(
             final NotificationType<T> notificationType) {
 
-        final ArgumentCaptor<Handler<T>> notificationHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
-
-        doNothing().when(notificationReceiver)
-                .registerConsumer(eq(notificationType), notificationHandlerCaptor.capture());
-
+        @SuppressWarnings("unchecked")
+        final ArgumentCaptor<Handler<io.vertx.core.eventbus.Message<T>>> notificationHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        verify(eventBus)
+                .consumer(eq(NotificationEventBusSupport.getEventBusAddress(notificationType)), notificationHandlerCaptor.capture());
         return notificationHandlerCaptor;
+    }
+
+    private <T extends AbstractNotification> void sendViaEventBusMock(final T notification,
+            final Handler<io.vertx.core.eventbus.Message<T>> messageHandler) {
+
+        @SuppressWarnings("unchecked")
+        final io.vertx.core.eventbus.Message<T> messageMock = mock(io.vertx.core.eventbus.Message.class);
+        when(messageMock.body()).thenReturn(notification);
+        messageHandler.handle(messageMock);
     }
 
     private Future<AnnotatedCacheKey<?>> addResultToCache(final String tenantId) {
@@ -531,6 +539,7 @@ class ProtonBasedTenantClientTest {
         final TenantResult<TenantObject> tenantResult = TenantResult.from(HttpURLConnection.HTTP_OK,
                 new TenantObject(tenantId, false));
 
+        @SuppressWarnings("unchecked")
         final ArgumentCaptor<AnnotatedCacheKey<?>> responseCacheKey = ArgumentCaptor.forClass(AnnotatedCacheKey.class);
         when(cache.getIfPresent(responseCacheKey.capture())).thenReturn(tenantResult);
 

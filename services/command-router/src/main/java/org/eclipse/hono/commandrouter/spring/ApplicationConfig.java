@@ -57,6 +57,8 @@ import org.eclipse.hono.config.VertxProperties;
 import org.eclipse.hono.deviceconnection.infinispan.client.BasicCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.CacheBasedDeviceConnectionInfo;
 import org.eclipse.hono.deviceconnection.infinispan.client.CommonCacheConfig;
+import org.eclipse.hono.notification.NotificationConstants;
+import org.eclipse.hono.notification.NotificationEventBusSupport;
 import org.eclipse.hono.notification.NotificationReceiver;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.HealthCheckServer;
@@ -254,9 +256,8 @@ public class ApplicationConfig {
             final MeterRegistry meterRegistry,
             final CommandRouterMetrics metrics) {
 
-        final NotificationReceiver notificationReceiver = notificationReceiver();
-        final DeviceRegistrationClient registrationClient = registrationClient(notificationReceiver);
-        final TenantClient tenantClient = tenantClient(notificationReceiver);
+        final DeviceRegistrationClient registrationClient = registrationClient();
+        final TenantClient tenantClient = tenantClient();
 
         final CommandTargetMapper commandTargetMapper = CommandTargetMapper.create(registrationClient, deviceConnectionInfo, getTracer());
         final MessagingClientProvider<CommandConsumerFactory> commandConsumerFactoryProvider = new MessagingClientProvider<>();
@@ -383,18 +384,16 @@ public class ApplicationConfig {
     /**
      * Exposes a client for accessing the <em>Device Registration</em> API as a Spring bean.
      *
-     * @param notificationReceiver The notification receiver to use.
      * @return The client.
      */
     @Bean
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Scope("prototype")
-    public DeviceRegistrationClient registrationClient(final NotificationReceiver notificationReceiver) {
+    public DeviceRegistrationClient registrationClient() {
 
         return new ProtonBasedDeviceRegistrationClient(
                 registrationServiceConnection(),
                 SendMessageSampler.Factory.noop(),
-                notificationReceiver,
                 Caches.newCaffeineCache(registrationClientConfig()));
     }
 
@@ -428,18 +427,16 @@ public class ApplicationConfig {
     /**
      * Exposes a client for accessing the <em>Tenant</em> API as a Spring bean.
      *
-     * @param notificationReceiver The notification receiver to use.
      * @return The client.
      */
     @Bean
     @Qualifier(TenantConstants.TENANT_ENDPOINT)
     @Scope("prototype")
-    public TenantClient tenantClient(final NotificationReceiver notificationReceiver) {
+    public TenantClient tenantClient() {
 
         return new ProtonBasedTenantClient(
                 tenantServiceConnection(),
                 SendMessageSampler.Factory.noop(),
-                notificationReceiver,
                 Caches.newCaffeineCache(tenantClientConfig()));
     }
 
@@ -662,16 +659,22 @@ public class ApplicationConfig {
      * @return The bean instance.
      */
     @Bean
-    @Scope("prototype")
     public NotificationReceiver notificationReceiver() {
+        final NotificationReceiver notificationReceiver;
         final var kafkaConsumerConfig = notificationKafkaConsumerConfig();
         if (kafkaConsumerConfig.isConfigured()) {
-            return new KafkaBasedNotificationReceiver(vertx(), kafkaConsumerConfig);
+            notificationReceiver = new KafkaBasedNotificationReceiver(vertx(), kafkaConsumerConfig);
         } else {
             final ClientConfigProperties notificationConfig = new ClientConfigProperties(commandConsumerConnectionConfig());
             notificationConfig.setServerRole("Notification");
-            return new ProtonBasedNotificationReceiver(HonoConnection.newConnection(vertx(), notificationConfig, getTracer()));
+            notificationReceiver = new ProtonBasedNotificationReceiver(HonoConnection.newConnection(vertx(), notificationConfig, getTracer()));
         }
+        NotificationConstants.DEVICE_REGISTRY_NOTIFICATION_TYPES.forEach(notificationType -> {
+            notificationReceiver.registerConsumer(notificationType, notification -> {
+                NotificationEventBusSupport.sendNotification(vertx(), notification);
+            });
+        });
+        return notificationReceiver;
     }
 
 }

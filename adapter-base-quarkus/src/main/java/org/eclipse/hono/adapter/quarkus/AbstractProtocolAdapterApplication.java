@@ -82,6 +82,8 @@ import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.config.quarkus.ClientOptions;
 import org.eclipse.hono.config.quarkus.RequestResponseClientOptions;
+import org.eclipse.hono.notification.NotificationConstants;
+import org.eclipse.hono.notification.NotificationEventBusSupport;
 import org.eclipse.hono.notification.NotificationReceiver;
 import org.eclipse.hono.service.cache.Caches;
 import org.eclipse.hono.service.quarkus.AbstractServiceApplication;
@@ -91,6 +93,7 @@ import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
+import org.eclipse.hono.util.WrappedLifecycleComponentVerticle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -99,8 +102,9 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 
 import io.opentracing.Tracer;
 import io.smallrye.config.ConfigMapping;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Promise;
+import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
@@ -286,12 +290,15 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         LOG.info("deploying {} {} instances ...", appConfig.getMaxInstances(), getComponentName());
 
         final CompletableFuture<Void> startup = new CompletableFuture<>();
-        final Promise<String> deploymentTracker = Promise.promise();
-        vertx.deployVerticle(
+
+        final Future<String> adapterTracker = vertx.deployVerticle(
                 this::adapter,
-                new DeploymentOptions().setInstances(appConfig.getMaxInstances()),
-                deploymentTracker);
-        deploymentTracker.future()
+                new DeploymentOptions().setInstances(appConfig.getMaxInstances()));
+
+        final Future<String> notificationReceiverTracker = vertx.deployVerticle(
+                new WrappedLifecycleComponentVerticle(notificationReceiver()));
+
+        CompositeFuture.all(adapterTracker, notificationReceiverTracker)
             .compose(s -> healthCheckServer.start())
             .onSuccess(ok -> startup.complete(null))
             .onFailure(startup::completeExceptionally);
@@ -310,14 +317,13 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
         Objects.requireNonNull(adapter);
 
-        final NotificationReceiver notificationReceiver = notificationReceiver();
-        final DeviceRegistrationClient registrationClient = registrationClient(notificationReceiver);
+        final DeviceRegistrationClient registrationClient = registrationClient();
 
         final MessagingClientProvider<TelemetrySender> telemetrySenderProvider = new MessagingClientProvider<>();
         final MessagingClientProvider<EventSender> eventSenderProvider = new MessagingClientProvider<>();
         final MessagingClientProvider<CommandResponseSender> commandResponseSenderProvider = new MessagingClientProvider<>();
         final KafkaClientMetricsSupport kafkaClientMetricsSupport = kafkaClientMetricsSupport(kafkaMetricsOptions);
-        final var tenantClient = tenantClient(notificationReceiver);
+        final var tenantClient = tenantClient();
 
         if (kafkaEventConfig.isConfigured()) {
             LOG.info("Kafka client configuration present, adding Kafka messaging clients");
@@ -383,7 +389,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         adapter.setMessagingClientProviders(messagingClientProviders);
         Optional.ofNullable(connectionEventProducer())
             .ifPresent(adapter::setConnectionEventProducer);
-        adapter.setCredentialsClient(credentialsClient(notificationReceiver));
+        adapter.setCredentialsClient(credentialsClient());
         adapter.setHealthCheckServer(healthCheckServer);
         adapter.setRegistrationClient(registrationClient);
         adapter.setResourceLimitChecks(prometheusResourceLimitChecks(resourceLimitChecksConfig, tenantClient));
@@ -418,14 +424,12 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     /**
      * Creates a new client for Hono's Tenant service.
      *
-     * @param notificationReceiver The notification receiver to use.
      * @return The client.
      */
-    protected TenantClient tenantClient(final NotificationReceiver notificationReceiver) {
+    protected TenantClient tenantClient() {
         return new ProtonBasedTenantClient(
                 HonoConnection.newConnection(vertx, tenantClientConfig, tracer),
                 messageSamplerFactory,
-                notificationReceiver,
                 tenantResponseCache());
     }
 
@@ -439,14 +443,12 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     /**
      * Creates a new client for Hono's Device Registration service.
      *
-     * @param notificationReceiver The notification receiver to use.
      * @return The client.
      */
-    protected DeviceRegistrationClient registrationClient(final NotificationReceiver notificationReceiver) {
+    protected DeviceRegistrationClient registrationClient() {
         return new ProtonBasedDeviceRegistrationClient(
                 HonoConnection.newConnection(vertx, deviceRegistrationClientConfig, tracer),
                 messageSamplerFactory,
-                notificationReceiver,
                 registrationResponseCache());
     }
 
@@ -460,14 +462,12 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     /**
      * Creates a new client for Hono's Credentials service.
      *
-     * @param notificationReceiver The notification receiver to use.
      * @return The client.
      */
-    protected CredentialsClient credentialsClient(final NotificationReceiver notificationReceiver) {
+    protected CredentialsClient credentialsClient() {
         return new ProtonBasedCredentialsClient(
                 HonoConnection.newConnection(vertx, credentialsClientConfig, tracer),
                 messageSamplerFactory,
-                notificationReceiver,
                 credentialsResponseCache());
     }
 
@@ -622,13 +622,20 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
      * @return The bean instance.
      */
     public NotificationReceiver notificationReceiver() {
+        final NotificationReceiver notificationReceiver;
         if (kafkaNotificationConfig.isConfigured()) {
-            return new KafkaBasedNotificationReceiver(vertx, kafkaNotificationConfig);
+            notificationReceiver = new KafkaBasedNotificationReceiver(vertx, kafkaNotificationConfig);
         } else {
             final ClientConfigProperties notificationConfig = new ClientConfigProperties(downstreamSenderConfig);
             notificationConfig.setServerRole("Notification");
-            return new ProtonBasedNotificationReceiver(HonoConnection.newConnection(vertx, notificationConfig, tracer));
+            notificationReceiver = new ProtonBasedNotificationReceiver(HonoConnection.newConnection(vertx, notificationConfig, tracer));
         }
+        NotificationConstants.DEVICE_REGISTRY_NOTIFICATION_TYPES.forEach(notificationType -> {
+            notificationReceiver.registerConsumer(notificationType, notification -> {
+                NotificationEventBusSupport.sendNotification(vertx, notification);
+            });
+        });
+        return notificationReceiver;
     }
 
 }

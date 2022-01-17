@@ -64,6 +64,8 @@ import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.VertxProperties;
+import org.eclipse.hono.notification.NotificationConstants;
+import org.eclipse.hono.notification.NotificationEventBusSupport;
 import org.eclipse.hono.notification.NotificationReceiver;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
@@ -137,8 +139,7 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
         final KafkaAdminClientConfigProperties kafkaCommandInternalConfig = kafkaCommandInternalConfig();
         final MessagingKafkaConsumerConfigProperties kafkaCommandConfig = kafkaCommandConfig();
         final KafkaClientMetricsSupport kafkaClientMetricsSupport = kafkaClientMetricsSupport(kafkaMetricsConfig());
-        final NotificationReceiver notificationReceiver = notificationReceiver();
-        final TenantClient tenantClient = tenantClient(samplerFactory, notificationReceiver);
+        final TenantClient tenantClient = tenantClient(samplerFactory);
         final MessagingClientProviders messagingClientProviders = messagingClientProviders(
                 samplerFactory,
                 getTracer(),
@@ -147,7 +148,7 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
                 kafkaClientMetricsSupport,
                 tenantClient);
 
-        final DeviceRegistrationClient registrationClient = registrationClient(samplerFactory, notificationReceiver);
+        final DeviceRegistrationClient registrationClient = registrationClient(samplerFactory);
         try {
             // look up client via bean factory in order to take advantage of conditional bean instantiation based
             // on config properties
@@ -190,7 +191,7 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
         adapter.setMessagingClientProviders(messagingClientProviders);
         Optional.ofNullable(connectionEventProducer())
             .ifPresent(adapter::setConnectionEventProducer);
-        adapter.setCredentialsClient(credentialsClient(samplerFactory, notificationReceiver));
+        adapter.setCredentialsClient(credentialsClient(samplerFactory));
         adapter.setHealthCheckServer(healthCheckServer());
         adapter.setRegistrationClient(registrationClient);
         adapter.setTenantClient(tenantClient);
@@ -312,20 +313,17 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
      * Exposes a client for accessing the <em>Device Registration</em> API as a Spring bean.
      *
      * @param samplerFactory The sampler factory to use.
-     * @param notificationReceiver The notification receiver to use.
      * @return The client.
      */
     @Bean
     @Qualifier(RegistrationConstants.REGISTRATION_ENDPOINT)
     @Scope("prototype")
     public DeviceRegistrationClient registrationClient(
-            final SendMessageSampler.Factory samplerFactory,
-            final NotificationReceiver notificationReceiver) {
+            final SendMessageSampler.Factory samplerFactory) {
 
         return new ProtonBasedDeviceRegistrationClient(
                 registrationServiceConnection(),
                 samplerFactory,
-                notificationReceiver,
                 registrationCache());
     }
 
@@ -385,20 +383,17 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
      * Exposes a client for accessing the <em>Credentials</em> API as a Spring bean.
      *
      * @param samplerFactory The sampler factory to use.
-     * @param notificationReceiver The notification receiver to use.
      * @return The client.
      */
     @Bean
     @Qualifier(CredentialsConstants.CREDENTIALS_ENDPOINT)
     @Scope("prototype")
     public CredentialsClient credentialsClient(
-            final SendMessageSampler.Factory samplerFactory,
-            final NotificationReceiver notificationReceiver) {
+            final SendMessageSampler.Factory samplerFactory) {
 
         return new ProtonBasedCredentialsClient(
                 credentialsServiceConnection(),
                 samplerFactory,
-                notificationReceiver,
                 credentialsCache());
     }
 
@@ -458,20 +453,17 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
      * Exposes a client for accessing the <em>Tenant</em> API as a Spring bean.
      *
      * @param samplerFactory The sampler factory to use.
-     * @param notificationReceiver The notification receiver to use.
      * @return The client.
      */
     @Bean
     @Qualifier(TenantConstants.TENANT_ENDPOINT)
     @Scope("prototype")
     public TenantClient tenantClient(
-            final SendMessageSampler.Factory samplerFactory,
-            final NotificationReceiver notificationReceiver) {
+            final SendMessageSampler.Factory samplerFactory) {
 
         return new ProtonBasedTenantClient(
                 tenantServiceConnection(),
                 samplerFactory,
-                notificationReceiver,
                 tenantCache());
     }
 
@@ -781,19 +773,26 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
     /**
      * Exposes a notification receiver as a Spring bean.
      *
+     * @param vertx The vertx instance to use.
      * @return The bean instance.
      */
     @Bean
-    @Scope("prototype")
-    public NotificationReceiver notificationReceiver() {
+    public NotificationReceiver notificationReceiver(final Vertx vertx) {
+        final NotificationReceiver notificationReceiver;
         final var kafkaConsumerConfig = notificationKafkaConsumerConfig();
         if (kafkaConsumerConfig.isConfigured()) {
-            return new KafkaBasedNotificationReceiver(vertx(), kafkaConsumerConfig);
+            notificationReceiver = new KafkaBasedNotificationReceiver(vertx(), kafkaConsumerConfig);
         } else {
             final ClientConfigProperties notificationConfig = new ClientConfigProperties(downstreamSenderConfig());
             notificationConfig.setServerRole("Notification");
-            return new ProtonBasedNotificationReceiver(HonoConnection.newConnection(vertx(), notificationConfig, getTracer()));
+            notificationReceiver = new ProtonBasedNotificationReceiver(HonoConnection.newConnection(vertx(), notificationConfig, getTracer()));
         }
+        NotificationConstants.DEVICE_REGISTRY_NOTIFICATION_TYPES.forEach(notificationType -> {
+            notificationReceiver.registerConsumer(notificationType, notification -> {
+                NotificationEventBusSupport.sendNotification(vertx, notification);
+            });
+        });
+        return notificationReceiver;
     }
 
 }

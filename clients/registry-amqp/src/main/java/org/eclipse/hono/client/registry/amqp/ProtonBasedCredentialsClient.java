@@ -27,8 +27,7 @@ import org.eclipse.hono.client.amqp.RequestResponseClient;
 import org.eclipse.hono.client.impl.CachingClientFactory;
 import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.client.util.AnnotatedCacheKey;
-import org.eclipse.hono.notification.NoOpNotificationReceiver;
-import org.eclipse.hono.notification.NotificationReceiver;
+import org.eclipse.hono.notification.NotificationEventBusSupport;
 import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
 import org.eclipse.hono.notification.deviceregistry.CredentialsChangeNotification;
 import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
@@ -68,22 +67,17 @@ public class ProtonBasedCredentialsClient extends AbstractRequestResponseService
     private static final String TAG_CREDENTIALS_TYPE = "credentials_type";
     private static final String ATTRIBUTE_KEY_DEVICE_ID = "device-id";
 
-    private final NotificationReceiver notificationReceiver;
-
     /**
      * Creates a new client for a connection.
      *
      * @param connection The connection to the Credentials service.
      * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
-     * @param notificationReceiver The client to receive notifications from the device registry. The receiver will be
-     *            started and stopped by the lifecycle of this client ({@link #start()} and {@link #stop()}).
      * @param responseCache The cache to use for service responses or {@code null} if responses should not be cached.
      * @throws NullPointerException if any of the parameters other than the response cache are {@code null}.
      */
     public ProtonBasedCredentialsClient(
             final HonoConnection connection,
             final SendMessageSampler.Factory samplerFactory,
-            final NotificationReceiver notificationReceiver,
             final Cache<Object, CredentialsResult<CredentialsObject>> responseCache) {
 
         super(connection,
@@ -93,36 +87,20 @@ public class ProtonBasedCredentialsClient extends AbstractRequestResponseService
         connection.getVertx().eventBus().consumer(
                 Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
                 this::handleTenantTimeout);
-        this.notificationReceiver = Objects.requireNonNull(notificationReceiver);
 
         if (isCachingEnabled()) {
-            notificationReceiver.registerConsumer(AllDevicesOfTenantDeletedNotification.TYPE,
+            NotificationEventBusSupport.registerConsumer(connection.getVertx(), AllDevicesOfTenantDeletedNotification.TYPE,
                     n -> removeResultsForTenantFromCache(n.getTenantId()));
-            notificationReceiver.registerConsumer(DeviceChangeNotification.TYPE,
+            NotificationEventBusSupport.registerConsumer(connection.getVertx(), DeviceChangeNotification.TYPE,
                     n -> {
                         if (LifecycleChange.DELETE.equals(n.getChange())
                                 || (LifecycleChange.UPDATE.equals(n.getChange()) && !n.isEnabled())) {
                             removeResultsForDeviceFromCache(n.getTenantId(), n.getDeviceId());
                         }
                     });
-            notificationReceiver.registerConsumer(CredentialsChangeNotification.TYPE,
+            NotificationEventBusSupport.registerConsumer(connection.getVertx(), CredentialsChangeNotification.TYPE,
                     n -> removeResultsForDeviceFromCache(n.getTenantId(), n.getDeviceId()));
         }
-    }
-
-    /**
-     * Creates a new client for a connection.
-     *
-     * @param connection The connection to the Credentials service.
-     * @param samplerFactory The factory for creating samplers for tracing AMQP messages being sent.
-     * @param responseCache The cache to use for service responses or {@code null} if responses should not be cached.
-     * @throws NullPointerException if any of the parameters other than the response cache are {@code null}.
-     */
-    public ProtonBasedCredentialsClient(
-            final HonoConnection connection,
-            final SendMessageSampler.Factory samplerFactory,
-            final Cache<Object, CredentialsResult<CredentialsObject>> responseCache) {
-        this(connection, samplerFactory, new NoOpNotificationReceiver(), responseCache);
     }
 
     @Override
@@ -173,9 +151,6 @@ public class ProtonBasedCredentialsClient extends AbstractRequestResponseService
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<CredentialsObject> get(
             final String tenantId,
@@ -186,9 +161,6 @@ public class ProtonBasedCredentialsClient extends AbstractRequestResponseService
         return get(tenantId, type, authId, new JsonObject(), spanContext);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<CredentialsObject> get(
             final String tenantId,
@@ -286,18 +258,6 @@ public class ProtonBasedCredentialsClient extends AbstractRequestResponseService
                     .orElse(false);
             return tenantMatches && deviceMatches;
         });
-    }
-
-    @Override
-    public Future<Void> start() {
-        final Future<Void> future = isCachingEnabled() ? notificationReceiver.start() : Future.succeededFuture();
-        return future.compose(v -> super.start());
-    }
-
-    @Override
-    public Future<Void> stop() {
-        return super.stop()
-                .compose(v -> isCachingEnabled() ? notificationReceiver.stop() : Future.succeededFuture());
     }
 
     private static class CacheKey {

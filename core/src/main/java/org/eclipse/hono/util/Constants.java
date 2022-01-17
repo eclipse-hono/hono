@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -122,6 +122,11 @@ public final class Constants {
      * The vert.x event bus address that the ID of a tenant that timed out is published to.
      */
     public static final String EVENT_BUS_ADDRESS_TENANT_TIMED_OUT = "tenant.timeout";
+
+    /**
+     * The prefix for the vert.x event bus address that notification messages are published to.
+     */
+    public static final String EVENT_BUS_ADDRESS_NOTIFICATION_PREFIX = "notification.";
 
     /**
      * The AMQP 1.0 port defined by IANA for unencrypted connections.
