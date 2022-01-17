@@ -101,7 +101,6 @@ public class MongoDBBasedTenantManagementSearchTenantsTest implements AbstractTe
                 return vertxCloseHandler.future();
             })
             .onComplete(testContext.succeedingThenComplete());
-        dao.close();
     }
 
     @Override
