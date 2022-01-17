@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,6 +19,7 @@ import java.util.Objects;
 import org.eclipse.hono.annotation.HonoTimestamp;
 import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationConstants;
+import org.eclipse.hono.notification.NotificationType;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -29,10 +30,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * Notification that informs that all devices of a tenant have been deleted.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class AllDevicesOfTenantDeletedNotification extends AbstractNotification {
+public final class AllDevicesOfTenantDeletedNotification extends AbstractNotification {
 
-    public static final String TYPE = "all-devices-of-tenant-deleted-v1";
+    public static final String TYPE_NAME = "all-devices-of-tenant-deleted-v1";
     public static final String ADDRESS = DeviceChangeNotification.ADDRESS;
+    public static final NotificationType<AllDevicesOfTenantDeletedNotification> TYPE = new NotificationType<>(
+            TYPE_NAME,
+            AllDevicesOfTenantDeletedNotification.class,
+            ADDRESS);
 
     private final String tenantId;
 
@@ -68,14 +73,20 @@ public class AllDevicesOfTenantDeletedNotification extends AbstractNotification 
      * @return The tenant ID.
      */
     @JsonProperty(value = NotificationConstants.JSON_FIELD_TENANT_ID)
-    public final String getTenantId() {
+    public String getTenantId() {
         return tenantId;
     }
 
     @Override
     @JsonIgnore
-    public final String getType() {
+    public NotificationType<AllDevicesOfTenantDeletedNotification> getType() {
         return TYPE;
+    }
+
+    @Override
+    @JsonIgnore
+    public String getKey() {
+        return getTenantId();
     }
 
     @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -154,10 +154,10 @@ public class KafkaBasedNotificationSenderTest {
                         final ProducerRecord<String, JsonObject> record = mockProducer.history().get(0);
 
                         assertThat(record.topic())
-                                .isEqualTo(NotificationTopicHelper.getTopicName(notificationToSend.getClass()));
+                                .isEqualTo(NotificationTopicHelper.getTopicName(notificationToSend.getType()));
                         assertThat(record.key()).isEqualTo(expectedRecordKey);
                         assertThat(record.value().getString(NotificationConstants.JSON_FIELD_TYPE))
-                                .isEqualTo(notificationToSend.getType());
+                                .isEqualTo(notificationToSend.getType().getTypeName());
                     });
                     ctx.completeNow();
                 }));

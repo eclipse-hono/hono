@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,10 +21,6 @@ import org.eclipse.hono.client.kafka.KafkaClientFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationSender;
-import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
-import org.eclipse.hono.notification.deviceregistry.CredentialsChangeNotification;
-import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
-import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -81,28 +77,14 @@ public class KafkaBasedNotificationSender implements NotificationSender {
 
     private Future<KafkaProducerRecord<String, JsonObject>> createProducerRecord(final AbstractNotification notification) {
         try {
-            final String topic = NotificationTopicHelper.getTopicName(notification.getClass());
-            final String key = getKey(notification);
+            final String topic = NotificationTopicHelper.getTopicName(notification.getType());
+            final String key = notification.getKey();
             final JsonObject value = JsonObject.mapFrom(notification);
 
             return Future.succeededFuture(KafkaProducerRecord.create(topic, key, value));
         } catch (final RuntimeException ex) {
             LOG.error("error creating producer record for notification [{}]", notification, ex);
             return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, ex));
-        }
-    }
-
-    private String getKey(final AbstractNotification notification) {
-        if (notification instanceof TenantChangeNotification) {
-            return ((TenantChangeNotification) notification).getTenantId();
-        } else if (notification instanceof DeviceChangeNotification) {
-            return ((DeviceChangeNotification) notification).getDeviceId();
-        } else if (notification instanceof CredentialsChangeNotification) {
-            return ((CredentialsChangeNotification) notification).getDeviceId();
-        } else if (notification instanceof AllDevicesOfTenantDeletedNotification) {
-            return ((AllDevicesOfTenantDeletedNotification) notification).getTenantId();
-        } else {
-            throw new IllegalArgumentException("unknown notification type");
         }
     }
 

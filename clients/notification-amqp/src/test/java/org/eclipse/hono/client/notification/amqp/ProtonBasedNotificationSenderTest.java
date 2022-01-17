@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -122,7 +122,7 @@ public class ProtonBasedNotificationSenderTest {
 
         // VERIFY that the message is as expected
         final Message message = messageCaptor.getValue();
-        assertThat(message.getAddress()).isEqualTo(NotificationAddressHelper.getAddress(notification.getClass()));
+        assertThat(message.getAddress()).isEqualTo(NotificationAddressHelper.getAddress(notification.getType()));
         assertThat(message.getContentType()).isEqualTo(NotificationConstants.CONTENT_TYPE);
         final AbstractNotification decodedNotification = Json.decodeValue(MessageHelper.getPayload(message),
                 AbstractNotification.class);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,7 +22,7 @@ import io.vertx.core.Handler;
 public final class NoOpNotificationReceiver implements NotificationReceiver {
 
     @Override
-    public <T extends AbstractNotification> void registerConsumer(final Class<T> notificationType,
+    public <T extends AbstractNotification> void registerConsumer(final NotificationType<T> notificationType,
             final Handler<T> consumer) {
 
     }

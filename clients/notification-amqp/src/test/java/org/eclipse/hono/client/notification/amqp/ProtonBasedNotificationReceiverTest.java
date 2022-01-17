@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -110,7 +110,7 @@ public class ProtonBasedNotificationReceiverTest {
 
         // GIVEN a client where a TenantChangeNotification consumer gets registered
         final AtomicReference<TenantChangeNotification> receivedNotificationRef = new AtomicReference<>();
-        client.registerConsumer(TenantChangeNotification.class, receivedNotificationRef::set);
+        client.registerConsumer(TenantChangeNotification.TYPE, receivedNotificationRef::set);
 
         // WHEN starting the client
         client.start()
@@ -163,25 +163,25 @@ public class ProtonBasedNotificationReceiverTest {
 
         final Checkpoint handlerInvokedCheckpoint = ctx.checkpoint(4);
 
-        client.registerConsumer(TenantChangeNotification.class,
+        client.registerConsumer(TenantChangeNotification.TYPE,
                 notification -> ctx.verify(() -> {
                     assertThat(notification).isInstanceOf(TenantChangeNotification.class);
                     handlerInvokedCheckpoint.flag();
                 }));
 
-        client.registerConsumer(DeviceChangeNotification.class,
+        client.registerConsumer(DeviceChangeNotification.TYPE,
                 notification -> ctx.verify(() -> {
                     assertThat(notification).isInstanceOf(DeviceChangeNotification.class);
                     handlerInvokedCheckpoint.flag();
                 }));
 
-        client.registerConsumer(CredentialsChangeNotification.class,
+        client.registerConsumer(CredentialsChangeNotification.TYPE,
                 notification -> ctx.verify(() -> {
                     assertThat(notification).isInstanceOf(CredentialsChangeNotification.class);
                     handlerInvokedCheckpoint.flag();
                 }));
 
-        client.registerConsumer(AllDevicesOfTenantDeletedNotification.class,
+        client.registerConsumer(AllDevicesOfTenantDeletedNotification.TYPE,
                 notification -> ctx.verify(() -> {
                     assertThat(notification).isInstanceOf(AllDevicesOfTenantDeletedNotification.class);
                     handlerInvokedCheckpoint.flag();
@@ -194,22 +194,22 @@ public class ProtonBasedNotificationReceiverTest {
                     final Map<String, ProtonMessageHandler> receiverMsgHandlersPerAddress = assertReceiverLinkCreated(connection);
 
                     assertThat(receiverMsgHandlersPerAddress)
-                            .containsKey(NotificationAddressHelper.getAddress(TenantChangeNotification.class));
+                            .containsKey(NotificationAddressHelper.getAddress(TenantChangeNotification.TYPE));
                     assertThat(receiverMsgHandlersPerAddress)
-                            .containsKey(NotificationAddressHelper.getAddress(DeviceChangeNotification.class));
+                            .containsKey(NotificationAddressHelper.getAddress(DeviceChangeNotification.TYPE));
                     assertThat(receiverMsgHandlersPerAddress)
-                            .containsKey(NotificationAddressHelper.getAddress(CredentialsChangeNotification.class));
+                            .containsKey(NotificationAddressHelper.getAddress(CredentialsChangeNotification.TYPE));
                     assertThat(receiverMsgHandlersPerAddress)
-                            .containsKey(NotificationAddressHelper.getAddress(AllDevicesOfTenantDeletedNotification.class));
+                            .containsKey(NotificationAddressHelper.getAddress(AllDevicesOfTenantDeletedNotification.TYPE));
 
                     final ProtonMessageHandler tenantChangeReceiverMsgHandler = receiverMsgHandlersPerAddress
-                            .get(NotificationAddressHelper.getAddress(TenantChangeNotification.class));
+                            .get(NotificationAddressHelper.getAddress(TenantChangeNotification.TYPE));
                     final ProtonMessageHandler deviceChangeReceiverMsgHandler = receiverMsgHandlersPerAddress
-                            .get(NotificationAddressHelper.getAddress(DeviceChangeNotification.class));
+                            .get(NotificationAddressHelper.getAddress(DeviceChangeNotification.TYPE));
                     final ProtonMessageHandler credentialsChangeReceiverMsgHandler = receiverMsgHandlersPerAddress
-                            .get(NotificationAddressHelper.getAddress(CredentialsChangeNotification.class));
+                            .get(NotificationAddressHelper.getAddress(CredentialsChangeNotification.TYPE));
                     final ProtonMessageHandler allDevicesOfTenantDeletedChangeReceiverMsgHandler = receiverMsgHandlersPerAddress
-                            .get(NotificationAddressHelper.getAddress(AllDevicesOfTenantDeletedNotification.class));
+                            .get(NotificationAddressHelper.getAddress(AllDevicesOfTenantDeletedNotification.TYPE));
                     // and sending notifications on the links
                     tenantChangeReceiverMsgHandler.handle(mock(ProtonDelivery.class), tenantChangeNotificationMsg);
                     deviceChangeReceiverMsgHandler.handle(mock(ProtonDelivery.class), deviceChangeNotificationMsg);

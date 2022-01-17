@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,6 +19,7 @@ import java.util.Objects;
 import org.eclipse.hono.annotation.HonoTimestamp;
 import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationConstants;
+import org.eclipse.hono.notification.NotificationType;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -34,10 +35,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * enforce re-authentication.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class CredentialsChangeNotification extends AbstractNotification {
+public final class CredentialsChangeNotification extends AbstractNotification {
 
-    public static final String TYPE = "credentials-change-v1";
+    public static final String TYPE_NAME = "credentials-change-v1";
     public static final String ADDRESS = DeviceChangeNotification.ADDRESS;
+    public static final NotificationType<CredentialsChangeNotification> TYPE = new NotificationType<>(
+            TYPE_NAME,
+            CredentialsChangeNotification.class,
+            ADDRESS);
 
     private final String tenantId;
     private final String deviceId;
@@ -78,7 +83,7 @@ public class CredentialsChangeNotification extends AbstractNotification {
      * @return The tenant ID.
      */
     @JsonProperty(value = NotificationConstants.JSON_FIELD_TENANT_ID)
-    public final String getTenantId() {
+    public String getTenantId() {
         return tenantId;
     }
 
@@ -88,14 +93,20 @@ public class CredentialsChangeNotification extends AbstractNotification {
      * @return The device ID.
      */
     @JsonProperty(value = NotificationConstants.JSON_FIELD_DEVICE_ID)
-    public final String getDeviceId() {
+    public String getDeviceId() {
         return deviceId;
     }
 
     @Override
     @JsonIgnore
-    public final String getType() {
+    public NotificationType<CredentialsChangeNotification> getType() {
         return TYPE;
+    }
+
+    @Override
+    @JsonIgnore
+    public String getKey() {
+        return getDeviceId();
     }
 
     @Override

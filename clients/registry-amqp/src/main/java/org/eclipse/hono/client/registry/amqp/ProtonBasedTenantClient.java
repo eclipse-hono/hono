@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -97,7 +97,7 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseServic
         this.notificationReceiver = Objects.requireNonNull(notificationReceiver);
 
         if (isCachingEnabled()) {
-            notificationReceiver.registerConsumer(TenantChangeNotification.class,
+            notificationReceiver.registerConsumer(TenantChangeNotification.TYPE,
                     n -> {
                         if (LifecycleChange.DELETE.equals(n.getChange())
                                 || (LifecycleChange.UPDATE.equals(n.getChange()) && !n.isEnabled())) {

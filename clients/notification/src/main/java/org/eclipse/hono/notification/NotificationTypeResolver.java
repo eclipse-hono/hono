@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,6 +12,8 @@
  *******************************************************************************/
 
 package org.eclipse.hono.notification;
+
+import java.util.List;
 
 import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
 import org.eclipse.hono.notification.deviceregistry.CredentialsChangeNotification;
@@ -30,6 +32,12 @@ import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
  * {@link CredentialsChangeNotification} and {@link AllDevicesOfTenantDeletedNotification}.
  */
 public final class NotificationTypeResolver extends TypeIdResolverBase {
+
+    private static final List<NotificationType<?>> SUPPORTED_TYPES = List.of(
+            TenantChangeNotification.TYPE,
+            DeviceChangeNotification.TYPE,
+            CredentialsChangeNotification.TYPE,
+            AllDevicesOfTenantDeletedNotification.TYPE);
 
     private JavaType baseType;
 
@@ -59,24 +67,18 @@ public final class NotificationTypeResolver extends TypeIdResolverBase {
     public String idFromValueAndType(final Object obj, final Class<?> subType) {
 
         if (obj instanceof AbstractNotification) {
-            return ((AbstractNotification) obj).getType();
+            return ((AbstractNotification) obj).getType().getTypeName();
         }
         return null;
     }
 
     @Override
     public JavaType typeFromId(final DatabindContext context, final String id) {
-        switch (id) {
-        case TenantChangeNotification.TYPE:
-            return context.constructSpecializedType(this.baseType, TenantChangeNotification.class);
-        case DeviceChangeNotification.TYPE:
-            return context.constructSpecializedType(this.baseType, DeviceChangeNotification.class);
-        case CredentialsChangeNotification.TYPE:
-            return context.constructSpecializedType(this.baseType, CredentialsChangeNotification.class);
-        case AllDevicesOfTenantDeletedNotification.TYPE:
-            return context.constructSpecializedType(this.baseType, AllDevicesOfTenantDeletedNotification.class);
-        default:
-            return null;
+        for (final NotificationType<?> type : SUPPORTED_TYPES) {
+            if (type.getTypeName().equals(id)) {
+                return context.constructSpecializedType(this.baseType, type.getClazz());
+            }
         }
+        return null;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,6 +19,7 @@ import java.util.Objects;
 import org.eclipse.hono.annotation.HonoTimestamp;
 import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationConstants;
+import org.eclipse.hono.notification.NotificationType;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -29,10 +30,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * Notification that informs about changes on a device.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class DeviceChangeNotification extends AbstractNotification {
+public final class DeviceChangeNotification extends AbstractNotification {
 
-    public static final String TYPE = "device-change-v1";
+    public static final String TYPE_NAME = "device-change-v1";
     public static final String ADDRESS = "registry-device";
+    public static final NotificationType<DeviceChangeNotification> TYPE = new NotificationType<>(
+            TYPE_NAME,
+            DeviceChangeNotification.class,
+            ADDRESS);
 
     private final LifecycleChange change;
     private final String tenantId;
@@ -88,7 +93,7 @@ public class DeviceChangeNotification extends AbstractNotification {
      * @return The change.
      */
     @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_CHANGE)
-    public final LifecycleChange getChange() {
+    public LifecycleChange getChange() {
         return change;
     }
 
@@ -98,7 +103,7 @@ public class DeviceChangeNotification extends AbstractNotification {
      * @return The tenant ID.
      */
     @JsonProperty(value = NotificationConstants.JSON_FIELD_TENANT_ID)
-    public final String getTenantId() {
+    public String getTenantId() {
         return tenantId;
     }
 
@@ -108,7 +113,7 @@ public class DeviceChangeNotification extends AbstractNotification {
      * @return The device ID.
      */
     @JsonProperty(value = NotificationConstants.JSON_FIELD_DEVICE_ID)
-    public final String getDeviceId() {
+    public String getDeviceId() {
         return deviceId;
     }
 
@@ -118,14 +123,20 @@ public class DeviceChangeNotification extends AbstractNotification {
      * @return {@code true} if this device is enabled.
      */
     @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_ENABLED)
-    public final boolean isEnabled() {
+    public boolean isEnabled() {
         return enabled;
     }
 
     @Override
     @JsonIgnore
-    public final String getType() {
+    public NotificationType<DeviceChangeNotification> getType() {
         return TYPE;
+    }
+
+    @Override
+    @JsonIgnore
+    public String getKey() {
+        return getDeviceId();
     }
 
     @Override

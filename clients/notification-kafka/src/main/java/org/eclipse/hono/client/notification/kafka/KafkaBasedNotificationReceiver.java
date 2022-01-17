@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,6 +26,7 @@ import org.eclipse.hono.client.kafka.KafkaClientFactory;
 import org.eclipse.hono.client.kafka.consumer.HonoKafkaConsumer;
 import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationReceiver;
+import org.eclipse.hono.notification.NotificationType;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -91,7 +92,7 @@ public class KafkaBasedNotificationReceiver implements NotificationReceiver {
     }
 
     @Override
-    public <T extends AbstractNotification> void registerConsumer(final Class<T> notificationType,
+    public <T extends AbstractNotification> void registerConsumer(final NotificationType<T> notificationType,
             final Handler<T> consumer) {
 
         if (started) {
@@ -99,7 +100,7 @@ public class KafkaBasedNotificationReceiver implements NotificationReceiver {
         }
 
         topics.add(NotificationTopicHelper.getTopicName(notificationType));
-        handlerPerType.put(notificationType, consumer);
+        handlerPerType.put(notificationType.getClazz(), consumer);
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })

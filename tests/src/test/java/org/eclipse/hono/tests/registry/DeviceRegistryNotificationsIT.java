@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -149,21 +149,21 @@ public class DeviceRegistryNotificationsIT {
         final Checkpoint notificationsReceivedCheckpoint = notificationsReceivedContext.checkpoint(3);
 
         final VertxTestContext setup = new VertxTestContext();
-        receiver.registerConsumer(TenantChangeNotification.class,
+        receiver.registerConsumer(TenantChangeNotification.TYPE,
                 notification -> {
                     ctx.verify(() -> {
                         assertThat(notification).isInstanceOf(TenantChangeNotification.class);
                     });
                     notificationsReceivedCheckpoint.flag();
                 });
-        receiver.registerConsumer(DeviceChangeNotification.class,
+        receiver.registerConsumer(DeviceChangeNotification.TYPE,
                 notification -> {
                     ctx.verify(() -> {
                         assertThat(notification).isInstanceOf(DeviceChangeNotification.class);
                     });
                     notificationsReceivedCheckpoint.flag();
                 });
-        receiver.registerConsumer(CredentialsChangeNotification.class,
+        receiver.registerConsumer(CredentialsChangeNotification.TYPE,
                 notification -> {
                     ctx.verify(() -> {
                         assertThat(notification).isInstanceOf(CredentialsChangeNotification.class);

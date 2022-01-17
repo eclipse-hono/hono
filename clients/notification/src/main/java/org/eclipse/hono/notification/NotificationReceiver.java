@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -33,5 +33,5 @@ public interface NotificationReceiver extends Lifecycle {
      * @param <T> The type of notifications to consume.
      * @throws IllegalStateException If invoked after the {@link #start()} method was called.
      */
-    <T extends AbstractNotification> void registerConsumer(Class<T> notificationType, Handler<T> consumer);
+    <T extends AbstractNotification> void registerConsumer(NotificationType<T> notificationType, Handler<T> consumer);
 }

@@ -27,6 +27,7 @@ import org.eclipse.hono.client.amqp.AbstractServiceClient;
 import org.eclipse.hono.client.impl.CachingClientFactory;
 import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationReceiver;
+import org.eclipse.hono.notification.NotificationType;
 import org.eclipse.hono.util.MessageHelper;
 
 import io.vertx.core.CompositeFuture;
@@ -101,7 +102,7 @@ public class ProtonBasedNotificationReceiver extends AbstractServiceClient imple
     }
 
     @Override
-    public <T extends AbstractNotification> void registerConsumer(final Class<T> notificationType,
+    public <T extends AbstractNotification> void registerConsumer(final NotificationType<T> notificationType,
             final Handler<T> consumer) {
 
         if (startCalled.get()) {
@@ -111,8 +112,8 @@ public class ProtonBasedNotificationReceiver extends AbstractServiceClient imple
         // Note that different notification types may use the same address!
         final String address = NotificationAddressHelper.getAddress(notificationType);
         addresses.add(address);
-        handlerPerType.put(notificationType, consumer);
-        log.debug("registered notification receiver [type: {}; address: {}]", notificationType.getSimpleName(), address);
+        handlerPerType.put(notificationType.getClazz(), consumer);
+        log.debug("registered notification receiver [type: {}; address: {}]", notificationType.getClazz().getSimpleName(), address);
     }
 
     private void recreateConsumers() {
@@ -179,7 +180,7 @@ public class ProtonBasedNotificationReceiver extends AbstractServiceClient imple
             final Buffer payload = MessageHelper.getPayload(message);
             if (payload != null) {
                 final AbstractNotification notification = Json.decodeValue(payload, AbstractNotification.class);
-                final String expectedAddress = NotificationAddressHelper.getAddress(notification.getClass());
+                final String expectedAddress = NotificationAddressHelper.getAddress(notification.getType());
                 if (!address.equals(expectedAddress)) {
                     log.warn("got notification of type [{}] on unexpected address [{}]; expected address is [{}]",
                             notification.getClass(), address, expectedAddress);
