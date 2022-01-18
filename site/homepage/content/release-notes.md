@@ -68,6 +68,32 @@ description = "Information about changes in recent Hono releases. Includes new f
   See the `tests/src/test/resources/qpid/qdrouterd-with-broker.json` file for an example Qpid Dispatch Router
   configuration.
 
+## 1.10.1
+
+### Fixes & Enhancements
+
+* The number of credits that the Mongo DB based registry would flow to a newly connected client could not be set using
+  the documented environment variable `HONO_CREDENTIALS_SVC_RECEIVERLINKCREDIT`. Instead, the initial link credit can be
+  configured using environment variable `HONO_REGISTRY_AMQP_RECEIVERLINKCREDIT`. The Mongo DB based registry's admin guide
+  has been updated accordingly.
+* When using Kafka messaging, there could possibly be an exception during startup of the Command Router component,
+  meaning the component was potentially only available after a number of startup attempts. This has been fixed.
+* The Quarkus based variant of the Lora protocol adapter did not start up unless the `HONO_LORA_COMMANDENABLEDTENANTS`
+  environment variable had been set. This has been fixed by removing this (unused) variable from the Lora adapter
+  altogether.
+* The Hono container images released with tag 1.10.0 failed to start up when not running as user `root` because the
+  Java process was lacking authority to create a temporary directory in the file system's root folder (`/`).
+  This has been fixed.
+* Command response messages published via Kafka did not contain the `tenant_id` header. This has been fixed.
+* Hono's components now support configuring the ciphers used in the TLS handshake when connecting to Infinispan servers.
+  For the Command Router component [remote data grid configuration]({{% doclink "/admin-guide/command-router-config/#remote-cache" %}})
+  this can be done by setting the `hono.commandRouter.cache.remote.sslCiphers` property.
+* When using Kafka messaging, protocol adapters may have shown a prolonged delay in processing command & control messages
+  in certain situations in which one Kafka cluster node was shortly unavailable. This has been fixed.
+* The native image variant of the Command Router component failed to connect to an Infinispan server using SASL
+  SCRAM. This has been fixed.
+* The lora adapter supports unconfirmed uplink data for the firefly provider.
+
 ## 1.10.0
 
 ### New Features
