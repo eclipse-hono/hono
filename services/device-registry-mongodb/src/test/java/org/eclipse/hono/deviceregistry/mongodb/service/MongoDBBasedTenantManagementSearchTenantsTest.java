@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -58,7 +58,7 @@ public class MongoDBBasedTenantManagementSearchTenantsTest implements AbstractTe
     public void setup(final VertxTestContext testContext) {
         vertx = Vertx.vertx();
         dao = MongoDbTestUtils.getTenantDao(vertx, "hono-search-tenants-test");
-        tenantManagementService = new MongoDbBasedTenantManagementService(dao, config);
+        tenantManagementService = new MongoDbBasedTenantManagementService(vertx, dao, config);
         dao.createIndices().onComplete(testContext.succeedingThenComplete());
     }
 

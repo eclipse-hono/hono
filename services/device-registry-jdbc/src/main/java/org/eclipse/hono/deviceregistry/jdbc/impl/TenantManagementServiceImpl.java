@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,6 +26,7 @@ import org.eclipse.hono.service.management.tenant.Tenant;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 
 /**
  * Implementation of a <em>Tenant management service</em>.
@@ -37,15 +38,14 @@ public class TenantManagementServiceImpl extends AbstractTenantManagementService
     /**
      * Create a new instance.
      *
+     * @param vertx The vert.x instance to use.
      * @param store The backing store to use.
      */
-    public TenantManagementServiceImpl(final ManagementStore store) {
+    public TenantManagementServiceImpl(final Vertx vertx, final ManagementStore store) {
+        super(vertx);
         this.store = store;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected Future<OperationResult<Id>> processCreateTenant(
             final String tenantId,
@@ -87,9 +87,6 @@ public class TenantManagementServiceImpl extends AbstractTenantManagementService
 
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<OperationResult<Void>> processUpdateTenant(final String tenantId, final Tenant tenantObj,
             final Optional<String> resourceVersion, final Span span) {

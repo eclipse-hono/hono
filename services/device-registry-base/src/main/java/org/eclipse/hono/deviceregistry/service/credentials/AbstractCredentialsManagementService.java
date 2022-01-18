@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,8 +28,7 @@ import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
-import org.eclipse.hono.notification.NoOpNotificationSender;
-import org.eclipse.hono.notification.NotificationSender;
+import org.eclipse.hono.notification.NotificationEventBusSupport;
 import org.eclipse.hono.notification.deviceregistry.CredentialsChangeNotification;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
@@ -53,7 +52,6 @@ public abstract class AbstractCredentialsManagementService implements Credential
     protected TenantInformationService tenantInformationService = new NoopTenantInformationService();
 
     protected final Vertx vertx;
-    protected NotificationSender notificationSender = new NoOpNotificationSender();
 
     private final HonoPasswordEncoder passwordEncoder;
     private final int maxBcryptCostFactor;
@@ -92,16 +90,6 @@ public abstract class AbstractCredentialsManagementService implements Credential
     @Autowired(required = false)
     public void setTenantInformationService(final TenantInformationService tenantInformationService) {
         this.tenantInformationService = Objects.requireNonNull(tenantInformationService);
-    }
-
-    /**
-     * Sets the client to publish notifications about changes on credentials.
-     *
-     * @param notificationSender The client.
-     * @throws NullPointerException if notificationSender is {@code null}.
-     */
-    public void setNotificationSender(final NotificationSender notificationSender) {
-        this.notificationSender = Objects.requireNonNull(notificationSender);
     }
 
     /**
@@ -175,8 +163,8 @@ public abstract class AbstractCredentialsManagementService implements Credential
                         encodedCredentials,
                         resourceVersion,
                         span))
-                .onSuccess(result -> notificationSender
-                        .publish(new CredentialsChangeNotification(tenantId, deviceId, Instant.now())))
+                .onSuccess(result -> NotificationEventBusSupport
+                        .sendNotification(vertx, new CredentialsChangeNotification(tenantId, deviceId, Instant.now())))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 

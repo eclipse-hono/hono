@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,8 +25,7 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
-import org.eclipse.hono.notification.NoOpNotificationSender;
-import org.eclipse.hono.notification.NotificationSender;
+import org.eclipse.hono.notification.NotificationEventBusSupport;
 import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
 import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
 import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
@@ -47,6 +46,7 @@ import io.opentracing.Span;
 import io.opentracing.log.Fields;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 
 /**
  * An abstract base class implementation for {@link DeviceManagementService}.
@@ -57,8 +57,18 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractDeviceManagementService.class);
 
+    protected final Vertx vertx;
     protected TenantInformationService tenantInformationService = new NoopTenantInformationService();
-    protected NotificationSender notificationSender = new NoOpNotificationSender();
+
+    /**
+     * Creates a new AbstractDeviceManagementService.
+     *
+     * @param vertx The vert.x instance to use.
+     * @throws NullPointerException if vertx is {@code null}.
+     */
+    protected AbstractDeviceManagementService(final Vertx vertx) {
+        this.vertx = Objects.requireNonNull(vertx);
+    }
 
     /**
      * Sets the service to use for checking existence of tenants.
@@ -70,16 +80,6 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
     @Autowired(required = false)
     public void setTenantInformationService(final TenantInformationService tenantInformationService) {
         this.tenantInformationService = Objects.requireNonNull(tenantInformationService);
-    }
-
-    /**
-     * Sets the client to publish notifications about changes on devices.
-     *
-     * @param notificationSender The client.
-     * @throws NullPointerException if notificationSender is {@code null}.
-     */
-    public void setNotificationSender(final NotificationSender notificationSender) {
-        this.notificationSender = Objects.requireNonNull(notificationSender);
     }
 
     /**
@@ -279,9 +279,9 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
                                 "tenant does not exist",
                                 null))
                         : processCreateDevice(DeviceKey.from(result.getPayload(), deviceIdValue), device, span))
-                .onSuccess(result -> notificationSender
-                        .publish(new DeviceChangeNotification(LifecycleChange.CREATE, tenantId, deviceIdValue,
-                                Instant.now(), device.isEnabled())))
+                .onSuccess(result -> NotificationEventBusSupport.sendNotification(vertx,
+                        new DeviceChangeNotification(LifecycleChange.CREATE, tenantId, deviceIdValue, Instant.now(),
+                                device.isEnabled())))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 
@@ -327,8 +327,9 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
                                 "tenant does not exist",
                                 null))
                         : processUpdateDevice(DeviceKey.from(result.getPayload(), deviceId), device, resourceVersion, span))
-                .onSuccess(result -> notificationSender.publish(new DeviceChangeNotification(LifecycleChange.UPDATE,
-                        tenantId, deviceId, Instant.now(), device.isEnabled())))
+                .onSuccess(result -> NotificationEventBusSupport.sendNotification(vertx,
+                        new DeviceChangeNotification(LifecycleChange.UPDATE, tenantId, deviceId, Instant.now(),
+                                device.isEnabled())))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 
@@ -365,7 +366,7 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
                     }
                     return processDeleteDevice(DeviceKey.from(tenantId, deviceId), resourceVersion, span);
                 })
-                .onSuccess(result -> notificationSender.publish(
+                .onSuccess(result -> NotificationEventBusSupport.sendNotification(vertx,
                         new DeviceChangeNotification(LifecycleChange.DELETE, tenantId, deviceId, Instant.now(), false)))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
@@ -396,14 +397,11 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
                     }
                     return processDeleteDevicesOfTenant(tenantId, span);
                 })
-                .onSuccess(result -> notificationSender
-                        .publish(new AllDevicesOfTenantDeletedNotification(tenantId, Instant.now())))
+                .onSuccess(result -> NotificationEventBusSupport.sendNotification(vertx,
+                        new AllDevicesOfTenantDeletedNotification(tenantId, Instant.now())))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public final Future<OperationResult<SearchResult<DeviceWithId>>> searchDevices(
             final String tenantId,

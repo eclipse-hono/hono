@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -30,6 +30,7 @@ import org.eclipse.hono.util.CacheDirective;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 
 /**
  * Implementation of the <em>device management service</em>.
@@ -43,10 +44,12 @@ public class DeviceManagementServiceImpl extends AbstractDeviceManagementService
     /**
      * Create a new instance.
      *
+     * @param vertx The vert.x instance to use.
      * @param store The backing store to use.
      * @param properties The service properties.
      */
-    public DeviceManagementServiceImpl(final TableManagementStore store, final DeviceServiceProperties properties) {
+    public DeviceManagementServiceImpl(final Vertx vertx, final TableManagementStore store, final DeviceServiceProperties properties) {
+        super(vertx);
         this.store = store;
         this.ttl = Optional.of(CacheDirective.maxAgeDirective(properties.getRegistrationTtl()));
         this.config = properties;
