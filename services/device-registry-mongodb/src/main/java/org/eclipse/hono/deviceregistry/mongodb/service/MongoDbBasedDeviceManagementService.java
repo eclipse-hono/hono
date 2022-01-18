@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -38,6 +38,7 @@ import org.eclipse.hono.tracing.TracingHelper;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 
 /**
  * A device management service that uses a Mongo DB for persisting data.
@@ -57,16 +58,18 @@ public final class MongoDbBasedDeviceManagementService extends AbstractDeviceMan
     /**
      * Creates a new service for configuration properties.
      *
+     * @param vertx The vert.x instance to use.
      * @param deviceDao The data access object to use for accessing device data in the MongoDB.
      * @param credentialsDao The data access object to use for accessing credentials data in the MongoDB.
      * @param config The properties for configuring this service.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public MongoDbBasedDeviceManagementService(
+            final Vertx vertx,
             final DeviceDao deviceDao,
             final CredentialsDao credentialsDao,
             final MongoDbBasedRegistrationConfigProperties config) {
-
+        super(vertx);
         Objects.requireNonNull(deviceDao);
         Objects.requireNonNull(credentialsDao);
         Objects.requireNonNull(config);
@@ -76,9 +79,6 @@ public final class MongoDbBasedDeviceManagementService extends AbstractDeviceMan
         this.config = config;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected Future<OperationResult<Id>> processCreateDevice(
             final DeviceKey key,
@@ -121,9 +121,6 @@ public final class MongoDbBasedDeviceManagementService extends AbstractDeviceMan
                             Optional.of(deviceResourceVersion)));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected Future<OperationResult<Device>> processReadDevice(final DeviceKey key, final Span span) {
 
@@ -158,9 +155,6 @@ public final class MongoDbBasedDeviceManagementService extends AbstractDeviceMan
                         Optional.empty()));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected Future<OperationResult<Id>> processUpdateDevice(
             final DeviceKey key,

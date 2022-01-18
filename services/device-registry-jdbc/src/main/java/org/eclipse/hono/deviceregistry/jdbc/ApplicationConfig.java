@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -55,11 +55,12 @@ import org.eclipse.hono.deviceregistry.service.credentials.AbstractCredentialsMa
 import org.eclipse.hono.deviceregistry.service.device.AbstractDeviceManagementService;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 import org.eclipse.hono.deviceregistry.service.device.EdgeDeviceAutoProvisioner;
-import org.eclipse.hono.deviceregistry.service.tenant.AbstractTenantManagementService;
 import org.eclipse.hono.deviceregistry.service.tenant.DefaultTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.util.ServiceClientAdapter;
+import org.eclipse.hono.notification.NotificationConstants;
+import org.eclipse.hono.notification.NotificationEventBusSupport;
 import org.eclipse.hono.notification.NotificationSender;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.VertxBasedHealthCheckServer;
@@ -351,7 +352,6 @@ public class ApplicationConfig {
      * @param tenantManagementService The tenant management service instance.
      * @param deviceManagementService The device management service instance.
      * @param credentialsManagementService The credentials management service instance.
-     * @param notificationSender The notification sender instance.
      * @return The server.
      */
     @Bean(name = BEAN_NAME_AMQP_SERVER)
@@ -363,15 +363,10 @@ public class ApplicationConfig {
             final CredentialsServiceImpl credentialsService,
             @Autowired(required = false) final TenantManagementService tenantManagementService,
             @Autowired(required = false) final DeviceManagementService deviceManagementService,
-            @Autowired(required = false) final CredentialsManagementService credentialsManagementService,
-            @Autowired(required = false) final NotificationSender notificationSender) {
+            @Autowired(required = false) final CredentialsManagementService credentialsManagementService) {
 
         final DeviceRegistryAmqpServer amqpServer = new DeviceRegistryAmqpServer();
 
-        Optional.ofNullable(notificationSender).ifPresent(sender -> {
-            amqpServer.setNotificationSender(sender);
-            applyNotificationSender(sender, tenantManagementService, deviceManagementService, credentialsManagementService);
-        });
         final TenantInformationService tenantInformationService = createAndApplyTenantInformationService(
                 tenantManagementService, deviceManagementService, credentialsManagementService);
 
@@ -409,24 +404,6 @@ public class ApplicationConfig {
             amqpServer.addEndpoint(ep);
         });
         return amqpServer;
-    }
-
-    private void applyNotificationSender(
-            final NotificationSender notificationSender,
-            final TenantManagementService tenantManagementService,
-            final DeviceManagementService deviceManagementService,
-            final CredentialsManagementService credentialsManagementService) {
-
-        if (tenantManagementService instanceof AbstractTenantManagementService) {
-            ((AbstractTenantManagementService) tenantManagementService).setNotificationSender(notificationSender);
-        }
-        if (deviceManagementService instanceof AbstractDeviceManagementService) {
-            ((AbstractDeviceManagementService) deviceManagementService).setNotificationSender(notificationSender);
-        }
-        if (credentialsManagementService instanceof AbstractCredentialsManagementService) {
-            ((AbstractCredentialsManagementService) credentialsManagementService).setNotificationSender(
-                    notificationSender);
-        }
     }
 
     private TenantInformationService createAndApplyTenantInformationService(
@@ -586,7 +563,7 @@ public class ApplicationConfig {
     @Scope("prototype")
     @Profile(Profiles.PROFILE_REGISTRY_MANAGEMENT)
     public DeviceManagementService registrationManagementService() throws IOException {
-        return new DeviceManagementServiceImpl(devicesManagementStore(), deviceRegistryServiceProperties());
+        return new DeviceManagementServiceImpl(vertx(), devicesManagementStore(), deviceRegistryServiceProperties());
     }
 
     /**
@@ -613,7 +590,7 @@ public class ApplicationConfig {
     @Scope("prototype")
     @Profile(Profiles.PROFILE_REGISTRY_MANAGEMENT + " & " + Profiles.PROFILE_TENANT_SERVICE)
     public TenantManagementService tenantManagementService() throws IOException {
-        return new TenantManagementServiceImpl(tenantManagementStore());
+        return new TenantManagementServiceImpl(vertx(), tenantManagementStore());
     }
 
     //
@@ -642,7 +619,6 @@ public class ApplicationConfig {
      * @param tenantManagementService The tenant management service instance.
      * @param deviceManagementService The device management service instance.
      * @param credentialsManagementService The credentials management service instance.
-     * @param notificationSender The notification sender instance.
      * @return The server.
      */
     @Bean(name = BEAN_NAME_HTTP_SERVER)
@@ -651,14 +627,10 @@ public class ApplicationConfig {
     public DeviceRegistryHttpServer httpServer(
             @Autowired(required = false) final TenantManagementService tenantManagementService,
             final DeviceManagementService deviceManagementService,
-            final CredentialsManagementService credentialsManagementService,
-            final NotificationSender notificationSender) {
+            final CredentialsManagementService credentialsManagementService) {
 
         final DeviceRegistryHttpServer httpServer = new DeviceRegistryHttpServer();
 
-        httpServer.setNotificationSender(notificationSender);
-        applyNotificationSender(notificationSender, tenantManagementService, deviceManagementService,
-                credentialsManagementService);
         createAndApplyTenantInformationService(tenantManagementService, deviceManagementService,
                 credentialsManagementService);
 
@@ -790,7 +762,6 @@ public class ApplicationConfig {
      * @return The bean instance.
      */
     @Bean
-    @Scope("prototype")
     @Profile(Profiles.PROFILE_REGISTRY_MANAGEMENT)
     public NotificationSender notificationSender() {
         final NotificationSender notificationSender;
@@ -806,6 +777,9 @@ public class ApplicationConfig {
             healthCheckServer()
                     .registerHealthCheckResources(ServiceClientAdapter.forClient((ServiceClient) notificationSender));
         }
+        NotificationConstants.DEVICE_REGISTRY_NOTIFICATION_TYPES.forEach(notificationType -> {
+            NotificationEventBusSupport.registerConsumer(vertx(), notificationType, notificationSender::publish);
+        });
         return notificationSender;
     }
 

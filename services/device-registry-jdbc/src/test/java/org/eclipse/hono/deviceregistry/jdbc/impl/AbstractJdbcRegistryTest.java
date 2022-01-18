@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -127,6 +127,7 @@ abstract class AbstractJdbcRegistryTest {
                 properties
         );
         this.registrationManagement = new DeviceManagementServiceImpl(
+                vertx,
                 DeviceStores.managementStoreFactory().createTable(vertx, TRACER, jdbc, Optional.empty(), Optional.empty(), Optional.empty()),
                 properties
         );
@@ -229,7 +230,7 @@ abstract class AbstractJdbcRegistryTest {
         );
 
         this.tenantManagement = new TenantManagementServiceImpl(
-                Stores.managementStore(vertx, TRACER, jdbc)
+                vertx, Stores.managementStore(vertx, TRACER, jdbc)
         );
     }
 

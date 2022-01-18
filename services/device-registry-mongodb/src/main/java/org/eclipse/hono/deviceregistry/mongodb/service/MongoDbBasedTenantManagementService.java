@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -34,6 +34,7 @@ import org.eclipse.hono.service.management.tenant.TenantWithId;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 
 /**
  * A tenant management service that persists data in a MongoDB collection.
@@ -48,14 +49,16 @@ public final class MongoDbBasedTenantManagementService extends AbstractTenantMan
     /**
      * Creates a new service for configuration properties.
      *
+     * @param vertx The vert.x instance to use.
      * @param tenantDao The data access object to use for accessing data in the MongoDB.
      * @param config The properties for configuring this service.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public MongoDbBasedTenantManagementService(
+            final Vertx vertx,
             final TenantDao tenantDao,
             final MongoDbBasedTenantsConfigProperties config) {
-
+        super(vertx);
         Objects.requireNonNull(tenantDao);
         Objects.requireNonNull(config);
 
@@ -63,9 +66,6 @@ public final class MongoDbBasedTenantManagementService extends AbstractTenantMan
         this.config = config;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected Future<OperationResult<Id>> processCreateTenant(
             final String tenantId,
@@ -101,9 +101,6 @@ public final class MongoDbBasedTenantManagementService extends AbstractTenantMan
                         Optional.ofNullable(dto.getVersion())));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<OperationResult<Void>> processUpdateTenant(
             final String tenantId,

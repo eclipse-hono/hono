@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,18 +13,19 @@
 
 package org.eclipse.hono.deviceregistry.service.device;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
 import java.util.Optional;
 
-import org.eclipse.hono.notification.AbstractNotification;
-import org.eclipse.hono.notification.NotificationSender;
+import org.eclipse.hono.notification.NotificationEventBusSupport;
 import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
 import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
 import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
@@ -40,6 +41,8 @@ import org.mockito.ArgumentCaptor;
 import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.EventBus;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -54,24 +57,14 @@ public class AbstractDeviceManagementServiceTest {
     private static final Span SPAN = NoopSpan.INSTANCE;
 
     private TestDeviceManagementService deviceManagementService;
-
-    private final NotificationSender notificationSender = mock(NotificationSender.class);
-    private final ArgumentCaptor<AbstractNotification> notificationArgumentCaptor = ArgumentCaptor
-            .forClass(AbstractNotification.class);
+    private EventBus eventBus;
 
     @BeforeEach
     void setUp() {
-        deviceManagementService = new TestDeviceManagementService();
-        deviceManagementService.setNotificationSender(notificationSender);
-    }
-
-    /**
-     * Verifies that {@link AbstractDeviceManagementService#setNotificationSender(NotificationSender)} throws a null
-     * pointer exception if the notification sender is {@code null}.
-     */
-    @Test
-    public void setNotificationSender() {
-        assertThrows(NullPointerException.class, () -> deviceManagementService.setNotificationSender(null));
+        eventBus = mock(EventBus.class);
+        final Vertx vertx = mock(Vertx.class);
+        when(vertx.eventBus()).thenReturn(eventBus);
+        deviceManagementService = new TestDeviceManagementService(vertx);
     }
 
     /**
@@ -82,20 +75,27 @@ public class AbstractDeviceManagementServiceTest {
      */
     @Test
     public void testNotificationOnCreateDevice(final VertxTestContext context) {
+        final var notificationArgumentCaptor = ArgumentCaptor.forClass(DeviceChangeNotification.class);
         deviceManagementService
                 .createDevice(DEFAULT_TENANT_ID, Optional.of(DEFAULT_DEVICE_ID), new Device().setEnabled(false), SPAN)
-                .onComplete(context.succeeding(result -> context.verify(() -> {
+                .onComplete(context.succeeding(result -> {
+                    context.verify(() -> {
+                        verify(eventBus).publish(
+                                eq(NotificationEventBusSupport.getEventBusAddress(DeviceChangeNotification.TYPE)),
+                                notificationArgumentCaptor.capture(),
+                                any());
 
-                    verify(notificationSender).publish(notificationArgumentCaptor.capture());
-
-                    final var notification = (DeviceChangeNotification) notificationArgumentCaptor.getValue();
-                    assertThat(notification.getChange()).isEqualTo(LifecycleChange.CREATE);
-                    assertThat(notification.getTenantId()).isEqualTo(DEFAULT_TENANT_ID);
-                    assertThat(notification.getDeviceId()).isEqualTo(DEFAULT_DEVICE_ID);
-                    assertThat(notification.getCreationTime()).isNotNull();
-                    assertThat(notification.isEnabled()).isFalse();
+                        assertThat(notificationArgumentCaptor.getAllValues().size()).isEqualTo(1);
+                        final var notification = notificationArgumentCaptor.getValue();
+                        assertThat(notification).isNotNull();
+                        assertThat(notification.getChange()).isEqualTo(LifecycleChange.CREATE);
+                        assertThat(notification.getTenantId()).isEqualTo(DEFAULT_TENANT_ID);
+                        assertThat(notification.getDeviceId()).isEqualTo(DEFAULT_DEVICE_ID);
+                        assertThat(notification.getCreationTime()).isNotNull();
+                        assertThat(notification.isEnabled()).isFalse();
+                    });
                     context.completeNow();
-                })));
+                }));
     }
 
     /**
@@ -106,21 +106,29 @@ public class AbstractDeviceManagementServiceTest {
      */
     @Test
     public void testNotificationOnUpdateDevice(final VertxTestContext context) {
+        final var notificationArgumentCaptor = ArgumentCaptor.forClass(DeviceChangeNotification.class);
         deviceManagementService
                 .createDevice(DEFAULT_TENANT_ID, Optional.of(DEFAULT_DEVICE_ID), new Device(), SPAN)
                 .compose(result -> deviceManagementService.updateDevice(DEFAULT_TENANT_ID, DEFAULT_DEVICE_ID,
                         new Device().setEnabled(false), Optional.empty(), SPAN))
-                .onComplete(context.succeeding(result -> context.verify(() -> {
-                    verify(notificationSender, times(2)).publish(notificationArgumentCaptor.capture());
+                .onComplete(context.succeeding(result -> {
+                    context.verify(() -> {
+                        verify(eventBus, times(2)).publish(
+                                eq(NotificationEventBusSupport.getEventBusAddress(DeviceChangeNotification.TYPE)),
+                                notificationArgumentCaptor.capture(),
+                                any());
 
-                    final var notification = (DeviceChangeNotification) notificationArgumentCaptor.getValue();
-                    assertThat(notification.getChange()).isEqualTo(LifecycleChange.UPDATE);
-                    assertThat(notification.getTenantId()).isEqualTo(DEFAULT_TENANT_ID);
-                    assertThat(notification.getDeviceId()).isEqualTo(DEFAULT_DEVICE_ID);
-                    assertThat(notification.getCreationTime()).isNotNull();
-                    assertThat(notification.isEnabled()).isFalse();
+                        assertThat(notificationArgumentCaptor.getAllValues().size()).isEqualTo(2);
+                        final var notification = notificationArgumentCaptor.getValue();
+                        assertThat(notification).isNotNull();
+                        assertThat(notification.getChange()).isEqualTo(LifecycleChange.UPDATE);
+                        assertThat(notification.getTenantId()).isEqualTo(DEFAULT_TENANT_ID);
+                        assertThat(notification.getDeviceId()).isEqualTo(DEFAULT_DEVICE_ID);
+                        assertThat(notification.getCreationTime()).isNotNull();
+                        assertThat(notification.isEnabled()).isFalse();
+                    });
                     context.completeNow();
-                })));
+                }));
     }
 
     /**
@@ -131,21 +139,29 @@ public class AbstractDeviceManagementServiceTest {
      */
     @Test
     public void testNotificationOnDeleteDevice(final VertxTestContext context) {
+        final var notificationArgumentCaptor = ArgumentCaptor.forClass(DeviceChangeNotification.class);
         deviceManagementService
                 .createDevice(DEFAULT_TENANT_ID, Optional.of(DEFAULT_DEVICE_ID), new Device(), SPAN)
                 .compose(result -> deviceManagementService.deleteDevice(DEFAULT_TENANT_ID, DEFAULT_DEVICE_ID,
                         Optional.empty(), SPAN))
-                .onComplete(context.succeeding(result -> context.verify(() -> {
-                    verify(notificationSender, times(2)).publish(notificationArgumentCaptor.capture());
+                .onComplete(context.succeeding(result -> {
+                    context.verify(() -> {
+                        verify(eventBus, times(2)).publish(
+                                eq(NotificationEventBusSupport.getEventBusAddress(DeviceChangeNotification.TYPE)),
+                                notificationArgumentCaptor.capture(),
+                                any());
 
-                    final var notification = (DeviceChangeNotification) notificationArgumentCaptor.getValue();
-                    assertThat(notification.getChange()).isEqualTo(LifecycleChange.DELETE);
-                    assertThat(notification.getTenantId()).isEqualTo(DEFAULT_TENANT_ID);
-                    assertThat(notification.getDeviceId()).isEqualTo(DEFAULT_DEVICE_ID);
-                    assertThat(notification.getCreationTime()).isNotNull();
-                    assertThat(notification.isEnabled()).isFalse();
+                        assertThat(notificationArgumentCaptor.getAllValues().size()).isEqualTo(2);
+                        final var notification = notificationArgumentCaptor.getValue();
+                        assertThat(notification).isNotNull();
+                        assertThat(notification.getChange()).isEqualTo(LifecycleChange.DELETE);
+                        assertThat(notification.getTenantId()).isEqualTo(DEFAULT_TENANT_ID);
+                        assertThat(notification.getDeviceId()).isEqualTo(DEFAULT_DEVICE_ID);
+                        assertThat(notification.getCreationTime()).isNotNull();
+                        assertThat(notification.isEnabled()).isFalse();
+                    });
                     context.completeNow();
-                })));
+                }));
     }
 
     /**
@@ -156,20 +172,32 @@ public class AbstractDeviceManagementServiceTest {
      */
     @Test
     public void testNotificationOnDeleteDevicesOfTenant(final VertxTestContext context) {
+        final var notificationArgumentCaptor = ArgumentCaptor.forClass(AllDevicesOfTenantDeletedNotification.class);
         deviceManagementService
                 .createDevice(DEFAULT_TENANT_ID, Optional.of(DEFAULT_DEVICE_ID), new Device(), SPAN)
                 .compose(result -> deviceManagementService.deleteDevicesOfTenant(DEFAULT_TENANT_ID, SPAN))
-                .onComplete(context.succeeding(result -> context.verify(() -> {
-                    verify(notificationSender, times(2)).publish(notificationArgumentCaptor.capture());
+                .onComplete(context.succeeding(result -> {
+                    context.verify(() -> {
+                        verify(eventBus).publish(
+                                eq(NotificationEventBusSupport.getEventBusAddress(AllDevicesOfTenantDeletedNotification.TYPE)),
+                                notificationArgumentCaptor.capture(),
+                                any());
 
-                    final var notification = (AllDevicesOfTenantDeletedNotification) notificationArgumentCaptor.getValue();
-                    assertThat(notification.getTenantId()).isEqualTo(DEFAULT_TENANT_ID);
-                    assertThat(notification.getCreationTime()).isNotNull();
+                        assertThat(notificationArgumentCaptor.getAllValues().size()).isEqualTo(1);
+                        final var notification = notificationArgumentCaptor.getValue();
+                        assertThat(notification).isNotNull();
+                        assertThat(notification.getTenantId()).isEqualTo(DEFAULT_TENANT_ID);
+                        assertThat(notification.getCreationTime()).isNotNull();
+                    });
                     context.completeNow();
-                })));
+                }));
     }
 
     private static class TestDeviceManagementService extends AbstractDeviceManagementService {
+
+        TestDeviceManagementService(final Vertx vertx) {
+            super(vertx);
+        }
 
         @Override
         protected Future<OperationResult<Id>> processCreateDevice(final DeviceKey key, final Device device,

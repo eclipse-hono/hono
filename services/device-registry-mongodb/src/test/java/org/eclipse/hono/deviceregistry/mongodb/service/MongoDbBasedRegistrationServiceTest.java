@@ -1,5 +1,5 @@
 /*****************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -94,7 +94,7 @@ public class MongoDbBasedRegistrationServiceTest implements AbstractRegistration
         vertx = Vertx.vertx();
         deviceDao = MongoDbTestUtils.getDeviceDao(vertx, DB_NAME);
         credentialsDao = MongoDbTestUtils.getCredentialsDao(vertx, DB_NAME);
-        deviceManagementService = new MongoDbBasedDeviceManagementService(deviceDao, credentialsDao, config);
+        deviceManagementService = new MongoDbBasedDeviceManagementService(vertx, deviceDao, credentialsDao, config);
 
         final EdgeDeviceAutoProvisioner edgeDeviceAutoProvisioner = new EdgeDeviceAutoProvisioner(
                 vertx,

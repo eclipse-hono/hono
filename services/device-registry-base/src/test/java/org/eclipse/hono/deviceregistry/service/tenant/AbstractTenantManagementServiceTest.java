@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,18 +13,19 @@
 
 package org.eclipse.hono.deviceregistry.service.tenant;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
 import java.util.Optional;
 
-import org.eclipse.hono.notification.AbstractNotification;
-import org.eclipse.hono.notification.NotificationSender;
+import org.eclipse.hono.notification.NotificationEventBusSupport;
 import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
 import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 import org.eclipse.hono.service.management.Id;
@@ -39,6 +40,8 @@ import org.mockito.ArgumentCaptor;
 import io.opentracing.Span;
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.EventBus;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -52,24 +55,14 @@ public class AbstractTenantManagementServiceTest {
     private static final Span SPAN = NoopSpan.INSTANCE;
 
     private TestTenantManagementService tenantManagementService;
-
-    private final NotificationSender notificationSender = mock(NotificationSender.class);
-    private final ArgumentCaptor<AbstractNotification> notificationArgumentCaptor = ArgumentCaptor
-            .forClass(AbstractNotification.class);
+    private EventBus eventBus;
 
     @BeforeEach
     void setUp() {
-        tenantManagementService = new TestTenantManagementService();
-        tenantManagementService.setNotificationSender(notificationSender);
-    }
-
-    /**
-     * Verifies that {@link AbstractTenantManagementService#setNotificationSender(NotificationSender)} throws a null
-     * pointer exception if the notification sender is {@code null}.
-     */
-    @Test
-    public void setNotificationSender() {
-        assertThrows(NullPointerException.class, () -> tenantManagementService.setNotificationSender(null));
+        eventBus = mock(EventBus.class);
+        final Vertx vertx = mock(Vertx.class);
+        when(vertx.eventBus()).thenReturn(eventBus);
+        tenantManagementService = new TestTenantManagementService(vertx);
     }
 
     /**
@@ -80,19 +73,26 @@ public class AbstractTenantManagementServiceTest {
      */
     @Test
     public void testNotificationOnCreateTenant(final VertxTestContext context) {
+        final var notificationArgumentCaptor = ArgumentCaptor.forClass(TenantChangeNotification.class);
         tenantManagementService
                 .createTenant(Optional.of(DEFAULT_TENANT_ID), new Tenant().setEnabled(false), SPAN)
-                .onComplete(context.succeeding(result -> context.verify(() -> {
+                .onComplete(context.succeeding(result -> {
+                    context.verify(() -> {
+                        verify(eventBus).publish(
+                                eq(NotificationEventBusSupport.getEventBusAddress(TenantChangeNotification.TYPE)),
+                                notificationArgumentCaptor.capture(),
+                                any());
 
-                    verify(notificationSender).publish(notificationArgumentCaptor.capture());
-
-                    final var notification = (TenantChangeNotification) notificationArgumentCaptor.getValue();
-                    assertThat(notification.getChange()).isEqualTo(LifecycleChange.CREATE);
-                    assertThat(notification.getTenantId()).isEqualTo(DEFAULT_TENANT_ID);
-                    assertThat(notification.getCreationTime()).isNotNull();
-                    assertThat(notification.isEnabled()).isFalse();
+                        assertThat(notificationArgumentCaptor.getAllValues().size()).isEqualTo(1);
+                        final var notification = notificationArgumentCaptor.getValue();
+                        assertThat(notification).isNotNull();
+                        assertThat(notification.getChange()).isEqualTo(LifecycleChange.CREATE);
+                        assertThat(notification.getTenantId()).isEqualTo(DEFAULT_TENANT_ID);
+                        assertThat(notification.getCreationTime()).isNotNull();
+                        assertThat(notification.isEnabled()).isFalse();
+                    });
                     context.completeNow();
-                })));
+                }));
     }
 
     /**
@@ -103,20 +103,28 @@ public class AbstractTenantManagementServiceTest {
      */
     @Test
     public void testNotificationOnUpdateTenant(final VertxTestContext context) {
+        final var notificationArgumentCaptor = ArgumentCaptor.forClass(TenantChangeNotification.class);
         tenantManagementService
                 .createTenant(Optional.of(DEFAULT_TENANT_ID), new Tenant(), SPAN)
                 .compose(result -> tenantManagementService.updateTenant(DEFAULT_TENANT_ID,
                         new Tenant().setEnabled(false), Optional.empty(), SPAN))
-                .onComplete(context.succeeding(result -> context.verify(() -> {
-                    verify(notificationSender, times(2)).publish(notificationArgumentCaptor.capture());
+                .onComplete(context.succeeding(result -> {
+                    context.verify(() -> {
+                        verify(eventBus, times(2)).publish(
+                                eq(NotificationEventBusSupport.getEventBusAddress(TenantChangeNotification.TYPE)),
+                                notificationArgumentCaptor.capture(),
+                                any());
 
-                    final var notification = (TenantChangeNotification) notificationArgumentCaptor.getValue();
-                    assertThat(notification.getChange()).isEqualTo(LifecycleChange.UPDATE);
-                    assertThat(notification.getTenantId()).isEqualTo(DEFAULT_TENANT_ID);
-                    assertThat(notification.getCreationTime()).isNotNull();
-                    assertThat(notification.isEnabled()).isFalse();
+                        assertThat(notificationArgumentCaptor.getAllValues().size()).isEqualTo(2);
+                        final var notification = notificationArgumentCaptor.getValue();
+                        assertThat(notification).isNotNull();
+                        assertThat(notification.getChange()).isEqualTo(LifecycleChange.UPDATE);
+                        assertThat(notification.getTenantId()).isEqualTo(DEFAULT_TENANT_ID);
+                        assertThat(notification.getCreationTime()).isNotNull();
+                        assertThat(notification.isEnabled()).isFalse();
+                    });
                     context.completeNow();
-                })));
+                }));
     }
 
     /**
@@ -127,22 +135,34 @@ public class AbstractTenantManagementServiceTest {
      */
     @Test
     public void testNotificationOnDeleteTenant(final VertxTestContext context) {
+        final var notificationArgumentCaptor = ArgumentCaptor.forClass(TenantChangeNotification.class);
         tenantManagementService
                 .createTenant(Optional.of(DEFAULT_TENANT_ID), new Tenant(), SPAN)
                 .compose(result -> tenantManagementService.deleteTenant(DEFAULT_TENANT_ID, Optional.empty(), SPAN))
-                .onComplete(context.succeeding(result -> context.verify(() -> {
-                    verify(notificationSender, times(2)).publish(notificationArgumentCaptor.capture());
+                .onComplete(context.succeeding(result -> {
+                    context.verify(() -> {
+                        verify(eventBus, times(2)).publish(
+                                eq(NotificationEventBusSupport.getEventBusAddress(TenantChangeNotification.TYPE)),
+                                notificationArgumentCaptor.capture(),
+                                any());
 
-                    final var notification = (TenantChangeNotification) notificationArgumentCaptor.getValue();
-                    assertThat(notification.getChange()).isEqualTo(LifecycleChange.DELETE);
-                    assertThat(notification.getTenantId()).isEqualTo(DEFAULT_TENANT_ID);
-                    assertThat(notification.getCreationTime()).isNotNull();
-                    assertThat(notification.isEnabled()).isFalse();
+                        assertThat(notificationArgumentCaptor.getAllValues().size()).isEqualTo(2);
+                        final var notification = notificationArgumentCaptor.getValue();
+                        assertThat(notification).isNotNull();
+                        assertThat(notification.getChange()).isEqualTo(LifecycleChange.DELETE);
+                        assertThat(notification.getTenantId()).isEqualTo(DEFAULT_TENANT_ID);
+                        assertThat(notification.getCreationTime()).isNotNull();
+                        assertThat(notification.isEnabled()).isFalse();
+                    });
                     context.completeNow();
-                })));
+                }));
     }
 
     private static class TestTenantManagementService extends AbstractTenantManagementService {
+
+        TestTenantManagementService(final Vertx vertx) {
+            super(vertx);
+        }
 
         @Override
         protected Future<OperationResult<Id>> processCreateTenant(final String tenantId, final Tenant tenantObj,

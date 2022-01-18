@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,8 +22,7 @@ import java.util.Optional;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
-import org.eclipse.hono.notification.NoOpNotificationSender;
-import org.eclipse.hono.notification.NotificationSender;
+import org.eclipse.hono.notification.NotificationEventBusSupport;
 import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
 import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 import org.eclipse.hono.service.management.Filter;
@@ -42,23 +41,25 @@ import org.slf4j.LoggerFactory;
 import io.opentracing.Span;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 
 /**
  * An abstract base class implementation for {@link TenantManagementService}.
  */
 public abstract class AbstractTenantManagementService implements TenantManagementService {
 
-    protected NotificationSender notificationSender = new NoOpNotificationSender();
+    protected final Vertx vertx;
+
     private final Logger log = LoggerFactory.getLogger(getClass());
 
     /**
-     * Sets the client to publish notifications about changes on tenants.
+     * Creates a new AbstractTenantManagementService.
      *
-     * @param notificationSender The client.
-     * @throws NullPointerException if notificationSender is {@code null}.
+     * @param vertx The vert.x instance to use.
+     * @throws NullPointerException if vertx is {@code null}.
      */
-    public void setNotificationSender(final NotificationSender notificationSender) {
-        this.notificationSender = Objects.requireNonNull(notificationSender);
+    protected AbstractTenantManagementService(final Vertx vertx) {
+        this.vertx = Objects.requireNonNull(vertx);
     }
 
     /**
@@ -218,14 +219,12 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
         final String tenantIdValue = tenantId.orElseGet(this::createId);
         return tenantCheck.future()
                 .compose(ok -> processCreateTenant(tenantIdValue, tenantObj, span))
-                .onSuccess(result -> notificationSender.publish(new TenantChangeNotification(LifecycleChange.CREATE,
-                        tenantIdValue, Instant.now(), tenantObj.isEnabled())))
+                .onSuccess(result -> NotificationEventBusSupport.sendNotification(vertx,
+                        new TenantChangeNotification(LifecycleChange.CREATE, tenantIdValue, Instant.now(),
+                                tenantObj.isEnabled())))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId.get()));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public final Future<OperationResult<Tenant>> readTenant(final String tenantId, final Span span) {
 
@@ -262,14 +261,12 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
         }
         return tenantCheck.future()
                 .compose(ok -> processUpdateTenant(tenantId, tenantObj, resourceVersion, span))
-                .onSuccess(result -> notificationSender.publish(new TenantChangeNotification(LifecycleChange.UPDATE,
-                        tenantId, Instant.now(), tenantObj.isEnabled())))
+                .onSuccess(result -> NotificationEventBusSupport.sendNotification(vertx,
+                        new TenantChangeNotification(LifecycleChange.UPDATE, tenantId, Instant.now(),
+                                tenantObj.isEnabled())))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public final Future<Result<Void>> deleteTenant(
             final String tenantId,
@@ -281,14 +278,11 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
         Objects.requireNonNull(span);
 
         return processDeleteTenant(tenantId, resourceVersion, span)
-                .onSuccess(result -> notificationSender
-                        .publish(new TenantChangeNotification(LifecycleChange.DELETE, tenantId, Instant.now(), false)))
+                .onSuccess(result -> NotificationEventBusSupport.sendNotification(vertx,
+                        new TenantChangeNotification(LifecycleChange.DELETE, tenantId, Instant.now(), false)))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public final Future<OperationResult<SearchResult<TenantWithId>>> searchTenants(
             final int pageSize,

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -64,7 +64,6 @@ public final class FileBasedTenantService extends AbstractTenantManagementServic
 
     // <ID, tenant>
     private final ConcurrentMap<String, Versioned<Tenant>> tenants = new ConcurrentHashMap<>();
-    private final Vertx vertx;
 
     private AtomicBoolean running = new AtomicBoolean(false);
     private AtomicBoolean dirty = new AtomicBoolean(false);
@@ -78,7 +77,7 @@ public final class FileBasedTenantService extends AbstractTenantManagementServic
      */
     @Autowired
     public FileBasedTenantService(final Vertx vertx) {
-        this.vertx = Objects.requireNonNull(vertx);
+        super(vertx);
     }
 
     /**
@@ -388,9 +387,6 @@ public final class FileBasedTenantService extends AbstractTenantManagementServic
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected Future<OperationResult<Id>> processCreateTenant(
             final String tenantId,
@@ -440,9 +436,6 @@ public final class FileBasedTenantService extends AbstractTenantManagementServic
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected Future<OperationResult<Void>> processUpdateTenant(
             final String tenantId,
