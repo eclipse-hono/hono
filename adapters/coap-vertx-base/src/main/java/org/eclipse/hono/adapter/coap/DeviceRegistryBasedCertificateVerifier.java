@@ -19,6 +19,9 @@ import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import javax.security.auth.x500.X500Principal;
 
@@ -35,6 +38,8 @@ import org.eclipse.californium.scandium.dtls.DTLSSession;
 import org.eclipse.californium.scandium.dtls.HandshakeException;
 import org.eclipse.californium.scandium.dtls.HandshakeResultHandler;
 import org.eclipse.californium.scandium.dtls.x509.NewAdvancedCertificateVerifier;
+import org.eclipse.californium.scandium.util.ServerName;
+import org.eclipse.californium.scandium.util.ServerName.NameType;
 import org.eclipse.californium.scandium.util.ServerNames;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentials;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
@@ -100,18 +105,28 @@ public class DeviceRegistryBasedCertificateVerifier implements NewAdvancedCertif
     /**
      * Validate certificate used by a device in a x509 based DTLS handshake and load device.
      *
+     * @param session The DTLS session to be negotiated with the device.
      * @param certPath certificate path.
      * @param span tracing span.
      */
-    private Future<AdditionalInfo> validateCertificateAndLoadDevice(final CertPath certPath, final Span span) {
+    private Future<AdditionalInfo> validateCertificateAndLoadDevice(
+            final DTLSSession session,
+            final CertPath certPath,
+            final Span span) {
 
-        final List<? extends Certificate> list = certPath.getCertificates();
-        final Certificate[] certChain = list.toArray(new Certificate[list.size()]);
+        final var certificateList = certPath.getCertificates();
+        final Certificate[] certChain = certificateList.toArray(new Certificate[certificateList.size()]);
         final Promise<AdditionalInfo> authResult = Promise.promise();
+        final List<String> requestedHostNames = Optional.ofNullable(session.getServerNames())
+            .map(names -> StreamSupport.stream(names.spliterator(), false)
+                    .filter(serverName -> serverName.getType() == NameType.HOST_NAME)
+                    .map(ServerName::getNameAsString)
+                    .collect(Collectors.toUnmodifiableList()))
+            .orElse(List.of());
 
-        auth.validateClientCertificate(certChain, List.of(), span.context())
-                .onSuccess(ar -> {
-                    final SubjectDnCredentials credentials = authProvider.getCredentials(ar);
+        auth.validateClientCertificate(certChain, requestedHostNames, span.context())
+                .onSuccess(authInfo -> {
+                    final SubjectDnCredentials credentials = authProvider.getCredentials(authInfo);
                     if (credentials == null) {
                         authResult.fail(new ClientErrorException(
                                 HttpURLConnection.HTTP_UNAUTHORIZED,
@@ -143,8 +158,7 @@ public class DeviceRegistryBasedCertificateVerifier implements NewAdvancedCertif
     }
 
     /**
-     * Validate certificate used by a device in a x509 based DTLS handshake, load device, and pass the device back as
-     * result's custom argument.
+     * Validates a device's client certificate and completes the DTLS handshake result handler.
      *
      * @param cid the connection id to report the result.
      * @param certPath certificate path.
@@ -162,7 +176,7 @@ public class DeviceRegistryBasedCertificateVerifier implements NewAdvancedCertif
                 .withTag(Tags.COMPONENT.getKey(), adapter.getTypeName())
                 .start();
 
-        validateCertificateAndLoadDevice(certPath, span)
+        validateCertificateAndLoadDevice(session, certPath, span)
                 .map(info -> {
                     // set AdditionalInfo as customArgument here
                     return new CertificateVerificationResult(cid, certPath, info);
@@ -170,8 +184,10 @@ public class DeviceRegistryBasedCertificateVerifier implements NewAdvancedCertif
                 .otherwise(t -> {
                     TracingHelper.logError(span, "could not validate X509 for device", t);
                     LOG.debug("error validating X509", t);
-                    final AlertMessage alert = new AlertMessage(AlertLevel.FATAL,
-                            AlertDescription.BAD_CERTIFICATE, session.getPeer());
+                    final AlertMessage alert = new AlertMessage(
+                            AlertLevel.FATAL,
+                            AlertDescription.BAD_CERTIFICATE,
+                            session.getPeer());
                     return new CertificateVerificationResult(cid,
                             new HandshakeException("error validating X509", alert), null);
                 })
@@ -218,17 +234,18 @@ public class DeviceRegistryBasedCertificateVerifier implements NewAdvancedCertif
                         AlertDescription.BAD_CERTIFICATE, session.getPeer());
                 throw new HandshakeException("RPK not supported", alert);
             }
-            final List<? extends Certificate> list = certChain.getCertificates();
-            final int pathSize = list.size();
-            if (pathSize < 1) {
-                final AlertMessage alert = new AlertMessage(AlertLevel.FATAL,
-                        AlertDescription.BAD_CERTIFICATE, session.getPeer());
+            final var certificates = certChain.getCertificates();
+            if (certificates.isEmpty()) {
+                final AlertMessage alert = new AlertMessage(
+                        AlertLevel.FATAL,
+                        AlertDescription.BAD_CERTIFICATE,
+                        session.getPeer());
                 throw new HandshakeException("client certificate chain must not be empty", alert);
             }
             if (clientUsage != null) {
-                final Certificate certificate = list.get(0);
-                if (certificate instanceof X509Certificate &&
-                        !CertPathUtil.canBeUsedForAuthentication((X509Certificate) certificate, clientUsage)) {
+                final Certificate clientCertificate = certificates.get(0);
+                if (clientCertificate instanceof X509Certificate &&
+                        !CertPathUtil.canBeUsedForAuthentication((X509Certificate) clientCertificate, clientUsage)) {
                     final AlertMessage alert = new AlertMessage(
                             AlertLevel.FATAL,
                             AlertDescription.BAD_CERTIFICATE,
