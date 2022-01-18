@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -326,6 +326,7 @@ public class ConfigBasedCoapEndpointFactory implements CoapEndpointFactory {
         dtlsConfig.setAdvancedPskStore(pskStore);
         dtlsConfig.setRetransmissionTimeout(config.getDtlsRetransmissionTimeout());
         dtlsConfig.setMaxConnections(networkConfig.getInt(Keys.MAX_ACTIVE_PEERS));
+        dtlsConfig.setSniEnabled(true);
         addIdentity(dtlsConfig);
 
         try {

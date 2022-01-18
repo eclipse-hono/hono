@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -103,8 +103,7 @@ public abstract class CoapTestBase {
      * The default password of devices.
      */
     protected static final String SECRET = "secret";
-
-        /**
+    /**
      * A helper for accessing the AMQP 1.0 Messaging Network and
      * for managing tenants/devices/credentials.
      */
@@ -113,19 +112,19 @@ public abstract class CoapTestBase {
      * The period of time in milliseconds after which test cases should time out.
      */
     protected static final long TEST_TIMEOUT_MILLIS = 20000; // 20 seconds
-
     protected static final int MESSAGES_TO_SEND = 60;
+    protected static final String PATH_CA_CERT = "target/certs/default_tenant-cert.pem";
+    protected static final String PATH_DEVICE_CERT = "target/certs/device-4711-cert.pem";
+    protected static final String PATH_DEVICE_KEY = "target/certs/device-4711-key.pem";
 
     private static final String COMMAND_TO_SEND = "setDarkness";
     private static final String COMMAND_JSON_KEY = "darkness";
-    private static final String PATH_CA_CERT = "target/certs/default_tenant-cert.pem";
-    private static final String PATH_DEVICE_CERT = "target/certs/device-4711-cert.pem";
-    private static final String PATH_DEVICE_KEY = "target/certs/device-4711-key.pem";
 
     /**
      * A logger to be shared with subclasses.
      */
     protected final Logger logger = LoggerFactory.getLogger(getClass());
+    protected final Vertx vertx = Vertx.vertx();
 
     /**
      * The IP address and port of the CoAP adapter's secure endpoint.
@@ -139,8 +138,6 @@ public abstract class CoapTestBase {
      * The random device identifier created for each test case.
      */
     protected String deviceId;
-
-    private final Vertx vertx = Vertx.vertx();
 
     /**
      * Creates the endpoint configuration variants for Command &amp; Control scenarios.
@@ -221,8 +218,11 @@ public abstract class CoapTestBase {
     protected CoapClient getCoapsClient(final KeyLoader keyLoader) {
 
         final DtlsConnectorConfig.Builder dtlsConfig = new DtlsConnectorConfig.Builder();
+        dtlsConfig.setSniEnabled(true);
         dtlsConfig.setIdentity(keyLoader.getPrivateKey(), keyLoader.getCertificateChain(), CertificateType.X_509);
-        dtlsConfig.setAdvancedCertificateVerifier(StaticNewAdvancedCertificateVerifier.builder().setTrustAllCertificates().build());
+        dtlsConfig.setAdvancedCertificateVerifier(StaticNewAdvancedCertificateVerifier.builder()
+                .setTrustAllCertificates()
+                .build());
         return getCoapsClient(dtlsConfig);
     }
 
@@ -1187,7 +1187,7 @@ public abstract class CoapTestBase {
      */
     protected final URI getCoapRequestUri(final String resource) {
 
-        return getRequestUri("coap", resource);
+        return getRequestUri("coap", IntegrationTestSupport.COAP_HOST, resource);
     }
 
     /**
@@ -1197,11 +1197,25 @@ public abstract class CoapTestBase {
      * @return The URI.
      */
     protected final URI getCoapsRequestUri(final String resource) {
-
-        return getRequestUri("coaps", resource);
+        return getCoapsRequestUri(IntegrationTestSupport.COAP_HOST, resource);
     }
 
-    private URI getRequestUri(final String scheme, final String resource) {
+    /**
+     * Creates a URI for a resource that uses the <em>coaps</em> scheme.
+     *
+     * @param hostname The name of the host that the resource resides on.
+     * @param resource The resource path.
+     * @return The URI.
+     */
+    protected final URI getCoapsRequestUri(final String hostname, final String resource) {
+
+        return getRequestUri("coaps", hostname, resource);
+    }
+
+    private URI getRequestUri(
+            final String scheme,
+            final String hostname,
+            final String resource) {
 
         final int port;
         switch (scheme) {
@@ -1215,7 +1229,7 @@ public abstract class CoapTestBase {
             throw new IllegalArgumentException();
         }
         try {
-            return new URI(scheme, null, IntegrationTestSupport.COAP_HOST, port, resource, null, null);
+            return new URI(scheme, null, hostname, port, resource, null, null);
         } catch (final URISyntaxException e) {
             // cannot happen
             return null;
@@ -1246,8 +1260,10 @@ public abstract class CoapTestBase {
     }
 
     /**
-     * Creates a CoAP request using either the <em>coaps</em> or <em>coap</em> scheme,
-     * depending on the given endpoint configuration.
+     * Creates a CoAP request for an endpoint configuration.
+     * <p>
+     * The request will use the {@code coap} scheme if the endpoint is configured for
+     * an unauthenticated device. Otherwise, the {@code coaps} scheme is used.
      *
      * @param endpointConfig The endpoint configuration.
      * @param resource the resource path.
@@ -1376,8 +1392,27 @@ public abstract class CoapTestBase {
             final Type type,
             final String resource,
             final byte[] payload) {
+        return createCoapsRequest(code, type, IntegrationTestSupport.COAP_HOST, resource, payload);
+    }
+
+    /**
+     * Creates a CoAP request using the <em>coaps</em> scheme.
+     *
+     * @param code The CoAP request code.
+     * @param type The message type.
+     * @param hostname The name of the host to send the request to.
+     * @param resource the resource path.
+     * @param payload The payload to send in the request body.
+     * @return The request to send.
+     */
+    protected Request createCoapsRequest(
+            final Code code,
+            final Type type,
+            final String hostname,
+            final String resource,
+            final byte[] payload) {
         final Request request = new Request(code, type);
-        request.setURI(getCoapsRequestUri(resource));
+        request.setURI(getCoapsRequestUri(hostname, resource));
         request.setPayload(payload);
         request.getOptions().setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
         return request;

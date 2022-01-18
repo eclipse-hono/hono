@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,9 +13,13 @@
 
 package org.eclipse.hono.tests.coap;
 
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.cert.X509Certificate;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.californium.core.CoapClient;
@@ -28,8 +32,10 @@ import org.eclipse.californium.elements.exception.ConnectorException;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
+import org.eclipse.hono.config.KeyLoader;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.IntegrationTestSupport;
+import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.jupiter.api.Test;
@@ -139,4 +145,73 @@ public class TelemetryCoapIT extends CoapTestBase {
         })
         .onComplete(ctx.succeedingThenComplete());
     }
+
+    /**
+     * Verifies that a number of messages uploaded to Hono's CoAP adapter using TLS_ECDSA based authentication can be
+     * successfully consumed via the messaging infrastructure.
+     * <p>
+     * The device's tenant is being determined using the requested host name contained in the client's SNI TLS
+     * extension.
+     *
+     * @param ctx The test context.
+     * @throws InterruptedException if the test fails.
+     */
+    @Test
+    public void testUploadMessagesUsingClientCertificateWithAlias(final VertxTestContext ctx) throws InterruptedException {
+
+        assumeTrue(IntegrationTestSupport.isTrustAnchorGroupsSupported(),
+                "device registry does not support trust anchor groups");
+        assumeTrue(IntegrationTestSupport.isTenantAliasSupported(),
+                "device registry does not support tenant aliases");
+
+        final var clientCertLoader = KeyLoader.fromFiles(vertx, PATH_DEVICE_KEY, PATH_DEVICE_CERT);
+        final var clientCert = (X509Certificate) clientCertLoader.getCertificateChain()[0];
+
+        final VertxTestContext setup = new VertxTestContext();
+
+        helper.getCertificate(PATH_CA_CERT)
+            .compose(caCert -> helper.registry.addTenant(
+                    helper.getRandomTenantId(),
+                    Tenants.createTenantForTrustAnchor(caCert).setTrustAnchorGroup("test-group"))
+                .map(caCert))
+            .compose(caCert -> {
+                return helper.registry.addDeviceForTenant(
+                        tenantId,
+                        Tenants.createTenantForTrustAnchor(caCert)
+                            .setTrustAnchorGroup("test-group")
+                            .setAlias("test-alias"),
+                        deviceId,
+                        clientCert);
+            })
+            .onComplete(setup.succeedingThenComplete());
+
+        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+            return;
+        }
+
+        final CoapClient client = getCoapsClient(clientCertLoader);
+
+        testUploadMessages(ctx, tenantId,
+                () -> warmUp(client, createCoapsRequest(
+                        Code.POST,
+                        getMessageType(),
+                        "test-alias." + IntegrationTestSupport.COAP_HOST,
+                        getPostResource(),
+                        "hello 0".getBytes(StandardCharsets.UTF_8))),
+                count -> {
+                    final Promise<OptionSet> result = Promise.promise();
+                    final String payload = "hello " + count;
+                    final Request request = createCoapsRequest(
+                            Code.POST,
+                            getMessageType(),
+                            "test-alias." + IntegrationTestSupport.COAP_HOST,
+                            getPostResource(),
+                            payload.getBytes(StandardCharsets.UTF_8));
+                    client.advanced(getHandler(result), request);
+                    return result.future();
+                });
+    }
+
 }
