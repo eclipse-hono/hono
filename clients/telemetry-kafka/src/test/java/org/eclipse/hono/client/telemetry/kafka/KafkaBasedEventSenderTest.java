@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,6 +16,7 @@ package org.eclipse.hono.client.telemetry.kafka;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -39,6 +40,7 @@ import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.eventbus.EventBus;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -50,8 +52,8 @@ public class KafkaBasedEventSenderTest {
 
     private TenantObject tenant = new TenantObject("the-tenant", true);
     private final RegistrationAssertion device = new RegistrationAssertion("the-device");
-    private final Vertx vertxMock = mock(Vertx.class);
 
+    private Vertx vertxMock;
     private MessagingKafkaProducerConfigProperties kafkaProducerConfig;
 
     /**
@@ -60,6 +62,8 @@ public class KafkaBasedEventSenderTest {
     @BeforeEach
     public void setUp() {
 
+        vertxMock = mock(Vertx.class);
+        when(vertxMock.eventBus()).thenReturn(mock(EventBus.class));
         kafkaProducerConfig = new MessagingKafkaProducerConfigProperties();
         kafkaProducerConfig.setProducerConfig(Map.of("hono.kafka.producerConfig.bootstrap.servers", "localhost:9092"));
     }
@@ -91,7 +95,7 @@ public class KafkaBasedEventSenderTest {
 
         final var mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         final var factory = newProducerFactory(mockProducer);
-        final var sender = new KafkaBasedEventSender(factory, kafkaProducerConfig, true, tracer);
+        final var sender = new KafkaBasedEventSender(vertxMock, factory, kafkaProducerConfig, true, tracer);
 
         // WHEN sending a message
         sender.sendEvent(tenant, device, contentType, Buffer.buffer(payload), properties, null)
@@ -136,13 +140,16 @@ public class KafkaBasedEventSenderTest {
         final Tracer tracer = NoopTracerFactory.create();
 
         assertThrows(NullPointerException.class,
-                () -> new KafkaBasedEventSender(null, kafkaProducerConfig, true, tracer));
+                () -> new KafkaBasedEventSender(null, factory, kafkaProducerConfig, true, tracer));
 
         assertThrows(NullPointerException.class,
-                () -> new KafkaBasedEventSender(factory, null, true, tracer));
+                () -> new KafkaBasedEventSender(vertxMock, null, kafkaProducerConfig, true, tracer));
 
         assertThrows(NullPointerException.class,
-                () -> new KafkaBasedEventSender(factory, kafkaProducerConfig, true, null));
+                () -> new KafkaBasedEventSender(vertxMock, factory, null, true, tracer));
+
+        assertThrows(NullPointerException.class,
+                () -> new KafkaBasedEventSender(vertxMock, factory, kafkaProducerConfig, true, null));
     }
 
     /**
@@ -157,7 +164,7 @@ public class KafkaBasedEventSenderTest {
                 .testFactory(vertxMock, (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
         final Tracer tracer = NoopTracerFactory.create();
 
-        final KafkaBasedEventSender sender = new KafkaBasedEventSender(factory, kafkaProducerConfig, true, tracer);
+        final KafkaBasedEventSender sender = new KafkaBasedEventSender(vertxMock, factory, kafkaProducerConfig, true, tracer);
 
         assertThrows(NullPointerException.class,
                 () -> sender.sendEvent(null, device, "the-content-type", null, null, null));

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -207,12 +207,7 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
         };
     }
 
-    /**
-     * Gets an existing producer.
-     *
-     * @param producerName The name to look up the producer.
-     * @return The producer or {@code null} if the cache does not contain the name.
-     */
+    @Override
     public Optional<KafkaProducer<K, V>> getProducer(final String producerName) {
         return Optional.ofNullable(activeProducers.get(producerName));
     }

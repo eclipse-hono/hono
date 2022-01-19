@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,6 +29,7 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 
 /**
@@ -39,6 +40,7 @@ public class KafkaBasedEventSender extends AbstractKafkaBasedDownstreamSender im
     /**
      * Creates a new Kafka-based event sender.
      *
+     * @param vertx The vert.x instance to use.
      * @param producerFactory The factory to use for creating Kafka producers.
      * @param kafkaProducerConfig The Kafka producer configuration properties to use.
      * @param includeDefaults {@code true} if a device's default properties should be included in messages being sent.
@@ -46,12 +48,18 @@ public class KafkaBasedEventSender extends AbstractKafkaBasedDownstreamSender im
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public KafkaBasedEventSender(
+            final Vertx vertx,
             final KafkaProducerFactory<String, Buffer> producerFactory,
             final MessagingKafkaProducerConfigProperties kafkaProducerConfig,
             final boolean includeDefaults,
             final Tracer tracer) {
 
-        super(producerFactory, EventConstants.EVENT_ENDPOINT, kafkaProducerConfig, includeDefaults, tracer);
+        super(vertx, producerFactory, EventConstants.EVENT_ENDPOINT, kafkaProducerConfig, includeDefaults, tracer);
+    }
+
+    @Override
+    protected HonoTopic.Type getTopicType() {
+        return HonoTopic.Type.EVENT;
     }
 
     @Override

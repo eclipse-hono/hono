@@ -331,11 +331,12 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             final KafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory.sharedFactory(vertx);
             factory.setMetricsSupport(kafkaClientMetricsSupport);
 
-            telemetrySenderProvider.setClient(new KafkaBasedTelemetrySender(factory, kafkaTelemetryConfig,
+            telemetrySenderProvider.setClient(new KafkaBasedTelemetrySender(vertx, factory, kafkaTelemetryConfig,
                     protocolAdapterProperties.isDefaultsEnabled(), tracer));
-            eventSenderProvider.setClient(new KafkaBasedEventSender(factory, kafkaEventConfig,
+            eventSenderProvider.setClient(new KafkaBasedEventSender(vertx, factory, kafkaEventConfig,
                     protocolAdapterProperties.isDefaultsEnabled(), tracer));
             commandResponseSenderProvider.setClient(new KafkaBasedCommandResponseSender(
+                    vertx,
                     factory,
                     kafkaCommandResponseConfig,
                     tracer));

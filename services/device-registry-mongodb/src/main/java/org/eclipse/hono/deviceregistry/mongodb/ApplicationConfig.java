@@ -454,7 +454,7 @@ public class ApplicationConfig {
 
         if (kafkaEventConfig().isConfigured()) {
             final KafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory.sharedFactory(vertx());
-            result.setClient(new KafkaBasedEventSender(factory, kafkaEventConfig(), true, tracer()));
+            result.setClient(new KafkaBasedEventSender(vertx(), factory, kafkaEventConfig(), true, tracer()));
         }
 
         healthCheckServer().registerHealthCheckResources(ServiceClientAdapter.forClient(result));

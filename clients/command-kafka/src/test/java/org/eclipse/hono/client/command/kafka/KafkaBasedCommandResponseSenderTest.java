@@ -12,7 +12,11 @@
  */
 package org.eclipse.hono.client.command.kafka;
 
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -28,7 +32,10 @@ import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
+import org.eclipse.hono.notification.NotificationEventBusSupport;
+import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 import org.eclipse.hono.test.TracingMockSupport;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
@@ -44,6 +51,7 @@ import io.opentracing.Tracer;
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.Json;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -96,7 +104,7 @@ public class KafkaBasedCommandResponseSenderTest {
         final var mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         final var factory = CachingKafkaProducerFactory
                 .testFactory(vertx, (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
-        final var sender = new KafkaBasedCommandResponseSender(factory, kafkaProducerConfig, tracer);
+        final var sender = new KafkaBasedCommandResponseSender(vertx, factory, kafkaProducerConfig, tracer);
         final TenantObject tenant = TenantObject.from(tenantId);
         tenant.setResourceLimits(new ResourceLimits().setMaxTtlCommandResponse(10L));
 
@@ -160,5 +168,28 @@ public class KafkaBasedCommandResponseSenderTest {
                     });
                     ctx.completeNow();
                 }));
+    }
+
+    /**
+     * Verifies that the sender registers itself for notifications of the type {@link TenantChangeNotification}.
+     */
+    @Test
+    public void testThatNotificationConsumerIsRegistered() {
+        final EventBus eventBus = mock(EventBus.class);
+        final Vertx vertx = mock(Vertx.class);
+        when(vertx.eventBus()).thenReturn(eventBus);
+
+        final Span span = TracingMockSupport.mockSpan();
+        final Tracer tracer = TracingMockSupport.mockTracer(span);
+        final var mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
+        final var factory = CachingKafkaProducerFactory
+                .testFactory(vertx, (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+        @SuppressWarnings("unused")
+        final var sender = new KafkaBasedCommandResponseSender(vertx, factory, kafkaProducerConfig, tracer);
+
+        verify(eventBus).consumer(eq(NotificationEventBusSupport.getEventBusAddress(TenantChangeNotification.TYPE)),
+                VertxMockSupport.anyHandler());
+
+        verifyNoMoreInteractions(eventBus);
     }
 }
