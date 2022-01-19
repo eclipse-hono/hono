@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -87,14 +87,20 @@ public abstract class AbstractMessagingClientConfig implements ComponentNameProv
             final KafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory.sharedFactory(vertx);
             factory.setMetricsSupport(kafkaClientMetricsSupport);
 
-            telemetrySenderProvider.setClient(new KafkaBasedTelemetrySender(factory, kafkaTelemetryConfig(),
-                    adapterProperties.isDefaultsEnabled(), tracer));
+            telemetrySenderProvider.setClient(new KafkaBasedTelemetrySender(
+                    vertx,
+                    factory,
+                    kafkaTelemetryConfig(),
+                    adapterProperties.isDefaultsEnabled(),
+                    tracer));
             eventSenderProvider.setClient(new KafkaBasedEventSender(
+                    vertx,
                     factory,
                     kafkaEventConfig(),
                     adapterProperties.isDefaultsEnabled(),
                     tracer));
             commandResponseSenderProvider.setClient(new KafkaBasedCommandResponseSender(
+                    vertx,
                     factory,
                     kafkaCommandResponseConfig(),
                     tracer));

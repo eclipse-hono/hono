@@ -318,6 +318,11 @@
       <artifactId>hono-client-notification-amqp</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-telemetry-kafka</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>

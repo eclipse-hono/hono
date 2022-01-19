@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,7 +14,11 @@
 package org.eclipse.hono.client.telemetry.kafka;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -22,10 +26,15 @@ import java.util.Collections;
 import java.util.Map;
 
 import org.apache.kafka.clients.producer.MockProducer;
+import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.kafka.test.KafkaClientUnitTestHelper;
+import org.eclipse.hono.notification.NotificationEventBusSupport;
+import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
+import org.eclipse.hono.test.TracingMockSupport;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
@@ -35,10 +44,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 
@@ -57,8 +68,8 @@ public class AbstractKafkaBasedDownstreamSenderTest {
 
     private final Tracer tracer = NoopTracerFactory.create();
     private final RegistrationAssertion device = new RegistrationAssertion(DEVICE_ID);
-    private final Vertx vertxMock = mock(Vertx.class);
 
+    private Vertx vertxMock;
     private MessagingKafkaProducerConfigProperties config;
     private AbstractKafkaBasedDownstreamSender sender;
     private TenantObject tenant;
@@ -68,6 +79,9 @@ public class AbstractKafkaBasedDownstreamSenderTest {
      */
     @BeforeEach
     public void setUp() {
+        vertxMock = mock(Vertx.class);
+        when(vertxMock.eventBus()).thenReturn(mock(EventBus.class));
+
         config = new MessagingKafkaProducerConfigProperties();
         config.setProducerConfig(Map.of("hono.kafka.producerConfig.bootstrap.servers", "localhost:9092"));
         tenant = new TenantObject(TENANT_ID, true);
@@ -194,20 +208,71 @@ public class AbstractKafkaBasedDownstreamSenderTest {
         final CachingKafkaProducerFactory<String, Buffer> factory = newProducerFactory(mockProducer);
 
         assertThrows(NullPointerException.class,
-                () -> new AbstractKafkaBasedDownstreamSender(null, PRODUCER_NAME, config, true, tracer) {
+                () -> new AbstractKafkaBasedDownstreamSender(null, factory, PRODUCER_NAME, config, true, tracer) {
+                    @Override
+                    protected HonoTopic.Type getTopicType() {
+                        return HonoTopic.Type.EVENT;
+                    }
                 });
 
         assertThrows(NullPointerException.class,
-                () -> new AbstractKafkaBasedDownstreamSender(factory, null, config, true, tracer) {
+                () -> new AbstractKafkaBasedDownstreamSender(vertxMock, null, PRODUCER_NAME, config, true, tracer) {
+                    @Override
+                    protected HonoTopic.Type getTopicType() {
+                        return HonoTopic.Type.EVENT;
+                    }
                 });
 
         assertThrows(NullPointerException.class,
-                () -> new AbstractKafkaBasedDownstreamSender(factory, PRODUCER_NAME, null, true, tracer) {
+                () -> new AbstractKafkaBasedDownstreamSender(vertxMock, factory, null, config, true, tracer) {
+                    @Override
+                    protected HonoTopic.Type getTopicType() {
+                        return HonoTopic.Type.EVENT;
+                    }
                 });
 
         assertThrows(NullPointerException.class,
-                () -> new AbstractKafkaBasedDownstreamSender(factory, PRODUCER_NAME, config, true, null) {
+                () -> new AbstractKafkaBasedDownstreamSender(vertxMock, factory, PRODUCER_NAME, null, true, tracer) {
+                    @Override
+                    protected HonoTopic.Type getTopicType() {
+                        return HonoTopic.Type.EVENT;
+                    }
                 });
+
+        assertThrows(NullPointerException.class,
+                () -> new AbstractKafkaBasedDownstreamSender(vertxMock, factory, PRODUCER_NAME, config, true, null) {
+                    @Override
+                    protected HonoTopic.Type getTopicType() {
+                        return HonoTopic.Type.EVENT;
+                    }
+                });
+    }
+
+    /**
+     * Verifies that the sender registers itself for notifications of the type {@link TenantChangeNotification}.
+     */
+    @Test
+    public void testThatNotificationConsumerIsRegistered() {
+        final EventBus eventBus = mock(EventBus.class);
+        when(vertxMock.eventBus()).thenReturn(eventBus);
+
+        final Span span = TracingMockSupport.mockSpan();
+        final Tracer tracer = TracingMockSupport.mockTracer(span);
+        final var mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
+        final var factory = CachingKafkaProducerFactory
+                .testFactory(vertxMock, (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+        @SuppressWarnings("unused")
+        final var sender = new AbstractKafkaBasedDownstreamSender(vertxMock, factory, PRODUCER_NAME, config, true, tracer) {
+            @Override
+            protected HonoTopic.Type getTopicType() {
+                return HonoTopic.Type.EVENT;
+            }
+        };
+
+        verify(eventBus).consumer(eq(NotificationEventBusSupport.getEventBusAddress(TenantChangeNotification.TYPE)),
+                VertxMockSupport.anyHandler());
+
+        verifyNoMoreInteractions(eventBus);
     }
 
     private CachingKafkaProducerFactory<String, Buffer> newProducerFactory(
@@ -222,7 +287,11 @@ public class AbstractKafkaBasedDownstreamSenderTest {
     }
 
     private AbstractKafkaBasedDownstreamSender newSender(final KafkaProducerFactory<String, Buffer> factory) {
-        return new AbstractKafkaBasedDownstreamSender(factory, PRODUCER_NAME, config, true, tracer) {
+        return new AbstractKafkaBasedDownstreamSender(vertxMock, factory, PRODUCER_NAME, config, true, tracer) {
+            @Override
+            protected HonoTopic.Type getTopicType() {
+                return HonoTopic.Type.EVENT;
+            }
         };
     }
 

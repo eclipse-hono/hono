@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,7 @@
 package org.eclipse.hono.client.kafka.producer;
 
 import java.time.Duration;
+import java.util.Optional;
 
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
@@ -32,6 +33,14 @@ import io.vertx.kafka.client.producer.KafkaProducer;
  * @param <V> The type for the record value serialization.
  */
 public interface KafkaProducerFactory<K, V> {
+
+    /**
+     * Gets an existing producer for sending data to Kafka, if one was already created with the given producer name.
+     *
+     * @param producerName The name to identify the producer.
+     * @return An existing producer or an empty Optional if no such producer exists.
+     */
+    Optional<KafkaProducer<K, V>> getProducer(String producerName);
 
     /**
      * Gets a producer for sending data to Kafka.

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -188,7 +188,7 @@ public class FileBasedServiceConfig {
 
         if (kafkaEventConfig().isConfigured()) {
             final KafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory.sharedFactory(vertx);
-            result.setClient(new KafkaBasedEventSender(factory, kafkaEventConfig(), true, tracer));
+            result.setClient(new KafkaBasedEventSender(vertx, factory, kafkaEventConfig(), true, tracer));
         }
 
         healthCheckServer.registerHealthCheckResources(ServiceClientAdapter.forClient(result));

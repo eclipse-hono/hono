@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -30,6 +30,7 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 
 /**
@@ -40,6 +41,7 @@ public class KafkaBasedTelemetrySender extends AbstractKafkaBasedDownstreamSende
     /**
      * Creates a new Kafka-based telemetry sender.
      *
+     * @param vertx The vert.x instance to use.
      * @param producerFactory The factory to use for creating Kafka producers.
      * @param kafkaProducerConfig The Kafka producer configuration properties to use.
      * @param includeDefaults {@code true} if a device's default properties should be included in messages being sent.
@@ -47,12 +49,18 @@ public class KafkaBasedTelemetrySender extends AbstractKafkaBasedDownstreamSende
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public KafkaBasedTelemetrySender(
+            final Vertx vertx,
             final KafkaProducerFactory<String, Buffer> producerFactory,
             final MessagingKafkaProducerConfigProperties kafkaProducerConfig,
             final boolean includeDefaults,
             final Tracer tracer) {
 
-        super(producerFactory, TelemetryConstants.TELEMETRY_ENDPOINT, kafkaProducerConfig, includeDefaults, tracer);
+        super(vertx, producerFactory, TelemetryConstants.TELEMETRY_ENDPOINT, kafkaProducerConfig, includeDefaults, tracer);
+    }
+
+    @Override
+    protected HonoTopic.Type getTopicType() {
+        return HonoTopic.Type.TELEMETRY;
     }
 
     @Override

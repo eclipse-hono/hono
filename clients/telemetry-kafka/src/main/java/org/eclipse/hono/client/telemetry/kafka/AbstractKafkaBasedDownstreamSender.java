@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,18 +17,26 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Stream;
 
+import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
+import org.eclipse.hono.client.kafka.producer.KafkaProducerHelper;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.client.util.DownstreamMessageProperties;
+import org.eclipse.hono.notification.NotificationEventBusSupport;
+import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
+import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.TenantObject;
 
 import io.opentracing.Tracer;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.kafka.client.producer.KafkaProducer;
 
 /**
  * A client for publishing downstream messages to a Kafka cluster.
@@ -40,6 +48,7 @@ public abstract class AbstractKafkaBasedDownstreamSender extends AbstractKafkaBa
     /**
      * Creates a new Kafka-based downstream sender.
      *
+     * @param vertx The vert.x instance to use.
      * @param producerFactory The factory to use for creating Kafka producers.
      * @param producerName The producer name to use.
      * @param config The Kafka producer configuration properties to use.
@@ -48,14 +57,36 @@ public abstract class AbstractKafkaBasedDownstreamSender extends AbstractKafkaBa
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public AbstractKafkaBasedDownstreamSender(
+            final Vertx vertx,
             final KafkaProducerFactory<String, Buffer> producerFactory,
             final String producerName,
             final MessagingKafkaProducerConfigProperties config,
             final boolean includeDefaults,
             final Tracer tracer) {
         super(producerFactory, producerName, config, tracer);
+        Objects.requireNonNull(vertx);
         this.isDefaultsEnabled = includeDefaults;
+
+        NotificationEventBusSupport.registerConsumer(vertx, TenantChangeNotification.TYPE,
+                notification -> {
+                    if (LifecycleChange.DELETE.equals(notification.getChange())) {
+                        producerFactory.getProducer(producerName)
+                                .ifPresent(producer -> removeTenantTopicBasedProducerMetrics(producer, notification.getTenantId()));
+                    }
+                });
     }
+
+    private void removeTenantTopicBasedProducerMetrics(final KafkaProducer<String, Buffer> producer, final String tenantId) {
+        final HonoTopic topic = new HonoTopic(getTopicType(), tenantId);
+        KafkaProducerHelper.removeTopicMetrics(producer, Stream.of(topic.toString()));
+    }
+
+    /**
+     * Gets the type of topic that this sender uses.
+     *
+     * @return The topic type.
+     */
+    protected abstract HonoTopic.Type getTopicType();
 
     /**
      * Adds default properties defined either at the device or tenant level are added to the message headers.

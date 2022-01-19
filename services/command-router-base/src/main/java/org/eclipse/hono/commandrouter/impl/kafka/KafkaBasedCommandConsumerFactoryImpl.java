@@ -129,6 +129,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
                 internalCommandProducerConfig,
                 tracer);
         kafkaBasedCommandResponseSender = new KafkaBasedCommandResponseSender(
+                vertx,
                 kafkaProducerFactory,
                 commandResponseProducerConfig,
                 tracer);
