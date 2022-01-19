@@ -65,6 +65,14 @@ where `${PROPERTY}` respectively `${property}` is any of the Kafka client's
 and `${CLIENTNAME}` respectively `${clientName}` is the name of the client to be configured, as documented in the
 component's admin guide.
 
+The following default properties are used, differing from the Kafka client defaults:
+
+| Property Name         | Value  |
+|:----------------------|:-------|
+| `delivery.timeout.ms` | `2500` |
+| `request.timeout.ms`  | `750`  |
+| `max.block.ms`        | `500`  |
+
 The following properties can _not_ be set because
 `org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties` uses fixed values instead in order to
 implement the message delivery semantics defined by Hono's Telemetry and Event APIs.
