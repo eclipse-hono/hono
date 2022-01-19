@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.tests.amqp;
 
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
@@ -58,54 +60,23 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
      * @param tlsVersion The TLS protocol version to use for connecting to the adapter.
      * @param ctx The test context
      */
-    @ParameterizedTest
-    @ValueSource(strings = { "TLSv1.2", "TLSv1.3" })
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
+    @ValueSource(strings = { IntegrationTestSupport.TLS_VERSION_1_2, IntegrationTestSupport.TLS_VERSION_1_3 })
     public void testConnectSucceedsForRegisteredDevice(final String tlsVersion, final VertxTestContext ctx) {
-        final String tenantId = helper.getRandomTenantId();
-        final String deviceId = helper.getRandomDeviceId(tenantId);
-        final String password = "secret";
-        final Tenant tenant = new Tenant();
 
-        helper.registry
-                .addDeviceForTenant(tenantId, tenant, deviceId, password)
-        .compose(ok -> connectToAdapter(tlsVersion, null, IntegrationTestSupport.getUsername(deviceId, tenantId), password))
-        .onComplete(ctx.succeeding(con -> {
-            ctx.verify(() -> assertThat(con.isDisconnected()).isFalse());
-            ctx.completeNow();
-        }));
-    }
-
-    /**
-     * Verifies that the adapter rejects a connection attempt from a registered device if the device uses an unsupported
-     * set of TLS security parameters.
-     *
-     * @param tlsVersion The TLS protocol version to use for connecting to the adapter.
-     * @param cipherSuite The TLS cipher suite to use for connecting to the adapter.
-     * @param ctx The test context
-     */
-    @ParameterizedTest
-    @CsvSource(value = {
-          "TLSv1.2,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
-          "TLSv1.3,TLS_AES_256_GCM_SHA384"
-          })
-    public void testConnectFailsForUnsupportedTlsSecurityParameters(
-            final String tlsVersion,
-            final String cipherSuite,
-            final VertxTestContext ctx) {
-
-        // GIVEN a client that is configured to use a combination of TLS version and cipher suite
-        // that is not supported by the AMQP adapter
         final String tenantId = helper.getRandomTenantId();
         final String deviceId = helper.getRandomDeviceId(tenantId);
         final String password = "secret";
         final Tenant tenant = new Tenant();
 
         helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password)
-            // WHEN the client tries to establish an AMQP connection to the adapter
-            .compose(ok -> connectToAdapter(tlsVersion, cipherSuite, IntegrationTestSupport.getUsername(deviceId, tenantId), password))
-            .onComplete(ctx.failing(t -> {
-                // THEN the TLS handshake fails
-                ctx.verify(() -> assertThat(t).isInstanceOf(SSLHandshakeException.class));
+            .compose(ok -> connectToAdapter(
+                    tlsVersion,
+                    null,
+                    IntegrationTestSupport.getUsername(deviceId, tenantId),
+                    password))
+            .onComplete(ctx.succeeding(con -> {
+                ctx.verify(() -> assertThat(con.isDisconnected()).isFalse());
                 ctx.completeNow();
             }));
     }
@@ -117,6 +88,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
      */
     @Test
     public void testConnectSucceedsWithAutoProvisioning(final VertxTestContext ctx) {
+
         final String tenantId = helper.getRandomTenantId();
         final SelfSignedCertificate deviceCert = SelfSignedCertificate.create(UUID.randomUUID().toString());
         final Promise<String> autoProvisionedDeviceId = Promise.promise();
@@ -138,6 +110,148 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
                             info.getJsonObject(RegistryManagementConstants.FIELD_STATUS),
                             true);
                 });
+                ctx.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that an attempt to open a connection using a valid X.509 client certificate succeeds.
+     *
+     * @param tlsVersion The TLS protocol version to use for connecting to the adapter.
+     * @param ctx The test context
+     */
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
+    @ValueSource(strings = { IntegrationTestSupport.TLS_VERSION_1_2, IntegrationTestSupport.TLS_VERSION_1_3 })
+    public void testConnectX509SucceedsForRegisteredDevice(final String tlsVersion, final VertxTestContext ctx) {
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final SelfSignedCertificate deviceCert = SelfSignedCertificate.create(deviceId + ".iot.eclipse.org");
+
+        helper.getCertificate(deviceCert.certificatePath())
+            .compose(cert -> helper.registry.addDeviceForTenant(
+                    tenantId,
+                    Tenants.createTenantForTrustAnchor(cert),
+                    deviceId,
+                    cert))
+            .compose(ok -> connectToAdapter(IntegrationTestSupport.AMQP_HOST, deviceCert, tlsVersion))
+            .onComplete(ctx.succeeding(con -> {
+                ctx.verify(() -> assertThat(con.isDisconnected()).isFalse());
+                ctx.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that an attempt to open a connection using a valid X.509 client certificate succeeds
+     * for a device belonging to a tenant that uses the same trust anchor as another tenant.
+     *
+     * @param tlsVersion The TLS protocol version to use for connecting to the adapter.
+     * @param ctx The test context
+     */
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
+    @ValueSource(strings = { IntegrationTestSupport.TLS_VERSION_1_2, IntegrationTestSupport.TLS_VERSION_1_3 })
+    public void testConnectX509SucceedsUsingSni(final String tlsVersion, final VertxTestContext ctx) {
+
+        assumeTrue(IntegrationTestSupport.isTrustAnchorGroupsSupported(),
+                "device registry does not support trust anchor groups");
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final SelfSignedCertificate deviceCert = SelfSignedCertificate.create(deviceId + ".iot.eclipse.org");
+
+        helper.getCertificate(deviceCert.certificatePath())
+            .compose(cert -> helper.registry.addTenant(
+                    helper.getRandomTenantId(),
+                    Tenants.createTenantForTrustAnchor(cert).setTrustAnchorGroup("test-group"))
+                .map(cert))
+            .compose(cert -> helper.registry.addDeviceForTenant(
+                    tenantId,
+                    Tenants.createTenantForTrustAnchor(cert).setTrustAnchorGroup("test-group"),
+                    deviceId,
+                    cert))
+            .compose(ok -> connectToAdapter(
+                    tenantId + "." + IntegrationTestSupport.AMQP_HOST,
+                    deviceCert,
+                    tlsVersion))
+            .onComplete(ctx.succeeding(con -> {
+                ctx.verify(() -> assertThat(con.isDisconnected()).isFalse());
+                ctx.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that an attempt to open a connection using a valid X.509 client certificate succeeds
+     * for a device belonging to a tenant with a tenant alias.
+     *
+     * @param tlsVersion The TLS protocol version to use for connecting to the adapter.
+     * @param ctx The test context
+     */
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
+    @ValueSource(strings = { IntegrationTestSupport.TLS_VERSION_1_2, IntegrationTestSupport.TLS_VERSION_1_3 })
+    public void testConnectX509SucceedsUsingSniWithTenantAlias(final String tlsVersion, final VertxTestContext ctx) {
+
+        assumeTrue(IntegrationTestSupport.isTrustAnchorGroupsSupported(),
+                "device registry does not support trust anchor groups");
+        assumeTrue(IntegrationTestSupport.isTenantAliasSupported(),
+                "device registry does not support tenant aliases");
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final SelfSignedCertificate deviceCert = SelfSignedCertificate.create(deviceId + ".iot.eclipse.org");
+
+        helper.getCertificate(deviceCert.certificatePath())
+            .compose(cert -> helper.registry.addTenant(
+                    helper.getRandomTenantId(),
+                    Tenants.createTenantForTrustAnchor(cert).setTrustAnchorGroup("test-group"))
+                .map(cert))
+            .compose(cert -> helper.registry.addDeviceForTenant(
+                    tenantId,
+                    Tenants.createTenantForTrustAnchor(cert)
+                        .setTrustAnchorGroup("test-group")
+                        .setAlias("test-alias"),
+                    deviceId,
+                    cert))
+            .compose(ok -> connectToAdapter(
+                    "test-alias." + IntegrationTestSupport.AMQP_HOST,
+                    deviceCert,
+                    tlsVersion))
+            .onComplete(ctx.succeeding(con -> {
+                ctx.verify(() -> assertThat(con.isDisconnected()).isFalse());
+                ctx.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that the adapter rejects a connection attempt from a registered device if the device uses an unsupported
+     * set of TLS security parameters.
+     *
+     * @param tlsVersion The TLS protocol version to use for connecting to the adapter.
+     * @param cipherSuite The TLS cipher suite to use for connecting to the adapter.
+     * @param ctx The test context
+     */
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
+    @CsvSource(value = {
+          IntegrationTestSupport.TLS_VERSION_1_2 + ",TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
+          IntegrationTestSupport.TLS_VERSION_1_3 + ",TLS_AES_256_GCM_SHA384"
+          })
+    public void testConnectFailsForUnsupportedTlsSecurityParameters(
+            final String tlsVersion,
+            final String cipherSuite,
+            final VertxTestContext ctx) {
+
+        // GIVEN a client that is configured to use a combination of TLS version and cipher suite
+        // that is not supported by the AMQP adapter
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final String password = "secret";
+        final Tenant tenant = new Tenant();
+
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password)
+            // WHEN the client tries to establish an AMQP connection to the adapter
+            .compose(ok -> connectToAdapter(tlsVersion, cipherSuite, IntegrationTestSupport.getUsername(deviceId, tenantId), password))
+            .onComplete(ctx.failing(t -> {
+                // THEN the TLS handshake fails
+                ctx.verify(() -> assertThat(t).isInstanceOf(SSLHandshakeException.class));
                 ctx.completeNow();
             }));
     }
@@ -398,4 +512,44 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
                 }));
     }
 
+    /**
+     * Verifies that an attempt to open a connection using a valid X.509 client certificate fails
+     * for a device belonging to a tenant using a non-existing tenant alias.
+     *
+     * @param ctx The test context
+     */
+    @Test
+    public void testConnectX509FailsUsingSniWithNonExistingTenantAlias(final VertxTestContext ctx) {
+
+        assumeTrue(IntegrationTestSupport.isTrustAnchorGroupsSupported(),
+                "device registry does not support trust anchor groups");
+        assumeTrue(IntegrationTestSupport.isTenantAliasSupported(),
+                "device registry does not support tenant aliases");
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final SelfSignedCertificate deviceCert = SelfSignedCertificate.create(deviceId + ".iot.eclipse.org");
+
+        helper.getCertificate(deviceCert.certificatePath())
+            .compose(cert -> helper.registry.addTenant(
+                    helper.getRandomTenantId(),
+                    Tenants.createTenantForTrustAnchor(cert).setTrustAnchorGroup("test-group"))
+                .map(cert))
+            .compose(cert -> helper.registry.addDeviceForTenant(
+                    tenantId,
+                    Tenants.createTenantForTrustAnchor(cert)
+                        .setTrustAnchorGroup("test-group")
+                        .setAlias("test-alias"),
+                    deviceId,
+                    cert))
+            .compose(ok -> connectToAdapter(
+                    "wrong-alias." + IntegrationTestSupport.AMQP_HOST,
+                    deviceCert,
+                    IntegrationTestSupport.TLS_VERSION_1_2))
+            .onComplete(ctx.failing(t -> {
+                // THEN the connection is not established
+                ctx.verify(() -> assertThat(t).isInstanceOf(SaslException.class));
+                ctx.completeNow();
+            }));
+    }
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,7 +13,6 @@
 package org.eclipse.hono.adapter.amqp;
 
 import java.net.HttpURLConnection;
-import java.security.cert.Certificate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -209,16 +208,21 @@ public class AmqpAdapterSaslAuthenticatorFactory implements ProtonSaslAuthentica
                 final byte[] saslResponse) {
             if (AuthenticationConstants.MECHANISM_PLAIN.equals(remoteMechanism)) {
                 return parseSaslResponse(saslResponse)
-                        .map(fields -> SaslResponseContext.forMechanismPlain(protonConnection, fields, currentSpan));
+                        .map(fields -> SaslResponseContext.forMechanismPlain(
+                                protonConnection,
+                                fields,
+                                currentSpan,
+                                sslSession));
             } else if (AuthenticationConstants.MECHANISM_EXTERNAL.equals(remoteMechanism)) {
-                Certificate[] peerCertificateChain = null;
                 try {
-                    peerCertificateChain = sslSession.getPeerCertificates();
+                    return Future.succeededFuture(SaslResponseContext.forMechanismExternal(
+                            protonConnection,
+                            currentSpan,
+                            sslSession));
                 } catch (final SSLPeerUnverifiedException e) {
                     LOG.debug("device's certificate chain cannot be read: {}", e.getMessage());
+                    return Future.failedFuture(e);
                 }
-                return Future.succeededFuture(
-                        SaslResponseContext.forMechanismExternal(protonConnection, peerCertificateChain, currentSpan));
             } else {
                 return Future.failedFuture("Unsupported SASL mechanism: " + remoteMechanism);
             }

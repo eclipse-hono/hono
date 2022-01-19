@@ -16,7 +16,6 @@ package org.eclipse.hono.adapter.amqp;
 import java.net.HttpURLConnection;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
-import java.util.List;
 import java.util.Objects;
 
 import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
@@ -81,8 +80,8 @@ public class SaslExternalAuthHandler extends ExecutionContextAuthHandler<SaslRes
      * <ul>
      * <li>the subject DN of the validated client certificate in the
      * {@link org.eclipse.hono.util.RequestResponseApiConstants#FIELD_PAYLOAD_SUBJECT_DN} property,</li>
-     * <li>the tenant that the device belongs to in the {@link org.eclipse.hono.util.RequestResponseApiConstants#FIELD_PAYLOAD_TENANT_ID}
-     * property</li>
+     * <li>the tenant that the device belongs to in the
+     * {@link org.eclipse.hono.util.RequestResponseApiConstants#FIELD_PAYLOAD_TENANT_ID} property.</li>
      * </ul>
      *
      * @param context The context containing the SASL response.
@@ -106,6 +105,9 @@ public class SaslExternalAuthHandler extends ExecutionContextAuthHandler<SaslRes
             return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED,
                     "Only X.509 certificates are supported"));
         }
-        return auth.validateClientCertificate(peerCertificateChain, List.of(), context.getTracingContext());
+        return auth.validateClientCertificate(
+                peerCertificateChain,
+                context.getRequestedHostNames(),
+                context.getTracingContext());
     }
 }
