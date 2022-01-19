@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,7 @@ package org.eclipse.hono.tests.amqp;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -206,7 +207,7 @@ public abstract class AmqpAdapterTestBase {
      * @return A succeeded future containing the established connection.
      */
     protected Future<ProtonConnection> connectToAdapter(final String username, final String password) {
-        return connectToAdapter("TLSv1.2", null, username, password);
+        return connectToAdapter(IntegrationTestSupport.TLS_VERSION_1_2, null, username, password);
     }
 
     /**
@@ -239,7 +240,7 @@ public abstract class AmqpAdapterTestBase {
                 username,
                 password,
                 result);
-        return result.future().compose(this::handleConnectAttempt);
+        return result.future().compose(con -> handleConnectAttempt(con, IntegrationTestSupport.AMQP_HOST));
     }
 
     /**
@@ -247,8 +248,29 @@ public abstract class AmqpAdapterTestBase {
      *
      * @param clientCertificate The certificate to use for authentication.
      * @return A succeeded future containing the established connection.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     protected Future<ProtonConnection> connectToAdapter(final SelfSignedCertificate clientCertificate) {
+        return connectToAdapter(IntegrationTestSupport.AMQP_HOST, clientCertificate, IntegrationTestSupport.TLS_VERSION_1_2);
+    }
+
+    /**
+     * Connects to the AMQP protocol adapter using a client certificate.
+     *
+     * @param hostname The name of the host to connect to.
+     * @param clientCertificate The certificate to use for authentication.
+     * @param tlsProtocolVersion The TLS protocol version to use for connecting to the host.
+     * @return A succeeded future containing the established connection.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    protected Future<ProtonConnection> connectToAdapter(
+            final String hostname,
+            final SelfSignedCertificate clientCertificate,
+            final String tlsProtocolVersion) {
+
+        Objects.requireNonNull(hostname);
+        Objects.requireNonNull(clientCertificate);
+        Objects.requireNonNull(tlsProtocolVersion);
 
         final Promise<ProtonConnection> result = Promise.promise();
         final ProtonClient client = ProtonClient.create(vertx);
@@ -256,15 +278,18 @@ public abstract class AmqpAdapterTestBase {
         final ProtonClientOptions secureOptions = new ProtonClientOptions(defaultOptions);
         secureOptions.setKeyCertOptions(clientCertificate.keyCertOptions());
         secureOptions.addEnabledSaslMechanism(ProtonSaslExternalImpl.MECH_NAME);
+        secureOptions.setEnabledSecureTransportProtocols(Set.of(tlsProtocolVersion));
         client.connect(
                 secureOptions,
-                IntegrationTestSupport.AMQP_HOST,
+                hostname,
                 IntegrationTestSupport.AMQPS_PORT,
                 result);
-        return result.future().compose(this::handleConnectAttempt);
+        return result.future().compose(con -> handleConnectAttempt(con, hostname));
     }
 
-    private Future<ProtonConnection> handleConnectAttempt(final ProtonConnection unopenedConnection) {
+    private Future<ProtonConnection> handleConnectAttempt(
+            final ProtonConnection unopenedConnection,
+            final String hostname) {
 
         final Promise<ProtonConnection> result = Promise.promise();
 
@@ -281,12 +306,12 @@ public abstract class AmqpAdapterTestBase {
                     this.context = Vertx.currentContext();
                     this.connection = unopenedConnection;
                     log.info("AMQPS connection to adapter [{}:{}] established",
-                            IntegrationTestSupport.AMQP_HOST, IntegrationTestSupport.AMQPS_PORT);
+                            hostname, IntegrationTestSupport.AMQPS_PORT);
                     return con;
                 })
                 .recover(t -> {
                     log.info("failed to establish AMQPS connection to adapter [{}:{}]",
-                            IntegrationTestSupport.AMQP_HOST, IntegrationTestSupport.AMQPS_PORT);
+                            hostname, IntegrationTestSupport.AMQPS_PORT);
 
                     return Optional.ofNullable(unopenedConnection.getRemoteCondition())
                             .map(condition -> Future.<ProtonConnection>failedFuture(StatusCodeMapper.fromAttachError(condition)))

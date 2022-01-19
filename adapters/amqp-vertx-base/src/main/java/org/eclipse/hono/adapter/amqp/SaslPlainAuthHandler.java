@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -70,7 +70,7 @@ public class SaslPlainAuthHandler extends ExecutionContextAuthHandler<SaslRespon
      * @return A future indicating the outcome of the operation. The future will succeed with the client's credentials
      *         extracted from context.
      * @throws NullPointerException if the context is {@code null}.
-     * @throws IllegalArgumentException if the context does not the response fields.
+     * @throws IllegalArgumentException if the context does not contain the required SASL response fields.
      */
     @Override
     public Future<JsonObject> parseCredentials(final SaslResponseContext context) {
