@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -158,7 +158,7 @@ import io.vertx.junit5.VertxTestContext;
                 .setTrustOptions(new PemTrustOptions().addCertPath(IntegrationTestSupport.TRUST_STORE_PATH))
                 .setVerifyHost(false)
                 .setSsl(true)
-                .setEnabledSecureTransportProtocols(Set.of("TLSv1.2"));
+                .setEnabledSecureTransportProtocols(Set.of(IntegrationTestSupport.TLS_VERSION_1_2));
 
     }
 
