@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,10 +25,23 @@ import io.vertx.kafka.client.serialization.JsonObjectSerializer;
 
 /**
  * Configuration properties for Kafka producers used for Hono's notifications.
- *
+ * <p>
  * Record keys will be serialized with {@link StringSerializer}, the values with {@link JsonObjectSerializer}.
  */
 public class NotificationKafkaProducerConfigProperties extends KafkaProducerConfigProperties {
+
+    /**
+     * Default value for the {@value ProducerConfig#DELIVERY_TIMEOUT_MS_CONFIG} config property.
+     */
+    public static final String DEFAULT_DELIVERY_TIMEOUT_MS = "2500";
+    /**
+     * Default value for the {@value ProducerConfig#REQUEST_TIMEOUT_MS_CONFIG} config property.
+     */
+    public static final String DEFAULT_REQUEST_TIMEOUT_MS = "750";
+    /**
+     * Default value for the {@value ProducerConfig#MAX_BLOCK_MS_CONFIG} config property.
+     */
+    public static final String DEFAULT_MAX_BLOCK_MS = "500";
 
     /**
      * Creates an instance.
@@ -49,19 +62,20 @@ public class NotificationKafkaProducerConfigProperties extends KafkaProducerConf
     }
 
     /**
-     * Sets the required properties.
-     *
-     * The following properties are set here to the given configuration:
-     * <ul>
-     * <li>{@code enable.idempotence=true}: enables idempotent producer behavior</li>
-     * </ul>
-     *
-     * @see <a href="https://kafka.apache.org/documentation/#enable.idempotence">The Kafka documentation -
-     *      "Producer Configs" - enable.idempotence</a>
+     * Adapts the given configuration, setting required and default values.
+     * <p>
+     * {@value ProducerConfig#ENABLE_IDEMPOTENCE_CONFIG} is always set to {@code true}, default values
+     * are applied for selected timeout properties.
      */
     @Override
     protected final void adaptConfiguration(final Map<String, String> config) {
+        // set properties with required values
         overrideConfigProperty(config, ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, "true");
+
+        // set default values
+        config.putIfAbsent(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, DEFAULT_DELIVERY_TIMEOUT_MS);
+        config.putIfAbsent(ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, DEFAULT_REQUEST_TIMEOUT_MS);
+        config.putIfAbsent(ProducerConfig.MAX_BLOCK_MS_CONFIG, DEFAULT_MAX_BLOCK_MS);
     }
 
 }
