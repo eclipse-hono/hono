@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,6 +12,8 @@
  *******************************************************************************/
 
 package org.eclipse.hono.tests.http;
+
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -30,6 +32,7 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.AssumeMessagingSystem;
 import org.eclipse.hono.tests.IntegrationTestSupport;
+import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.QoS;
@@ -45,6 +48,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.RequestOptions;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.Checkpoint;
@@ -281,5 +285,65 @@ public class TelemetryHttpIT extends HttpTestBase {
                         deliveryStateCheckDone.flag();
                     });
                 }));
+    }
+
+    /**
+     * Verifies that a number of messages uploaded to Hono's HTTP adapter using client certificate based authentication
+     * can be successfully consumed via the AMQP Messaging Network.
+     * <p>
+     * The device's tenant is being determined using the requested host name contained in the client's SNI TLS
+     * extension.
+     *
+     * @param ctx The test context.
+     * @throws InterruptedException if the test fails.
+     */
+    @Test
+    public void testUploadMessagesUsingClientCertificateWithAlias(final VertxTestContext ctx) throws InterruptedException {
+
+        assumeTrue(IntegrationTestSupport.isTrustAnchorGroupsSupported(),
+                "device registry does not support trust anchor groups");
+        assumeTrue(IntegrationTestSupport.isTenantAliasSupported(),
+                "device registry does not support tenant aliases");
+
+        final VertxTestContext setup = new VertxTestContext();
+        final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                .add(HttpHeaders.ORIGIN, ORIGIN_URI);
+
+        helper.getCertificate(deviceCert.certificatePath())
+           .compose(cert -> helper.registry.addTenant(
+                    helper.getRandomTenantId(),
+                    Tenants.createTenantForTrustAnchor(cert).setTrustAnchorGroup("test-group"))
+               .map(cert))
+            .compose(cert -> helper.registry.addDeviceForTenant(
+                    tenantId,
+                    Tenants.createTenantForTrustAnchor(cert)
+                        .setTrustAnchorGroup("test-group")
+                        .setAlias("test-alias"),
+                    deviceId,
+                    cert))
+            .onComplete(setup.succeedingThenComplete());
+
+        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+            return;
+        }
+
+        final RequestOptions options = new RequestOptions()
+                .setHost("test-alias." + IntegrationTestSupport.HTTP_HOST)
+                .setPort(IntegrationTestSupport.HTTPS_PORT)
+                .setURI(getEndpointUri())
+                .setHeaders(requestHeaders);
+        testUploadMessages(
+                ctx,
+                tenantId,
+                null,
+                count -> httpClientWithClientCert.create(
+                        options,
+                        Buffer.buffer("hello " + count),
+                        ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED)),
+                10,
+                QoS.AT_MOST_ONCE);
     }
 }

@@ -14,8 +14,6 @@
 package org.eclipse.hono.adapter.http;
 
 import java.net.HttpURLConnection;
-import java.security.cert.Certificate;
-import java.util.List;
 import java.util.Objects;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
@@ -25,6 +23,7 @@ import org.eclipse.hono.adapter.auth.device.ExecutionContextAuthHandler;
 import org.eclipse.hono.adapter.auth.device.PreCredentialsValidationHandler;
 import org.eclipse.hono.adapter.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.adapter.auth.device.X509Authentication;
+import org.eclipse.hono.service.auth.SniExtensionHelper;
 import org.eclipse.hono.service.http.HttpContext;
 import org.eclipse.hono.service.http.TracingHandler;
 import org.slf4j.Logger;
@@ -94,9 +93,6 @@ public class X509AuthHandler extends AuthenticationHandlerImpl<DeviceCredentials
         this.preCredentialsValidationHandler = preCredentialsValidationHandler;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void authenticate(final RoutingContext context, final Handler<AsyncResult<User>> handler) {
 
@@ -105,10 +101,12 @@ public class X509AuthHandler extends AuthenticationHandlerImpl<DeviceCredentials
 
         if (context.request().isSSL()) {
             try {
-                final Certificate[] path = context.request().sslSession().getPeerCertificates();
-                auth.validateClientCertificate(path, List.of(), TracingHandler.serverSpanContext(context))
+                auth.validateClientCertificate(
+                        context.request().sslSession().getPeerCertificates(),
+                        SniExtensionHelper.getHostNames(context.request().sslSession()),
+                        TracingHandler.serverSpanContext(context))
                     .compose(credentialsJson -> {
-                        final ExecutionContextAuthHandler<HttpContext> authHandler = new ExecutionContextAuthHandler<>(
+                        final var authHandler = new ExecutionContextAuthHandler<HttpContext>(
                                 (DeviceCredentialsAuthProvider<?>) authProvider,
                                 preCredentialsValidationHandler) {
 
