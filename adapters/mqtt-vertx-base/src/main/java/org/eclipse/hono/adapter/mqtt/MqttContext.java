@@ -46,6 +46,7 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
     private final MqttEndpoint deviceEndpoint;
     private final Device authenticatedDevice;
     private ResourceIdentifier topic;
+    private Optional<ResourceIdentifier> mappedTargetAddress = Optional.empty();
     private String contentType;
     private Sample timer;
     private MetricsTags.EndpointType endpoint;
@@ -259,6 +260,17 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
     }
 
     /**
+     * Apply a mapped targetAddress to this mqtt context.
+     * <p>
+     * The device identifier included in the address overrides the device identifier derived from the message topic.
+     *
+     * @param mappedTargetAddress The mappedTargetAddress.
+     */
+    public void applyMappedTargetAddress(final ResourceIdentifier mappedTargetAddress) {
+        this.mappedTargetAddress = Optional.ofNullable(mappedTargetAddress);
+    }
+
+    /**
      * Gets the tenant that the device belongs to that published
      * the message.
      *
@@ -292,7 +304,9 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
      */
     public String deviceId() {
 
-        if (topic != null && !Strings.isNullOrEmpty(topic.getResourceId())) {
+        if (mappedTargetAddress.isPresent() && !Strings.isNullOrEmpty(mappedTargetAddress.get().getResourceId())) {
+            return mappedTargetAddress.get().getResourceId();
+        } else if (topic != null && !Strings.isNullOrEmpty(topic.getResourceId())) {
             return topic.getResourceId();
         } else if (authenticatedDevice != null) {
             return authenticatedDevice.getDeviceId();

@@ -108,6 +108,7 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
                 .compose(registrationInfo -> messageMapping.mapDownstreamMessage(ctx, targetAddress, registrationInfo))
                 .map(mappedMessage -> {
                     ctx.put(MAPPER_DATA, mappedMessage.getAdditionalProperties());
+                    ctx.applyMappedTargetAddress(mappedMessage.getTargetAddress());
                     return mappedMessage;
                 });
     }
