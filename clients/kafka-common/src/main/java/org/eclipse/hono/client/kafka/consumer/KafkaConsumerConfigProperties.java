@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -35,12 +35,12 @@ public class KafkaConsumerConfigProperties extends AbstractKafkaConfigProperties
     /**
      * The default amount of time (milliseconds) to wait for records when polling records.
      */
-    public static final long DEFAULT_POLL_TIMEOUT = 100L; // ms
+    public static final long DEFAULT_POLL_TIMEOUT_MILLIS = 250L; // ms
 
     private final Class<? extends Deserializer<?>> keyDeserializerClass;
     private final Class<? extends Deserializer<?>> valueDeserializerClass;
 
-    private long pollTimeout = DEFAULT_POLL_TIMEOUT;
+    private long pollTimeout = DEFAULT_POLL_TIMEOUT_MILLIS;
 
     /**
      * Creates an instance.
@@ -138,7 +138,7 @@ public class KafkaConsumerConfigProperties extends AbstractKafkaConfigProperties
     /**
      * Sets the timeout for polling records.
      * <p>
-     * The default value of this property is {@value #DEFAULT_POLL_TIMEOUT}.
+     * The default value of this property is {@value #DEFAULT_POLL_TIMEOUT_MILLIS}.
      *
      * @param pollTimeoutMillis The maximum number of milliseconds to wait.
      * @throws IllegalArgumentException if poll timeout is negative.
@@ -154,7 +154,7 @@ public class KafkaConsumerConfigProperties extends AbstractKafkaConfigProperties
     /**
      * Gets the timeout for polling records.
      * <p>
-     * The default value of this property is {@value #DEFAULT_POLL_TIMEOUT}.
+     * The default value of this property is {@value #DEFAULT_POLL_TIMEOUT_MILLIS}.
      *
      * @return The maximum number of milliseconds to wait.
      */

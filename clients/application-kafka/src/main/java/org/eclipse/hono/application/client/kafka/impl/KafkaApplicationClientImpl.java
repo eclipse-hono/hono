@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.application.client.kafka.impl;
 
+import java.time.Duration;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
@@ -166,6 +167,7 @@ public class KafkaApplicationClientImpl extends KafkaBasedCommandSender implemen
         };
         final HonoKafkaConsumer consumer = new HonoKafkaConsumer(vertx, Set.of(topic), recordHandler,
                 consumerConfig.getConsumerConfig(type.toString()));
+        consumer.setPollTimeout(Duration.ofMillis(consumerConfig.getPollTimeout()));
         Optional.ofNullable(kafkaConsumerSupplier)
                 .ifPresent(consumer::setKafkaConsumerSupplier);
         return consumer.start()

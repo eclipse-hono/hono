@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.client.notification.kafka;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -84,6 +85,7 @@ public class KafkaBasedNotificationReceiver implements NotificationReceiver {
     @Override
     public Future<Void> start() {
         honoKafkaConsumer = new HonoKafkaConsumer(vertx, topics, getRecordHandler(), consumerConfig.getConsumerConfig(NAME));
+        honoKafkaConsumer.setPollTimeout(Duration.ofMillis(consumerConfig.getPollTimeout()));
         honoKafkaConsumer.setConsumerCreationRetriesTimeout(KafkaClientFactory.UNLIMITED_RETRIES_DURATION);
         Optional.ofNullable(kafkaConsumerSupplier).ifPresent(honoKafkaConsumer::setKafkaConsumerSupplier);
         return honoKafkaConsumer
