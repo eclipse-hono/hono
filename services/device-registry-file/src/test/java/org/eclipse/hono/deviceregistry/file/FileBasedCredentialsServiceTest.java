@@ -35,16 +35,19 @@ import java.util.concurrent.TimeUnit;
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.deviceregistry.DeviceRegistryTestUtils;
-import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
+import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
+import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
 import org.eclipse.hono.deviceregistry.util.Assertions;
 import org.eclipse.hono.service.credentials.CredentialsService;
 import org.eclipse.hono.service.credentials.CredentialsServiceTestBase;
+import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.Credentials;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.service.management.credentials.PskCredential;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.CredentialsConstants;
@@ -94,6 +97,7 @@ public class FileBasedCredentialsServiceTest implements CredentialsServiceTestBa
 
     private FileBasedRegistrationService registrationService;
     private FileBasedCredentialsService credentialsService;
+    private TenantInformationService tenantInformationService;
 
     private FileBasedDeviceBackend svc;
 
@@ -126,9 +130,20 @@ public class FileBasedCredentialsServiceTest implements CredentialsServiceTestBa
         this.registrationService = new FileBasedRegistrationService(vertx);
         this.registrationService.setConfig(registrationConfig);
 
-        this.credentialsService = new FileBasedCredentialsService(vertx, credentialsConfig, PASSWORD_ENCODER);
+        this.tenantInformationService = mock(TenantInformationService.class);
+        when(tenantInformationService.getTenant(anyString(), any())).thenReturn(Future.succeededFuture(new Tenant()));
+        when(tenantInformationService.tenantExists(anyString(), any())).thenAnswer(invocation -> {
+            return Future.succeededFuture(OperationResult.ok(
+                    HttpURLConnection.HTTP_OK,
+                    TenantKey.from(invocation.getArgument(0)),
+                    Optional.empty(),
+                    Optional.empty()));
+        });
 
-        this.svc = new FileBasedDeviceBackend(this.registrationService, this.credentialsService, new NoopTenantInformationService());
+        this.credentialsService = new FileBasedCredentialsService(vertx, credentialsConfig, PASSWORD_ENCODER);
+        this.credentialsService.setTenantInformationService(tenantInformationService);
+
+        this.svc = new FileBasedDeviceBackend(this.registrationService, this.credentialsService, tenantInformationService);
     }
 
     @Override
@@ -144,6 +159,11 @@ public class FileBasedCredentialsServiceTest implements CredentialsServiceTestBa
     @Override
     public DeviceManagementService getDeviceManagementService() {
         return this.svc;
+    }
+
+    @Override
+    public TenantInformationService getTenantInformationService() {
+        return this.tenantInformationService;
     }
 
     /**
@@ -607,4 +627,9 @@ public class FileBasedCredentialsServiceTest implements CredentialsServiceTestBa
                 }));
     }
 
+    @Override
+    public void testUpdateCredentialsAppliesAuthIdTemplate(final VertxTestContext ctx) {
+        // The deprecated file based registry is not extended to support auth-id-template,
+        // hence this test has been disabled.
+    }
 }

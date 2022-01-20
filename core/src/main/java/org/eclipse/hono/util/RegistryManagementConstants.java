@@ -181,6 +181,15 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String FIELD_AUTH_ID                     = "auth-id";
     /**
+     * The name of the field that contains the generated authentication identifier
+     * by applying the template to the subject DN.
+     */
+    public static final String FIELD_GENERATED_AUTH_ID           = "generated-auth-id";
+    /**
+     * The name of the field that contains the issuer DN of the client certificate.
+     */
+    public static final String FIELD_ISSUER_DN                   = "issuer-dn";
+    /**
      * The name of the field that contains the secret(s) of the credentials.
      */
     public static final String FIELD_SECRETS                     = "secrets";

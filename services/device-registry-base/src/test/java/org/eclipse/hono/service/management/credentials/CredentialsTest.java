@@ -31,15 +31,19 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import javax.security.auth.x500.X500Principal;
 
+import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.service.management.tenant.TrustedCertificateAuthority;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -242,18 +246,21 @@ public class CredentialsTest {
     }
 
     /**
-     * Test encoding an X.509 secret.
+     * Test encoding an X.509 credential.
      */
     @Test
     public void testEncodeX509Credential() {
 
         final X509CertificateSecret x509Secret = new X509CertificateSecret();
         addCommonProperties(x509Secret);
-        var credential = X509CertificateCredential.fromSubjectDn("CN=foo, O=bar", List.of(x509Secret));
+        var credential = X509CertificateCredential.fromSubjectDn("CN=foo, O=bar", "CN=test, O=bar", "foo-bar",
+                List.of(x509Secret));
 
         JsonObject json = JsonObject.mapFrom(credential);
         assertEquals("x509-cert", json.getString(RegistryManagementConstants.FIELD_TYPE));
         assertEquals("CN=foo,O=bar", json.getString(RegistryManagementConstants.FIELD_AUTH_ID));
+        assertEquals(false, json.containsKey(RegistryManagementConstants.FIELD_GENERATED_AUTH_ID));
+        assertEquals(false, json.containsKey(RegistryManagementConstants.FIELD_ISSUER_DN));
         JsonObject secret = json.getJsonArray(RegistryManagementConstants.FIELD_SECRETS).getJsonObject(0);
         assertCommonSecretProperties(secret);
 
@@ -293,6 +300,106 @@ public class CredentialsTest {
 
         final X509CertificateSecret secret = credential.getSecrets().get(0);
         assertCommonSecretProperties(secret);
+    }
+
+    /**
+     * Verifies that a JSON object containing an auth-id, generated-auth-id and a secret can be decoded into an X.509
+     * credential.
+     */
+    @Test
+    void testDecodeX509CredentialWithGeneratedAuthId() {
+        final JsonObject jsonCredential = new JsonObject()
+                .put(RegistryManagementConstants.FIELD_TYPE, RegistryManagementConstants.SECRETS_TYPE_X509_CERT)
+                .put(RegistryManagementConstants.FIELD_AUTH_ID, "CN=Acme")
+                .put(RegistryManagementConstants.FIELD_GENERATED_AUTH_ID, "Acme")
+                .put(RegistryManagementConstants.FIELD_COMMENT, "comment")
+                .put(RegistryManagementConstants.FIELD_ENABLED, true)
+                .put(RegistryManagementConstants.FIELD_SECRETS, new JsonArray()
+                        .add(new JsonObject()
+                                .put(RegistryManagementConstants.FIELD_ENABLED, true)
+                                .put(RegistryManagementConstants.FIELD_SECRETS_NOT_BEFORE, NOT_BEFORE_STRING)
+                                .put(RegistryManagementConstants.FIELD_SECRETS_NOT_AFTER, NOT_AFTER_STRING)
+                                .put(RegistryManagementConstants.FIELD_SECRETS_COMMENT, SECRET_COMMENT)));
+
+        final X509CertificateCredential credential = jsonCredential.mapTo(X509CertificateCredential.class);
+
+        assertEquals("CN=Acme", credential.getAuthId());
+        assertEquals("Acme", credential.getGeneratedAuthId());
+        assertEquals("comment", credential.getComment());
+        assertTrue(credential.isEnabled());
+        assertEquals(1, credential.getSecrets().size());
+
+        final X509CertificateSecret secret = credential.getSecrets().get(0);
+        assertCommonSecretProperties(secret);
+    }
+
+    /**
+     * Verifies an X.509 credential obtained by overriding the authId with the generated authId.
+     */
+    @Test
+    void testX509CredentialObtainedByOverridingAuthId() {
+        final String subjectDn = "CN=foo, O=bar";
+        final String generatedAuthId = "foo-bar";
+        final X509CertificateSecret x509Secret = new X509CertificateSecret();
+        addCommonProperties(x509Secret);
+        final var credential = X509CertificateCredential.fromSubjectDn(subjectDn, null, generatedAuthId,
+                List.of(x509Secret));
+        final X509CertificateCredential credentialWithOverriddenAuthId = credential.overrideAuthIdWithGeneratedAuthId();
+
+        assertEquals(generatedAuthId, credentialWithOverriddenAuthId.getAuthId());
+        assertTrue(credentialWithOverriddenAuthId.isEnabled());
+        assertEquals(1, credentialWithOverriddenAuthId.getSecrets().size());
+
+        final X509CertificateSecret secret = credentialWithOverriddenAuthId.getSecrets().get(0);
+        assertCommonSecretProperties(secret);
+    }
+
+    /**
+     * Verifies an X.509 credential obtained by applying the given auth-id-template
+     * to the client certificate's subject DN.
+     */
+    @Test
+    void testX509CredentialWithGeneratedAuthIdObtainedByApplyingAuthIdTemplate() {
+        final String commonName = UUID.randomUUID().toString();
+        final String issuerDn = "CN=testBase,OU=Hono,O=Eclipse";
+        final String subjectDN = String.format("CN=%s,OU=Hono,O=Eclipse", commonName);
+        final String authIdTemplate = "auth-{{subject-cn}}-{{subject-ou}}-{{subject-o}}";
+        final String generatedAuthId = String.format("auth-%s-Hono-Eclipse", commonName);
+
+        final var trustedCa = new TrustedCertificateAuthority()
+                .setSubjectDn(issuerDn)
+                .setPublicKey("NOTAKEY".getBytes(StandardCharsets.UTF_8))
+                .setAuthIdTemplate(authIdTemplate)
+                .setNotBefore(Instant.now().minus(1, ChronoUnit.DAYS))
+                .setNotAfter(Instant.now().plus(2, ChronoUnit.DAYS));
+        final var tenant = new Tenant().setTrustedCertificateAuthorities(List.of(trustedCa));
+        final X509CertificateSecret x509Secret = new X509CertificateSecret();
+        addCommonProperties(x509Secret);
+        final var credential = X509CertificateCredential.fromSubjectDn(subjectDN, issuerDn, null, List.of(x509Secret));
+        credential.setEnabled(true)
+                .setComment("comment");
+
+        final X509CertificateCredentialWithGeneratedAuthId credentialWithGeneratedAuthId = X509CertificateCredentialWithGeneratedAuthId
+                .applyAuthIdTemplate(credential, tenant);
+
+        assertEquals(subjectDN, credentialWithGeneratedAuthId.getAuthId());
+        assertEquals(generatedAuthId, credentialWithGeneratedAuthId.getGeneratedAuthId());
+        assertEquals("comment", credentialWithGeneratedAuthId.getComment());
+        assertTrue(credentialWithGeneratedAuthId.isEnabled());
+        assertEquals(1, credentialWithGeneratedAuthId.getSecrets().size());
+
+        final X509CertificateSecret secret = credentialWithGeneratedAuthId.getSecrets().get(0);
+        assertCommonSecretProperties(secret);
+
+        final JsonObject json = JsonObject.mapFrom(credentialWithGeneratedAuthId);
+
+        assertEquals("x509-cert", json.getString(RegistryManagementConstants.FIELD_TYPE));
+        assertEquals(subjectDN, json.getString(RegistryManagementConstants.FIELD_AUTH_ID));
+        assertEquals(generatedAuthId, json.getString(RegistryManagementConstants.FIELD_GENERATED_AUTH_ID));
+        assertEquals("comment", json.getString(RegistryManagementConstants.FIELD_COMMENT));
+
+        final JsonObject secretJson = json.getJsonArray(RegistryManagementConstants.FIELD_SECRETS).getJsonObject(0);
+        assertCommonSecretProperties(secretJson);
     }
 
     /**

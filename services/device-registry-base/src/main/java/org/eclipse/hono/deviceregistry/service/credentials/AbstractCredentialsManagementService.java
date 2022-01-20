@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
@@ -34,6 +35,9 @@ import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
+import org.eclipse.hono.service.management.credentials.X509CertificateCredential;
+import org.eclipse.hono.service.management.credentials.X509CertificateCredentialWithGeneratedAuthId;
+import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.util.Futures;
 import org.eclipse.hono.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -154,10 +158,11 @@ public abstract class AbstractCredentialsManagementService implements Credential
         Objects.requireNonNull(resourceVersion);
         Objects.requireNonNull(span);
 
-        return this.tenantInformationService
-                .getTenant(tenantId, span)
+        final Future<Tenant> tenantFuture = tenantInformationService.getTenant(tenantId, span);
+        return tenantFuture
                 .compose(tenant -> tenant.checkCredentialsLimitExceeded(tenantId, credentials))
-                .compose(ok -> verifyAndEncodePasswords(credentials))
+                .compose(ok -> applyAuthIdTemplateForX509CertificateCredentials(tenantFuture.result(), credentials))
+                .compose(this::verifyAndEncodePasswords)
                 .compose(encodedCredentials -> processUpdateCredentials(
                         DeviceKey.from(tenantId, deviceId),
                         encodedCredentials,
@@ -256,4 +261,18 @@ public abstract class AbstractCredentialsManagementService implements Credential
         return credentials;
     }
 
+    private static Future<List<CommonCredential>> applyAuthIdTemplateForX509CertificateCredentials(
+            final Tenant tenant,
+            final List<CommonCredential> credentials) {
+        final List<CommonCredential> creds = credentials.stream()
+                .map(cred -> {
+                    if (cred instanceof X509CertificateCredential) {
+                        return X509CertificateCredentialWithGeneratedAuthId.applyAuthIdTemplate(
+                                (X509CertificateCredential) cred, tenant);
+                    }
+                    return cred;
+                })
+                .collect(Collectors.toUnmodifiableList());
+        return Future.succeededFuture(creds);
+    }
 }

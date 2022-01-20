@@ -39,6 +39,7 @@ import org.eclipse.hono.service.management.credentials.CredentialsDto;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.RegistryManagementConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -162,6 +163,7 @@ public class TableManagementStore extends AbstractDeviceStore {
                         "device_id",
                         "type",
                         "auth_id",
+                        "generated_auth_id",
                         "data");
 
         this.deleteAllCredentialsStatement = cfg
@@ -692,8 +694,9 @@ public class TableManagementStore extends AbstractDeviceStore {
                                             .expand(map -> {
                                                 map.put("tenant_id", key.getTenantId());
                                                 map.put("device_id", key.getDeviceId());
-                                                map.put("type", c.getString("type"));
-                                                map.put("auth_id", c.getString("auth-id"));
+                                                map.put("type", c.getString(RegistryManagementConstants.FIELD_TYPE));
+                                                map.put("auth_id", c.getString(RegistryManagementConstants.FIELD_AUTH_ID));
+                                                map.put("generated_auth_id", c.getString(RegistryManagementConstants.FIELD_GENERATED_AUTH_ID));
                                                 map.put("data", c.toString());
                                             })
                                             .trace(this.tracer, span.context())

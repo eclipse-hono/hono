@@ -70,7 +70,8 @@ public final class DeviceRegistryUtils {
      */
     public static <T> Future<T> mapError(final Throwable error, final String tenantId) {
         if (error instanceof IllegalArgumentException) {
-            return Future.failedFuture(new ClientErrorException(tenantId, HttpURLConnection.HTTP_BAD_REQUEST, error.getMessage()));
+            return Future.failedFuture(
+                    new ClientErrorException(tenantId, HttpURLConnection.HTTP_BAD_REQUEST, error.getMessage(), error));
         }
         return Future.failedFuture(error);
     }
