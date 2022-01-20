@@ -109,6 +109,12 @@ The following properties can _not_ be set because
 Kafka clients used in Hono will get a unique client identifier, containing client name and component identifier.
 If the property `client.id` is provided, its value will be used as prefix for the created client identifier.
 
+Apart from the standard Kafka client consumer properties, this additional property may be set:
+
+| OS Environment Variable<br>Java System Property                                  | Mandatory | Default | Description                                                                                                                                                                                                                                                                                                                                                                                                               |
+|:---------------------------------------------------------------------------------|:---------:|:--------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `HONO_KAFKA_${CLIENTNAME}_POLLTIMEOUT`<br>`hono.kafka.${clientName}.pollTimeout` |    no     | `250`   | The maximum number of milliseconds to wait for records on each consumer poll operation. Setting the timeout to a lower value will make the client more responsive, for example concerning consumer-group membership changes, in times when no messages are available for the consumer to poll. At the same time, the client will poll more frequently and thus will potentially create a higher load on the Kafka Broker. |
+
 ## Admin Client Configuration Properties
 
 Admin clients for Hono's Kafka based APIs are configured with instances of the class

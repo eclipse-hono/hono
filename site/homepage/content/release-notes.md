@@ -57,6 +57,9 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The native image variant of the Command Router component failed to connect to an Infinispan server using SASL
   SCRAM. This has been fixed.
 * The lora adapter supports unconfirmed uplink data for the firefly provider.
+* The poll timeout used by the Kafka consumer clients in the Hono components can now be configured individually.
+  Please refer to the [Hono Kafka Client Configuration Guide]({{% doclink "/admin-guide/hono-kafka-client-configuration/#consumer-configuration-properties" %}})
+  for details.
 
 ## API Changes
 

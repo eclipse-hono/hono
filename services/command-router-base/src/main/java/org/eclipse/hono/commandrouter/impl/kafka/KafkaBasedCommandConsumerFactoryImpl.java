@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,6 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.commandrouter.impl.kafka;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -173,6 +174,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
         consumerConfig.putIfAbsent(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         kafkaConsumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, COMMANDS_TOPIC_PATTERN,
                 commandHandler::mapAndDelegateIncomingCommandMessage, consumerConfig);
+        kafkaConsumer.setPollTimeout(Duration.ofMillis(kafkaConsumerConfig.getPollTimeout()));
         kafkaConsumer.setConsumerCreationRetriesTimeout(KafkaClientFactory.UNLIMITED_RETRIES_DURATION);
         kafkaConsumer.setMetricsSupport(kafkaClientMetricsSupport);
         kafkaConsumer.setOnRebalanceDoneHandler(

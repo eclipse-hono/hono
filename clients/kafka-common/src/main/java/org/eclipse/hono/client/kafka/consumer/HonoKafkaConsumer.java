@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -79,7 +79,7 @@ public class HonoKafkaConsumer implements Lifecycle {
      */
     private static final long WAIT_FOR_REBALANCE_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(30);
     private static final long OBSOLETE_METRICS_REMOVAL_DELAY_MILLIS = TimeUnit.SECONDS.toMillis(30);
-    private static final Duration POLL_TIMEOUT = Duration.ofSeconds(1);
+    private static final long DEFAULT_POLL_TIMEOUT_MILLIS = 250;
     private static final String MSG_CONSUMER_NOT_INITIALIZED_STARTED = "consumer not initialized/started";
 
     protected final Logger log = LoggerFactory.getLogger(getClass());
@@ -114,6 +114,7 @@ public class HonoKafkaConsumer implements Lifecycle {
     private Handler<Set<TopicPartition>> onPartitionsRevokedHandler;
     private Handler<Set<TopicPartition>> onPartitionsLostHandler;
     private boolean respectTtl = true;
+    private Duration pollTimeout = Duration.ofMillis(DEFAULT_POLL_TIMEOUT_MILLIS);
     private Supplier<Consumer<String, Buffer>> kafkaConsumerSupplier;
     private KafkaClientMetricsSupport metricsSupport;
     private Long pollPauseTimeoutTimerId;
@@ -278,6 +279,25 @@ public class HonoKafkaConsumer implements Lifecycle {
      */
     public final void setRespectTtl(final boolean respectTtl) {
         this.respectTtl = respectTtl;
+    }
+
+    /**
+     * Sets the poll timeout for the underlying native Kafka Consumer.
+     * Defaults to {@value #DEFAULT_POLL_TIMEOUT_MILLIS} ms.
+     * <p>
+     * Setting the timeout to a lower value results in a more 'responsive' client because it will block for a shorter
+     * period if no data is available  in the assigned partition and therefore allows subsequent actions to be executed
+     * with a shorter delay. At the same time, the client will poll more frequently and thus will potentially create a
+     * higher load on the Kafka Broker.
+     *
+     * @param pollTimeout The poll timeout.
+     * @throws NullPointerException if pollTimeout is {@code null}.
+     */
+    public final void setPollTimeout(final Duration pollTimeout) {
+        this.pollTimeout = Objects.requireNonNull(pollTimeout);
+        if (kafkaConsumer != null) {
+            kafkaConsumer.asStream().pollTimeout(pollTimeout);
+        }
     }
 
     /**
@@ -469,7 +489,7 @@ public class HonoKafkaConsumer implements Lifecycle {
                         kafkaConsumer.asStream().pollTimeout(Duration.ofMillis(10)); // let polls finish quickly until start() is completed
                         subscribeAndWaitForRebalance()
                                 .onSuccess(v2 -> {
-                                    kafkaConsumer.asStream().pollTimeout(POLL_TIMEOUT);
+                                    kafkaConsumer.asStream().pollTimeout(pollTimeout);
                                     logSubscribedTopicsOnStartComplete();
                                 })
                                 .onComplete(startPromise);
