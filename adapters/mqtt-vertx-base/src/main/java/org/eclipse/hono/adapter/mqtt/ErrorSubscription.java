@@ -205,13 +205,11 @@ public final class ErrorSubscription extends AbstractSubscription {
     public String getErrorPublishTopic(final MqttContext context, final int errorCode) {
         Objects.requireNonNull(context);
 
-        final String contextTopicDeviceId = Optional.ofNullable(context.topic())
-                .map(ResourceIdentifier::getResourceId)
-                .orElse(null);
+        final String contextDeviceId = context.deviceId();
         final String contextEndpoint = Optional.ofNullable(context.topic())
                 .map(ResourceIdentifier::getEndpoint)
                 .orElse("");
-        return getErrorPublishTopic(contextEndpoint, contextTopicDeviceId, context.correlationId(), errorCode);
+        return getErrorPublishTopic(contextEndpoint, contextDeviceId, context.correlationId(), errorCode);
     }
 
     /**
