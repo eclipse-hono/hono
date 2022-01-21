@@ -93,7 +93,7 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
     /**
      * Registers the readiness and liveness checks of the given service.
      *
-     * @param serviceInstance instance of the service which's checks should be registered.
+     * @param serviceInstance instance of the service for which checks should be registered.
      */
     @Override
     public void registerHealthCheckResources(final HealthCheckProvider serviceInstance) {

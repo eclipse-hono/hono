@@ -23,7 +23,7 @@
   <artifactId>hono-adapter-coap-vertx</artifactId>
   <name>Hono CoAP Adapter (Spring)</name>
 
-  <description>A SPring Boot based protocol adapter exposing Hono's Telemetry &amp; Event APIs via CoAP.</description>
+  <description>A Spring Boot based protocol adapter exposing Hono's Telemetry &amp; Event APIs via CoAP.</description>
   <url>https://www.eclipse.org/hono</url>
 
   <dependencies>

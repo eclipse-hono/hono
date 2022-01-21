@@ -13,7 +13,7 @@ registered with a particular tenant, and to authenticate a device before accepti
 <!--more-->
 
 There is no particular technical reason to implement these three APIs in one component, so for production scenarios
-there might be up to three different components each implementing one of the API's.
+there might be up to three different components each implementing one of the APIs.
 
 The Device Registry component also exposes [HTTP based resources]({{< relref "/api/management" >}}) for managing tenants
 and the registration information and credentials of devices.

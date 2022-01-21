@@ -167,7 +167,7 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
 
         return Future.failedFuture(new ServerErrorException(
                 HttpURLConnection.HTTP_NOT_IMPLEMENTED,
-                "this implementation does not support the search tenamts operation"));
+                "this implementation does not support the search tenants operation"));
     }
 
     /**
