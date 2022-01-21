@@ -63,7 +63,8 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
                       <port>${vertx.health.port}</port>
                     </ports>
                     <env>
-                      <JAVA_OPTIONS>-Dorg.jboss.logging.provider=slf4j</JAVA_OPTIONS>
+                      <!-- use Base64 encoder/decoder that is compatible with vert.x 3 -->
+                      <JAVA_OPTIONS>-Dvertx.json.base64=legacy -Dorg.jboss.logging.provider=slf4j</JAVA_OPTIONS>
                       <JAVA_MAIN_CLASS>org.eclipse.hono.deviceconnection.infinispan.Application</JAVA_MAIN_CLASS>
                     </env>
                   </build>
