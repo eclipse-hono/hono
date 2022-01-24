@@ -17,7 +17,7 @@
   <parent>
     <groupId>org.eclipse.hono</groupId>
     <artifactId>hono-adapters</artifactId>
-    <version>1.11.0</version>
+    <version>1.11.1-SNAPSHOT</version>
   </parent>
   <artifactId>hono-adapter-lora-vertx-base</artifactId>
   <name>Hono LoRa Adapter</name>
