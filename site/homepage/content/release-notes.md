@@ -64,6 +64,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 ## Deprecations
 
 * The Spring Boot based variant of the protocol adapters has been deprecated and marked for removal in Hono 2.0.0.
+* The Kura 3 protocol adapter has been deprecated and marked for removal in Hono 2.0.0. Support for Kura version 4 and
+  later is still available by means of Hono's standard MQTT adapter.
 
 ## API Changes
 

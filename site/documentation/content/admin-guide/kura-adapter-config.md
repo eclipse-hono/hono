@@ -3,12 +3,17 @@ title = "Kura Adapter Configuration"
 weight = 330
 +++
 
-The Kura protocol adapter exposes an MQTT topic hierarchy allowing Eclipse Kura&trade; based gateways to access
+The Kura protocol adapter exposes an MQTT topic hierarchy allowing Eclipse Kura&trade; 3 based gateways to access
 Eclipse Hono&trade;'s south bound Telemetry, Event and Command & Control APIs.
 <!--more-->
 
 The adapter is implemented as a Spring Boot application. It can be run either directly from the command line or by means
 of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-adapter-kura/) created from it.
+
+{{% notice info %}}
+The Kura adapter is deprecated and will be removed completely in Hono 2.0.0. Support for Kura version 4 and
+later is still available by means of Hono's standard MQTT adapter.
+{{% /notice %}}
 
 ## Service Configuration
 
