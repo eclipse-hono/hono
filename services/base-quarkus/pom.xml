@@ -16,7 +16,7 @@
   <parent>
     <artifactId>hono-services</artifactId>
     <groupId>org.eclipse.hono</groupId>
-    <version>1.11.0</version>
+    <version>1.12.0-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
