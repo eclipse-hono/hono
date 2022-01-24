@@ -447,8 +447,11 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
      * </pre>
      *
      * @param tenantDto the tenant DTO.
-     * @param tracingContext The Open Tracing context to use for tracking the trust anchors validation
-     *                       or {@code null} if there is no context available.
+     * @param span The active OpenTracing span to use for tracking this operation.
+     *             <p>
+     *             Implementations <em>must not</em> invoke the {@link Span#finish()} nor the {@link Span#finish(long)}
+     *             methods. However,implementations may log (error) events on this span, set tags and use this span
+     *             as the parent for additional spans created as part of this method's execution.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will be succeeded if the checks have passed. Otherwise, the future will be
