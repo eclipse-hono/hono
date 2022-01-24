@@ -130,7 +130,6 @@ Note that the adapter uses a single cache for all responses from the service reg
 Consequently, the Credentials Service client configuration's *responseCacheMinSize* and *responseCacheMaxSize* properties
 determine the overall number of responses that can be cached.
 
-<a name="device-connection-service-connection-configuration"></a>
 ### Device Connection Service Connection Configuration
 
 {{% notice info %}}
@@ -174,7 +173,6 @@ In general, the service supports all configuration properties of the
 [Infinispan Hotrod client](https://docs.jboss.org/infinispan/12.1/apidocs/org/infinispan/client/hotrod/configuration/package-summary.html#package.description)
 using `hono.deviceConnection` instead of the `infinispan.client.hotrod` prefix.
 
-<a name="command-router-service-connection-configuration"></a>
 ### Command Router Service Connection Configuration
 
 {{% notice tip %}}

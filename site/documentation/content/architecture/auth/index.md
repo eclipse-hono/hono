@@ -45,7 +45,7 @@ The Apache Qpid Dispatch Router which is used in Hono's example deployment can b
 
 The identities and corresponding authorities that the *Auth Server* uses for verifying credentials and issuing tokens are defined in a configuration file (`services/auth/src/main/resources/permissions.json`) read in during start-up of the *Auth Server*. These authorities are used for authenticating and authorizing system components as well as *Business Applications*.
 
-Please refer to the [Dispatch Router documentation](http://qpid.apache.org/components/dispatch-router/index.html) for details regarding configuration of *Dispatch Router* security.
+Please refer to the [Dispatch Router documentation](https://qpid.apache.org/components/dispatch-router/index.html) for details regarding configuration of *Dispatch Router* security.
 
 ## Future Approach
 

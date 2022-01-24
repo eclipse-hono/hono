@@ -32,11 +32,11 @@ system failure.
 
 ### Configuring a Metrics Back End
 
-Hono uses [Micrometer](http://micrometer.io/) for providing metrics. It is
+Hono uses [Micrometer](https://micrometer.io/) for providing metrics. It is
 possible to drop in any Micrometer compatible back end. Hono also uses the
 Micrometer integration with Spring Boot and Vert.x.
 
-Please refer to the [Micrometer documentation](http://micrometer.io/docs)
+Please refer to the [Micrometer documentation](https://micrometer.io/docs)
 for details regarding the configuration of a specific Micrometer back end.
 In most cases, you only need to add the back end specific jar files to the class path and
 add back end specific configuration properties to the `application.yml` file.

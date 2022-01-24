@@ -98,7 +98,7 @@ The provisioning is, of course, a one-time action, on subsequent connections the
 ## Automatic Gateway Provisioning
 
 Auto-provisioning of gateways involves the same steps as 
-[Automatic Device Provisioning]({{< ref "/concepts/device-provisioning#automatic-devicegateway-provisioning" >}}).
+[Automatic Device Provisioning]({{< ref "/concepts/device-provisioning#automatic-device-provisioning" >}}).
 An extra attribute namely *auto-provision-as-gateway* is needed in the tenant's trusted CA configuration to enable
 auto-provisioning of gateways. If this attribute is set to `true` then the device registry provisions any unregistered 
 devices that authenticate with a client certificate issued by this tenant's trusted CA as gateways, provided that the 

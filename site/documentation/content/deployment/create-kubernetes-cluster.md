@@ -66,7 +66,7 @@ This deployment model is not meant for productive use but rather for evaluation 
 
 - An [Azure subscription](https://azure.microsoft.com/en-us/get-started/).
 - [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) installed to setup the infrastructure.
-- [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) and [helm](https://helm.sh/docs/using_helm/#installing-helm)
+- [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) and [helm](https://helm.sh/docs/intro/install/)
   installed to deploy Hono into [Azure Kubernetes Service (AKS)](https://docs.microsoft.com/en-us/azure/aks/intro-kubernetes)
 
 ### Setup
