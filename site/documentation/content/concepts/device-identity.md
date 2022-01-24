@@ -17,30 +17,116 @@ to by this identifier when using Hono's APIs until the device is being removed f
 
 ## Tenant
 
-Hono supports the logical partitioning of devices into groups called [*tenants*]({{< relref "/concepts/tenancy" >}}). Each tenant has a unique identifier, a string called the *tenant-id*, and can be used to provide a logical grouping of devices belonging e.g. to the same application scope or organizational unit. Each device can thus be uniquely identified by the tuple (*tenant-id*, *device-id*). This tuple is broadly used throughout Hono's APIs when addressing a particular device.
+Hono supports the logical partitioning of devices into groups called [*tenants*]({{< relref "/concepts/tenancy" >}}).
+Each tenant has a unique identifier, a string called the *tenant-id*, and can be used to provide a logical grouping of
+devices belonging e.g. to the same application scope or organizational unit. Each device can thus be uniquely
+identified by the tuple (*tenant-id*, *device-id*). This tuple is broadly used throughout Hono's APIs when addressing
+a particular device.
 
 ## Device Registration
 
-Hono components use the [Device Registration API]({{< relref "/api/device-registration" >}}) to access device registration information. The API defines the *assert Registration* operation for verifying a device's registration status.
-In many real world scenarios there will already be a component in place which keeps track of devices and which supports the particular *provisioning process* being used to bring devices into life. In such cases it makes sense to simply implement the Device Registration API as a *facade* on top of the existing component.
+Hono components use the [Device Registration API]({{< relref "/api/device-registration" >}}) to access device
+registration information. The API defines the *assert Registration* operation for verifying a device's registration
+status.
 
-In addition to that, Hono defines a [Device Registry Management API]({{< relref "/api/management" >}}), which can be implemented to take advantage of standardized  operations for managing devices and credentials. This API is optional because Hono components do not require it during runtime. 
+In many real world scenarios there will already be a component in place which keeps track of devices and which supports
+the particular *provisioning process* being used to bring devices into life. In such cases it makes sense to simply
+implement the Device Registration API as a *facade* on top of the existing component.
 
-Hono comes with a [MongoDB]({{< relref "/admin-guide/mongodb-device-registry-config.md" >}}) and a [simple file]({{< relref "/admin-guide/file-based-device-registry-config.md" >}}) based implementations of both APIs. The file based implementation, which keeps all data in memory, is to be used only for demonstration purposes and is not supposed to be used in production scenarios.
+In addition to that, Hono defines a [Device Registry Management API]({{< relref "/api/management" >}}), which can be
+implemented to take advantage of standardized  operations for managing devices and credentials. This API is optional
+because Hono components do not require it during runtime. 
+
+Hono comes with a [MongoDB]({{< relref "/admin-guide/mongodb-device-registry-config.md" >}}) and a
+[JDBC]({{< relref "/admin-guide/jdbc-device-registry-config.md" >}}) based implementation of both APIs.
+The JDBC based implementation supports PostgreSQL and H2 out of the box. It can also be configured with an H2 based
+in-memory database which can be used for demonstration or testing purposes.
 
 ## Device Authentication
 
-Devices connect to protocol adapters in order to publish telemetry data or events. Downstream applications consuming this data often take particular actions based on the content of the messages. Such actions may include simply updating some statistics, e.g. tracking the average room temperature, but may also trigger more serious activities like shutting down a power plant. It is therefore important that applications can rely on the fact that the messages they process have in fact been produced by the device indicated by a message's source address.
+Devices connect to protocol adapters in order to publish telemetry data or events. Downstream applications consuming
+this data often take particular actions based on the content of the messages. Such actions may include simply
+updating some statistics, e.g. tracking the average room temperature, but may also trigger more serious activities
+like shutting down a power plant. It is therefore important that applications can rely on the fact that the messages
+they process have in fact been produced by the device indicated by a message's source address.
 
-Hono relies on protocol adapters to establish a device's identity before it is allowed to publish downstream data or receive commands. Conceptually, Hono distinguishes between two identities
+Hono relies on protocol adapters to establish a device's identity before it is allowed to publish downstream data
+or receive commands. Conceptually, Hono distinguishes between two identities
 
 1. an identity associated with the authentication credentials (termed the *authentication identity* or *auth-id*), and
 1. an identity to act as (the *device identity* or *device-id*).
 
-A device therefore presents an *auth-id* as part of its credentials during the authentication process which is then resolved to a *device identity* by the protocol adapter on successful verification of the credentials.
+A device therefore presents an *auth-id* as part of its credentials during the authentication process which is then
+resolved to a *device identity* by the protocol adapter on successful verification of the credentials.
 
-In order to support the protocol adapters in the process of verifying credentials presented by a device, the [Credentials API]({{< relref "/api/credentials" >}}) provides means to look up *secrets* on record for the device and use this information to verify the credentials.
+In order to support the protocol adapters in the process of verifying credentials presented by a device, the
+[Credentials API]({{< relref "/api/credentials" >}}) provides means to look up *secrets* on record for the device and
+use this information to verify the credentials.
 
-The Credentials API supports registration of multiple sets of credentials for each device. A set of credentials consists of an *auth-id* and some sort of *secret* information. The particular *type* of secret determines the kind of information kept. Please refer to the [Standard Credential Types]({{< relref "/api/credentials#standard-credential-types" >}}) defined in the Credentials API for details. Based on this approach, a device may be authenticated using different types of secrets, e.g. a *hashed password* or a *pre-shared key*, depending on the capabilities of the device and/or protocol adapter.
+The Credentials API supports registration of multiple sets of credentials for each device. A set of credentials
+consists of an *auth-id* and some sort of *secret* information. The particular *type* of secret determines the kind of
+information kept. Please refer to the [Standard Credential Types]({{< relref "/api/credentials#standard-credential-types" >}})
+defined in the Credentials API for details. Based on this approach, a device may be authenticated using different
+types of secrets, e.g. a *hashed password* or a *client certificate*, depending on the capabilities of the device and/or
+protocol adapter.
 
-Once the protocol adapter has resolved the *device-id* for a device, it uses this identity when referring to the device in all subsequent API invocations, e.g. when forwarding telemetry messages downstream to the AMQP Messaging Network.
+Once the protocol adapter has resolved the *device-id* for a device, it uses this identity when referring to the
+device in all subsequent API invocations, e.g. when forwarding telemetry messages downstream.
+
+Every device connecting to Hono needs to be registered in the scope of a single tenant as described above already.
+The Device Registration and Credentials APIs therefore require a tenant identifier to be passed in to their operations.
+Consequently, the first step a protocol adapter needs to take when authenticating a device is determining the tenant
+that the device belongs to.
+
+The means used by a device to indicate the tenant that it belongs to vary according to the type of credentials
+and authentication mechanism being used.
+
+### Username/Password based Authentication
+
+The MQTT, HTTP and AMQP protocol adapters support authentication of devices with a username/password based
+mechanism. In this case, a protocol adapter verifies that the password presented by the device during connection
+establishment matches the password that is on record for the device in the device registry.
+
+During connection establishment the device presents a username and a password to the protocol adapter.
+For example, a device that belongs to tenant `example-tenant` and for which
+[*hashed-password* credentials]({{< relref "/api/credentials#hashed-password" >}}) with an *auth-id* of `device-1`
+have been registered, would present a username of `device-1@example-tenant` when authenticating to a protocol adapter.
+
+The protocol adapter then extracts the tenant identifier from the username and invokes the Credentials API's
+[*get Credentials*]({{< relref "/api/credentials#get-credentials" >}}) operation in order to retrieve the
+*hashed-password* type credentials that are on record for the device.
+
+### Pre-Shared Key based Authentication
+
+The CoAP protocol adapter supports authentication of devices using a *pre-shared key* (PSK) as part of a DTLS handshake.
+In this case, the protocol adapter verifies that the PSK used by the device to generate the DTLS session's pre-master
+secret is the same as the key contained in the credentials that are on record for the device in the device registry.
+
+During the DTLS handshake the device provides a *psk_identity* to the protocol adapter. For example, a device that
+belongs to tenant `example-tenant` and for which [*psk* credentials]({{< relref "/api/credentials#pre-shared-key" >}})
+with an *auth-id* of `device-1` have been registered, would present a PSK identity of `device-1@example-tenant` during
+the DTLS handshake.
+
+The protocol adapter then extracts the tenant identifier from the PSK identity and invokes the Credentials API's
+[*get Credentials*]({{< relref "/api/credentials#get-credentials" >}}) operation in order to retrieve the *psk*
+type credentials that are on record for the device. The *psk* contained in the credentials are then used by the
+protocol adapter to generate the pre-master secret of the DTLS session being negotiated with the client. If both,
+the device and the protocol adapter use the same key for doing so, the DTLS handshake will succeed and the device
+has been authenticated successfully.
+
+### Client Certificate based Authentication
+
+Devices can also use an X.509 (client) certificate to authenticate to protocol adapters. In this case, the protocol
+adapter tries to verify that a valid chain of certificates can be established starting with the client certificate
+presented by the device up to one of the trusted root certificates configured for the device's tenant.
+
+During connection establishment with the device, the protocol adapter extracts the *issuer DN* property from the
+device's client certificate and uses it to retrieve the configuration of the tenant that the device belongs to by
+means of the Tenant API's [*get Tenant Information*]({{< relref "/api/tenant#get-tenant-information" >}}) operation.
+The data returned by the Tenant service includes the tenant identifier and the trust anchors that have been configured
+for the tenant.
+
+After having verified the client certificate using the trust anchor(s), the protocol adapter extracts
+the client certificate's *subject DN* and invokes the Credentials API's
+[*get Credentials*]({{< relref "/api/credentials#get-credentials" >}}) operation in order to retrieve the
+[*x509-cert* type credentials]({{< relref "/api/credentials#x509-certificate" >}}) that are on record for the device.
