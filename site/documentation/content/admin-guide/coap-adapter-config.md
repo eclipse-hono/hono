@@ -7,9 +7,16 @@ The CoAP protocol adapter exposes CoAP based endpoints for Eclipse Hono&trade;'s
 Command & Control APIs.
 <!--more-->
 
-The adapter is implemented as a Spring Boot application using [Eclipse Californium&trade;](https://www.eclipse.org/californium/)
+The adapter is implemented as a Quarkus application using [Eclipse Californium&trade;](https://www.eclipse.org/californium/)
 for implementing the CoAP protocol handling. It can be run either directly from the command line or by means of starting
-the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-adapter-coap-vertx/) created from it.
+the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-adapter-coap-vertx-quarkus/) created from it.
+
+{{% notice info %}}
+The CoAP adapter had originally been implemented as a Spring Boot application. That variant has been deprecated with Hono
+1.11.0 and will be completely removed in Hono 2.0.0.
+The [Spring Boot based Docker image](https://hub.docker.com/r/eclipse/hono-adapter-coap-vertx/) will be available until
+then.
+{{% /notice %}}
 
 ## Service Configuration
 

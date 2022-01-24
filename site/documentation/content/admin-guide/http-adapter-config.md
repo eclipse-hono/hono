@@ -7,8 +7,16 @@ The HTTP protocol adapter exposes HTTP based endpoints for Eclipse Hono&trade;'s
 Command & Control APIs.
 <!--more-->
 
-The adapter is implemented as a Spring Boot application. It can be run either directly from the command line or by means
-of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-adapter-http-vertx/) created from it.
+The adapter is implemented as a Quarkus application. It can be run either directly from the command line or by means
+of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-adapter-http-vertx-quarkus/)
+created from it.
+
+{{% notice info %}}
+The HTTP adapter had originally been implemented as a Spring Boot application. That variant has been deprecated with Hono
+1.11.0 and will be completely removed in Hono 2.0.0.
+The [Spring Boot based Docker image](https://hub.docker.com/r/eclipse/hono-adapter-http-vertx/) will be available until
+then.
+{{% /notice %}}
 
 ## Service Configuration
 

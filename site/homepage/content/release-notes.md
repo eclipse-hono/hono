@@ -61,6 +61,10 @@ description = "Information about changes in recent Hono releases. Includes new f
   Please refer to the [Hono Kafka Client Configuration Guide]({{% doclink "/admin-guide/hono-kafka-client-configuration/#consumer-configuration-properties" %}})
   for details.
 
+## Deprecations
+
+* The Spring Boot based variant of the protocol adapters has been deprecated and marked for removal in Hono 2.0.0.
+
 ## API Changes
 
 * The `hono.kafka.defaultClientIdPrefix` configuration property needs to be removed from existing configurations.
