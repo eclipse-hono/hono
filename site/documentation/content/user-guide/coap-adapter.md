@@ -754,7 +754,7 @@ default value.
 
 ### Event Message Time-to-live
 
-Events published by devices will usually be persisted by the messing infrastructure in order to support deferred
+Events published by devices will usually be persisted by the messaging infrastructure in order to support deferred
 delivery to downstream consumers.
 
 In most cases, the messaging infrastructure can be configured with a maximum *time-to-live* to apply to the events so

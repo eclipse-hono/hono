@@ -49,7 +49,7 @@ The adapter extracts the *auth-id*, *tenant* and password from the CONNECT packe
 credentials that the
 [configured Credentials service]({{< relref "/admin-guide/common-config#credentials-service-connection-configuration" >}})
 has on record for the client as described in
-[Username/Password based Authentication]({{< relref "/concepts/device-identity#username-password-based-authentication" >}}).
+[Username/Password based Authentication]({{< relref "/concepts/device-identity#usernamepassword-based-authentication" >}}).
 If the credentials match, the client has been authenticated successfully and the connection is being established.
 
 **NB** There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses
@@ -137,7 +137,7 @@ default value.
 
 ### Event Message Time-to-live
 
-Events published by devices will usually be persisted by the messing infrastructure in order to support deferred
+Events published by devices will usually be persisted by the messaging infrastructure in order to support deferred
 delivery to downstream consumers.
 
 In most cases, the messaging infrastructure can be configured with a maximum *time-to-live* to apply to the events so
