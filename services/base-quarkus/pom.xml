@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2021 Contributors to the Eclipse Foundation
+    Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
 
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -39,12 +39,6 @@
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-vertx</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>io.quarkus</groupId>
-          <artifactId>quarkus-ide-launcher</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
@@ -291,16 +285,6 @@
         <dependency>
           <groupId>io.quarkus</groupId>
           <artifactId>quarkus-jaeger</artifactId>
-          <exclusions>
-            <exclusion>
-              <groupId>io.quarkus</groupId>
-              <artifactId>quarkus-ide-launcher</artifactId>
-            </exclusion>
-            <exclusion>
-              <groupId>com.sun.activation</groupId>
-              <artifactId>jakarta.activation</artifactId>
-            </exclusion>
-          </exclusions>
         </dependency>
         <dependency>
           <groupId>jakarta.activation</groupId>
