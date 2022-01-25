@@ -81,6 +81,10 @@ public class Tenant {
     @JsonInclude(Include.NON_NULL)
     private TenantTracingConfig tracing;
 
+    @JsonProperty(RegistryManagementConstants.FIELD_TRUST_ANCHOR_GROUP)
+    @JsonInclude(Include.NON_NULL)
+    private String trustAnchorGroup;
+
     @JsonProperty(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA)
     @JsonInclude(Include.NON_EMPTY)
     private List<TrustedCertificateAuthority> trustedCertificateAuthorities = List.of();
@@ -118,6 +122,7 @@ public class Tenant {
         this.resourceLimits = other.resourceLimits;
         this.registrationLimits = other.registrationLimits;
         this.tracing = other.tracing;
+        this.trustAnchorGroup = other.trustAnchorGroup;
         if (Objects.nonNull(other.trustedCertificateAuthorities)) {
             this.trustedCertificateAuthorities = List.copyOf(other.trustedCertificateAuthorities);
         }
@@ -384,6 +389,26 @@ public class Tenant {
     }
 
     /**
+     * Gets the trust anchor group name of this tenant.
+     *
+     * @return The trust anchor group name or {@code null} if not set.
+     */
+    public String getTrustAnchorGroup() {
+        return trustAnchorGroup;
+    }
+
+    /**
+     * Sets the trust anchor group name of this tenant.
+     *
+     * @param trustAnchorGroup The trust anchor group name.
+     * @return This instance, to allow chained invocations.
+     */
+    public Tenant setTrustAnchorGroup(final String trustAnchorGroup) {
+        this.trustAnchorGroup = trustAnchorGroup;
+        return this;
+    }
+
+    /**
      * Gets the trusted certificate authorities of this tenant.
      *
      * @return  The authorities or {@code null} if not set.
@@ -406,16 +431,35 @@ public class Tenant {
     }
 
     /**
-     * Gets the subject DNs of this tenant's trusted certificate authorities.
+     * Gets the distinct subject DNs of this tenant's trusted certificate authorities.
      *
      * @return The subject DNs.
      */
     @JsonIgnore
-    public Set<X500Principal> getTrustedCertificateAuthoritySubjectDNs() {
+    public List<X500Principal> getTrustedCertificateAuthoritySubjectDNs() {
 
         return Optional.ofNullable(trustedCertificateAuthorities)
-                .map(list -> list.stream().map(TrustedCertificateAuthority::getSubjectDn).collect(Collectors.toSet()))
-                .orElseGet(Set::of);
+                .map(list -> list.stream()
+                        .map(TrustedCertificateAuthority::getSubjectDn)
+                        .distinct()
+                        .collect(Collectors.toUnmodifiableList()))
+                .orElseGet(List::of);
+    }
+
+    /**
+     * Gets the distinct subject DNs of this tenant's trusted certificate authorities.
+     *
+     * @return The RFC 2253 formatted subject DNs.
+     */
+    @JsonIgnore
+    public List<String> getTrustedCertificateAuthoritySubjectDNsAsStrings() {
+
+        return Optional.ofNullable(trustedCertificateAuthorities)
+                .map(list -> list.stream()
+                        .map(TrustedCertificateAuthority::getSubjectDnAsString)
+                        .distinct()
+                        .collect(Collectors.toUnmodifiableList()))
+                .orElseGet(List::of);
     }
 
     /**

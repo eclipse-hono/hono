@@ -370,6 +370,10 @@ public final class RegistryManagementConstants extends RequestResponseApiConstan
      */
     public static final String FIELD_PAYLOAD_PUBLIC_KEY = "public-key";
     /**
+     * The name of the property that contains the trust anchor group name for a tenant.
+     */
+    public static final String FIELD_TRUST_ANCHOR_GROUP = "trust-anchor-group";
+    /**
      * The name of the property that contains the trusted certificate authority configured for a tenant.
      */
     public static final String FIELD_PAYLOAD_TRUSTED_CA = "trusted-ca";

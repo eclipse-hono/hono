@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -94,17 +94,32 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
             return createIndex(
                     new JsonObject().put(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, 1),
                     new IndexOptions().unique(true))
-                // create unique index on tenant.trusted-ca.subject-dn
-                // to ensure that two tenants never share a trusted-ca
+                // create a non-unique index on tenant ID, tenant.trust_anchor_group and tenant.trusted-ca.subject-dn
+                // this index is supposed to replace the previously used unique index on tenant.trusted-ca.subject-dn
                 .compose(ok -> createIndex(
+                        new JsonObject()
+                                .put(RegistryManagementConstants.FIELD_PAYLOAD_TENANT_ID, 1)
+                                .put(TenantDto.FIELD_TENANT + "."
+                                        + RegistryManagementConstants.FIELD_TRUST_ANCHOR_GROUP, 1)
+                                .put(TenantDto.FIELD_TENANT + "."
+                                        + RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA + "."
+                                        + RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN, 1),
+                        new IndexOptions()
+                                .partialFilterExpression(new JsonObject().put(
+                                        TenantDto.FIELD_TENANT + "."
+                                            + RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA,
+                                        new JsonObject().put("$exists", true)))))
+                // in order to be able to use the same trust anchor for multiple tenants having the same
+                // trust anchor group value, the old unique index on tenant.trusted-ca.subject-dn needs to be dropped
+                .compose(ok -> dropIndex(
                         new JsonObject().put(TenantDto.FIELD_TENANT + "." +
                                 RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA + "." +
                                 RegistryManagementConstants.FIELD_PAYLOAD_SUBJECT_DN, 1),
                         new IndexOptions().unique(true)
-                                .partialFilterExpression(new JsonObject().put(
-                                        TenantDto.FIELD_TENANT + "." +
-                                                RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA,
-                                        new JsonObject().put("$exists", true)))))
+                            .partialFilterExpression(new JsonObject().put(
+                                    TenantDto.FIELD_TENANT + "." +
+                                            RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA,
+                                    new JsonObject().put("$exists", true)))))
                 .onSuccess(ok -> indicesCreated.set(true))
                 .onComplete(r -> {
                     creatingIndices.set(false);
@@ -161,7 +176,8 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                 .start();
 
         final JsonObject newTenantDtoJson = JsonObject.mapFrom(tenantConfig);
-        return mongoClient.insert(collectionName, newTenantDtoJson)
+        return validateTrustAnchors(tenantConfig, span)
+                .compose(ok -> mongoClient.insert(collectionName, newTenantDtoJson))
                 .map(tenantObjectIdResult -> {
                     LOG.debug("successfully created tenant [tenant-id: {}, version: {}]",
                             tenantConfig.getTenantId(), tenantConfig.getVersion());
@@ -170,11 +186,10 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                 })
                 .recover(error -> {
                     if (MongoDbBasedDao.isDuplicateKeyError(error)) {
-                        TracingHelper.logError(span, "tenant already exists or an existing tenant uses a CA with the same subject DN");
+                        TracingHelper.logError(span, "tenant already exists");
                         return Future.failedFuture(new ClientErrorException(
                                 tenantConfig.getTenantId(),
-                                HttpURLConnection.HTTP_CONFLICT,
-                                "tenant already exists or an existing tenant uses a CA with the same subject DN"));
+                                HttpURLConnection.HTTP_CONFLICT, "tenant already exists"));
                     } else {
                         TracingHelper.logError(span, "error creating tenant", error);
                         return mapError(error);
@@ -286,38 +301,28 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                 .withTenantId(newTenantConfig.getTenantId())
                 .document();
 
-        return mongoClient.findOneAndReplaceWithOptions(
-                collectionName,
-                updateTenantQuery,
-                JsonObject.mapFrom(newTenantConfig),
-                new FindOptions(),
-                new UpdateOptions().setReturningNewDocument(true))
-            .compose(updateResult -> {
-                if (updateResult == null) {
-                    return MongoDbBasedDao.checkForVersionMismatchAndFail(
-                            newTenantConfig.getTenantId(), resourceVersion, getById(newTenantConfig.getTenantId(), span));
-                } else {
-                    LOG.debug("successfully updated tenant [tenant-id: {}]", newTenantConfig.getTenantId());
-                    span.log("successfully updated tenant");
-                    return Future.succeededFuture(updateResult.getString(TenantDto.FIELD_VERSION));
-                }
-            })
-            .recover(error -> {
-                if (MongoDbBasedDao.isDuplicateKeyError(error)) {
-                    LOG.debug("conflict updating tenant [{}]. An existing tenant uses a certificate authority with the same Subject DN",
-                            newTenantConfig.getTenantId(),
-                            error);
-                    TracingHelper.logError(span, "an existing tenant uses a certificate authority with the same Subject DN");
-                    return Future.failedFuture(new ClientErrorException(
-                            newTenantConfig.getTenantId(),
-                            HttpURLConnection.HTTP_CONFLICT,
-                            "an existing tenant uses a certificate authority with the same Subject DN"));
-                } else {
-                    TracingHelper.logError(span, "error updating tenant", error);
-                    return mapError(error);
-                }
-            })
-            .onComplete(r -> span.finish());
+        return validateTrustAnchors(newTenantConfig, span)
+                .compose(ok -> mongoClient.findOneAndReplaceWithOptions(
+                        collectionName,
+                        updateTenantQuery,
+                        JsonObject.mapFrom(newTenantConfig),
+                        new FindOptions(),
+                        new UpdateOptions().setReturningNewDocument(true)))
+                .compose(updateResult -> {
+                    if (updateResult == null) {
+                        return MongoDbBasedDao.checkForVersionMismatchAndFail(newTenantConfig.getTenantId(),
+                                resourceVersion, getById(newTenantConfig.getTenantId(), span));
+                    } else {
+                        LOG.debug("successfully updated tenant [tenant-id: {}]", newTenantConfig.getTenantId());
+                        span.log("successfully updated tenant");
+                        return Future.succeededFuture(updateResult.getString(TenantDto.FIELD_VERSION));
+                    }
+                })
+                .recover(error -> {
+                        TracingHelper.logError(span, "error updating tenant", error);
+                        return mapError(error);
+                })
+                .onComplete(r -> span.finish());
     }
 
     /**
@@ -410,5 +415,81 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                         .map(tenantDto -> TenantWithId.from(tenantDto.getTenantId(), tenantDto.getData()))
                         .collect(Collectors.toList()))
                 .orElseGet(ArrayList::new);
+    }
+
+    /**
+     * Validates trust anchors of the given tenant by checking that no other existing tenants belonging to
+     * different trust anchor group or having no group contain the same trust anchor(s) of the given tenant.
+     * <p>
+     * A MongoDB query used for the validation is given below as an example:
+     * <pre>
+     * {
+     *   "tenant-id" : {
+     *     "$ne" : "DEFAULT_TENANT"
+     *   },
+     *   "tenant.trusted-ca" : {
+     *     "$elemMatch" : {
+     *       "subject-dn" : {
+     *         "$in" : [ "CN=DEFAULT_TENANT_CA,OU=Hono,O=Eclipse IoT" ]
+     *       }
+     *     }
+     *   },
+     *   "$or" : [ {
+     *     "tenant.trust-anchor-group" : {
+     *       "$exists" : false
+     *     }
+     *   }, {
+     *     "tenant.trust-anchor-group" : {
+     *       "$ne" : "test-group"
+     *     }
+     *   } ]
+     * }
+     * </pre>
+     *
+     * @param tenantDto the tenant DTO.
+     * @param span The active OpenTracing span to use for tracking this operation.
+     *             <p>
+     *             Implementations <em>must not</em> invoke the {@link Span#finish()} nor the {@link Span#finish(long)}
+     *             methods. However,implementations may log (error) events on this span, set tags and use this span
+     *             as the parent for additional spans created as part of this method's execution.
+     * @return A future indicating the outcome of the operation.
+     *         <p>
+     *         The future will be succeeded if the checks have passed. Otherwise, the future will be
+     *         failed with a {@link ClientErrorException}.
+     */
+    private Future<Void> validateTrustAnchors(final TenantDto tenantDto, final Span span) {
+        Objects.requireNonNull(tenantDto);
+
+        final List<String> subjectDns = tenantDto.getData().getTrustedCertificateAuthoritySubjectDNsAsStrings();
+
+        if (subjectDns.isEmpty()) {
+            return Future.succeededFuture();
+        }
+
+        final MongoDbDocumentBuilder queryBuilder = MongoDbDocumentBuilder.builder()
+                .withOtherTenantId(tenantDto.getTenantId())
+                .withAnyCa(subjectDns);
+        Optional.ofNullable(tenantDto.getData().getTrustAnchorGroup())
+                .ifPresent(queryBuilder::withTrustAnchorGroup);
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("validate trust anchors query:{}{}", System.lineSeparator(),
+                    queryBuilder.document().encodePrettily());
+        }
+
+        return mongoClient.count(
+                collectionName,
+                queryBuilder.document())
+            .map(count -> {
+                if (count == 0) {
+                    return (Void) null;
+                } else {
+                    final String msg = "tenant cannot use same CA certificate as other tenant belonging to different trust anchor group";
+                    LOG.debug("tenant [{}] cannot use same CA certificate as other tenant belonging to different trust anchor group",
+                            tenantDto.getTenantId());
+                    TracingHelper.logError(span, msg);
+                    throw new ClientErrorException(tenantDto.getTenantId(), HttpURLConnection.HTTP_CONFLICT, msg);
+                }
+            });
     }
 }

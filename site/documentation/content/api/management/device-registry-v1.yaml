@@ -754,6 +754,11 @@ components:
                $ref: '#/components/schemas/ResourceLimit'
             "tracing":
                $ref: '#/components/schemas/TracingConfig'
+            "trust-anchor-group":
+               type: string
+               description: |
+                  A logical identifier used for implicitly grouping together tenants that may use trusted CAs having
+                  the same subject DN.
             "trusted-ca":
                type: array
                description: |
@@ -779,9 +784,8 @@ components:
          properties:
             "id":
                type: string
-               required: false
                description: |
-                  The identifier of the trust anchor. This identifier must be unique
+                  An (optional) identifier for the trust anchor. This identifier must be unique
                   among a tenant's trust anchors. If this property is not provided,
                   then the device registry assigns a unique identifier.
                example: A user provided identifier could look like "DEFAULT_TENANT_CA_2021_2022".
@@ -866,7 +870,6 @@ components:
                   Either this property or `public-key` must be set.
             "auth-id-template":
                type: string
-               required: false
                description: |
                   Specifies the template to generate the `auth-id` to use for authentication and also
                   auto-provisioning of devices and gateways based on the client certificate. The placeholders
@@ -895,7 +898,6 @@ components:
                   provided that the device registry implementation being used supports this feature.
             "auto-provisioning-device-id-template":
                type: string
-               required: false
                description: |
                   Specifies the template to use by the device registry to generate the `device-id` during 
                   auto-provisioning of devices and gateways. The placeholders `{{subject-cn}}`, `{{subject-dn}}`,

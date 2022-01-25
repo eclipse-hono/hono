@@ -171,6 +171,67 @@ public abstract class MongoDbBasedDao {
     }
 
     /**
+     * Drops an index matching given criteria.
+     *
+     * @param keys The set of keys that the index to drop must match.
+     * @param options The options that the index to drop must match.
+     * @return A future indicating the outcome. The future will be succeeded if the index has been
+     *         dropped or no index matching the criteria has been found. Otherwise, the future
+     *         will be failed.
+     */
+    protected Future<Void> dropIndex(final JsonObject keys, final IndexOptions options) {
+
+        Objects.requireNonNull(keys);
+
+        return mongoClient.listIndexes(collectionName)
+                .onSuccess(indexes -> {
+                    if (LOG.isTraceEnabled()) {
+                        LOG.trace("found indexes [collection: {}]:{}{}",
+                                collectionName, System.lineSeparator(), indexes.encodePrettily());
+                    }
+                })
+                .map(indexes -> indexes.stream()
+                        .filter(JsonObject.class::isInstance)
+                        .map(JsonObject.class::cast)
+                        .filter(idx -> {
+                            boolean result = keys.equals(idx.getJsonObject("key"));
+                            if (options != null) {
+                                result = result && (options.isUnique() == idx.getBoolean("unique", false));
+                                if (options.getPartialFilterExpression() != null) {
+                                    result = result && options.getPartialFilterExpression()
+                                            .equals(idx.getJsonObject("partialFilterExpression"));
+                                }
+                            }
+                            return result;
+                        })
+                        .map(idx -> idx.getString("name"))
+                        .findFirst())
+                .compose(idxName -> {
+                    if (idxName.isPresent()) {
+                        return mongoClient.dropIndex(collectionName, idxName.get())
+                                .onSuccess(ok -> {
+                                    LOG.debug("successfully dropped index [collection: {}, index: {}]",
+                                            collectionName, idxName.get());
+                                })
+                                .onFailure(t -> {
+                                    LOG.info("failed to drop index [collection: {}, index: {}]",
+                                            collectionName, idxName.get(), t);
+                                });
+                    } else {
+                        if (LOG.isDebugEnabled()) {
+                            final var b = new StringBuilder("no index matching given criteria found:");
+                            b.append(System.lineSeparator()).append(keys.encodePrettily());
+                            if (options != null) {
+                                b.append(System.lineSeparator()).append(options.toJson().encodePrettily());
+                            }
+                            LOG.debug(b.toString());
+                        }
+                        return Future.succeededFuture();
+                    }
+                });
+    }
+
+    /**
      * Finds resources such as tenant or device from the given MongoDB collection with the provided 
      * paging, filtering and sorting options.
      * <p>

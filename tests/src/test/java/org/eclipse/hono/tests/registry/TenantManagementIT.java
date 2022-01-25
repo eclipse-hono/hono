@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,6 +16,7 @@ package org.eclipse.hono.tests.registry;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -110,6 +111,20 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
     }
 
     /**
+     * Verifies that the service successfully create a tenant from a request with an empty body.
+     *
+     * @param context The vert.x test context.
+     */
+    @Test
+    public void testAddTenantSucceedsForEmptyBody(final VertxTestContext context) {
+
+        getHelper().registry.addTenant(tenantId)
+            .onFailure(context::failNow)
+            .compose(ok -> getHelper().registry.getTenant(tenantId, HttpURLConnection.HTTP_OK))
+            .onComplete(context.succeedingThenComplete());
+    }
+
+    /**
      * Verifies that the service successfully create a tenant with a generated tenant ID.
      *
      * @param context The vert.x test context.
@@ -127,6 +142,70 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
                 });
                 context.completeNow();
             }));
+    }
+
+    /**
+     * Verifies that the service successfully creates a tenant from a request having a tenant anchor
+     * with an ID and an another without an ID.
+     *
+     * @param context The Vert.x test context.
+     */
+    @Test
+    public void testAddTenantSucceedsForConfigurationWithMissingTrustAnchorIds(final VertxTestContext context) {
+        final PublicKey publicKey = TenantApiTests.getRandomPublicKey();
+        final TrustedCertificateAuthority trustAnchor1 = Tenants
+                .createTrustAnchor("test-ca", "CN=test-dn", publicKey.getEncoded(), publicKey.getAlgorithm(),
+                        Instant.now(), Instant.now().plus(365, ChronoUnit.DAYS));
+        final TrustedCertificateAuthority trustAnchor2 = Tenants
+                .createTrustAnchor(null, "CN=test-dn-1", publicKey.getEncoded(), publicKey.getAlgorithm(),
+                        Instant.now(), Instant.now().plus(365, ChronoUnit.DAYS));
+        final Tenant tenant = new Tenant()
+                .setTrustedCertificateAuthorities(List.of(trustAnchor1, trustAnchor2));
+
+        getHelper().registry.addTenant(tenantId, tenant)
+            .compose(ok -> getHelper().registry.getTenant(tenantId))
+            .onComplete(context.succeeding(httpResponse -> {
+                context.verify(() -> {
+                    final JsonObject response = httpResponse.bodyAsJsonObject();
+                    assertThat(response.getJsonArray(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA)).hasSize(2);
+                    final JsonArray trustAnchors = response
+                            .getJsonArray(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA);
+                    assertThat(trustAnchors.getJsonObject(0).getString(RegistryManagementConstants.FIELD_ID))
+                            .isEqualTo("test-ca");
+                    assertNotNull(trustAnchors.getJsonObject(1).getString(RegistryManagementConstants.FIELD_ID));
+                });
+                context.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that the service successfully creates a tenant containing a CA that is also used by
+     * an existing tenant that belongs to the same trust anchor group.
+     *
+     * @param context The Vert.x test context.
+     */
+    @Test
+    public void testAddTenantSucceedsForCaSharedWithinTrustAnchorGroup(final VertxTestContext context) {
+
+        assumeTrue(IntegrationTestSupport.isTrustAnchorGroupsSupported(),
+                "device registry does not support trust anchor groups");
+
+        final PublicKey publicKey = TenantApiTests.getRandomPublicKey();
+        final TrustedCertificateAuthority trustAnchor = Tenants.createTrustAnchor(
+                "test-ca",
+                "CN=test-dn",
+                publicKey.getEncoded(),
+                publicKey.getAlgorithm(),
+                Instant.now(),
+                Instant.now().plus(365, ChronoUnit.DAYS));
+        final Tenant tenant = new Tenant()
+                .setTrustAnchorGroup("test-group")
+                .setTrustedCertificateAuthorities(List.of(trustAnchor));
+
+        getHelper().registry.addTenant(tenantId, tenant)
+            .onFailure(context::failNow)
+            .compose(ok -> getHelper().registry.addTenant(getHelper().getRandomTenantId(), tenant))
+            .onComplete(context.succeedingThenComplete());
     }
 
     /**
@@ -162,10 +241,9 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
         final Tenant payload = buildTenantPayload();
 
         getHelper().registry.addTenant(tenantId, payload)
-            .compose(ar -> {
-                // now try to add the tenant again
-                return getHelper().registry.addTenant(tenantId, payload, HttpURLConnection.HTTP_CONFLICT);
-            })
+            .onFailure(context::failNow)
+            // now try to add the tenant again
+            .compose(ar -> getHelper().registry.addTenant(tenantId, payload, HttpURLConnection.HTTP_CONFLICT))
             .onComplete(context.succeeding(response -> {
                 context.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
                 context.completeNow();
@@ -190,58 +268,6 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
                 context.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
                 context.completeNow();
             }));
-    }
-
-    /**
-     * Verifies that the service successfully create a tenant from a request with an empty body.
-     *
-     * @param context The vert.x test context.
-     */
-    @Test
-    public void testAddTenantSucceedsForEmptyBody(final VertxTestContext context) {
-
-        getHelper().registry.addTenant(tenantId)
-            .onFailure(context::failNow)
-            .compose(ok -> getHelper().registry.getTenant(tenantId, HttpURLConnection.HTTP_OK))
-            .onComplete(context.succeedingThenComplete());
-    }
-
-    /**
-     * Verifies that the service successfully creates a tenant from a request having a tenant anchor
-     * with an ID and an another without an ID.
-     *
-     * @param context The Vert.x test context.
-     */
-    @Test
-    public void testAddTenantSucceedsForConfigurationWithMissingTrustAnchorIds(final VertxTestContext context) {
-        final PublicKey publicKey = TenantApiTests.getRandomPublicKey();
-        final TrustedCertificateAuthority trustAnchor1 = Tenants
-                .createTrustAnchor("test-ca", "CN=test-dn", publicKey.getEncoded(), publicKey.getAlgorithm(),
-                        Instant.now(), Instant.now().plus(365, ChronoUnit.DAYS));
-        final TrustedCertificateAuthority trustAnchor2 = Tenants
-                .createTrustAnchor(null, "CN=test-dn-1", publicKey.getEncoded(), publicKey.getAlgorithm(),
-                        Instant.now(), Instant.now().plus(365, ChronoUnit.DAYS));
-        final Tenant tenant = new Tenant()
-                .setTrustedCertificateAuthorities(List.of(trustAnchor1, trustAnchor2));
-
-        getHelper().registry.addTenant(
-                tenantId,
-                tenant,
-                "application/json",
-                HttpURLConnection.HTTP_CREATED)
-                .compose(ok -> getHelper().registry.getTenant(tenantId))
-                .onComplete(context.succeeding(httpResponse -> {
-                    context.verify(() -> {
-                        final JsonObject response = httpResponse.bodyAsJsonObject();
-                        assertThat(response.getJsonArray(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA)).hasSize(2);
-                        final JsonArray trustAnchors = response
-                                .getJsonArray(RegistryManagementConstants.FIELD_PAYLOAD_TRUSTED_CA);
-                        assertThat(trustAnchors.getJsonObject(0).getString(RegistryManagementConstants.FIELD_ID))
-                                .isEqualTo("test-ca");
-                        assertNotNull(trustAnchors.getJsonObject(1).getString(RegistryManagementConstants.FIELD_ID));
-                    });
-                    context.completeNow();
-                }));
     }
 
     /**
@@ -273,8 +299,38 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
         getHelper().registry.addTenant(
                 tenantId,
                 requestBody,
-                "application/json",
                 HttpURLConnection.HTTP_BAD_REQUEST)
+            .onComplete(context.succeeding(response -> {
+                context.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                context.completeNow();
+            }));
+    }
+
+    /**
+     * Verifies that the service returns a 409 status code for an add tenant request containing a
+     * CA that is already in use by another tenant that does not belong to the same trust anchor group.
+     *
+     * @param context The Vert.x test context.
+     */
+    @Test
+    public void testAddTenantFailsForConfigurationWithDuplicateTrustAnchor(final VertxTestContext context) {
+
+        final PublicKey publicKey = TenantApiTests.getRandomPublicKey();
+        final TrustedCertificateAuthority trustAnchor = Tenants.createTrustAnchor(
+                "test-ca",
+                "CN=test-dn",
+                publicKey.getEncoded(),
+                publicKey.getAlgorithm(),
+                Instant.now(),
+                Instant.now().plus(365, ChronoUnit.DAYS));
+        final Tenant tenant = new Tenant().setTrustedCertificateAuthorities(List.of(trustAnchor));
+
+        getHelper().registry.addTenant(tenantId, tenant)
+            .onFailure(context::failNow)
+            .compose(ok -> getHelper().registry.addTenant(
+                getHelper().getRandomTenantId(),
+                tenant,
+                HttpURLConnection.HTTP_CONFLICT))
             .onComplete(context.succeeding(response -> {
                 context.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
                 context.completeNow();
@@ -302,12 +358,11 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
         getHelper().registry.addTenant(
                 tenantId,
                 tenant,
-                "application/json",
                 HttpURLConnection.HTTP_BAD_REQUEST)
-                .onComplete(context.succeeding(response -> {
-                    context.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
-                    context.completeNow();
-                }));
+            .onComplete(context.succeeding(response -> {
+                context.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                context.completeNow();
+            }));
     }
 
     /**
@@ -430,6 +485,38 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
     }
 
     /**
+     * Verifies that the service successfully updates a tenant with a CA that is also used by
+     * an existing tenant that belongs to the same trust anchor group.
+     *
+     * @param context The Vert.x test context.
+     */
+    @Test
+    public void testUpdateTenantSucceedsForCaSharedWithinTrustAnchorGroup(final VertxTestContext context) {
+
+        assumeTrue(IntegrationTestSupport.isTrustAnchorGroupsSupported(),
+                "device registry does not support trust anchor groups");
+
+        final PublicKey publicKey = TenantApiTests.getRandomPublicKey();
+        final TrustedCertificateAuthority trustAnchor = Tenants.createTrustAnchor(
+                "test-ca",
+                "CN=test-dn",
+                publicKey.getEncoded(),
+                publicKey.getAlgorithm(),
+                Instant.now(),
+                Instant.now().plus(365, ChronoUnit.DAYS));
+        final Tenant tenant = new Tenant()
+                .setTrustAnchorGroup("test-group")
+                .setTrustedCertificateAuthorities(List.of(trustAnchor));
+
+        getHelper().registry.addTenant(getHelper().getRandomTenantId(), tenant)
+            .onFailure(context::failNow)
+            .compose(ok -> getHelper().registry.addTenant(tenantId))
+            .onFailure(context::failNow)
+            .compose(ok -> getHelper().registry.updateTenant(tenantId, tenant, HttpURLConnection.HTTP_NO_CONTENT))
+            .onComplete(context.succeedingThenComplete());
+    }
+
+    /**
      * Verifies that setting an empty list of trusted CAs on multiple tenants does not result in a unique key
      * violation.
      *
@@ -504,6 +591,39 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
                     context.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
                     context.completeNow();
                 }));
+    }
+
+    /**
+     * Verifies that the service returns a 409 status code for an update tenant request containing a
+     * CA that is already in use by another tenant that does not belong to the same trust anchor group.
+     *
+     * @param context The Vert.x test context.
+     */
+    @Test
+    public void testUpdateTenantFailsForConfigurationWithDuplicateTrustAnchor(final VertxTestContext context) {
+
+        final PublicKey publicKey = TenantApiTests.getRandomPublicKey();
+        final TrustedCertificateAuthority trustAnchor = Tenants.createTrustAnchor(
+                "test-ca",
+                "CN=test-dn",
+                publicKey.getEncoded(),
+                publicKey.getAlgorithm(),
+                Instant.now(),
+                Instant.now().plus(365, ChronoUnit.DAYS));
+        final Tenant tenant = new Tenant().setTrustedCertificateAuthorities(List.of(trustAnchor));
+
+        getHelper().registry.addTenant(getHelper().getRandomTenantId(), tenant)
+            .onFailure(context::failNow)
+            .compose(ok -> getHelper().registry.addTenant(tenantId, new Tenant()))
+            .onFailure(context::failNow)
+            .compose(ok -> getHelper().registry.updateTenant(
+                    tenantId,
+                    tenant,
+                    HttpURLConnection.HTTP_CONFLICT))
+            .onComplete(context.succeeding(response -> {
+                context.verify(() -> IntegrationTestSupport.assertErrorPayload(response));
+                context.completeNow();
+            }));
     }
 
     /**

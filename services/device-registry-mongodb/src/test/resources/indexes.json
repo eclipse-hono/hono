@@ -1,0 +1,42 @@
+[
+    {
+        "v" : 2,
+        "key" : {
+            "_id" : 1
+        },
+        "name" : "_id_",
+        "ns" : "hono.hub-tenants"
+    },
+    {
+        "v" : 2,
+        "unique" : true,
+        "key" : {
+            "tenant-id" : 1
+        },
+        "name" : "tenant-id_1",
+        "ns" : "hono.hub-tenants"
+    },
+    {
+        "v" : 2,
+        "unique" : true,
+        "key" : {
+            "tenant.trusted-ca.subject-dn" : 1
+        },
+        "name" : "tenant.trusted-ca.subject-dn_1",
+        "ns" : "honot.hub-tenants",
+        "partialFilterExpression" : {
+            "tenant.trusted-ca" : {
+                "$exists" : true
+            }
+        }
+    },
+    {
+        "v" : 2,
+        "key" : {
+            "tenant.ext.state.name" : 1.0,
+            "tenant.ext.state.since" : 1.0
+        },
+        "name" : "tenant.ext.state.name_1_tenant.ext.state.since_1",
+        "ns" : "hono.hub-tenants"
+    }
+]

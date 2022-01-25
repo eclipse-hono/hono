@@ -39,8 +39,11 @@ import org.mockito.ArgumentCaptor;
 
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.FindOptions;
+import io.vertx.ext.mongo.IndexOptions;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.mongo.UpdateOptions;
 import io.vertx.junit5.Timeout;
@@ -187,4 +190,31 @@ public class MongoDbBasedTenantDaoTest {
             }));
     }
 
+    /**
+     * Verifies that when creating indices for the Tenant collection, an existing unique index on
+     * <em>tenant.trusted-ca.subject-dn</em> is getting dropped.
+     *
+     * @param ctx The vert.x test context.
+     * @param vertx The vert.x instance to run on.
+     */
+    @Test
+    public void testCreateIndicesDropsObsoleteIndex(final VertxTestContext ctx, final Vertx vertx) {
+
+        // GIVEN a set of existing indices including a unique, partial index on tenant.trusted-ca.subject-dn
+        final Buffer existingIndices = vertx.fileSystem().readFileBlocking("target/test-classes/indexes.json");
+        when(mongoClient.createIndexWithOptions(anyString(), any(JsonObject.class), any(IndexOptions.class)))
+            .thenReturn(Future.succeededFuture());
+        when(mongoClient.dropIndex(anyString(), anyString())).thenReturn(Future.succeededFuture());
+        when(mongoClient.listIndexes(anyString())).thenReturn(Future.succeededFuture(existingIndices.toJsonArray()));
+
+        // WHEN creating indices for the tenant collection
+        dao.createIndices()
+            .onComplete(ctx.succeeding(ok -> {
+                ctx.verify(() -> {
+                    // THEN the unique index is being dropped
+                    verify(mongoClient).dropIndex(anyString(), eq("tenant.trusted-ca.subject-dn_1"));
+                });
+                ctx.completeNow();
+            }));
+    }
 }
