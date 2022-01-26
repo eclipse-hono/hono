@@ -4,34 +4,31 @@ weight: 416
 ---
 
 The Kafka-based APIs of Eclipse Hono&trade; provide an alternative to the existing APIs based on AMQP 1.0.
-With these APIs, clients publish data to as well as consume data from an Apache Kafka&reg; cluster instead of using an AMQP messaging network.
-
-<!--more-->
-
-{{% notice info %}}
-The support of Kafka as a messaging system is currently a preview and not yet ready for production. The APIs are subject to change without prior notice. 
-{{% /notice %}}
-
+With these APIs, clients publish data to as well as consume data from an Apache Kafka&reg; cluster instead of using an
+AMQP messaging network.
 
 ## Kafka-based Messaging
 
 Using Kafka instead of AMQP comes with slightly different behavior. Kafka provides a Publish/Subscribe messaging style.
 Every message is sent by a *producer* to a *topic* in a Kafka cluster, where it will be persisted by (multiple) *brokers*.
-Each topic consists of a configurable number of *partitions*. The *key* of a message determines to which partition it will be written.
-Each partition is *replicated* to a configurable number of brokers in the cluster to provide fault-tolerance if a broker goes down.
+Each topic consists of a configurable number of *partitions*. The *key* of a message determines to which partition it
+will be written. Each partition is *replicated* to a configurable number of brokers in the cluster to provide
+fault-tolerance if a broker goes down.
 
 A Kafka message (also called record) consists of a key, a value, a timestamp, and headers.
 
 Multiple *consumers* can read the messages at the same time and they can read them repeatedly (if an error occurred).
-This decoupling of producer and consumers has the consequence that a producer does not get feedback about the consumption of messages, 
-it does not know *if* and *when* a message will be read by any consumer(s).
-For example, a protocol adapter can only confirm to the device that the Kafka cluster successfully persisted a telemetry message, 
-not if a *Business Application* received it.
+This decoupling of producer and consumers has the consequence that a producer does not get feedback about the consumption
+of messages, it does not know *if* and *when* a message will be read by any consumer(s).
+For example, a protocol adapter can only confirm to the device that the Kafka cluster successfully persisted a telemetry
+message, not if a *Business Application* received it.
 
-Messages are usually deleted from a topic at some point &ndash; regardless of whether they have been processed by a consumer. 
-Care should therefore be taken to set each topic's *log retention time* to a reasonable value in the Kafka configuration.
+Messages are usually deleted from a topic at some point &ndash; regardless of whether they have been processed by a
+consumer. Care should therefore be taken to set each topic's *log retention time* to a reasonable value in the Kafka
+configuration.
 
-See the [Kafka documentation](https://kafka.apache.org/documentation/#configuration) for details about Kafka's configuration properties. 
+See the [Kafka documentation](https://kafka.apache.org/documentation/#configuration) for details about Kafka's
+configuration properties. 
 
 ### Quality of Service
 
@@ -79,26 +76,30 @@ before sending the acknowledgement back to the client.
 This can be achieved e.g. by setting *acks* to `all` or, implicitly, by setting *enable.idempotence* to `true`.
 
 The producer MUST retain the order in which it received messages from a client. 
-This requires that if *retries* is set to a value greater than zero, *max.in.flight.requests.per.connection* must be set to `1`.
-Alternatively, *enable.idempotence* can be set to `true`. 
-Disabling retries might cause messages to fail in case of high load or transient transmission failures, so this is not recommended.
+This requires that if *retries* is set to a value greater than zero, *max.in.flight.requests.per.connection* must be
+set to `1`. Alternatively, *enable.idempotence* can be set to `true`. 
+Disabling retries might cause messages to fail in case of high load or transient transmission failures, so this is not
+recommended.
 
 The recommended configuration for *AT LEAST ONCE* producers has the following properties:
-`enable.idempotence=true`, `acks=all`, `max.in.flight.requests.per.connection=5`, leaving *retries* unset (which defaults to `Integer.MAX`), 
-and setting *delivery.timeout.ms* to a reasonable value. This configuration is supported from Kafka version 1.0.0 on. 
+`enable.idempotence=true`, `acks=all`, `max.in.flight.requests.per.connection=5`, leaving *retries* unset (which defaults to
+`Integer.MAX`), and setting *delivery.timeout.ms* to a reasonable value. This configuration is supported from Kafka
+version 1.0.0 on.
 
 
 ### AT MOST ONCE Producers
 
-Every producer that does not wait for acknowledgements from all *in-sync replicas* or does not consider them before sending
-an acknowledgement back to the client, is considered to provide only *AT MOST ONCE* delivery semantics.
+Every producer that does not wait for acknowledgements from all *in-sync replicas* or does not consider them before
+sending an acknowledgement back to the client, is considered to provide only *AT MOST ONCE* delivery semantics.
 To achieve this, several strategies are possible:
 
-1. The producer can disable acknowledgements (`acks=0`). This is the fastest mode of delivery but has the drawback of a potential loss of messages without notice.
-1. The producer can enable acknowledgements, but not wait for the acknowledgements from the Kafka cluster before acknowledging the message to *its* client.  
+1. The producer can disable acknowledgements (`acks=0`). This is the fastest mode of delivery but has the drawback of
+   a potential loss of messages without notice.
+1. The producer can enable acknowledgements, but not wait for the acknowledgements from the Kafka cluster before
+   acknowledging the message to *its* client.
 
 The producer MUST retain the order in which it received messages from a client. 
 This requires to either set *retries* to `0` or to set *max.in.flight.requests.per.connection* to `1`.
 
-**NB:** To send messages with both delivery semantics with the same producer, it MUST be configured for *AT LEAST ONCE*. 
+**NB:** To send messages with both delivery semantics with the same producer, it MUST be configured for *AT LEAST ONCE*.
 Such a producer may ignore the outcome of the *produce* operation for *AT MOST ONCE* messages.

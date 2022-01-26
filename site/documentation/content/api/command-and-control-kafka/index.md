@@ -6,28 +6,33 @@ weight: 419
 
 The *Command & Control* API of Eclipse Hono&trade; is used by *Business Applications* to send commands to connected devices.
 
-Commands can be used to trigger actions on devices. Examples include updating a configuration property, installing a software component or switching the state of an actuator.
+Commands can be used to trigger actions on devices. Examples include updating a configuration property, installing a
+software component or switching the state of an actuator.
 <!--more-->
 
-Hono distinguishes two types of commands. The first type is *one-way* only. In this case the sender of the command does not expect the device to send back a message in response to the command. This type of command is referred to as a *one-way command* in the remainder of this page. One-way commands may be used to e.g. *notify* a device about a change of state.
+Hono distinguishes two types of commands. The first type is *one-way* only. In this case the sender of the command does
+not expect the device to send back a message in response to the command. This type of command is referred to as a
+*one-way command* in the remainder of this page. One-way commands may be used to e.g. *notify* a device about a change
+of state.
 
-The second type of commands expects a *response* to be sent back from the device as a result of processing the command. In this case the response contains a *status* code which indicates whether the command could be processed successfully. If so, the response may also include data representing the result of processing the command. This type of command is plainly referred to as a *command* because it represents the default case.
+The second type of commands expects a *response* to be sent back from the device as a result of processing the command.
+In this case the response contains a *status* code which indicates whether the command could be processed successfully.
+If so, the response may also include data representing the result of processing the command. This type of command is
+plainly referred to as a *command* because it represents the default case.
 
-The Command & Control API for Kafka is an alternative to the [Command & Control API for AMQP]({{< relref "/api/command-and-control" >}}).
-With this API, clients send command messages to an Apache Kafka&reg; cluster instead of an AMQP Messaging Network.
+The Command & Control API for Kafka is an alternative to the
+[Command & Control API for AMQP]({{< relref "/api/command-and-control" >}}). With this API, clients send command
+messages to an Apache Kafka&reg; cluster instead of an AMQP Messaging Network.
 
 See [Kafka-based APIs]({{< relref "/api/kafka-api" >}}) for fundamental information about Hono's Kafka-based APIs.
 The statements there apply to this specification.
 
-{{% notice info %}}
-The support of Kafka as a messaging system is currently a preview and not yet ready for production. The APIs are
-subject to change without prior notice.
-{{% /notice %}}
-
 ## Send a One-Way Command
 
-Business Applications use this operation to send a command to a device for which they do not expect to receive a response from the device.
-For that, the Business Application connects to the *Kafka Cluster* and writes a message to the tenant-specific topic `hono.command.${tenant_id}` where `${tenant_id}` is the ID of the tenant that the client wants to send the command for.
+Business Applications use this operation to send a command to a device for which they do not expect to receive a
+response from the device.
+For that, the Business Application connects to the *Kafka Cluster* and writes a message to the tenant-specific topic
+`hono.command.${tenant_id}` where `${tenant_id}` is the ID of the tenant that the client wants to send the command for.
 
 **Preconditions**
 
@@ -37,14 +42,15 @@ For that, the Business Application connects to the *Kafka Cluster* and writes a 
 **Message Flow**
 
 1. The *Business Application* writes a command message to the topic `hono.command.${tenant_id}` on the *Kafka Cluster*.
-1. Hono consumes the message from the *Kafka Cluster* and forwards it to the device, provided that the target device is connected and is accepting commands.
+1. Hono consumes the message from the *Kafka Cluster* and forwards it to the device, provided that the target device is
+connected and is accepting commands.
 
 **Message Format**
 
 The key of the message MUST be the ID of the device that the command is targeted at.
 
-Metadata MUST be set as Kafka headers on a message.
-The following table provides an overview of the headers the *Business Application* needs to set on a one-way command message.
+Metadata MUST be set as Kafka headers on a message. The following table provides an overview of the headers the
+*Business Application* needs to set on a one-way command message.
 
 | Name               | Mandatory | Type      | Description |
 | :----------------- | :-------: | :-------- | :---------- |
@@ -52,27 +58,36 @@ The following table provides an overview of the headers the *Business Applicatio
 | *subject*          | yes       | *string*  | The name of the command to be executed by the device. |
 | *content-type*     | no        | *string*  | If present, MUST contain a *Media Type* as defined by [RFC 2046](https://tools.ietf.org/html/rfc2046) which describes the semantics and format of the command's input data contained in the message payload. However, not all protocol adapters will support this property as not all transport protocols provide means to convey this information, e.g. MQTT 3.1.1 has no notion of message headers. |
 
-The command message MAY contain arbitrary payload, set as message value, to be sent to the device. The value of the message's *subject* header may provide a hint to the device regarding the format, encoding and semantics of the payload data.
+The command message MAY contain arbitrary payload, set as message value, to be sent to the device. The value of the
+message's *subject* header may provide a hint to the device regarding the format, encoding and semantics of the payload
+data.
 
 ## Send a (Request/Response) Command
 
-*Business Applications* use this operation to send a command to a device for which they expect the device to send back a response.
-For that, the Business Application connects to the *Kafka Cluster* and writes a message to the tenant-specific topic `hono.command.${tenant_id}` where `${tenant_id}` is the ID of the tenant that the client wants to send the command for.
+*Business Applications* use this operation to send a command to a device for which they expect the device to send back
+a response.
+For that, the Business Application connects to the *Kafka Cluster* and writes a message to the tenant-specific topic
+`hono.command.${tenant_id}` where `${tenant_id}` is the ID of the tenant that the client wants to send the command for.
 The Business Application can consume the corresponding command response from the `hono.command_response.${tenant_id}` topic.
 
-In contrast to a one-way command, a request/response command contains a *response-required* header with value `true` and a *correlation-id* header, providing the identifier that is used to correlate a response message to the original request.
+In contrast to a one-way command, a request/response command contains a *response-required* header with value `true` and
+a *correlation-id* header, providing the identifier that is used to correlate a response message to the original request.
 
 **Preconditions**
 
-1. Either the topics `hono.command.${tenant_id}` and `hono.command_response.${tenant_id}` exist, or the broker is configured to automatically create topics on demand.
-1. The *Business Application* is authorized to write to the `hono.command.${tenant_id}` topic and read from the `hono.command_response.${tenant_id}` topic.
+1. Either the topics `hono.command.${tenant_id}` and `hono.command_response.${tenant_id}` exist, or the broker is configured to
+   automatically create topics on demand.
+1. The *Business Application* is authorized to write to the `hono.command.${tenant_id}` topic and read from the
+   `hono.command_response.${tenant_id}` topic.
 1. The *Business Application* is subscribed to the `hono.command_response.${tenant_id}` topic with a Kafka consumer.
 
 **Message Flow**
 
 1. The *Business Application* writes a command message to the topic `hono.command.${tenant_id}` on the *Kafka Cluster*.
-1. Hono consumes the message from the *Kafka Cluster* and forwards it to the device, provided that the target device is connected and is accepting commands.
-1. The device sends a command response message. Hono writes that message to the `hono.command_response.${tenant_id}` topic on the *Kafka Cluster*.
+1. Hono consumes the message from the *Kafka Cluster* and forwards it to the device, provided that the target device is
+   connected and is accepting commands.
+1. The device sends a command response message. Hono writes that message to the `hono.command_response.${tenant_id}` topic
+   on the *Kafka Cluster*.
 1. The *Business Application* consumes the command response message from the `hono.command_response.${tenant_id}` topic.
 
 **Command Message Format**
@@ -80,7 +95,8 @@ In contrast to a one-way command, a request/response command contains a *respons
 The key of the message MUST be the ID of the device that the command is targeted at.
 
 Metadata MUST be set as Kafka headers on a message.
-The following table provides an overview of the headers the *Business Application* needs to set on a request/response command message.
+The following table provides an overview of the headers the *Business Application* needs to set on a request/response
+command message.
 
 | Name                | Mandatory | Type      | Description |
 | :------------------ | :-------: | :-------- | :---------- |
@@ -91,9 +107,13 @@ The following table provides an overview of the headers the *Business Applicatio
 | *content-type*      | no        | *string*  | If present, MUST contain a *Media Type* as defined by [RFC 2046](https://tools.ietf.org/html/rfc2046) which describes the semantics and format of the command's input data contained in the message payload. However, not all protocol adapters will support this property as not all transport protocols provide means to convey this information, e.g. MQTT 3.1.1 has no notion of message headers. |
 | *delivery-failure-notification-metadata[\*]* | no | *string* | Headers with the *delivery-failure-notification-metadata* prefix are adopted for the error command response that is sent in case delivering the command to the device failed. In case of a successful command delivery, these headers are ignored. |
 
-The command message MAY contain arbitrary payload, set as message value, to be sent to the device. The value of the message's *subject* header may provide a hint to the device regarding the format, encoding and semantics of the payload data.
+The command message MAY contain arbitrary payload, set as message value, to be sent to the device. The value of the
+message's *subject* header may provide a hint to the device regarding the format, encoding and semantics of the payload
+data.
 
-An application can determine the overall outcome of the operation by means of the response to the command. The response is either sent back by the device, or in case the command could not be successfully forwarded to the device, an error command response message is sent by the Hono protocol adapter or Command Router component.
+An application can determine the overall outcome of the operation by means of the response to the command. The response
+is either sent back by the device, or in case the command could not be successfully forwarded to the device, an error
+command response message is sent by the Hono protocol adapter or Command Router component.
 
 **Response Message Format**
 
@@ -126,11 +146,14 @@ In a response from a device, the semantics of the *status* code ranges are as fo
 | *4xx* | The command could not be processed due to a client error, e.g. malformed message payload. |
 | *5xx* | The command could not be processed due to an internal problem at the device side. |
 
-The semantics of the individual codes are specific to the device and command. For status codes indicating an error (codes in the `400 - 599` range) the message body MAY contain a detailed description of the error that occurred.
+The semantics of the individual codes are specific to the device and command. For status codes indicating an error
+(codes in the `400 - 599` range) the message body MAY contain a detailed description of the error that occurred.
 
 **Response Message sent from Hono Component**
 
-If the command response message represents an error message sent by the Hono protocol adapter or Command Router component, with the *content-type* header set to *application/vnd.eclipse-hono-delivery-failure-notification+json*, the possible status codes are:
+If the command response message represents an error message sent by the Hono protocol adapter or Command Router
+component, with the *content-type* header set to *application/vnd.eclipse-hono-delivery-failure-notification+json*,
+the possible status codes are:
 
 | Code  | Description |
 | :---- | :---------- |
