@@ -1,7 +1,6 @@
 hono:
   app:
     maxInstances: 1
-    startupTimeout: 120
   connectionEvents:
     producer: none
   healthCheck:

@@ -1,7 +1,6 @@
 hono:
   app:
     maxInstances: 1
-    startupTimeout: 60
   server:
     bindAddress: "10.2.0.1"
     insecurePort: 11001

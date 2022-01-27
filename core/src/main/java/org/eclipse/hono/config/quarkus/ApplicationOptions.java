@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,16 +22,6 @@ import io.smallrye.config.WithDefault;
  */
 @ConfigMapping(prefix = "hono.app", namingStrategy = ConfigMapping.NamingStrategy.VERBATIM)
 public interface ApplicationOptions {
-
-    /**
-     * Gets the maximum time to wait for the server to start up.
-     * <p>
-     * The default value of this property is 20.
-     *
-     * @return The number of seconds to wait.
-     */
-    @WithDefault("20")
-    int startupTimeout();
 
     /**
      * Gets the number of verticle instances to deploy.
