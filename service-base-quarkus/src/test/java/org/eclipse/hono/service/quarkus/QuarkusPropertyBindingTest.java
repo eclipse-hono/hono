@@ -74,7 +74,6 @@ public class QuarkusPropertyBindingTest {
         assertThat(applicationOptions).isNotNull();
         final var props = new ApplicationConfigProperties(applicationOptions);
         assertThat(props.getMaxInstances()).isEqualTo(1);
-        assertThat(props.getStartupTimeout()).isEqualTo(60);
     }
 
     /**
