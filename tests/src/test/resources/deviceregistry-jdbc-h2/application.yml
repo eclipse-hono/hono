@@ -2,7 +2,6 @@ hono:
 
   app:
     maxInstances: 1
-    startupTimeout: 90
 
   healthCheck:
     insecurePortBindAddress: 0.0.0.0

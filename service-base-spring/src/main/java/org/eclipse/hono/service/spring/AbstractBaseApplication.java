@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,10 +17,6 @@ import java.util.Base64;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import javax.annotation.PreDestroy;
 
@@ -35,7 +31,6 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.impl.cpu.CpuCoreSensor;
 import io.vertx.core.json.impl.JsonUtil;
@@ -154,9 +149,6 @@ public abstract class AbstractBaseApplication implements ApplicationRunner {
                     base64Encoder);
         }
 
-        final int startupTimeoutSeconds = config.getStartupTimeout();
-        log.info("Waiting {} seconds for components to start ...", startupTimeoutSeconds);
-
         final CompletableFuture<Void> started = new CompletableFuture<>();
 
         deployVerticles()
@@ -165,19 +157,7 @@ public abstract class AbstractBaseApplication implements ApplicationRunner {
             .onSuccess(started::complete)
             .onFailure(started::completeExceptionally);
 
-        try {
-            started.get(startupTimeoutSeconds, TimeUnit.SECONDS);
-        } catch (final TimeoutException e) {
-            log.error("startup timed out after {} seconds, shutting down ...", startupTimeoutSeconds);
-            shutdown();
-        } catch (final InterruptedException e) {
-            log.error("startup process has been interrupted, shutting down ...");
-            Thread.currentThread().interrupt();
-            shutdown();
-        } catch (final ExecutionException e) {
-            log.error("exception occurred during startup, shutting down ...", e);
-            shutdown();
-        }
+        started.join();
     }
 
     /**
@@ -212,57 +192,22 @@ public abstract class AbstractBaseApplication implements ApplicationRunner {
      */
     @PreDestroy
     public final void shutdown() {
-        final int shutdownTimeoutSeconds = config.getStartupTimeout();
-        shutdown(shutdownTimeoutSeconds, succeeded -> {
-            // do nothing
-        });
-    }
 
-    /**
-     * Stops this application in a controlled fashion.
-     *
-     * @param maxWaitTime The maximum time to wait for the server to shut down (in seconds).
-     * @param shutdownHandler The handler to invoke with the result of the shutdown attempt.
-     */
-    public final void shutdown(final long maxWaitTime, final Handler<Boolean> shutdownHandler) {
+        log.info("shutting down application...");
+        final CompletableFuture<Void> shutdown = new CompletableFuture<>();
 
-        try {
-            log.info("shutting down application...");
-
-            preShutdown();
-            final CountDownLatch latch = new CountDownLatch(1);
-
-            stopHealthCheckServer().onComplete(result -> {
-
-                if (vertx != null) {
-                    log.info("closing vert.x instance ...");
-                    vertx.close(r -> {
-                        if (r.failed()) {
-                            log.error("could not close vert.x instance", r.cause());
-                        }
-                        latch.countDown();
-                    });
-                } else {
-                    latch.countDown(); // nothing to wait for
-                }
+        preShutdown();
+        healthCheckServer.stop()
+            .onComplete(ok -> {
+                vertx.close(attempt -> {
+                    if (attempt.succeeded()) {
+                        shutdown.complete(null);
+                    } else {
+                        shutdown.completeExceptionally(attempt.cause());
+                    }
+                });
             });
-
-            if (latch.await(maxWaitTime, TimeUnit.SECONDS)) {
-                log.info("application has been shut down successfully");
-                shutdownHandler.handle(Boolean.TRUE);
-            } else {
-                log.error("shut down timed out, aborting...");
-                shutdownHandler.handle(Boolean.FALSE);
-            }
-        } catch (final InterruptedException e) {
-            log.error("application shut down has been interrupted, aborting...");
-            Thread.currentThread().interrupt();
-            shutdownHandler.handle(Boolean.FALSE);
-        }
-    }
-
-    private Future<Void> stopHealthCheckServer() {
-        return healthCheckServer.stop();
+        shutdown.join();
     }
 
     /**

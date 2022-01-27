@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,7 +22,6 @@ import org.eclipse.hono.config.quarkus.ApplicationOptions;
 public class ApplicationConfigProperties {
 
     private int maxInstances = 0;
-    private int startupTimeout = 20;
 
     /**
      * Creates new properties using default values.
@@ -39,33 +38,6 @@ public class ApplicationConfigProperties {
     public ApplicationConfigProperties(final ApplicationOptions options) {
         super();
         setMaxInstances(options.maxInstances());
-        setStartupTimeout(options.startupTimeout());
-    }
-
-    /**
-     * Gets the maximum time to wait for the server to start up.
-     * <p>
-     * The default value of this property is 20 (seconds).
-     *
-     * @return The number of seconds to wait.
-     */
-    public final int getStartupTimeout() {
-        return startupTimeout;
-    }
-
-    /**
-     * Sets the maximum time to wait for the server to start up.
-     * <p>
-     * The default value of this property is 20 (seconds).
-     *
-     * @param seconds The maximum number of seconds to wait.
-     * @throws IllegalArgumentException if <em>seconds</em> &lt; 1.
-     */
-    public final void setStartupTimeout(final int seconds) {
-        if (seconds < 1) {
-            throw new IllegalArgumentException("startup timeout must be at least 1 second");
-        }
-        this.startupTimeout = seconds;
     }
 
     /**
