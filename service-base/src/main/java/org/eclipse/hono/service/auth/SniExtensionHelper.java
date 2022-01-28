@@ -16,7 +16,6 @@ package org.eclipse.hono.service.auth;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -40,7 +39,6 @@ public final class SniExtensionHelper {
      * @return The host names.
      */
     public static List<String> getHostNames(final SSLSession tlsSession) {
-        Objects.requireNonNull(tlsSession);
 
         return Optional.ofNullable(tlsSession)
                 .filter(ExtendedSSLSession.class::isInstance)
