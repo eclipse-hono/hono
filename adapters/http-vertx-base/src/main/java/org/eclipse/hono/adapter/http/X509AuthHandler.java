@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,6 +15,7 @@ package org.eclipse.hono.adapter.http;
 
 import java.net.HttpURLConnection;
 import java.security.cert.Certificate;
+import java.util.List;
 import java.util.Objects;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
@@ -105,7 +106,7 @@ public class X509AuthHandler extends AuthenticationHandlerImpl<DeviceCredentials
         if (context.request().isSSL()) {
             try {
                 final Certificate[] path = context.request().sslSession().getPeerCertificates();
-                auth.validateClientCertificate(path, TracingHandler.serverSpanContext(context))
+                auth.validateClientCertificate(path, List.of(), TracingHandler.serverSpanContext(context))
                     .compose(credentialsJson -> {
                         final ExecutionContextAuthHandler<HttpContext> authHandler = new ExecutionContextAuthHandler<>(
                                 (DeviceCredentialsAuthProvider<?>) authProvider,

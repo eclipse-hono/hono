@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -109,7 +109,7 @@ public class DeviceRegistryBasedCertificateVerifier implements NewAdvancedCertif
         final Certificate[] certChain = list.toArray(new Certificate[list.size()]);
         final Promise<AdditionalInfo> authResult = Promise.promise();
 
-        auth.validateClientCertificate(certChain, span.context())
+        auth.validateClientCertificate(certChain, List.of(), span.context())
                 .onSuccess(ar -> {
                     final SubjectDnCredentials credentials = authProvider.getCredentials(ar);
                     if (credentials == null) {

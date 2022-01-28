@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,6 +23,7 @@ import static com.google.common.truth.Truth.assertThat;
 import java.net.HttpURLConnection;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
+import java.util.List;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
@@ -79,6 +80,7 @@ public class X509AuthHandlerTest {
      * @param ctx The vert.x test context.
      * @throws SSLPeerUnverifiedException if the client certificate cannot be determined.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testParseCredentialsIncludesMqttClientId(final VertxTestContext ctx) throws SSLPeerUnverifiedException {
 
@@ -86,7 +88,10 @@ public class X509AuthHandlerTest {
         final JsonObject authInfo = new JsonObject()
                 .put(RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN, "CN=device")
                 .put(RequestResponseApiConstants.FIELD_PAYLOAD_TENANT_ID, "tenant");
-        when(clientAuth.validateClientCertificate(any(Certificate[].class), (SpanContext) any()))
+        when(clientAuth.validateClientCertificate(
+                any(Certificate[].class),
+                any(List.class),
+                (SpanContext) any()))
         .thenReturn(Future.succeededFuture(authInfo));
 
         // WHEN trying to authenticate a request that contains a client certificate
@@ -119,13 +124,18 @@ public class X509AuthHandlerTest {
      * @param ctx The vert.x test context.
      * @throws SSLPeerUnverifiedException if the client certificate cannot be determined.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testHandleFailsWithStatusCodeFromAuthProvider(final VertxTestContext ctx) throws SSLPeerUnverifiedException {
 
         // GIVEN an auth handler configured with an auth provider that
         // fails with a 503 error code during authentication
         final ServiceInvocationException error = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE);
-        when(clientAuth.validateClientCertificate(any(Certificate[].class), (SpanContext) any())).thenReturn(Future.failedFuture(error));
+        when(clientAuth.validateClientCertificate(
+                any(Certificate[].class),
+                any(List.class),
+                (SpanContext) any()))
+        .thenReturn(Future.failedFuture(error));
 
         // WHEN trying to authenticate a request that contains a client certificate
         final X509Certificate clientCert = getClientCertificate("CN=device", "CN=tenant");

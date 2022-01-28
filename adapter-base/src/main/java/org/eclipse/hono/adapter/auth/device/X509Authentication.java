@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,7 @@
 package org.eclipse.hono.adapter.auth.device;
 
 import java.security.cert.Certificate;
+import java.util.List;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
@@ -29,6 +30,8 @@ public interface X509Authentication {
      * Validates a certificate path.
      *
      * @param path The certificate path to validate.
+     * @param requestedHostNames The host names conveyed by the client in a TLS SNI extension or {@code null} if
+     *                          the client did not provide any.
      * @param spanContext The <em>OpenTracing</em> context in which the
      *                    validation should be executed, or {@code null}
      *                    if no context exists (yet).
@@ -47,5 +50,6 @@ public interface X509Authentication {
      */
     Future<JsonObject> validateClientCertificate(
             Certificate[] path,
+            List<String> requestedHostNames,
             SpanContext spanContext);
 }

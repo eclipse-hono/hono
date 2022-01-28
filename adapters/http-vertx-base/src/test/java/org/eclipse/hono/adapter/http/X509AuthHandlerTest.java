@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -32,6 +32,7 @@ import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.time.Period;
 import java.util.Date;
+import java.util.List;
 import java.util.Set;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
@@ -83,13 +84,18 @@ public class X509AuthHandlerTest {
      *
      * @throws SSLPeerUnverifiedException if the client certificate cannot be validated.
      */
+    @SuppressWarnings("unchecked")
     @Test
     public void testHandleFailsWithStatusCodeFromAuthProvider() throws SSLPeerUnverifiedException {
 
         // GIVEN an auth handler configured with an auth provider that
         // fails with a 503 error code during authentication
         final ServiceInvocationException error = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE);
-        when(clientAuth.validateClientCertificate(any(Certificate[].class), (SpanContext) any())).thenReturn(Future.failedFuture(error));
+        when(clientAuth.validateClientCertificate(
+                any(Certificate[].class),
+                any(List.class),
+                (SpanContext) any()))
+            .thenReturn(Future.failedFuture(error));
 
         // WHEN trying to authenticate a request that contains a client certificate
         final EmptyCertificate clientCert = new EmptyCertificate("CN=device", "CN=tenant");
