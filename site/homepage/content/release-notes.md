@@ -4,6 +4,13 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
+## 1.11.1 (not yet released)
+
+### Fixes & Enhancements
+
+* The device registry containers might not have started up properly when used with Kafka as the messaging
+  infrastructure. This has been fixed.
+
 ## 1.11.0
 
 ### New Features
