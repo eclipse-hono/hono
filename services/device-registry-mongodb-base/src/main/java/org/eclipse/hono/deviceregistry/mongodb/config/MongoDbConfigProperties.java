@@ -41,6 +41,28 @@ public final class MongoDbConfigProperties {
     private Integer connectionTimeoutInMs;
 
     /**
+     * Creates default properties.
+     */
+    public MongoDbConfigProperties() {
+    }
+
+    /**
+     * Creates properties from existing options.
+     *
+     *@param options The options to use.
+     */
+    public MongoDbConfigProperties(final MongoDbConfigOptions options) {
+        options.host().ifPresent(this::setHost);
+        this.setPort(options.port());
+        this.setDbName(options.dbName());
+        options.username().ifPresent(this::setUsername);
+        options.password().ifPresent(this::setPassword);
+        options.connectionString().ifPresent(this::setConnectionString);
+        this.setConnectTimeout(options.connectTimeout());
+        this.setServerSelectionTimeout(options.serverSelectionTimeout());
+    }
+
+    /**
      * Gets the name or literal IP address of the host the Mongo DB instance is
      * running on.
      *

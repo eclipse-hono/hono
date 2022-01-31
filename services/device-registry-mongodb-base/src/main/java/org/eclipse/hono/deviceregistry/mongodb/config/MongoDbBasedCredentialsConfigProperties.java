@@ -37,6 +37,28 @@ public final class MongoDbBasedCredentialsConfigProperties extends AbstractMongo
 
     private int maxBcryptCostFactor = 10;
 
+    /**
+     * Creates default properties.
+     */
+    public MongoDbBasedCredentialsConfigProperties() {
+        super();
+    }
+
+    /**
+     * Creates properties from existing options.
+     *
+     * @param options The options.
+     * @throws NullPointerException if options are {@code null}.
+     */
+    public MongoDbBasedCredentialsConfigProperties(final MongoDbBasedCredentialsConfigOptions options) {
+        super(options.commonOptions());
+        this.setCollectionName(options.collectionName());
+        options.encryptionKeyFile().ifPresent(this::setEncryptionKeyFile);
+        options.hashAlgorithmsWhitelist()
+            .ifPresent(algorithms -> setHashAlgorithmsWhitelist(algorithms.toArray(String[]::new)));
+        this.setMaxBcryptCostFactor(options.maxBcryptCostFactor());
+    }
+
     @Override
     protected String getDefaultCollectionName() {
         return DEFAULT_CREDENTIALS_COLLECTION_NAME;

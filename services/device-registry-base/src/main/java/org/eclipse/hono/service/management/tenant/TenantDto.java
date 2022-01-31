@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,12 +20,15 @@ import org.eclipse.hono.service.management.BaseDto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
 /**
  * A Data Transfer Object for tenant information.
  * <p>
  * This is basically a wrapper around a {@link Tenant} object, adding a resource version
  * and time stamps for initial creation and last update.
  */
+@RegisterForReflection(ignoreNested = false)
 public final class TenantDto extends BaseDto<Tenant> {
 
     /**

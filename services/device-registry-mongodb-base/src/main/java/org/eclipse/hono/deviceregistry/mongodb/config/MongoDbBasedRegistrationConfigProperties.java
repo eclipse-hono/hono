@@ -35,6 +35,26 @@ public final class MongoDbBasedRegistrationConfigProperties extends AbstractMong
     private int maxDevicesPerTenant = UNLIMITED_DEVICES_PER_TENANT;
 
     /**
+     * Creates default properties.
+     */
+    public MongoDbBasedRegistrationConfigProperties() {
+        // do nothing
+    }
+
+    /**
+     * Creates properties from existing options.
+     *
+     * @param options The options.
+     * @throws NullPointerException if options are {@code null}.
+     */
+    public MongoDbBasedRegistrationConfigProperties(final MongoDbBasedRegistrationConfigOptions options) {
+        super(options.commonOptions());
+        this.setCollectionName(options.collectionName());
+        this.setMaxDevicesPerTenant(options.maxDevicesPerTenant());
+        options.usernamePattern().ifPresent(this::setUsernamePattern);
+    }
+
+    /**
      * Checks if the number of devices per tenant is limited.
      *
      * @return {@code true} if the configured number of devices per tenant is &gt;

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -36,6 +36,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
 /**
  * A trusted CA configuration.
  * <p>
@@ -43,6 +45,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>
  *
  */
+@RegisterForReflection
 @JsonInclude(value = Include.NON_NULL)
 public class TrustedCertificateAuthority {
     @JsonProperty(RegistryManagementConstants.FIELD_ID)

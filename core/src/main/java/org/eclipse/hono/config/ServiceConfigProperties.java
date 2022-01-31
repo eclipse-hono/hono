@@ -70,6 +70,7 @@ public class ServiceConfigProperties extends ServerConfig {
      * Creates a new instance from existing options.
      *
      * @param options The options to copy.
+     * @throws NullPointerException if options are {@code null}.
      */
     public ServiceConfigProperties(final ServiceOptions options) {
         super(options.serverOptions());

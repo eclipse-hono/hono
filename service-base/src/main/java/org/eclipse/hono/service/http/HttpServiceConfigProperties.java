@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,6 +29,25 @@ public class HttpServiceConfigProperties extends ServiceConfigProperties {
 
     private boolean authenticationRequired = true;
     private String realm = DEFAULT_REALM;
+
+    /**
+     * Creates default properties.
+     */
+    public HttpServiceConfigProperties() {
+        super();
+    }
+
+    /**
+     * Creates properties from existing options.
+     *
+     * @param options The options.
+     * @throws NullPointerException if options are {@code null}.
+     */
+    public HttpServiceConfigProperties(final HttpServiceConfigOptions options) {
+        super(options.commonOptions());
+        this.setAuthenticationRequired(options.authenticationRequired());
+        this.setRealm(options.realm());
+    }
 
     /**
      * Checks whether the HTTP endpoint requires clients to authenticate.

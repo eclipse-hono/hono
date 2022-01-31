@@ -26,11 +26,34 @@ import io.vertx.ext.auth.mongo.MongoAuthentication;
 public final class MongoAuthProviderConfig {
 
     private String collectionName = MongoAuthentication.DEFAULT_COLLECTION_NAME;
-    private HashSaltStyle saltStyle;
+    private HashSaltStyle saltStyle = HashSaltStyle.COLUMN;
     private String saltField = MongoAuthentication.DEFAULT_SALT_FIELD;
     private String usernameField = MongoAuthentication.DEFAULT_USERNAME_FIELD;
     private String passwordField = MongoAuthentication.DEFAULT_PASSWORD_FIELD;
-    private HashAlgorithm hashAlgorithm;
+    private HashAlgorithm hashAlgorithm = HashAlgorithm.PBKDF2;
+
+    /**
+     * Creates default properties.
+     */
+    public MongoAuthProviderConfig() {
+        // do nothing
+    }
+
+    /**
+     * Creates properties from existing options.
+     *
+     * @param options The options.
+     * @throws NullPointerException if options are {@code null}.
+     */
+    public MongoAuthProviderConfig(final MongoAuthProviderOptions options) {
+        Objects.requireNonNull(options);
+        setCollectionName(options.collectionName());
+        setHashAlgorithm(options.hashAlgorithm());
+        setPasswordField(options.passwordField());
+        setSaltField(options.saltField());
+        setSaltStyle(options.saltStyle());
+        setUsernameField(options.usernameField());
+    }
 
     /**
      * Gets the name of the Mongo DB collection that contains the user accounts.
@@ -57,8 +80,10 @@ public final class MongoAuthProviderConfig {
 
     /**
      * Gets the strategy to use for determining the salt of a password.
+     * <p>
+     * The default value of this property is {@link HashSaltStyle#COLUMN}.
      *
-     * @return The style or {@code null} if the provider should use the default value.
+     * @return The style.
      */
     public HashSaltStyle getSaltStyle() {
         return saltStyle;
@@ -66,9 +91,11 @@ public final class MongoAuthProviderConfig {
 
     /**
      * Sets the strategy to use for determining the salt of a password.
+     * <p>
+     * The default value of this property is {@link HashSaltStyle#COLUMN}.
      *
      * @param strategy The strategy.
-     * @throws NullPointerException if strategy is {@code null}.
+     * @throws NullPointerException if style is {@code null}.
      */
     public void setSaltStyle(final HashSaltStyle strategy) {
         this.saltStyle = Objects.requireNonNull(strategy);
@@ -76,8 +103,10 @@ public final class MongoAuthProviderConfig {
 
     /**
      * Gets the algorithm used for creating password hashes.
+     * <p>
+     * The default value of this property is {@link HashAlgorithm#PBKDF2}.
      *
-     * @return The algorithm or {@code null} if the provider should use the default value.
+     * @return The algorithm.
      */
     public HashAlgorithm getHashAlgorithm() {
         return hashAlgorithm;
@@ -85,6 +114,8 @@ public final class MongoAuthProviderConfig {
 
     /**
      * Sets the algorithm to use for creating password hashes.
+     * <p>
+     * The default value of this property is {@link HashAlgorithm#PBKDF2}.
      *
      * @param algorithm The algorithm.
      * @throws NullPointerException if algorithm is {@code null}.

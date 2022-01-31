@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,9 +20,12 @@ import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
 /**
  * This class encapsulates secrets information for a generic credential type.
  */
+@RegisterForReflection
 public class GenericSecret extends CommonSecret {
 
     @JsonAnySetter

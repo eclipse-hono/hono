@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,9 +18,12 @@ import java.util.Objects;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
 /**
  * An ID used in results.
  */
+@RegisterForReflection
 public final class Id {
 
     private final String id;

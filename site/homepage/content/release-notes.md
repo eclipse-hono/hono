@@ -14,11 +14,16 @@ description = "Information about changes in recent Hono releases. Includes new f
   Device Registry Management API for details on how to configure tenants accordingly. Please refer to the protocol
   adapter user guides and the Device Identity concept page for details regarding device authentication based on client
   certificates.
+* A Quarkus based variant of the MongoDB device registry has been added.
 
 ### Fixes & Enhancements
 
 * The device registry containers might not have started up properly when used with Kafka as the messaging
   infrastructure. This has been fixed.
+
+### Deprecations
+
+* The Spring Boot based variant of the MongoDB device registry has been deprecated and marked for removal in Hono 2.0.0.
 
 ## 1.11.1
 

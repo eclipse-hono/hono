@@ -45,6 +45,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.vertx.core.Future;
 
 /**
@@ -53,6 +54,7 @@ import io.vertx.core.Future;
  * Represents the <em>Tenant</em> schema object defined in the
  * <a href="https://www.eclipse.org/hono/docs/api/management/">Device Registry Management API</a>
  */
+@RegisterForReflection(ignoreNested = false)
 @JsonInclude(value = Include.NON_NULL)
 public class Tenant {
 

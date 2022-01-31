@@ -18,6 +18,10 @@ hono:
     sendTimeOut: 5100
     tenantIdPattern: "[A-Z]+"
     waitForDownstreamConnectionEnabled: true
+  http:
+    authenticationRequired: false
+    maxPayloadSize: 4096
+    realm: "test-realm"
   command:
     addressRewriteRule: "([a-z_]+)/([\\w-]+) test-vhost/$1/$2"
     amqpHostname: "command.hono.eclipseprojects.io"

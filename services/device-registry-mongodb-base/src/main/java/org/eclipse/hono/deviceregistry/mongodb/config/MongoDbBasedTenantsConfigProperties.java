@@ -22,6 +22,24 @@ public final class MongoDbBasedTenantsConfigProperties extends AbstractMongoDbBa
      */
     private static final String DEFAULT_TENANTS_COLLECTION_NAME = "tenants";
 
+    /**
+     * Creates default properties.
+     */
+    public MongoDbBasedTenantsConfigProperties() {
+        super();
+    }
+
+    /**
+     * Creates properties from existing options.
+     *
+     * @param options The options.
+     * @throws NullPointerException if options are {@code null}.
+     */
+    public MongoDbBasedTenantsConfigProperties(final MongoDbBasedTenantsConfigOptions options) {
+        super(options.commonOptions());
+        this.setCollectionName(options.collectionName());
+    }
+
     @Override
     protected String getDefaultCollectionName() {
         return DEFAULT_TENANTS_COLLECTION_NAME;

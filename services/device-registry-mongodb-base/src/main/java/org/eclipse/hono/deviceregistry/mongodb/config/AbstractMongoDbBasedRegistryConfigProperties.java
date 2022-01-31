@@ -36,6 +36,24 @@ public abstract class AbstractMongoDbBasedRegistryConfigProperties {
     private String encryptionKeyFile;
 
     /**
+     * Creates default properties.
+     */
+    protected AbstractMongoDbBasedRegistryConfigProperties() {
+        // do nothing
+    }
+
+    /**
+     * Creates properties from existing options.
+     *
+     * @param options The options.
+     * @throws NullPointerException if options are {@code null}.
+     */
+    protected AbstractMongoDbBasedRegistryConfigProperties(final MongoDbBasedRegistryConfigOptions options) {
+        Objects.requireNonNull(options);
+        this.setCacheMaxAge(options.cacheMaxAge());
+    }
+
+    /**
      * Gets the default name of the Mongo DB collection that the registry's data should be persisted to.
      *
      * @return The name.

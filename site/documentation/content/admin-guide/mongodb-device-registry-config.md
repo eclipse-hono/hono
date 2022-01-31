@@ -3,10 +3,25 @@ title = "MongoDB Based Device Registry Configuration"
 weight = 310
 +++
 
-The MongoDB based Device Registry component provides an implementation of Eclipse Hono&trade;'s [Device Registration]({{< relref "/api/device-registration" >}}),
-[Credentials]({{< relref "/api/credentials" >}}) and [Tenant]({{< relref "/api/tenant" >}}) APIs. Protocol adapters use these APIs to determine a device's registration status, e.g. if it is enabled and if it is registered with a particular tenant, and to authenticate a device before accepting any data for processing from it. In addition to the above, this Device Registry also provides an implementation of [Device Registry Management APIs]({{< relref "/api/management" >}}) for managing tenants, registration information and credentials of devices.
+The MongoDB based Device Registry component provides an implementation of Eclipse Hono&trade;'s
+[Device Registration]({{< relref "/api/device-registration" >}}), [Credentials]({{< relref "/api/credentials" >}}) and
+[Tenant]({{< relref "/api/tenant" >}}) APIs. Protocol adapters use these APIs to determine a device's registration
+status, e.g. if it is enabled and if it is registered with a particular tenant, and to authenticate a device before
+accepting any data for processing from it. In addition to the above, this Device Registry also provides an
+implementation of [Device Registry Management APIs]({{< relref "/api/management" >}}) for managing tenants,
+registration information and credentials of devices.
 
-The Device Registry is implemented as a Spring Boot application, and the data is persisted in a MongoDB database. It can be run either directly from the command line or by means of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-service-device-registry-mongodb/) created from it.
+
+The registry is implemented as a Quarkus application, using a MongoDB database as the persistence store. It can be run
+either directly from the command line or by means of starting the corresponding
+[Docker image](https://hub.docker.com/r/eclipse/hono-service-device-registry-mongodb-quarkus/) created from it.
+
+{{% notice info %}}
+The registry had originally been implemented as a Spring Boot application. That variant has been deprecated with Hono
+1.12.0 and will be completely removed in Hono 2.0.0.
+The [Spring Boot based Docker image](https://hub.docker.com/r/eclipse/hono-service-device-registry-mongodb/) will be
+available until then.
+{{% /notice %}}
 
 ## Service Configuration
 
@@ -80,7 +95,9 @@ options:
 
 ## Port Configuration
 
-The Device Registry supports configuration of both, an AMQP based endpoint as well as an HTTP based endpoint proving RESTful resources for managing registration information and credentials. Both endpoints can be configured to listen for connections on
+The Device Registry supports configuration of both, an AMQP based endpoint as well as an HTTP based endpoint proving
+RESTful resources for managing registration information and credentials. Both endpoints can be configured to listen for
+connections on
 
 * a secure port only (default) or
 * an insecure port only or
@@ -89,16 +106,19 @@ The Device Registry supports configuration of both, an AMQP based endpoint as we
 See [Port Configuration]({{< relref "file-based-device-registry-config#port-configuration" >}}) for more information. 
 
 {{% notice tip %}}
-The environment variables to use for configuring the REST endpoint are the same as the ones for the AMQP endpoint, substituting `_AMQP_` with `_HTTP_`.
+The environment variables to use for configuring the REST endpoint are the same as the ones for the AMQP endpoint,
+sbstituting `_AMQP_` with `_HTTP_`.
 {{% /notice %}}
 
 ## Authentication Service Connection Configuration
 
-See [Authentication Service Connection Configuration]({{< relref "file-based-device-registry-config#authentication-service-connection-configuration" >}}) for more information.
+See [Authentication Service Connection Configuration]({{< relref "file-based-device-registry-config#authentication-service-connection-configuration" >}})
+for more information.
 
 ## Metrics Configuration
 
-See [Monitoring & Tracing Admin Guide]({{< relref "monitoring-tracing-config.md" >}}) for details on how to configure the reporting of metrics.
+See [Monitoring & Tracing Admin Guide]({{< relref "monitoring-tracing-config.md" >}}) for details on how to configure
+the reporting of metrics.
 
 ## Encrypting Secrets
 
@@ -159,7 +179,7 @@ The individual client configuration is optional, a minimal configuration may onl
 configuration consisting of properties prefixed with `HONO_KAFKA_COMMONCLIENTCONFIG_` and `hono.kafka.commonClientConfig.`
 respectively.
 
-| OS Environment Variable Prefix<br>Java System Property Prefix                          | Description                                                                                                         |
-|:---------------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------|
-| `HONO_KAFKA_EVENT_PRODUCERCONFIG_`<br>`hono.kafka.event.producerConfig.`               | Configures the Kafka producer that publishes event messages.                                                        |
+| OS Environment Variable Prefix<br>Java System Property Prefix             | Description |
+|:--------------------------------------------------------------------------|:------------|
+| `HONO_KAFKA_EVENT_PRODUCERCONFIG_`<br>`hono.kafka.event.producerConfig.`             | Configures the Kafka producer that publishes event messages. 
 | `HONO_KAFKA_NOTIFICATION_PRODUCERCONFIG_`<br>`hono.kafka.notification.producerConfig.` | Configures the Kafka producer that publishes notification messages about changes to tenant/device/credentials data. |

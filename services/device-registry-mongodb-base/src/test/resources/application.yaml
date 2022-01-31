@@ -1,0 +1,6 @@
+hono:
+  registry:
+    http:
+      maxPayloadSize: 4096
+      auth:
+        collectionName: "user-accounts"
