@@ -120,11 +120,28 @@ Devices can also use an X.509 (client) certificate to authenticate to protocol a
 adapter tries to verify that a valid chain of certificates can be established starting with the client certificate
 presented by the device up to one of the trusted root certificates configured for the device's tenant.
 
-During connection establishment with the device, the protocol adapter extracts the *issuer DN* property from the
-device's client certificate and uses it to retrieve the configuration of the tenant that the device belongs to by
-means of the Tenant API's [*get Tenant Information*]({{< relref "/api/tenant#get-tenant-information" >}}) operation.
-The data returned by the Tenant service includes the tenant identifier and the trust anchors that have been configured
-for the tenant.
+During connection establishment with the device, the protocol adapter tries to determine the tenant to which the
+device belongs and retrieve the tenant's configuration information using the Tenant API. The adapter then uses the
+trust anchors that have been configured for the tenant to verify the client certificate.
+
+The protocol adapter tries to look up the device's tenant configuration using the Tenant API's
+[*get Tenant Information*]({{< relref "/api/tenant#get-tenant-information" >}}) operation.
+The adapter first invokes the operation using the *issuer DN* from the device's client certificate.
+If that fails and if the device has included the
+[Server Name Indication](https://datatracker.ietf.org/doc/html/rfc6066#section-3) extension during the TLS handshake,
+the adapter extracts the first label of the first host name conveyed in the SNI extension and invokes the *get Tenant
+Information* operation with the extracted value as the tenant identifier. For example, a host name of
+`my-tenant.hono.eclipseprojects.io` would result in a tenant identifier of `my-tenant` being used in the look-up.
+
+{{% note info %}}
+Labels in host names may only consist of letters, digits and hyphens. In order to be able to refer to tenants which
+have an identifier that consists of other characters as well, the Device Registry Management API supports registering
+an *alias* for a tenant which can be used as an alternate identifier when looking up tenant configuration information.
+
+Based on that, a tenant with identifier `unsupported_id` that has been registered using *alias* `my-tenant`,
+can be referred to by a device by means of including a host name like `my-tenant.hono.eclipseprojects.io` in the SNI
+extension.
+{{% /note %}}
 
 After having verified the client certificate using the trust anchor(s), the protocol adapter extracts
 the client certificate's *subject DN* and invokes the Credentials API's

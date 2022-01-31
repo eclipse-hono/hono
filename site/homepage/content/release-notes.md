@@ -6,6 +6,15 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 ## 1.12.0 (not yet released)
 
+### New Features
+
+* The Mongo DB based device registry now supports multiple tenants to use the same trust anchors for authenticating
+  devices based on client certificates. The devices belonging to such tenants need to indicate the tenant identifier
+  using the Server Name Indication extension during their TLS handshake with a protocol adapter. Please refer to the
+  Device Registry Management API for details on how to configure tenants accordingly. Please refer to the protocol
+  adapter user guides and the Device Identity concept page for details regarding device authentication based on client
+  certificates.
+
 ### Fixes & Enhancements
 
 * The device registry containers might not have started up properly when used with Kafka as the messaging
