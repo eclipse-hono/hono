@@ -149,7 +149,7 @@ org.apache.commons:commons-collections4:jar:4.2
 org.apache.commons:commons-compress:jar:1.21
 org.apache.kafka:kafka-clients:jar:2.8.1
 org.apache.logging.log4j:log4j-api:jar:2.17.1
-org.apache.logging.log4j:log4j-to-slf4j:jar:2.14.1
+org.apache.logging.log4j:log4j-to-slf4j:jar:2.17.1
 org.apache.qpid:proton-j:jar:0.33.10
 org.apache.sshd:sshd-common:jar:2.3.0
 org.apache.thrift:libthrift:jar:0.14.1
