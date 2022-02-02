@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+    Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -23,77 +23,18 @@
   <modelVersion>4.0.0</modelVersion>
 
   <artifactId>hono-service-device-registry-mongodb</artifactId>
-  <name>Hono Mongodb Based Device Registry</name>
-  <description>A Mongodb based device registry for Hono implementing the Device Registration and Credentials APIs.
-    </description>
+  <name>Hono Mongodb Based Device Registry (Spring)</name>
+  <description>
+    A Spring Boot based implementation of Hono's device registry using MongoDB for persistence.
+  </description>
   <url>https://www.eclipse.org/hono</url>
 
   <dependencies>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-service-device-registry-base</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-mongo-client</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-auth-mongo</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-client-telemetry-amqp</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-client-telemetry-kafka</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.bol</groupId>
-      <artifactId>cryptvault</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.yaml</groupId>
-      <artifactId>snakeyaml</artifactId>
-      <scope>compile</scope>
-    </dependency>
-
-    <!-- testing -->
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-service-device-registry-base</artifactId>
-      <version>${project.version}</version>
-      <classifier>tests</classifier>
-      <type>test-jar</type>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.testcontainers</groupId>
-      <artifactId>mongodb</artifactId>
-      <scope>test</scope>
+      <artifactId>hono-service-device-registry-mongodb-base</artifactId>
     </dependency>
   </dependencies>
-
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <skipTests>${skipDockerTests}</skipTests>
-          <systemProperties>
-            <mongoDbImageName>${mongodb-image.name}</mongoDbImageName>
-          </systemProperties>
-          <properties>
-            <configurationParameters>
-              junit.jupiter.execution.parallel.enabled = false
-            </configurationParameters>
-          </properties>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
 
   <profiles>
     <profile>
@@ -122,6 +63,7 @@
                       <implemented.api.1>Tenant</implemented.api.1>
                       <implemented.api.2>Device Registration</implemented.api.2>
                       <implemented.api.3>Credentials</implemented.api.3>
+                      <implemented.api.4>Device Registry Management</implemented.api.4>
                     </labels>
                     <ports>
                       <port>5671</port>
