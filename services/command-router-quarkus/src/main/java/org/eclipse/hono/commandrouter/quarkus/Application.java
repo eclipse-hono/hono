@@ -262,7 +262,8 @@ public class Application extends AbstractServiceApplication {
         final CompletableFuture<Void> startup = new CompletableFuture<>();
 
         // deploy authentication service (once only)
-        final Future<String> authServiceDeploymentTracker = vertx.deployVerticle((Verticle) authenticationService);
+        final Future<String> authServiceDeploymentTracker = vertx.deployVerticle((Verticle) authenticationService)
+                .onSuccess(ok -> registerHealthCheckProvider(authenticationService));
 
         // deploy AMQP 1.0 server
         final Future<String> amqpServerDeploymentTracker = vertx.deployVerticle(

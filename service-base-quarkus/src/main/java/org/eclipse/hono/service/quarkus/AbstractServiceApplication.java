@@ -25,6 +25,7 @@ import javax.inject.Inject;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.quarkus.ApplicationOptions;
 import org.eclipse.hono.service.ComponentNameProvider;
+import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -105,6 +106,32 @@ public abstract class AbstractServiceApplication implements ComponentNameProvide
         new FileDescriptorMetrics().bindTo(meterRegistry);
         this.jvmGcMetrics = new JvmGcMetrics();
         jvmGcMetrics.bindTo(meterRegistry);
+    }
+
+    /**
+     * Registers additional health checks.
+     *
+     * @param provider The provider of the health checks to be registered (may be {@code null}).
+     */
+    protected final void registerHealthchecks(final HealthCheckProvider provider) {
+        Optional.ofNullable(provider).ifPresent(p -> {
+            LOG.debug("registering health checks [provider: {}]", p.getClass().getName());
+            healthCheckServer.registerHealthCheckResources(p);
+        });
+    }
+
+    /**
+     * Registers additional health checks.
+     * <p>
+     * Does nothing if the given object is not a {@link HealthCheckProvider}.
+     * Otherwise, simply invokes {@link #registerHealthchecks(HealthCheckProvider)}.
+     *
+     * @param obj The provider of the health checks.
+     */
+    protected final void registerHealthCheckProvider(final Object obj) {
+        if (obj instanceof HealthCheckProvider) {
+            registerHealthchecks((HealthCheckProvider) obj);
+        }
     }
 
     /**
