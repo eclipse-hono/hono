@@ -8,7 +8,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 ### Fixes & Enhancements
 
-* The MongoDB device registry did not accept HTTP endpoint credentials that worked with Hono >= 1.10 because
+* The MongoDB device registry did not accept HTTP endpoint credentials that worked with Hono <= 1.10 because
   password hashes were created in lowercase instead of uppercase. This has been fixed.
 
 ## 1.11.1
