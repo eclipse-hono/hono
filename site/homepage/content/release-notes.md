@@ -4,14 +4,19 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
+## 1.11.2 (not yet released)
+
+### Fixes & Enhancements
+
+* The MongoDB device registry did not accept HTTP endpoint credentials that worked with Hono >= 1.10 because
+  password hashes were created in lowercase instead of uppercase. This has been fixed.
+
 ## 1.11.1
 
 ### Fixes & Enhancements
 
 * The device registry containers might not have started up properly when used with Kafka as the messaging
   infrastructure. This has been fixed.
-* The MongoDB device registry did not accept HTTP endpoint credentials that worked with Hono >= 1.10 because
-  password hashes were created in lowercase instead of uppercase. This has been fixed.
 
 ## 1.11.0
 
