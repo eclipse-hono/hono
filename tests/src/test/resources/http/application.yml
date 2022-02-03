@@ -98,9 +98,6 @@ quarkus:
         level: INFO
   vertx:
     max-event-loop-execute-time: ${max.event-loop.execute-time}
-    prefer-native-transport: true
-    resolver:
-      cache-max-time-to-live: 0
 
 spring:
   jmx:

@@ -35,8 +35,6 @@ quarkus:
         level: INFO
       "org.eclipse.hono.authentication.file":
         level: INFO
-  vertx:
-    prefer-native-transport: true
 
 spring:
   jmx:
