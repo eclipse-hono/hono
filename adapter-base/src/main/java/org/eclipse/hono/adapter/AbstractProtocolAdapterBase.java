@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -936,8 +936,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected Future<Void> sendConnectedEvent(final String remoteId, final Device authenticatedDevice, final SpanContext context) {
         if (this.connectionEventProducer != null) {
-            return getTenantClient().get(authenticatedDevice.getTenantId(), context)
-                    .map(this::getEventSender)
+            return Optional.ofNullable(authenticatedDevice)
+                    .map(device -> getTenantClient().get(device.getTenantId(), context)
+                            .map(this::getEventSender))
+                    .orElseGet(() -> Future.succeededFuture(null))
                     .compose(es -> this.connectionEventProducer.connected(
                             new ConnectionEventProducer.Context() {
                                 @Override
@@ -972,8 +974,10 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      */
     protected Future<Void> sendDisconnectedEvent(final String remoteId, final Device authenticatedDevice, final SpanContext context) {
         if (this.connectionEventProducer != null) {
-            return getTenantClient().get(authenticatedDevice.getTenantId(), context)
-                    .map(this::getEventSender)
+            return Optional.ofNullable(authenticatedDevice)
+                    .map(device -> getTenantClient().get(device.getTenantId(), context)
+                            .map(this::getEventSender))
+                    .orElseGet(() -> Future.succeededFuture(null))
                     .compose(es -> this.connectionEventProducer.disconnected(
                             new ConnectionEventProducer.Context() {
                                 @Override
