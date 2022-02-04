@@ -5,13 +5,13 @@ hono:
     insecurePortBindAddress: 0.0.0.0
     insecurePort: ${vertx.health.port}
   messaging:
-    name: 'Hono Device Registry MongoDb'
-    host: ${hono.amqp-network.host}
+    name: "Hono Device Registry MongoDb"
+    host: "${hono.amqp-network.host}"
     port: 5673
     amqpHostname: hono-internal
-    keyPath: /etc/hono/certs/device-registry-key.pem
-    certPath: /etc/hono/certs/device-registry-cert.pem
-    trustStorePath: /etc/hono/certs/trusted-certs.pem
+    keyPath: "/${hono.deviceregistry.config-dir}/certs/device-registry-key.pem"
+    certPath: "/${hono.deviceregistry.config-dir}/certs/device-registry-cert.pem"
+    trustStorePath: "/${hono.deviceregistry.config-dir}/certs/trusted-certs.pem"
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
@@ -19,9 +19,9 @@ hono:
     host: ${hono.auth.host}
     port: 5671
     name: device-registry
-    trustStorePath: "/etc/hono/certs/trusted-certs.pem"
+    trustStorePath: "/${hono.deviceregistry.config-dir}/certs/trusted-certs.pem"
     validation:
-      certPath: /etc/hono/certs/auth-server-cert.pem
+      certPath: "/${hono.deviceregistry.config-dir}/certs/auth-server-cert.pem"
   registry:
     amqp:
       insecurePortEnabled: true
@@ -40,7 +40,7 @@ hono:
     svc:
   credentials:
     svc:
-      encryptionKeyFile: /etc/hono/encryptionKeys.yml
+      encryptionKeyFile: "/${hono.deviceregistry.config-dir}/encryptionKeys.yml"
       maxBcryptCostFactor: ${max.bcrypt.costFactor}
   tenant:
     svc:
@@ -56,6 +56,33 @@ hono:
   kafka:
     commonClientConfig:
       bootstrap.servers: ${hono.kafka.bootstrap.servers}
+
+quarkus:
+  log:
+    console:
+      color: true
+    level: INFO
+    min-level: TRACE
+    category:
+      "io.quarkus.vertx.core.runtime":
+        level: DEBUG
+      "org.apache.kafka":
+        level: WARN
+      "org.eclipse.hono":
+        level: INFO
+      "org.eclipse.hono.authentication.impl":
+        level: INFO
+      "org.eclipse.hono.client":
+        level: INFO
+      "org.eclipse.hono.deviceregistry":
+        level: INFO
+      "org.eclipse.hono.deviceregistry.mongodb":
+        level: INFO
+      "org.eclipse.hono.service":
+        level: INFO
+  vertx:
+    max-event-loop-execute-time: ${max.event-loop.execute-time}
+    prefer-native-transport: true
 
 spring:
   jmx:

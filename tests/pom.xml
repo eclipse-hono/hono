@@ -121,11 +121,14 @@
       Device Registry related properties - The MongoDB based device registry is used as the default one.
     -->
     <hono.deviceregistry.type>mongodb</hono.deviceregistry.type>
+    <hono.deviceregistry.config-dir>opt/hono/config</hono.deviceregistry.config-dir>
     <hono.deviceregistry.image>hono-service-device-registry-mongodb</hono.deviceregistry.image>
+    <hono.deviceregistry.image-suffix>-quarkus</hono.deviceregistry.image-suffix>
     <hono.deviceregistry.resources.folder>deviceregistry-mongodb</hono.deviceregistry.resources.folder>
     <!-- default memory limit of the device registry container is 400MB -->
     <hono.deviceregistry.max-mem>400000000</hono.deviceregistry.max-mem>
     <hono.deviceregistry.java-options>${default.java-options}</hono.deviceregistry.java-options>
+    <hono.deviceregistry.native-image-args></hono.deviceregistry.native-image-args>
     <!-- Spring application profiles to activate for the registry -->
     <hono.deviceregistry.spring.profiles>${logging.profile}</hono.deviceregistry.spring.profiles>
     <!--  accept requests with a body size of up to 2000 bytes -->
@@ -487,48 +490,6 @@
       </build>
     </profile>
     <profile>
-      <id>device-registry-file</id>
-      <activation>
-        <property>
-          <name>hono.deviceregistry.type</name>
-          <value>file</value>
-        </property>
-      </activation>
-      <properties>
-        <hono.mongodb.disabled>true</hono.mongodb.disabled>
-        <hono.postgres.disabled>true</hono.postgres.disabled>
-        <hono.deviceregistry.type>file</hono.deviceregistry.type>
-        <hono.deviceregistry.image>hono-service-device-registry-jdbc</hono.deviceregistry.image>
-        <hono.deviceregistry.resources.folder>deviceregistry-jdbc-h2</hono.deviceregistry.resources.folder>
-        <hono.deviceregistry.spring.profiles>registry-adapter,registry-management,tenant-service,create-schema,${logging.profile}</hono.deviceregistry.spring.profiles>
-        <!-- increase memory limit of the device registry container to 400MB in order to accommodate for embedded H2 DB -->
-        <hono.deviceregistry.containerMemoryLimit>400000000</hono.deviceregistry.containerMemoryLimit>
-        <hono.jdbc.db.url>jdbc:h2:file://var/tmp/hono</hono.jdbc.db.url>
-      </properties>
-    </profile>
-    <profile>
-      <id>device-registry-jdbc</id>
-      <activation>
-        <property>
-          <name>hono.deviceregistry.type</name>
-          <value>jdbc</value>
-        </property>
-      </activation>
-      <properties>
-        <hono.mongodb.disabled>true</hono.mongodb.disabled>
-        <hono.postgres.disabled>false</hono.postgres.disabled>
-        <hono.deviceregistry.type>jdbc</hono.deviceregistry.type>
-        <hono.deviceregistry.image>hono-service-device-registry-jdbc</hono.deviceregistry.image>
-        <hono.deviceregistry.resources.folder>deviceregistry-jdbc-postgres</hono.deviceregistry.resources.folder>
-        <hono.deviceregistry.spring.profiles>registry-adapter,registry-management,tenant-service,create-schema,${logging.profile}</hono.deviceregistry.spring.profiles>
-        <hono.jdbc.db.url>jdbc:postgresql://hono-jdbc-db:5432/</hono.jdbc.db.url>
-        <hono.jdbc.db.admin.username>postgres</hono.jdbc.db.admin.username>
-        <hono.jdbc.db.admin.password>change-me</hono.jdbc.db.admin.password>
-        <hono.jdbc.db.registry.username>${hono.jdbc.db.admin.username}</hono.jdbc.db.registry.username>
-        <hono.jdbc.db.registry.password>${hono.jdbc.db.admin.password}</hono.jdbc.db.registry.password>
-      </properties>
-    </profile>
-    <profile>
       <id>components-spring-boot</id>
       <activation>
         <property>
@@ -545,6 +506,8 @@
         <hono.mqtt-adapter.config-dir>etc/hono</hono.mqtt-adapter.config-dir>
         <hono.auth-server.config-dir>etc/hono</hono.auth-server.config-dir>
         <hono.command-router.config-dir>etc/hono</hono.command-router.config-dir>
+        <hono.deviceregistry.config-dir>etc/hono</hono.deviceregistry.config-dir>
+        <hono.deviceregistry.image-suffix></hono.deviceregistry.image-suffix>
       </properties>
     </profile>
     <profile>
@@ -570,8 +533,55 @@
         <hono.mqtt-adapter.useNativeTransport>false</hono.mqtt-adapter.useNativeTransport>
 
         <hono.auth-server.max-mem>33554432</hono.auth-server.max-mem>
-
         <hono.command-router.max-mem>67108864</hono.command-router.max-mem>
+        <hono.deviceregistry.max-mem>150000000</hono.deviceregistry.max-mem>
+        <hono.deviceregistry.image-suffix>-quarkus-native</hono.deviceregistry.image-suffix>
+      </properties>
+    </profile>
+    <profile>
+      <id>device-registry-file</id>
+      <activation>
+        <property>
+          <name>hono.deviceregistry.type</name>
+          <value>file</value>
+        </property>
+      </activation>
+      <properties>
+        <hono.mongodb.disabled>true</hono.mongodb.disabled>
+        <hono.postgres.disabled>true</hono.postgres.disabled>
+        <hono.deviceregistry.type>file</hono.deviceregistry.type>
+        <hono.deviceregistry.image>hono-service-device-registry-jdbc</hono.deviceregistry.image>
+        <hono.deviceregistry.image-suffix></hono.deviceregistry.image-suffix>
+        <hono.deviceregistry.config-dir>etc/hono</hono.deviceregistry.config-dir>
+        <hono.deviceregistry.resources.folder>deviceregistry-jdbc-h2</hono.deviceregistry.resources.folder>
+        <hono.deviceregistry.spring.profiles>registry-adapter,registry-management,tenant-service,create-schema,${logging.profile}</hono.deviceregistry.spring.profiles>
+        <!-- increase memory limit of the device registry container to 400MB in order to accommodate for embedded H2 DB -->
+        <hono.deviceregistry.containerMemoryLimit>400000000</hono.deviceregistry.containerMemoryLimit>
+        <hono.jdbc.db.url>jdbc:h2:file://var/tmp/hono</hono.jdbc.db.url>
+      </properties>
+    </profile>
+    <profile>
+      <id>device-registry-jdbc</id>
+      <activation>
+        <property>
+          <name>hono.deviceregistry.type</name>
+          <value>jdbc</value>
+        </property>
+      </activation>
+      <properties>
+        <hono.mongodb.disabled>true</hono.mongodb.disabled>
+        <hono.postgres.disabled>false</hono.postgres.disabled>
+        <hono.deviceregistry.type>jdbc</hono.deviceregistry.type>
+        <hono.deviceregistry.image>hono-service-device-registry-jdbc</hono.deviceregistry.image>
+        <hono.deviceregistry.image-suffix></hono.deviceregistry.image-suffix>
+        <hono.deviceregistry.config-dir>etc/hono</hono.deviceregistry.config-dir>
+        <hono.deviceregistry.resources.folder>deviceregistry-jdbc-postgres</hono.deviceregistry.resources.folder>
+        <hono.deviceregistry.spring.profiles>registry-adapter,registry-management,tenant-service,create-schema,${logging.profile}</hono.deviceregistry.spring.profiles>
+        <hono.jdbc.db.url>jdbc:postgresql://hono-jdbc-db:5432/</hono.jdbc.db.url>
+        <hono.jdbc.db.admin.username>postgres</hono.jdbc.db.admin.username>
+        <hono.jdbc.db.admin.password>change-me</hono.jdbc.db.admin.password>
+        <hono.jdbc.db.registry.username>${hono.jdbc.db.admin.username}</hono.jdbc.db.registry.username>
+        <hono.jdbc.db.registry.password>${hono.jdbc.db.admin.password}</hono.jdbc.db.registry.password>
       </properties>
     </profile>
     <profile>
@@ -1092,7 +1102,7 @@
                   <name>${docker.repository}/hono-service-device-registry-test:${project.version}</name>
                   <build>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${docker.repository}/${hono.deviceregistry.image}:${project.version}</from>
+                    <from>${docker.repository}/${hono.deviceregistry.image}${hono.deviceregistry.image-suffix}:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>
@@ -1101,14 +1111,14 @@
                         <fileSets>
                           <fileSet>
                             <directory>${project.build.directory}/resources/${hono.deviceregistry.resources.folder}</directory>
-                            <outputDirectory>etc/hono</outputDirectory>
+                            <outputDirectory>${hono.deviceregistry.config-dir}</outputDirectory>
                             <includes>
                               <include>*</include>
                             </includes>
                           </fileSet>
                           <fileSet>
                             <directory>${project.build.directory}/certs</directory>
-                            <outputDirectory>etc/hono/certs</outputDirectory>
+                            <outputDirectory>${hono.deviceregistry.config-dir}/certs</outputDirectory>
                             <includes>
                               <include>device-registry-*.pem</include>
                               <include>auth-server-cert.pem</include>
@@ -1131,6 +1141,11 @@
                       <name>${custom.network.name}</name>
                       <alias>${hono.registration.host}</alias>
                     </network>
+                    <cmd>
+                      <exec>
+                        <arg>${hono.deviceregistry.native-image-args}</arg>
+                      </exec>
+                    </cmd>
                     <memorySwap>${hono.deviceregistry.max-mem}</memorySwap>
                     <memory>${hono.deviceregistry.max-mem}</memory>
                     <env>

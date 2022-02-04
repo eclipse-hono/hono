@@ -46,10 +46,8 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TenantConstants;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
@@ -77,18 +75,6 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
 
     private static final Logger LOG = LoggerFactory.getLogger(TenantManagementIT.class);
 
-    private String tenantId;
-
-    /**
-     * Sets up the fixture.
-     *
-     * @param testInfo The test meta data.
-     */
-    @BeforeEach
-    public void setUp(final TestInfo testInfo) {
-        tenantId = getHelper().getRandomTenantId();
-    }
-
     /**
      * Verifies that the service accepts an add tenant request containing a valid tenant structure
      * and that the response contains a <em>Location</em> header for the created resource.
@@ -98,6 +84,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
     @Test
     public void testAddTenantSucceeds(final VertxTestContext context) {
 
+        final String tenantId = getHelper().getRandomTenantId();
         final Tenant tenant = buildTenantPayload();
         getHelper().registry.addTenant(tenantId, tenant)
             .onComplete(context.succeeding(response -> {
@@ -118,6 +105,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
     @Test
     public void testAddTenantSucceedsForEmptyBody(final VertxTestContext context) {
 
+        final String tenantId = getHelper().getRandomTenantId();
         getHelper().registry.addTenant(tenantId)
             .onFailure(context::failNow)
             .compose(ok -> getHelper().registry.getTenant(tenantId, HttpURLConnection.HTTP_OK))
@@ -152,6 +140,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
      */
     @Test
     public void testAddTenantSucceedsForConfigurationWithMissingTrustAnchorIds(final VertxTestContext context) {
+
         final PublicKey publicKey = TenantApiTests.getRandomPublicKey();
         final TrustedCertificateAuthority trustAnchor1 = Tenants
                 .createTrustAnchor("test-ca", "CN=test-dn", publicKey.getEncoded(), publicKey.getAlgorithm(),
@@ -161,6 +150,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
                         Instant.now(), Instant.now().plus(365, ChronoUnit.DAYS));
         final Tenant tenant = new Tenant()
                 .setTrustedCertificateAuthorities(List.of(trustAnchor1, trustAnchor2));
+        final String tenantId = getHelper().getRandomTenantId();
 
         getHelper().registry.addTenant(tenantId, tenant)
             .compose(ok -> getHelper().registry.getTenant(tenantId))
@@ -201,6 +191,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
         final Tenant tenant = new Tenant()
                 .setTrustAnchorGroup("test-group")
                 .setTrustedCertificateAuthorities(List.of(trustAnchor));
+        final String tenantId = getHelper().getRandomTenantId();
 
         getHelper().registry.addTenant(tenantId, tenant)
             .onFailure(context::failNow)
@@ -221,6 +212,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
         Arrays.fill(data, 'x');
         final Tenant payload = new Tenant();
         payload.setExtensions(Map.of("data", new String(data)));
+        final String tenantId = getHelper().getRandomTenantId();
 
         getHelper().registry.addTenant(tenantId, payload, HttpURLConnection.HTTP_ENTITY_TOO_LARGE)
             .onComplete(context.succeeding(response -> {
@@ -239,6 +231,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
     public void testAddTenantFailsForDuplicateTenantId(final VertxTestContext context)  {
 
         final Tenant payload = buildTenantPayload();
+        final String tenantId = getHelper().getRandomTenantId();
 
         getHelper().registry.addTenant(tenantId, payload)
             .onFailure(context::failNow)
@@ -263,6 +256,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
                 "device registry does not support tenant aliases");
 
         final Tenant payload = new Tenant().setAlias("the-alias");
+        final String tenantId = getHelper().getRandomTenantId();
 
         getHelper().registry.addTenant(tenantId, payload)
             .onFailure(context::failNow)
@@ -286,6 +280,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
     @Test
     public void testAddTenantFailsForWrongContentType(final VertxTestContext context)  {
 
+        final String tenantId = getHelper().getRandomTenantId();
         getHelper().registry.addTenant(
                 tenantId,
                 buildTenantPayload(),
@@ -322,6 +317,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
     public void testAddTenantFailsForMalformedTrustConfiguration(final VertxTestContext context) {
 
         final Tenant requestBody = Tenants.createTenantForTrustAnchor("CN=test-dn", "NotBased64Encoded".getBytes(), "RSA");
+        final String tenantId = getHelper().getRandomTenantId();
 
         getHelper().registry.addTenant(
                 tenantId,
@@ -351,6 +347,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
                 Instant.now(),
                 Instant.now().plus(365, ChronoUnit.DAYS));
         final Tenant tenant = new Tenant().setTrustedCertificateAuthorities(List.of(trustAnchor));
+        final String tenantId = getHelper().getRandomTenantId();
 
         getHelper().registry.addTenant(tenantId, tenant)
             .onFailure(context::failNow)
@@ -381,6 +378,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
                         Instant.now().plus(366, ChronoUnit.DAYS), Instant.now().plus(730, ChronoUnit.DAYS));
         final Tenant tenant = new Tenant()
                 .setTrustedCertificateAuthorities(List.of(trustAnchor1, trustAnchor2));
+        final String tenantId = getHelper().getRandomTenantId();
 
         getHelper().registry.addTenant(
                 tenantId,
@@ -405,6 +403,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
         final JsonObject requestBody = JsonObject.mapFrom(buildTenantPayload());
         requestBody.getJsonArray(RegistryManagementConstants.FIELD_ADAPTERS)
             .add(JsonObject.mapFrom(httpAdapter));
+        final String tenantId = getHelper().getRandomTenantId();
 
         getHelper().registry.addTenant(
                 tenantId,
@@ -428,6 +427,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
 
         final JsonObject requestBody = JsonObject.mapFrom(new Tenant());
         requestBody.put("unexpected", "property");
+        final String tenantId = getHelper().getRandomTenantId();
 
         getHelper().registry.addTenant(
                 tenantId,
@@ -454,6 +454,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
         altered.setAdapters(orig.getAdapters());
         altered.setEnabled(Boolean.FALSE);
         final AtomicReference<String> latestVersion = new AtomicReference<>();
+        final String tenantId = getHelper().getRandomTenantId();
 
         getHelper().registry.addTenant(tenantId, orig)
             .compose(httpResponse -> {
@@ -493,6 +494,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
                         Instant.now(), Instant.now().plus(365, ChronoUnit.DAYS));
         final Tenant tenantForUpdate = new Tenant()
                 .setTrustedCertificateAuthorities(List.of(trustAnchor1, trustAnchor2));
+        final String tenantId = getHelper().getRandomTenantId();
 
         getHelper().registry.addTenant(tenantId, new Tenant())
                 .compose(ok -> getHelper().registry.updateTenant(tenantId, tenantForUpdate, HttpURLConnection.HTTP_NO_CONTENT))
@@ -534,6 +536,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
         final Tenant tenant = new Tenant()
                 .setTrustAnchorGroup("test-group")
                 .setTrustedCertificateAuthorities(List.of(trustAnchor));
+        final String tenantId = getHelper().getRandomTenantId();
 
         getHelper().registry.addTenant(getHelper().getRandomTenantId(), tenant)
             .onFailure(context::failNow)
@@ -552,6 +555,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
     @Test
     public void testUpdateTenantPreventsEmptyCaArray(final VertxTestContext context) {
 
+        final String tenantId = getHelper().getRandomTenantId();
         final var tenantTwoId = getHelper().getRandomTenantId();
         final PublicKey publicKey = TenantApiTests.getRandomPublicKey();
         final TrustedCertificateAuthority trustAnchor1 = Tenants
@@ -610,6 +614,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
                         Instant.now().plus(366, ChronoUnit.DAYS), Instant.now().plus(730, ChronoUnit.DAYS));
         final Tenant tenantForUpdate = new Tenant()
                 .setTrustedCertificateAuthorities(List.of(trustAnchor1, trustAnchor2));
+        final String tenantId = getHelper().getRandomTenantId();
 
         getHelper().registry.addTenant(tenantId, new Tenant())
                 .compose(ok -> getHelper().registry.updateTenant(tenantId, tenantForUpdate,
@@ -638,6 +643,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
                 Instant.now(),
                 Instant.now().plus(365, ChronoUnit.DAYS));
         final Tenant tenant = new Tenant().setTrustedCertificateAuthorities(List.of(trustAnchor));
+        final String tenantId = getHelper().getRandomTenantId();
 
         getHelper().registry.addTenant(getHelper().getRandomTenantId(), tenant)
             .onFailure(context::failNow)
@@ -666,6 +672,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
                 "device registry does not support tenant aliases");
 
         final Tenant payload = new Tenant().setAlias("the-alias");
+        final String tenantId = getHelper().getRandomTenantId();
 
         getHelper().registry.addTenant(getHelper().getRandomTenantId(), payload)
             .onFailure(context::failNow)
@@ -690,6 +697,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
     @Test
     public void testUpdateTenantFailsForRequestPayloadExceedingLimit(final VertxTestContext context)  {
 
+        final String tenantId = getHelper().getRandomTenantId();
         getHelper().registry.addTenant(tenantId, new Tenant())
             .compose(ok -> {
                 final var data = new char[3000];
@@ -715,6 +723,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
     public void testRemoveTenantSucceeds(final VertxTestContext context) {
 
         final Tenant tenantPayload = buildTenantPayload();
+        final String tenantId = getHelper().getRandomTenantId();
         final String deviceId = getHelper().getRandomDeviceId(tenantId);
 
         getHelper().registry.addDeviceForTenant(tenantId, tenantPayload, deviceId, new Device(), "secret")
@@ -759,6 +768,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
         requestBody.setMinimumMessageSize(2048);
         requestBody.setResourceLimits(resourceLimits);
         requestBody.setRegistrationLimits(registrationLimits);
+        final String tenantId = getHelper().getRandomTenantId();
 
         LOG.debug("registering tenant using Management API: {}", JsonObject.mapFrom(requestBody).encodePrettily());
         getHelper().registry.addTenant(tenantId, requestBody)
@@ -810,6 +820,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
         @Test
         public void testSearchTenantsFailsWhenNoTenantsAreFound(final VertxTestContext ctx) {
             final Tenant tenant = new Tenant().setEnabled(false);
+            final String tenantId = getHelper().getRandomTenantId();
             final String filterJson = getFilterJson("/enabled", true, "eq");
 
             getHelper().registry.addTenant(tenantId, tenant)
@@ -825,9 +836,10 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
          */
         @Test
         public void testSearchTenantsWithInvalidPageSizeFails(final VertxTestContext ctx) {
+
             final int invalidPageSize = -100;
 
-            getHelper().registry.addTenant(tenantId, new Tenant())
+            getHelper().registry.addTenant(getHelper().getRandomTenantId(), new Tenant())
                     .compose(ok -> getHelper().registry.searchTenants(Optional.of(invalidPageSize), Optional.empty(),
                             List.of(), List.of(), HttpURLConnection.HTTP_BAD_REQUEST))
                     .onComplete(ctx.succeedingThenComplete());
@@ -874,7 +886,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
         public void testSearchTenantsWithInvalidPageOffsetFails(final VertxTestContext ctx) {
             final int invalidPageOffset = -100;
 
-            getHelper().registry.addTenant(tenantId, new Tenant())
+            getHelper().registry.addTenant(getHelper().getRandomTenantId(), new Tenant())
                     .compose(ok -> getHelper().registry.searchTenants(Optional.empty(), Optional.of(invalidPageOffset),
                             List.of(), List.of(), HttpURLConnection.HTTP_BAD_REQUEST))
                     .onComplete(ctx.succeedingThenComplete());
@@ -921,7 +933,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
         @Test
         public void testSearchTenantsWithInvalidFilterJsonFails(final VertxTestContext ctx) {
 
-            getHelper().registry.addTenant(tenantId, new Tenant())
+            getHelper().registry.addTenant(getHelper().getRandomTenantId(), new Tenant())
                     .compose(ok -> getHelper().registry.searchTenants(Optional.empty(), Optional.empty(),
                             List.of("Invalid filterJson"), List.of(), HttpURLConnection.HTTP_BAD_REQUEST))
                     .onComplete(ctx.succeedingThenComplete());
@@ -1006,7 +1018,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
             final Tenant tenant = new Tenant().setExtensions(Map.of("id", "$id:1"));
             final String filterJson = getFilterJson("/ext/id", "*id*2", "eq");
 
-            getHelper().registry.addTenant(tenantId, tenant)
+            getHelper().registry.addTenant(getHelper().getRandomTenantId(), tenant)
                     .compose(ok -> getHelper().registry.searchTenants(Optional.empty(), Optional.empty(),
                             List.of(filterJson), List.of(), HttpURLConnection.HTTP_NOT_FOUND))
                     .onComplete(ctx.succeedingThenComplete());
@@ -1056,7 +1068,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
             final Tenant tenant = new Tenant().setExtensions(Map.of("id", "$id:2"));
             final String filterJson = getFilterJson("/ext/id", "$id:?2", "eq");
 
-            getHelper().registry.addTenant(tenantId, tenant)
+            getHelper().registry.addTenant(getHelper().getRandomTenantId(), tenant)
                     .compose(ok -> getHelper().registry.searchTenants(Optional.empty(), Optional.empty(),
                             List.of(filterJson), List.of(), HttpURLConnection.HTTP_NOT_FOUND))
                     .onComplete(ctx.succeedingThenComplete());
@@ -1070,7 +1082,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
         @Test
         public void testSearchTenantsWithInvalidSortJsonFails(final VertxTestContext ctx) {
 
-            getHelper().registry.addTenant(tenantId, new Tenant())
+            getHelper().registry.addTenant(getHelper().getRandomTenantId(), new Tenant())
                     .compose(ok -> getHelper().registry.searchTenants(Optional.empty(), Optional.empty(), List.of(),
                             List.of("Invalid sortJson"), HttpURLConnection.HTTP_BAD_REQUEST))
                     .onComplete(ctx.succeedingThenComplete());

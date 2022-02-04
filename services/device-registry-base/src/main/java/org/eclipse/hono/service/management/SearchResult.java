@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,6 +21,8 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
 /**
  * The result of a search operation in Device Registry Management API.
  *
@@ -30,6 +32,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * @see <a href="https://www.eclipse.org/hono/docs/api/management/#/devices/searchDevicesForTenant"> Device Registry
  *      Management API - Search Devices</a>
  */
+@RegisterForReflection
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 public final class SearchResult<T> {
     private final int total;

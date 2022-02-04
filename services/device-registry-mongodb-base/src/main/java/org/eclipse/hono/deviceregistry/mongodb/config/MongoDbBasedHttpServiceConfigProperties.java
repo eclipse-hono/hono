@@ -25,6 +25,24 @@ public final class MongoDbBasedHttpServiceConfigProperties extends HttpServiceCo
     private MongoAuthProviderConfig authenticationProviderConfig = new MongoAuthProviderConfig();
 
     /**
+     * Creates default properties.
+     */
+    public MongoDbBasedHttpServiceConfigProperties() {
+        super();
+    }
+
+    /**
+     * Creates properties from existing options.
+     *
+     * @param options The options.
+     * @throws NullPointerException if options are {@code null}.
+     */
+    public MongoDbBasedHttpServiceConfigProperties(final MongoDbBasedHttpServiceConfigOptions options) {
+        super(options.commonOptions());
+        this.authenticationProviderConfig = new MongoAuthProviderConfig(options.auth());
+    }
+
+    /**
      * Gets the configuration for the authentication provider guarding access to the registry's
      * HTTP endpoint.
      *

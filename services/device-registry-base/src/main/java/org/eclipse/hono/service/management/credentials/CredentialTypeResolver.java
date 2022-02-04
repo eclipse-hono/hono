@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,12 +18,15 @@ import com.fasterxml.jackson.databind.DatabindContext;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
 /**
  * Type resolver for credentials.
  * <p>
  * This type resolver knows the types Password, PSK and X509 Certificate. All other credentials are encoded in a
  * {@link CommonCredential}.
  */
+@RegisterForReflection
 public final class CredentialTypeResolver extends TypeIdResolverBase {
 
     private JavaType baseType;

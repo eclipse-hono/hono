@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
 /**
  * A credential type for storing a Pre-shared Key as used in TLS handshakes.
  * <p>
@@ -36,6 +38,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * the PSK identity can be an arbitrary UTF-8 encoded string of up to 2^16-1 bytes length.
  * There are no restrictions regarding the characters being allowed in the identifier.
  */
+@RegisterForReflection
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 public class PskCredential extends CommonCredential {
 

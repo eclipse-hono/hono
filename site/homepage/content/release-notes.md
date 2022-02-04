@@ -14,6 +14,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   Device Registry Management API for details on how to configure tenants accordingly. Please refer to the protocol
   adapter user guides and the Device Identity concept page for details regarding device authentication based on client
   certificates.
+* A Quarkus based variant of the MongoDB device registry has been added.
 
 ### Fixes & Enhancements
 
@@ -23,6 +24,10 @@ description = "Information about changes in recent Hono releases. Includes new f
   password hashes were created in lowercase instead of uppercase. This has been fixed.
 * The native executable of the Command Router component did not start when configured with an embedded cache.
   This has been fixed.
+
+### Deprecations
+
+* The Spring Boot based variant of the MongoDB device registry has been deprecated and marked for removal in Hono 2.0.0.
 
 ## 1.11.1
 

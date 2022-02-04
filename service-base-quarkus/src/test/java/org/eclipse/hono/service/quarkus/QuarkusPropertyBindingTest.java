@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -30,6 +30,8 @@ import org.eclipse.hono.config.quarkus.ServerOptions;
 import org.eclipse.hono.config.quarkus.ServiceOptions;
 import org.eclipse.hono.service.auth.delegating.AuthenticationServerClientConfigProperties;
 import org.eclipse.hono.service.auth.delegating.AuthenticationServerClientOptions;
+import org.eclipse.hono.service.http.HttpServiceConfigOptions;
+import org.eclipse.hono.service.http.HttpServiceConfigProperties;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
@@ -59,7 +61,11 @@ public class QuarkusPropertyBindingTest {
 
     @Inject
     @ConfigMapping(prefix = "hono.amqp", namingStrategy = ConfigMapping.NamingStrategy.VERBATIM)
-    ServiceOptions serviceOptions;
+    ServiceOptions amqpEndpointOptions;
+
+    @Inject
+    @ConfigMapping(prefix = "hono.http", namingStrategy = ConfigMapping.NamingStrategy.VERBATIM)
+    HttpServiceConfigOptions httpEndpointOptions;
 
     @Inject
     @ConfigMapping(prefix = "hono.auth", namingStrategy = ConfigMapping.NamingStrategy.VERBATIM)
@@ -176,8 +182,8 @@ public class QuarkusPropertyBindingTest {
      */
     @Test
     public void testServiceOptionsBinding() {
-        assertThat(serviceOptions).isNotNull();
-        final var props = new ServiceConfigProperties(serviceOptions);
+        assertThat(amqpEndpointOptions).isNotNull();
+        final var props = new ServiceConfigProperties(amqpEndpointOptions);
         assertThat(props.getCorsAllowedOrigin()).isEqualTo("client.eclipse.org");
         assertThat(props.getDeviceIdPattern().pattern()).isEqualTo("[a-z]+");
         assertThat(props.getEventLoopBlockedCheckTimeout()).isEqualTo(12000);
@@ -189,4 +195,16 @@ public class QuarkusPropertyBindingTest {
         assertThat(props.isWaitForDownstreamConnectionEnabled()).isTrue();
     }
 
+    /**
+     * Verifies that Quarkus correctly binds properties from a yaml file to a
+     * {@link HttpServiceConfigOptions} instance.
+     */
+    @Test
+    public void testHttpServiceConfigOptionsBinding() {
+        assertThat(httpEndpointOptions).isNotNull();
+        final var props = new HttpServiceConfigProperties(httpEndpointOptions);
+        assertThat(props.isAuthenticationRequired()).isFalse();
+        assertThat(props.getRealm()).isEqualTo("test-realm");
+        assertThat(props.getMaxPayloadSize()).isEqualTo(4096);
+    }
 }

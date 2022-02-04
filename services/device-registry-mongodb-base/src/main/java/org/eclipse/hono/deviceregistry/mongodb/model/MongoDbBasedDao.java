@@ -284,6 +284,11 @@ public abstract class MongoDbBasedDao {
             .handler(searchPromise::complete);
 
         return searchPromise.future()
+                .onSuccess(searchResult -> {
+                    if (LOG.isTraceEnabled()) {
+                        LOG.trace("search result:{}{}", System.lineSeparator(), searchResult.encodePrettily());
+                    }
+                })
                 .map(result -> Optional.ofNullable(result.getInteger(RegistryManagementConstants.FIELD_RESULT_SET_SIZE))
                         .filter(total -> total > 0)
                         // if no resources are found then return 404, else the result

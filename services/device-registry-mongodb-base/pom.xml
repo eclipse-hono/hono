@@ -59,6 +59,11 @@
       <artifactId>snakeyaml</artifactId>
       <scope>compile</scope>
     </dependency>
+    <dependency>
+      <groupId>io.smallrye.config</groupId>
+      <artifactId>smallrye-config</artifactId>
+      <optional>true</optional>
+    </dependency>
 
     <!-- testing -->
     <dependency>
@@ -127,6 +132,10 @@
             </configurationParameters>
           </properties>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.jboss.jandex</groupId>
+        <artifactId>jandex-maven-plugin</artifactId>
       </plugin>
     </plugins>
   </build>

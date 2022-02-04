@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,9 +24,12 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
 /**
  * A wrapper around a pre-shared (secret) key.
  */
+@RegisterForReflection
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 public class PskSecret extends CommonSecret {
 
