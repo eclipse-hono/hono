@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,6 +11,8 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 package org.eclipse.hono.adapter.monitoring;
+
+import java.util.Optional;
 
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.util.EventConstants;
@@ -84,13 +86,15 @@ public abstract class AbstractMessageSenderConnectionEventProducer implements Co
                         payload.put("data", data);
                     }
 
-                    return context.getMessageSenderClient().sendEvent(
-                            tenant,
-                            new RegistrationAssertion(deviceId),
-                            EventConstants.EVENT_CONNECTION_NOTIFICATION_CONTENT_TYPE,
-                            payload.toBuffer(),
-                            null,
-                            spanContext);
+                    return Optional.ofNullable(context.getMessageSenderClient())
+                            .map(client -> client.sendEvent(
+                                    tenant,
+                                    new RegistrationAssertion(deviceId),
+                                    EventConstants.EVENT_CONNECTION_NOTIFICATION_CONTENT_TYPE,
+                                    payload.toBuffer(),
+                                    null,
+                                    spanContext))
+                            .orElseGet(Future::succeededFuture);
                 });
     }
 }

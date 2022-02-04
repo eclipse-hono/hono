@@ -12,6 +12,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   password hashes were created in lowercase instead of uppercase. This has been fixed.
 * The native executable of the Command Router component did not start when configured with an embedded cache.
   This has been fixed.
+* There was an issue trying to send connection events concerning unauthenticated MQTT/AMQP devices. This has been fixed.
 
 ## 1.11.1
 
