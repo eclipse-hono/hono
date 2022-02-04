@@ -21,6 +21,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   infrastructure. This has been fixed.
 * The MongoDB device registry did not accept HTTP endpoint credentials that worked with Hono <= 1.10 because
   password hashes were created in lowercase instead of uppercase. This has been fixed.
+* The native executable of the Command Router component did not start when configured with an embedded cache.
+  This has been fixed.
 
 ## 1.11.1
 
