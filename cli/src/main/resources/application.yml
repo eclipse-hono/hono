@@ -36,13 +36,15 @@ spring:
 
 address:
   resolver:
-    cacheNegativeTimeToLive: 0 #discard failed DNS lookup results immediately
-    cacheMaxTimeToLive: 0 #support DNS based service resolution
+    # discard failed DNS lookup results immediately
+    cacheNegativeTimeToLive: 0
+    # support DNS based service resolution
+    cacheMaxTimeToLive: 0
     rotateServers: true
     queryTimeout: 2000
 
 message:
-  type: all
+  type: "all"
 
 ---
 # Enables the "command" mode of the northbound client used to send commands to devices.
@@ -68,16 +70,16 @@ spring:
 
 hono:
   client:
-    host: hono.eclipseprojects.io
+    host: "hono.eclipseprojects.io"
     port: 15672
     tlsEnabled: false
-    username: consumer@HONO
-    password: verysecret
+    username: "consumer@HONO"
+    password: "verysecret"
   kafka:
     commonClientConfig:
-      bootstrap.servers: hono.eclipseprojects.io:9092
-      security.protocol: SASL_PLAINTEXT
-      sasl.mechanism: SCRAM-SHA-256
+      bootstrap.servers: "hono.eclipseprojects.io:9092,hono.eclipseprojects.io:9094"
+      security.protocol: "SASL_PLAINTEXT"
+      sasl.mechanism: "SCRAM-SHA-512"
       sasl.jaas.config: "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"hono\" password=\"hono-secret\";"
 
 ---
@@ -95,22 +97,23 @@ hono:
   client:
     port: 15672
     tlsEnabled: false
-    username: consumer@HONO
-    password: verysecret
+    username: "consumer@HONO"
+    password: "verysecret"
   kafka:
     commonClientConfig:
-      bootstrap.servers: UNCONFIGURED
-      security.protocol: SASL_SSL
+      bootstrap.servers: "UNCONFIGURED"
+      security.protocol: "SASL_SSL"
       sasl.jaas.config: "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"hono\" password=\"hono-secret\";"
-      sasl.mechanism: SCRAM-SHA-512
-      ssl.truststore.location: UNCONFIGURED
-      ssl.truststore.password: honotrust
+      sasl.mechanism: "SCRAM-SHA-512"
+      ssl.truststore.location: "UNCONFIGURED"
+      ssl.truststore.password: "honotrust"
+      # disable verification of SANs in server cert
       ssl.endpoint.identification.algorithm: ""
 
 tenant:
-  id: DEFAULT_TENANT
+  id: "DEFAULT_TENANT"
 device:
-  id: 4711
+  id: "4711"
 
 ---
 # This profile enables Kafka based messaging - see:
@@ -127,10 +130,8 @@ spring:
 hono:
   kafka:
     commonClientConfig:
-      client.id: hono-cli
-    consumer:
-      consumerConfig:
-        group.id: cli
+      client.id: "hono-cli"
+      group.id: "cli"
 
 ---
 # This profile enables the collection of statistics of received messages from
@@ -158,9 +159,9 @@ spring:
 
 hono:
   client:
-    host: hono.eclipseprojects.io
+    host: "hono.eclipseprojects.io"
     port: 5672
 
 message:
-  address: telemetry
+  address: "telemetry"
   payload: '{"temp": 5}'
