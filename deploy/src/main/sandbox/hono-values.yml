@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2021 Contributors to the Eclipse Foundation
+# Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -16,8 +16,8 @@ honoImagesType: "quarkus-native"
 useLoadBalancer: true
 
 messagingNetworkTypes:
-  - "amqp"
-  - "kafka"
+- "amqp"
+- "kafka"
 
 amqpMessagingNetworkExample:
   enabled: true
@@ -196,10 +196,10 @@ deviceRegistryExample:
   resources:
     requests:
       cpu:
-      memory: "300Mi"
+      memory: "400Mi"
     limits:
       cpu:
-      memory: "300Mi"
+      memory: "400Mi"
 
 commandRouterService:
   extraSecretMounts:
@@ -216,7 +216,8 @@ commandRouterService:
 
 kafka:
   auth:
-    clientProtocol: "sasl" # no TLS. That would be "sasl_tls"
+    # no TLS. That would be "sasl_tls"
+    clientProtocol: "sasl"
   persistence:
     size: 200Mi
   zookeeper:
@@ -230,7 +231,7 @@ kafka:
       type: "LoadBalancer"
       port: 9092
       loadBalancerIPs:
-        - "hono.eclipseprojects.io"
+      - "hono.eclipseprojects.io"
     autoDiscovery:
       enabled: false
   serviceAccount:
