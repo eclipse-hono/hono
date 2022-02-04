@@ -1,0 +1,57 @@
+# Copyright (c) 2022 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Eclipse Public License 2.0 which is available at
+# http://www.eclipse.org/legal/epl-2.0
+#
+# SPDX-License-Identifier: EPL-2.0
+#
+# This workflow will build all of Hono's components, run unit tests and create
+# Docker images. Finally, the integration tests are run.
+# The job uses a matrix for the distinct device registry implementations. Thus,
+# for each registry implementation, the workflow is run on a separate VM.
+
+name: Build native images and run integration tests
+
+on: workflow_dispatch
+
+jobs:
+  build-and-run-tests:
+
+    runs-on: ubuntu-latest
+    name: "Nightly build and integration test"
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up JDK 11
+      uses: actions/setup-java@v2
+      with:
+        distribution: "temurin"
+        java-version: "11"
+        cache: "maven"
+    - name: Build native images
+      run: |
+        mvn install -B -e -DskipTests -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
+        -Dquarkus.native.remote-container-build=false -Dquarkus.native.container-build=true \
+        -Pjaeger,build-native-image -am \
+        -pl :hono-service-auth-quarkus,:hono-service-command-router-quarkus,:hono-service-device-registry-mongodb-quarkus,\
+        :hono-adapter-mqtt-vertx-quarkus,:hono-adapter-amqp-vertx-quarkus,:hono-adapter-coap-vertx-quarkus,:hono-adapter-http-vertx-quarkus,\
+        :hono-tests
+    - name: Build JDBC registry image
+      run: |
+        mvn install -B -e -DskipTests -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
+        -Pjaeger,build-docker-image -am -pl :hono-service-device-registry-jdbc
+    - name: Run integration tests with Mongo DB and Kafka
+      run: |
+        mvn verify -pl :hono-tests -B -e -DCI=$CI \
+        -Dhono.components.type=quarkus-native -Dhono.deviceregistry.type=mongodb \
+        -Dhono.messaging-infra.type=kafka -Dhono.commandrouting.cache=server \
+        -Prun-tests,jaeger
+    - name: Run integration tests with Sandbox-like configuration
+      run: |
+        mvn verify -pl :hono-tests -B -e -DCI=$CI \
+        -Dhono.components.type=quarkus-native -Dhono.deviceregistry.type=file \
+        -Dhono.messaging-infra.type=amqp -Dhono.commandrouting.cache=embedded \
+        -Prun-tests,jaeger
