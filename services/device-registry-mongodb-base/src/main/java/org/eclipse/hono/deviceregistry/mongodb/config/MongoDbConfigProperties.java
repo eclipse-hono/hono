@@ -44,14 +44,17 @@ public final class MongoDbConfigProperties {
      * Creates default properties.
      */
     public MongoDbConfigProperties() {
+        // do nothing
     }
 
     /**
      * Creates properties from existing options.
      *
      *@param options The options to use.
+     *@throws NullPointerException if options is {@code null}.
      */
     public MongoDbConfigProperties(final MongoDbConfigOptions options) {
+        Objects.requireNonNull(options);
         options.host().ifPresent(this::setHost);
         this.setPort(options.port());
         this.setDbName(options.dbName());

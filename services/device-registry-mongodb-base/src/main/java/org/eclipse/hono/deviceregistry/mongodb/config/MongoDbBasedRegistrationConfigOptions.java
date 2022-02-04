@@ -43,6 +43,8 @@ public interface MongoDbBasedRegistrationConfigOptions {
 
     /**
      * Gets the maximum number of devices that can be registered for each tenant.
+     * <p>
+     * The default value of {@code -1} indicates that the number of devices is unlimited.
      *
      * @return The maximum number of devices.
      */

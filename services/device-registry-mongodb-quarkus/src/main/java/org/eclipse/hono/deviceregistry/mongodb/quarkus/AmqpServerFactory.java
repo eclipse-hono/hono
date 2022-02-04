@@ -25,7 +25,6 @@ import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
-import org.eclipse.hono.client.notification.kafka.NotificationKafkaProducerConfigProperties;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.client.telemetry.kafka.KafkaBasedEventSender;
@@ -104,9 +103,6 @@ public class AmqpServerFactory {
 
     @Inject
     MessagingKafkaProducerConfigProperties eventKafkaProducerConfig;
-
-    @Inject
-    NotificationKafkaProducerConfigProperties notificationKafkaProducerConfig;
 
     @Inject
     AutoProvisionerConfigProperties autoProvisionerConfigProperties;

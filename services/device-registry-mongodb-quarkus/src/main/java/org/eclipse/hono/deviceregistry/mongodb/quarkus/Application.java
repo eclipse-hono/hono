@@ -26,7 +26,6 @@ import org.eclipse.hono.util.WrappedLifecycleComponentVerticle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.opentracing.Tracer;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Promise;
@@ -40,9 +39,6 @@ public class Application extends AbstractServiceApplication {
 
     private static final String COMPONENT_NAME = "Hono MongoDB Device Registry";
     private static final Logger LOG = LoggerFactory.getLogger(Application.class);
-
-    @Inject
-    Tracer tracer;
 
     @Inject
     HttpServerFactory httpServerFactory;
