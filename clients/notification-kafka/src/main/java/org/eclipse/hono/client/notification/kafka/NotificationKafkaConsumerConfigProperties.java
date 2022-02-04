@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,6 +18,7 @@ import org.eclipse.hono.client.kafka.CommonKafkaClientOptions;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerOptions;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.vertx.kafka.client.serialization.JsonObjectDeserializer;
 
 /**
@@ -25,6 +26,7 @@ import io.vertx.kafka.client.serialization.JsonObjectDeserializer;
  *
  * Record keys will be deserialized with {@link StringDeserializer}, the values with {@link JsonObjectDeserializer}.
  */
+@RegisterForReflection(targets = JsonObjectDeserializer.class)
 public class NotificationKafkaConsumerConfigProperties extends KafkaConsumerConfigProperties {
 
     /**

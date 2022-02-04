@@ -21,6 +21,7 @@ import org.eclipse.hono.client.kafka.CommonKafkaClientOptions;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerConfigProperties;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerOptions;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.vertx.kafka.client.serialization.JsonObjectSerializer;
 
 /**
@@ -28,6 +29,7 @@ import io.vertx.kafka.client.serialization.JsonObjectSerializer;
  * <p>
  * Record keys will be serialized with {@link StringSerializer}, the values with {@link JsonObjectSerializer}.
  */
+@RegisterForReflection(targets = JsonObjectSerializer.class)
 public class NotificationKafkaProducerConfigProperties extends KafkaProducerConfigProperties {
 
     /**

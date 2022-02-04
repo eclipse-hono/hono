@@ -48,6 +48,7 @@ import org.eclipse.hono.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -72,6 +73,7 @@ import io.vertx.kafka.client.consumer.impl.KafkaReadStreamImpl;
  * Includes adapted partition assignment handling concerning partition position resets,
  * see {@link #ensurePositionsHaveBeenSetIfNeeded(Set)}.
  */
+@RegisterForReflection(targets = io.vertx.kafka.client.consumer.impl.KafkaReadStreamImpl.class)
 public class HonoKafkaConsumer implements Lifecycle {
 
     /**

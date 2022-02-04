@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,6 +16,7 @@ package org.eclipse.hono.client.kafka.consumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.eclipse.hono.client.kafka.CommonKafkaClientOptions;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.vertx.kafka.client.serialization.BufferDeserializer;
 
 /**
@@ -29,6 +30,7 @@ import io.vertx.kafka.client.serialization.BufferDeserializer;
  * @see <a href="https://www.eclipse.org/hono/docs/api/command-and-control-kafka/">Command &amp; Control API for Kafka Specification</a>
  */
 // When renaming or moving this class, please update it in the documentation
+@RegisterForReflection(targets = BufferDeserializer.class)
 public class MessagingKafkaConsumerConfigProperties extends KafkaConsumerConfigProperties {
 
     /**

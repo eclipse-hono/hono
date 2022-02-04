@@ -19,6 +19,7 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.eclipse.hono.client.kafka.CommonKafkaClientOptions;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.vertx.kafka.client.serialization.BufferSerializer;
 
 /**
@@ -35,6 +36,7 @@ import io.vertx.kafka.client.serialization.BufferSerializer;
  * @see <a href="https://www.eclipse.org/hono/docs/api/command-and-control-kafka/">Command &amp; Control API for Kafka Specification</a>
  */
 // When renaming or moving this class, please update it in the documentation
+@RegisterForReflection(targets = BufferSerializer.class)
 public class MessagingKafkaProducerConfigProperties extends KafkaProducerConfigProperties {
 
     /**
