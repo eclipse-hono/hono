@@ -18,7 +18,7 @@
     <groupId>org.eclipse.hono</groupId>
     <artifactId>hono-adapters-spring</artifactId>
     <relativePath>../base-spring</relativePath>
-    <version>1.11.2</version>
+    <version>1.11.3-SNAPSHOT</version>
   </parent>
   <artifactId>hono-adapter-sigfox-vertx</artifactId>
   <name>Hono Sigfox Adapter (Spring)</name>
