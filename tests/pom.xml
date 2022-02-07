@@ -555,8 +555,8 @@
         <hono.deviceregistry.config-dir>etc/hono</hono.deviceregistry.config-dir>
         <hono.deviceregistry.resources.folder>deviceregistry-jdbc-h2</hono.deviceregistry.resources.folder>
         <hono.deviceregistry.spring.profiles>registry-adapter,registry-management,tenant-service,create-schema,${logging.profile}</hono.deviceregistry.spring.profiles>
-        <!-- increase memory limit of the device registry container to 400MB in order to accommodate for embedded H2 DB -->
-        <hono.deviceregistry.containerMemoryLimit>400000000</hono.deviceregistry.containerMemoryLimit>
+        <!-- increase memory limit of the device registry container in order to accommodate for H2 DB -->
+        <hono.deviceregistry.max-mem>450000000</hono.deviceregistry.max-mem>
         <hono.jdbc.db.url>jdbc:h2:file://var/tmp/hono</hono.jdbc.db.url>
       </properties>
     </profile>
@@ -574,6 +574,7 @@
         <hono.deviceregistry.type>jdbc</hono.deviceregistry.type>
         <hono.deviceregistry.image>hono-service-device-registry-jdbc</hono.deviceregistry.image>
         <hono.deviceregistry.image-suffix></hono.deviceregistry.image-suffix>
+        <hono.deviceregistry.max-mem>400000000</hono.deviceregistry.max-mem>
         <hono.deviceregistry.config-dir>etc/hono</hono.deviceregistry.config-dir>
         <hono.deviceregistry.resources.folder>deviceregistry-jdbc-postgres</hono.deviceregistry.resources.folder>
         <hono.deviceregistry.spring.profiles>registry-adapter,registry-management,tenant-service,create-schema,${logging.profile}</hono.deviceregistry.spring.profiles>
