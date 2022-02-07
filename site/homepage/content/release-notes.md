@@ -21,7 +21,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The device registry containers might not have started up properly when used with Kafka as the messaging
   infrastructure. This has been fixed.
 * The MongoDB device registry did not accept HTTP endpoint credentials that worked with Hono <= 1.10 because
-  password hashes were created in lowercase instead of uppercase. This has been fixed.
+  password hashes were created in lower case instead of upper case. This has been fixed.
 * The native executable of the Command Router component did not start when configured with an embedded cache.
   This has been fixed.
 * There was an issue trying to send connection events concerning unauthenticated MQTT/AMQP devices. This has been fixed.
@@ -29,6 +29,16 @@ description = "Information about changes in recent Hono releases. Includes new f
 ### Deprecations
 
 * The Spring Boot based variant of the MongoDB device registry has been deprecated and marked for removal in Hono 2.0.0.
+
+## 1.11.2
+
+### Fixes & Enhancements
+
+* The MongoDB device registry did not accept HTTP endpoint credentials that worked with Hono <= 1.10 because
+  password hashes were created in lower case instead of upper case. This has been fixed.
+* The native executable of the Command Router component did not start when configured with an embedded cache.
+  This has been fixed.
+* There was an issue trying to send connection events concerning unauthenticated MQTT/AMQP devices. This has been fixed.
 
 ## 1.11.1
 
