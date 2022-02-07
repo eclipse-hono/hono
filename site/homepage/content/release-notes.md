@@ -4,12 +4,12 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
-## 1.11.2 (not yet released)
+## 1.11.2
 
 ### Fixes & Enhancements
 
 * The MongoDB device registry did not accept HTTP endpoint credentials that worked with Hono <= 1.10 because
-  password hashes were created in lowercase instead of uppercase. This has been fixed.
+  password hashes were created in lower case instead of upper case. This has been fixed.
 * The native executable of the Command Router component did not start when configured with an embedded cache.
   This has been fixed.
 * There was an issue trying to send connection events concerning unauthenticated MQTT/AMQP devices. This has been fixed.
