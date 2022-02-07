@@ -218,6 +218,8 @@ kafka:
   auth:
     # no TLS. That would be "sasl_tls"
     clientProtocol: "sasl"
+    tls:
+      existingSecrets: []
   persistence:
     size: 200Mi
   zookeeper:
