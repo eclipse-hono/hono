@@ -1,6 +1,6 @@
 #!/bin/bash
 #*******************************************************************************
-# Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+# Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -33,7 +33,8 @@ IMAGES="hono-adapter-amqp-vertx \
         hono-service-device-connection \
         hono-service-device-registry-file \
         hono-service-device-registry-jdbc \
-        hono-service-device-registry-mongodb"
+        hono-service-device-registry-mongodb \
+        hono-service-device-registry-mongodb-quarkus"
 
 NATIVE_IMAGES="hono-adapter-amqp-vertx-quarkus-native \
         hono-adapter-coap-vertx-quarkus-native \
@@ -41,7 +42,8 @@ NATIVE_IMAGES="hono-adapter-amqp-vertx-quarkus-native \
         hono-adapter-lora-vertx-quarkus-native \
         hono-adapter-mqtt-vertx-quarkus-native \
         hono-service-auth-quarkus-native \
-        hono-service-command-router-quarkus-native"
+        hono-service-command-router-quarkus-native \
+        hono-service-device-registry-mongodb-quarkus-native"
 
 ME=`basename "$0"`
 echo "called as $ME"
