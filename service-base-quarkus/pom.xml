@@ -62,35 +62,14 @@
 
     <!-- testing -->
     <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-engine</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-junit5</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>com.google.truth</groupId>
       <artifactId>truth</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>core-test-utils</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-junit5</artifactId>
       <scope>test</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>org.jboss.slf4j</groupId>
-          <artifactId>slf4j-jboss-logmanager</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
@@ -105,6 +84,12 @@
   </dependencies>
 
   <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -117,49 +102,6 @@
          -->
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
-        <executions>
-          <execution>
-            <!--
-              Execution and configuration for copying certificates from related module
-              to "target/classes" folder so that we can include them in the image.
-             -->
-            <id>copy_demo_certs</id>
-            <phase>generate-test-resources</phase>
-            <goals>
-              <goal>unpack-dependencies</goal>
-            </goals>
-            <configuration>
-              <includeArtifactIds>hono-demo-certs</includeArtifactIds>
-              <outputDirectory>${project.build.directory}/certs</outputDirectory>
-              <excludes>META-INF/**</excludes>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <!--
-        Copy legal documents from "target/classes" folder to "target/test-classes" folder
-        so that we make sure to include legal docs in test jar.
-       -->
-      <plugin>
-        <artifactId>maven-resources-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>copy resources</id>
-            <phase>process-resources</phase>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>${project.build.outputDirectory}</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${project.basedir}/src/main/resources</directory>
-                  <filtering>true</filtering>
-                </resource>
-              </resources>
-            </configuration>
-          </execution>
-        </executions>
       </plugin>
       <plugin>
         <groupId>org.jboss.jandex</groupId>
@@ -168,37 +110,22 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <argLine>
-            --add-opens java.base/jdk.internal.event=ALL-UNNAMED
-          </argLine>
-        </configuration>
+          <configuration>
+            <systemPropertyVariables>
+              <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+              <quarkus.log.level>INFO</quarkus.log.level>
+              <maven.home>${maven.home}</maven.home>
+            </systemPropertyVariables>
+          </configuration>
       </plugin>
     </plugins>
   </build>
 
   <profiles>
     <profile>
-      <id>jboss-logmanager</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <configuration>
-              <argLine>
-                --add-opens java.base/jdk.internal.event=ALL-UNNAMED
-                -Djava.util.logging.manager=org.jboss.logmanager.LogManager
-              </argLine>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <profile>
       <id>jaeger</id>
       <properties>
-        <jaeger-reflection-config>${.}/reflection-config-jaeger.json,</jaeger-reflection-config>
+        <jaeger-reflection-config>,${.}/reflection-config-jaeger.json,</jaeger-reflection-config>
       </properties>
     </profile>
   </profiles>
