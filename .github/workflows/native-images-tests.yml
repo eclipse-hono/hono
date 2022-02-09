@@ -16,13 +16,16 @@
 
 name: Build native images and run integration tests
 
-on: workflow_dispatch
+on:
+  schedule:
+  # run three times a day (UTC)
+  - cron: '23 3,10,14 * * *'
 
 jobs:
   build-and-run-tests:
 
     runs-on: ubuntu-latest
-    name: "Nightly build and integration test"
+    name: "Run integration tests with native images"
     steps:
     - uses: actions/checkout@v2
     - name: Set up JDK 11
@@ -31,7 +34,7 @@ jobs:
         distribution: "temurin"
         java-version: "11"
         cache: "maven"
-    - name: Build native images
+    - name: "Build native images"
       run: |
         mvn install -B -e -DskipTests -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
         -Dquarkus.native.remote-container-build=false -Dquarkus.native.container-build=true \
@@ -39,17 +42,17 @@ jobs:
         -pl :hono-service-auth-quarkus,:hono-service-command-router-quarkus,:hono-service-device-registry-mongodb-quarkus,\
         :hono-adapter-mqtt-vertx-quarkus,:hono-adapter-amqp-vertx-quarkus,:hono-adapter-coap-vertx-quarkus,:hono-adapter-http-vertx-quarkus,\
         :hono-tests
-    - name: Build JDBC registry image
+    - name: "Build JDBC registry image"
       run: |
         mvn install -B -e -DskipTests -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
         -Pjaeger,build-docker-image -am -pl :hono-service-device-registry-jdbc
-    - name: Run integration tests with Mongo DB and Kafka
+    - name: "Run integration tests with Mongo DB and Kafka"
       run: |
         mvn verify -pl :hono-tests -B -e -DCI=$CI \
         -Dhono.components.type=quarkus-native -Dhono.deviceregistry.type=mongodb \
         -Dhono.messaging-infra.type=kafka -Dhono.commandrouting.cache=server \
         -Prun-tests,jaeger
-    - name: Run integration tests with Sandbox-like configuration
+    - name: "Run integration tests with Sandbox-like configuration"
       run: |
         mvn verify -pl :hono-tests -B -e -DCI=$CI \
         -Dhono.components.type=quarkus-native -Dhono.deviceregistry.type=file \
