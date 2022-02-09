@@ -36,7 +36,7 @@ info:
    license:
       name: EPL-2.0
       url: https://www.eclipse.org/legal/epl-2.0/
-   version: 1.12.0
+   version: 1.12.1
 
 externalDocs:
    description: Eclipse Hono™ web page
