@@ -1,0 +1,7 @@
+quarkus:
+  log:
+    category:
+      "io.netty.handler.logging.LoggingHandler":
+        level: DEBUG
+      "org.eclipse.hono":
+        level: DEBUG

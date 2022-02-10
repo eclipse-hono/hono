@@ -96,12 +96,6 @@ quarkus:
     category:
       "io.quarkus.vertx.core.runtime":
         level: DEBUG
-      "org.apache.kafka":
-        level: WARN
-      "org.eclipse.hono":
-        level: INFO
-      "org.eclipse.hono.adapter":
-        level: INFO
   vertx:
     max-event-loop-execute-time: ${max.event-loop.execute-time}
 

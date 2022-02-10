@@ -1,0 +1,9 @@
+quarkus:
+  log:
+    category:
+      "org.apache.kafka":
+        level: WARN
+      "org.eclipse.hono":
+        level: INFO
+      "org.eclipse.hono.client.impl.HonoConnectionImpl":
+        level: ERROR

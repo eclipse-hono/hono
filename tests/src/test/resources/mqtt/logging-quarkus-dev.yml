@@ -1,0 +1,7 @@
+quarkus:
+  log:
+    category:
+      "org.apache.kafka":
+        level: INFO
+      "org.eclipse.hono":
+        level: DEBUG
