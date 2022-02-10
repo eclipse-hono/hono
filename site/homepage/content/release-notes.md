@@ -4,6 +4,14 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
+## 1.13.0 (not yet released)
+
+### Fixes & Enhancements
+
+* The Quarkus variant of the MongoDB based device registry failed to start up if the *hono.mongodb.dbName* property
+  was not set. However, the DB name should not be required if a connection string is set using the
+  *hono.mongodb.connectionString* property. This has been fixed.
+
 ## 1.12.0
 
 ### New Features
