@@ -1,0 +1,8 @@
+hono:
+  server:
+    bindAddress: "10.2.0.1"
+    insecurePort: 11001
+    insecurePortBindAddress: "10.2.0.2"
+    insecurePortEnabled: true
+    nativeTlsRequired: true
+    port: 11000

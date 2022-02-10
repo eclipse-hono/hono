@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,73 +12,34 @@
  */
 
 
-package org.eclipse.hono.service.quarkus;
+package org.eclipse.hono.config.quarkus;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import javax.inject.Inject;
-
-import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.config.MapperEndpoint;
+import org.eclipse.hono.config.ProtocolAdapterOptions;
+import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.config.quarkus.ApplicationOptions;
-import org.eclipse.hono.config.quarkus.ClientOptions;
-import org.eclipse.hono.config.quarkus.RequestResponseClientOptions;
-import org.eclipse.hono.config.quarkus.ServerOptions;
-import org.eclipse.hono.config.quarkus.ServiceOptions;
-import org.eclipse.hono.service.auth.delegating.AuthenticationServerClientConfigProperties;
-import org.eclipse.hono.service.auth.delegating.AuthenticationServerClientOptions;
-import org.eclipse.hono.service.http.HttpServiceConfigOptions;
-import org.eclipse.hono.service.http.HttpServiceConfigProperties;
+import org.eclipse.hono.test.ConfigMappingSupport;
 import org.junit.jupiter.api.Test;
 
-import io.quarkus.test.junit.QuarkusTest;
-import io.smallrye.config.ConfigMapping;
-
 /**
- * Tests verifying the binding of configuration properties to objects.
+ * Tests verifying the mapping of YAML properties to configuration classes.
  *
  */
-@QuarkusTest
-public class QuarkusPropertyBindingTest {
+class QuarkusConfigMappingTest {
 
-    @Inject
-    ApplicationOptions applicationOptions;
-
-    @Inject
-    @ConfigMapping(prefix = "hono.command", namingStrategy = ConfigMapping.NamingStrategy.VERBATIM)
-    ClientOptions clientOptions;
-
-    @Inject
-    @ConfigMapping(prefix = "hono.tenant", namingStrategy = ConfigMapping.NamingStrategy.VERBATIM)
-    RequestResponseClientOptions tenantClientOptions;
-
-    @Inject
-    @ConfigMapping(prefix = "hono.server", namingStrategy = ConfigMapping.NamingStrategy.VERBATIM)
-    ServerOptions serverOptions;
-
-    @Inject
-    @ConfigMapping(prefix = "hono.amqp", namingStrategy = ConfigMapping.NamingStrategy.VERBATIM)
-    ServiceOptions amqpEndpointOptions;
-
-    @Inject
-    @ConfigMapping(prefix = "hono.http", namingStrategy = ConfigMapping.NamingStrategy.VERBATIM)
-    HttpServiceConfigOptions httpEndpointOptions;
-
-    @Inject
-    @ConfigMapping(prefix = "hono.auth", namingStrategy = ConfigMapping.NamingStrategy.VERBATIM)
-    AuthenticationServerClientOptions authServerClientOptions;
-
-    /**
-     * Verifies that Quarkus correctly binds properties from a yaml file to an
-     * {@link ApplicationOptions} instance.
-     */
     @Test
-    public void testApplicationOptionsBinding() {
-        assertThat(applicationOptions).isNotNull();
-        final var props = new ApplicationConfigProperties(applicationOptions);
+    void testApplicationOptionsBinding() {
+
+        final ApplicationConfigProperties props = new ApplicationConfigProperties(
+                ConfigMappingSupport.getConfigMapping(
+                        ApplicationOptions.class,
+                        this.getClass().getResource("/application-options.yaml")));
+
         assertThat(props.getMaxInstances()).isEqualTo(1);
     }
 
@@ -88,8 +49,12 @@ public class QuarkusPropertyBindingTest {
      */
     @Test
     public void testClientOptionsBinding() {
-        assertThat(clientOptions).isNotNull();
-        final var props = new ClientConfigProperties(clientOptions);
+
+        final ClientConfigProperties props = new ClientConfigProperties(
+                ConfigMappingSupport.getConfigMapping(
+                        ClientOptions.class,
+                        this.getClass().getResource("/client-options.yaml")));
+
         assertThat(props.getAddressRewritePattern().pattern()).isEqualTo("([a-z_]+)/([\\w-]+)");
         assertThat(props.getAddressRewriteReplacement()).isEqualTo("test-vhost/$1/$2");
         assertThat(props.getAmqpHostname()).isEqualTo("command.hono.eclipseprojects.io");
@@ -130,42 +95,16 @@ public class QuarkusPropertyBindingTest {
 
     /**
      * Verifies that Quarkus correctly binds properties from a yaml file to a
-     * {@link RequestResponseClientOptions} instance.
-     */
-    @Test
-    public void testRequestResponseClientOptionsBinding() {
-        assertThat(tenantClientOptions).isNotNull();
-        final var props = new RequestResponseClientConfigProperties(tenantClientOptions);
-        assertThat(props.getServerRole()).isEqualTo("Tenant");
-        assertThat(props.getResponseCacheDefaultTimeout()).isEqualTo(300);
-        assertThat(props.getResponseCacheMaxSize()).isEqualTo(121212);
-        assertThat(props.getResponseCacheMinSize()).isEqualTo(333);
-    }
-
-    /**
-     * Verifies that Quarkus correctly binds properties from a yaml file to a
-     * {@link AuthenticationServerClientOptions} instance.
-     */
-    @Test
-    public void testAuthenticationServerClientOptionsBinding() {
-        assertThat(authServerClientOptions).isNotNull();
-        final var props = new AuthenticationServerClientConfigProperties(authServerClientOptions);
-        assertThat(props.getServerRole()).isEqualTo("Authentication Server");
-        assertThat(props.getSupportedSaslMechanisms()).containsExactly("PLAIN");
-        assertThat(props.getValidation().getCertPath()).isEqualTo("/etc/cert.pem");
-        assertThat(props.getValidation().getKeyPath()).isEqualTo("/etc/key.pem");
-        assertThat(props.getValidation().getSharedSecret()).isEqualTo("secret");
-        assertThat(props.getValidation().getTokenExpiration()).isEqualTo(300);
-    }
-
-    /**
-     * Verifies that Quarkus correctly binds properties from a yaml file to a
      * {@link ServerOptions} instance.
      */
     @Test
     public void testServerOptionsBinding() {
-        assertThat(serverOptions).isNotNull();
-        final var props = new ServerConfig(serverOptions);
+
+        final ServerConfig props = new ServerConfig(
+                ConfigMappingSupport.getConfigMapping(
+                        ServerOptions.class,
+                        this.getClass().getResource("/server-options.yaml")));
+
         assertThat(props.getBindAddress()).isEqualTo("10.2.0.1");
         assertThat(props.getInsecurePort()).isEqualTo(11001);
         assertThat(props.getInsecurePortBindAddress()).isEqualTo("10.2.0.2");
@@ -182,8 +121,12 @@ public class QuarkusPropertyBindingTest {
      */
     @Test
     public void testServiceOptionsBinding() {
-        assertThat(amqpEndpointOptions).isNotNull();
-        final var props = new ServiceConfigProperties(amqpEndpointOptions);
+
+        final ServiceConfigProperties props = new ServiceConfigProperties(
+                ConfigMappingSupport.getConfigMapping(
+                        ServiceOptions.class,
+                        this.getClass().getResource("/service-options.yaml")));
+
         assertThat(props.getCorsAllowedOrigin()).isEqualTo("client.eclipse.org");
         assertThat(props.getDeviceIdPattern().pattern()).isEqualTo("[a-z]+");
         assertThat(props.getEventLoopBlockedCheckTimeout()).isEqualTo(12000);
@@ -197,14 +140,19 @@ public class QuarkusPropertyBindingTest {
 
     /**
      * Verifies that Quarkus correctly binds properties from a yaml file to a
-     * {@link HttpServiceConfigOptions} instance.
+     * {@link ProtocolAdapterOptions} instance.
      */
     @Test
-    public void testHttpServiceConfigOptionsBinding() {
-        assertThat(httpEndpointOptions).isNotNull();
-        final var props = new HttpServiceConfigProperties(httpEndpointOptions);
-        assertThat(props.isAuthenticationRequired()).isFalse();
-        assertThat(props.getRealm()).isEqualTo("test-realm");
-        assertThat(props.getMaxPayloadSize()).isEqualTo(4096);
+    public void testProtocolAdapterOptionsBinding() {
+
+        final ProtocolAdapterProperties props = new ProtocolAdapterProperties(
+                ConfigMappingSupport.getConfigMapping(
+                        ProtocolAdapterOptions.class,
+                        this.getClass().getResource("/protocol-adapter-options.yaml")));
+
+        final MapperEndpoint telemetryMapper = props.getMapperEndpoint("telemetry");
+        assertThat(telemetryMapper).isNotNull();
+        assertThat(telemetryMapper.getUri()).isEqualTo("https://mapper.eclipseprojects.io/telemetry");
+        assertThat(telemetryMapper.isTlsEnabled()).isTrue();
     }
 }

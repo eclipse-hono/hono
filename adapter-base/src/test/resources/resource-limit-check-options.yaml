@@ -1,7 +1,4 @@
 hono:
-  connectionEvents:
-    logLevel: "debug"
-    producer: events
   resourceLimits:
     prometheusBased:
       cacheMaxSize: 15500

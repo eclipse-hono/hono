@@ -1,0 +1,11 @@
+hono:
+  service:
+    corsAllowedOrigin: "client.eclipse.org"
+    deviceIdPattern: "[a-z]+"
+    eventLoopBlockedCheckTimeout: 12000
+    maxPayloadSize: 128000
+    networkDebugLoggingEnabled: true
+    receiverLinkCredit: 1000
+    sendTimeOut: 5100
+    tenantIdPattern: "[A-Z]+"
+    waitForDownstreamConnectionEnabled: true

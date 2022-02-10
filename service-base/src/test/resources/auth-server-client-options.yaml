@@ -1,0 +1,10 @@
+hono:
+  auth:
+    client:
+      serverRole: "Authentication Server"
+      supportedSaslMechanisms: "PLAIN"
+      validation:
+        certPath: "/etc/cert.pem"
+        keyPath: "/etc/key.pem"
+        sharedSecret: "secret"
+        tokenExpiration: 300

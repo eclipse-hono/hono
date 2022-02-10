@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,12 +16,9 @@ package org.eclipse.hono.deviceconnection.infinispan.client;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import javax.inject.Inject;
-
+import org.eclipse.hono.test.ConfigMappingSupport;
 import org.infinispan.client.hotrod.impl.ConfigurationProperties;
 import org.junit.jupiter.api.Test;
-
-import io.quarkus.test.junit.QuarkusTest;
 
 
 /**
@@ -29,19 +26,16 @@ import io.quarkus.test.junit.QuarkusTest;
  * {@link InfinispanRemoteConfigurationProperties}.
  *
  */
-@QuarkusTest
 public class QuarkusPropertyBindingTest {
-
-    @Inject
-    CommonCacheOptions commonCacheOptions;
-
-    @Inject
-    InfinispanRemoteConfigurationOptions remoteCacheOptions;
 
     @Test
     void testCommonCacheConfigurationPropertiesArePickedUp() {
-        assertThat(commonCacheOptions).isNotNull();
-        final var commonCacheConfig = new CommonCacheConfig(commonCacheOptions);
+
+        final var commonCacheConfig = new CommonCacheConfig(
+                ConfigMappingSupport.getConfigMapping(
+                        CommonCacheOptions.class,
+                        this.getClass().getResource("/common-cache-options.yaml")));
+
         assertThat(commonCacheConfig.getCacheName()).isEqualTo("the-cache");
         assertThat(commonCacheConfig.getCheckKey()).isEqualTo("the-key");
         assertThat(commonCacheConfig.getCheckValue()).isEqualTo("the-value");
@@ -50,8 +44,12 @@ public class QuarkusPropertyBindingTest {
     @SuppressWarnings("deprecation")
     @Test
     void testRemoteCacheConfigurationPropertiesArePickedUp() {
-        assertThat(remoteCacheOptions).isNotNull();
-        final var remoteCacheConfig = new InfinispanRemoteConfigurationProperties(remoteCacheOptions);
+
+        final var remoteCacheConfig = new InfinispanRemoteConfigurationProperties(
+                ConfigMappingSupport.getConfigMapping(
+                        InfinispanRemoteConfigurationOptions.class,
+                        this.getClass().getResource("/remote-cache-options.yaml")));
+
         assertThat(remoteCacheConfig.getServerList()).contains("data-grid:11222");
         assertThat(remoteCacheConfig.getAuthUsername()).isEqualTo("user");
         assertThat(remoteCacheConfig.getAuthPassword()).isEqualTo("secret");

@@ -18,11 +18,8 @@ import static com.google.common.truth.Truth.assertThat;
 
 import java.io.IOException;
 
+import org.eclipse.hono.test.ConfigMappingSupport;
 import org.junit.jupiter.api.Test;
-
-import io.smallrye.config.SmallRyeConfig;
-import io.smallrye.config.SmallRyeConfigBuilder;
-import io.smallrye.config.source.yaml.YamlConfigSource;
 
 
 /**
@@ -32,13 +29,12 @@ import io.smallrye.config.source.yaml.YamlConfigSource;
 class QuarkusConfigMappingTest {
 
     @Test
-    void testMongoDbConfigOptionsMappingWithConnectionString() throws IOException {
+    void testMongoDbConfigOptionsMappingWithConnectionString() {
 
-        final SmallRyeConfig config = new SmallRyeConfigBuilder()
-                .withSources(new YamlConfigSource(MongoDbConfigOptions.class.getResource("/mongodb-connection-string-only.yaml")))
-                .withMapping(MongoDbConfigOptions.class)
-                .build();
-        final var props = new MongoDbConfigProperties(config.getConfigMapping(MongoDbConfigOptions.class));
+        final var props = new MongoDbConfigProperties(
+                ConfigMappingSupport.getConfigMapping(
+                        MongoDbConfigOptions.class,
+                        this.getClass().getResource("/mongodb-connection-string-only.yaml")));
         assertThat(props.getConnectionString())
             .isEqualTo("mongodb://username:password@mongodb-server/hono-db?connectTimeoutMS=2000");
     }
@@ -46,11 +42,10 @@ class QuarkusConfigMappingTest {
     @Test
     void testMongoDbConfigOptionsMappingWithSeparateProperties() throws IOException {
 
-        final SmallRyeConfig config = new SmallRyeConfigBuilder()
-                .withSources(new YamlConfigSource(MongoDbConfigOptions.class.getResource("/mongodb-separate-props.yaml")))
-                .withMapping(MongoDbConfigOptions.class)
-                .build();
-        final var props = new MongoDbConfigProperties(config.getConfigMapping(MongoDbConfigOptions.class));
+        final var props = new MongoDbConfigProperties(
+                ConfigMappingSupport.getConfigMapping(
+                        MongoDbConfigOptions.class,
+                        this.getClass().getResource("/mongodb-separate-props.yaml")));
         assertThat(props.getConnectionString()).isNull();
         assertThat(props.getHost()).isEqualTo("mongodb-server");
         assertThat(props.getPort()).isEqualTo(13131);
@@ -64,12 +59,10 @@ class QuarkusConfigMappingTest {
     @Test
     void testMongoDbBasedHttpServiceConfigOptionsMapping() throws IOException {
 
-        final SmallRyeConfig config = new SmallRyeConfigBuilder()
-                .withSources(new YamlConfigSource(MongoDbConfigOptions.class.getResource("/http-endpoint-config.yaml")))
-                .withMapping(MongoDbBasedHttpServiceConfigOptions.class)
-                .build();
         final var props = new MongoDbBasedHttpServiceConfigProperties(
-                config.getConfigMapping(MongoDbBasedHttpServiceConfigOptions.class));
+                ConfigMappingSupport.getConfigMapping(
+                        MongoDbBasedHttpServiceConfigOptions.class,
+                        this.getClass().getResource("/http-endpoint-config.yaml")));
         assertThat(props.getAuth().getCollectionName()).isEqualTo("user-accounts");
     }
 }

@@ -20,6 +20,7 @@ import javax.inject.Inject;
 
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
+import org.eclipse.hono.client.RequestResponseClientOptions;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.kafka.CommonKafkaClientOptions;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
@@ -54,7 +55,6 @@ import org.eclipse.hono.commandrouter.impl.kafka.KafkaBasedCommandConsumerFactor
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.quarkus.ClientOptions;
-import org.eclipse.hono.config.quarkus.RequestResponseClientOptions;
 import org.eclipse.hono.config.quarkus.ServiceOptions;
 import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
 import org.eclipse.hono.notification.NotificationConstants;
