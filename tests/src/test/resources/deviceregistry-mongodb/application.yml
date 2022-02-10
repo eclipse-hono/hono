@@ -45,11 +45,12 @@ hono:
   tenant:
     svc:
   mongodb:
-    host: ${hono.mongodb.host}
-    port: ${hono.mongodb.port}
-    dbName: ${hono.mongodb.database.name}
-    username: ${hono.mongodb.username}
-    password: ${hono.mongodb.password}
+    connectionString: "mongodb://${hono.mongodb.username}:${hono.mongodb.password}@${hono.mongodb.host}:${hono.mongodb.port}/${hono.mongodb.database.name}"
+#    host: ${hono.mongodb.host}
+#    port: ${hono.mongodb.port}
+#    dbName: ${hono.mongodb.database.name}
+#    username: ${hono.mongodb.username}
+#    password: ${hono.mongodb.password}
   vertx:
     maxEventLoopExecuteTime: ${max.event-loop.execute-time}
     preferNative: true
