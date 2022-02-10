@@ -148,7 +148,7 @@
     <hono.mongodb.disabled>false</hono.mongodb.disabled>
     <hono.mongodb.host>hono-mongodb</hono.mongodb.host>
     <hono.mongodb.port>27017</hono.mongodb.port>
-    <hono.mongodb.username>device-registry@HONO</hono.mongodb.username>
+    <hono.mongodb.username>device-registry</hono.mongodb.username>
     <hono.mongodb.password>device-registry-secret</hono.mongodb.password>
     <hono.mongodb.database.name>hono-it-tests</hono.mongodb.database.name>
 

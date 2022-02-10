@@ -57,7 +57,7 @@ public final class MongoDbConfigProperties {
         Objects.requireNonNull(options);
         options.host().ifPresent(this::setHost);
         this.setPort(options.port());
-        this.setDbName(options.dbName());
+        options.dbName().ifPresent(this::setDbName);
         options.username().ifPresent(this::setUsername);
         options.password().ifPresent(this::setPassword);
         options.connectionString().ifPresent(this::setConnectionString);

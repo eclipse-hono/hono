@@ -1,0 +1,9 @@
+hono:
+  mongodb:
+    host: "mongodb-server"
+    port: 13131
+    dbName: "hono-db"
+    username: "user"
+    password: "pwd"
+    serverSelectionTimeout: 5432
+    connectTimeout: 6789

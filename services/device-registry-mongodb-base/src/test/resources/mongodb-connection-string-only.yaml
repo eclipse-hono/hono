@@ -1,0 +1,3 @@
+hono:
+  mongodb:
+    connectionString: "mongodb://username:password@mongodb-server/hono-db?connectTimeoutMS=2000"
