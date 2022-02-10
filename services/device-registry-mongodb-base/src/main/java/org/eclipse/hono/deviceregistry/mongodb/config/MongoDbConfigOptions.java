@@ -46,7 +46,7 @@ public interface MongoDbConfigOptions {
      *
      * @return The database name.
      */
-    String dbName();
+    Optional<String> dbName();
 
     /**
      * Gets the user name for authenticating to the Mongo DB.
