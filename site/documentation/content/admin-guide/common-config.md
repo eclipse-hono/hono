@@ -17,12 +17,20 @@ The Java VM started in Hono's components can be configured with arbitrary comman
 
 | Environment Variable | Mandatory | Default | Description |
 | :------------------- | :-------: | :------ | :-----------|
-| `JDK_JAVA_OPTIONS`     | no        | -       | Any options that should be passed to the Java VM on the command line, e.g. `-Xmx128m` |
+| `JDK_JAVA_OPTIONS`      | no        | -       | Any options that should be passed to the Java VM on the command line, e.g. `-Xmx128m` |
 
 ## Vert.x Options
 
-The vert.x framework instance used to run Hono's components can be configured using the following environment variables
-or corresponding system properties:
+The vert.x framework instance used to run Hono's components can be configured using the following
+environment variables or corresponding system properties:
+
+| OS Environment Variable<br>Java System Property | Mandatory | Default | Description                                 |
+| :---------------------------------------------- | :-------: | :------ | :------------------------------------------ |
+| `QUARKUS_VERTX_MAX_EVENT_LOOP_EXECUTE_TIME`<br>`quarkus.vertx.max-event-loop-execute-time` | no | `PT2S` | The maximum duration that a task on the event loop may run without being considered to block the event loop. The value needs to be a string that represents an [ISO-8601 Duration](https://en.wikipedia.org/wiki/ISO_8601#Durations). |
+| `QUARKUS_VERTX_PREFER_NATIVE_TRANSPORT`<br>`quarkus.vertx.prefer-native-transport`| no | `true` | Enables/disables *epoll()* support on Linux/MacOS. See the [notes below](./#epoll) for an explanation of the benefits of enabling *epoll*. It is generally safe to set this property to `true` because Netty will disable native transport if the platform doesn't support it. |
+
+The vert.x framework instance used to run Hono's (deprecated) Spring Boot based components can be configured using the
+following environment variables or corresponding system properties:
 
 | OS Environment Variable<br>Java System Property | Mandatory | Default | Description                                 |
 | :---------------------------------------------- | :-------: | :------ | :------------------------------------------ |
@@ -33,13 +41,15 @@ or corresponding system properties:
 <a name="epoll"></a>
 ### Using Native Transport on Linux/MacOS
 
-Using `epoll()` on Linux/MacOS may provide better performance for applications which
-have a high I/O throughput. Especially when the application supports an
-asynchronous I/O model. This is true for most Hono components and applications using Hono.
+Using `epoll()` on Linux/MacOS may provide better performance for applications which have a high I/O throughput.
+Especially when the application supports an asynchronous I/O model. This is true for most Hono components and
+applications using Hono.
 
 The *Netty* framework supports using `epoll()` on Linux/MacOS x86_64 based systems.
 
-In order to use *epoll*, the `HONO_VERTX_PREFERNATIVE` environment variable needs to be set to `true` on startup.
+Hono's components support native transport by default. For the (deprecated) Spring Boot based variant of the components,
+support for native transport needs to be enabled explicitly by means of setting the *HONO_VERTX_PREFERNATIVE*
+environment variable to `true`.
 
 ## Protocol Adapter Options
 
@@ -74,44 +84,47 @@ The connection to an *Apache Kafka cluster* can be configured according to the
 [Hono Kafka Client Configuration]({{< relref "hono-kafka-client-configuration.md" >}}).
 
 The following table provides an overview of the prefixes to be used to individually configure the Kafka clients used by
-a protocol adapter. The individual client configuration is optional, a minimal configuration may only contain a common client
-configuration consisting of properties prefixed with `HONO_KAFKA_COMMONCLIENTCONFIG_` and `hono.kafka.commonClientConfig.`
+a protocol adapter. The individual client configuration is optional, a minimal configuration may only contain a common
+client configuration consisting of properties prefixed with `HONO_KAFKA_COMMONCLIENTCONFIG_` and `hono.kafka.commonClientConfig.`
 respectively.
 
-| OS Environment Variable Prefix<br>Java System Property Prefix                                      | Description                                                                                                        |
-|:---------------------------------------------------------------------------------------------------|:-------------------------------------------------------------------------------------------------------------------|
-| `HONO_KAFKA_COMMAND_CONSUMERCONFIG_`<br>`hono.kafka.command.consumerConfig.`                       | Configures the Kafka consumer that receives command messages.                                                      |
+| OS Environment Variable Prefix<br>Java System Property Prefix                       | Description |
+|:------------------------------------------------------------------------------------|:------------|
+| `HONO_KAFKA_COMMAND_CONSUMERCONFIG_`<br>`hono.kafka.command.consumerConfig.`                   | Configures the Kafka consumer that receives command messages.                                                      |
 | `HONO_KAFKA_COMMANDINTERNAL_ADMINCLIENTCONFIG_`<br>`hono.kafka.commandInternal.adminClientConfig.` | Configures the Kafka admin client that creates Hono internal topics.                                               |
-| `HONO_KAFKA_COMMANDRESPONSE_PRODUCERCONFIG_`<br>`hono.kafka.commandResponse.producerConfig.`       | Configures the Kafka producer that publishes command response messages.                                            |
-| `HONO_KAFKA_EVENT_PRODUCERCONFIG_`<br>`hono.kafka.event.producerConfig.`                           | Configures the Kafka producer that publishes event messages.                                                       |
-| `HONO_KAFKA_NOTIFICATION_CONSUMERCONFIG_`<br>`hono.kafka.notification.consumerConfig.`             | Configures the Kafka consumer that receives notification messages about changes to tenant/device/credentials data. |
-| `HONO_KAFKA_TELEMETRY_PRODUCERCONFIG_`<br>`hono.kafka.telemetry.producerConfig.`                   | Configures the Kafka producer that publishes telemetry messages.                                                   |
+| `HONO_KAFKA_COMMANDRESPONSE_PRODUCERCONFIG_`<br>`hono.kafka.commandResponse.producerConfig.`      | Configures the Kafka producer that publishes command response messages.                                            |
+| `HONO_KAFKA_EVENT_PRODUCERCONFIG_`<br>`hono.kafka.event.producerConfig.`                       | Configures the Kafka producer that publishes event messages.                                                       |
+| `HONO_KAFKA_NOTIFICATION_CONSUMERCONFIG_`<br>`hono.kafka.notification.consumerConfig.`           | Configures the Kafka consumer that receives notification messages about changes to tenant/device/credentials data. |
+| `HONO_KAFKA_TELEMETRY_PRODUCERCONFIG_`<br>`hono.kafka.telemetry.producerConfig.`                | Configures the Kafka producer that publishes telemetry messages.                                                   |
 
 ### Tenant Service Connection Configuration
 
 Protocol adapters require a connection to an implementation of Hono's [Tenant API]({{< ref "/api/tenant" >}})
 in order to retrieve information for a tenant.
 
-The connection to the Tenant Service is configured according to the [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
-where the `${PREFIX}` is set to `HONO_TENANT` and the additional values for response caching apply.
+The connection to the Tenant Service is configured according to the
+[Hono Client Configuration]({{< relref "hono-client-configuration.md" >}}) where the `${PREFIX}` is set to `HONO_TENANT`
+and the additional values for response caching apply.
 
 The adapter caches the responses from the service according to the *cache directive* included in the response.
 If the response doesn't contain a *cache directive* no data will be cached.
 
 ### Device Registration Service Connection Configuration
 
-Protocol adapters require a connection to an implementation of Hono's [Device Registration API]({{< relref "/api/device-registration" >}})
-in order to retrieve registration status assertions for connected devices.
+Protocol adapters require a connection to an implementation of Hono's
+[Device Registration API]({{< relref "/api/device-registration" >}}) in order to retrieve registration status assertions
+for connected devices.
 
-The connection to the Device Registration Service is configured according to the [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
-where the `${PREFIX}` is set to `HONO_REGISTRATION`.
+The connection to the Device Registration Service is configured according to the
+[Hono Client Configuration]({{< relref "hono-client-configuration.md" >}}) where the `${PREFIX}` is set to
+`HONO_REGISTRATION`.
 
 The adapter caches the responses from the service according to the *cache directive* included in the response.
 If the response doesn't contain a *cache directive* no data will be cached.
 
 Note that the adapter uses a single cache for all responses from the service regardless of the tenant identifier.
-Consequently, the Device Registration Service client configuration's *responseCacheMinSize* and *responseCacheMaxSize* properties
-determine the overall number of responses that can be cached.
+Consequently, the Device Registration Service client configuration's *responseCacheMinSize* and *responseCacheMaxSize*
+properties determine the overall number of responses that can be cached.
 
 ### Credentials Service Connection Configuration
 
@@ -120,15 +133,16 @@ in order to retrieve credentials stored for devices that needs to be authenticat
 the adapter uses the Credentials API to retrieve the credentials on record for the device and matches that with the
 credentials provided by a device.
 
-The connection to the Credentials Service is configured according to the [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
-where the `${PREFIX}` is set to `HONO_CREDENTIALS`.
+The connection to the Credentials Service is configured according to the
+[Hono Client Configuration]({{< relref "hono-client-configuration.md" >}}) where the `${PREFIX}` is set to
+`HONO_CREDENTIALS`.
 
 The adapter caches the responses from the service according to the *cache directive* included in the response.
 If the response doesn't contain a *cache directive* no data will be cached.
 
 Note that the adapter uses a single cache for all responses from the service regardless of the tenant identifier.
-Consequently, the Credentials Service client configuration's *responseCacheMinSize* and *responseCacheMaxSize* properties
-determine the overall number of responses that can be cached.
+Consequently, the Credentials Service client configuration's *responseCacheMinSize* and *responseCacheMaxSize*
+properties determine the overall number of responses that can be cached.
 
 ### Device Connection Service Connection Configuration
 
@@ -142,8 +156,8 @@ section.
 {{% /notice %}}
 
 Protocol adapters connect to an implementation of Hono's [Device Connection API]({{< relref "/api/device-connection" >}})
-in order to determine the gateway that a device is connected via to a protocol adapter. This information is required in order to
-forward commands issued by applications to the protocol adapter instance that the gateway is connected to.
+in order to determine the gateway that a device is connected via to a protocol adapter. This information is required
+in order to forward commands issued by applications to the protocol adapter instance that the gateway is connected to.
 
 The connection to the Device Connection service is configured according to
 [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}}) where the `${PREFIX}` is set to
@@ -156,14 +170,14 @@ Responses from the Device Connection service are never cached, so the properties
 Protocol adapters can alternatively be configured to directly access a data grid for storing and retrieving
 device connection information using [Infinispan](https://infinispan.org)'s Hotrod protocol.
 This has the advantage of saving the network hop to the Device Connection service. However,
-this is only beneficial if the Device Connection service implementation itself uses a remote service (like a data grid) for
-storing the data.
+this is only beneficial if the Device Connection service implementation itself uses a remote service (like a data grid)
+for storing the data.
 
-The following table provides an overview of the configuration variables and corresponding system properties for configuring
-the connection to the data grid:
+The following table provides an overview of the configuration variables and corresponding system properties for
+configuring the connection to the data grid:
 
 | OS Environment Variable<br>Java System property | Mandatory | Default | Description                                |
-| :------------------------------------------ | :-------: | :------ | :--------------------------------------------- |
+| :---------------------------------------------- | :-------: | :------ | :--------------------------------------------- |
 | `HONO_DEVICECONNECTION_SERVERLIST`<br>`hono.deviceConnection.serverList` | yes | - | A list of remote servers in the form: `host1[:port][;host2[:port]]....`. |
 | `HONO_DEVICECONNECTION_AUTHSERVERNAME`<br>`hono.deviceConnection.authServerName` | yes | - | The server name to indicate in the SASL handshake when authenticating to the server. |
 | `HONO_DEVICECONNECTION_AUTHUSERNAME`<br>`hono.deviceConnection.authUsername` | yes | - | The username to use for authenticating to the server. |
@@ -185,8 +199,9 @@ Protocol adapters connect to an implementation of Hono's [Command Router API]({{
 in order to supply information with which a Command Router service component can route command & control messages to
 the protocol adapters that the target devices are connected to.
 
-The connection to the Command Router service is configured according to the [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
-where the `${PREFIX}` is set to `HONO_COMMANDROUTER`.
+The connection to the Command Router service is configured according to the
+[Hono Client Configuration]({{< relref "hono-client-configuration.md" >}}) where the `${PREFIX}` is set to
+`HONO_COMMANDROUTER`.
 
 Responses from the Command Router service are never cached, so the properties for configuring the cache are ignored.
 
