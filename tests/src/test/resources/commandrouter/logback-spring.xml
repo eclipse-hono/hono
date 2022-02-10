@@ -41,6 +41,7 @@
   </root>
 
   <springProfile name="trace">
+    <logger name="org.eclipse.hono" level="DEBUG"/>
     <logger name="org.eclipse.hono.client" level="TRACE"/>
     <logger name="org.eclipse.hono.client.command" level="TRACE"/>
     <logger name="org.eclipse.hono.client.registry" level="TRACE"/>
@@ -48,7 +49,6 @@
     <logger name="org.eclipse.hono.commandrouter" level="TRACE"/>
     <logger name="org.eclipse.hono.connection" level="TRACE"/>
     <logger name="org.eclipse.hono.service" level="TRACE"/>
-    <logger name="org.eclipse.hono" level="DEBUG"/>
 
     <logger name="org.infinispan" level="DEBUG"/>
     <logger name="org.apache.kafka" level="INFO"/>

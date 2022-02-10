@@ -29,12 +29,8 @@ quarkus:
     category:
       "io.quarkus.vertx.core.runtime":
         level: DEBUG
-      "org.eclipse.hono":
-        level: INFO
-      "org.eclipse.hono.authentication":
-        level: INFO
-      "org.eclipse.hono.authentication.file":
-        level: INFO
+  vertx:
+    max-event-loop-execute-time: ${max.event-loop.execute-time}
 
 spring:
   jmx:

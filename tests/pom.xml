@@ -881,8 +881,11 @@
                       </exec>
                     </cmd>
                     <env>
-                      <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
-                      <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
+                      <SMALLRYE_CONFIG_LOCATIONS>
+                        /${hono.auth-server.config-dir}/logging-quarkus-${logging.profile}.yml
+                      </SMALLRYE_CONFIG_LOCATIONS>
+                      <LOGGING_CONFIG>file:///${hono.auth-server.config-dir}/logback-spring.xml</LOGGING_CONFIG>
+                      <SPRING_CONFIG_LOCATION>file:///${hono.auth-server.config-dir}/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>authentication-impl,${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${hono.auth-server.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
@@ -1150,8 +1153,11 @@
                     <memorySwap>${hono.deviceregistry.max-mem}</memorySwap>
                     <memory>${hono.deviceregistry.max-mem}</memory>
                     <env>
-                      <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
-                      <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
+                      <SMALLRYE_CONFIG_LOCATIONS>
+                        /${hono.deviceregistry.config-dir}/logging-quarkus-${logging.profile}.yml
+                      </SMALLRYE_CONFIG_LOCATIONS>
+                      <LOGGING_CONFIG>file:///${hono.deviceregistry.config-dir}/logback-spring.xml</LOGGING_CONFIG>
+                      <SPRING_CONFIG_LOCATION>file:///${hono.deviceregistry.config-dir}/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>${hono.deviceregistry.spring.profiles}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${hono.deviceregistry.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
@@ -1308,8 +1314,11 @@
                       </exec>
                     </cmd>
                     <env>
-                      <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
-                      <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
+                      <SMALLRYE_CONFIG_LOCATIONS>
+                        /${hono.command-router.config-dir}/logging-quarkus-${logging.profile}.yml
+                      </SMALLRYE_CONFIG_LOCATIONS>
+                      <LOGGING_CONFIG>file:///${hono.command-router.config-dir}/logback-spring.xml</LOGGING_CONFIG>
+                      <SPRING_CONFIG_LOCATION>file:///${hono.command-router.config-dir}/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>${logging.profile},embedded-cache,enable-device-connection-endpoint</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${hono.command-router.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
@@ -1394,8 +1403,11 @@
                       </exec>
                     </cmd>
                     <env>
-                      <LOGGING_CONFIG>file:/etc/hono/logback-spring.xml</LOGGING_CONFIG>
-                      <SPRING_CONFIG_LOCATION>file:/etc/hono/</SPRING_CONFIG_LOCATION>
+                      <SMALLRYE_CONFIG_LOCATIONS>
+                        /${hono.http-adapter.config-dir}/logging-quarkus-${logging.profile}.yml
+                      </SMALLRYE_CONFIG_LOCATIONS>
+                      <LOGGING_CONFIG>file:/${hono.http-adapter.config-dir}/logback-spring.xml</LOGGING_CONFIG>
+                      <SPRING_CONFIG_LOCATION>file:/${hono.http-adapter.config-dir}/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${hono.http-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
@@ -1470,8 +1482,11 @@
                       </exec>
                     </cmd>
                     <env>
-                      <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
-                      <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
+                      <SMALLRYE_CONFIG_LOCATIONS>
+                        /${hono.mqtt-adapter.config-dir}/logging-quarkus-${logging.profile}.yml
+                      </SMALLRYE_CONFIG_LOCATIONS>
+                      <LOGGING_CONFIG>file:///${hono.mqtt-adapter.config-dir}/logback-spring.xml</LOGGING_CONFIG>
+                      <SPRING_CONFIG_LOCATION>file:///${hono.mqtt-adapter.config-dir}/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${hono.mqtt-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
@@ -1546,8 +1561,11 @@
                       </exec>
                     </cmd>
                     <env>
-                      <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
-                      <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
+                      <SMALLRYE_CONFIG_LOCATIONS>
+                        /${hono.amqp-adapter.config-dir}/logging-quarkus-${logging.profile}.yml
+                      </SMALLRYE_CONFIG_LOCATIONS>
+                      <LOGGING_CONFIG>file:///${hono.amqp-adapter.config-dir}/logback-spring.xml</LOGGING_CONFIG>
+                      <SPRING_CONFIG_LOCATION>file:///${hono.amqp-adapter.config-dir}/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${hono.amqp-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
@@ -1622,8 +1640,11 @@
                       </exec>
                     </cmd>
                     <env>
-                      <LOGGING_CONFIG>file:/etc/hono/logback-spring.xml</LOGGING_CONFIG>
-                      <SPRING_CONFIG_LOCATION>file:/etc/hono/</SPRING_CONFIG_LOCATION>
+                      <SMALLRYE_CONFIG_LOCATIONS>
+                        /${hono.coap-adapter.config-dir}/logging-quarkus-${logging.profile}.yml
+                      </SMALLRYE_CONFIG_LOCATIONS>
+                      <LOGGING_CONFIG>file:/${hono.coap-adapter.config-dir}/logback-spring.xml</LOGGING_CONFIG>
+                      <SPRING_CONFIG_LOCATION>file:/${hono.coap-adapter.config-dir}/</SPRING_CONFIG_LOCATION>
                       <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${hono.coap-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>

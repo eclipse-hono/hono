@@ -1,0 +1,7 @@
+quarkus:
+  log:
+    category:
+      "org.eclipse.hono":
+        level: INFO
+      "org.eclipse.hono.client.impl.HonoConnectionImpl":
+        level: ERROR
