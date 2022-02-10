@@ -1,9 +1,5 @@
 hono:
   cache:
-    common:
-      cacheName: "the-cache"
-      checkKey: "the-key"
-      checkValue: "the-value"
     infinispan:
       serverList: "data-grid:11222"
       authServerName: "data-grid"

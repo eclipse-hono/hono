@@ -1,0 +1,4 @@
+hono:
+  connectionEvents:
+    logLevel: "debug"
+    producer: events

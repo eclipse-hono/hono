@@ -1,0 +1,6 @@
+hono:
+  requestResponseClient:
+    serverRole: "Tenant"
+    responseCacheDefaultTimeout: 300
+    responseCacheMaxSize: 121212
+    responseCacheMinSize: 333

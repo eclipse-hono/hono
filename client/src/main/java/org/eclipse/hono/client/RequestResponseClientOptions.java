@@ -11,7 +11,9 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.config.quarkus;
+package org.eclipse.hono.client;
+
+import org.eclipse.hono.config.quarkus.ClientOptions;
 
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;

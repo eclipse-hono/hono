@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,7 +14,6 @@
 package org.eclipse.hono.client;
 
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.config.quarkus.RequestResponseClientOptions;
 
 /**
  * Configuration properties for clients invoking request/response operations

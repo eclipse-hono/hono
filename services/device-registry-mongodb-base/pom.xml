@@ -90,8 +90,8 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>io.smallrye.config</groupId>
-      <artifactId>smallrye-config-source-yaml</artifactId>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>core-test-utils</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

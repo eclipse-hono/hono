@@ -38,6 +38,7 @@ import org.eclipse.hono.adapter.resourcelimits.PrometheusBasedResourceLimitCheck
 import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
+import org.eclipse.hono.client.RequestResponseClientOptions;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.command.CommandConsumerFactory;
 import org.eclipse.hono.client.command.CommandResponseSender;
@@ -81,7 +82,6 @@ import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.config.quarkus.ClientOptions;
-import org.eclipse.hono.config.quarkus.RequestResponseClientOptions;
 import org.eclipse.hono.notification.NotificationConstants;
 import org.eclipse.hono.notification.NotificationEventBusSupport;
 import org.eclipse.hono.notification.NotificationReceiver;

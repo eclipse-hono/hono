@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,22 +16,15 @@ package org.eclipse.hono.authentication.file;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import javax.inject.Inject;
-
+import org.eclipse.hono.test.ConfigMappingSupport;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.junit.jupiter.api.Test;
-
-import io.quarkus.test.junit.QuarkusTest;
 
 /**
  * Tests verifying the binding of configuration properties to objects.
  *
  */
-@QuarkusTest
-public class QuarkusPropertyBindingTest {
-
-    @Inject
-    FileBasedAuthenticationServiceOptions serviceOptions;
+public class FileBasedAuthenticationServiceOptionsTest {
 
     /**
      * Verifies that Quarkus correctly binds properties from a yaml file to a
@@ -39,8 +32,12 @@ public class QuarkusPropertyBindingTest {
      */
     @Test
     public void testServiceOptionsBinding() {
-        assertThat(serviceOptions).isNotNull();
-        final var props = new FileBasedAuthenticationServiceConfigProperties(serviceOptions);
+
+        final var props = new FileBasedAuthenticationServiceConfigProperties(
+                ConfigMappingSupport.getConfigMapping(
+                        FileBasedAuthenticationServiceOptions.class,
+                        this.getClass().getResource("/auth-service-options.yaml")));
+
         assertThat(props.getPermissionsPath()).isEqualTo("/etc/permissions.json");
         assertThat(props.getSigning().getSharedSecret()).isEqualTo("secret");
         assertThat(props.getSigning().getTokenExpiration()).isEqualTo(1000);

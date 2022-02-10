@@ -1,0 +1,31 @@
+hono:
+  client:
+    addressRewriteRule: "([a-z_]+)/([\\w-]+) test-vhost/$1/$2"
+    amqpHostname: "command.hono.eclipseprojects.io"
+    certPath: "/etc/cert.pem"
+    connectTimeout: 1234
+    credentialsPath: "/etc/creds"
+    flowLatency: 321
+    host: "hono.eclipseprojects.io"
+    idleTimeout: 44444
+    initialCredits: 55
+    keyPath: "/etc/key.pem"
+    linkEstablishmentTimeout: 1111
+    maxFrameSize: 32000
+    maxMessageSize: 64000
+    maxSessionFrames: 30
+    minMaxMessageSize: 65000
+    name: "client"
+    password: "secret"
+    pathSeparator: "-"
+    port: 12000
+    reconnectAttempts: 12
+    reconnectMaxDelay: 412
+    reconnectMinDelay: 10
+    requestTimeout: 533
+    secureProtocols: "TLSv1.0,TLSv1.5"
+    sendMessageTimeout: 2121
+    serverRole: "bumlux"
+    tlsEnabled: true
+    trustStorePath: "/etc/trusted-certs.pem"
+    username: "user"
