@@ -111,6 +111,11 @@
       <optional>true</optional>
     </dependency>
     <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-core</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
       <groupId>io.smallrye.config</groupId>
       <artifactId>smallrye-config</artifactId>
       <optional>true</optional>
