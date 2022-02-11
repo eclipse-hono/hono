@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,12 +25,21 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.vertx.core.Vertx;
 
 /**
  * A helper for creating and validating JSON Web Tokens containing user claims.
  *
  */
+@RegisterForReflection(targets = {
+                        io.jsonwebtoken.impl.DefaultJwtBuilder.class,
+                        io.jsonwebtoken.impl.DefaultJwtParserBuilder.class,
+                        io.jsonwebtoken.jackson.io.JacksonDeserializer.class,
+                        io.jsonwebtoken.jackson.io.JacksonSerializer.class,
+                        io.jsonwebtoken.impl.compression.DeflateCompressionCodec.class,
+                        io.jsonwebtoken.impl.compression.GzipCompressionCodec.class
+})
 public class AuthTokenHelperImpl extends JwtHelper implements AuthTokenHelper {
 
     private AuthTokenHelperImpl() {
