@@ -194,6 +194,7 @@
         <!-- allow incomplete class path in order to not require (optional) compression codec dependencies of Netty -->
         <!-- use Base64 encoder/decoder that is compatible with vert.x 3 -->
         <quarkus.native.additional-build-args>
+          --initialize-at-run-time=io.netty.internal.tcnative.SSL,
           --allow-incomplete-classpath,
           -Dvertx.json.base64=legacy
         </quarkus.native.additional-build-args>
