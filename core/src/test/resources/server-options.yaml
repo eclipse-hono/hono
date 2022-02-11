@@ -4,5 +4,7 @@ hono:
     insecurePort: 11001
     insecurePortBindAddress: "10.2.0.2"
     insecurePortEnabled: true
+    keyFormat: "PEM"
     nativeTlsRequired: true
     port: 11000
+    trustStoreFormat: "JKS"

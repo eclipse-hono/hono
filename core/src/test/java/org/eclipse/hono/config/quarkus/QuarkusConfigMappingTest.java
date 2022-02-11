@@ -18,6 +18,7 @@ import static com.google.common.truth.Truth.assertThat;
 
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.config.FileFormat;
 import org.eclipse.hono.config.MapperEndpoint;
 import org.eclipse.hono.config.ProtocolAdapterOptions;
 import org.eclipse.hono.config.ProtocolAdapterProperties;
@@ -108,7 +109,9 @@ class QuarkusConfigMappingTest {
         assertThat(props.getBindAddress()).isEqualTo("10.2.0.1");
         assertThat(props.getInsecurePort()).isEqualTo(11001);
         assertThat(props.getInsecurePortBindAddress()).isEqualTo("10.2.0.2");
+        assertThat(props.getKeyFormat()).isEqualTo(FileFormat.PEM);
         assertThat(props.getPort()).isEqualTo(11000);
+        assertThat(props.getTrustStoreFormat()).isEqualTo(FileFormat.JKS);
         assertThat(props.isInsecurePortEnabled()).isTrue();
         assertThat(props.isNativeTlsRequired()).isTrue();
         assertThat(props.isSecurePortEnabled()).isFalse();
