@@ -56,9 +56,13 @@ The tenants in the registry can be managed using the Device Registry Management 
 [tenant related resources]({{< relref "/api/management#tenants" >}}).
 
 {{% notice info %}}
-The JDBC based registry implementation does not support the [search tenants]({{< relref "/api/management#tenants/searchTenants" >}})
-operation defined by the Device Registry Management API. Invoking this operation will yield a `501 Not Implemented`
-response.
+The JDBC based registry implementation does not support the following features:
+
+* Tenants can not be retrieved using the [search tenants]({{< relref "/api/management#tenants/searchTenants" >}})
+  operation defined by the Device Registry Management API. Invoking this operation will yield a `501 Not Implemented`
+  response.
+* The *alias* and *trust-anchor-group* properties defined on a tenant are being ignored by the registry. Consequently,
+  multiple tenants can not be configured to use the same trust anchor(s).
 {{% /notice %}}
 
 #### Registration Limits
@@ -96,9 +100,11 @@ The devices in the registry can be managed using the Device Registry Management 
 [device related resources]({{< relref "/api/management#devices" >}}).
 
 {{% notice info %}}
-The JDBC based device registry does not support the [search devices]({{< relref "/api/management#devices/searchDevicesForTenant" >}})
-operation defined by the Device Registry Management API. Invoking this operation will yield a `501 Not Implemented`
-response.
+The JDBC based registry implementation does not support the following features:
+
+* Registration information can not be retrieved using the
+  [search devices]({{< relref "/api/management#devices/searchDevicesForTenant" >}}) operation defined by the Device
+  Registry Management API. Invoking this operation will yield a `501 Not Implemented` response.
 {{% /notice %}}
 
 ### Managing Credentials
