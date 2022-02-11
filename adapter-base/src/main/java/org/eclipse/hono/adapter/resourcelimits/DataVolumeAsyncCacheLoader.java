@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -30,12 +30,14 @@ import org.slf4j.LoggerFactory;
 import io.opentracing.Tracer;
 import io.opentracing.log.Fields;
 import io.opentracing.tag.Tags;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.vertx.ext.web.client.WebClient;
 
 /**
  * A Caffeine cache loader that retrieves the overall data volume that devices of a tenant have sent/received
  * via Hono during the current accounting period from a Prometheus server by invoking its HTTP query API.
  */
+@RegisterForReflection
 public class DataVolumeAsyncCacheLoader extends PrometheusBasedAsyncCacheLoader<LimitedResourceKey, LimitedResource<Long>> {
 
     private static final String METRIC_NAME_COMMANDS_PAYLOAD_SIZE = String.format("%s_bytes_sum",
