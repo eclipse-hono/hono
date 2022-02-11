@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
 /**
  * A Hono internal notification that is published by one component to inform other components about events.
  *
@@ -33,6 +35,7 @@ import com.fasterxml.jackson.databind.annotation.JsonTypeIdResolver;
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = NotificationConstants.JSON_FIELD_TYPE, visible = true)
 @JsonTypeIdResolver(NotificationTypeResolver.class)
+@RegisterForReflection
 public abstract class AbstractNotification {
 
     private final String source;

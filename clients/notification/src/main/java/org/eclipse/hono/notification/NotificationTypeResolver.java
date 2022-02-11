@@ -18,11 +18,14 @@ import com.fasterxml.jackson.databind.DatabindContext;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.jsontype.impl.TypeIdResolverBase;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
 /**
  * Type resolver for notifications.
  * <p>
  * This type resolver knows the types contained in {@link NotificationConstants#DEVICE_REGISTRY_NOTIFICATION_TYPES}.
  */
+@RegisterForReflection
 public final class NotificationTypeResolver extends TypeIdResolverBase {
 
     private JavaType baseType;

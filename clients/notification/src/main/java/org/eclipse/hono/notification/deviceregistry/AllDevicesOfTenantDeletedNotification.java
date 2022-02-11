@@ -26,9 +26,12 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
 /**
  * Notification that informs that all devices of a tenant have been deleted.
  */
+@RegisterForReflection
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public final class AllDevicesOfTenantDeletedNotification extends AbstractNotification {
 

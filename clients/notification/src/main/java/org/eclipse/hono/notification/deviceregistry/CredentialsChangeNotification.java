@@ -26,6 +26,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
 /**
  * Notification that informs about changes on credentials.
  *
@@ -34,6 +36,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * that the used credentials have become invalid. For example a protocol adapter can simply disconnect the device to
  * enforce re-authentication.
  */
+@RegisterForReflection
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public final class CredentialsChangeNotification extends AbstractNotification {
 

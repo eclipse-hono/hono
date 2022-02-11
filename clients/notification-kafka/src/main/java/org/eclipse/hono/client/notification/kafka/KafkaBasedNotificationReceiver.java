@@ -28,12 +28,14 @@ import org.eclipse.hono.client.kafka.consumer.HonoKafkaConsumer;
 import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationReceiver;
 import org.eclipse.hono.notification.NotificationType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 
 /**
@@ -41,6 +43,7 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
  */
 public class KafkaBasedNotificationReceiver implements NotificationReceiver {
 
+    private static final Logger LOG = LoggerFactory.getLogger(KafkaBasedNotificationReceiver.class);
     private static final String NAME = "notification";
 
     private final Vertx vertx;
@@ -108,7 +111,12 @@ public class KafkaBasedNotificationReceiver implements NotificationReceiver {
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private Handler<KafkaConsumerRecord<String, Buffer>> getRecordHandler() {
         return record -> {
-            final AbstractNotification notification = Json.decodeValue(record.value(), AbstractNotification.class);
+            final JsonObject json = record.value().toJsonObject();
+            if (LOG.isTraceEnabled()) {
+                LOG.trace("received notification:{}{}", System.lineSeparator(), json.encodePrettily());
+            }
+
+            final AbstractNotification notification = json.mapTo(AbstractNotification.class);
             final Handler handler = handlerPerType.get(notification.getClass());
             if (handler != null) {
                 handler.handle(notification);

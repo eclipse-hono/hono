@@ -26,9 +26,12 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
 /**
  * Notification that informs about changes on a device.
  */
+@RegisterForReflection
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public final class DeviceChangeNotification extends AbstractNotification {
 
@@ -141,12 +144,13 @@ public final class DeviceChangeNotification extends AbstractNotification {
 
     @Override
     public String toString() {
-        return "DeviceChangeNotification{" +
-                "change=" + change +
-                ", tenantId='" + tenantId + '\'' +
-                ", deviceId='" + deviceId + '\'' +
-                ", enabled=" + enabled +
-                ", creationTime='" + getCreationTime() + '\'' +
-                '}';
+        return new StringBuilder("DeviceChangeNotification{")
+                .append("change=").append(change)
+                .append(", tenantId='").append(tenantId).append('\'')
+                .append(", deviceId='").append(deviceId).append('\'')
+                .append(", enabled=").append(enabled)
+                .append(", creationTime='").append(getCreationTime()).append('\'')
+                .append(", source='").append(getSource()).append("'}")
+                .toString();
     }
 }

@@ -34,7 +34,7 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.Json;
+import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonMessageHandler;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
@@ -179,7 +179,11 @@ public class ProtonBasedNotificationReceiver extends AbstractServiceClient imple
         return (delivery, message) -> {
             final Buffer payload = MessageHelper.getPayload(message);
             if (payload != null) {
-                final AbstractNotification notification = Json.decodeValue(payload, AbstractNotification.class);
+                final JsonObject json = payload.toJsonObject();
+                if (log.isTraceEnabled()) {
+                    log.trace("received notification:{}{}", System.lineSeparator(), json.encodePrettily());
+                }
+                final AbstractNotification notification = json.mapTo(AbstractNotification.class);
                 final String expectedAddress = NotificationAddressHelper.getAddress(notification.getType());
                 if (!address.equals(expectedAddress)) {
                     log.warn("got notification of type [{}] on unexpected address [{}]; expected address is [{}]",
