@@ -243,7 +243,7 @@
                   OSGi bundle, so we inline and export its packages.
                 -->
                 <Export-Package>
-                  io.opentracing*;version=${opentracing.version},
+                  io.opentracing*;version=0.33.0,
                   org.springframework.security.crypto*;version=${spring-security-crypto.version},
                   {local-packages}
                 </Export-Package>
