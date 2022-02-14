@@ -154,18 +154,21 @@
 
     <hono.postgres.disabled>true</hono.postgres.disabled>
 
+    <hono.amqp-adapter.host>hono-adapter-amqp</hono.amqp-adapter.host>
     <hono.amqp-adapter.image>hono-adapter-amqp-vertx</hono.amqp-adapter.image>
     <hono.amqp-adapter.config-dir>opt/hono/config</hono.amqp-adapter.config-dir>
     <hono.amqp-adapter.max-mem>314572800</hono.amqp-adapter.max-mem>
     <hono.amqp-adapter.java-options>${default.java-options}</hono.amqp-adapter.java-options>
     <hono.amqp-adapter.native-image-args></hono.amqp-adapter.native-image-args>
 
+    <hono.coap-adapter.host>hono-adapter-coap</hono.coap-adapter.host>
     <hono.coap-adapter.image>hono-adapter-coap-vertx</hono.coap-adapter.image>
     <hono.coap-adapter.config-dir>opt/hono/config</hono.coap-adapter.config-dir>
     <hono.coap-adapter.max-mem>314572800</hono.coap-adapter.max-mem>
     <hono.coap-adapter.java-options>${default.java-options}</hono.coap-adapter.java-options>
     <hono.coap-adapter.native-image-args></hono.coap-adapter.native-image-args>
 
+    <hono.http-adapter.host>hono-adapter-http</hono.http-adapter.host>
     <hono.http-adapter.image>hono-adapter-http-vertx</hono.http-adapter.image>
     <hono.http-adapter.config-dir>opt/hono/config</hono.http-adapter.config-dir>
     <hono.http-adapter.max-mem>314572800</hono.http-adapter.max-mem>
@@ -173,6 +176,7 @@
     <hono.http-adapter.java-options>${default.java-options}</hono.http-adapter.java-options>
     <hono.http-adapter.native-image-args></hono.http-adapter.native-image-args>
 
+    <hono.mqtt-adapter.host>hono-adapter-mqtt</hono.mqtt-adapter.host>
     <hono.mqtt-adapter.image>hono-adapter-mqtt-vertx</hono.mqtt-adapter.image>
     <hono.mqtt-adapter.config-dir>opt/hono/config</hono.mqtt-adapter.config-dir>
     <hono.mqtt-adapter.max-mem>314572800</hono.mqtt-adapter.max-mem>
@@ -780,14 +784,31 @@
                 </image>
                 <!-- ##### Jaeger tracing component ##### -->
                 <image>
-                  <name>${jaeger.image.name}</name>
-                  <run>
+                  <name>${docker.repository}/hono-jaeger-test:${project.version}</name>
+                  <build>
                     <skip>${jaeger.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
+                    <from>${jaeger.image.name}</from>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/</basedir>
+                      <inline>
+                        <id>config</id>
+                        <fileSet>
+                          <directory>${project.build.directory}/resources/jaeger</directory>
+                          <outputDirectory>etc/hono</outputDirectory>
+                          <includes>
+                            <include>*</include>
+                          </includes>
+                        </fileSet>
+                      </inline>
+                    </assembly>
+                  </build>
+                  <run>
+                    <skip>${jaeger.disabled}</skip>
                     <ports>
                       <port>+jaeger.ip:jaeger.health.port:14269</port><!-- admin-http -->
                       <port>+jaeger.ip:jaeger.query.port:16686</port><!-- query-http -->
-                      <port>+jaeger.ip:jaeger.agent.port:6831/udp</port><!-- agent (compact thrift protocol) -->
                     </ports>
                     <portPropertyFile>${project.build.directory}/docker/jaeger.port.properties</portPropertyFile>
                     <network>
@@ -807,7 +828,9 @@
                     <memorySwap>314572800</memorySwap>
                     <memory>314572800</memory>
                     <env>
+                      <LOG_LEVEL>info</LOG_LEVEL>
                       <MEMORY_MAX_TRACES>2000</MEMORY_MAX_TRACES>
+                      <SAMPLING_STRATEGIES_FILE>/etc/hono/default-sampling-strategies.json</SAMPLING_STRATEGIES_FILE>
                     </env>
                     <log>
                       <prefix>JAEGER</prefix>
@@ -1161,11 +1184,9 @@
                       <SPRING_PROFILES_ACTIVE>${hono.deviceregistry.spring.profiles}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${hono.deviceregistry.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
-                      <JAEGER_SERVICE_NAME>device-registry</JAEGER_SERVICE_NAME>
+                      <JAEGER_SERVICE_NAME>${hono.registration.host}</JAEGER_SERVICE_NAME>
                       <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
-                      <JAEGER_AGENT_PORT>6831</JAEGER_AGENT_PORT>
-                      <JAEGER_SAMPLER_TYPE>const</JAEGER_SAMPLER_TYPE>
-                      <JAEGER_SAMPLER_PARAM>1</JAEGER_SAMPLER_PARAM>
+                      <JAEGER_SAMPLER_MANAGER_HOST_PORT>${jaeger.host}:5778</JAEGER_SAMPLER_MANAGER_HOST_PORT>
                     </env>
                     <log>
                       <prefix>REGISTRY</prefix>
@@ -1234,11 +1255,9 @@
                       <SPRING_PROFILES_ACTIVE>${logging.profile},embedded-cache</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${default.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
-                      <JAEGER_SERVICE_NAME>device-connection</JAEGER_SERVICE_NAME>
+                      <JAEGER_SERVICE_NAME>${hono.device-connection.host}</JAEGER_SERVICE_NAME>
                       <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
-                      <JAEGER_AGENT_PORT>6831</JAEGER_AGENT_PORT>
-                      <JAEGER_SAMPLER_TYPE>const</JAEGER_SAMPLER_TYPE>
-                      <JAEGER_SAMPLER_PARAM>1</JAEGER_SAMPLER_PARAM>
+                      <JAEGER_SAMPLER_MANAGER_HOST_PORT>${jaeger.host}:5778</JAEGER_SAMPLER_MANAGER_HOST_PORT>
                     </env>
                     <log>
                       <prefix>DEVCON</prefix>
@@ -1322,11 +1341,9 @@
                       <SPRING_PROFILES_ACTIVE>${logging.profile},embedded-cache,enable-device-connection-endpoint</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${hono.command-router.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
-                      <JAEGER_SERVICE_NAME>command-router</JAEGER_SERVICE_NAME>
+                      <JAEGER_SERVICE_NAME>${hono.commandrouter.host}</JAEGER_SERVICE_NAME>
                       <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
-                      <JAEGER_AGENT_PORT>6831</JAEGER_AGENT_PORT>
-                      <JAEGER_SAMPLER_TYPE>const</JAEGER_SAMPLER_TYPE>
-                      <JAEGER_SAMPLER_PARAM>1</JAEGER_SAMPLER_PARAM>
+                      <JAEGER_SAMPLER_MANAGER_HOST_PORT>${jaeger.host}:5778</JAEGER_SAMPLER_MANAGER_HOST_PORT>
                     </env>
                     <log>
                       <prefix>CMDROUTER</prefix>
@@ -1393,7 +1410,7 @@
                     <network>
                       <mode>custom</mode>
                       <name>${custom.network.name}</name>
-                      <alias>hono-adapter-http-vertx</alias>
+                      <alias>${hono.http-adapter.host}</alias>
                     </network>
                     <memorySwap>${hono.http-adapter.max-mem}</memorySwap>
                     <memory>${hono.http-adapter.max-mem}</memory>
@@ -1411,11 +1428,9 @@
                       <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${hono.http-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
-                      <JAEGER_SERVICE_NAME>hono-adapter-http</JAEGER_SERVICE_NAME>
+                      <JAEGER_SERVICE_NAME>${hono.http-adapter.host}</JAEGER_SERVICE_NAME>
                       <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
-                      <JAEGER_AGENT_PORT>6831</JAEGER_AGENT_PORT>
-                      <JAEGER_SAMPLER_TYPE>const</JAEGER_SAMPLER_TYPE>
-                      <JAEGER_SAMPLER_PARAM>1</JAEGER_SAMPLER_PARAM>
+                      <JAEGER_SAMPLER_MANAGER_HOST_PORT>${jaeger.host}:5778</JAEGER_SAMPLER_MANAGER_HOST_PORT>
                     </env>
                     <log>
                       <prefix>HTTP</prefix>
@@ -1472,7 +1487,7 @@
                     <network>
                       <mode>custom</mode>
                       <name>${custom.network.name}</name>
-                      <alias>hono-adapter-mqtt-vertx</alias>
+                      <alias>${hono.mqtt-adapter.host}</alias>
                     </network>
                     <memorySwap>${hono.mqtt-adapter.max-mem}</memorySwap>
                     <memory>${hono.mqtt-adapter.max-mem}</memory>
@@ -1490,11 +1505,9 @@
                       <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${hono.mqtt-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
-                      <JAEGER_SERVICE_NAME>hono-adapter-mqtt</JAEGER_SERVICE_NAME>
+                      <JAEGER_SERVICE_NAME>${hono.mqtt-adapter.host}</JAEGER_SERVICE_NAME>
                       <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
-                      <JAEGER_AGENT_PORT>6831</JAEGER_AGENT_PORT>
-                      <JAEGER_SAMPLER_TYPE>const</JAEGER_SAMPLER_TYPE>
-                      <JAEGER_SAMPLER_PARAM>1</JAEGER_SAMPLER_PARAM>
+                      <JAEGER_SAMPLER_MANAGER_HOST_PORT>${jaeger.host}:5778</JAEGER_SAMPLER_MANAGER_HOST_PORT>
                     </env>
                     <log>
                       <prefix>MQTT</prefix>
@@ -1543,6 +1556,7 @@
                   </build>
                   <run>
                     <ports>
+                      <port>5005</port>
                       <port>+adapter.amqp.ip:adapter.amqp.port:5672</port>
                       <port>+adapter.amqps.ip:adapter.amqps.port:5671</port>
                       <port>+adapter.amqp.ip:adapter.amqp.health.port:${vertx.health.port}</port>
@@ -1551,7 +1565,7 @@
                     <network>
                       <mode>custom</mode>
                       <name>${custom.network.name}</name>
-                      <alias>hono-adapter-amqp-vertx</alias>
+                      <alias>${hono.amqp-adapter.host}</alias>
                     </network>
                     <memorySwap>${hono.amqp-adapter.max-mem}</memorySwap>
                     <memory>${hono.amqp-adapter.max-mem}</memory>
@@ -1569,11 +1583,9 @@
                       <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${hono.amqp-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
-                      <JAEGER_SERVICE_NAME>hono-adapter-amqp</JAEGER_SERVICE_NAME>
+                      <JAEGER_SERVICE_NAME>${hono.amqp-adapter.host}</JAEGER_SERVICE_NAME>
                       <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
-                      <JAEGER_AGENT_PORT>6831</JAEGER_AGENT_PORT>
-                      <JAEGER_SAMPLER_TYPE>const</JAEGER_SAMPLER_TYPE>
-                      <JAEGER_SAMPLER_PARAM>1</JAEGER_SAMPLER_PARAM>
+                      <JAEGER_SAMPLER_MANAGER_HOST_PORT>${jaeger.host}:5778</JAEGER_SAMPLER_MANAGER_HOST_PORT>
                     </env>
                     <log>
                       <prefix>AMQP</prefix>
@@ -1630,7 +1642,7 @@
                     <network>
                       <mode>custom</mode>
                       <name>${custom.network.name}</name>
-                      <alias>hono-adapter-coap-vertx</alias>
+                      <alias>${hono.coap-adapter.host}</alias>
                     </network>
                     <memorySwap>${hono.coap-adapter.max-mem}</memorySwap>
                     <memory>${hono.coap-adapter.max-mem}</memory>
@@ -1648,11 +1660,9 @@
                       <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${hono.coap-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
-                      <JAEGER_SERVICE_NAME>hono-adapter-coap</JAEGER_SERVICE_NAME>
+                      <JAEGER_SERVICE_NAME>${hono.coap-adapter.host}</JAEGER_SERVICE_NAME>
                       <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
-                      <JAEGER_AGENT_PORT>6831</JAEGER_AGENT_PORT>
-                      <JAEGER_SAMPLER_TYPE>const</JAEGER_SAMPLER_TYPE>
-                      <JAEGER_SAMPLER_PARAM>1</JAEGER_SAMPLER_PARAM>
+                      <JAEGER_SAMPLER_MANAGER_HOST_PORT>${jaeger.host}:5778</JAEGER_SAMPLER_MANAGER_HOST_PORT>
                     </env>
                     <log>
                       <prefix>COAP</prefix>

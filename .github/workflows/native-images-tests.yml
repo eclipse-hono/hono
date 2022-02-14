@@ -57,4 +57,4 @@ jobs:
         mvn verify -pl :hono-tests -B -e -DCI=$CI \
         -Dhono.components.type=quarkus-native -Dhono.deviceregistry.type=file \
         -Dhono.messaging-infra.type=amqp -Dhono.commandrouting.cache=embedded \
-        -Prun-tests,jaeger
+        -Prun-tests

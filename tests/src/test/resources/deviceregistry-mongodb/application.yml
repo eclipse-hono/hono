@@ -59,12 +59,16 @@ hono:
       bootstrap.servers: ${hono.kafka.bootstrap.servers}
 
 quarkus:
+  jaeger:
+    service-name: "${hono.registration.host}"
   log:
     console:
       color: true
     level: INFO
     min-level: TRACE
     category:
+      "io.quarkus.jaeger":
+        level: DEBUG
       "io.quarkus.vertx.core.runtime":
         level: DEBUG
   vertx:
