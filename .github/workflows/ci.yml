@@ -60,4 +60,4 @@ jobs:
       with:
         java-version: '11'
     - name: Build all components (incl. unit tests) and run integration tests
-      run: mvn install -B -e -DcreateJavadoc=true -DCI=$CI -Dhono.components.type=${{ matrix.component-type }} -Dhono.deviceregistry.type=${{ matrix.device-registry }} -Dhono.messaging-infra.type=${{ matrix.messaging-type }} -Dhono.commandrouting.mode=${{ matrix.commandrouting-mode }} -Dhono.commandrouting.cache=${{ matrix.commandrouting-cache }} -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -Pbuild-docker-image,run-tests
+      run: mvn install -B -e -DcreateJavadoc=true -DCI=$CI -Dhono.components.type=${{ matrix.component-type }} -Dhono.deviceregistry.type=${{ matrix.device-registry }} -Dhono.messaging-infra.type=${{ matrix.messaging-type }} -Dhono.commandrouting.mode=${{ matrix.commandrouting-mode }} -Dhono.commandrouting.cache=${{ matrix.commandrouting-cache }} -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -Pbuild-docker-image,jaeger,run-tests

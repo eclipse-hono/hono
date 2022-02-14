@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,38 +12,29 @@
  */
 package org.eclipse.hono.service.quarkus;
 
-import java.util.Optional;
-
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 
-import io.jaegertracing.Configuration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.opentracing.Tracer;
-import io.opentracing.contrib.tracerresolver.TracerResolver;
-import io.opentracing.noop.NoopTracerFactory;
-import io.quarkus.arc.DefaultBean;
-import io.quarkus.arc.properties.IfBuildProperty;
+import io.opentracing.util.GlobalTracer;
 
 /**
- * A factory class that creates a proper tracer based on the profile.
+ * A producer for an OpenTracting Tracer.
  */
 @ApplicationScoped
 public class TracerProducer {
 
-    @Singleton
-    @Produces
-    @DefaultBean
-    Tracer tracer() {
-        return Optional.ofNullable(TracerResolver.resolveTracer())
-                .orElse(NoopTracerFactory.create());
-    }
+    private static final Logger LOG = LoggerFactory.getLogger(TracerProducer.class);
 
     @Singleton
     @Produces
-    @IfBuildProperty(name = "hono.tracing", stringValue = "jaeger")
     Tracer jaegerTracer() {
-        return Configuration.fromEnv().getTracer();
+        final var tracer = GlobalTracer.get();
+        LOG.info("using tracer instance: {}", tracer.toString());
+        return tracer;
     }
-
 }

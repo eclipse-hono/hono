@@ -1,0 +1,57 @@
+{
+  "service_strategies": [
+    {
+      "service": "${hono.registration.host}",
+      "type": "probabilistic",
+      "param": 1.0,
+      "operation_strategies": [
+      ]
+    },
+    {
+      "service": "${hono.device-connection.host}",
+      "type": "probabilistic",
+      "param": 1.0,
+      "operation_strategies": [
+      ]
+    },
+    {
+      "service": "${hono.commandrouter.host}",
+      "type": "probabilistic",
+      "param": 1.0,
+      "operation_strategies": [
+      ]
+    },
+    {
+      "service": "${hono.amqp-adapter.host}",
+      "type": "probabilistic",
+      "param": 1.0,
+      "operation_strategies": [
+      ]
+    },
+    {
+      "service": "${hono.coap-adapter.host}",
+      "type": "probabilistic",
+      "param": 1.0,
+      "operation_strategies": [
+      ]
+    },
+    {
+      "service": "${hono.http-adapter.host}",
+      "type": "probabilistic",
+      "param": 1.0,
+      "operation_strategies": [
+      ]
+    },
+    {
+      "service": "${hono.mqtt-adapter.host}",
+      "type": "probabilistic",
+      "param": 1.0,
+      "operation_strategies": [
+      ]
+    }
+  ],
+  "default_strategy": {
+    "type": "probabilistic",
+    "param": 1.0
+  }
+}

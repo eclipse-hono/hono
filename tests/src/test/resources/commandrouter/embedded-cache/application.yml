@@ -55,12 +55,16 @@ hono:
     preferNative: true
 
 quarkus:
+  jaeger:
+    service-name: "${hono.commandrouter.host}"
   log:
     console:
       color: true
     level: INFO
     min-level: TRACE
     category:
+      "io.quarkus.jaeger":
+        level: DEBUG
       "io.quarkus.vertx.core.runtime":
         level: DEBUG
   vertx:
