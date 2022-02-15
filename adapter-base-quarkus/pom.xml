@@ -70,10 +70,6 @@
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-adapter-base</artifactId>
     </dependency>
-    <dependency>
-      <groupId>io.opentracing.contrib</groupId>
-      <artifactId>opentracing-tracerresolver</artifactId>
-    </dependency>
   </dependencies>
 
   <build>
