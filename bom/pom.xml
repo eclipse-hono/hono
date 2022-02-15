@@ -55,7 +55,7 @@
     <kafka.image.name>confluentinc/cp-kafka:6.2.2</kafka.image.name>
     <logback.version>1.2.9</logback.version>
     <mongodb-image.name>mongo:4.4</mongodb-image.name>
-    <native.image.name>registry.access.redhat.com/ubi8/ubi-minimal:8.4</native.image.name>
+    <native.image.name>quay.io/quarkus/quarkus-micro-image:1.0</native.image.name>
     <netty.version>4.1.72.Final</netty.version>
     <netty.tcnative.version>2.0.46.Final</netty.tcnative.version>
     <postgresql-image.name>postgres:12-alpine</postgresql-image.name>
