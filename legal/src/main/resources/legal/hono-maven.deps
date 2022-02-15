@@ -121,7 +121,6 @@ io.smallrye:smallrye-context-propagation-api:jar:1.2.2
 io.smallrye:smallrye-context-propagation:jar:1.2.2
 io.smallrye:smallrye-context-propagation-storage:jar:1.2.2
 io.smallrye:smallrye-fault-tolerance-vertx:jar:5.2.1
-io.smallrye:smallrye-metrics:jar:2.4.0
 io.vertx:vertx-auth-common:jar:4.2.2
 io.vertx:vertx-auth-jdbc:jar:4.2.2
 io.vertx:vertx-auth-mongo:jar:4.2.2

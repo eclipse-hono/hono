@@ -121,7 +121,6 @@ maven/mavencentral/io.smallrye/smallrye-context-propagation/1.2.2, Apache-2.0, a
 maven/mavencentral/io.smallrye/smallrye-context-propagation-api/1.2.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.smallrye/smallrye-context-propagation-storage/1.2.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.smallrye/smallrye-fault-tolerance-vertx/5.2.1, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.smallrye/smallrye-metrics/2.4.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.vertx/vertx-auth-common/4.2.2, , approved, eclipse
 maven/mavencentral/io.vertx/vertx-auth-jdbc/4.2.2, , approved, eclipse
 maven/mavencentral/io.vertx/vertx-auth-mongo/4.2.2, , approved, eclipse
