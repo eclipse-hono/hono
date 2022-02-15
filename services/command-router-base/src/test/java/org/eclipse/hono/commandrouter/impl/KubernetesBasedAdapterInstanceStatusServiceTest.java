@@ -80,7 +80,8 @@ public class KubernetesBasedAdapterInstanceStatusServiceTest {
         final String pod1ContainerId = KubernetesBasedAdapterInstanceStatusService
                 .getShortContainerId(pod1.getStatus().getContainerStatuses().get(0).getContainerID());
         assertThat(pod1ContainerId).isNotNull();
-        server.expect().withPath("/api/v1/namespaces/test/pods?watch=true")
+
+        server.expect().withPath("/api/v1/namespaces/test/pods?allowWatchBookmarks=true&watch=true")
                 .andUpgradeToWebSocket()
                 .open()
                 .waitFor(10).andEmit(new WatchEvent(pod1, "ADDED"))
@@ -130,7 +131,7 @@ public class KubernetesBasedAdapterInstanceStatusServiceTest {
                 .andReturn(200, new PodListBuilder().addToItems(pod0, pod1).build())
                 .once();
 
-        server.expect().withPath("/api/v1/namespaces/test/pods?watch=true")
+        server.expect().withPath("/api/v1/namespaces/test/pods?allowWatchBookmarks=true&watch=true")
                 .andUpgradeToWebSocket()
                 .open()
                 .waitFor(10).andEmit(new WatchEvent(pod1, "DELETED"))
@@ -193,7 +194,7 @@ public class KubernetesBasedAdapterInstanceStatusServiceTest {
                 .andReturn(200, new PodListBuilder().addToItems(pod0, pod1WithFirstContainer).build())
                 .once();
 
-        server.expect().withPath("/api/v1/namespaces/test/pods?watch=true")
+        server.expect().withPath("/api/v1/namespaces/test/pods?allowWatchBookmarks=true&watch=true")
                 .andUpgradeToWebSocket()
                 .open()
                 .waitFor(10).andEmit(new WatchEvent(pod1WithFirstContainerTerminated, "MODIFIED"))
@@ -253,14 +254,14 @@ public class KubernetesBasedAdapterInstanceStatusServiceTest {
                 .getShortContainerId(pod1.getStatus().getContainerStatuses().get(0).getContainerID());
         assertThat(pod1ContainerId).isNotNull();
 
-        server.expect().withPath("/api/v1/namespaces/test/pods?watch=true")
+        server.expect().withPath("/api/v1/namespaces/test/pods?allowWatchBookmarks=true&watch=true")
                 .andUpgradeToWebSocket()
                 .open()
                 .waitFor(10).andEmit(outdatedEvent())
                 .done()
                 .once();
 
-        server.expect().withPath("/api/v1/namespaces/test/pods?watch=true")
+        server.expect().withPath("/api/v1/namespaces/test/pods?allowWatchBookmarks=true&watch=true")
                 .andUpgradeToWebSocket()
                 .open()
                 .waitFor(10).andEmit(new WatchEvent(pod1, "MODIFIED"))
