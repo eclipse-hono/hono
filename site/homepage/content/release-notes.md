@@ -38,6 +38,14 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 * The Spring Boot based variant of the MongoDB device registry has been deprecated and marked for removal in Hono 2.0.0.
 
+### API Changes
+
+* The MongoDB device registry now uses `PBKDF2` as default hash algorithm for the HTTP endpoint credential verification.
+  Hono deployments updated from an earlier version with password hashes created using the previous SHA-512 default need
+  to either create new password hashes or set `hono.registry.http.auth.hashAlgorithm` to `SHA512`. See the
+  [MongoDB based registry configuration guide]({{% doclink "/admin-guide/mongodb-device-registry-config/#service-configuration" %}})
+  for details.
+
 ## 1.11.2
 
 ### Fixes & Enhancements
