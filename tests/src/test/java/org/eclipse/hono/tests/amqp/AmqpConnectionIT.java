@@ -22,6 +22,7 @@ import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import javax.net.ssl.SSLHandshakeException;
 import javax.security.sasl.AuthenticationException;
@@ -33,6 +34,7 @@ import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Adapter;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,7 +42,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import io.vertx.core.Future;
 import io.vertx.core.Promise;
+import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.SelfSignedCertificate;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
@@ -450,6 +454,110 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
                     ctx.verify(() -> assertThat(t).isInstanceOf(AuthenticationException.class));
                     ctx.completeNow();
                 }));
+    }
+
+    /**
+     * Verifies that the adapter closes the connection to a device when the registration data of the device
+     * is deleted.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testDeviceConnectionIsClosedOnDeviceDeleted(final VertxTestContext ctx) {
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+
+        testDeviceConnectionIsClosedOnDeviceOrTenantDisabledOrDeleted(ctx, tenantId, deviceId,
+                () -> helper.registry.deregisterDevice(tenantId, deviceId));
+    }
+
+    /**
+     * Verifies that the adapter closes the connection to a device when the registration data of the device
+     * is disabled.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testDeviceConnectionIsClosedOnDeviceDisabled(final VertxTestContext ctx) {
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final JsonObject updatedDeviceData = new JsonObject()
+                .put(RegistrationConstants.FIELD_ENABLED, Boolean.FALSE);
+
+        testDeviceConnectionIsClosedOnDeviceOrTenantDisabledOrDeleted(ctx, tenantId, deviceId,
+                () -> helper.registry.updateDevice(tenantId, deviceId, updatedDeviceData));
+    }
+
+    /**
+     * Verifies that the adapter closes the connection to a device when the tenant of the device
+     * is deleted.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testDeviceConnectionIsClosedOnTenantDeleted(final VertxTestContext ctx) {
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+
+        testDeviceConnectionIsClosedOnDeviceOrTenantDisabledOrDeleted(ctx, tenantId, deviceId,
+                () -> helper.registry.removeTenant(tenantId));
+    }
+
+    /**
+     * Verifies that the adapter closes the connection to a device when the tenant of the device
+     * is disabled.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testDeviceConnectionIsClosedOnTenantDisabled(final VertxTestContext ctx) {
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final Tenant updatedTenant = new Tenant().setEnabled(false);
+
+        testDeviceConnectionIsClosedOnDeviceOrTenantDisabledOrDeleted(ctx, tenantId, deviceId,
+                () -> helper.registry.updateTenant(tenantId, updatedTenant, HttpURLConnection.HTTP_NO_CONTENT));
+    }
+
+    /**
+     * Verifies that the adapter closes the connection to a device when registration data for all devices of the device
+     * tenant is deleted.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testDeviceConnectionIsClosedOnAllDevicesOfTenantDeleted(final VertxTestContext ctx) {
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+
+        testDeviceConnectionIsClosedOnDeviceOrTenantDisabledOrDeleted(ctx, tenantId, deviceId,
+                () -> helper.registry.deregisterDevicesOfTenant(tenantId));
+    }
+
+    private void testDeviceConnectionIsClosedOnDeviceOrTenantDisabledOrDeleted(
+            final VertxTestContext ctx,
+            final String tenantId,
+            final String deviceId,
+            final Supplier<Future<?>> deviceRegistryChangeOperation) {
+
+        final String password = "secret";
+        final Promise<Void> disconnectedPromise = Promise.promise();
+        // GIVEN a connected device
+        helper.registry
+                .addDeviceForTenant(tenantId, new Tenant(), deviceId, password)
+                .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password))
+                .compose(con -> {
+                    con.disconnectHandler(ignore -> disconnectedPromise.complete());
+                    con.closeHandler(remoteClose -> {
+                        con.close();
+                        con.disconnect();
+                    });
+                    // WHEN corresponding device/tenant is removed/disabled
+                    return deviceRegistryChangeOperation.get();
+                })
+                // THEN the device connection is closed
+                .compose(ok -> disconnectedPromise.future())
+                .onComplete(ctx.succeedingThenComplete());
     }
 
     /**

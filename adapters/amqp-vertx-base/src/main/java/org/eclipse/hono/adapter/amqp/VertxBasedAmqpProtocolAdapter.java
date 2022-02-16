@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,6 +24,7 @@ import java.util.OptionalInt;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.apache.qpid.proton.amqp.Symbol;
@@ -59,6 +60,11 @@ import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandResponse;
 import org.eclipse.hono.client.command.Commands;
+import org.eclipse.hono.notification.NotificationEventBusSupport;
+import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
+import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
+import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
+import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
@@ -102,7 +108,7 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
  */
 public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapterBase<AmqpAdapterProperties> {
 
-    private static final String KEY_CONNECTION_LOSS_HANDLERS = "connectionLossHandlers";
+    private static final String KEY_COMMAND_SUBSCRIPTIONS_MAP = "commandSubscriptions";
 
     // These values should be made configurable.
     /**
@@ -121,6 +127,11 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     private static final int MEMORY_PER_CONNECTION = 20_000;
 
     private final AtomicReference<Promise<Void>> stopResultPromiseRef = new AtomicReference<>();
+
+    /**
+     * The current connections from authenticated devices (possibly multiple connections from the same device).
+     */
+    private final Map<ProtonConnection, Device> authenticatedDeviceConnections = new HashMap<>();
 
     /**
      * The AMQP server instance that maps to a secure port.
@@ -167,11 +178,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         return metrics;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected void doStart(final Promise<Void> startPromise) {
+
+        registerDeviceAndTenantChangeNotificationConsumers();
 
         if (getConnectionLimitManager() == null) {
             setConnectionLimitManager(createConnectionLimitManager());
@@ -200,6 +210,43 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         .compose(success -> CompositeFuture.all(bindSecureServer(), bindInsecureServer()))
         .map(ok -> (Void) null)
         .onComplete(startPromise);
+    }
+
+    private void registerDeviceAndTenantChangeNotificationConsumers() {
+        NotificationEventBusSupport.registerConsumer(vertx, DeviceChangeNotification.TYPE,
+                notification -> {
+                    if (LifecycleChange.DELETE.equals(notification.getChange())
+                            || (LifecycleChange.UPDATE.equals(notification.getChange()) && !notification.isEnabled())) {
+                        final String reason = LifecycleChange.DELETE.equals(notification.getChange()) ? "device deleted"
+                                : "device disabled";
+                        closeDeviceConnections(connectedDevice -> connectedDevice.getTenantId().equals(notification.getTenantId())
+                                && connectedDevice.getDeviceId().equals(notification.getDeviceId()), reason);
+                    }
+                });
+        NotificationEventBusSupport.registerConsumer(vertx, AllDevicesOfTenantDeletedNotification.TYPE,
+                notification -> {
+                    closeDeviceConnections(connectedDevice -> connectedDevice.getTenantId()
+                            .equals(notification.getTenantId()), "all devices of tenant deleted");
+                });
+        NotificationEventBusSupport.registerConsumer(vertx, TenantChangeNotification.TYPE,
+                notification -> {
+                    if (LifecycleChange.DELETE.equals(notification.getChange())
+                            || (LifecycleChange.UPDATE.equals(notification.getChange()) && !notification.isEnabled())) {
+                        final String reason = LifecycleChange.DELETE.equals(notification.getChange()) ? "tenant deleted"
+                                : "tenant disabled";
+                        closeDeviceConnections(connectedDevice -> connectedDevice.getTenantId()
+                                .equals(notification.getTenantId()), reason);
+                    }
+                });
+    }
+
+    private void closeDeviceConnections(final Predicate<Device> deviceMatchPredicate, final String reason) {
+        final List<ProtonConnection> deviceConnections =  authenticatedDeviceConnections.entrySet().stream()
+                .filter(entry -> deviceMatchPredicate.test(entry.getValue()))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+        // sendDisconnectedEvent param false here - sending an event for a deleted/disabled tenant/device would fail
+        deviceConnections.forEach(con -> closeDeviceConnection(con, reason, false));
     }
 
     /**
@@ -398,17 +445,55 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         });
     }
 
+    /**
+     * Actively closes the connection to the device.
+     */
+    private void closeDeviceConnection(final ProtonConnection con, final String reason, final boolean sendDisconnectedEvent) {
+        final Device authenticatedDevice = getAuthenticatedDevice(con);
+        final Span span = newSpan("close device connection", authenticatedDevice, getTraceSamplingPriority(con));
+
+        final Map<String, String> logFields = new HashMap<>(2);
+        logFields.put(Fields.EVENT, "closing device connection");
+        Optional.ofNullable(reason).ifPresent(r -> logFields.put("reason", r));
+        span.log(logFields);
+
+        log.debug("closing device connection [container: {}, {}]; reason: {}",
+                con.getRemoteContainer(), authenticatedDevice, reason);
+
+        con.closeHandler(connection -> {});
+        con.disconnectHandler(connection -> {});
+        con.close();
+        con.disconnect();
+
+        handleConnectionLossInternal(con, span, authenticatedDevice, sendDisconnectedEvent)
+                .onComplete(ar -> span.finish());
+    }
+
+    /**
+     * To be called by the connection closeHandler / disconnectHandler.
+     */
     private void onConnectionLoss(final ProtonConnection con) {
-        final String operationName = "handle closing of connection" + (stopCalled() ? " on server shutdown" : "");
-        final Span span = newSpan(operationName, getAuthenticatedDevice(con), getTraceSamplingPriority(con));
+        final String spanOperationName = stopCalled() ? "close device connection (server shutdown)" : "handle closing of connection";
+        final Device authenticatedDevice = getAuthenticatedDevice(con);
+        final Span span = newSpan(spanOperationName, authenticatedDevice, getTraceSamplingPriority(con));
+        handleConnectionLossInternal(con, span, authenticatedDevice, true)
+                .onComplete(ar -> span.finish());
+    }
+
+    private Future<Void> handleConnectionLossInternal(final ProtonConnection con, final Span span, final Device authenticatedDevice,
+            final boolean sendDisconnectedEvent) {
+        authenticatedDeviceConnections.remove(con);
         @SuppressWarnings("rawtypes")
-        final List<Future> handlerResults = getConnectionLossHandlers(con).stream().map(handler -> handler.apply(span))
+        final List<Future> handlerResults = getCommandSubscriptions(con).stream()
+                .map(commandSubscription -> closeCommandConsumer(commandSubscription.getConsumer(), commandSubscription.getAddress(),
+                        authenticatedDevice, sendDisconnectedEvent, span))
                 .collect(Collectors.toList());
-        decrementConnectionCount(con, span.context());
-        CompositeFuture.join(handlerResults).recover(thr -> {
-            Tags.ERROR.set(span, true);
-            return Future.failedFuture(thr);
-        }).onComplete(v -> span.finish());
+        decrementConnectionCount(con, span.context(), sendDisconnectedEvent);
+        return CompositeFuture.join(handlerResults)
+                .recover(thr -> {
+                    Tags.ERROR.set(span, true);
+                    return Future.failedFuture(thr);
+                }).mapEmpty();
     }
 
     private void processRemoteOpen(final ProtonConnection con) {
@@ -441,6 +526,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 con.open();
                 log.debug("connection with device [container: {}] established", con.getRemoteContainer());
                 span.log("connection established");
+
+                Optional.ofNullable(authenticatedDevice)
+                        .ifPresent(device -> authenticatedDeviceConnections.put(con, device));
+
                 metrics.reportConnectionAttempt(
                         ConnectionAttemptOutcome.SUCCEEDED,
                         Optional.ofNullable(authenticatedDevice).map(Device::getTenantId).orElse(null),
@@ -562,7 +651,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         con.disconnect();
     }
 
-    private void decrementConnectionCount(final ProtonConnection con, final SpanContext context) {
+    private void decrementConnectionCount(final ProtonConnection con, final SpanContext context, final boolean sendDisconnectedEvent) {
 
         final Device device = getAuthenticatedDevice(con);
         if (device == null) {
@@ -570,10 +659,12 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         } else {
             metrics.decrementConnections(device.getTenantId());
         }
-        sendDisconnectedEvent(
-                Optional.ofNullable(con.getRemoteContainer()).orElse("unknown"),
-                device,
-                context);
+        if (sendDisconnectedEvent) {
+            sendDisconnectedEvent(
+                    Optional.ofNullable(con.getRemoteContainer()).orElse("unknown"),
+                    device,
+                    context);
+        }
     }
 
     /**
@@ -745,17 +836,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         .compose(validAddress -> {
             // validAddress ALWAYS contains the tenant and device ID
             if (CommandConstants.isCommandEndpoint(validAddress.getEndpoint())) {
-                return openCommandSenderLink(connection, sender, validAddress, authenticatedDevice, span, traceSamplingPriority)
-                        .map(consumer -> {
-                            setConnectionLossHandler(connection, validAddress.toString(), connectionLossSpan -> {
-                                // do not use the above created span for closing the command consumer
-                                // because that span will (usually) be finished long before the
-                                // connection is closed/lost
-                                return closeCommandConsumer(consumer, validAddress.getTenantId(),
-                                        validAddress.getResourceId(), authenticatedDevice, connectionLossSpan);
-                            });
-                            return consumer;
-                        });
+                return openCommandSenderLink(connection, sender, validAddress, authenticatedDevice, span, traceSamplingPriority);
             } else {
                 return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "no such node"));
             }
@@ -835,9 +916,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             final Handler<AsyncResult<ProtonSender>> detachHandler = link -> {
                 final Span detachHandlerSpan = newSpan("detach device command receiver link",
                         authenticatedDevice, traceSamplingPriority);
-                removeConnectionLossHandler(connection, address.toString());
+                removeCommandSubscription(connection, address.toString());
                 onLinkDetach(sender);
-                closeCommandConsumer(consumer, tenantId, deviceId, authenticatedDevice, detachHandlerSpan)
+                closeCommandConsumer(consumer, address, authenticatedDevice, true, detachHandlerSpan)
                         .onComplete(v -> detachHandlerSpan.finish());
             };
             HonoProtonHelper.setCloseHandler(sender, detachHandler);
@@ -849,6 +930,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             log.debug("established link [address: {}] for sending commands to device", address);
 
             sendConnectedTtdEvent(tenantId, deviceId, authenticatedDevice, span.context());
+
+            registerCommandSubscription(connection, new CommandSubscription(consumer, address));
             return consumer;
         }).recover(t -> Future.failedFuture(
                 new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "cannot create command consumer")));
@@ -856,11 +939,13 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
     private Future<Void> closeCommandConsumer(
             final CommandConsumer consumer,
-            final String tenantId,
-            final String deviceId,
+            final ResourceIdentifier address,
             final Device authenticatedDevice,
+            final boolean sendDisconnectedEvent, 
             final Span span) {
 
+        final String tenantId = address.getTenantId();
+        final String deviceId = address.getResourceId();
         return consumer.close(span.context())
                 .recover(thr -> {
                     TracingHelper.logError(span, thr);
@@ -873,7 +958,12 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     }
                     return Future.succeededFuture();
                 })
-                .compose(v -> sendDisconnectedTtdEvent(tenantId, deviceId, authenticatedDevice, span.context()))
+                .compose(v -> {
+                    if (sendDisconnectedEvent) {
+                        return sendDisconnectedTtdEvent(tenantId, deviceId, authenticatedDevice, span.context());
+                    }
+                    return Future.succeededFuture();
+                })
                 .mapEmpty();
     }
 
@@ -1411,25 +1501,25 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         }
     }
 
-    private static void setConnectionLossHandler(final ProtonConnection con, final String key, final Function<Span, Future<Void>> handler) {
+    private static void registerCommandSubscription(final ProtonConnection con, final CommandSubscription commandSubscription) {
         @SuppressWarnings("unchecked")
-        final Map<String, Function<Span, Future<Void>>> handlers = Optional
-                .ofNullable(con.attachments().get(KEY_CONNECTION_LOSS_HANDLERS, Map.class))
+        final Map<String, CommandSubscription> map = Optional
+                .ofNullable(con.attachments().get(KEY_COMMAND_SUBSCRIPTIONS_MAP, Map.class))
                 .orElseGet(HashMap::new);
-        handlers.put(key, handler);
-        con.attachments().set(KEY_CONNECTION_LOSS_HANDLERS, Map.class, handlers);
+        map.put(commandSubscription.getAddress().toString(), commandSubscription);
+        con.attachments().set(KEY_COMMAND_SUBSCRIPTIONS_MAP, Map.class, map);
     }
 
-    private static Collection<Function<Span, Future<Void>>> getConnectionLossHandlers(final ProtonConnection con) {
+    private static Collection<CommandSubscription> getCommandSubscriptions(final ProtonConnection con) {
         @SuppressWarnings("unchecked")
-        final Map<String, Function<Span, Future<Void>>> handlers = con.attachments().get(KEY_CONNECTION_LOSS_HANDLERS, Map.class);
-        return handlers != null ? handlers.values() : Collections.emptyList();
+        final Map<String, CommandSubscription> map = con.attachments().get(KEY_COMMAND_SUBSCRIPTIONS_MAP, Map.class);
+        return map != null ? map.values() : Collections.emptyList();
     }
 
-    private static boolean removeConnectionLossHandler(final ProtonConnection con, final String key) {
+    private static boolean removeCommandSubscription(final ProtonConnection con, final String subscriptionAddress) {
         @SuppressWarnings("unchecked")
-        final Map<String, Function<Span, Future<Void>>> handlers = con.attachments().get(KEY_CONNECTION_LOSS_HANDLERS, Map.class);
-        return handlers != null && handlers.remove(key) != null;
+        final Map<String, Function<Span, Future<Void>>> map = con.attachments().get(KEY_COMMAND_SUBSCRIPTIONS_MAP, Map.class);
+        return map != null && map.remove(subscriptionAddress) != null;
     }
 
     private static Device getAuthenticatedDevice(final ProtonConnection con) {
@@ -1450,36 +1540,54 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     }
     // -------------------------------------------< AbstractServiceBase >---
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public int getPortDefaultValue() {
         return Constants.PORT_AMQPS;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public int getInsecurePortDefaultValue() {
         return Constants.PORT_AMQP;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected int getActualPort() {
         return secureServer != null ? secureServer.actualPort() : Constants.PORT_UNCONFIGURED;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected int getActualInsecurePort() {
         return insecureServer != null ? insecureServer.actualPort() : Constants.PORT_UNCONFIGURED;
     }
 
+    /**
+     * Represents the command subscription for a specific device. 
+     */
+    private static class CommandSubscription {
+        private final CommandConsumer consumer;
+        private final ResourceIdentifier subscriptionAddress;
+
+        CommandSubscription(final CommandConsumer consumer, final ResourceIdentifier subscriptionAddress) {
+            this.consumer = consumer;
+            this.subscriptionAddress = subscriptionAddress;
+        }
+
+        /**
+         * Gets the consumer created for this command subscription.
+         *
+         * @return The consumer.
+         */
+        public final CommandConsumer getConsumer() {
+            return consumer;
+        }
+
+        /**
+         * Gets the address that identifies the device to receive commands for.
+         *
+         * @return The address.
+         */
+        public final ResourceIdentifier getAddress() {
+            return subscriptionAddress;
+        }
+    }
 }
