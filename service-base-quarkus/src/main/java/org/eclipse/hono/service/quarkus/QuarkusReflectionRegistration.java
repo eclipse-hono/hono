@@ -21,10 +21,6 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
  *
  */
 @RegisterForReflection(
-        targets = {
-            org.eclipse.hono.util.RegistrationAssertion.class,
-            org.eclipse.hono.config.FileFormat.class
-        },
         // TODO: remove the Jaeger classes once the fix to Quarkus Jaeger extension has been released
         // see https://github.com/quarkusio/quarkus/pull/23610
         classNames = {
