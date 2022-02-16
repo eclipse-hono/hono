@@ -119,12 +119,13 @@ public abstract class AmqpAdapterTestBase {
     }
 
     /**
-     * Disconnect the AMQP 1.0 client connected to the AMQP Adapter and close senders and consumers.
+     * Disconnect the AMQP 1.0 client connected to the AMQP Adapter and delete device registry entries created
+     * during the test.
      *
      * @param ctx The Vert.x test context.
      */
     @AfterEach
-    public void closeConnectionToAdapter(final VertxTestContext ctx) {
+    public void closeAdapterConnectionAndCleanupDeviceRegistry(final VertxTestContext ctx) {
 
         final Promise<ProtonConnection> connectionTracker = Promise.promise();
 
@@ -132,29 +133,30 @@ public abstract class AmqpAdapterTestBase {
             connectionTracker.complete();
         } else {
             context.runOnContext(go -> {
-                connection.closeHandler(connectionTracker);
-                connection.close();
+                if (connection.isDisconnected()) {
+                    connectionTracker.complete();
+                } else {
+                    connection.closeHandler(connectionTracker);
+                    connection.disconnectHandler(con -> {
+                        if (connectionTracker.tryComplete()) {
+                            log.debug("connection to AMQP adapter disconnected without CLOSE frame having been received");
+                        }
+                    });
+                    connection.close();
+                }
             });
         }
 
         connectionTracker.future()
                 .onComplete(con -> {
-                    log.info("connection to AMQP adapter closed");
+                    Optional.ofNullable(connection).ifPresent(v -> log.info("connection to AMQP adapter closed"));
                     context = null;
                     connection = null;
                     sender = null;
-                    ctx.completeNow();
+                    // cleanup device registry - done after the adapter connection is closed because otherwise
+                    // the adapter would close the connection from its end after having received the device deletion notification 
+                    helper.deleteObjects(ctx);
                 });
-    }
-
-    /**
-     * Clean up after the test.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @AfterEach
-    public void cleanupDeviceRegistry(final VertxTestContext ctx) {
-        helper.deleteObjects(ctx);
     }
 
     /**

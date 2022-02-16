@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -30,6 +30,7 @@ import static org.mockito.Mockito.when;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -61,6 +62,13 @@ import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandResponse;
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.command.Commands;
+import org.eclipse.hono.notification.AbstractNotification;
+import org.eclipse.hono.notification.NotificationEventBusSupport;
+import org.eclipse.hono.notification.NotificationType;
+import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
+import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
+import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
+import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;
@@ -95,6 +103,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.eventbus.EventBus;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -127,6 +136,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     private ConnectionLimitManager connectionLimitManager;
     private Vertx vertx;
     private Context context;
+    private EventBus eventBus;
     private Span span;
     private ProtonServer server;
 
@@ -139,6 +149,8 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         metrics = mock(AmqpAdapterMetrics.class);
         vertx = mock(Vertx.class);
         context = VertxMockSupport.mockContext(vertx);
+        eventBus = mock(EventBus.class);
+        when(vertx.eventBus()).thenReturn(eventBus);
 
         span = TracingMockSupport.mockSpan();
 
@@ -1289,6 +1301,133 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         // AND the connection count should be decremented accordingly when the connection is closed
         metricsInOrderVerifier.verify(metrics).decrementUnauthenticatedConnections();
         verify(metrics).reportConnectionAttempt(ConnectionAttemptOutcome.ADAPTER_CONNECTIONS_EXCEEDED, null, null);
+    }
+
+    /**
+     * Verifies that the adapter closes the connection to an authenticated device when a notification
+     * about the deletion of registration data of that device has been received.
+     */
+    @Test
+    public void testDeviceConnectionIsClosedOnDeviceDeletedNotification() {
+
+        testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification( new DeviceChangeNotification(
+                LifecycleChange.DELETE, TEST_TENANT_ID, TEST_DEVICE, Instant.now(), true));
+    }
+
+    /**
+     * Verifies that the adapter closes the connection to an authenticated device when a notification
+     * has been received that the device has been disabled.
+     */
+    @Test
+    public void testDeviceConnectionIsClosedOnDeviceDisabledNotification() {
+
+        testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification( new DeviceChangeNotification(
+                LifecycleChange.UPDATE, TEST_TENANT_ID, TEST_DEVICE, Instant.now(), false));
+    }
+
+    /**
+     * Verifies that the adapter closes the connection to an authenticated device when a notification
+     * about the deletion of the tenant of that device has been received.
+     */
+    @Test
+    public void testDeviceConnectionIsClosedOnTenantDeletedNotification() {
+
+        testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification( new TenantChangeNotification(
+                LifecycleChange.DELETE, TEST_TENANT_ID, Instant.now(), true));
+    }
+
+    /**
+     * Verifies that the adapter closes the connection to an authenticated device when a notification
+     * has been received that the tenant of the device has been disabled.
+     */
+    @Test
+    public void testDeviceConnectionIsClosedOnTenantDisabledNotification() {
+
+        testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification( new TenantChangeNotification(
+                LifecycleChange.UPDATE, TEST_TENANT_ID, Instant.now(), false));
+    }
+
+    /**
+     * Verifies that the adapter closes the connection to an authenticated device when a notification
+     * about the deletion of all device data of the tenant of that device has been received.
+     */
+    @Test
+    public void testDeviceConnectionIsClosedOnAllDevicesOfTenantDeletedNotification() {
+
+        testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification(
+                new AllDevicesOfTenantDeletedNotification(TEST_TENANT_ID, Instant.now()));
+    }
+
+    private <T extends AbstractNotification> void testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification(
+            final T notification) {
+
+        // GIVEN an AMQP adapter
+        givenAnAdapter(properties);
+
+        final Promise<Void> startPromise = Promise.promise();
+        adapter.doStart(startPromise);
+        assertThat(startPromise.future().succeeded()).isTrue();
+
+        @SuppressWarnings("unchecked")
+        final ArgumentCaptor<Handler<io.vertx.core.eventbus.Message<T>>> notificationHandlerCaptor = getEventBusConsumerHandlerArgumentCaptor(
+                (NotificationType<T>) notification.getType());
+
+        // with an enabled tenant
+        givenAConfiguredTenant(TEST_TENANT_ID, true);
+
+        // WHEN a device connects
+        final Device authenticatedDevice = new Device(TEST_TENANT_ID, TEST_DEVICE);
+        final Record record = new RecordImpl();
+        record.set(AmqpAdapterConstants.KEY_CLIENT_DEVICE, Device.class, authenticatedDevice);
+        final ProtonConnection deviceConnection = mock(ProtonConnection.class);
+        when(deviceConnection.attachments()).thenReturn(record);
+        when(deviceConnection.getRemoteContainer()).thenReturn("deviceContainer");
+        adapter.onConnectRequest(deviceConnection);
+        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> openHandler = VertxMockSupport.argumentCaptorHandler();
+        verify(deviceConnection).openHandler(openHandler.capture());
+        openHandler.getValue().handle(Future.succeededFuture(deviceConnection));
+
+        // that wants to receive commands
+        final CommandConsumer commandConsumer = mock(CommandConsumer.class);
+        when(commandConsumer.close(any())).thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED)));
+        when(commandConsumerFactory.createCommandConsumer(eq(TEST_TENANT_ID), eq(TEST_DEVICE), VertxMockSupport.anyHandler(), any(), any()))
+                .thenReturn(Future.succeededFuture(commandConsumer));
+        final String sourceAddress = getCommandEndpoint();
+        final ProtonSender sender = getSender(sourceAddress);
+
+        adapter.handleRemoteSenderOpenForCommands(deviceConnection, sender);
+
+        // THEN the connection count is incremented
+        verify(metrics).incrementConnections(TEST_TENANT_ID);
+
+        // AND WHEN a notification is sent about the tenant/device having been deleted or disabled
+        sendViaEventBusMock(notification, notificationHandlerCaptor.getValue());
+
+        // THEN the device connection is closed
+        verify(deviceConnection).close();
+        // and the connection count is decremented
+        verify(metrics).decrementConnections(TEST_TENANT_ID);
+        // and the adapter has closed the command consumer
+        verify(commandConsumer).close(any());
+    }
+
+    private <T extends AbstractNotification> ArgumentCaptor<Handler<io.vertx.core.eventbus.Message<T>>> getEventBusConsumerHandlerArgumentCaptor(
+            final NotificationType<T> notificationType) {
+
+        @SuppressWarnings("unchecked")
+        final ArgumentCaptor<Handler<io.vertx.core.eventbus.Message<T>>> notificationHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        verify(eventBus)
+                .consumer(eq(NotificationEventBusSupport.getEventBusAddress(notificationType)), notificationHandlerCaptor.capture());
+        return notificationHandlerCaptor;
+    }
+
+    private <T extends AbstractNotification> void sendViaEventBusMock(final T notification,
+            final Handler<io.vertx.core.eventbus.Message<T>> messageHandler) {
+
+        @SuppressWarnings("unchecked")
+        final io.vertx.core.eventbus.Message<T> messageMock = mock(io.vertx.core.eventbus.Message.class);
+        when(messageMock.body()).thenReturn(notification);
+        messageHandler.handle(messageMock);
     }
 
     private String getCommandEndpoint() {

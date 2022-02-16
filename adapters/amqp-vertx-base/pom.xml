@@ -1,5 +1,5 @@
 <!--
-    Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+    Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
 
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -28,6 +28,10 @@
       <groupId>io.smallrye.config</groupId>
       <artifactId>smallrye-config</artifactId>
       <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-notification</artifactId>
     </dependency>
 
     <!-- testing -->
