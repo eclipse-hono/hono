@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,15 +22,18 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLSession;
@@ -57,6 +60,11 @@ import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandResponse;
+import org.eclipse.hono.notification.NotificationEventBusSupport;
+import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
+import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
+import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
+import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;
@@ -67,6 +75,7 @@ import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.Futures;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.Pair;
 import org.eclipse.hono.util.RegistrationAssertion;
@@ -130,6 +139,11 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     private MqttServer server;
     private MqttServer insecureServer;
     private AuthHandler<MqttConnectContext> authHandler;
+
+    /**
+     * The endpoints representing the currently connected, authenticated MQTT devices.
+     */
+    private final Set<MqttDeviceEndpoint> connectedAuthenticatedDeviceEndpoints = new HashSet<>();
 
     /**
      * Sets the authentication handler to use for authenticating devices.
@@ -334,6 +348,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     @Override
     protected final void doStart(final Promise<Void> startPromise) {
 
+        registerDeviceAndTenantChangeNotificationConsumers();
+
         log.info("limiting size of inbound message payload to {} bytes", getConfig().getMaxPayloadSize());
         if (!getConfig().isAuthenticationRequired()) {
             log.warn("authentication of devices turned off");
@@ -352,6 +368,49 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 return Future.succeededFuture((Void) null);
             })
             .onComplete(startPromise);
+    }
+
+    private void registerDeviceAndTenantChangeNotificationConsumers() {
+        NotificationEventBusSupport.registerConsumer(vertx, DeviceChangeNotification.TYPE,
+                notification -> {
+                    if (LifecycleChange.DELETE.equals(notification.getChange())
+                            || (LifecycleChange.UPDATE.equals(notification.getChange()) && !notification.isEnabled())) {
+                        final String reason = LifecycleChange.DELETE.equals(notification.getChange()) ? "device deleted"
+                                : "device disabled";
+                        closeDeviceConnectionsOnDeviceOrTenantChange(
+                                connectedDevice -> connectedDevice.getTenantId().equals(notification.getTenantId())
+                                        && connectedDevice.getDeviceId().equals(notification.getDeviceId()),
+                                reason);
+                    }
+                });
+        NotificationEventBusSupport.registerConsumer(vertx, AllDevicesOfTenantDeletedNotification.TYPE,
+                notification -> closeDeviceConnectionsOnDeviceOrTenantChange(
+                        connectedDevice -> connectedDevice.getTenantId().equals(notification.getTenantId()),
+                        "all devices of tenant deleted"));
+        NotificationEventBusSupport.registerConsumer(vertx, TenantChangeNotification.TYPE,
+                notification -> {
+                    if (LifecycleChange.DELETE.equals(notification.getChange())
+                            || (LifecycleChange.UPDATE.equals(notification.getChange()) && !notification.isEnabled())) {
+                        final String reason = LifecycleChange.DELETE.equals(notification.getChange()) ? "tenant deleted"
+                                : "tenant disabled";
+                        closeDeviceConnectionsOnDeviceOrTenantChange(
+                                connectedDevice -> connectedDevice.getTenantId().equals(notification.getTenantId()),
+                                reason);
+                    }
+                });
+    }
+
+    private void closeDeviceConnectionsOnDeviceOrTenantChange(final Predicate<Device> deviceMatchPredicate, final String reason) {
+        final List<MqttDeviceEndpoint> deviceEndpoints = connectedAuthenticatedDeviceEndpoints.stream()
+                .filter(ep -> deviceMatchPredicate.test(ep.getAuthenticatedDevice()))
+                .collect(Collectors.toList()); // using intermediate list since connectedAuthenticatedDeviceEndpoints is modified in the close() method
+        deviceEndpoints.forEach(ep -> {
+            // decouple the (potentially numerous) close invocations by using context.runOnContext()
+            Futures.onCurrentContextCompletionHandler(v -> {
+                // sendDisconnectedEvent param false here - sending an event for a deleted/disabled tenant/device would fail
+                ep.close(reason, false);
+            }).handle(null);
+        });
     }
 
     private ConnectionLimitManager createConnectionLimitManager() {
@@ -933,6 +992,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         });
     }
 
+    private void onBeforeEndpointClose(final MqttDeviceEndpoint endpoint) {
+        if (endpoint.getAuthenticatedDevice() != null) {
+            connectedAuthenticatedDeviceEndpoints.remove(endpoint);
+        }
+    }
+
     /**
      * Invoked before the connection with a device is closed.
      * <p>
@@ -1022,14 +1087,19 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     private void registerEndpointHandlers(final MqttEndpoint endpoint, final Device authenticatedDevice,
             final OptionalInt traceSamplingPriority) {
 
-        final MqttDeviceEndpoint deviceEndpoint = getMqttDeviceEndpoint(endpoint, authenticatedDevice,
+        final MqttDeviceEndpoint deviceEndpoint = createMqttDeviceEndpoint(endpoint, authenticatedDevice,
                 traceSamplingPriority);
         deviceEndpoint.registerHandlers();
     }
 
-    final MqttDeviceEndpoint getMqttDeviceEndpoint(final MqttEndpoint endpoint, final Device authenticatedDevice,
+    final MqttDeviceEndpoint createMqttDeviceEndpoint(final MqttEndpoint endpoint, final Device authenticatedDevice,
             final OptionalInt traceSamplingPriority) {
-        return new MqttDeviceEndpoint(endpoint, authenticatedDevice, traceSamplingPriority);
+        final MqttDeviceEndpoint mqttDeviceEndpoint = new MqttDeviceEndpoint(endpoint, authenticatedDevice,
+                traceSamplingPriority);
+        if (authenticatedDevice != null) {
+            connectedAuthenticatedDeviceEndpoints.add(mqttDeviceEndpoint);
+        }
+        return mqttDeviceEndpoint;
     }
 
     private static MqttConnectReturnCode getConnectReturnCode(final Throwable e) {
@@ -1085,6 +1155,15 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             this.endpoint = Objects.requireNonNull(endpoint);
             this.authenticatedDevice = authenticatedDevice;
             this.traceSamplingPriority = Objects.requireNonNull(traceSamplingPriority);
+        }
+
+        /**
+         * Gets the authenticated device.
+         *
+         * @return The authenticated device or {@code null}.
+         */
+        protected final Device getAuthenticatedDevice() {
+            return authenticatedDevice;
         }
 
         /**
@@ -1664,7 +1743,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                                 removedSubscription.set(subscription);
                                 subscription.logUnsubscribe(span);
                                 removalDoneFutures.add(
-                                        onCommandSubscriptionRemoved(subscriptionCommandConsumerPair, span));
+                                        onCommandSubscriptionRemoved(subscriptionCommandConsumerPair, span, true));
                             });
                 } else if (ErrorSubscription.hasErrorEndpointPrefix(topic)) {
                     Optional.ofNullable(ErrorSubscription.getKey(topic, authenticatedDevice))
@@ -1689,7 +1768,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         }
 
         private Future<Void> onCommandSubscriptionRemoved(
-                final Pair<CommandSubscription, CommandConsumer> subscriptionConsumerPair, final Span span) {
+                final Pair<CommandSubscription, CommandConsumer> subscriptionConsumerPair, 
+                final Span span, 
+                final boolean sendDisconnectedEvent) {
+
             final CommandSubscription subscription = subscriptionConsumerPair.one();
             final CommandConsumer commandConsumer = subscriptionConsumerPair.two();
             return commandConsumer.close(span.context())
@@ -1704,7 +1786,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                         }
                         return Future.succeededFuture();
                     })
-                    .compose(v -> sendDisconnectedTtdEvent(subscription.getTenant(), subscription.getDeviceId(), span));
+                    .compose(v -> {
+                        if (sendDisconnectedEvent) {
+                            return sendDisconnectedTtdEvent(subscription.getTenant(), subscription.getDeviceId(), span);
+                        }
+                        return Future.succeededFuture();
+                    });
         }
 
         private Future<Void> sendDisconnectedTtdEvent(final String tenant, final String device, final Span span) {
@@ -1718,38 +1805,78 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         }
 
         /**
-         * Closes a connection to a client.
+         * Actively closes the connection to the device.
+         *
+         * @param reason The reason for closing the connection.
+         * @param sendDisconnectedEvent {@code true} if events shall be sent concerning the disconnect.
+         * @throws NullPointerException if reason is {@code null}.
          */
-        protected final void onClose() {
-            final String operationName = stopCalled() ? "CLOSE on server shutdown" : "CLOSE";
-            final Span span = newSpan(operationName);
-            AbstractVertxBasedMqttProtocolAdapter.this.onClose(endpoint);
-            final CompositeFuture removalDoneFuture = removeAllCommandSubscriptions(span);
-            sendDisconnectedEvent(endpoint.clientIdentifier(), authenticatedDevice, span.context());
-            if (authenticatedDevice == null) {
-                log.debug("connection to anonymous device [clientId: {}] closed", endpoint.clientIdentifier());
-                metrics.decrementUnauthenticatedConnections();
-            } else {
-                log.debug("connection to device [tenant-id: {}, device-id: {}] closed",
-                        authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
-                metrics.decrementConnections(authenticatedDevice.getTenantId());
-            }
-            if (endpoint.isConnected()) {
-                log.debug("closing connection with client [client ID: {}]", endpoint.clientIdentifier());
-                endpoint.close();
-            } else {
-                log.trace("connection to client is already closed");
-            }
-            removalDoneFuture.onComplete(r -> span.finish());
+        protected final void close(final String reason, final boolean sendDisconnectedEvent) {
+            Objects.requireNonNull(reason);
+
+            final Span span = newSpan("close device connection");
+            endpoint.closeHandler(v -> {});
+            onCloseInternal(span, reason, sendDisconnectedEvent)
+                    .onComplete(ar -> span.finish());
         }
 
-        private CompositeFuture removeAllCommandSubscriptions(final Span span) {
+        /**
+         * To be called by the MqttEndpoint closeHandler.
+         */
+        protected final void onClose() {
+            final Span span = newSpan(stopCalled() ? "close device connection (server shutdown)" : "CLOSE");
+            final String reason = stopCalled() ? "server shutdown" : null;
+            onCloseInternal(span, reason, true)
+                    .onComplete(ar -> span.finish());
+        }
+
+        private Future<Void> onCloseInternal(final Span span, final String reason, final boolean sendDisconnectedEvent) {
+            AbstractVertxBasedMqttProtocolAdapter.this.onBeforeEndpointClose(this);
+            AbstractVertxBasedMqttProtocolAdapter.this.onClose(endpoint);
+            final CompositeFuture removalDoneFuture = removeAllCommandSubscriptions(span, sendDisconnectedEvent);
+            if (sendDisconnectedEvent) {
+                sendDisconnectedEvent(endpoint.clientIdentifier(), authenticatedDevice, span.context());
+            }
+            if (authenticatedDevice == null) {
+                metrics.decrementUnauthenticatedConnections();
+            } else {
+                metrics.decrementConnections(authenticatedDevice.getTenantId());
+            }
+            final String reasonSuffix = reason != null ? ("; reason: " + reason) : "";
+            if (endpoint.isConnected()) {
+                final Map<String, String> logFields = new HashMap<>(2);
+                logFields.put(Fields.EVENT, "closing device connection");
+                Optional.ofNullable(reason).ifPresent(r -> logFields.put("reason", r));
+                span.log(logFields);
+
+                if (authenticatedDevice == null) {
+                    log.debug("closing connection to anonymous device [client ID: {}]{}", endpoint.clientIdentifier(), reasonSuffix);
+                } else {
+                    log.debug("closing connection to device [tenant-id: {}, device-id: {}, client ID: {}]{}",
+                            authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId(),
+                            endpoint.clientIdentifier(), reasonSuffix);
+                }
+                endpoint.close();
+            } else {
+                // connection already closed
+                if (authenticatedDevice == null) {
+                    log.debug("connection to anonymous device closed [client ID: {}]{}", endpoint.clientIdentifier(), reasonSuffix);
+                } else {
+                    log.debug("connection to device closed [tenant-id: {}, device-id: {}, client ID: {}]{}",
+                            authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId(),
+                            endpoint.clientIdentifier(), reasonSuffix);
+                }
+            }
+            return removalDoneFuture.mapEmpty();
+        }
+
+        private CompositeFuture removeAllCommandSubscriptions(final Span span, final boolean sendDisconnectedEvent) {
             @SuppressWarnings("rawtypes")
             final List<Future> removalFutures = new ArrayList<>(commandSubscriptions.size());
             for (final var iter = commandSubscriptions.values().iterator(); iter.hasNext();) {
                 final Pair<CommandSubscription, CommandConsumer> pair = iter.next();
                 pair.one().logUnsubscribe(span);
-                removalFutures.add(onCommandSubscriptionRemoved(pair, span));
+                removalFutures.add(onCommandSubscriptionRemoved(pair, span, sendDisconnectedEvent));
                 iter.remove();
             }
             return CompositeFuture.join(removalFutures);

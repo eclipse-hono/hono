@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,6 +19,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -28,6 +29,7 @@ import static org.mockito.Mockito.when;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -40,12 +42,19 @@ import javax.net.ssl.SSLSession;
 import org.eclipse.hono.adapter.auth.device.AuthHandler;
 import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.adapter.test.ProtocolAdapterTestSupport;
+import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.command.CommandResponse;
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.command.Commands;
+import org.eclipse.hono.notification.AbstractNotification;
+import org.eclipse.hono.notification.NotificationEventBusSupport;
+import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
+import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
+import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
+import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.metric.MetricsTags;
@@ -448,7 +457,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         when(msg.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
         when(msg.topicName()).thenReturn(null);
         when(msg.payload()).thenReturn(payload);
-        final var mqttDeviceEndpoint = adapter.getMqttDeviceEndpoint(endpoint, null, OptionalInt.empty());
+        final var mqttDeviceEndpoint = adapter.createMqttDeviceEndpoint(endpoint, null, OptionalInt.empty());
         mqttDeviceEndpoint.handlePublishedMessage(msg);
 
         // THEN the message is not processed
@@ -902,7 +911,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         when(msg.messageId()).thenReturn(15);
         when(msg.topicSubscriptions()).thenReturn(subscriptions);
 
-        final var mqttDeviceEndpoint = adapter.getMqttDeviceEndpoint(endpoint, null, OptionalInt.empty());
+        final var mqttDeviceEndpoint = adapter.createMqttDeviceEndpoint(endpoint, null, OptionalInt.empty());
         endpoint.closeHandler(handler -> mqttDeviceEndpoint.onClose());
         mqttDeviceEndpoint.onSubscribe(msg);
 
@@ -916,6 +925,110 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         verify(commandConsumer).close(any());
         // and sends an empty notification downstream with TTD 0
         assertEmptyNotificationHasBeenSentDownstream("tenant", "deviceId", 0);
+    }
+
+    /**
+     * Verifies that the adapter closes the connection to an authenticated device when a notification
+     * about the deletion of registration data of that device has been received.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testDeviceConnectionIsClosedOnDeviceDeletedNotification(final VertxTestContext ctx) {
+
+        final Device device = new Device("tenant", "deviceId");
+        testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification(ctx, device, new DeviceChangeNotification(
+                LifecycleChange.DELETE, "tenant", "deviceId", Instant.now(), true));
+    }
+
+    /**
+     * Verifies that the adapter closes the connection to an authenticated device when a notification
+     * has been received that the device has been disabled.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testDeviceConnectionIsClosedOnDeviceDisabledNotification(final VertxTestContext ctx) {
+
+        final Device device = new Device("tenant", "deviceId");
+        testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification(ctx, device, new DeviceChangeNotification(
+                LifecycleChange.UPDATE, "tenant", "deviceId", Instant.now(), false));
+    }
+
+    /**
+     * Verifies that the adapter closes the connection to an authenticated device when a notification
+     * about the deletion of the tenant of that device has been received.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testDeviceConnectionIsClosedOnTenantDeletedNotification(final VertxTestContext ctx) {
+
+        final Device device = new Device("tenant", "deviceId");
+        testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification(ctx, device, new TenantChangeNotification(
+                LifecycleChange.DELETE, "tenant", Instant.now(), true));
+    }
+
+    /**
+     * Verifies that the adapter closes the connection to an authenticated device when a notification
+     * has been received that the tenant of the device has been disabled.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testDeviceConnectionIsClosedOnTenantDisabledNotification(final VertxTestContext ctx) {
+
+        final Device device = new Device("tenant", "deviceId");
+        testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification(ctx, device, new TenantChangeNotification(
+                LifecycleChange.UPDATE, "tenant", Instant.now(), false));
+    }
+
+    /**
+     * Verifies that the adapter closes the connection to an authenticated device when a notification
+     * about the deletion of all device data of the tenant of that device has been received.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testDeviceConnectionIsClosedOnAllDevicesOfTenantDeletedNotification(final VertxTestContext ctx) {
+
+        final Device device = new Device("tenant", "deviceId");
+        testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification(ctx, device,
+                new AllDevicesOfTenantDeletedNotification("tenant", Instant.now()));
+    }
+
+    private void testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification(final VertxTestContext ctx,
+            final Device device, final AbstractNotification notification) {
+
+        // GIVEN a device connected to an adapter
+        givenAnAdapter(properties);
+        givenAnEventSenderForAnyTenant();
+        final MqttEndpoint endpoint = mockEndpoint();
+        when(endpoint.isConnected()).thenReturn(true);
+
+        final Promise<Void> startPromise = Promise.promise();
+        adapter.doStart(startPromise);
+        assertThat(startPromise.future().succeeded()).isTrue();
+        adapter.createMqttDeviceEndpoint(endpoint, device, OptionalInt.empty());
+
+        final Promise<Void> endpointClosedPromise = Promise.promise();
+        doAnswer(invocation -> {
+            endpointClosedPromise.complete();
+            return null;
+        }).when(endpoint).close();
+
+        // WHEN a notification is sent about the tenant/device having been deleted or disabled
+        NotificationEventBusSupport.sendNotification(vertx, notification);
+
+        // THEN the MQTT endpoint representing the device connection is closed
+        endpointClosedPromise.future()
+                .onComplete(ctx.succeeding(v -> {
+                    ctx.verify(() -> {
+                        // and the adapter didn't send an empty notification downstream
+                        assertEmptyNotificationHasNotBeenSentDownstream(device.getTenantId(), device.getDeviceId(), 0);
+                    });
+                    ctx.completeNow();
+                }));
     }
 
     /**
@@ -945,7 +1058,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         when(msg.messageId()).thenReturn(15);
         when(msg.topicSubscriptions()).thenReturn(subscriptions);
 
-        final var mqttDeviceEndpoint = adapter.getMqttDeviceEndpoint(endpoint, null, OptionalInt.empty());
+        final var mqttDeviceEndpoint = adapter.createMqttDeviceEndpoint(endpoint, null, OptionalInt.empty());
         endpoint.closeHandler(handler -> mqttDeviceEndpoint.onClose());
         mqttDeviceEndpoint.onSubscribe(msg);
 
@@ -996,7 +1109,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         when(msg.messageId()).thenReturn(15);
         when(msg.topicSubscriptions()).thenReturn(subscriptions);
 
-        final var mqttDeviceEndpoint = adapter.getMqttDeviceEndpoint(endpoint, null, OptionalInt.empty());
+        final var mqttDeviceEndpoint = adapter.createMqttDeviceEndpoint(endpoint, null, OptionalInt.empty());
         mqttDeviceEndpoint.onSubscribe(msg);
 
         // THEN the adapter sends a SUBACK packet to the device
