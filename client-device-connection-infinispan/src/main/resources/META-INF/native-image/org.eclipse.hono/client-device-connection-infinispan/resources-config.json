@@ -8,6 +8,9 @@
         "pattern": ".*\\.proto$"
       },
       {
+        "pattern": "default-configs\\/.*$"
+      },
+      {
         "pattern": "META-INF\\/services\\/java\\.security\\.Provider"
       },
       {
