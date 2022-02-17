@@ -88,7 +88,7 @@ The response message's *status* property may contain the following codes:
 | Code  | Description |
 | :---- | :---------- |
 | *200* | OK, The response message body contains the requested tenant information. |
-| *400* | Bad Request, the request message did not contain all mandatory properties.
+| *400* | Bad Request, the request message did not contain all mandatory properties. |
 | *403* | Forbidden, the client is not authorized to retrieve information for the given tenant. |
 | *404* | Not Found, there is no tenant matching the given search criteria. |
 

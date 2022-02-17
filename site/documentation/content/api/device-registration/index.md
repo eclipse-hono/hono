@@ -81,7 +81,7 @@ The response message's *status* property may contain the following codes:
 | Code  | Description |
 | :---- | :---------- |
 | *200* | OK, the device is registered for the given tenant and is enabled. The response message body contains the asserted device's registration status. |
-| *400* | Bad Request, the request message did not contain all mandatory properties.
+| *400* | Bad Request, the request message did not contain all mandatory properties. |
 | *403* | Forbidden, the gateway with the given *gateway id* either does not exist, is not enabled or is not authorized to get an assertion for the device with the given *device id*. |
 | *404* | Not Found, there is no device registered with the given *device id* within the given *tenant id* or the device is not enabled. |
 
