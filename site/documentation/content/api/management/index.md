@@ -4,6 +4,6 @@ linkTitle: "Device Registry Management API"
 weight: 437
 swaggerUI: true
 resources:
-  - src: device-registry-v1.yaml
+  - src: device-registry-v2.yaml
 ---
-{{% swagger "device-registry-v1.yaml" %}}
+{{% swagger "device-registry-v2.yaml" %}}
