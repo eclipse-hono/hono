@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,6 +23,24 @@ public class SigfoxProtocolAdapterProperties extends HttpProtocolAdapterProperti
     private static final int DEFAULT_TTD_WHEN_ACK_REQUIRED = 20;
 
     private int ttdWhenAckRequired = DEFAULT_TTD_WHEN_ACK_REQUIRED;
+
+    /**
+     * Creates default properties.
+     */
+    public SigfoxProtocolAdapterProperties() {
+        // nothing to do
+    }
+
+    /**
+     * Creates properties for existing options.
+     *
+     * @param options The options.
+     * @throws NullPointerException if options is {@code null}.
+     */
+    public SigfoxProtocolAdapterProperties(final SigfoxProtocolAdapterOptions options) {
+        super(options.httpAdapterOptions());
+        setTtdWhenAckRequired(options.ttdWhenAckRequired());
+    }
 
     /**
      * Set a custom TTD value which is being used when an ack is required.

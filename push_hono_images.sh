@@ -25,7 +25,7 @@ IMAGES="hono-adapter-amqp-vertx \
         hono-adapter-lora-vertx-quarkus \
         hono-adapter-mqtt-vertx \
         hono-adapter-mqtt-vertx-quarkus \
-        hono-adapter-sigfox-vertx \
+        hono-adapter-sigfox-vertx-quarkus \
         hono-service-auth \
         hono-service-auth-quarkus \
         hono-service-command-router \
@@ -41,6 +41,7 @@ NATIVE_IMAGES="hono-adapter-amqp-vertx-quarkus-native \
         hono-adapter-http-vertx-quarkus-native \
         hono-adapter-lora-vertx-quarkus-native \
         hono-adapter-mqtt-vertx-quarkus-native \
+        hono-adapter-sigfox-vertx-quarkus-native \
         hono-service-auth-quarkus-native \
         hono-service-command-router-quarkus-native \
         hono-service-device-registry-mongodb-quarkus-native"
