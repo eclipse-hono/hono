@@ -126,6 +126,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * The amount of memory (bytes) required for each connection.
      */
     protected static final int MEMORY_PER_CONNECTION = 20_000;
+    /**
+     * The number of bytes added to the configured max payload size to set the max MQTT message size.
+     * Accounts for the size of the variable header (including the topic name) included in the max message size
+     * calculation.
+     */
+    protected static final int MAX_MSG_SIZE_VARIABLE_HEADER_SIZE = 128;
 
     private static final String EVENT_SENDING_PUBACK = "sending PUBACK";
     private static final int IANA_MQTT_PORT = 1883;
@@ -293,7 +299,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             options
                     .setHost(getConfig().getBindAddress())
                     .setPort(determineSecurePort())
-                    .setMaxMessageSize(getConfig().getMaxPayloadSize());
+                    .setMaxMessageSize(getConfig().getMaxPayloadSize() + MAX_MSG_SIZE_VARIABLE_HEADER_SIZE);
             addTlsKeyCertOptions(options);
             addTlsTrustOptions(options);
 
@@ -313,7 +319,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             options
                     .setHost(getConfig().getInsecurePortBindAddress())
                     .setPort(determineInsecurePort())
-                    .setMaxMessageSize(getConfig().getMaxPayloadSize());
+                    .setMaxMessageSize(getConfig().getMaxPayloadSize() + MAX_MSG_SIZE_VARIABLE_HEADER_SIZE);
 
             return bindMqttServer(options, insecureServer).map(createdServer -> {
                 insecureServer = createdServer;
