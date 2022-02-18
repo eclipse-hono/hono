@@ -9,9 +9,9 @@ hono:
     host: "${hono.amqp-network.host}"
     port: 5673
     amqpHostname: hono-internal
-    keyPath: "/${hono.deviceregistry.config-dir}/certs/device-registry-key.pem"
-    certPath: "/${hono.deviceregistry.config-dir}/certs/device-registry-cert.pem"
-    trustStorePath: "/${hono.deviceregistry.config-dir}/certs/trusted-certs.pem"
+    keyPath: "/${hono.deviceregistry.mongodb.config-dir}/certs/device-registry-key.pem"
+    certPath: "/${hono.deviceregistry.mongodb.config-dir}/certs/device-registry-cert.pem"
+    trustStorePath: "/${hono.deviceregistry.mongodb.config-dir}/certs/trusted-certs.pem"
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
@@ -19,9 +19,9 @@ hono:
     host: ${hono.auth.host}
     port: 5671
     name: device-registry
-    trustStorePath: "/${hono.deviceregistry.config-dir}/certs/trusted-certs.pem"
+    trustStorePath: "/${hono.deviceregistry.mongodb.config-dir}/certs/trusted-certs.pem"
     validation:
-      certPath: "/${hono.deviceregistry.config-dir}/certs/auth-server-cert.pem"
+      certPath: "/${hono.deviceregistry.mongodb.config-dir}/certs/auth-server-cert.pem"
   registry:
     amqp:
       insecurePortEnabled: true
@@ -40,7 +40,7 @@ hono:
     svc:
   credentials:
     svc:
-      encryptionKeyFile: "/${hono.deviceregistry.config-dir}/encryptionKeys.yml"
+      encryptionKeyFile: "/${hono.deviceregistry.mongodb.config-dir}/encryptionKeys.yml"
       maxBcryptCostFactor: ${max.bcrypt.costFactor}
   tenant:
     svc:
