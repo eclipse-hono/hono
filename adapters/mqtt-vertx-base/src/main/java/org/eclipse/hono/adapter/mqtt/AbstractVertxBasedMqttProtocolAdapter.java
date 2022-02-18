@@ -1148,6 +1148,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         private final Map<Subscription.Key, ErrorSubscription> errorSubscriptions = new HashMap<>();
         private final PendingPubAcks pendingAcks = new PendingPubAcks(vertx);
 
+        private Throwable protocolLevelException;
+
         /**
          * Creates a new MqttDeviceEndpoint.
          *
@@ -1181,6 +1183,26 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             endpoint.subscribeHandler(this::onSubscribe);
             endpoint.unsubscribeHandler(this::onUnsubscribe);
             endpoint.closeHandler(v -> onClose());
+            endpoint.exceptionHandler(this::onProtocolLevelError);
+        }
+
+        /**
+         * To be called by the MqttEndpoint exceptionHandler. The given exception could for example be a
+         * {@code io.netty.handler.codec.TooLongFrameException} if the MQTT max message size was exceeded.
+         * The MQTT server will close the connection on such an error, triggering a subsequent invocation of
+         * the endpoint closeHandler.
+         *
+         * @param throwable The exception.
+         */
+        private void onProtocolLevelError(final Throwable throwable) {
+            if (authenticatedDevice == null) {
+                log.debug("protocol-level exception occurred [client ID: {}]", endpoint.clientIdentifier(), throwable);
+            } else {
+                log.debug("protocol-level exception occurred [tenant-id: {}, device-id: {}, client ID: {}]",
+                        authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId(),
+                        endpoint.clientIdentifier(), throwable);
+            }
+            this.protocolLevelException = throwable;
         }
 
         /**
@@ -1830,8 +1852,19 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
          * To be called by the MqttEndpoint closeHandler.
          */
         protected final void onClose() {
-            final Span span = newSpan(stopCalled() ? "close device connection (server shutdown)" : "CLOSE");
-            final String reason = stopCalled() ? "server shutdown" : null;
+            final Span span;
+            final String reason;
+            if (protocolLevelException != null) {
+                span = newSpan("close connection due to protocol error");
+                TracingHelper.logError(span, protocolLevelException);
+                reason = "protocol error: " + protocolLevelException.toString();
+            } else if (stopCalled()) {
+                span = newSpan("close device connection (server shutdown)");
+                reason = "server shutdown";
+            } else {
+                span = newSpan("CLOSE");
+                reason = null;
+            }
             onCloseInternal(span, reason, true)
                     .onComplete(ar -> span.finish());
         }
