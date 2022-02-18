@@ -35,6 +35,7 @@ import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.DownstreamMessageAssertions;
@@ -48,6 +49,7 @@ import org.junit.jupiter.api.Test;
 import io.netty.handler.codec.http.QueryStringEncoder;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.core.AsyncResult;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -372,6 +374,57 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
         }
 
         testUploadMessageWithInvalidContentType(ctx, tenantId, deviceId, deviceId);
+    }
+
+    /**
+     * Verifies that a message from a device with a payload exceeding the maximum size cannot be consumed and causes
+     * the connection to be closed.
+     *
+     * @param ctx The vert.x test context.
+     * @throws InterruptedException if test execution gets interrupted.
+     */
+    @Test
+    public void testMessageWithPayloadExceedingMaxSize(final VertxTestContext ctx) throws InterruptedException {
+
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final Tenant tenant = new Tenant();
+        final VertxTestContext setup = new VertxTestContext();
+
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, "secret")
+                .onComplete(setup.succeedingThenComplete());
+
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+            return;
+        }
+
+        final byte[] payloadBytes = IntegrationTestSupport.getPayload(ServiceConfigProperties.DEFAULT_MAX_PAYLOAD_SIZE + 256);
+        // GIVEN a connected device
+        connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), "secret")
+                .compose(connAck -> {
+                    final Promise<Void> clientClosedPromise = Promise.promise();
+                    mqttClient.closeHandler(v -> clientClosedPromise.complete());
+                    // WHEN a device publishes a message with a payload exceeding the max size
+                    final Future<Integer> sendFuture = send(tenantId, deviceId, Buffer.buffer(payloadBytes), false,
+                            null);
+                    return CompositeFuture.join(clientClosedPromise.future(), sendFuture)
+                            .onComplete(ar -> {
+                                // THEN publishing the message fails (if QoS 1)
+                                if (getQos() == MqttQoS.AT_LEAST_ONCE) {
+                                    assertThat(sendFuture.succeeded()).isFalse();
+                                    assertThat(sendFuture.cause()).isInstanceOf(ServerErrorException.class);
+                                    assertThat(((ServerErrorException) sendFuture.cause()).getErrorCode())
+                                            .isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+                                } else {
+                                    assertThat(sendFuture.succeeded()).isTrue();
+                                }
+                                // and the connection gets closed
+                                assertThat(clientClosedPromise.future().succeeded()).isTrue();
+                                ctx.completeNow();
+                            });
+                });
     }
 
     /**
