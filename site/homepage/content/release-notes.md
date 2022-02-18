@@ -11,6 +11,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The Quarkus variant of the MongoDB based device registry failed to start up if the *hono.mongodb.dbName* property
   was not set. However, the DB name should not be required if a connection string is set using the
   *hono.mongodb.connectionString* property. This has been fixed.
+* When a tenant or device gets disabled or deleted, any open AMQP or MQTT connections from clients having authenticated
+  themselves as belonging to that tenant or device are getting closed now.
 
 ## 1.12.0
 
