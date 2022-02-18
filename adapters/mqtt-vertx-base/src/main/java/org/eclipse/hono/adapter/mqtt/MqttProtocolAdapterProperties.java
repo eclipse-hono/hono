@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -47,46 +47,7 @@ public class MqttProtocolAdapterProperties extends ProtocolAdapterProperties {
      */
     public MqttProtocolAdapterProperties(final MqttProtocolAdapterOptions options) {
         super(options.adapterOptions());
-        setCommandAckTimeout(options.commandAckTimeout());
         setSendMessageToDeviceTimeout(options.sendMessageToDeviceTimeout());
-    }
-
-    /**
-     * Gets the waiting for acknowledgement timeout in milliseconds for commands published with QoS 1.
-     * <p>
-     * This timeout is used by the MQTT adapter for commands published with QoS 1. If there is no acknowledgement
-     * within this time limit, then the command is settled with the <em>released</em> outcome.
-     * <p>
-     * The default value is {@link #DEFAULT_COMMAND_ACK_TIMEOUT}.
-     *
-     * @deprecated Use {@link #getSendMessageToDeviceTimeout()} instead.
-     *
-     * @return The timeout in milliseconds.
-     */
-    @Deprecated(forRemoval = true)
-    public final int getCommandAckTimeout() {
-        return commandAckTimeout;
-    }
-
-    /**
-     * Sets the waiting for acknowledgement timeout in milliseconds for commands published with QoS 1.
-     * <p>
-     * This timeout is used by the MQTT adapter for commands published with QoS 1. If there is no acknowledgement
-     * within this time limit, then the command is settled with the <em>released</em> outcome.
-     * <p>
-     * The default value is {@link #DEFAULT_COMMAND_ACK_TIMEOUT}.
-     *
-     * @deprecated Use {@link #setSendMessageToDeviceTimeout(long)} ()} instead.
-     *
-     * @param timeout The timeout in milliseconds.
-     * @throws IllegalArgumentException if the timeout is negative.
-     */
-    @Deprecated(forRemoval = true)
-    public final void setCommandAckTimeout(final int timeout) {
-        if (timeout < 0) {
-            throw new IllegalArgumentException("timeout must not be negative");
-        }
-        this.commandAckTimeout = timeout;
     }
 
     /**
