@@ -121,16 +121,23 @@
       Device Registry related properties - The MongoDB based device registry is used as the default one.
     -->
     <hono.deviceregistry.type>mongodb</hono.deviceregistry.type>
-    <hono.deviceregistry.config-dir>opt/hono/config</hono.deviceregistry.config-dir>
-    <hono.deviceregistry.image>hono-service-device-registry-mongodb</hono.deviceregistry.image>
+
+    <hono.deviceregistry.mongodb.disabled>false</hono.deviceregistry.mongodb.disabled>
+    <hono.deviceregistry.mongodb.max-mem>400000000</hono.deviceregistry.mongodb.max-mem>
+    <hono.deviceregistry.mongodb.config-dir>opt/hono/config</hono.deviceregistry.mongodb.config-dir>
+    <hono.deviceregistry.mongodb.java-options>${default.java-options}</hono.deviceregistry.mongodb.java-options>
+    <hono.deviceregistry.mongodb.native-image-args></hono.deviceregistry.mongodb.native-image-args>
+
+    <hono.deviceregistry.jdbc.disabled>true</hono.deviceregistry.jdbc.disabled>
+    <hono.deviceregistry.jdbc.max-mem>400000000</hono.deviceregistry.jdbc.max-mem>
+    <hono.deviceregistry.jdbc.java-options>
+      ${default.java-options}
+      -Dorg.eclipse.hono.service.base.jdbc.store.skipDumpingStatementConfiguration=true
+    </hono.deviceregistry.jdbc.java-options>
+    <hono.deviceregistry.jdbc.resources.folder></hono.deviceregistry.jdbc.resources.folder>
+
+    <!-- use Quarkus JVM images by default -->
     <hono.deviceregistry.image-suffix>-quarkus</hono.deviceregistry.image-suffix>
-    <hono.deviceregistry.resources.folder>deviceregistry-mongodb</hono.deviceregistry.resources.folder>
-    <!-- default memory limit of the device registry container is 400MB -->
-    <hono.deviceregistry.max-mem>400000000</hono.deviceregistry.max-mem>
-    <hono.deviceregistry.java-options>${default.java-options}</hono.deviceregistry.java-options>
-    <hono.deviceregistry.native-image-args></hono.deviceregistry.native-image-args>
-    <!-- Spring application profiles to activate for the registry -->
-    <hono.deviceregistry.spring.profiles>${logging.profile}</hono.deviceregistry.spring.profiles>
     <!--  accept requests with a body size of up to 2000 bytes -->
     <hono.deviceregistry.maxPayloadSize>2000</hono.deviceregistry.maxPayloadSize>
     <!-- the credentials required for accessing the (Mongo DB) registry's HTTP endpoint -->
@@ -145,7 +152,6 @@
       5905BFCF36F5852A0E75B9D0727F3E26FD9701FD3C6A182F360EBD1FBFD321A8E1D7E392AEA7D8AF84B445186C86532E22D99892DE5EE95C86C0783198AA9840
     </hono.deviceregistry.http.authConfig.passwordHash>
 
-    <hono.mongodb.disabled>false</hono.mongodb.disabled>
     <hono.mongodb.host>hono-mongodb</hono.mongodb.host>
     <hono.mongodb.port>27017</hono.mongodb.port>
     <hono.mongodb.username>device-registry</hono.mongodb.username>
@@ -494,6 +500,46 @@
       </build>
     </profile>
     <profile>
+      <id>device-registry-jdbc</id>
+      <activation>
+        <property>
+          <name>hono.deviceregistry.type</name>
+          <value>jdbc</value>
+        </property>
+      </activation>
+      <properties>
+        <hono.deviceregistry.mongodb.disabled>true</hono.deviceregistry.mongodb.disabled>
+        <hono.postgres.disabled>false</hono.postgres.disabled>
+        <hono.deviceregistry.type>jdbc</hono.deviceregistry.type>
+        <hono.deviceregistry.jdbc.disabled>false</hono.deviceregistry.jdbc.disabled>
+        <hono.deviceregistry.jdbc.resources.folder>deviceregistry-jdbc-postgres</hono.deviceregistry.jdbc.resources.folder>
+        <hono.jdbc.db.url>jdbc:postgresql://hono-jdbc-db:5432/</hono.jdbc.db.url>
+        <hono.jdbc.db.admin.username>postgres</hono.jdbc.db.admin.username>
+        <hono.jdbc.db.admin.password>change-me</hono.jdbc.db.admin.password>
+        <hono.jdbc.db.registry.username>${hono.jdbc.db.admin.username}</hono.jdbc.db.registry.username>
+        <hono.jdbc.db.registry.password>${hono.jdbc.db.admin.password}</hono.jdbc.db.registry.password>
+      </properties>
+    </profile>
+    <profile>
+      <id>device-registry-file</id>
+      <activation>
+        <property>
+          <name>hono.deviceregistry.type</name>
+          <value>file</value>
+        </property>
+      </activation>
+      <properties>
+        <hono.deviceregistry.mongodb.disabled>true</hono.deviceregistry.mongodb.disabled>
+        <hono.postgres.disabled>true</hono.postgres.disabled>
+        <hono.deviceregistry.type>file</hono.deviceregistry.type>
+        <hono.deviceregistry.jdbc.disabled>false</hono.deviceregistry.jdbc.disabled>
+        <hono.deviceregistry.jdbc.resources.folder>deviceregistry-jdbc-h2</hono.deviceregistry.jdbc.resources.folder>
+        <!-- increase memory limit of the device registry container in order to accommodate for H2 DB -->
+        <hono.deviceregistry.jdbc.max-mem>450000000</hono.deviceregistry.jdbc.max-mem>
+        <hono.jdbc.db.url>jdbc:h2:file://var/tmp/hono</hono.jdbc.db.url>
+      </properties>
+    </profile>
+    <profile>
       <id>components-spring-boot</id>
       <activation>
         <property>
@@ -510,7 +556,7 @@
         <hono.mqtt-adapter.config-dir>etc/hono</hono.mqtt-adapter.config-dir>
         <hono.auth-server.config-dir>etc/hono</hono.auth-server.config-dir>
         <hono.command-router.config-dir>etc/hono</hono.command-router.config-dir>
-        <hono.deviceregistry.config-dir>etc/hono</hono.deviceregistry.config-dir>
+        <hono.deviceregistry.mongodb.config-dir>etc/hono</hono.deviceregistry.mongodb.config-dir>
         <hono.deviceregistry.image-suffix></hono.deviceregistry.image-suffix>
       </properties>
     </profile>
@@ -538,55 +584,8 @@
 
         <hono.auth-server.max-mem>33554432</hono.auth-server.max-mem>
         <hono.command-router.max-mem>67108864</hono.command-router.max-mem>
-        <hono.deviceregistry.max-mem>150000000</hono.deviceregistry.max-mem>
-        <hono.deviceregistry.image-suffix>-quarkus-native</hono.deviceregistry.image-suffix>
-      </properties>
-    </profile>
-    <profile>
-      <id>device-registry-file</id>
-      <activation>
-        <property>
-          <name>hono.deviceregistry.type</name>
-          <value>file</value>
-        </property>
-      </activation>
-      <properties>
-        <hono.mongodb.disabled>true</hono.mongodb.disabled>
-        <hono.postgres.disabled>true</hono.postgres.disabled>
-        <hono.deviceregistry.type>file</hono.deviceregistry.type>
-        <hono.deviceregistry.image>hono-service-device-registry-jdbc</hono.deviceregistry.image>
-        <hono.deviceregistry.image-suffix></hono.deviceregistry.image-suffix>
-        <hono.deviceregistry.config-dir>etc/hono</hono.deviceregistry.config-dir>
-        <hono.deviceregistry.resources.folder>deviceregistry-jdbc-h2</hono.deviceregistry.resources.folder>
-        <hono.deviceregistry.spring.profiles>registry-adapter,registry-management,tenant-service,create-schema,${logging.profile}</hono.deviceregistry.spring.profiles>
-        <!-- increase memory limit of the device registry container in order to accommodate for H2 DB -->
-        <hono.deviceregistry.max-mem>450000000</hono.deviceregistry.max-mem>
-        <hono.jdbc.db.url>jdbc:h2:file://var/tmp/hono</hono.jdbc.db.url>
-      </properties>
-    </profile>
-    <profile>
-      <id>device-registry-jdbc</id>
-      <activation>
-        <property>
-          <name>hono.deviceregistry.type</name>
-          <value>jdbc</value>
-        </property>
-      </activation>
-      <properties>
-        <hono.mongodb.disabled>true</hono.mongodb.disabled>
-        <hono.postgres.disabled>false</hono.postgres.disabled>
-        <hono.deviceregistry.type>jdbc</hono.deviceregistry.type>
-        <hono.deviceregistry.image>hono-service-device-registry-jdbc</hono.deviceregistry.image>
-        <hono.deviceregistry.image-suffix></hono.deviceregistry.image-suffix>
-        <hono.deviceregistry.max-mem>400000000</hono.deviceregistry.max-mem>
-        <hono.deviceregistry.config-dir>etc/hono</hono.deviceregistry.config-dir>
-        <hono.deviceregistry.resources.folder>deviceregistry-jdbc-postgres</hono.deviceregistry.resources.folder>
-        <hono.deviceregistry.spring.profiles>registry-adapter,registry-management,tenant-service,create-schema,${logging.profile}</hono.deviceregistry.spring.profiles>
-        <hono.jdbc.db.url>jdbc:postgresql://hono-jdbc-db:5432/</hono.jdbc.db.url>
-        <hono.jdbc.db.admin.username>postgres</hono.jdbc.db.admin.username>
-        <hono.jdbc.db.admin.password>change-me</hono.jdbc.db.admin.password>
-        <hono.jdbc.db.registry.username>${hono.jdbc.db.admin.username}</hono.jdbc.db.registry.username>
-        <hono.jdbc.db.registry.password>${hono.jdbc.db.admin.password}</hono.jdbc.db.registry.password>
+        <hono.deviceregistry.mongodb.max-mem>150000000</hono.deviceregistry.mongodb.max-mem>
+        <hono.deviceregistry.image-suffix>-quarkus</hono.deviceregistry.image-suffix>
       </properties>
     </profile>
     <profile>
@@ -696,89 +695,6 @@
                     <wait>
                       <time>${service.startup.timeout}</time>
                       <log>.*(Infinispan Server .* started).*</log>
-                    </wait>
-                  </run>
-                </image>
-                <!-- ##### Mongo DB instance for the device registry ##### -->
-                <image>
-                  <name>${docker.repository}/hono-mongodb-test:${project.version}</name>
-                  <build>
-                    <skip>${hono.mongodb.disabled}</skip>
-                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${mongodb-image.name}</from>
-                    <assembly>
-                      <mode>dir</mode>
-                      <basedir>/</basedir>
-                      <inline>
-                        <id>config</id>
-                        <fileSet>
-                          <directory>${project.build.directory}/resources/mongodb/init_db</directory>
-                          <outputDirectory>docker-entrypoint-initdb.d/</outputDirectory>
-                          <includes>
-                            <include>*</include>
-                          </includes>
-                        </fileSet>
-                        <file>
-                          <source>${project.build.directory}/resources/mongodb/mongod.conf</source>
-                          <outputDirectory>etc/mongo/</outputDirectory>
-                        </file>
-                      </inline>
-                    </assembly>
-                  </build>
-                  <run>
-                    <skip>${hono.mongodb.disabled}</skip>
-                    <cmd>
-                      <arg>--config</arg>
-                      <arg>/etc/mongo/mongod.conf</arg>
-                    </cmd>
-                    <ports>
-                      <port>+mongodb.ip:mongodb.port:${hono.mongodb.port}</port>
-                    </ports>
-                    <portPropertyFile>${project.build.directory}/docker/mongodb.port.properties</portPropertyFile>
-                    <env>
-                      <MONGO_INITDB_DATABASE>${hono.mongodb.database.name}</MONGO_INITDB_DATABASE>
-                    </env>
-                    <network>
-                      <mode>custom</mode>
-                      <name>${custom.network.name}</name>
-                      <alias>${hono.mongodb.host}</alias>
-                    </network>
-                    <memorySwap>524288000</memorySwap>
-                    <memory>524288000</memory>
-                    <log>
-                      <prefix>MONGODB</prefix>
-                      <color>${log.color.hono-device-registry}</color>
-                    </log>
-                    <wait>
-                      <time>${service.startup.timeout}</time>
-                      <log>.*("Listening on").*("0.0.0.0").*</log>
-                    </wait>
-                  </run>
-                </image>
-                <!-- ##### PostgreSQL instance for the device registry ##### -->
-                <image>
-                  <name>${postgresql-image.name}</name>
-                  <run>
-                    <skip>${hono.postgres.disabled}</skip>
-                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <portPropertyFile>${project.build.directory}/docker/jdbc-db.port.properties</portPropertyFile>
-                    <network>
-                      <mode>custom</mode>
-                      <name>${custom.network.name}</name>
-                      <alias>hono-jdbc-db</alias>
-                    </network>
-                    <memorySwap>134217728</memorySwap>
-                    <memory>134217728</memory>
-                    <env>
-                      <POSTGRES_PASSWORD>${hono.jdbc.db.admin.password}</POSTGRES_PASSWORD>
-                    </env>
-                    <log>
-                      <prefix>POSTGRES</prefix>
-                      <color>${log.color.hono-device-registry}</color>
-                    </log>
-                    <wait>
-                      <time>${service.startup.timeout}</time>
-                      <log>.*(listening on IPv4 address).*</log>
                     </wait>
                   </run>
                 </image>
@@ -1124,12 +1040,69 @@
                     </env>
                   </run>
                 </image>
-                <!-- ##### Device Registration service ##### -->
+                <!-- ##### Mongo DB instance for the device registry ##### -->
+                <image>
+                  <name>${docker.repository}/hono-mongodb-test:${project.version}</name>
+                  <build>
+                    <skip>${hono.deviceregistry.mongodb.disabled}</skip>
+                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
+                    <from>${mongodb-image.name}</from>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/</basedir>
+                      <inline>
+                        <id>config</id>
+                        <fileSet>
+                          <directory>${project.build.directory}/resources/mongodb/init_db</directory>
+                          <outputDirectory>docker-entrypoint-initdb.d/</outputDirectory>
+                          <includes>
+                            <include>*</include>
+                          </includes>
+                        </fileSet>
+                        <file>
+                          <source>${project.build.directory}/resources/mongodb/mongod.conf</source>
+                          <outputDirectory>etc/mongo/</outputDirectory>
+                        </file>
+                      </inline>
+                    </assembly>
+                  </build>
+                  <run>
+                    <skip>${hono.deviceregistry.mongodb.disabled}</skip>
+                    <cmd>
+                      <arg>--config</arg>
+                      <arg>/etc/mongo/mongod.conf</arg>
+                    </cmd>
+                    <ports>
+                      <port>+mongodb.ip:mongodb.port:${hono.mongodb.port}</port>
+                    </ports>
+                    <portPropertyFile>${project.build.directory}/docker/mongodb.port.properties</portPropertyFile>
+                    <env>
+                      <MONGO_INITDB_DATABASE>${hono.mongodb.database.name}</MONGO_INITDB_DATABASE>
+                    </env>
+                    <network>
+                      <mode>custom</mode>
+                      <name>${custom.network.name}</name>
+                      <alias>${hono.mongodb.host}</alias>
+                    </network>
+                    <memorySwap>524288000</memorySwap>
+                    <memory>524288000</memory>
+                    <log>
+                      <prefix>MONGODB</prefix>
+                      <color>${log.color.hono-device-registry}</color>
+                    </log>
+                    <wait>
+                      <time>${service.startup.timeout}</time>
+                      <log>.*("Listening on").*("0.0.0.0").*</log>
+                    </wait>
+                  </run>
+                </image>
+                <!-- ##### MongoDB based Device Registration service ##### -->
                 <image>
                   <name>${docker.repository}/hono-service-device-registry-test:${project.version}</name>
                   <build>
+                    <skip>${hono.deviceregistry.mongodb.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${docker.repository}/${hono.deviceregistry.image}${hono.deviceregistry.image-suffix}:${project.version}</from>
+                    <from>${docker.repository}/hono-service-device-registry-mongodb${hono.deviceregistry.image-suffix}:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>
@@ -1137,15 +1110,15 @@
                         <id>config</id>
                         <fileSets>
                           <fileSet>
-                            <directory>${project.build.directory}/resources/${hono.deviceregistry.resources.folder}</directory>
-                            <outputDirectory>${hono.deviceregistry.config-dir}</outputDirectory>
+                            <directory>${project.build.directory}/resources/deviceregistry-mongodb</directory>
+                            <outputDirectory>${hono.deviceregistry.mongodb.config-dir}</outputDirectory>
                             <includes>
                               <include>*</include>
                             </includes>
                           </fileSet>
                           <fileSet>
                             <directory>${project.build.directory}/certs</directory>
-                            <outputDirectory>${hono.deviceregistry.config-dir}/certs</outputDirectory>
+                            <outputDirectory>${hono.deviceregistry.mongodb.config-dir}/certs</outputDirectory>
                             <includes>
                               <include>device-registry-*.pem</include>
                               <include>auth-server-cert.pem</include>
@@ -1157,6 +1130,7 @@
                     </assembly>
                   </build>
                   <run>
+                    <skip>${hono.deviceregistry.mongodb.disabled}</skip>
                     <ports>
                       <port>+deviceregistry.ip:deviceregistry.amqp.port:5672</port>
                       <port>+deviceregistry.ip:deviceregistry.http.port:8080</port>
@@ -1170,19 +1144,118 @@
                     </network>
                     <cmd>
                       <exec>
-                        <arg>${hono.deviceregistry.native-image-args}</arg>
+                        <arg>${hono.deviceregistry.mongodb.native-image-args}</arg>
                       </exec>
                     </cmd>
-                    <memorySwap>${hono.deviceregistry.max-mem}</memorySwap>
-                    <memory>${hono.deviceregistry.max-mem}</memory>
+                    <memorySwap>${hono.deviceregistry.mongodb.max-mem}</memorySwap>
+                    <memory>${hono.deviceregistry.mongodb.max-mem}</memory>
                     <env>
                       <SMALLRYE_CONFIG_LOCATIONS>
-                        /${hono.deviceregistry.config-dir}/logging-quarkus-${logging.profile}.yml
+                        /${hono.deviceregistry.mongodb.config-dir}/logging-quarkus-${logging.profile}.yml
                       </SMALLRYE_CONFIG_LOCATIONS>
-                      <LOGGING_CONFIG>file:///${hono.deviceregistry.config-dir}/logback-spring.xml</LOGGING_CONFIG>
-                      <SPRING_CONFIG_LOCATION>file:///${hono.deviceregistry.config-dir}/</SPRING_CONFIG_LOCATION>
-                      <SPRING_PROFILES_ACTIVE>${hono.deviceregistry.spring.profiles}</SPRING_PROFILES_ACTIVE>
-                      <JDK_JAVA_OPTIONS>${hono.deviceregistry.java-options}</JDK_JAVA_OPTIONS>
+                      <LOGGING_CONFIG>file:///${hono.deviceregistry.mongodb.config-dir}/logback-spring.xml</LOGGING_CONFIG>
+                      <SPRING_CONFIG_LOCATION>file:///${hono.deviceregistry.mongodb.config-dir}/</SPRING_CONFIG_LOCATION>
+                      <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
+                      <JDK_JAVA_OPTIONS>${hono.deviceregistry.mongodb.java-options}</JDK_JAVA_OPTIONS>
+                      <PN_TRACE_FRM>0</PN_TRACE_FRM>
+                      <JAEGER_SERVICE_NAME>${hono.registration.host}</JAEGER_SERVICE_NAME>
+                      <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
+                      <JAEGER_SAMPLER_MANAGER_HOST_PORT>${jaeger.host}:5778</JAEGER_SAMPLER_MANAGER_HOST_PORT>
+                    </env>
+                    <log>
+                      <prefix>REGISTRY</prefix>
+                      <color>${log.color.hono-device-registry}</color>
+                    </log>
+                    <wait>
+                      <time>${service.startup.timeout}</time>
+                      <http>
+                        <method>GET</method>
+                        <url>http://${deviceregistry.ip}:${deviceregistry.health.port}/readiness</url>
+                        <status>200..299</status>
+                      </http>
+                    </wait>
+                  </run>
+                </image>
+                <!-- ##### PostgreSQL instance for the JDBC based device registry ##### -->
+                <image>
+                  <name>${postgresql-image.name}</name>
+                  <run>
+                    <skip>${hono.postgres.disabled}</skip>
+                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
+                    <portPropertyFile>${project.build.directory}/docker/jdbc-db.port.properties</portPropertyFile>
+                    <network>
+                      <mode>custom</mode>
+                      <name>${custom.network.name}</name>
+                      <alias>hono-jdbc-db</alias>
+                    </network>
+                    <memorySwap>134217728</memorySwap>
+                    <memory>134217728</memory>
+                    <env>
+                      <POSTGRES_PASSWORD>${hono.jdbc.db.admin.password}</POSTGRES_PASSWORD>
+                    </env>
+                    <log>
+                      <prefix>POSTGRES</prefix>
+                      <color>${log.color.hono-device-registry}</color>
+                    </log>
+                    <wait>
+                      <time>${service.startup.timeout}</time>
+                      <log>.*(listening on IPv4 address).*</log>
+                    </wait>
+                  </run>
+                </image>
+                <!-- ##### JDBC based Device Registration service ##### -->
+                <image>
+                  <name>${docker.repository}/hono-service-device-registry-test:${project.version}</name>
+                  <build>
+                    <skip>${hono.deviceregistry.jdbc.disabled}</skip>
+                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
+                    <from>${docker.repository}/hono-service-device-registry-jdbc:${project.version}</from>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/</basedir>
+                      <inline>
+                        <id>config</id>
+                        <fileSets>
+                          <fileSet>
+                            <directory>${project.build.directory}/resources/${hono.deviceregistry.jdbc.resources.folder}</directory>
+                            <outputDirectory>etc/hono</outputDirectory>
+                            <includes>
+                              <include>*</include>
+                            </includes>
+                          </fileSet>
+                          <fileSet>
+                            <directory>${project.build.directory}/certs</directory>
+                            <outputDirectory>etc/hono/certs</outputDirectory>
+                            <includes>
+                              <include>device-registry-*.pem</include>
+                              <include>auth-server-cert.pem</include>
+                              <include>trusted-certs.pem</include>
+                            </includes>
+                          </fileSet>
+                        </fileSets>
+                      </inline>
+                    </assembly>
+                  </build>
+                  <run>
+                    <skip>${hono.deviceregistry.jdbc.disabled}</skip>
+                    <ports>
+                      <port>+deviceregistry.ip:deviceregistry.amqp.port:5672</port>
+                      <port>+deviceregistry.ip:deviceregistry.http.port:8080</port>
+                      <port>+deviceregistry.ip:deviceregistry.health.port:${vertx.health.port}</port>
+                    </ports>
+                    <portPropertyFile>${project.build.directory}/docker/deviceregistry.port.properties</portPropertyFile>
+                    <network>
+                      <mode>custom</mode>
+                      <name>${custom.network.name}</name>
+                      <alias>${hono.registration.host}</alias>
+                    </network>
+                    <memorySwap>${hono.deviceregistry.jdbc.max-mem}</memorySwap>
+                    <memory>${hono.deviceregistry.jdbc.max-mem}</memory>
+                    <env>
+                      <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
+                      <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
+                      <SPRING_PROFILES_ACTIVE>registry-adapter,registry-management,tenant-service,create-schema,${logging.profile}</SPRING_PROFILES_ACTIVE>
+                      <JDK_JAVA_OPTIONS>${hono.deviceregistry.jdbc.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <JAEGER_SERVICE_NAME>${hono.registration.host}</JAEGER_SERVICE_NAME>
                       <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
