@@ -35,8 +35,8 @@ import io.opentracing.Tracer;
 import io.vertx.core.Future;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.jdbc.JDBCClient;
 import io.vertx.ext.sql.ResultSet;
-import io.vertx.ext.sql.SQLClient;
 import io.vertx.ext.sql.SQLOperations;
 
 /**
@@ -49,7 +49,7 @@ public abstract class AbstractTenantStore extends AbstractStore {
 
     private static final Logger log = LoggerFactory.getLogger(AbstractTenantStore.class);
 
-    protected final SQLClient client;
+    protected final JDBCClient client;
     protected final Tracer tracer;
 
     private final Statement readStatement;
@@ -58,11 +58,11 @@ public abstract class AbstractTenantStore extends AbstractStore {
     /**
      * Create a new instance.
      *
-     * @param client The SQL client to use.
+     * @param client The client to use for accessing the DB.
      * @param tracer The tracer to use.
      * @param cfg The statement configuration to use.
      */
-    public AbstractTenantStore(final SQLClient client, final Tracer tracer, final StatementConfiguration cfg) {
+    public AbstractTenantStore(final JDBCClient client, final Tracer tracer, final StatementConfiguration cfg) {
         super(client, tracer, cfg.getStatement("checkConnection"));
         cfg.dump(log);
 

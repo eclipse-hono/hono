@@ -124,7 +124,6 @@
       ${default.java-options}
       -Dorg.eclipse.hono.service.base.jdbc.store.skipDumpingStatementConfiguration=true
     </hono.deviceregistry.jdbc.java-options>
-    <hono.deviceregistry.jdbc.resources.folder></hono.deviceregistry.jdbc.resources.folder>
 
     <!--  accept requests with a body size of up to 2000 bytes -->
     <hono.deviceregistry.maxPayloadSize>2000</hono.deviceregistry.maxPayloadSize>
@@ -1175,7 +1174,7 @@
                   <build>
                     <skip>${hono.deviceregistry.jdbc.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${docker.repository}/hono-service-device-registry-jdbc:${project.version}</from>
+                    <from>${docker.repository}/hono-service-device-registry-jdbc-quarkus:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>
@@ -1184,14 +1183,14 @@
                         <fileSets>
                           <fileSet>
                             <directory>${project.build.directory}/resources/${hono.deviceregistry.jdbc.resources.folder}</directory>
-                            <outputDirectory>etc/hono</outputDirectory>
+                            <outputDirectory>opt/hono/config</outputDirectory>
                             <includes>
                               <include>*</include>
                             </includes>
                           </fileSet>
                           <fileSet>
                             <directory>${project.build.directory}/certs</directory>
-                            <outputDirectory>etc/hono/certs</outputDirectory>
+                            <outputDirectory>opt/hono/config/certs</outputDirectory>
                             <includes>
                               <include>device-registry-*.pem</include>
                               <include>auth-server-cert.pem</include>
@@ -1218,9 +1217,9 @@
                     <memorySwap>${hono.deviceregistry.jdbc.max-mem}</memorySwap>
                     <memory>${hono.deviceregistry.jdbc.max-mem}</memory>
                     <env>
-                      <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
-                      <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
-                      <SPRING_PROFILES_ACTIVE>registry-adapter,registry-management,tenant-service,create-schema,${logging.profile}</SPRING_PROFILES_ACTIVE>
+                      <SMALLRYE_CONFIG_LOCATIONS>
+                        /opt/hono/config/logging-quarkus-${logging.profile}.yml
+                      </SMALLRYE_CONFIG_LOCATIONS>
                       <JDK_JAVA_OPTIONS>${hono.deviceregistry.jdbc.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <JAEGER_SERVICE_NAME>${hono.registration.host}</JAEGER_SERVICE_NAME>

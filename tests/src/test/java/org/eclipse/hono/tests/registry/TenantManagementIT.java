@@ -729,7 +729,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
         getHelper().registry.addDeviceForTenant(tenantId, tenantPayload, deviceId, new Device(), "secret")
             .compose(ok -> getHelper().registry.getRegistrationInfo(tenantId, deviceId))
             .compose(ok -> getHelper().registry.getCredentials(tenantId, deviceId))
-            .compose(ar -> getHelper().registry.removeTenant(tenantId, HttpURLConnection.HTTP_NO_CONTENT))
+            .compose(ar -> getHelper().registry.removeTenant(tenantId))
             .compose(ok -> getHelper().registry.getCredentials(tenantId, deviceId, HttpURLConnection.HTTP_NOT_FOUND))
             .compose(ok -> getHelper().registry.getRegistrationInfo(tenantId, deviceId, HttpURLConnection.HTTP_NOT_FOUND))
             .compose(ok -> getHelper().registry.getTenant(tenantId, HttpURLConnection.HTTP_NOT_FOUND))

@@ -3,7 +3,7 @@ title = "JDBC Based Device Registry Configuration"
 weight = 313
 +++
 
-The JDBC based Device Registry components provides an implementation of Eclipse Hono™'s
+The JDBC based Device Registry component provides an implementation of Eclipse Hono™'s
 [Device Registration]({{< relref "/api/device-registration" >}}), [Credentials]({{< relref "/api/credentials" >}})
 and [Tenant]({{< relref "/api/tenant" >}}) APIs. Protocol adapters use these APIs to determine a device's registration
 status, e.g. if it is enabled and if it is registered with a particular tenant, and to authenticate a device before
@@ -11,14 +11,13 @@ accepting any data for processing from it. In addition to the above, this Device
 implementation of [Device Registry Management APIs]({{< relref "/api/management" >}}) for managing tenants,
 registration information and credentials of devices.
 
-The application is implemented as a Spring Boot application, and it uses a JDBC compliant database to persist data. In
+The registry is implemented as a Quarkus application, and it uses a JDBC compliant database to persist data. It
 provides the following features:
 
-* Run only the registration and credentials service, or run including the tenant service.
 * By default, supports H2 and PostgreSQL
 * Supports different JDBC connections for read-only and read-write operations, to support read-only replicas
 
-**Note:** The provided container images contains only the H2 and PostgreSQL configuration and JDBC driver. While it is
+**Note:** The provided container image contains only the H2 and PostgreSQL configuration and JDBC driver. While it is
 possible to use other JDBC compliant databases, database specific configuration and JDBC driver have to be provided
 by the user.
 
@@ -33,7 +32,7 @@ used to direct adapters to services instances, which are backed by read-only rep
 and availability.
 
 | OS Environment Variable<br>Java System Property | Mandatory | Default | Description                                 |
-| :------------------------------------------ | :-------: | :------ | :---------------------------------------------- |
+| :---------------------------------------------- | :-------: | :------ | :------------------------------------------ |
 | `HONO_REGISTRY_AMQP_BINDADDRESS`                <br> `hono.registry.amqp.bindAddress`                 | no | `127.0.0.1` | The IP address of the network interface that the secure AMQP port should be bound to.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
 | `HONO_REGISTRY_AMQP_CERTPATH`                   <br> `hono.registry.amqp.certPath`                    | no | - | The absolute path to the PEM file containing the certificate that the server should use for authenticating to clients. This option must be used in conjunction with `HONO_REGISTRY_AMQP_KEYPATH`.<br>Alternatively, the `HONO_REGISTRY_AMQP_KEYSTOREPATH` option can be used to configure a key store containing both the key as well as the certificate. |
 | `HONO_REGISTRY_AMQP_INSECUREPORT`                <br> `hono.registry.amqp.insecurePort`                | no | - | The insecure port the server should listen on for AMQP 1.0 connections.<br>See [Port Configuration]({{< relref "#port-configuration" >}}) below for details. |
@@ -228,7 +227,7 @@ The individual client configuration is optional, a minimal configuration may onl
 configuration consisting of properties prefixed with `HONO_KAFKA_COMMONCLIENTCONFIG_` and `hono.kafka.commonClientConfig.`
 respectively.
 
-| OS Environment Variable Prefix<br>Java System Property Prefix                          | Description                                                                                                         |
-|:---------------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------|
-| `HONO_KAFKA_EVENT_PRODUCERCONFIG_`<br>`hono.kafka.event.producerConfig.`               | Configures the Kafka producer that publishes event messages.                                                        |
+| OS Environment Variable Prefix<br>Java System Property Prefix             | Description                             |
+|:--------------------------------------------------------------------------|:----------------------------------------|
+| `HONO_KAFKA_EVENT_PRODUCERCONFIG_`<br>`hono.kafka.event.producerConfig.`             | Configures the Kafka producer that publishes event messages. |
 | `HONO_KAFKA_NOTIFICATION_PRODUCERCONFIG_`<br>`hono.kafka.notification.producerConfig.` | Configures the Kafka producer that publishes notification messages about changes to tenant/device/credentials data. |

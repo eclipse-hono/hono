@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.service.base.jdbc.config;
 
+import java.util.Objects;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.jdbc.JDBCClient;
-import io.vertx.ext.sql.SQLClient;
 
 /**
  * Configuration properties for a JDBC service.
@@ -37,8 +38,30 @@ public class JdbcProperties {
     private String username;
     private String password;
     private Integer maximumPoolSize;
-
     private String tableName;
+
+    /**
+     * Creates default properties.
+     */
+    public JdbcProperties() {
+        // nothing to do
+    }
+
+    /**
+     * Creates properties from existing options.
+     *
+     * @param options The options.
+     * @throws NullPointerException if options is {@code null}.
+     */
+    public JdbcProperties(final JdbcOptions options) {
+        Objects.requireNonNull(options);
+        setDriverClass(options.driverClass());
+        options.maximumPoolSize().ifPresent(this::setMaximumPoolSize);
+        options.password().ifPresent(this::setPassword);
+        options.tableName().ifPresent(this::setTableName);;
+        setUrl(options.url());
+        options.username().ifPresent(this::setUsername);
+    }
 
     public void setUrl(final String url) {
         this.url = url;
@@ -83,10 +106,11 @@ public class JdbcProperties {
     }
 
     /**
-     * Create a {@link SQLClient} from the configuration properties.
+     * Creates a JDBC client for configuration properties.
+     *
      * @param vertx The vertx instance to use.
      * @param dataSourceProperties The properties.
-     * @return The new SQL client.
+     * @return The client.
      */
     public static JDBCClient dataSource(final Vertx vertx, final JdbcProperties dataSourceProperties) {
 

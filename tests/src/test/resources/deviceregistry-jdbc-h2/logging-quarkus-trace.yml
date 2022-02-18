@@ -1,0 +1,9 @@
+quarkus:
+  log:
+    category:
+      "io.netty.handler.logging.LoggingHandler":
+        level: DEBUG
+      "org.apache.kafka":
+        level: INFO
+      "org.eclipse.hono":
+        level: TRACE

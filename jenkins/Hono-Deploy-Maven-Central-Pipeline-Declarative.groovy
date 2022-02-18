@@ -143,7 +143,7 @@ spec:
                   :hono-service-auth-quarkus,\
                   :hono-service-command-router,\
                   :hono-service-command-router-quarkus,\
-                  :hono-service-device-registry-jdbc,\
+                  :hono-service-device-registry-jdbc-quarkus,\
                   :hono-service-device-registry-mongodb-quarkus,\
                   '"
         }

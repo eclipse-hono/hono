@@ -45,7 +45,7 @@ jobs:
     - name: "Build JDBC registry image"
       run: |
         mvn install -B -e -DskipTests -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
-        -Pjaeger,build-docker-image -am -pl :hono-service-device-registry-jdbc
+        -Pjaeger,build-docker-image -am -pl :hono-service-device-registry-jdbc-quarkus
     - name: "Run integration tests with Mongo DB and Kafka"
       run: |
         mvn verify -pl :hono-tests -B -e -DCI=$CI \
