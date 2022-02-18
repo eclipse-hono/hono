@@ -27,7 +27,7 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.sql.SQLClient;
+import io.vertx.ext.jdbc.JDBCClient;
 
 
 /**
@@ -40,11 +40,11 @@ public class AdapterStore extends AbstractTenantStore {
     /**
      * Create a new instance.
      *
-     * @param client The SQL client to use.
+     * @param client The client to use for accessing the DB.
      * @param tracer The tracer to use.
      * @param cfg The statement configuration to use.
      */
-    public AdapterStore(final SQLClient client, final Tracer tracer, final StatementConfiguration cfg) {
+    public AdapterStore(final JDBCClient client, final Tracer tracer, final StatementConfiguration cfg) {
         super(client, tracer, cfg);
 
         this.readByTrustAnchorStatement = cfg

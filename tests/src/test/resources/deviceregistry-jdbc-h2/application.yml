@@ -4,71 +4,74 @@ hono:
     maxInstances: 1
 
   healthCheck:
-    insecurePortBindAddress: 0.0.0.0
+    insecurePortBindAddress: "0.0.0.0"
     insecurePort: ${vertx.health.port}
 
   messaging:
-    name: 'Hono Device Registry JDBC'
-    host: ${hono.amqp-network.host}
+    name: "Hono Device Registry JDBC"
+    host: "${hono.amqp-network.host}"
     port: 5673
-    amqpHostname: hono-internal
-    keyPath: /etc/hono/certs/device-registry-key.pem
-    certPath: /etc/hono/certs/device-registry-cert.pem
-    trustStorePath: /etc/hono/certs/trusted-certs.pem
+    amqpHostname: "hono-internal"
+    keyPath: "/opt/hono/config/certs/device-registry-key.pem"
+    certPath: "/opt/hono/config/certs/device-registry-cert.pem"
+    trustStorePath: "/opt/hono/config/certs/trusted-certs.pem"
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
 
   auth:
-    host: ${hono.auth.host}
+    host: "${hono.auth.host}"
     port: 5671
-    name: device-registry
-    trustStorePath: "/etc/hono/certs/trusted-certs.pem"
+    name: "device-registry"
+    trustStorePath: "/opt/hono/config/certs/trusted-certs.pem"
     validation:
-      certPath: /etc/hono/certs/auth-server-cert.pem
+      certPath: "/opt/hono/config/certs/auth-server-cert.pem"
 
   registry:
     amqp:
       insecurePortEnabled: true
-      insecurePortBindAddress: 0.0.0.0
+      insecurePortBindAddress: "0.0.0.0"
     http:
       authenticationRequired: false
       insecurePortEnabled: true
-      insecurePortBindAddress: 0.0.0.0
+      insecurePortBindAddress: "0.0.0.0"
       maxPayloadSize: ${hono.deviceregistry.maxPayloadSize}
     jdbc:
       adapter:
-        url: ${hono.jdbc.db.url}
-        driverClass: org.h2.Driver
+        url: "${hono.jdbc.db.url}"
+        driverClass: "org.h2.Driver"
       management:
-        url: ${hono.jdbc.db.url}
-        driverClass: org.h2.Driver
+        url: "${hono.jdbc.db.url}"
+        driverClass: "org.h2.Driver"
     svc:
       maxBcryptCostFactor: ${max.bcrypt.costFactor}
 
   tenant:
     jdbc:
       adapter:
-        url: ${hono.jdbc.db.url}
-        driverClass: org.h2.Driver
+        url: "${hono.jdbc.db.url}"
+        driverClass: "org.h2.Driver"
       management:
-        url: ${hono.jdbc.db.url}
-        driverClass: org.h2.Driver
+        url: "${hono.jdbc.db.url}"
+        driverClass: "org.h2.Driver"
     svc:
 
-  vertx:
-    maxEventLoopExecuteTime: ${max.event-loop.execute-time}
-    preferNative: true
   kafka:
     commonClientConfig:
       bootstrap.servers: ${hono.kafka.bootstrap.servers}
 
-spring:
-  jmx:
-    enabled: false
-
-management:
-  port: -1
-
-server:
-  port: -1
+quarkus:
+  jaeger:
+    service-name: "${hono.registration.host}"
+  log:
+    console:
+      color: true
+    level: INFO
+    min-level: TRACE
+    category:
+      "io.quarkus.jaeger":
+        level: DEBUG
+      "io.quarkus.vertx.core.runtime":
+        level: DEBUG
+  vertx:
+    max-event-loop-execute-time: ${max.event-loop.execute-time}

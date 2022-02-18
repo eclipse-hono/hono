@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -31,8 +31,8 @@ import io.opentracing.log.Fields;
 import io.vertx.core.Future;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
+import io.vertx.ext.jdbc.JDBCClient;
 import io.vertx.ext.sql.ResultSet;
-import io.vertx.ext.sql.SQLClient;
 import io.vertx.ext.sql.UpdateResult;
 
 /**
@@ -42,7 +42,7 @@ public abstract class AbstractStore implements HealthCheckProvider, AutoCloseabl
 
     private static final String DEFAULT_CHECK_SQL = "SELECT 1";
 
-    private final SQLClient client;
+    private final JDBCClient client;
     private final Tracer tracer;
 
     private final ExpandedStatement checkSql;
@@ -50,12 +50,12 @@ public abstract class AbstractStore implements HealthCheckProvider, AutoCloseabl
     /**
      * Create a new instance.
      *
-     * @param client The SQL client to use.
+     * @param client The client to use for accessing the DB.
      * @param tracer The tracer to use.
      * @param checkSql An optional SQL statement, which will be used to check if the connection to the
      *        database is OK. It this value is empty, the default statement {@value #DEFAULT_CHECK_SQL} will be used.
      */
-    public AbstractStore(final SQLClient client, final Tracer tracer, final Optional<Statement> checkSql) {
+    public AbstractStore(final JDBCClient client, final Tracer tracer, final Optional<Statement> checkSql) {
         this.client = Objects.requireNonNull(client);
         this.tracer = Objects.requireNonNull(tracer);
         this.checkSql = checkSql.orElseGet(() -> Statement.statement(DEFAULT_CHECK_SQL)).expand();

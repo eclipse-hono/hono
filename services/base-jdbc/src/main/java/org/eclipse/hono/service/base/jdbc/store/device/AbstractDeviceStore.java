@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,8 +26,8 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
+import io.vertx.ext.jdbc.JDBCClient;
 import io.vertx.ext.sql.ResultSet;
-import io.vertx.ext.sql.SQLClient;
 import io.vertx.ext.sql.SQLOperations;
 
 /**
@@ -37,7 +37,7 @@ public abstract class AbstractDeviceStore extends AbstractStore {
 
     private static final Logger log = LoggerFactory.getLogger(AbstractDeviceStore.class);
 
-    protected final SQLClient client;
+    protected final JDBCClient client;
     protected final Tracer tracer;
 
     private final Statement readRegistrationStatement;
@@ -45,11 +45,11 @@ public abstract class AbstractDeviceStore extends AbstractStore {
     /**
      * Create a new instance.
      *
-     * @param client The SQL client to use.
+     * @param client The client to use for accessing the DB.
      * @param tracer The tracer to use.
      * @param cfg The SQL statement configuration.
      */
-    public AbstractDeviceStore(final SQLClient client, final Tracer tracer, final StatementConfiguration cfg) {
+    public AbstractDeviceStore(final JDBCClient client, final Tracer tracer, final StatementConfiguration cfg) {
         super(client, tracer, cfg.getStatement("checkConnection"));
 
         this.client = client;

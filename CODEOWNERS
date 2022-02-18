@@ -44,7 +44,7 @@
 /services/base-jdbc/                        @ctron
 /services/command-router/                   @calohmn
 /services/device-registry-base/             @kaniyan
-/services/device-registry-jdbc/             @ctron
+/services/device-registry-jdbc-quarkus/     @ctron
 /services/device-registry-mongodb-quarkus/  @kaniyan
 
 /site/                                @kaniyan @sophokles73

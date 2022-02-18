@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -51,8 +51,8 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.jdbc.JDBCClient;
 import io.vertx.ext.sql.ResultSet;
-import io.vertx.ext.sql.SQLClient;
 import io.vertx.ext.sql.SQLConnection;
 import io.vertx.ext.sql.UpdateResult;
 
@@ -84,11 +84,11 @@ public class TableManagementStore extends AbstractDeviceStore {
     /**
      * Create a new instance.
      *
-     * @param client The SQL client ot use.
+     * @param client The client to use for accessing the DB.
      * @param tracer The tracer to use.
      * @param cfg The SQL statement configuration.
      */
-    public TableManagementStore(final SQLClient client, final Tracer tracer, final StatementConfiguration cfg) {
+    public TableManagementStore(final JDBCClient client, final Tracer tracer, final StatementConfiguration cfg) {
         super(client, tracer, cfg);
         cfg.dump(log);
 

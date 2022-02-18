@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.service.base.jdbc.config;
 
+import java.util.Objects;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
@@ -24,6 +26,25 @@ public class JdbcDeviceStoreProperties {
 
     private JdbcProperties adapter;
     private JdbcProperties management;
+
+    /**
+     * Creates default properties.
+     */
+    public JdbcDeviceStoreProperties() {
+        // nothing to do
+    }
+
+    /**
+     * Creates properties from existing options.
+     *
+     * @param options The options.
+     * @throws NullPointerException if options is {@code null}.
+     */
+    public JdbcDeviceStoreProperties(final JdbcDeviceStoreOptions options) {
+        Objects.requireNonNull(options);
+        setAdapter(new JdbcProperties(options.adapter()));
+        setManagement(new JdbcProperties(options.management()));
+    }
 
     public JdbcProperties getAdapter() {
         return adapter;
