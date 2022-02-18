@@ -704,6 +704,16 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             receiver.setPrefetch(30);
             // manage disposition handling manually
             receiver.setAutoAccept(false);
+            receiver.maxMessageSizeExceededHandler(recv -> {
+                final Span errorSpan = newSpan("upload message", authenticatedDevice, traceSamplingPriority);
+                log.debug("incoming message size exceeds configured maximum of {} bytes; link will be detached [container: {}, {}]",
+                        getConfig().getMaxPayloadSize(), conn.getRemoteContainer(), authenticatedDevice);
+                TracingHelper.logError(errorSpan,
+                        String.format("incoming message size exceeds configured maximum of %s bytes",
+                                getConfig().getMaxPayloadSize()));
+                errorSpan.log("device sender link will be detached");
+                errorSpan.finish();
+            });
             HonoProtonHelper.setCloseHandler(receiver, remoteDetach -> onLinkDetach(receiver));
             HonoProtonHelper.setDetachHandler(receiver, remoteDetach -> onLinkDetach(receiver));
             receiver.handler((delivery, message) -> {
