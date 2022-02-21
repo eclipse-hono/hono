@@ -92,7 +92,7 @@ public class CommandSubscriptionTest {
         String topic = String.format("%s///%s/#", endpointName, reqPartName);
         assertThat(CommandSubscription.fromTopic(topic, MqttQoS.AT_MOST_ONCE, null)).isNull();
 
-        topic = String.format("%s/+/+/%s/#", endpointName, reqPartName);
+        topic = String.format("%s//+/%s/#", endpointName, reqPartName);
         assertThat(CommandSubscription.fromTopic(topic, MqttQoS.AT_MOST_ONCE, null)).isNull();
     }
 
@@ -112,7 +112,7 @@ public class CommandSubscriptionTest {
         topic = String.format("%s///notReqNorQ/#", endpointName);
         assertThat(CommandSubscription.fromTopic(topic, MqttQoS.AT_MOST_ONCE, device)).isNull();
 
-        topic = String.format("%s/+/+/notReqNorQ/#", endpointName);
+        topic = String.format("%s//+/notReqNorQ/#", endpointName);
         assertThat(CommandSubscription.fromTopic(topic, MqttQoS.AT_MOST_ONCE, device)).isNull();
     }
 
@@ -135,7 +135,7 @@ public class CommandSubscriptionTest {
         topic = String.format("%s///%s/not#", endpointName, reqPartName);
         assertThat(CommandSubscription.fromTopic(topic, MqttQoS.AT_MOST_ONCE, device)).isNull();
 
-        topic = String.format("%s/+/+/%s/not#", endpointName, reqPartName);
+        topic = String.format("%s//+/%s/not#", endpointName, reqPartName);
         assertThat(CommandSubscription.fromTopic(topic, MqttQoS.AT_MOST_ONCE, device)).isNull();
     }
 
@@ -159,6 +159,18 @@ public class CommandSubscriptionTest {
         assertThat(CommandSubscription.fromTopic(topic, MqttQoS.AT_MOST_ONCE, null)).isNull();
     }
 
+    /**
+     * Verifies that topic filters containing the {@code +} wild card character for the tenant ID are not supported.
+     *
+     * @param topicFilter The topic filter to test.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = { "command/+/+/req/#", "command/+//req/#", "command/+/device-id/req/#" })
+    public void testSubscriptionFailsForWildcardTenantId(final String topicFilter) {
+
+        final var topicSubscription = new MqttTopicSubscriptionImpl(topicFilter, MqttQoS.AT_LEAST_ONCE);
+        assertThat(CommandSubscription.fromTopic(topicSubscription, null)).isNull();
+    }
 
     /**
      * Verifies that an unauthenticated device can successfully subscribe for commands
@@ -384,19 +396,6 @@ public class CommandSubscriptionTest {
                 String.format("%s/otherTenant/+/%s/#", endpointName, reqPartName),
                 qos);
         assertThat(CommandSubscription.fromTopic(mqttTopicSubscription, gw)).isNull();
-    }
-
-    /**
-     * Verifies that topic filters containing the {@code +} wildcard character for the tenant ID are not supported.
-     *
-     * @param topicFilter The topic filter to test.
-     */
-    @ParameterizedTest
-    @ValueSource(strings = { "command/+/+/req/#", "command/+//req/#", "command/+/device-id/req/#" })
-    public void testSubscriptionFailsForWildcardDeviceId(final String topicFilter) {
-
-        final var topicSubscription = new MqttTopicSubscriptionImpl(topicFilter, MqttQoS.AT_LEAST_ONCE);
-        assertThat(CommandSubscription.fromTopic(topicSubscription, null)).isNull();
     }
 
     private static String getCommandEndpoint() {

@@ -16,7 +16,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 # API Changes
 
-* The MQTT adapter no longer accepts the `+` wild card character for the device ID in a topic filter used for
+* The MQTT adapter no longer accepts the `+` wild card character for the tenant ID in a topic filter used for
   subscribing to commands.
 
 ## 1.12.0
