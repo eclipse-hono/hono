@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,18 +28,33 @@ import io.vertx.mqtt.MqttTopicSubscription;
 /**
  * A device's MQTT subscription for command messages.
  * <p>
- * Supported topic filters: {@code command|c/[+|TENANT]/[+|DEVICE_ID]/req|q/#}
+ * Supported topic filters: {@code command|c/[TENANT]/[DEVICE_ID|+]/req|q/#}
  * <p>
  * Examples:
  * <ol>
  * <li>{@code command/DEFAULT_TENANT/4711/req/#} unauthenticated device</li>
  * <li>{@code command///req/#} - authenticated device</li>
+ * <li>{@code command//+/req/#} - authenticated gateway</li>
  * <li>{@code c///q/#} - authenticated device using short names</li>
  * </ol>
  */
 public final class CommandSubscription extends AbstractSubscription {
 
     private static final Logger LOG = LoggerFactory.getLogger(CommandSubscription.class);
+    private static final String ERROR_MSG_FILTER_FORMAT = String.format(
+            "topic filter does not match pattern: %s|%s/[tenant-id]/[device-id|+]/%s|%s/#",
+            CommandConstants.COMMAND_ENDPOINT,
+            CommandConstants.COMMAND_ENDPOINT_SHORT,
+            CommandConstants.COMMAND_RESPONSE_REQUEST_PART,
+            CommandConstants.COMMAND_RESPONSE_REQUEST_PART_SHORT);
+    private static final String ERROR_MSG_ENDPOINT_NAME = String.format(
+            "the endpoint needs to be '%s' or '%s'",
+            CommandConstants.COMMAND_ENDPOINT,
+            CommandConstants.COMMAND_ENDPOINT_SHORT);
+    private static final String ERROR_MSG_REQUEST_SEGMENT_NAME = String.format(
+            "the request part needs to be '%s' or '%s'",
+            CommandConstants.COMMAND_RESPONSE_REQUEST_PART,
+            CommandConstants.COMMAND_RESPONSE_REQUEST_PART_SHORT);
 
     private final String req;
     private final Key key;
@@ -102,20 +117,14 @@ public final class CommandSubscription extends AbstractSubscription {
         }
         final ResourceIdentifier resource = ResourceIdentifier.fromString(topic);
         if (resource.length() != 5 || !"#".equals(resource.elementAt(4))) {
-            throw new IllegalArgumentException(
-                    "topic filter does not match pattern: " + CommandConstants.COMMAND_ENDPOINT + "|"
-                            + CommandConstants.COMMAND_ENDPOINT_SHORT + "/+/+/req|q/#");
+            throw new IllegalArgumentException(ERROR_MSG_FILTER_FORMAT);
         }
         if (!CommandConstants.isCommandEndpoint(resource.getEndpoint())) {
-            throw new IllegalArgumentException(
-                    "the endpoint needs to be '" + CommandConstants.COMMAND_ENDPOINT + "' or '"
-                            + CommandConstants.COMMAND_ENDPOINT_SHORT + "'");
+            throw new IllegalArgumentException(ERROR_MSG_ENDPOINT_NAME);
         }
         if (!CommandConstants.COMMAND_RESPONSE_REQUEST_PART.equals(resource.elementAt(3))
                 && !CommandConstants.COMMAND_RESPONSE_REQUEST_PART_SHORT.equals(resource.elementAt(3))) {
-            throw new IllegalArgumentException(
-                    "the request part needs to be '" + CommandConstants.COMMAND_RESPONSE_REQUEST_PART + "' or '"
-                            + CommandConstants.COMMAND_RESPONSE_REQUEST_PART_SHORT + "'");
+            throw new IllegalArgumentException(ERROR_MSG_REQUEST_SEGMENT_NAME);
         }
         return resource;
     }

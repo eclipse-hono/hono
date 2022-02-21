@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -61,11 +61,15 @@ public abstract class AbstractSubscription implements Subscription {
 
         Objects.requireNonNull(topicResource);
         Objects.requireNonNull(qos);
+
+        if ("+".equals(topicResource.getTenantId())) {
+            throw new IllegalArgumentException("topic filter must not contain '+' wildcard for tenant ID");
+        }
+
         this.topic = topicResource.toString();
         this.qos = qos;
-
         this.endpoint = topicResource.getEndpoint();
-        final String resourceTenant = "+".equals(topicResource.getTenantId()) ? null : topicResource.getTenantId();
+        final String resourceTenant = topicResource.getTenantId();
         this.containsTenantId = !Strings.isNullOrEmpty(resourceTenant);
         final String resourceDeviceId = "+".equals(topicResource.getResourceId()) ? null : topicResource.getResourceId();
         this.containsDeviceId = !Strings.isNullOrEmpty(resourceDeviceId);

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.vertx.mqtt.MqttTopicSubscription;
@@ -91,7 +92,7 @@ public class CommandSubscriptionTest {
         String topic = String.format("%s///%s/#", endpointName, reqPartName);
         assertThat(CommandSubscription.fromTopic(topic, MqttQoS.AT_MOST_ONCE, null)).isNull();
 
-        topic = String.format("%s/+/+/%s/#", endpointName, reqPartName);
+        topic = String.format("%s//+/%s/#", endpointName, reqPartName);
         assertThat(CommandSubscription.fromTopic(topic, MqttQoS.AT_MOST_ONCE, null)).isNull();
     }
 
@@ -111,7 +112,7 @@ public class CommandSubscriptionTest {
         topic = String.format("%s///notReqNorQ/#", endpointName);
         assertThat(CommandSubscription.fromTopic(topic, MqttQoS.AT_MOST_ONCE, device)).isNull();
 
-        topic = String.format("%s/+/+/notReqNorQ/#", endpointName);
+        topic = String.format("%s//+/notReqNorQ/#", endpointName);
         assertThat(CommandSubscription.fromTopic(topic, MqttQoS.AT_MOST_ONCE, device)).isNull();
     }
 
@@ -134,7 +135,7 @@ public class CommandSubscriptionTest {
         topic = String.format("%s///%s/not#", endpointName, reqPartName);
         assertThat(CommandSubscription.fromTopic(topic, MqttQoS.AT_MOST_ONCE, device)).isNull();
 
-        topic = String.format("%s/+/+/%s/not#", endpointName, reqPartName);
+        topic = String.format("%s//+/%s/not#", endpointName, reqPartName);
         assertThat(CommandSubscription.fromTopic(topic, MqttQoS.AT_MOST_ONCE, device)).isNull();
     }
 
@@ -158,6 +159,18 @@ public class CommandSubscriptionTest {
         assertThat(CommandSubscription.fromTopic(topic, MqttQoS.AT_MOST_ONCE, null)).isNull();
     }
 
+    /**
+     * Verifies that topic filters containing the {@code +} wild card character for the tenant ID are not supported.
+     *
+     * @param topicFilter The topic filter to test.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = { "command/+/+/req/#", "command/+//req/#", "command/+/device-id/req/#" })
+    public void testSubscriptionFailsForWildcardTenantId(final String topicFilter) {
+
+        final var topicSubscription = new MqttTopicSubscriptionImpl(topicFilter, MqttQoS.AT_LEAST_ONCE);
+        assertThat(CommandSubscription.fromTopic(topicSubscription, null)).isNull();
+    }
 
     /**
      * Verifies that an unauthenticated device can successfully subscribe for commands
@@ -277,23 +290,6 @@ public class CommandSubscriptionTest {
             .isEqualTo(String.format("%s///%s/requestId/doSomething",
                     endpointName, reqPartName));
 
-        // WHEN subscribing to commands using the deprecated topic filter
-        mqttTopicSubscription = new MqttTopicSubscriptionImpl(
-                String.format("%s/+/+/%s/#", endpointName, reqPartName),
-                qos);
-
-        subscription = CommandSubscription.fromTopic(mqttTopicSubscription, device);
-        assertThat(subscription).isNotNull();
-        assertThat(subscription.getTenant()).isEqualTo("tenant");
-        assertThat(subscription.getDeviceId()).isEqualTo("device");
-        assertThat(subscription.getEndpoint()).isEqualTo(endpointName);
-        assertThat(subscription.getRequestPart()).isEqualTo(reqPartName);
-        assertThat(subscription.getQos()).isEqualTo(qos);
-        // THEN the command topic does not include tenant nor device ID
-        assertThat(subscription.getCommandPublishTopic(command))
-            .isEqualTo(String.format("%s///%s/requestId/doSomething",
-                    endpointName, reqPartName));
-
         // using a tenant other than the tenant that the device belongs to should fail
         mqttTopicSubscription = new MqttTopicSubscriptionImpl(
                 String.format("%s/otherTenant/device/%s/#", endpointName, reqPartName),
@@ -394,23 +390,6 @@ public class CommandSubscriptionTest {
         assertThat(subscription.getCommandPublishTopic(command))
             .isEqualTo(String.format("%s/%s/%s/%s/requestId/doSomething",
                     endpointName, gw.getTenantId(), gatewayManagedDeviceId, reqPartName));
-
-        // WHEN subscribing to commands for all devices using the deprecated topic filter
-        mqttTopicSubscription = new MqttTopicSubscriptionImpl(
-                String.format("%s/+/+/%s/#", endpointName, reqPartName),
-                qos);
-
-        subscription = CommandSubscription.fromTopic(mqttTopicSubscription, gw);
-        assertThat(subscription).isNotNull();
-        assertThat(subscription.getTenant()).isEqualTo(gw.getTenantId());
-        assertThat(subscription.getDeviceId()).isEqualTo(gw.getDeviceId());
-        assertThat(subscription.getAuthenticatedDeviceId()).isEqualTo(gw.getDeviceId());
-        assertThat(subscription.getQos()).isEqualTo(qos);
-        assertThat(subscription.isGatewaySubscriptionForSpecificDevice()).isEqualTo(false);
-        // THEN the command topic does not include the tenant either
-        assertThat(subscription.getCommandPublishTopic(command))
-            .isEqualTo(String.format("%s//%s/%s/requestId/doSomething",
-                    endpointName, gatewayManagedDeviceId, reqPartName));
 
         // using a tenant other than the tenant that the gateway belongs to should fail
         mqttTopicSubscription = new MqttTopicSubscriptionImpl(
