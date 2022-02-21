@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -89,23 +89,15 @@ public class CommandAndControlMqttIT extends MqttTestBase {
 
     static Stream<MqttCommandEndpointConfiguration> allCombinations() {
         return Stream.of(
-                new MqttCommandEndpointConfiguration(SubscriberRole.DEVICE, false),
-                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_ALL_DEVICES, false),
-                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE, false),
-
-                // the following variants can be removed once we no longer support the legacy topic filters
-                new MqttCommandEndpointConfiguration(SubscriberRole.DEVICE, true),
-                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_ALL_DEVICES, true),
-                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE, true)
+                new MqttCommandEndpointConfiguration(SubscriberRole.DEVICE),
+                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_ALL_DEVICES),
+                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE)
                 );
     }
 
     static Stream<MqttCommandEndpointConfiguration> gatewayForSingleDevice() {
         return Stream.of(
-                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE, false),
-
-                // the following variants can be removed once we no longer support the legacy topic filters
-                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE, true)
+                new MqttCommandEndpointConfiguration(SubscriberRole.GATEWAY_FOR_SINGLE_DEVICE)
         );
     }
 
@@ -121,7 +113,9 @@ public class CommandAndControlMqttIT extends MqttTestBase {
         helper.registry.addTenant(tenantId).onComplete(ctx.succeedingThenComplete());
     }
 
-    private Future<MessageConsumer> createConsumer(final String tenantId, final Handler<DownstreamMessage<? extends MessageContext>> messageConsumer) {
+    private Future<MessageConsumer> createConsumer(
+            final String tenantId,
+            final Handler<DownstreamMessage<? extends MessageContext>> messageConsumer) {
         return helper.applicationClient.createEventConsumer(tenantId, (Handler) messageConsumer, remoteClose -> {});
     }
 

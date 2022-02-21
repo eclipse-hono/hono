@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -27,20 +27,14 @@ import org.eclipse.hono.util.ResourceIdentifier;
  */
 public class MqttCommandEndpointConfiguration extends CommandEndpointConfiguration {
 
-    private final boolean legacyTopicFilter;
-
     /**
      * Creates a new configuration.
      *
      * @param subscriberRole The way in which to subscribe for commands.
-     * @param useLegacyTopicFilter {@code true} if the device uses the legacy topic filter for subscribing to commands.
      */
-    public MqttCommandEndpointConfiguration(
-            final SubscriberRole subscriberRole,
-            final boolean useLegacyTopicFilter) {
+    public MqttCommandEndpointConfiguration(final SubscriberRole subscriberRole) {
 
         super(subscriberRole);
-        this.legacyTopicFilter = useLegacyTopicFilter;
     }
 
     /**
@@ -48,8 +42,12 @@ public class MqttCommandEndpointConfiguration extends CommandEndpointConfigurati
      */
     @Override
     public String toString() {
-        return String.format("subscribe as: %s, southbound endpoint: %s, northbound endpoint: %s, topic filter: %s",
-                getSubscriberRole(), getSouthboundEndpoint(), getNorthboundEndpoint(), getCommandTopicFilter("${deviceId}"));
+        return String.format(
+                "subscribe as: %s, southbound endpoint: %s, northbound endpoint: %s, topic filter: %s",
+                getSubscriberRole(),
+                getSouthboundEndpoint(),
+                getNorthboundEndpoint(),
+                getCommandTopicFilter("${deviceId}"));
     }
 
     /**
@@ -63,14 +61,11 @@ public class MqttCommandEndpointConfiguration extends CommandEndpointConfigurati
     public final String getCommandTopicFilter(final String deviceId) {
         switch (getSubscriberRole()) {
         case DEVICE:
-            return String.format(
-                    "%s/%s/req/#", getSouthboundEndpoint(), legacyTopicFilter ? "+/+" : "/");
+            return String.format("%s///req/#", getSouthboundEndpoint());
         case GATEWAY_FOR_ALL_DEVICES:
-            return String.format(
-                    "%s/%s/req/#", getSouthboundEndpoint(), legacyTopicFilter ? "+/+" : "/+");
+            return String.format("%s//+/req/#", getSouthboundEndpoint());
         case GATEWAY_FOR_SINGLE_DEVICE:
-            return String.format(
-                    "%s/%s/req/#", getSouthboundEndpoint(), (legacyTopicFilter ? "+/" : "/") + deviceId);
+            return String.format("%s//%s/req/#", getSouthboundEndpoint(), deviceId);
         default:
             throw new IllegalStateException("unknown role");
         }

@@ -380,12 +380,6 @@ The protocol adapter will publish commands for the device to the following topic
 The *tenant-id* and/or *device-id* will be included in the topic name if the tenant and/or device ID had been included
 in the topic filter used for subscribing to commands.
 
-{{% notice info %}}
-Previous versions of Hono required authenticated devices to use `command/+/+/req/#` for subscribing to commands.
-This old topic filter is deprecated. Devices MAY still use it until support for it will be removed in a future Hono
-version.
-{{% /notice %}}
-
 **Examples**
 
 The following command can be used to subscribe to commands resulting in command messages being published to a
@@ -490,12 +484,12 @@ for details.
 
 An authenticated gateway MUST use one of the following topic filters for subscribing to commands:
 
-| Topic Filter                          | Description                                                                                     |
-| :------------------------------------ | :---------------------------------------------------------------------------------------------- |
-| `command//+/req/#`                       | Subscribe to commands for all devices that the gateway is authorized to act on behalf of. |
-| `command/${tenant-id}/+/req/#`             | Subscribe to commands for all devices that the gateway is authorized to act on behalf of. |
-| `command//${device-id}/req/#`              | Subscribe to commands for a specific device that the gateway is authorized to act on behalf of. |
-| `command/${tenant-id}/${device-id}/req/#`    | Subscribe to commands for a specific device that the gateway is authorized to act on behalf of. |
+| Topic Filter                       | Description                                                                  |
+| :--------------------------------- | :--------------------------------------------------------------------------- |
+| `command//+/req/#`                    | Subscribe to commands for all devices that the gateway is authorized to act on behalf of. |
+| `command/${tenant-id}/+/req/#`          | Subscribe to commands for all devices that the gateway is authorized to act on behalf of. |
+| `command//${device-id}/req/#`           | Subscribe to commands for a specific device that the gateway is authorized to act on behalf of. |
+| `command/${tenant-id}/${device-id}/req/#` | Subscribe to commands for a specific device that the gateway is authorized to act on behalf of. |
 
 The protocol adapter will publish commands for devices to the following topic names
 
@@ -504,12 +498,6 @@ The protocol adapter will publish commands for devices to the following topic na
 
 The `${tenant-id}` will be included in the topic name if the tenant ID had been included in the topic filter used for
 subscribing to commands.
-
-{{% notice info %}}
-Previous versions of Hono required authenticated gateways to use `command/+/+/req/#` for subscribing to commands.
-This old topic filter is deprecated. Gateways MAY still use it until support for it will be removed in a future Hono
-version.
-{{% /notice %}}
 
 When processing an incoming command message, the protocol adapter will give precedence to a device-specific command
 subscription matching the command target device, whether the subscription comes from a gateway or the device itself.
