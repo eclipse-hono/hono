@@ -1,6 +1,7 @@
 +++
 title = "Kura Adapter Configuration"
-weight = 330
+hidden = true # does not show up in the menu, but shows up in the version selector and can be accessed from links
+weight = 0
 +++
 
 The Kura protocol adapter exposes an MQTT topic hierarchy allowing Eclipse Kura&trade; 3 based gateways to access
@@ -11,8 +12,8 @@ The adapter is implemented as a Spring Boot application. It can be run either di
 of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-adapter-kura/) created from it.
 
 {{% notice info %}}
-The Kura adapter is deprecated and will be removed completely in Hono 2.0.0. Support for Kura version 4 and
-later is still available by means of Hono's standard MQTT adapter.
+The Kura adapter has been removed in Hono 2.0.0. Support for Kura version 4 and later is still available by means of
+Hono's standard MQTT adapter.
 {{% /notice %}}
 
 ## Service Configuration

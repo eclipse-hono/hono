@@ -62,10 +62,6 @@ public final class Constants {
      */
     public static final String PROTOCOL_ADAPTER_TYPE_HTTP = "hono-http";
     /**
-     * The type of the Eclipse Kura protocol adapter.
-     */
-    public static final String PROTOCOL_ADAPTER_TYPE_KURA = "hono-kura-mqtt";
-    /**
      * The type of the LoRaWAN protocol adapter.
      */
     public static final String PROTOCOL_ADAPTER_TYPE_LORA = "hono-lora";
