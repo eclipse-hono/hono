@@ -1,6 +1,6 @@
 #!/bin/bash
 #*******************************************************************************
-# Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+# Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -32,8 +32,6 @@ HTTP_ADAPTER_KEY_STORE=httpKeyStore.p12
 HTTP_ADAPTER_KEY_STORE_PWD=httpkeys
 LORA_ADAPTER_KEY_STORE=loraKeyStore.p12
 LORA_ADAPTER_KEY_STORE_PWD=lorakeys
-KURA_ADAPTER_KEY_STORE=kuraKeyStore.p12
-KURA_ADAPTER_KEY_STORE_PWD=kurakeys
 ARTEMIS_KEY_STORE=artemisKeyStore.p12
 ARTEMIS_KEY_STORE_PWD=artemiskeys
 COAP_ADAPTER_KEY_STORE=coapKeyStore.p12
@@ -143,7 +141,6 @@ create_cert command-router $CMD_ROUTER_KEY_STORE $CMD_ROUTER_KEY_STORE_PWD
 create_cert http-adapter $HTTP_ADAPTER_KEY_STORE $HTTP_ADAPTER_KEY_STORE_PWD
 create_cert lora-adapter $LORA_ADAPTER_KEY_STORE $LORA_ADAPTER_KEY_STORE_PWD
 create_cert mqtt-adapter $MQTT_ADAPTER_KEY_STORE $MQTT_ADAPTER_KEY_STORE_PWD
-create_cert kura-adapter $KURA_ADAPTER_KEY_STORE $KURA_ADAPTER_KEY_STORE_PWD
 create_cert artemis $ARTEMIS_KEY_STORE $ARTEMIS_KEY_STORE_PWD
 create_cert coap-adapter $COAP_ADAPTER_KEY_STORE $COAP_ADAPTER_KEY_STORE_PWD
 create_cert amqp-adapter $AMQP_ADAPTER_KEY_STORE $AMQP_ADAPTER_KEY_STORE_PWD

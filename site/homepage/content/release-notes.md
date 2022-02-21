@@ -14,12 +14,14 @@ description = "Information about changes in recent Hono releases. Includes new f
 * When a tenant or device gets disabled or deleted, any open AMQP or MQTT connections from clients having authenticated
   themselves as belonging to that tenant or device are getting closed now.
 
-# API Changes
+### API Changes
 
 * The MQTT adapter no longer accepts the `+` wild card character for the tenant ID in a topic filter used for
   subscribing to commands.
 * Support for configuration properties that had been marked as deprecated in Hono versions before 2.0.0 has been
   removed.
+* The Kura protocol adapter has been removed. Eclipse Kura gateways starting with version 4 can still connect to Hono
+  using Hono's standard MQTT adapter.
 
 ## 1.12.0
 

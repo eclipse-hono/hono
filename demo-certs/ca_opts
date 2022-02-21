@@ -119,13 +119,6 @@ keyUsage             = keyAgreement,keyEncipherment,digitalSignature
 extendedKeyUsage     = serverAuth, clientAuth
 subjectAltName       = DNS.1:hono-adapter-amqp-vertx,DNS.2:hono-adapter-amqp-vertx.hono,DNS.3:localhost
 
-[ req_ext_kura-adapter ]
-
-subjectKeyIdentifier = hash
-keyUsage             = keyAgreement,keyEncipherment,digitalSignature
-extendedKeyUsage     = serverAuth, clientAuth
-subjectAltName       = DNS.1:hono-adapter-kura,DNS.2:hono-adapter-kura.hono,DNS.3:localhost
-
 [ req_ext_artemis ]
 
 subjectKeyIdentifier = hash

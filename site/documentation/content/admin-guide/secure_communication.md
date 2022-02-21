@@ -161,22 +161,6 @@ The `demo-certs/certs` folder contains the following demo keys and certificates 
 | `mqtt-adapter-cert.pem` | The example certificate asserting the adapter's identity. |
 | `trusted-certs.pem`     | Trusted CA certificates to use for verifying signatures. |
 
-### Kura Adapter
-
-The Kura adapter supports the use of TLS for its connections to the Tenant service, the Device Registration service,
-the Credentials service and the AMQP Messaging Network. The adapter also supports the use of TLS for connections with
-devices. For this purpose, the adapter can be configured with a server certificate and private key.
-Please refer to the [Kura adapter admin guide]({{< relref "kura-adapter-config.md" >}}) for details regarding the
-required configuration steps.
-
-The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the Kura adapter for that purpose.
-
-| File                      | Description                                                      |
-| :------------------------ | :--------------------------------------------------------------- |
-| `kura-adapter-key.pem`  | The example private key for creating signatures. |
-| `kura-adapter-cert.pem` | The example certificate asserting the adapter's identity. |
-| `trusted-certs.pem`     | Trusted CA certificates to use for verifying signatures. |
-
 
 
 ### Client Application
