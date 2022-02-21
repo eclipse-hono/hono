@@ -1102,7 +1102,7 @@
                   <build>
                     <skip>${hono.deviceregistry.mongodb.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${docker.repository}/hono-service-device-registry-mongodb${hono.deviceregistry.image-suffix}:${project.version}</from>
+                    <from>${docker.repository}/hono-service-device-registry-mongodb${hono.image-suffix}:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>
