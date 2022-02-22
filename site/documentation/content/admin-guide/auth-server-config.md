@@ -13,12 +13,12 @@ identities and their authorities from a JSON file from the file system. All data
 are no remote service APIs for managing the identities and their authorities.
 
 The Auth Server is implemented as a Quarkus application. It can be run either directly from the command line or by
-means of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-service-auth-quarkus/) created from it.
+means of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-service-auth-quarkus/) created
+from it.
 
 {{% notice info %}}
-The Auth Server had originally been implemented as a Spring Boot application. That variant has been deprecated with Hono
-1.10.0 and will be completely removed in Hono 2.0.0.
-The [Spring Boot based Docker image](https://hub.docker.com/r/eclipse/hono-service-auth/) will be available until then.
+The Auth Server had originally been implemented as a Spring Boot application. That variant has been removed in Hono
+2.0.0.
 {{% /notice %}}
 
 ## Service Configuration
@@ -75,45 +75,66 @@ The server will fail to start if none of the ports is configured properly.
 
 ### Secure Port Only
 
-The server needs to be configured with a private key, a certificate holding the public key and a trust store in order to open a TLS secured port.
+The server needs to be configured with a private key, a certificate holding the public key and a trust store in order
+to open a TLS secured port.
 
 There are two alternative ways for setting the private key and certificate:
 
-1. Setting the `HONO_AUTH_AMQP_KEYSTORE_PATH` and the `HONO_AUTH_AMQP_KEYSTOREPASSWORD` variables in order to load the key & certificate from a password protected key store, or
-1. setting the `HONO_AUTH_AMQP_KEYPATH` and `HONO_AUTH_AMQPCERTPATH` variables in order to load the key and certificate from two separate PEM files in PKCS8 format.
+1. Setting the `HONO_AUTH_AMQP_KEYSTORE_PATH` and the `HONO_AUTH_AMQP_KEYSTOREPASSWORD` variables in order to load the key &
+   certificate from a password protected key store, or
+1. setting the `HONO_AUTH_AMQP_KEYPATH` and `HONO_AUTH_AMQPCERTPATH` variables in order to load the key and certificate from
+   two separate PEM files in PKCS8 format.
 
-In order to set the trust store, the `HONO_AUTH_AMQP_TRUSTSTOREPATH` variable needs to be set to a key store containing the trusted root CA certificates. The `HONO_AUTH_AMQP_TRUSTSTOREPASSWORD` variable needs to be set if the key store requires a pass phrase for reading its contents.
+In order to set the trust store, the `HONO_AUTH_AMQP_TRUSTSTOREPATH` variable needs to be set to a key store containing the
+trusted root CA certificates. The `HONO_AUTH_AMQP_TRUSTSTOREPASSWORD` variable needs to be set if the key store requires a
+pass phrase for reading its contents.
 
-When starting up, the server will bind a TLS secured socket to the default secure AMQP port 5671. The port number can also be set explicitly using the `HONO_AUTH_AMQP_PORT` variable.
+When starting up, the server will bind a TLS secured socket to the default secure AMQP port 5671. The port number can
+also be set explicitly using the `HONO_AUTH_AMQP_PORT` variable.
 
-The `HONO_AUTH_AMQP_BINDADDRESS` variable can be used to specify the network interface that the port should be exposed on. By default the port is bound to the *loopback device* only, i.e. the port will only be accessible from the local host. Setting this variable to `0.0.0.0` will let the port being bound to **all** network interfaces (be careful not to expose the port unintentionally to the outside world).
+The `HONO_AUTH_AMQP_BINDADDRESS` variable can be used to specify the network interface that the port should be exposed on.
+By default the port is bound to the *loopback device* only, i.e. the port will only be accessible from the local host.
+Setting this variable to `0.0.0.0` will let the port being bound to **all** network interfaces (be careful not to expose
+the port unintentionally to the outside world).
 
 ### Insecure Port Only
 
-The secure port will mostly be required for production scenarios. However, it might be desirable to expose a non-TLS secured port instead, e.g. for testing purposes. In any case, the non-secure port needs to be explicitly enabled either by
+The secure port will mostly be required for production scenarios. However, it might be desirable to expose a non-TLS
+secured port instead, e.g. for testing purposes. In any case, the non-secure port needs to be explicitly enabled either
+by
 
-- explicitly setting `HONO_AUTH_AMQP_INSECUREPORT` to a valid port number, or by
-- implicitly configuring the default AMQP port (5672) by simply setting `HONO_AUTH_AMQP_INSECUREPORTENABLED` to `true`.
+* explicitly setting `HONO_AUTH_AMQP_INSECUREPORT` to a valid port number, or by
+* implicitly configuring the default AMQP port (5672) by simply setting `HONO_AUTH_AMQP_INSECUREPORTENABLED` to `true`.
 
 The server issues a warning on the console if `HONO_AUTH_AMQP_INSECUREPORT` is set to the default secure AMQP port (5671).
 
-The `HONO_AUTH_AMQP_INSECUREPORTBINDADDRESS` variable can be used to specify the network interface that the port should be exposed on. By default the port is bound to the *loopback device* only, i.e. the port will only be accessible from the local host. This variable might be used to e.g. expose the non-TLS secured port on a local interface only, thus providing easy access from within the local network, while still requiring encrypted communication when accessed from the outside over public network infrastructure.
+The `HONO_AUTH_AMQP_INSECUREPORTBINDADDRESS` variable can be used to specify the network interface that the port should be
+exposed on. By default the port is bound to the *loopback device* only, i.e. the port will only be accessible from the
+local host. This variable might be used to e.g. expose the non-TLS secured port on a local interface only, thus
+providing easy access from within the local network, while still requiring encrypted communication when accessed from
+the outside over public network infrastructure.
 
-Setting this variable to `0.0.0.0` will let the port being bound to **all** network interfaces (be careful not to expose the port unintentionally to the outside world).
+Setting this variable to `0.0.0.0` will let the port being bound to **all** network interfaces (be careful not to expose
+the port unintentionally to the outside world).
 
 ### Dual Port
  
-In test setups and some production scenarios Hono server may be configured to open one secure **and** one insecure port at the same time.
+In test setups and some production scenarios Hono server may be configured to open one secure **and** one insecure port
+at the same time.
  
-This is achieved by configuring both ports correctly (see above). The server will fail to start if both ports are configured to use the same port number.
+This is achieved by configuring both ports correctly (see above). The server will fail to start if both ports are
+configured to use the same port number.
 
-Since the secure port may need different visibility in the network setup compared to the secure port, it has its own binding address `HONO_AUTH_AMQP_INSECUREPORTBINDADDRESS`. 
-This can be used to narrow the visibility of the insecure port to a local network e.g., while the secure port may be visible worldwide. 
+Since the secure port may need different visibility in the network setup compared to the secure port, it has its own
+binding address `HONO_AUTH_AMQP_INSECUREPORTBINDADDRESS`. This can be used to narrow the visibility of the insecure port to a
+local network e.g., while the secure port may be visible worldwide.
 
 ### Ephemeral Ports
 
-Both the secure as well as the insecure port numbers may be explicitly set to `0`. The Auth Server will then use arbitrary (unused) port numbers determined by the operating system during startup.
+Both the secure as well as the insecure port numbers may be explicitly set to `0`. The Auth Server will then use
+arbitrary (unused) port numbers determined by the operating system during startup.
 
 ## Metrics Configuration
 
-See [Monitoring & Tracing Admin Guide]({{< ref "/admin-guide/monitoring-tracing-config.md" >}}) for details on how to configure the reporting of metrics.
+See [Monitoring & Tracing Admin Guide]({{< ref "/admin-guide/monitoring-tracing-config.md" >}}) for details on how to
+configure the reporting of metrics.

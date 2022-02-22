@@ -7,19 +7,16 @@ hono:
   auth:
     amqp:
       bindAddress: "0.0.0.0"
-      keyPath: /etc/hono/certs/auth-server-key.pem
-      certPath: /etc/hono/certs/auth-server-cert.pem
+      keyPath: "/opt/hono/config/certs/auth-server-key.pem"
+      certPath: "/opt/hono/config/certs/auth-server-cert.pem"
       nativeTlsRequired: ${hono.auth-server.nativeTlsRequired}
     svc:
-      permissionsPath: "/${hono.auth-server.config-dir}/permissions.json"
+      permissionsPath: "/opt/hono/config/permissions.json"
       signing:
         # extend token expiration to 1h in order to prevent
         # connection loss during test execution
         tokenExpiration: 3600
       supportedSaslMechanisms: "PLAIN"
-  vertx:
-    maxEventLoopExecuteTime: "${max.event-loop.execute-time}"
-    preferNative: true
 
 quarkus:
   log:
@@ -32,13 +29,3 @@ quarkus:
         level: DEBUG
   vertx:
     max-event-loop-execute-time: ${max.event-loop.execute-time}
-
-spring:
-  jmx:
-    enabled: false
-
-management:
-  port: -1
-
-server:
-  port: -1
