@@ -40,12 +40,12 @@
 /service-base-quarkus/                @dejanb @sophokles73
 /service-base-spring/                 @dejanb @sophokles73
 
-/services/                            @dejanb @kaniyan
-/services/base-jdbc/                  @ctron
-/services/command-router/             @calohmn
-/services/device-registry-base/       @kaniyan
-/services/device-registry-jdbc/       @ctron
-/services/device-registry-mongodb/    @kaniyan
+/services/                                  @dejanb @kaniyan
+/services/base-jdbc/                        @ctron
+/services/command-router/                   @calohmn
+/services/device-registry-base/             @kaniyan
+/services/device-registry-jdbc/             @ctron
+/services/device-registry-mongodb-quarkus/  @kaniyan
 
 /site/                                @kaniyan @sophokles73
 /test-utils/                          @calohmn

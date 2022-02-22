@@ -17,10 +17,7 @@ either directly from the command line or by means of starting the corresponding
 [Docker image](https://hub.docker.com/r/eclipse/hono-service-device-registry-mongodb-quarkus/) created from it.
 
 {{% notice info %}}
-The registry had originally been implemented as a Spring Boot application. That variant has been deprecated with Hono
-1.12.0 and will be completely removed in Hono 2.0.0.
-The [Spring Boot based Docker image](https://hub.docker.com/r/eclipse/hono-service-device-registry-mongodb/) will be
-available until then.
+The registry had originally been implemented as a Spring Boot application. That variant has been removed in Hono 2.0.0.
 {{% /notice %}}
 
 ## Service Configuration

@@ -37,12 +37,6 @@
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-kafka-client</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>io.quarkus</groupId>
-          <artifactId>quarkus-ide-launcher</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
   </dependencies>
 
