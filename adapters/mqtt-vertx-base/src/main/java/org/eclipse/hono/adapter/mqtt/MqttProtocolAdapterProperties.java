@@ -22,15 +22,10 @@ import org.eclipse.hono.config.ProtocolAdapterProperties;
 public class MqttProtocolAdapterProperties extends ProtocolAdapterProperties {
 
     /**
-     * The default number of milliseconds to wait for PUBACK.
-     */
-    protected static final int DEFAULT_COMMAND_ACK_TIMEOUT = 100;
-    /**
      * The amount of time (in milliseconds) to wait for a device to acknowledge receiving a command message.
      */
     protected static final long DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT = 1000L; // ms
 
-    private int commandAckTimeout = DEFAULT_COMMAND_ACK_TIMEOUT;
     private long sendMessageToDeviceTimeout = DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT;
 
     /**
@@ -82,22 +77,4 @@ public class MqttProtocolAdapterProperties extends ProtocolAdapterProperties {
 
         this.sendMessageToDeviceTimeout = sendMessageToDeviceTimeout;
     }
-
-    /**
-     * Gets the effective timeout for waiting for acknowledgement in milliseconds for commands published with QoS 1
-     * by taking the {@link #sendMessageToDeviceTimeout} and {@link #commandAckTimeout} properties into account.
-     *
-     * Can be removed when the deprecated {@link #commandAckTimeout} property is removed.
-     *
-     * @return The timeout in milliseconds.
-     */
-    long getEffectiveSendMessageToDeviceTimeout() {
-        if (sendMessageToDeviceTimeout == DEFAULT_SEND_MESSAGE_TO_DEVICE_TIMEOUT
-                && commandAckTimeout != DEFAULT_COMMAND_ACK_TIMEOUT) {
-            return commandAckTimeout;
-        } else {
-            return sendMessageToDeviceTimeout;
-        }
-    }
-
 }

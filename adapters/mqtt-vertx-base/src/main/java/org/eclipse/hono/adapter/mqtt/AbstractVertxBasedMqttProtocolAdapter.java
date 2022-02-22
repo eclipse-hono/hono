@@ -1721,7 +1721,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                             "did not receive PUBACK from device"));
                     reportPublishedCommand(tenantObject, subscription, commandContext, ProcessingOutcome.UNDELIVERABLE);
                 };
-                pendingAcks.add(publishedMsgId, onAckHandler, onAckTimeoutHandler, getConfig().getEffectiveSendMessageToDeviceTimeout());
+                pendingAcks.add(publishedMsgId, onAckHandler, onAckTimeoutHandler, getConfig().getSendMessageToDeviceTimeout());
             } else {
                 reportPublishedCommand(tenantObject, subscription, commandContext, ProcessingOutcome.FORWARDED);
                 commandContext.accept();

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -34,19 +34,6 @@ public interface MqttProtocolAdapterOptions {
      */
     @WithParentName
     ProtocolAdapterOptions adapterOptions();
-
-    /**
-     * Gets the waiting for acknowledgement timeout in milliseconds for commands published with QoS 1.
-     * <p>
-     * This timeout is used by the MQTT adapter for commands published with QoS 1. If there is no acknowledgement
-     * within this time limit, then the command is settled with the <em>released</em> outcome.
-     *
-     * @deprecated Use {@link #sendMessageToDeviceTimeout()} instead.
-     * @return The timeout in milliseconds.
-     */
-    @WithDefault("100")
-    @Deprecated(forRemoval = true)
-    int commandAckTimeout();
 
     /**
      * Gets the waiting for acknowledgement timeout in milliseconds for commands published with QoS 1.
