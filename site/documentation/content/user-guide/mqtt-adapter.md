@@ -479,7 +479,7 @@ Note that the topic in the latter case doesn't contain a request identifier.
 *Gateway* components can receive commands for devices which do not connect to a protocol adapter directly but instead
 are connected to the gateway, e.g. using some low-bandwidth radio based technology like [SigFox](https://www.sigfox.com)
 or [LoRa](https://lora-alliance.org/). Corresponding devices have to be configured so that they can be used with a
-gateway. See [Configuring Gateway Devices]({{< relref "/admin-guide/file-based-device-registry-config#configuring-gateway-devices" >}})
+gateway. See [Connecting via a Device Gateway]({{< relref "/concepts/connecting-devices#connecting-via-a-device-gateway" >}})
 for details.
 
 An authenticated gateway MUST use one of the following topic filters for subscribing to commands:
