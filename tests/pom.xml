@@ -179,8 +179,7 @@
     <hono.mqtt-adapter.java-options>${default.java-options}</hono.mqtt-adapter.java-options>
     <hono.mqtt-adapter.native-image-args></hono.mqtt-adapter.native-image-args>
 
-    <hono.auth-server.image>hono-service-auth</hono.auth-server.image>
-    <hono.auth-server.config-dir>opt/hono/config</hono.auth-server.config-dir>
+    <hono.auth-server.image>hono-service-auth-quarkus</hono.auth-server.image>
     <hono.auth-server.max-mem>205520896</hono.auth-server.max-mem>
     <hono.auth-server.java-options>${default.java-options}</hono.auth-server.java-options>
     <hono.auth-server.native-image-args></hono.auth-server.native-image-args>
@@ -528,7 +527,6 @@
         <hono.coap-adapter.config-dir>etc/hono</hono.coap-adapter.config-dir>
         <hono.http-adapter.config-dir>etc/hono</hono.http-adapter.config-dir>
         <hono.mqtt-adapter.config-dir>etc/hono</hono.mqtt-adapter.config-dir>
-        <hono.auth-server.config-dir>etc/hono</hono.auth-server.config-dir>
         <hono.command-router.config-dir>etc/hono</hono.command-router.config-dir>
         <hono.deviceregistry.mongodb.config-dir>etc/hono</hono.deviceregistry.mongodb.config-dir>
         <hono.deviceregistry.image-suffix></hono.deviceregistry.image-suffix>
@@ -553,6 +551,7 @@
 
         <hono.mqtt-adapter.max-mem>67108864</hono.mqtt-adapter.max-mem>
 
+        <hono.auth-server.image>hono-service-auth-quarkus-native</hono.auth-server.image>
         <hono.auth-server.max-mem>33554432</hono.auth-server.max-mem>
         <hono.auth-server.nativeTlsRequired>false</hono.auth-server.nativeTlsRequired>
         <hono.command-router.max-mem>67108864</hono.command-router.max-mem>
@@ -739,7 +738,7 @@
                   <name>${docker.repository}/hono-service-auth-test:${project.version}</name>
                   <build>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${docker.repository}/${hono.auth-server.image}${hono.image-suffix}:${project.version}</from>
+                    <from>${docker.repository}/${hono.auth-server.image}:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>
@@ -757,14 +756,14 @@
                         <fileSets>
                           <fileSet>
                             <directory>${project.build.directory}/resources/auth</directory>
-                            <outputDirectory>${hono.auth-server.config-dir}</outputDirectory>
+                            <outputDirectory>opt/hono/config</outputDirectory>
                             <includes>
                               <include>*</include>
                             </includes>
                           </fileSet>
                           <fileSet>
                             <directory>${project.build.directory}/certs</directory>
-                            <outputDirectory>etc/hono/certs</outputDirectory>
+                            <outputDirectory>opt/hono/config/certs</outputDirectory>
                             <includes>
                               <include>auth-server-*.pem</include>
                             </includes>
@@ -802,11 +801,8 @@
                     </cmd>
                     <env>
                       <SMALLRYE_CONFIG_LOCATIONS>
-                        /${hono.auth-server.config-dir}/logging-quarkus-${logging.profile}.yml
+                        /opt/hono/config/logging-quarkus-${logging.profile}.yml
                       </SMALLRYE_CONFIG_LOCATIONS>
-                      <LOGGING_CONFIG>file:///${hono.auth-server.config-dir}/logback-spring.xml</LOGGING_CONFIG>
-                      <SPRING_CONFIG_LOCATION>file:///${hono.auth-server.config-dir}/</SPRING_CONFIG_LOCATION>
-                      <SPRING_PROFILES_ACTIVE>authentication-impl,${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${hono.auth-server.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                     </env>

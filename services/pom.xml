@@ -26,7 +26,6 @@
   <packaging>pom</packaging>
 
   <modules>
-    <module>auth</module>
     <module>auth-base</module>
     <module>auth-quarkus</module>
     <module>base-jdbc</module>
