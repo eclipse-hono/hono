@@ -45,7 +45,6 @@
 /services/command-router/             @calohmn
 /services/device-connection/          @calohmn
 /services/device-registry-base/       @kaniyan
-/services/device-registry-file/       @sophokles73
 /services/device-registry-jdbc/       @ctron
 /services/device-registry-mongodb/    @kaniyan
 

@@ -82,7 +82,7 @@ of the device's *via* and *viaGroups* properties. This is useful in cases where 
 
 When sending commands to a device, Hono needs to determine which of the authorized gateways should be used to forward
 the command message to the device. For this purpose, Hono's protocol adapters keep track of the *last known gateway*
-which has acted on behalf of each device by means of the [Device Connection API]({{< relref "/api/device-connection" >}}).
+which has acted on behalf of each device by means of the [Command Router API]({{< relref "/api/command-router" >}}).
 
 
 ### Gateway Groups

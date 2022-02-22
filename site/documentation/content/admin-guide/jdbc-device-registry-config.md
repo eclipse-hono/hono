@@ -104,26 +104,94 @@ options:
 
 ## Port Configuration
 
-The Device Registry supports configuration of both, an AMQP based endpoint and an HTTP based endpoint proving RESTful
-resources for managing registration information and credentials. Both endpoints can be configured to listen for
-connections on:
+The device registry supports configuration of both an AMQP based endpoint exposing the Tenant, Device
+Registration and Credentials APIs as well as an HTTP based endpoint providing resources for managing tenants,
+registration information and credentials as defined by the [Registry Management API]({{< relref "api/management" >}}).
+Both endpoints can be configured to listen for connections on
 
 * a secure port only (default) or
 * an insecure port only or
 * both a secure and an insecure port (dual port configuration)
 
-See [Port Configuration]({{< relref "file-based-device-registry-config#port-configuration" >}}) for
-more information.
+The registry will fail to start if none of the ports is configured properly.
 
-{{% notice tip %}}
-The environment variables to use for configuring the REST endpoint are the same as the ones for the AMQP endpoint,
-substituting `_AMQP_` with `_HTTP_`.
-{{% /notice %}}
+The following sections apply to configuring both the AMQP and the HTTP endpoint. The environment variables to use for
+configuring the HTTP endpoint are the same as the ones for the AMQP endpoint, substituting `_AMQP_` with `_HTTP_`,
+e.g. `HONO_REGISTRY_HTTP_KEYPATH` instead of `HONO_REGISTRY_AMQP_KEYPATH`.
+
+### Secure Port Only
+
+The server needs to be configured with a private key and certificate in order to open a TLS secured port.
+
+There are two alternative ways for doing so:
+
+1. Setting the `HONO_REGISTRY_AMQP_KEYSTOREPATH` and the `HONO_REGISTRY_AMQP_KEYSTOREPASSWORD` variables in order to load the
+key & certificate from a password protected key store, or
+1. setting the `HONO_REGISTRY_AMQP_KEYPATH` and `HONO_REGISTRY_AMQP_CERTPATH` variables in order to load the key and certificate
+   from two separate PEM files in PKCS8 format.
+
+When starting up, the server will bind a TLS secured socket to the default secure port (`5671` for AMQP and `8443` for HTTP).
+The port number can also be set explicitly using the `HONO_REGISTRY_AMQP_PORT` variable.
+
+The `HONO_REGISTRY_AMQP_BINDADDRESS` variable can be used to specify the network interface that the port should be exposed on.
+By default, the port is bound to the *loopback device* only, i.e. the port will only be accessible from the local host.
+Setting this variable to `0.0.0.0` will let the port being bound to **all** network interfaces (be careful not to expose
+the port unintentionally to the outside world).
+
+### Insecure Port Only
+
+The secure port will mostly be required for production scenarios. However, it might be desirable to expose a non-TLS
+secured port instead, e.g. for testing purposes. In any case, the non-secure port needs to be explicitly enabled either
+by
+
+* explicitly setting `HONO_REGISTRY_AMQP_INSECUREPORT` to a valid port number, or
+* implicitly configuring the default port (`5672` for AMQP and `8080` for HTTP) to be used by setting
+  `HONO_REGISTRY_AMQP_INSECUREPORTENABLED` to `true`.
+
+The server issues a warning on the console if one of the insecure ports is set to the corresponding default secure port.
+
+The `HONO_REGISTRY_AMQP_INSECUREPORTBINDADDRESS` variable can be used to specify the network interface that the port should be
+exposed on. By default, the port is bound to the *loopback device* only, i.e. the port will only be accessible from the
+local host. This variable might be used to e.g. expose the non-TLS secured port on a local interface only, thus
+providing easy access from within the local network, while still requiring encrypted communication when accessed from
+the outside over public network infrastructure.
+
+Setting this variable to `0.0.0.0` will let the port being bound to **all** network interfaces (be careful not to expose
+the port unintentionally to the outside world).
+
+### Dual Port
+ 
+In test setups and some production scenarios Hono server may be configured to open one secure **and** one insecure port
+at the same time.
+ 
+This is achieved by configuring both ports correctly (see above). The server will fail to start if both ports are
+configured to use the same port number.
+
+Since the secure port may need different visibility in the network setup compared to the secure port, it has its own
+binding address `HONO_REGISTRY_AMQP_INSECUREPORTBINDADDRESS`. This can be used to narrow the visibility of the insecure port
+to a local network e.g., while the secure port may be visible worldwide. 
+
+### Ephemeral Ports
+
+Both the secure as well as the insecure port numbers may be explicitly set to `0`. The registry will then use
+arbitrary (unused) port numbers determined by the operating system during startup.
 
 ## Authentication Service Connection Configuration
 
-See [Authentication Service Connection Configuration]({{< relref "file-based-device-registry-config#authentication-service-connection-configuration" >}})
-for more information.
+The Device Registry requires a connection to an implementation of Hono's Authentication API in order to authenticate
+and authorize client requests.
+
+The connection is configured according to the [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
+where the `${PREFIX}` is set to `HONO_AUTH`. Since Hono's Authentication Service does not allow caching of the responses,
+the cache properties can be ignored.
+
+In addition to the standard client configuration properties, the following properties may be set for the connection:
+
+| OS Environment Variable<br>Java System Property                 | Mandatory | Default        | Description          |
+| :-------------------------------------------------------------- | :-------: | :------------- | :--------------------|
+| `HONO_AUTH_VALIDATION_CERTPATH`<br>`hono.auth.validation.certPath`        | no        | -              | The absolute path to the PEM file containing the an X.509 certificate that the service should use for validating tokens issued by the Authentication service. Alternatively, a symmetric key can be used for validating tokens by setting the `HONO_AUTH_VALIDATION_SHAREDSECRET` variable. If none of these variables is set, startup of the service fails. |
+| `HONO_AUTH_VALIDATION_SHAREDSECRET`<br>`hono.auth.validation.sharedSecret` | no        | -              | A string to derive a symmetric key from which is used for validating tokens issued by the Authentication service. The key is derived from the string by using the bytes of the String's UTF8 encoding. When setting the validation key using this variable, the Authentication service **must** be configured with the same key. Alternatively, an X.509 certificate can be used for validating tokens by setting the `HONO_AUTH_VALIDATION_CERTPATH` variable. If none of these variables is set, startup of the service fails. |
+| `HONO_AUTH_SUPPORTEDSASLMECHANISMS`<br>`hono.auth.supportedSaslMechanisms` | no        | `EXTERNAL, PLAIN` | A (comma separated) list of the SASL mechanisms that the device registry should offer to clients for authentication. This option may be set to specify only one of `EXTERNAL` or `PLAIN`, or to use a different order. |
 
 ## Metrics Configuration
 

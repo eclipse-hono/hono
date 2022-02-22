@@ -1,7 +1,7 @@
 +++
 title = "File Based Device Registry"
 hidden = true
-weight = 210
+weight = 0
 +++
 
 The Device Registry component provides exemplary implementations of Hono's [Tenant API]({{< relref "/api/tenant" >}}),
@@ -12,7 +12,7 @@ As such it exposes AMQP 1.0 based endpoints for retrieving the relevant informat
 system.
 
 {{% notice info %}}
-The file based device registry has been deprecated and will be removed in Hono 2.0.0.
+The file based device registry has been removed in Hono 2.0.0.
 Please use the [Mongo DB]({{< relref "mongodb-device-registry-config" >}}) or
 [JDBC based registry]({{< relref "jdbc-device-registry-config" >}}) implementations instead.
 {{% /notice %}}

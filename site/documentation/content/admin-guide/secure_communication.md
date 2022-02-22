@@ -78,21 +78,21 @@ The `demo-certs/certs` folder includes the following demo keys and certificates 
 | `qdrouter-cert.pem`   | The example certificate asserting the server's identity. |
 | `trusted-certs.pem`   | Trusted CA certificates to use for verifying signatures. |
 
-### File Based Device Registry
+### JDBC Based Device Registry
 
-The file based Device Registry supports the use of TLS for connections to protocol adapters and the Auth Server.
-Please refer to the [file based Device Registry admin guide]({{< relref "file-based-device-registry-config.md" >}}) for
+The JDBC based Device Registry supports the use of TLS for connections to protocol adapters and the Auth Server.
+Please refer to the [JDBC based Device Registry admin guide]({{< relref "jdbc-device-registry-config.md" >}}) for
 details regarding the required configuration steps.
 
 The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the file based Device
 Registry for that purpose.
 
-| File                     | Description                                                      |
-| :----------------------- | :--------------------------------------------------------------- |
-| `auth-server-cert.pem`     | The certificate of the Auth Server, used to verify the signatures of tokens issued by the Auth Server. |
+| File                   | Description                                                      |
+| :--------------------- | :--------------------------------------------------------------- |
+| `auth-server-cert.pem`    | The certificate of the Auth Server, used to verify the signatures of tokens issued by the Auth Server. |
 | `device-registry-key.pem`  | The example private key for creating signatures. |
 | `device-registry-cert.pem` | The example certificate asserting the server's identity. |
-| `trusted-certs.pem`        | Trusted CA certificates to use for verifying signatures. |
+| `trusted-certs.pem`       | Trusted CA certificates to use for verifying signatures. |
 
 
 ### MongoDB Based Device Registry
