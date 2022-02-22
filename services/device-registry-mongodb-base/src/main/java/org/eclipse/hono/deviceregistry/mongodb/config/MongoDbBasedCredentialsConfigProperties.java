@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,15 +18,10 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 /**
  * Configuration properties for Hono's credentials service and management APIs.
  */
 public final class MongoDbBasedCredentialsConfigProperties extends AbstractMongoDbBasedRegistryConfigProperties {
-
-    private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedCredentialsConfigProperties.class);
 
     /**
      * The name of the mongodb collection where devices information are stored.
@@ -77,20 +72,6 @@ public final class MongoDbBasedCredentialsConfigProperties extends AbstractMongo
     }
 
     /**
-     * Gets the maximum cost factor to use for bcrypt
-     * password hashes.
-     * <p>
-     * The default value of this property is 10.
-     *
-     * @return The maximum cost factor.
-     * @deprecated Use {@link #getMaxBcryptCostFactor()} instead.
-     */
-    @Deprecated(forRemoval = true)
-    public int getMaxBcryptIterations() {
-        return getMaxBcryptCostFactor();
-    }
-
-    /**
      * Sets the maximum cost factor to use for bcrypt
      * password hashes.
      * <p>
@@ -106,23 +87,6 @@ public final class MongoDbBasedCredentialsConfigProperties extends AbstractMongo
             maxBcryptCostFactor = costFactor;
         }
     }
-
-    /**
-     * Sets the maximum cost factor to use for bcrypt
-     * password hashes.
-     * <p>
-     * The default value of this property is 10.
-     *
-     * @param costFactor The maximum cost factor.
-     * @throws IllegalArgumentException if iterations is &lt; 4 or &gt; 31.
-     * @deprecated Use {@link #setMaxBcryptCostFactor(int)} instead.
-     */
-    @Deprecated(forRemoval = true)
-    public void setMaxBcryptIterations(final int costFactor) {
-        LOG.warn("the maxBcryptIterations property is deprecated, please update your configuration to use maxBcryptCostFactor instead");
-        setMaxBcryptCostFactor(costFactor);
-    }
-
 
     /**
      * Gets the list of supported hashing algorithms for pre-hashed passwords.
