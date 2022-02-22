@@ -113,8 +113,8 @@
     <hono.deviceregistry.type>mongodb</hono.deviceregistry.type>
 
     <hono.deviceregistry.mongodb.disabled>false</hono.deviceregistry.mongodb.disabled>
+    <hono.deviceregistry.mongodb.image>hono-service-device-registry-mongodb-quarkus</hono.deviceregistry.mongodb.image>
     <hono.deviceregistry.mongodb.max-mem>400000000</hono.deviceregistry.mongodb.max-mem>
-    <hono.deviceregistry.mongodb.config-dir>opt/hono/config</hono.deviceregistry.mongodb.config-dir>
     <hono.deviceregistry.mongodb.java-options>${default.java-options}</hono.deviceregistry.mongodb.java-options>
     <hono.deviceregistry.mongodb.native-image-args></hono.deviceregistry.mongodb.native-image-args>
 
@@ -126,8 +126,6 @@
     </hono.deviceregistry.jdbc.java-options>
     <hono.deviceregistry.jdbc.resources.folder></hono.deviceregistry.jdbc.resources.folder>
 
-    <!-- use Quarkus JVM images by default -->
-    <hono.deviceregistry.image-suffix>-quarkus</hono.deviceregistry.image-suffix>
     <!--  accept requests with a body size of up to 2000 bytes -->
     <hono.deviceregistry.maxPayloadSize>2000</hono.deviceregistry.maxPayloadSize>
     <!-- the credentials required for accessing the (Mongo DB) registry's HTTP endpoint -->
@@ -528,8 +526,6 @@
         <hono.http-adapter.config-dir>etc/hono</hono.http-adapter.config-dir>
         <hono.mqtt-adapter.config-dir>etc/hono</hono.mqtt-adapter.config-dir>
         <hono.command-router.config-dir>etc/hono</hono.command-router.config-dir>
-        <hono.deviceregistry.mongodb.config-dir>etc/hono</hono.deviceregistry.mongodb.config-dir>
-        <hono.deviceregistry.image-suffix></hono.deviceregistry.image-suffix>
       </properties>
     </profile>
     <profile>
@@ -555,8 +551,8 @@
         <hono.auth-server.max-mem>33554432</hono.auth-server.max-mem>
         <hono.auth-server.nativeTlsRequired>false</hono.auth-server.nativeTlsRequired>
         <hono.command-router.max-mem>67108864</hono.command-router.max-mem>
+        <hono.deviceregistry.mongodb.image>hono-service-device-registry-mongodb-quarkus-native</hono.deviceregistry.mongodb.image>
         <hono.deviceregistry.mongodb.max-mem>150000000</hono.deviceregistry.mongodb.max-mem>
-        <hono.deviceregistry.image-suffix>-quarkus</hono.deviceregistry.image-suffix>
       </properties>
     </profile>
     <profile>
@@ -1079,7 +1075,7 @@
                   <build>
                     <skip>${hono.deviceregistry.mongodb.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${docker.repository}/hono-service-device-registry-mongodb${hono.image-suffix}:${project.version}</from>
+                    <from>${docker.repository}/${hono.deviceregistry.mongodb.image}:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>
@@ -1088,14 +1084,14 @@
                         <fileSets>
                           <fileSet>
                             <directory>${project.build.directory}/resources/deviceregistry-mongodb</directory>
-                            <outputDirectory>${hono.deviceregistry.mongodb.config-dir}</outputDirectory>
+                            <outputDirectory>opt/hono/config</outputDirectory>
                             <includes>
                               <include>*</include>
                             </includes>
                           </fileSet>
                           <fileSet>
                             <directory>${project.build.directory}/certs</directory>
-                            <outputDirectory>${hono.deviceregistry.mongodb.config-dir}/certs</outputDirectory>
+                            <outputDirectory>opt/hono/config/certs</outputDirectory>
                             <includes>
                               <include>device-registry-*.pem</include>
                               <include>auth-server-cert.pem</include>
@@ -1128,11 +1124,8 @@
                     <memory>${hono.deviceregistry.mongodb.max-mem}</memory>
                     <env>
                       <SMALLRYE_CONFIG_LOCATIONS>
-                        /${hono.deviceregistry.mongodb.config-dir}/logging-quarkus-${logging.profile}.yml
+                        /opt/hono/config/logging-quarkus-${logging.profile}.yml
                       </SMALLRYE_CONFIG_LOCATIONS>
-                      <LOGGING_CONFIG>file:///${hono.deviceregistry.mongodb.config-dir}/logback-spring.xml</LOGGING_CONFIG>
-                      <SPRING_CONFIG_LOCATION>file:///${hono.deviceregistry.mongodb.config-dir}/</SPRING_CONFIG_LOCATION>
-                      <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${hono.deviceregistry.mongodb.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <JAEGER_SERVICE_NAME>${hono.registration.host}</JAEGER_SERVICE_NAME>

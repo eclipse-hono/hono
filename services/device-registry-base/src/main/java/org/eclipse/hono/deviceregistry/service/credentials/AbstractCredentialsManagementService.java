@@ -36,7 +36,6 @@ import org.eclipse.hono.service.management.credentials.CredentialsManagementServ
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.util.Futures;
 import org.eclipse.hono.util.Strings;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
@@ -87,7 +86,6 @@ public abstract class AbstractCredentialsManagementService implements Credential
      * @param tenantInformationService The tenant information service.
      * @throws NullPointerException if service is {@code null};
      */
-    @Autowired(required = false)
     public void setTenantInformationService(final TenantInformationService tenantInformationService) {
         this.tenantInformationService = Objects.requireNonNull(tenantInformationService);
     }

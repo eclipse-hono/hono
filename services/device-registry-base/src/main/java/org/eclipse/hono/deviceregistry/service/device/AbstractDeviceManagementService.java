@@ -40,7 +40,6 @@ import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.device.DeviceWithId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Span;
 import io.opentracing.log.Fields;
@@ -77,7 +76,6 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
      *
      * @param tenantInformationService The tenant information service.
      */
-    @Autowired(required = false)
     public void setTenantInformationService(final TenantInformationService tenantInformationService) {
         this.tenantInformationService = Objects.requireNonNull(tenantInformationService);
     }

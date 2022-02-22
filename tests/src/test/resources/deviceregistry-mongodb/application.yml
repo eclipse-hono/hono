@@ -9,9 +9,9 @@ hono:
     host: "${hono.amqp-network.host}"
     port: 5673
     amqpHostname: hono-internal
-    keyPath: "/${hono.deviceregistry.mongodb.config-dir}/certs/device-registry-key.pem"
-    certPath: "/${hono.deviceregistry.mongodb.config-dir}/certs/device-registry-cert.pem"
-    trustStorePath: "/${hono.deviceregistry.mongodb.config-dir}/certs/trusted-certs.pem"
+    keyPath: "/opt/hono/config/certs/device-registry-key.pem"
+    certPath: "/opt/hono/config/certs/device-registry-cert.pem"
+    trustStorePath: "/opt/hono/config/certs/trusted-certs.pem"
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
@@ -19,9 +19,9 @@ hono:
     host: ${hono.auth.host}
     port: 5671
     name: device-registry
-    trustStorePath: "/${hono.deviceregistry.mongodb.config-dir}/certs/trusted-certs.pem"
+    trustStorePath: "/opt/hono/config/certs/trusted-certs.pem"
     validation:
-      certPath: "/${hono.deviceregistry.mongodb.config-dir}/certs/auth-server-cert.pem"
+      certPath: "/opt/hono/config/certs/auth-server-cert.pem"
   registry:
     amqp:
       insecurePortEnabled: true
@@ -40,7 +40,7 @@ hono:
     svc:
   credentials:
     svc:
-      encryptionKeyFile: "/${hono.deviceregistry.mongodb.config-dir}/encryptionKeys.yml"
+      encryptionKeyFile: "/opt/hono/config/encryptionKeys.yml"
       maxBcryptCostFactor: ${max.bcrypt.costFactor}
   tenant:
     svc:
@@ -51,9 +51,6 @@ hono:
 #    dbName: ${hono.mongodb.database.name}
 #    username: ${hono.mongodb.username}
 #    password: ${hono.mongodb.password}
-  vertx:
-    maxEventLoopExecuteTime: ${max.event-loop.execute-time}
-    preferNative: true
   kafka:
     commonClientConfig:
       bootstrap.servers: ${hono.kafka.bootstrap.servers}
@@ -73,13 +70,3 @@ quarkus:
         level: DEBUG
   vertx:
     max-event-loop-execute-time: ${max.event-loop.execute-time}
-
-spring:
-  jmx:
-    enabled: false
-
-management:
-  port: -1
-
-server:
-  port: -1
