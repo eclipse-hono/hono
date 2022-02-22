@@ -2,6 +2,7 @@
 title = "Device Registry"
 weight = 205
 aliases = [
+  "/user-guide/file-based-device-registry/",
   "/user-guide/jdbc-based-device-registry/",
   "/user-guide/mongodb-based-device-registry/"
 ]

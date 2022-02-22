@@ -1,6 +1,7 @@
 +++
 title = "File Based Device Registry Configuration"
-weight = 315
+hidden = true # does not show up in the menu, but shows up in the version selector and can be accessed from links
+weight = 0
 +++
 
 The File based Device Registry component provides an exemplary implementation of Eclipse Hono&trade;'s
@@ -23,7 +24,7 @@ by means of starting the corresponding [Docker image](https://hub.docker.com/r/e
 created from it.
 
 {{% notice info %}}
-The file based device registry has been deprecated and will be removed in a future version of Hono.
+The file based device registry has been removed in Hono 2.0.0.
 Please use the [Mongo DB]({{< relref "mongodb-device-registry-config" >}}) or
 [JDBC based registry]({{< relref "jdbc-device-registry-config" >}}) implementations instead. The JDBC based registry
 can be configured to use an H2 database in either *embedded* or *in-memory* mode. The former can be used to persist

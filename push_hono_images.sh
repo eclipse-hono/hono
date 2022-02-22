@@ -30,7 +30,6 @@ IMAGES="hono-adapter-amqp-vertx \
         hono-service-command-router \
         hono-service-command-router-quarkus \
         hono-service-device-connection \
-        hono-service-device-registry-file \
         hono-service-device-registry-jdbc \
         hono-service-device-registry-mongodb \
         hono-service-device-registry-mongodb-quarkus"

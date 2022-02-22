@@ -3,9 +3,9 @@ title = "Helm based Deployment"
 weight = 471
 +++
 
-Eclipse Hono&trade;'s components are provided as container images which can be run on arbitrary container orchestration platforms.
-This page describes the steps necessary to deploy Hono to a [Kubernetes](https://kubernetes.io) cluster using the
-[Helm package manager](https://helm.sh).
+Eclipse Hono&trade;'s components are provided as container images which can be run on arbitrary container orchestration
+platforms. This page describes the steps necessary to deploy Hono to a [Kubernetes](https://kubernetes.io) cluster
+using the [Helm package manager](https://helm.sh).
 <!--more-->
 
 ## Installing Hono
@@ -26,8 +26,8 @@ details regarding the setup and configuration of a private container registry.
 
 ### Deploying via a private Registry
 
-The first step is getting the source code of Hono. Please refer to [Building from Source]({{< relref "building_hono.md" >}}) for details.
-Once the source code has been retrieved, the build process can be started using the following command:
+The first step is getting the source code of Hono. Please refer to [Building from Source]({{< relref "building_hono.md" >}})
+for details. Once the source code has been retrieved, the build process can be started using the following command:
 
 ~~~sh
 # in base directory of Hono working tree:
@@ -52,18 +52,18 @@ The image names that Hono should use for starting up containers can be configure
 
 ```yaml
 deviceRegistryExample:
-  imageName: "my.registry.io/eclipse/hono-service-device-registry-file:1.0.3-CUSTOM"
+  imageName: "my.registry.io/eclipse/hono-service-device-registry-mongodb-quarkus:1.12.0-CUSTOM"
 authServer:
-  imageName: "my.registry.io/eclipse/hono-service-auth:1.0.3-CUSTOM"
-deviceConnectionService:
-  imageName: "my.registry.io/eclipse/hono-service-device-connection:1.0.3-CUSTOM"
+  imageName: "my.registry.io/eclipse/hono-service-auth-quarkus:1.12.0-CUSTOM"
+commandRouterService:
+  imageName: "my.registry.io/eclipse/hono-service-command-router-quarkus:1.12.0-CUSTOM"
 adapters:
   amqp:
-    imageName: "my.registry.io/eclipse/hono-adapter-amqp-vertx:1.0.3-CUSTOM"
+    imageName: "my.registry.io/eclipse/hono-adapter-amqp-vertx-quarkus:1.12.0-CUSTOM"
   mqtt:
-    imageName: "my.registry.io/eclipse/hono-adapter-mqtt-vertx:1.0.3-CUSTOM"
+    imageName: "my.registry.io/eclipse/hono-adapter-mqtt-vertx-quarkus:1.12.0-CUSTOM"
   http:
-    imageName: "my.registry.io/eclipse/hono-adapter-http-vertx:1.0.3-CUSTOM"
+    imageName: "my.registry.io/eclipse/hono-adapter-http-vertx-quarkus:1.12.0-CUSTOM"
 ```
 
 Assuming that the YAML file is called `imageNames.yaml`, installation can then be done using:
@@ -108,24 +108,26 @@ helm install --dependency-update -n hono --set honoImagesTag=$HONO_VERSION eclip
 
 ### Using Jaeger Tracing
 
-Hono's components are instrumented using OpenTracing to allow tracking of the distributed processing of messages flowing through the system.
-The Hono chart can be configured to report tracing information to the [Jaeger tracing system](https://www.jaegertracing.io/). The *Spans* reported
-by the components can then be viewed in a web browser.
+Hono's components are instrumented using OpenTracing to allow tracking of the distributed processing of messages
+flowing through the system. The Hono chart can be configured to report tracing information to the
+[Jaeger tracing system](https://www.jaegertracing.io/). The *Spans* reported by the components can then be viewed in a
+web browser.
 
-In order for Hono's components to use the Jaeger client for reporting tracing information, the container images need to be built
-with the `jaeger` Maven profile. Please refer to [Monitoring & Tracing]({{< relref "/admin-guide/monitoring-tracing-config#configuring-usage-of-jaeger-tracing-included-in-docker-images" >}})
-for details.
-The newly built images also need to be made available to the target Kubernetes cluster as described in the two previous sections.
+In order for Hono's components to use the Jaeger client for reporting tracing information, the container images need
+to be built with the `jaeger` Maven profile. Please refer to
+[Monitoring & Tracing]({{< relref "/admin-guide/monitoring-tracing-config#configuring-usage-of-jaeger-tracing-included-in-docker-images" >}})
+for details. The newly built images also need to be made available to the target Kubernetes cluster as described in the
+two previous sections.
 
-The chart can be configured to deploy and use an example Jaeger back end by means of setting the *jaegerBackendExample.enabled* property
-to `true` when running Helm:
+The chart can be configured to deploy and use an example Jaeger back end by means of setting the
+*jaegerBackendExample.enabled* property to `true` when running Helm:
 
 ~~~sh
 helm install --dependency-update -n hono --set jaegerBackendExample.enabled=true eclipse-hono eclipse-iot/hono
 ~~~
 
-This will create a Jaeger back end instance suitable for testing purposes and will configure all deployed Hono components to use the
-Jaeger back end.
+This will create a Jaeger back end instance suitable for testing purposes and will configure all deployed Hono
+components to use the Jaeger back end.
 
 The following command can then be used to return the IP address with which the Jaeger UI can be accessed in a
 browser (ensure `minikube tunnel` is running when using minikube):
@@ -195,7 +197,9 @@ k8s_namespace=honons
 kubectl create namespace $k8s_namespace
 ```
 
-Finally install Hono. Leveraging the _managed-premium-retain_ storage in combination with _deviceRegistry.resetFiles=false_ parameter is optional but ensures that Device registry storage will retain future update deployments.
+Finally install Hono. Leveraging the _managed-premium-retain_ storage in combination with
+_deviceRegistry.resetFiles=false_ parameter is optional but ensures that Device registry storage will retain future
+update deployments.
 
 ```bash
 # in Hono working tree directory: hono/deploy
@@ -232,7 +236,8 @@ Have fun with Hono on Microsoft Azure!
 
 Next steps:
 
-You can follow the steps as described in the [Getting Started]({{% homelink "getting-started/" %}}) guide with the following differences:
+You can follow the steps as described in the [Getting Started]({{% homelink "getting-started/" %}}) guide with the
+following differences:
 
 Compared to a plain k8s deployment Azure provides us DNS names with static IPs for the Hono endpoints. To retrieve them:
 
@@ -244,7 +249,8 @@ REGISTRY_IP=`az group deployment show --name HonoBasicInfrastructure --resource-
 AMQP_NETWORK_IP=`az group deployment show --name HonoBasicInfrastructure --resource-group $resourcegroup_name --query properties.outputs.networkPublicIPFQDN.value -o tsv`
 ```
 
-As Azure Service Bus does not support auto creation of queues you have to create a queue per tenant (ID), e.g. after you have created your tenant run:
+As Azure Service Bus does not support auto creation of queues you have to create a queue per tenant (ID), e.g. after
+you have created your tenant run:
 
 ```bash
 az servicebus queue create --resource-group $resourcegroup_name \
