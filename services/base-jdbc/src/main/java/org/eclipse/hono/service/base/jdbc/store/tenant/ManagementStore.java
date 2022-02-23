@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -41,7 +41,7 @@ import io.vertx.ext.sql.SQLOperations;
 import io.vertx.ext.sql.UpdateResult;
 
 /**
- * A data store for device connection information.
+ * A data store for tenant management information.
  */
 public class ManagementStore extends AbstractTenantStore {
 
@@ -118,7 +118,7 @@ public class ManagementStore extends AbstractTenantStore {
     }
 
     /**
-     * Create a device statement configuration for the device connection store.
+     * Create a device statement configuration for the tenant store.
      *
      * @param jdbcUrl The JDBC URL for detecting the database dialect.
      * @param tenantTableName The table name to use for tenants.

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -286,15 +286,13 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                     cmdReceiver.flow(1);
                     commandsReceived.flag();
                 }, payload -> {
-                    // let half the commands be rerouted via the AMQP network (relevant when using the device connection service instead of the command router)
-                    final boolean forceCommandRerouting = counter.incrementAndGet() > COMMANDS_TO_SEND / 2;
+                    counter.incrementAndGet();
                     return helper.sendOneWayCommand(
                             tenantId,
                             commandTargetDeviceId,
                             "setValue",
                             "text/plain",
                             payload,
-                            IntegrationTestSupport.newCommandMessageProperties(forceCommandRerouting),
                             helper.getSendCommandTimeout(counter.get() == 1));
                 }, COMMANDS_TO_SEND);
     }
@@ -425,15 +423,13 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 endpointConfig,
                 (cmdReceiver, cmdResponseSender) -> createCommandConsumer(ctx, cmdReceiver, cmdResponseSender),
                 payload -> {
-                    // let half the commands be rerouted via the AMQP network (relevant when using the device connection service instead of the command router)
-                    final boolean forceCommandRerouting = counter.incrementAndGet() > COMMANDS_TO_SEND / 2;
+                    counter.incrementAndGet();
                     return helper.sendCommand(
                             tenantId,
                             commandTargetDeviceId,
                             "setValue",
                             "text/plain",
                             payload,
-                            IntegrationTestSupport.newCommandMessageProperties(forceCommandRerouting),
                             helper.getSendCommandTimeout(counter.get() == 1))
                         .map(response -> {
                             ctx.verify(() -> {
@@ -772,7 +768,6 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 firstCommandSubject,
                 "text/plain",
                 Buffer.buffer("cmd"),
-                null,
                 helper.getSendCommandTimeout(true))
             // first command shall succeed because there's one initial credit
             .onFailure(ctx::failNow)
@@ -787,7 +782,6 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                     "secondCommandSubject",
                     "text/plain",
                     Buffer.buffer("cmd"),
-                    null,
                     helper.getSendCommandTimeout(false)))
             // sending of second command is supposed to fail due to no credit
             .onComplete(ctx.failing(t -> {
@@ -854,7 +848,6 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 "setValue",
                 "text/plain",
                 Buffer.buffer("cmd"),
-                null,
                 helper.getSendCommandTimeout(true))
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {

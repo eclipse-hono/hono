@@ -153,9 +153,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Sets the client to use for accessing the Command Router service.
-     * <p>
-     * Either this client or the Device Connection client needs to be set for
-     * the adapter to work properly.
      *
      * @param client The client.
      * @throws NullPointerException if the client is {@code null}.

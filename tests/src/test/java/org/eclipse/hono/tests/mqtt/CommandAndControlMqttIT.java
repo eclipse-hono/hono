@@ -169,15 +169,13 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             });
             commandsReceived.flag();
         }, payload -> {
-            // let half the commands be rerouted via the AMQP network (relevant when using the device connection service instead of the command router)
-            final boolean forceCommandRerouting = counter.incrementAndGet() > COMMANDS_TO_SEND / 2;
+            counter.incrementAndGet();
             return helper.sendOneWayCommand(
                     tenantId,
                     commandTargetDeviceId,
                     "setValue",
                     "text/plain",
                     payload,
-                    IntegrationTestSupport.newCommandMessageProperties(forceCommandRerouting),
                     helper.getSendCommandTimeout(counter.get() == 1));
         }, endpointConfig, COMMANDS_TO_SEND, MqttQoS.AT_MOST_ONCE);
     }
@@ -246,15 +244,13 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                     false);
         }, payload -> {
             final String contentType = payload != null ? "text/plain" : null;
-            // let half the commands be rerouted via the AMQP network (relevant when using the device connection service instead of the command router)
-            final boolean forceCommandRerouting = counter.incrementAndGet() > COMMANDS_TO_SEND / 2;
+            counter.incrementAndGet();
             return helper.sendCommand(
                     tenantId,
                     commandTargetDeviceId,
                     "setValue",
                     contentType,
                     payload,
-                    IntegrationTestSupport.newCommandMessageProperties(forceCommandRerouting),
                     helper.getSendCommandTimeout(counter.get() == 1))
                     .map(response -> {
                         ctx.verify(() -> {
@@ -568,11 +564,8 @@ public class CommandAndControlMqttIT extends MqttTestBase {
             receivedMessagesCounter.incrementAndGet();
         };
         final Function<Buffer, Future<Void>> commandSender = payload -> {
-            // let half the commands be rerouted via the AMQP network (relevant when using the device connection service instead of the command router)
-            final boolean forceCommandRerouting = counter.incrementAndGet() > COMMANDS_TO_SEND / 2;
+            counter.incrementAndGet();
             return helper.sendCommand(tenantId, commandTargetDeviceId, "setValue", "text/plain", payload,
-                    // set "forceCommandRerouting" message property so that half the command are rerouted via the AMQP network
-                    IntegrationTestSupport.newCommandMessageProperties(forceCommandRerouting),
                     helper.getSendCommandTimeout(counter.get() == 1))
                 .mapEmpty();
         };

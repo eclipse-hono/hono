@@ -43,7 +43,6 @@
     -->
     <hono.amqp-network.host>hono-dispatch-router</hono.amqp-network.host>
     <hono.amqp-broker.host>hono-artemis</hono.amqp-broker.host>
-    <hono.device-connection.host>hono-service-device-connection</hono.device-connection.host>
     <hono.commandrouter.host>hono-service-command-router</hono.commandrouter.host>
     <hono.registration.host>hono-service-device-registry</hono.registration.host>
     <hono.auth.host>hono-service-auth</hono.auth.host>
@@ -80,28 +79,19 @@
     <default.java-options>
       -XX:MinRAMPercentage=80
       -XX:MaxRAMPercentage=90
-      -DenableForcedCommandRerouting=true
     </default.java-options>
 
     <hono.image-suffix>-quarkus</hono.image-suffix>
 
     <!--
-     Properties defining whether the Device Connection service (now deprecated) or the Command Router service
-     shall be used for Command & Control. The default here lets the Command Router service be used.
-     See the 'device-connection-service' maven profile below for the Device Connection service values.
+     Command Router related properties.
      -->
-    <hono.command-related-service.configname>commandRouter</hono.command-related-service.configname>
-    <hono.command-related-service.host>${hono.commandrouter.host}</hono.command-related-service.host>
-
     <hono.command-router.config-dir>opt/hono/config</hono.command-router.config-dir>
     <hono.command-router.config-src>clustered-cache</hono.command-router.config-src>
-    <hono.command-router.disabled>false</hono.command-router.disabled>
     <hono.command-router.image>hono-service-command-router</hono.command-router.image>
     <hono.command-router.max-mem>300000000</hono.command-router.max-mem>
     <hono.command-router.java-options>${default.java-options}</hono.command-router.java-options>
     <hono.command-router.native-image-args></hono.command-router.native-image-args>
-
-    <hono.device-connection.disabled>true</hono.device-connection.disabled>
 
     <hono.infinispan.disabled>false</hono.infinispan.disabled>
     <hono.infinispan.host>hono-data-grid</hono.infinispan.host>
@@ -382,22 +372,6 @@
         <max.event-loop.execute-time>20000</max.event-loop.execute-time>
         <request.timeout>3000</request.timeout>
         <service.startup.timeout>240000</service.startup.timeout>
-      </properties>
-    </profile>
-    <profile>
-      <id>device-connection-service</id>
-      <activation>
-        <property>
-          <name>hono.commandrouting.mode</name>
-          <value>dev-con-service</value>
-        </property>
-      </activation>
-      <properties>
-        <hono.command-related-service.configname>deviceConnection</hono.command-related-service.configname>
-        <hono.command-related-service.host>${hono.device-connection.host}</hono.command-related-service.host>
-        <hono.command-router.disabled>true</hono.command-router.disabled>
-        <hono.device-connection.disabled>false</hono.device-connection.disabled>
-        <hono.infinispan.disabled>true</hono.infinispan.disabled>
       </properties>
     </profile>
     <profile>
@@ -1275,82 +1249,10 @@
                     </wait>
                   </run>
                 </image>
-                <!-- ##### Device Connection service ##### -->
-                <image>
-                  <name>${docker.repository}/hono-service-device-connection-test:${project.version}</name>
-                  <build>
-                    <skip>${hono.device-connection.disabled}</skip>
-                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${docker.repository}/hono-service-device-connection:${project.version}</from>
-                    <assembly>
-                      <mode>dir</mode>
-                      <basedir>/</basedir>
-                      <inline>
-                        <id>config</id>
-                        <fileSets>
-                          <fileSet>
-                            <directory>${project.build.directory}/resources/deviceconnection</directory>
-                            <outputDirectory>etc/hono</outputDirectory>
-                            <includes>
-                              <include>*</include>
-                            </includes>
-                          </fileSet>
-                          <fileSet>
-                            <directory>${project.build.directory}/certs</directory>
-                            <outputDirectory>etc/hono/certs</outputDirectory>
-                            <includes>
-                              <include>device-connection-*.pem</include>
-                              <include>auth-server-cert.pem</include>
-                              <include>trusted-certs.pem</include>
-                            </includes>
-                          </fileSet>
-                        </fileSets>
-                      </inline>
-                    </assembly>
-                  </build>
-                  <run>
-                    <skip>${hono.device-connection.disabled}</skip>
-                    <ports>
-                      <port>+deviceconnection.ip:deviceconnection.amqp.port:5672</port>
-                      <port>+deviceconnection.ip:deviceconnection.health.port:${vertx.health.port}</port>
-                    </ports>
-                    <portPropertyFile>${project.build.directory}/docker/deviceconnection.port.properties</portPropertyFile>
-                    <network>
-                      <mode>custom</mode>
-                      <name>${custom.network.name}</name>
-                      <alias>${hono.device-connection.host}</alias>
-                    </network>
-                    <memorySwap>314572800</memorySwap>
-                    <memory>314572800</memory>
-                    <env>
-                      <LOGGING_CONFIG>file:///etc/hono/logback-spring.xml</LOGGING_CONFIG>
-                      <SPRING_CONFIG_LOCATION>file:///etc/hono/</SPRING_CONFIG_LOCATION>
-                      <SPRING_PROFILES_ACTIVE>${logging.profile},embedded-cache</SPRING_PROFILES_ACTIVE>
-                      <JDK_JAVA_OPTIONS>${default.java-options}</JDK_JAVA_OPTIONS>
-                      <PN_TRACE_FRM>0</PN_TRACE_FRM>
-                      <JAEGER_SERVICE_NAME>${hono.device-connection.host}</JAEGER_SERVICE_NAME>
-                      <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
-                      <JAEGER_SAMPLER_MANAGER_HOST_PORT>${jaeger.host}:5778</JAEGER_SAMPLER_MANAGER_HOST_PORT>
-                    </env>
-                    <log>
-                      <prefix>DEVCON</prefix>
-                      <color>${log.color.hono-services}</color>
-                    </log>
-                    <wait>
-                      <time>${service.startup.timeout}</time>
-                      <http>
-                        <method>GET</method>
-                        <url>http://${deviceconnection.ip}:${deviceconnection.health.port}/readiness</url>
-                        <status>200..299</status>
-                      </http>
-                    </wait>
-                  </run>
-                </image>
-                <!-- ##### Command Router service (may also act as Device Connection service via 'enable-device-connection-endpoint') ##### -->
+                <!-- ##### Command Router service ##### -->
                 <image>
                   <name>${docker.repository}/hono-service-command-router-test:${project.version}</name>
                   <build>
-                    <skip>${hono.command-router.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
                     <from>${docker.repository}/${hono.command-router.image}${hono.image-suffix}:${project.version}</from>
                     <assembly>
@@ -1387,7 +1289,6 @@
                     </assembly>
                   </build>
                   <run>
-                    <skip>${hono.command-router.disabled}</skip>
                     <ports>
                       <port>+commandrouter.ip:commandrouter.amqp.port:5672</port>
                       <port>+commandrouter.ip:commandrouter.health.port:${vertx.health.port}</port>
@@ -1411,7 +1312,7 @@
                       </SMALLRYE_CONFIG_LOCATIONS>
                       <LOGGING_CONFIG>file:///${hono.command-router.config-dir}/logback-spring.xml</LOGGING_CONFIG>
                       <SPRING_CONFIG_LOCATION>file:///${hono.command-router.config-dir}/</SPRING_CONFIG_LOCATION>
-                      <SPRING_PROFILES_ACTIVE>${logging.profile},embedded-cache,enable-device-connection-endpoint</SPRING_PROFILES_ACTIVE>
+                      <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${hono.command-router.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <JAEGER_SERVICE_NAME>${hono.commandrouter.host}</JAEGER_SERVICE_NAME>
@@ -1808,9 +1709,6 @@
                 <downstream.amqps.port>${qpid.amqps.port}</downstream.amqps.port>
                 <downstream.username>consumer@HONO</downstream.username>
                 <downstream.password>verysecret</downstream.password>
-                <deviceconnection.enabled>${hono.command-router.disabled}</deviceconnection.enabled>
-                <deviceconnection.host>${deviceconnection.ip}</deviceconnection.host>
-                <deviceconnection.amqp.port>${deviceconnection.amqp.port}</deviceconnection.amqp.port>
                 <commandrouter.host>${commandrouter.ip}</commandrouter.host>
                 <commandrouter.amqp.port>${commandrouter.amqp.port}</commandrouter.amqp.port>
                 <deviceregistry.type>${hono.deviceregistry.type}</deviceregistry.type>
@@ -1876,7 +1774,6 @@
                     <file>${project.build.directory}/docker/mongodb.port.properties</file>
                     <file>${project.build.directory}/docker/auth.port.properties</file>
                     <file>${project.build.directory}/docker/deviceregistry.port.properties</file>
-                    <file>${project.build.directory}/docker/deviceconnection.port.properties</file>
                     <file>${project.build.directory}/docker/commandrouter.port.properties</file>
                     <file>${project.build.directory}/docker/infinispan.port.properties</file>
                     <file>${project.build.directory}/docker/broker.port.properties</file>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+    Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -34,7 +34,6 @@
     <logger name="org.eclipse.hono.client" level="TRACE"/>
     <logger name="org.eclipse.hono.connection" level="TRACE"/>
     <logger name="org.eclipse.hono.config" level="TRACE"/>
-    <logger name="org.eclipse.hono.deviceconnection.infinispan.client" level="TRACE"/>
     <logger name="org.eclipse.hono.service" level="TRACE"/>
     <logger name="org.eclipse.hono.tracing" level="TRACE"/>
     <logger name="org.eclipse.hono.util" level="TRACE"/>
@@ -46,7 +45,6 @@
     <logger name="org.eclipse.hono.client" level="DEBUG"/>
     <logger name="org.eclipse.hono.connection" level="DEBUG"/>
     <logger name="org.eclipse.hono.config" level="DEBUG"/>
-    <logger name="org.eclipse.hono.deviceconnection.infinispan.client" level="DEBUG"/>
     <logger name="org.eclipse.hono.service" level="DEBUG"/>
     <logger name="org.eclipse.hono.tracing" level="DEBUG"/>
     <logger name="org.eclipse.hono.util" level="DEBUG"/>

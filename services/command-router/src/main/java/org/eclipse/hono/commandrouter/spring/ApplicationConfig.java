@@ -37,7 +37,6 @@ import org.eclipse.hono.client.registry.amqp.ProtonBasedDeviceRegistrationClient
 import org.eclipse.hono.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.commandrouter.AdapterInstanceStatusService;
-import org.eclipse.hono.commandrouter.CacheBasedDeviceConnectionService;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterAmqpServer;
 import org.eclipse.hono.commandrouter.CommandRouterMetrics;
@@ -67,8 +66,6 @@ import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.service.cache.Caches;
 import org.eclipse.hono.service.commandrouter.CommandRouterService;
 import org.eclipse.hono.service.commandrouter.DelegatingCommandRouterAmqpEndpoint;
-import org.eclipse.hono.service.deviceconnection.DelegatingDeviceConnectionAmqpEndpoint;
-import org.eclipse.hono.service.deviceconnection.DeviceConnectionService;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.spring.PrometheusSupport;
 import org.eclipse.hono.util.CommandConstants;
@@ -83,7 +80,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Profile;
 import org.springframework.context.annotation.Scope;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -102,15 +98,6 @@ import io.vertx.ext.healthchecks.HealthCheckHandler;
 @Configuration
 @Import(PrometheusSupport.class)
 public class ApplicationConfig {
-
-    /**
-     * Profile for using a embedded (vs remote) cache.
-     */
-    public static final String PROFILE_EMBEDDED_CACHE = "embedded-cache";
-    /**
-     * Profile for enabling an AMQP endpoint implementing the Device Connection API.
-     */
-    public static final String PROFILE_ENABLE_DEVICE_CONNECTION_ENDPOINT = "enable-device-connection-endpoint";
 
     private static final String BEAN_NAME_AMQP_SERVER = "amqpServer";
     private static final String COMPONENT_NAME = "Hono Command Router";
@@ -612,33 +599,6 @@ public class ApplicationConfig {
     @ConfigurationProperties(prefix = "hono.kafka.metrics")
     public KafkaMetricsConfig kafkaMetricsConfig() {
         return new KafkaMetricsConfig();
-    }
-
-    // ---- Optional beans letting the Command Router component also implement the Device Connection API (e.g. for integration tests) ----
-
-    /**
-     * Creates a new instance of an AMQP 1.0 protocol handler for Hono's <em>Device Connection</em> API.
-     *
-     * @param service The service instance to delegate to.
-     * @return The handler.
-     */
-    @Bean
-    @Scope("prototype")
-    @Profile(PROFILE_ENABLE_DEVICE_CONNECTION_ENDPOINT)
-    public AmqpEndpoint deviceConnectionAmqpEndpoint(final DeviceConnectionService service) {
-        return new DelegatingDeviceConnectionAmqpEndpoint<>(vertx(), service);
-    }
-
-    /**
-     * Exposes a Device Connection service as a Spring bean.
-     *
-     * @param deviceConnectionInfo The Device Connection info repository.
-     * @return The service implementation.
-     */
-    @Bean
-    @Profile(PROFILE_ENABLE_DEVICE_CONNECTION_ENDPOINT)
-    public CacheBasedDeviceConnectionService deviceConnectionService(final CacheBasedDeviceConnectionInfo deviceConnectionInfo) {
-        return new CacheBasedDeviceConnectionService(deviceConnectionInfo);
     }
 
     /**

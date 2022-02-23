@@ -8,13 +8,6 @@
       ]
     },
     {
-      "service": "${hono.device-connection.host}",
-      "type": "probabilistic",
-      "param": 1.0,
-      "operation_strategies": [
-      ]
-    },
-    {
       "service": "${hono.commandrouter.host}",
       "type": "probabilistic",
       "param": 1.0,
