@@ -80,11 +80,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-classic</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>core-test-utils</artifactId>
       <scope>test</scope>
