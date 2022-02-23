@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,8 +13,6 @@
 
 package org.eclipse.hono.deviceconnection.infinispan.client;
 
-import org.eclipse.hono.util.DeviceConnectionConstants;
-
 import com.google.common.base.MoreObjects;
 
 /**
@@ -22,7 +20,13 @@ import com.google.common.base.MoreObjects;
  */
 public class CommonCacheConfig {
 
-    private String cacheName = DeviceConnectionConstants.DEFAULT_CACHE_NAME;
+    /**
+     * The default name of the (remote) cache in the data grid that is used for
+     * storing device connection information.
+     */
+    public static final String DEFAULT_CACHE_NAME = "device-connection";
+
+    private String cacheName = DEFAULT_CACHE_NAME;
 
     private String checkKey = "KEY_CONNECTION_CHECK";
     private String checkValue = "VALUE_CONNECTION_CHECK";

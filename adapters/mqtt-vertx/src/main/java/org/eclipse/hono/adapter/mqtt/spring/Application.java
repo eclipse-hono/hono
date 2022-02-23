@@ -14,7 +14,6 @@
 package org.eclipse.hono.adapter.mqtt.spring;
 
 import org.eclipse.hono.adapter.spring.AbstractProtocolAdapterApplication;
-import org.eclipse.hono.deviceconnection.infinispan.client.HotrodCacheConfig;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.Configuration;
@@ -24,7 +23,7 @@ import org.springframework.context.annotation.Import;
  * The Hono MQTT adapter main application class.
  */
 @Configuration
-@Import({ Config.class, HotrodCacheConfig.class })
+@Import(Config.class)
 @EnableAutoConfiguration
 public class Application extends AbstractProtocolAdapterApplication {
 

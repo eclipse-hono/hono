@@ -40,14 +40,11 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.RequestResponseClientOptions;
 import org.eclipse.hono.client.SendMessageSampler;
-import org.eclipse.hono.client.command.CommandConsumerFactory;
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.command.CommandRouterClient;
 import org.eclipse.hono.client.command.CommandRouterCommandConsumerFactory;
-import org.eclipse.hono.client.command.DeviceConnectionClient;
 import org.eclipse.hono.client.command.amqp.ProtonBasedCommandResponseSender;
 import org.eclipse.hono.client.command.amqp.ProtonBasedCommandRouterClient;
-import org.eclipse.hono.client.command.amqp.ProtonBasedDelegatingCommandConsumerFactory;
 import org.eclipse.hono.client.command.amqp.ProtonBasedInternalCommandConsumer;
 import org.eclipse.hono.client.command.kafka.KafkaBasedCommandResponseSender;
 import org.eclipse.hono.client.command.kafka.KafkaBasedInternalCommandConsumer;
@@ -382,8 +379,6 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
             adapter.setCommandConsumerFactory(commandConsumerFactory);
         } else {
-            LOG.warn("Quarkus based protocol adapters do not support the Device Connection service to be used."
-                    + " Make sure to configure a connection to the Command Router service instead.");
             throw new IllegalStateException("No Command Router connection configured");
         }
 
@@ -503,29 +498,6 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
      */
     protected HonoConnection commandConsumerConnection() {
         return HonoConnection.newConnection(vertx, commandConsumerConfig, tracer);
-    }
-
-    /**
-     * Creates a new factory for creating command consumers.
-     * <p>
-     * The returned factory will also take care of routing commands to target adapter instances.
-     *
-     * @param deviceConnectionClient The client to use for accessing the Device Connection service.
-     * @param deviceRegistrationClient The client to use for accessing the Device Registration service.
-     * @return The factory.
-     */
-    protected CommandConsumerFactory commandConsumerFactory(
-            final DeviceConnectionClient deviceConnectionClient,
-            final DeviceRegistrationClient deviceRegistrationClient) {
-
-        LOG.debug("using Device Connection service client, configuring CommandConsumerFactory [{}]",
-                ProtonBasedDelegatingCommandConsumerFactory.class.getName());
-        return new ProtonBasedDelegatingCommandConsumerFactory(
-                commandConsumerConnection(),
-                messageSamplerFactory,
-                deviceConnectionClient,
-                deviceRegistrationClient,
-                tracer);
     }
 
     /**

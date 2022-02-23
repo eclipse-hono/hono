@@ -413,7 +413,7 @@ public class ApplicationConfig {
     }
 
     /**
-     * Exposes a factory for creating Device Connection service instances.
+     * Exposes a factory for creating Device Registry AMQP service instances.
      *
      * @return The factory bean.
      */
@@ -683,7 +683,7 @@ public class ApplicationConfig {
     }
 
     /**
-     * Exposes a factory for creating Device Connection service instances.
+     * Exposes a factory for creating Device Registry HTTP service instances.
      *
      * @return The factory bean.
      */

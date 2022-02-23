@@ -83,10 +83,6 @@ public final class Constants {
      */
     public static final String SERVICE_NAME_AUTH = "hono-auth";
     /**
-     * The (short) name of the Device Connection service.
-     */
-    public static final String SERVICE_NAME_DEVICE_CONNECTION = "hono-device-connection";
-    /**
      * The (short) name of the Command Router service.
      */
     public static final String SERVICE_NAME_COMMAND_ROUTER = "hono-command-router";

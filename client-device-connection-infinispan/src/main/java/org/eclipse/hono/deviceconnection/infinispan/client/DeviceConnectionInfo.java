@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -135,8 +135,30 @@ public interface DeviceConnectionInfo {
     /**
      * Gets information about the adapter instances that can handle a command for the given device.
      * <p>
-     * See Hono's <a href="https://www.eclipse.org/hono/docs/api/device-connection/">Device Connection API
-     * specification</a> for a detailed description of the method's behaviour and the returned JSON object.
+     * In order to determine the adapter instances the following rules are applied (in the given order):
+     * <ol>
+     * <li>If an adapter instance is associated with the given device, this adapter instance is returned as the single
+     * returned list entry.</li>
+     * <li>Otherwise, if there is an adapter instance registered for the last known gateway associated with the given
+     * device, this adapter instance is returned as the single returned list entry. The last known gateway has to be
+     * contained in the given list of gateways for this case.</li>
+     * <li>Otherwise, all adapter instances associated with any of the given gateway identifiers are returned.</li>
+     * </ol>
+     * That means that for a device communicating via a gateway, the result is reduced to a <i>single element</i> list
+     * if an adapter instance for the device itself or its last known gateway is found. The adapter instance registered
+     * for the device itself is given precedence in order to ensure that a gateway having subscribed to commands for
+     * that particular device is chosen over a gateway that has subscribed to commands for all devices of a tenant.
+     * <p>
+     * The resulting JSON structure looks like this, possibly containing multiple array entries: <code>
+     * {
+     *   "adapter-instances": [
+     *     {
+     *       "adapter-instance-id": "adapter-1",
+     *       "device-id": "4711"
+     *     }
+     *   ]
+     * }
+     * </code>
      * <p>
      * If no adapter instances are found, the returned future is failed.
      *

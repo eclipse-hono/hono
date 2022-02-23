@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -52,7 +52,7 @@ import io.vertx.core.Vertx;
  * A producer of an application scoped {@link DeviceConnectionInfo} instance.
  * <p>
  * The underlying cache implementation will store data in-memory or in a remote cache, depending
- * on whether the active Quarkus profile is <em>embedded-cache</em> or not.
+ * on whether a remote cache config with a non-empty server list is used or not.
  */
 @ApplicationScoped
 public class DeviceConnectionInfoProducer {

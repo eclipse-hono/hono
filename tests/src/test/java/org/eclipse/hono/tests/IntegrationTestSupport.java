@@ -125,10 +125,6 @@ public final class IntegrationTestSupport {
      */
     public static final int DEFAULT_COAPS_PORT = 5684;
     /**
-     * The default AMQP port exposed by the Device Connection service.
-     */
-    public static final int DEFAULT_DEVICECONNECTION_AMQP_PORT = 35672;
-    /**
      * The default AMQP port exposed by the device registry.
      */
     public static final int DEFAULT_DEVICEREGISTRY_AMQP_PORT = 25672;
@@ -208,19 +204,6 @@ public final class IntegrationTestSupport {
      * has access to all tenants.
      */
     public static final String PROPERTY_TENANT_ADMIN_PASSWORD = "tenant.admin.password";
-    /**
-     * The name of the system property to use for indicating whether the Device Connection service is enabled.
-     */
-    public static final String PROPERTY_DEVICECONNECTION_SERVICE_ENABLED = "deviceconnection.enabled";
-    /**
-     * The name of the system property to use for setting the IP address of the Device Connection service.
-     */
-    public static final String PROPERTY_DEVICECONNECTION_HOST = "deviceconnection.host";
-    /**
-     * The name of the system property to use for setting the port number that the Device Connection
-     * service should listen on for AMQP connections.
-     */
-    public static final String PROPERTY_DEVICECONNECTION_AMQP_PORT = "deviceconnection.amqp.port";
     /**
      * The name of the system property to use for setting the IP address of the Device Registry.
      */
@@ -389,20 +372,6 @@ public final class IntegrationTestSupport {
      * The type of Device Registry being used.
      */
     public static final String HONO_DEVICEREGISTRY_TYPE = System.getProperty(PROPERTY_DEVICEREGISTRY_TYPE, DEVICEREGISTRY_TYPE_MONGODB);
-
-    /**
-     * The boolean value indicating whether the Device Connection service is enabled.
-     */
-    public static final boolean HONO_DEVICECONNECTION_SERVICE_ENABLED = Boolean.parseBoolean(System.getProperty(
-            PROPERTY_DEVICECONNECTION_SERVICE_ENABLED, "true"));
-    /**
-     * The IP address of the Device Connection service.
-     */
-    public static final String HONO_DEVICECONNECTION_HOST = System.getProperty(PROPERTY_DEVICECONNECTION_HOST, DEFAULT_HOST);
-    /**
-     * The port number that the Device Connection service listens on for AMQP connections.
-     */
-    public static final int HONO_DEVICECONNECTION_AMQP_PORT = Integer.getInteger(PROPERTY_DEVICECONNECTION_AMQP_PORT, DEFAULT_DEVICECONNECTION_AMQP_PORT);
 
     /**
      * The IP address of the AMQP Messaging Network.
@@ -777,33 +746,6 @@ public final class IntegrationTestSupport {
                     return "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
                 })
                 .orElse(null);
-    }
-
-    /**
-     * Checks if the Device Connection service is enabled.
-     * <p>
-     * Evaluates the system property <em>deviceconnection.enabled</em>. Returns {@code true} if it doesn't exist.
-     *
-     * @return {@code true} if the Device Connection service is enabled.
-     */
-    public static boolean isDeviceConnectionServiceEnabled() {
-        return HONO_DEVICECONNECTION_SERVICE_ENABLED;
-    }
-
-    /**
-     * Creates properties for connecting to the Device Connection service.
-     *
-     * @param username The username to use for authenticating to the service.
-     * @param password The password to use for authenticating to the service.
-     * @return The properties.
-     */
-    public static ClientConfigProperties getDeviceConnectionServiceProperties(final String username, final String password) {
-
-        return getClientConfigProperties(
-                IntegrationTestSupport.HONO_DEVICECONNECTION_HOST,
-                IntegrationTestSupport.HONO_DEVICECONNECTION_AMQP_PORT,
-                username,
-                password);
     }
 
     /**
@@ -1212,7 +1154,6 @@ public final class IntegrationTestSupport {
      * @param command The name of the command to send.
      * @param contentType The type of the command's input data.
      * @param payload The command's input data to send to the device.
-     * @param properties The headers to include in the command message as AMQP application properties.
      * @return A future that is either succeeded with the response payload from the device or
      *         failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      */
@@ -1220,8 +1161,7 @@ public final class IntegrationTestSupport {
             final TimeUntilDisconnectNotification notification,
             final String command,
             final String contentType,
-            final Buffer payload,
-            final Map<String, Object> properties) {
+            final Buffer payload) {
 
         return sendCommand(
                 notification.getTenantId(),
@@ -1229,7 +1169,6 @@ public final class IntegrationTestSupport {
                 command,
                 contentType,
                 payload,
-                properties,
                 notification.getMillisecondsUntilExpiry());
     }
 
@@ -1241,7 +1180,6 @@ public final class IntegrationTestSupport {
      * @param command The name of the command to send.
      * @param contentType The type of the command's input data.
      * @param payload The command's input data to send to the device.
-     * @param properties The headers to include in the command message as AMQP application properties.
      * @param requestTimeout The number of milliseconds to wait for a response from the device.
      * @return A future that is either succeeded with the response payload from the device or
      *         failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
@@ -1252,7 +1190,6 @@ public final class IntegrationTestSupport {
             final String command,
             final String contentType,
             final Buffer payload,
-            final Map<String, Object> properties,
             final long requestTimeout) {
 
         final Promise<Void> timeOutTracker = Promise.promise();
@@ -1262,7 +1199,7 @@ public final class IntegrationTestSupport {
         LOGGER.trace("sending command [name: {}, contentType: {}, payload: {}]", command, contentType, payload);
         // send the command upstream to the device and receive the command response
         final Future<? extends DownstreamMessage<?>> sendCommandTracker = applicationClient
-                .sendCommand(tenantId, deviceId, command, contentType, payload, properties)
+                .sendCommand(tenantId, deviceId, command, contentType, payload, null)
                 .onComplete(ar -> {
                     vertx.cancelTimer(timerId);
                     timeOutTracker.tryComplete();
@@ -1288,7 +1225,6 @@ public final class IntegrationTestSupport {
      * @param command The name of the command to send.
      * @param contentType The type of the command's input data.
      * @param payload The command's input data to send to the device.
-     * @param properties The headers to include in the command message as AMQP application properties.
      * @return A future that is either succeeded if the command has been sent to the device or
      *         failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      */
@@ -1296,8 +1232,7 @@ public final class IntegrationTestSupport {
             final TimeUntilDisconnectNotification notification,
             final String command,
             final String contentType,
-            final Buffer payload,
-            final Map<String, Object> properties) {
+            final Buffer payload) {
 
         return sendOneWayCommand(
                 notification.getTenantId(),
@@ -1305,7 +1240,6 @@ public final class IntegrationTestSupport {
                 command,
                 contentType,
                 payload,
-                properties,
                 notification.getMillisecondsUntilExpiry());
     }
 
@@ -1317,7 +1251,6 @@ public final class IntegrationTestSupport {
      * @param command The name of the command to send.
      * @param contentType The type of the command's input data.
      * @param payload The command's input data to send to the device.
-     * @param properties The headers to include in the command message as AMQP application properties.
      * @param requestTimeout The number of milliseconds to wait for the command being sent to the device.
      * @return A future that is either succeeded if the command has been sent to the device or
      *         failed with a {@link org.eclipse.hono.client.ServiceInvocationException}.
@@ -1328,7 +1261,6 @@ public final class IntegrationTestSupport {
             final String command,
             final String contentType,
             final Buffer payload,
-            final Map<String, Object> properties,
             final long requestTimeout) {
 
         final Promise<Void> timeOutTracker = Promise.promise();
@@ -1337,7 +1269,7 @@ public final class IntegrationTestSupport {
 
         // send the one way command upstream to the device
         final Future<Void> sendOneWayCommandTracker = applicationClient
-                .sendOneWayCommand(tenantId, deviceId, command, contentType, payload, properties,
+                .sendOneWayCommand(tenantId, deviceId, command, contentType, payload, null,
                         NoopSpan.INSTANCE.context())
                 .onComplete(ar -> {
                     vertx.cancelTimer(timerId);
@@ -1351,23 +1283,6 @@ public final class IntegrationTestSupport {
 
         return CompositeFuture.all(sendOneWayCommandTracker, timeOutTracker.future())
                 .mapEmpty();
-    }
-
-    /**
-     * Gets the properties to be set on a command message.
-     *
-     * @param forceCommandRerouting Value for the "force-command-rerouting" property. A {@code true}
-     *                              value of this property causes the command message to be rerouted to the
-     *                              AMQP messaging network, mimicking the behaviour when the command message
-     *                              has reached a protocol adapter instance that the command target device is
-     *                              not connected to, so that the message needs to be delegated to the correct
-     *                              protocol adapter instance. See the <em>CommandConsumerFactoryImpl</em> class.
-     * @return The properties map.
-     */
-    public static Map<String, Object> newCommandMessageProperties(final boolean forceCommandRerouting) {
-        final HashMap<String, Object> properties = new HashMap<>();
-        properties.put("force-command-rerouting", forceCommandRerouting);
-        return properties;
     }
 
     /**

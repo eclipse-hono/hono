@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -129,7 +129,7 @@ spec:
             sh 'gpg --batch --import-options restore --import "${KEYRING}"'
             sh 'gpg --list-secret-keys'
           }
-          sh "mvn deploy -pl :hono-service-auth,:hono-service-auth-quarkus,:hono-service-device-registry-jdbc,:hono-service-device-registry-mongodb,:hono-service-device-registry-mongodb-quarkus,:hono-service-command-router,:hono-service-command-router-quarkus,:hono-service-device-connection,:hono-adapter-http-vertx,:hono-adapter-http-vertx-quarkus,:hono-adapter-mqtt-vertx,:hono-adapter-mqtt-vertx-quarkus,:hono-adapter-amqp-vertx,:hono-adapter-amqp-vertx-quarkus,:hono-adapter-lora-vertx,:hono-adapter-lora-vertx-quarkus,:hono-adapter-sigfox-vertx-quarkus,:hono-adapter-coap-vertx,:hono-adapter-coap-vertx-quarkus,:hono-example,:hono-cli -am -DskipTests=true -DnoDocker -DcreateGPGSignature=true -DcreateJavadoc=true -DenableEclipseJarSigner=true"
+          sh "mvn deploy -pl :hono-service-auth,:hono-service-auth-quarkus,:hono-service-device-registry-jdbc,:hono-service-device-registry-mongodb,:hono-service-device-registry-mongodb-quarkus,:hono-service-command-router,:hono-service-command-router-quarkus,:hono-adapter-http-vertx,:hono-adapter-http-vertx-quarkus,:hono-adapter-mqtt-vertx,:hono-adapter-mqtt-vertx-quarkus,:hono-adapter-amqp-vertx,:hono-adapter-amqp-vertx-quarkus,:hono-adapter-lora-vertx,:hono-adapter-lora-vertx-quarkus,:hono-adapter-sigfox-vertx-quarkus,:hono-adapter-coap-vertx,:hono-adapter-coap-vertx-quarkus,:hono-example,:hono-cli -am -DskipTests=true -DnoDocker -DcreateGPGSignature=true -DcreateJavadoc=true -DenableEclipseJarSigner=true"
         }
       }
     }

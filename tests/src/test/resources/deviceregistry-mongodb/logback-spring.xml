@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2020 Contributors to the Eclipse Foundation
+    Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -52,7 +52,6 @@
     <logger name="org.eclipse.hono.deviceregistry.mongodb.utils" level="TRACE"/>
     <logger name="org.eclipse.hono.deviceregistry.service.credentials" level="TRACE"/>
     <logger name="org.eclipse.hono.deviceregistry.service.device" level="TRACE"/>
-    <logger name="org.eclipse.hono.deviceregistry.service.deviceconnection" level="TRACE"/>
     <logger name="org.eclipse.hono.deviceregistry.service.tenant" level="TRACE"/>
     <logger name="org.eclipse.hono.service.credentials" level="TRACE"/>
     <logger name="org.eclipse.hono.service.management" level="TRACE"/>
@@ -82,7 +81,6 @@
     <logger name="org.eclipse.hono.deviceregistry.mongodb.utils" level="DEBUG"/>
     <logger name="org.eclipse.hono.deviceregistry.service.credentials" level="DEBUG"/>
     <logger name="org.eclipse.hono.deviceregistry.service.device" level="DEBUG"/>
-    <logger name="org.eclipse.hono.deviceregistry.service.deviceconnection" level="DEBUG"/>
     <logger name="org.eclipse.hono.deviceregistry.service.tenant" level="DEBUG"/>
     <logger name="org.eclipse.hono.service.credentials" level="DEBUG"/>
     <logger name="org.eclipse.hono.service.management" level="DEBUG"/>

@@ -33,15 +33,10 @@ import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
-import org.eclipse.hono.client.command.CommandConsumerFactory;
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.command.CommandRouterClient;
 import org.eclipse.hono.client.command.CommandRouterCommandConsumerFactory;
-import org.eclipse.hono.client.command.DeviceConnectionClient;
-import org.eclipse.hono.client.command.DeviceConnectionClientAdapter;
 import org.eclipse.hono.client.command.amqp.ProtonBasedCommandRouterClient;
-import org.eclipse.hono.client.command.amqp.ProtonBasedDelegatingCommandConsumerFactory;
-import org.eclipse.hono.client.command.amqp.ProtonBasedDeviceConnectionClient;
 import org.eclipse.hono.client.command.amqp.ProtonBasedInternalCommandConsumer;
 import org.eclipse.hono.client.command.kafka.KafkaBasedInternalCommandConsumer;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
@@ -75,7 +70,6 @@ import org.eclipse.hono.util.CommandRouterConstants;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
-import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
@@ -149,44 +143,30 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
                 tenantClient);
 
         final DeviceRegistrationClient registrationClient = registrationClient(samplerFactory);
-        try {
-            // look up client via bean factory in order to take advantage of conditional bean instantiation based
-            // on config properties
-            final DeviceConnectionClient deviceConnectionClient = context.getBean(DeviceConnectionClient.class);
-            adapter.setCommandRouterClient(new DeviceConnectionClientAdapter(deviceConnectionClient));
-            adapter.setCommandConsumerFactory(commandConsumerFactory(
-                    samplerFactory,
-                    deviceConnectionClient,
-                    registrationClient));
-        } catch (final BeansException e) {
-            // try to look up a Command Router client instead
-            // no need to catch BeansException here because startup should fail if neither
-            // Device Connection nor Command Router client have been configured anyway
-            final CommandRouterClient commandRouterClient = context.getBean(CommandRouterClient.class);
-            adapter.setCommandRouterClient(commandRouterClient);
-            final CommandRouterCommandConsumerFactory commandConsumerFactory = commandConsumerFactory(commandRouterClient);
-            if (commandConsumerFactoryConfig().isHostConfigured()) {
-                commandConsumerFactory.registerInternalCommandConsumer(
-                        (id, handlers) -> new ProtonBasedInternalCommandConsumer(commandConsumerConnection(vertx()), id, handlers));
-            }
-            final CommandResponseSender kafkaCommandResponseSender = messagingClientProviders
-                    .getCommandResponseSenderProvider().getClient(MessagingType.kafka);
-            if (kafkaCommandInternalConfig.isConfigured() && kafkaCommandConfig.isConfigured()
-                    && kafkaCommandResponseSender != null) {
-                commandConsumerFactory.registerInternalCommandConsumer(
-                        (id, handlers) -> new KafkaBasedInternalCommandConsumer(
-                                vertx(),
-                                kafkaCommandInternalConfig,
-                                kafkaCommandConfig,
-                                tenantClient,
-                                kafkaCommandResponseSender,
-                                id,
-                                handlers,
-                                getTracer())
-                            .setMetricsSupport(kafkaClientMetricsSupport));
-            }
-            adapter.setCommandConsumerFactory(commandConsumerFactory);
+        final CommandRouterClient commandRouterClient = context.getBean(CommandRouterClient.class);
+        adapter.setCommandRouterClient(commandRouterClient);
+        final CommandRouterCommandConsumerFactory commandConsumerFactory = commandConsumerFactory(commandRouterClient);
+        if (commandConsumerFactoryConfig().isHostConfigured()) {
+            commandConsumerFactory.registerInternalCommandConsumer(
+                    (id, handlers) -> new ProtonBasedInternalCommandConsumer(commandConsumerConnection(vertx()), id, handlers));
         }
+        final CommandResponseSender kafkaCommandResponseSender = messagingClientProviders
+                .getCommandResponseSenderProvider().getClient(MessagingType.kafka);
+        if (kafkaCommandInternalConfig.isConfigured() && kafkaCommandConfig.isConfigured()
+                && kafkaCommandResponseSender != null) {
+            commandConsumerFactory.registerInternalCommandConsumer(
+                    (id, handlers) -> new KafkaBasedInternalCommandConsumer(
+                            vertx(),
+                            kafkaCommandInternalConfig,
+                            kafkaCommandConfig,
+                            tenantClient,
+                            kafkaCommandResponseSender,
+                            id,
+                            handlers,
+                            getTracer())
+                            .setMetricsSupport(kafkaClientMetricsSupport));
+        }
+        adapter.setCommandConsumerFactory(commandConsumerFactory);
 
         adapter.setMessagingClientProviders(messagingClientProviders);
         Optional.ofNullable(connectionEventProducer())
@@ -491,67 +471,6 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
     }
 
     /**
-     * Exposes configuration properties for accessing the device connection service as a Spring bean.
-     *
-     * @return The properties.
-     */
-    @Bean
-    @Qualifier(DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT)
-    @ConfigurationProperties(prefix = "hono.device-connection")
-    @ConditionalOnProperty(prefix = "hono.device-connection", name = "host")
-    public RequestResponseClientConfigProperties deviceConnectionServiceClientConfig() {
-        final RequestResponseClientConfigProperties config = Optional.ofNullable(getDeviceConnectionClientFactoryConfigDefaults())
-                .orElseGet(RequestResponseClientConfigProperties::new);
-        config.setServerRoleIfUnknown("Device Connection");
-        config.setNameIfNotSet(getComponentName());
-        return config;
-    }
-
-    /**
-     * Gets the default client properties, on top of which the configured properties will be loaded, to be then provided
-     * via {@link #deviceConnectionServiceClientConfig()}.
-     * <p>
-     * This method returns an empty set of properties by default. Subclasses may override this method to set specific
-     * properties.
-     *
-     * @return The properties.
-     */
-    protected RequestResponseClientConfigProperties getDeviceConnectionClientFactoryConfigDefaults() {
-        return new RequestResponseClientConfigProperties();
-    }
-
-    /**
-     * Exposes the connection used for accessing the device connection service as a Spring bean.
-     *
-     * @return The connection.
-     */
-    @Bean
-    @Qualifier(DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT)
-    @Scope("prototype")
-    @ConditionalOnProperty(prefix = "hono.device-connection", name = "host")
-    public HonoConnection deviceConnectionServiceConnection() {
-        return HonoConnection.newConnection(vertx(), deviceConnectionServiceClientConfig());
-    }
-
-    /**
-     * Exposes a client for accessing the <em>Device Connection</em> API as a Spring bean.
-     *
-     * @param samplerFactory The sampler factory to use.
-     * @return The client.
-     */
-    @Bean
-    @Qualifier(DeviceConnectionConstants.DEVICE_CONNECTION_ENDPOINT)
-    @Scope("prototype")
-    @ConditionalOnProperty(prefix = "hono.device-connection", name = "host")
-    public DeviceConnectionClient deviceConnectionClient(
-            final SendMessageSampler.Factory samplerFactory) {
-
-        return new ProtonBasedDeviceConnectionClient(
-                deviceConnectionServiceConnection(),
-                samplerFactory);
-    }
-
-    /**
      * Exposes configuration properties for accessing the command router service as a Spring bean.
      *
      * @return The properties.
@@ -610,21 +529,6 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
         return new ProtonBasedCommandRouterClient(
                 commandRouterServiceConnection(),
                 samplerFactory);
-    }
-
-    CommandConsumerFactory commandConsumerFactory(
-            final SendMessageSampler.Factory samplerFactory,
-            final DeviceConnectionClient deviceConnectionClient,
-            final DeviceRegistrationClient registrationClient) {
-
-        log.debug("using Device Connection service client, configuring CommandConsumerFactory [{}]",
-                ProtonBasedDelegatingCommandConsumerFactory.class.getName());
-        return new ProtonBasedDelegatingCommandConsumerFactory(
-                commandConsumerConnection(vertx()),
-                samplerFactory,
-                deviceConnectionClient,
-                registrationClient,
-                getTracer());
     }
 
     CommandRouterCommandConsumerFactory commandConsumerFactory(final CommandRouterClient commandRouterClient) {

@@ -164,17 +164,6 @@ setting the `hono.commandrouting.cache` Maven property to value `embedded`:
 mvn verify -Prun-tests -Dhono.commandrouting.cache=embedded
 ```
 
-### Running the Tests with the Device Connection service component
-
-By default, the integration tests are run using the Command Router service component. In order to use the Device
-Connection service component instead, the `hono.commandrouting.mode` Maven property needs to be set to
-value `dev-con-service`:
-
-```sh
-mvn verify -Prun-tests -Dhono.commandrouting.mode=dev-con-service
-```
-Note that the Quarkus based component images cannot be used in this case.
-
 ### Running the Tests with Kafka as the Messaging Infrastructure
 
 By default, the integration tests are run using the AMQP 1.0 based QPid Dispatch Router and ActiveMQ Artemis message

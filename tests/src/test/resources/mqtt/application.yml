@@ -52,9 +52,9 @@ hono:
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
-  ${hono.command-related-service.configname}:
+  commandRouter:
     name: 'Hono MQTT Adapter'
-    host: ${hono.command-related-service.host}
+    host: ${hono.commandrouter.host}
     port: 5672
     username: mqtt-adapter@HONO
     password: mqtt-secret
