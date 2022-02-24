@@ -230,6 +230,11 @@ the `--mount` parameter. Please refer to the
 [Docker reference documentation](https://docs.docker.com/engine/reference/commandline/service_create/#add-bind-mounts-volumes-or-memory-filesystems)
 for details.
 
+{{% warning %}}
+Configuring containers to use OpenSSL the way described above does **not** work with container images based on
+native executables.
+{{% /warning %}}
+
 ## Server Name Indication (SNI)
 
 [Server Name Indication](https://tools.ietf.org/html/rfc6066#section-3) can be used to indicate to a server the host
