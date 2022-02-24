@@ -18,7 +18,7 @@
     <groupId>org.eclipse.hono</groupId>
     <artifactId>hono-adapters-quarkus</artifactId>
     <relativePath>../base-quarkus</relativePath>
-    <version>1.12.1-SNAPSHOT</version>
+    <version>1.12.1</version>
   </parent>
   <artifactId>hono-adapter-coap-vertx-quarkus</artifactId>
   <name>Hono CoAP Adapter (Quarkus)</name>
