@@ -6,7 +6,19 @@ hono:
       authUsername: "user"
       authPassword: "secret"
       authRealm: "ApplicationRealm"
+      cluster:
+        siteA: "hostA1:11222; hostA2:11223"
+        siteB: "hostB1:11222; hostB2:11223"
+      connectionPool:
+        minIdle: 10
+        maxActive: 10
+        maxPendingRequests: 400
+        maxWait: 500
+      defaultExecutorFactory:
+        poolSize: 200
       saslMechanism: "DIGEST-MD5"
+      saslProperties:
+        "javax.security.sasl.qop": "auth"
       socketTimeout: 5000
       connectTimeout: 5000
       keyStoreFileName: "/etc/hono/key-store.p12"
