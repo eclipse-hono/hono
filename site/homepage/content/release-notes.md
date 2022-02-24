@@ -28,6 +28,18 @@ description = "Information about changes in recent Hono releases. Includes new f
   using Hono's standard MQTT adapter.
 * The file based device registry has been removed.
 
+## 1.12.1
+
+### Fixes & Enhancements
+
+* The Quarkus variant of the MongoDB based device registry failed to start up if the *hono.mongodb.dbName* property
+  was not set. However, the DB name should not be required if a connection string is set using the
+  *hono.mongodb.connectionString* property. This has been fixed.
+* Using OpenSSL with the Quarkus based variant of Hono components did not work as described in the Secure Communication
+  guide. This has been fixed.
+* The connection pool configuration for the HotRod client in the Quarkus variant of the Command Router component
+  didn't support using property names in camel-case. This has been fixed.
+
 ## 1.12.0
 
 ### New Features
