@@ -9,6 +9,7 @@ hono:
       bindAddress: "0.0.0.0"
       keyPath: /etc/hono/certs/auth-server-key.pem
       certPath: /etc/hono/certs/auth-server-cert.pem
+      nativeTlsRequired: ${hono.auth-server.nativeTlsRequired}
     svc:
       permissionsPath: "/${hono.auth-server.config-dir}/permissions.json"
       signing:
