@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,12 +15,13 @@
 package org.eclipse.hono.deviceconnection.infinispan.client;
 
 import java.util.Map;
+import java.util.Optional;
+import java.util.function.Function;
 
 import org.infinispan.client.hotrod.configuration.ConfigurationBuilder;
 import org.infinispan.client.hotrod.impl.ConfigurationProperties;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+import com.google.common.base.CaseFormat;
 import com.google.common.base.MoreObjects;
 
 
@@ -30,7 +31,8 @@ import com.google.common.base.MoreObjects;
  */
 public class InfinispanRemoteConfigurationProperties extends ConfigurationProperties {
 
-    private static final Logger LOG = LoggerFactory.getLogger(InfinispanRemoteConfigurationProperties.class);
+    private static final String DEFAULT_EXECUTOR_FACTORY_PREFIX = "infinispan.client.hotrod.default_executor_factory";
+    private static final String CONNECTION_POOL_PREFIX = "infinispan.client.hotrod.connection_pool";
 
     /**
      * Creates properties using default values.
@@ -56,6 +58,8 @@ public class InfinispanRemoteConfigurationProperties extends ConfigurationProper
         setCluster(options.cluster());
         setConnectionPool(options.connectionPool());
         setConnectTimeout(options.connectTimeout());
+
+        setDefaultExecutorFactory(options.defaultExecutorFactory());
 
         options.keyAlias().ifPresent(this::setKeyAlias);
         options.keyStoreCertificatePassword().ifPresent(this::setKeyStoreCertificatePassword);
@@ -91,15 +95,24 @@ public class InfinispanRemoteConfigurationProperties extends ConfigurationProper
 
     /**
      * Sets the properties related to the connection pool.
+     * <p>
+     * Property keys may be in camel case or snake case.
      *
      * @param poolProperties The properties.
      */
     public final void setConnectionPool(final Map<String, String> poolProperties) {
-       poolProperties.forEach((k, v) -> {
-           final String key = String.format("%s.%s", "infinispan.client.hotrod.connection_pool", k);
-           LOG.debug("setting configuration property [{}: {}]", key, v);
-           getProperties().setProperty(key, v);
-       });
+        setProperties(poolProperties, CONNECTION_POOL_PREFIX, this::toSnakeCase);
+    }
+
+    /**
+     * Sets the properties related to the default executor factory.
+     * <p>
+     * Property keys may be in camel case or snake case.
+     *
+     * @param factoryProperties The properties.
+     */
+    public final void setDefaultExecutorFactory(final Map<String, String> factoryProperties) {
+        setProperties(factoryProperties, DEFAULT_EXECUTOR_FACTORY_PREFIX, this::toSnakeCase);
     }
 
     /**
@@ -108,25 +121,45 @@ public class InfinispanRemoteConfigurationProperties extends ConfigurationProper
      * @param saslProperties The properties.
      */
     public final void setSaslProperties(final Map<String, String> saslProperties) {
-       saslProperties.forEach((k, v) -> {
-           final String key = String.format("%s.%s", SASL_PROPERTIES_PREFIX, k);
-           getProperties().setProperty(key, v);
-       });
+        setProperties(saslProperties, SASL_PROPERTIES_PREFIX, null);
     }
 
     /**
      * Sets the properties related to cluster configuration.
      *
-     * @param cluster The properties.
+     * @param clusterProperties The properties.
      */
-    public final void setCluster(final Map<String, String> cluster) {
-       cluster.forEach((k, v) -> {
-           final String key = String.format("%s.%s", CLUSTER_PROPERTIES_PREFIX, k);
-           getProperties().setProperty(key, v);
-       });
+    public final void setCluster(final Map<String, String> clusterProperties) {
+        setProperties(clusterProperties, CLUSTER_PROPERTIES_PREFIX, null);
+    }
+
+    private String toSnakeCase(final String key) {
+        return CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, key);
+    }
+
+    private void setProperties(
+            final Map<String, String> properties,
+            final String keyPrefix,
+            final Function<String, String> keyConverter) {
+
+        properties.forEach((k, v) -> {
+            final String keySuffix = Optional.ofNullable(keyConverter).map(f -> f.apply(k)).orElse(k);
+            final String key = String.format("%s.%s", keyPrefix, keySuffix);
+            getProperties().setProperty(key, v);
+        });
     }
 
     // ------- Getters/setters missing in the parent ConfigurationProperties class -------
+
+    /**
+     * Gets the keystore certificate password.
+     *
+     * @return The password.
+     */
+    public String getKeyStoreCertificatePassword() {
+        return getProperties().getProperty(KEY_STORE_CERTIFICATE_PASSWORD);
+    }
+
     /**
      * Gets the SSL ciphers.
      *
