@@ -145,10 +145,12 @@
                       <env>
                         <JAVA_MAJOR_VERSION>${maven.compiler.release}</JAVA_MAJOR_VERSION>
                         <JAVA_APP_NAME>${project.artifactId}</JAVA_APP_NAME>
-                        <JAVA_LIB_DIR>/opt/hono/lib/*:/opt/hono/extensions/*</JAVA_LIB_DIR>
+                        <JAVA_MAIN_CLASS>io.quarkus.bootstrap.runner.QuarkusEntryPoint</JAVA_MAIN_CLASS>
+                        <JAVA_LIB_DIR>app/*:quarkus/*:lib/boot/*:lib/main/*:extensions/*</JAVA_LIB_DIR>
                         <!-- use Base64 encoder/decoder that is compatible with vert.x 3 -->
-                        <JAVA_OPTIONS>-Dvertx.json.base64=legacy -Djava.util.logging.manager=org.jboss.logmanager.LogManager</JAVA_OPTIONS>
-                        <JAVA_APP_JAR>quarkus-run.jar</JAVA_APP_JAR>
+                        <JAVA_OPTIONS>
+                          -Dvertx.json.base64=legacy
+                          -Djava.util.logging.manager=org.jboss.logmanager.LogManager</JAVA_OPTIONS>
                       </env>
                       <entryPoint>
                         <arg>/opt/hono/run-java.sh</arg>

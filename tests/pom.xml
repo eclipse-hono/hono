@@ -168,7 +168,7 @@
     <hono.http-adapter.image>hono-adapter-http-vertx</hono.http-adapter.image>
     <hono.http-adapter.config-dir>opt/hono/config</hono.http-adapter.config-dir>
     <hono.http-adapter.max-mem>314572800</hono.http-adapter.max-mem>
-    <hono.http-adapter.nativeTlsRequired>false</hono.http-adapter.nativeTlsRequired>
+    <hono.http-adapter.nativeTlsRequired>true</hono.http-adapter.nativeTlsRequired>
     <hono.http-adapter.java-options>${default.java-options}</hono.http-adapter.java-options>
     <hono.http-adapter.native-image-args></hono.http-adapter.native-image-args>
 
@@ -184,6 +184,7 @@
     <hono.auth-server.max-mem>205520896</hono.auth-server.max-mem>
     <hono.auth-server.java-options>${default.java-options}</hono.auth-server.java-options>
     <hono.auth-server.native-image-args></hono.auth-server.native-image-args>
+    <hono.auth-server.nativeTlsRequired>true</hono.auth-server.nativeTlsRequired>
 
     <trace.frames>0</trace.frames>
     <jaeger.disabled>true</jaeger.disabled>
@@ -526,7 +527,6 @@
         <hono.amqp-adapter.config-dir>etc/hono</hono.amqp-adapter.config-dir>
         <hono.coap-adapter.config-dir>etc/hono</hono.coap-adapter.config-dir>
         <hono.http-adapter.config-dir>etc/hono</hono.http-adapter.config-dir>
-        <hono.http-adapter.nativeTlsRequired>true</hono.http-adapter.nativeTlsRequired>
         <hono.mqtt-adapter.config-dir>etc/hono</hono.mqtt-adapter.config-dir>
         <hono.auth-server.config-dir>etc/hono</hono.auth-server.config-dir>
         <hono.command-router.config-dir>etc/hono</hono.command-router.config-dir>
@@ -545,18 +545,16 @@
       <properties>
         <hono.image-suffix>-quarkus-native</hono.image-suffix>
         <hono.amqp-adapter.max-mem>67108864</hono.amqp-adapter.max-mem>
-        <hono.amqp-adapter.useNativeTransport>false</hono.amqp-adapter.useNativeTransport>
 
         <hono.coap-adapter.max-mem>67108864</hono.coap-adapter.max-mem>
-        <hono.coap-adapter.useNativeTransport>false</hono.coap-adapter.useNativeTransport>
 
         <hono.http-adapter.max-mem>67108864</hono.http-adapter.max-mem>
         <hono.http-adapter.nativeTlsRequired>false</hono.http-adapter.nativeTlsRequired>
 
         <hono.mqtt-adapter.max-mem>67108864</hono.mqtt-adapter.max-mem>
-        <hono.mqtt-adapter.useNativeTransport>false</hono.mqtt-adapter.useNativeTransport>
 
         <hono.auth-server.max-mem>33554432</hono.auth-server.max-mem>
+        <hono.auth-server.nativeTlsRequired>false</hono.auth-server.nativeTlsRequired>
         <hono.command-router.max-mem>67108864</hono.command-router.max-mem>
         <hono.deviceregistry.mongodb.max-mem>150000000</hono.deviceregistry.mongodb.max-mem>
         <hono.deviceregistry.image-suffix>-quarkus</hono.deviceregistry.image-suffix>
@@ -747,6 +745,15 @@
                       <basedir>/</basedir>
                       <inline>
                         <id>config</id>
+                        <dependencySets>
+                          <dependencySet>
+                            <includes>
+                              <!--  use openSSL in Auth server -->
+                              <include>io.netty:netty-tcnative-boringssl-static</include>
+                            </includes>
+                            <outputDirectory>opt/hono/extensions</outputDirectory>
+                          </dependencySet>
+                        </dependencySets>
                         <fileSets>
                           <fileSet>
                             <directory>${project.build.directory}/resources/auth</directory>
