@@ -13,6 +13,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   *hono.mongodb.connectionString* property. This has been fixed.
 * Using OpenSSL with the Quarkus based variant of Hono components did not work as described in the Secure Communication
   guide. This has been fixed.
+* The connection pool configuration for the HotRod client in the Quarkus variant of the Command Router component
+  didn't support using property names in camel-case. This has been fixed.
 
 ## 1.12.0
 

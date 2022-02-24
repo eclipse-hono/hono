@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -45,6 +45,12 @@ class InfinispanRemoteConfigurationPropertiesTest {
         final Configuration config = props.getConfigurationBuilder().build();
         assertThat(config.connectionPool().minIdle()).isEqualTo(2);
         assertThat(config.connectionPool().minEvictableIdleTime()).isGreaterThan(0L);
+    }
+
+    @Test
+    void testDefaultExecutorFactoryProperties() {
+        props.setDefaultExecutorFactory(Map.of("pool_size", "50"));
+        assertThat(props.getDefaultExecutorFactoryPoolSize()).isEqualTo(50);
     }
 
 }
