@@ -8,8 +8,7 @@
                 | |                                        
                 |_|                                        
 
-Eclipse Hono Sigfox Protocol Adapter ${application.formatted-version}
-using Spring Boot ${spring-boot.formatted-version}
+Eclipse Hono Sigfox Protocol Adapter
 
 Go to https://www.eclipse.org/hono for more information.
 
