@@ -16,7 +16,6 @@ TAG=$1
 CR=$2
 IMAGES="hono-adapter-amqp-vertx-quarkus \
         hono-adapter-coap-vertx-quarkus \
-        hono-adapter-http-vertx \
         hono-adapter-http-vertx-quarkus \
         hono-adapter-lora-vertx-quarkus \
         hono-adapter-mqtt-vertx \
