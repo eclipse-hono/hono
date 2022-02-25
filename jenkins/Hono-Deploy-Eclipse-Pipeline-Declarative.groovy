@@ -129,7 +129,6 @@ spec:
           sh "mvn deploy \
                 -DskipTests=true -DnoDocker -DcreateJavadoc=true -DenableEclipseJarSigner=true -DskipStaging=true
                 -am -pl '\
-                  :hono-adapter-amqp-vertx,\
                   :hono-adapter-amqp-vertx-quarkus,\
                   :hono-adapter-coap-vertx-quarkus,\
                   :hono-adapter-http-vertx,\
