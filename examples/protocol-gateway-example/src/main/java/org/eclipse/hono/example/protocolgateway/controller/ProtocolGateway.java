@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,6 +25,7 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.device.amqp.AmqpAdapterClientFactory;
 import org.eclipse.hono.client.impl.CommandConsumer;
 import org.eclipse.hono.example.protocolgateway.TcpServer;
@@ -285,7 +286,7 @@ public class ProtocolGateway {
      * @param socket The socket to use for sending commands to the device.
      * @return A future indicating the outcome.
      */
-    private Future<Void> subscribe(final String deviceId, final NetSocket socket) {
+    private Future<MessageConsumer> subscribe(final String deviceId, final NetSocket socket) {
 
         final Consumer<Message> messageHandler = m -> {
 
@@ -307,8 +308,7 @@ public class ProtocolGateway {
                 }
             }
         };
-        return amqpAdapterClientFactory.createDeviceSpecificCommandConsumer(deviceId, messageHandler)
-                .mapEmpty();
+        return amqpAdapterClientFactory.createDeviceSpecificCommandConsumer(deviceId, messageHandler);
     }
 
     private Future<ProtonDelivery> respondWithTime(final Message command) {
