@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,7 +24,6 @@ import org.eclipse.hono.adapter.lora.GatewayInfo;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.eclipse.hono.adapter.lora.LoraMetaData;
 import org.eclipse.hono.service.http.HttpUtils;
-import org.springframework.stereotype.Component;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
@@ -37,7 +36,6 @@ import io.vertx.core.json.JsonObject;
  * <a href="https://ns.docs.everynet.io/data-api/uplink-message.html">
  * Everynet API</a>
  */
-@Component
 @ApplicationScoped
 public class EverynetProvider extends JsonBasedLoraProvider {
 

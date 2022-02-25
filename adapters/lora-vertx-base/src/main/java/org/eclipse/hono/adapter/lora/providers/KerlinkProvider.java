@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,7 +23,6 @@ import javax.enterprise.context.ApplicationScoped;
 import org.eclipse.hono.adapter.lora.GatewayInfo;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.eclipse.hono.adapter.lora.LoraMetaData;
-import org.springframework.stereotype.Component;
 
 import com.google.common.io.BaseEncoding;
 
@@ -36,7 +35,6 @@ import io.vertx.core.json.JsonObject;
  * This provider supports messages as described by the
  * <a href="https://wmc-poc.wanesy.com/gms/application/doc#PushDataUpDto">Kerlink API</a>.
  */
-@Component
 @ApplicationScoped
 public class KerlinkProvider extends JsonBasedLoraProvider {
 

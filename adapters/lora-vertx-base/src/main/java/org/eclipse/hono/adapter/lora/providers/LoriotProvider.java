@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,7 +28,6 @@ import org.eclipse.hono.adapter.lora.LoraMetaData;
 import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 
 import com.google.common.io.BaseEncoding;
 
@@ -43,7 +42,6 @@ import io.vertx.core.json.JsonObject;
  * This provider only supports <a href="https://docs.loriot.io/display/LNS/Gateway+Information">
  * Gateway Information</a> messages.
  */
-@Component
 @ApplicationScoped
 public class LoriotProvider extends JsonBasedLoraProvider {
 

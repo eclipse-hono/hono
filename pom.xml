@@ -226,7 +226,6 @@
   <modules>
     <module>adapter-base</module>
     <module>adapter-base-quarkus</module>
-    <module>adapter-base-spring</module>
     <module>adapters</module>
     <module>bom</module>
     <module>core</module>

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,7 +25,6 @@ import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.JsonHelper;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Tracer;
 import io.vertx.core.Context;
@@ -49,7 +48,6 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
      * @param tracer The tracer instance.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    @Autowired
     public UsernamePasswordAuthProvider(final CredentialsClient credentialsClient, final Tracer tracer) {
         this(credentialsClient, new SpringBasedHonoPasswordEncoder(), tracer);
     }
@@ -62,7 +60,6 @@ public final class UsernamePasswordAuthProvider extends CredentialsApiAuthProvid
      * @param tracer The tracer instance.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    @Autowired
     public UsernamePasswordAuthProvider(
             final CredentialsClient credentialsClient,
             final HonoPasswordEncoder pwdEncoder,

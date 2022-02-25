@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,7 +24,6 @@ import org.eclipse.hono.adapter.lora.GatewayInfo;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.eclipse.hono.adapter.lora.LoraMetaData;
 import org.eclipse.hono.util.MessageHelper;
-import org.springframework.stereotype.Component;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
@@ -38,7 +37,6 @@ import io.vertx.core.json.JsonObject;
  * to comply with the <a href="https://www.chirpstack.io/application-server/integrate/sending-receiving/">
  * Protobuf based JSON format</a>.
  */
-@Component
 @ApplicationScoped
 public class ChirpStackProvider extends JsonBasedLoraProvider {
 

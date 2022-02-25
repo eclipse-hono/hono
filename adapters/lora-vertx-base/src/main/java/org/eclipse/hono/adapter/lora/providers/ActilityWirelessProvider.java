@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,7 +20,6 @@ import javax.enterprise.context.ApplicationScoped;
 
 import org.eclipse.hono.adapter.lora.GatewayInfo;
 import org.eclipse.hono.adapter.lora.LoraMetaData;
-import org.springframework.stereotype.Component;
 
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -28,7 +27,6 @@ import io.vertx.core.json.JsonObject;
 /**
  * A LoRaWAN provider with API for Actility Wireless.
  */
-@Component
 @ApplicationScoped
 public class ActilityWirelessProvider extends ActilityBaseProvider {
 
