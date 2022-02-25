@@ -2,55 +2,55 @@ hono:
   app:
     maxInstances: 1
   connectionEvents:
-    producer: none
+    producer: "none"
   healthCheck:
-    insecurePortBindAddress: 0.0.0.0
+    insecurePortBindAddress: "0.0.0.0"
     insecurePort: ${vertx.health.port}
   coap:
     authenticationRequired: false
-    bindAddress: 0.0.0.0
+    bindAddress: "0.0.0.0"
     port: 5684
-    keyPath: /etc/hono/certs/coap-adapter-key.pem
-    certPath: /etc/hono/certs/coap-adapter-cert.pem
-    insecurePortBindAddress: 0.0.0.0
+    keyPath: "/opt/hono/config/certs/coap-adapter-key.pem"
+    certPath: "/opt/hono/config/certs/coap-adapter-cert.pem"
+    insecurePortBindAddress: "0.0.0.0"
     insecurePort: 5683
     maxConnections: 100
     maxPayloadSize: 2048
   messaging:
     name: 'Hono CoAP Adapter'
-    host: ${hono.amqp-network.host}
+    host: "${hono.amqp-network.host}"
     port: 5673
-    amqpHostname: hono-internal
-    keyPath: /etc/hono/certs/coap-adapter-key.pem
-    certPath: /etc/hono/certs/coap-adapter-cert.pem
-    trustStorePath: /etc/hono/certs/trusted-certs.pem
+    amqpHostname: "hono-internal"
+    keyPath: "/opt/hono/config/certs/coap-adapter-key.pem"
+    certPath: "/opt/hono/config/certs/coap-adapter-cert.pem"
+    trustStorePath: "/opt/hono/config/certs/trusted-certs.pem"
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
   registration:
     name: 'Hono CoAP Adapter'
-    host: ${hono.registration.host}
+    host: "${hono.registration.host}"
     port: 5672
-    username: coap-adapter@HONO
-    password: coap-secret
+    username: "coap-adapter@HONO"
+    password: "coap-secret"
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
   credentials:
     name: 'Hono CoAP Adapter'
-    host: ${hono.registration.host}
+    host: "${hono.registration.host}"
     port: 5672
-    username: coap-adapter@HONO
-    password: coap-secret
+    username: "coap-adapter@HONO"
+    password: "coap-secret"
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
   tenant:
     name: 'Hono CoAP Adapter'
-    host: ${hono.registration.host}
+    host: "${hono.registration.host}"
     port: 5672
-    username: coap-adapter@HONO
-    password: coap-secret
+    username: "coap-adapter@HONO"
+    password: "coap-secret"
     # we need to disable caching of tenant lookup results
     # in order to allow registration of non-matching trust anchors
     # leaving the cache "poisoned" when looking up a tenant using
@@ -62,30 +62,27 @@ hono:
     requestTimeout: ${request.timeout}
   commandRouter:
     name: 'Hono CoAP Adapter'
-    host: ${hono.commandrouter.host}
+    host: "${hono.commandrouter.host}"
     port: 5672
-    username: coap-adapter@HONO
-    password: coap-secret
+    username: "coap-adapter@HONO"
+    password: "coap-secret"
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
   command:
     name: 'Hono CoAP Adapter'
-    host: ${hono.amqp-network.host}
+    host: "${hono.amqp-network.host}"
     port: 5673
-    amqpHostname: hono-internal
-    keyPath: /etc/hono/certs/coap-adapter-key.pem
-    certPath: /etc/hono/certs/coap-adapter-cert.pem
-    trustStorePath: /etc/hono/certs/trusted-certs.pem
+    amqpHostname: "hono-internal"
+    keyPath: "/opt/hono/config/certs/coap-adapter-key.pem"
+    certPath: "/opt/hono/config/certs/coap-adapter-cert.pem"
+    trustStorePath: "/opt/hono/config/certs/trusted-certs.pem"
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
-  vertx:
-    maxEventLoopExecuteTime: ${max.event-loop.execute-time}
-    preferNative: true
   kafka:
     commonClientConfig:
-      bootstrap.servers: ${hono.kafka.bootstrap.servers}
+      bootstrap.servers: "${hono.kafka.bootstrap.servers}"
 
 quarkus:
   jaeger:
@@ -102,13 +99,3 @@ quarkus:
         level: DEBUG
   vertx:
     max-event-loop-execute-time: ${max.event-loop.execute-time}
-
-spring:
-  jmx:
-    enabled: false
-
-management:
-  port: -1
-
-server:
-  port: -1

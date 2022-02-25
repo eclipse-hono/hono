@@ -134,7 +134,6 @@ spec:
                 -am -pl '\
                   :hono-adapter-amqp-vertx,\
                   :hono-adapter-amqp-vertx-quarkus,\
-                  :hono-adapter-coap-vertx,\
                   :hono-adapter-coap-vertx-quarkus,\
                   :hono-adapter-http-vertx,\
                   :hono-adapter-http-vertx-quarkus,\

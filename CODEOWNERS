@@ -9,8 +9,8 @@
 /adapters/amqp-vertx-base/            @calohmn
 /adapters/amqp-vertx-quarkus/         @calohmn
 
-/adapters/coap-vertx/                 @sophokles73
 /adapters/coap-vertx-base/            @sophokles73
+/adapters/coap-vertx-quarkus/         @sophokles73
 
 /adapters/http-vertx/                 @ctron @calohmn
 /adapters/http-vertx-base/            @ctron @calohmn
