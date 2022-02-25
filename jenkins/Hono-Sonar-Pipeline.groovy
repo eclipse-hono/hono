@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,7 +26,7 @@ kind: Pod
 spec:
   containers:
   - name: maven
-    image: "maven:3.8-openjdk-11"
+    image: "maven:3.8-openjdk-17"
     tty: true
     command:
     - cat
@@ -110,8 +110,8 @@ spec:
                     userRemoteConfigs: [[url: 'https://github.com/eclipse/hono.git']]])
 
           withSonarQubeEnv(credentialsId: 'sonarcloud-token', installationName: 'SonarCloud.io') {
-	    echo "building and running Sonar analysis ..."
-	    sh 'mvn verify sonar:sonar -Djacoco.skip=false -DnoDocker -DcreateJavadoc=true -Dsonar.organization=eclipse -Dsonar.projectKey=org.eclipse.hono '
+            echo "building and running Sonar analysis ..."
+            sh "mvn verify sonar:sonar -Djacoco.skip=false -DnoDocker -DcreateJavadoc=true -Dsonar.organization=eclipse -Dsonar.projectKey=org.eclipse.hono"
           }
 
           echo "recording JUnit test results ..."
