@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -137,7 +137,8 @@ public class ProtonBasedInternalCommandConsumer extends AbstractServiceClient im
         final SpanContext followsFromSpanContext = commandHandler != null
                 ? commandHandler.getConsumerCreationSpanContext()
                 : null;
-        final Span currentSpan = CommandContext.createSpan(tracer, command, spanContext, followsFromSpanContext);
+        final Span currentSpan = CommandContext.createSpan(tracer, command, spanContext, followsFromSpanContext,
+                getClass().getSimpleName());
         currentSpan.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
 
         final CommandContext commandContext = new ProtonBasedCommandContext(command, delivery, currentSpan);

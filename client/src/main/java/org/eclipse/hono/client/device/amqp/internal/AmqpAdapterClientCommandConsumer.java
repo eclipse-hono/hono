@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,7 +19,7 @@ import java.util.function.BiConsumer;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.client.impl.CommandConsumer;
+import org.eclipse.hono.client.impl.AbstractConsumer;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
@@ -34,7 +34,7 @@ import io.vertx.proton.ProtonReceiver;
  * A wrapper around an AMQP receiver link for consuming commands from Hono's AMQP adapter. This implementation tries to
  * restore closed links by trying to create a new link each time the link is closed.
  */
-public class AmqpAdapterClientCommandConsumer extends CommandConsumer {
+public class AmqpAdapterClientCommandConsumer extends AbstractConsumer {
 
     private static final Logger LOG = LoggerFactory.getLogger(AmqpAdapterClientCommandConsumer.class);
 

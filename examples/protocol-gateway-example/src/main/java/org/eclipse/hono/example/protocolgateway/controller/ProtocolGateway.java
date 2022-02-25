@@ -27,7 +27,6 @@ import javax.annotation.PreDestroy;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.device.amqp.AmqpAdapterClientFactory;
-import org.eclipse.hono.client.impl.CommandConsumer;
 import org.eclipse.hono.example.protocolgateway.TcpServer;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -121,7 +120,7 @@ public class ProtocolGateway {
         commandParser.handler(data -> handleData(socket, dict, data));
         socket.closeHandler(remoteClose -> {
             LOG.debug("device closed connection");
-            Optional.ofNullable((CommandConsumer) dict.get(KEY_COMMAND_CONSUMER))
+            Optional.ofNullable((MessageConsumer) dict.get(KEY_COMMAND_CONSUMER))
                 .ifPresent(c -> {
                     c.close(res -> {
                         LOG.debug("closed device's command consumer");
@@ -271,7 +270,7 @@ public class ProtocolGateway {
         Optional.ofNullable(dictionary.get(KEY_COMMAND_CONSUMER))
             .ifPresentOrElse(
                     obj -> {
-                        ((CommandConsumer) obj).close(result);
+                        ((MessageConsumer) obj).close(result);
                     },
                     () -> {
                         result.fail("device not subscribed to commands");

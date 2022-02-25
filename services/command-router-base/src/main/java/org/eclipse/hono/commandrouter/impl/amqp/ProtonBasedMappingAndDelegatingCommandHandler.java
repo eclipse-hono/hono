@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,7 +23,6 @@ import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.command.amqp.ProtonBasedCommand;
 import org.eclipse.hono.client.command.amqp.ProtonBasedCommandContext;
 import org.eclipse.hono.client.command.amqp.ProtonBasedInternalCommandSender;
-import org.eclipse.hono.client.impl.CommandConsumer;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.commandrouter.CommandRouterMetrics;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
@@ -37,14 +36,12 @@ import org.eclipse.hono.util.Strings;
 import io.micrometer.core.instrument.Timer;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
-import io.opentracing.Tracer;
 import io.vertx.proton.ProtonDelivery;
 
 /**
  * Handler for commands received at the tenant-specific address.
  */
 public class ProtonBasedMappingAndDelegatingCommandHandler extends AbstractMappingAndDelegatingCommandHandler {
-    private final Tracer tracer;
 
     /**
      * Creates a new ProtonBasedMappingAndDelegatingCommandHandler instance.
@@ -60,8 +57,8 @@ public class ProtonBasedMappingAndDelegatingCommandHandler extends AbstractMappi
             final HonoConnection connection,
             final CommandTargetMapper commandTargetMapper,
             final CommandRouterMetrics metrics) {
-        super(tenantClient, commandTargetMapper, new ProtonBasedInternalCommandSender(connection), metrics);
-        this.tracer = connection.getTracer();
+        super(tenantClient, commandTargetMapper, new ProtonBasedInternalCommandSender(connection), metrics,
+                connection.getTracer());
     }
 
     @Override
@@ -124,8 +121,7 @@ public class ProtonBasedMappingAndDelegatingCommandHandler extends AbstractMappi
             log.debug("received invalid command message: {}", command);
         }
         final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, message);
-        final Span currentSpan = CommandConsumer.createSpan("map and delegate command", tenantId, deviceId, null,
-                tracer, spanContext);
+        final Span currentSpan = createSpan(tenantId, deviceId, spanContext);
         command.logToSpan(currentSpan);
         final ProtonBasedCommandContext commandContext = new ProtonBasedCommandContext(command, messageDelivery, currentSpan);
         if (command.isValid()) {

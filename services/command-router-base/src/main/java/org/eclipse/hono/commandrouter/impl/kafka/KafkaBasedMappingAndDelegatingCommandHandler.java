@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,7 +23,6 @@ import org.eclipse.hono.client.command.kafka.KafkaBasedCommand;
 import org.eclipse.hono.client.command.kafka.KafkaBasedCommandContext;
 import org.eclipse.hono.client.command.kafka.KafkaBasedCommandResponseSender;
 import org.eclipse.hono.client.command.kafka.KafkaBasedInternalCommandSender;
-import org.eclipse.hono.client.impl.CommandConsumer;
 import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.commandrouter.CommandRouterMetrics;
@@ -61,7 +60,6 @@ public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappin
 
     private final Vertx vertx;
     private final KafkaBasedCommandResponseSender kafkaBasedCommandResponseSender;
-    private final Tracer tracer;
     private final KafkaCommandProcessingQueue commandQueue;
 
     /**
@@ -86,11 +84,10 @@ public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappin
             final KafkaBasedCommandResponseSender kafkaBasedCommandResponseSender,
             final CommandRouterMetrics metrics,
             final Tracer tracer) {
-        super(tenantClient, commandTargetMapper, internalCommandSender, metrics);
+        super(tenantClient, commandTargetMapper, internalCommandSender, metrics, tracer);
         this.vertx = Objects.requireNonNull(vertx);
         this.commandQueue = Objects.requireNonNull(commandQueue);
         this.kafkaBasedCommandResponseSender = Objects.requireNonNull(kafkaBasedCommandResponseSender);
-        this.tracer = Objects.requireNonNull(tracer);
     }
 
     @Override
@@ -128,8 +125,7 @@ public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappin
         }
 
         final SpanContext spanContext = KafkaTracingHelper.extractSpanContext(tracer, consumerRecord);
-        final Span currentSpan = CommandConsumer.createSpan("map and delegate command", command.getTenant(),
-                command.getDeviceId(), null, tracer, spanContext);
+        final Span currentSpan = createSpan(command.getTenant(), command.getDeviceId(), spanContext);
         KafkaTracingHelper.setRecordTags(currentSpan, consumerRecord);
 
         final KafkaBasedCommandContext commandContext = new KafkaBasedCommandContext(
