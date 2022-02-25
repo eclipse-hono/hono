@@ -161,8 +161,7 @@
     <hono.coap-adapter.native-image-args></hono.coap-adapter.native-image-args>
 
     <hono.http-adapter.host>hono-adapter-http</hono.http-adapter.host>
-    <hono.http-adapter.image>hono-adapter-http-vertx</hono.http-adapter.image>
-    <hono.http-adapter.config-dir>opt/hono/config</hono.http-adapter.config-dir>
+    <hono.http-adapter.image>hono-adapter-http-vertx-quarkus</hono.http-adapter.image>
     <hono.http-adapter.max-mem>314572800</hono.http-adapter.max-mem>
     <hono.http-adapter.nativeTlsRequired>true</hono.http-adapter.nativeTlsRequired>
     <hono.http-adapter.java-options>${default.java-options}</hono.http-adapter.java-options>
@@ -519,7 +518,6 @@
       </activation>
       <properties>
         <hono.image-suffix></hono.image-suffix>
-        <hono.http-adapter.config-dir>etc/hono</hono.http-adapter.config-dir>
         <hono.mqtt-adapter.config-dir>etc/hono</hono.mqtt-adapter.config-dir>
         <hono.command-router.config-dir>etc/hono</hono.command-router.config-dir>
       </properties>
@@ -540,6 +538,7 @@
         <hono.coap-adapter.image>hono-adapter-coap-vertx-quarkus-native</hono.coap-adapter.image>
         <hono.coap-adapter.max-mem>67108864</hono.coap-adapter.max-mem>
 
+        <hono.http-adapter.image>hono-adapter-http-vertx-quarkus-native</hono.http-adapter.image>
         <hono.http-adapter.max-mem>67108864</hono.http-adapter.max-mem>
         <hono.http-adapter.nativeTlsRequired>false</hono.http-adapter.nativeTlsRequired>
 
@@ -1332,7 +1331,7 @@
                   <name>${docker.repository}/hono-adapter-http-test:${project.version}</name>
                   <build>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${docker.repository}/${hono.http-adapter.image}${hono.image-suffix}:${project.version}</from>
+                    <from>${docker.repository}/${hono.http-adapter.image}:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>
@@ -1350,14 +1349,14 @@
                         <fileSets>
                           <fileSet>
                             <directory>${project.build.directory}/resources/http</directory>
-                            <outputDirectory>${hono.http-adapter.config-dir}</outputDirectory>
+                            <outputDirectory>opt/hono/config</outputDirectory>
                             <includes>
                               <include>*</include>
                             </includes>
                           </fileSet>
                           <fileSet>
                             <directory>${project.build.directory}/certs</directory>
-                            <outputDirectory>etc/hono/certs</outputDirectory>
+                            <outputDirectory>opt/hono/config/certs</outputDirectory>
                             <includes>
                               <include>http-adapter-*.pem</include>
                               <include>trustStore.jks</include>
@@ -1389,11 +1388,8 @@
                     </cmd>
                     <env>
                       <SMALLRYE_CONFIG_LOCATIONS>
-                        /${hono.http-adapter.config-dir}/logging-quarkus-${logging.profile}.yml
+                        /opt/hono/config/logging-quarkus-${logging.profile}.yml
                       </SMALLRYE_CONFIG_LOCATIONS>
-                      <LOGGING_CONFIG>file:/${hono.http-adapter.config-dir}/logback-spring.xml</LOGGING_CONFIG>
-                      <SPRING_CONFIG_LOCATION>file:/${hono.http-adapter.config-dir}/</SPRING_CONFIG_LOCATION>
-                      <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${hono.http-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <JAEGER_SERVICE_NAME>${hono.http-adapter.host}</JAEGER_SERVICE_NAME>

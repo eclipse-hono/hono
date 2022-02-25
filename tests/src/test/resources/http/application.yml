@@ -2,81 +2,78 @@ hono:
   app:
     maxInstances: 1
   connectionEvents:
-    producer: none
+    producer: "none"
   healthCheck:
-    insecurePortBindAddress: 0.0.0.0
+    insecurePortBindAddress: "0.0.0.0"
     insecurePort: ${vertx.health.port}
   http:
-    bindAddress: 0.0.0.0
-    insecurePortBindAddress: 0.0.0.0
+    bindAddress: "0.0.0.0"
+    insecurePortBindAddress: "0.0.0.0"
     insecurePortEnabled: true
     nativeTlsRequired: ${hono.http-adapter.nativeTlsRequired}
-    keyPath: /etc/hono/certs/http-adapter-key.pem
-    certPath: /etc/hono/certs/http-adapter-cert.pem
+    keyPath: "/opt/hono/config/certs/http-adapter-key.pem"
+    certPath: "/opt/hono/config/certs/http-adapter-cert.pem"
     maxPayloadSize: 2048
   messaging:
     name: 'Hono HTTP Adapter'
-    host: ${hono.amqp-network.host}
+    host: "${hono.amqp-network.host}"
     port: 5673
-    amqpHostname: hono-internal
-    keyPath: /etc/hono/certs/http-adapter-key.pem
-    certPath: /etc/hono/certs/http-adapter-cert.pem
-    trustStorePath: /etc/hono/certs/trustStore.jks
-    trustStorePassword: "file:/etc/hono/certs/trust-store-password"
+    amqpHostname: "hono-internal"
+    keyPath: "/opt/hono/config/certs/http-adapter-key.pem"
+    certPath: "/opt/hono/config/certs/http-adapter-cert.pem"
+    trustStorePath: "/opt/hono/config/certs/trustStore.jks"
+    trustStorePassword: "file:/opt/hono/config/certs/trust-store-password"
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
   registration:
     name: 'Hono HTTP Adapter'
-    host: ${hono.registration.host}
+    host: "${hono.registration.host}"
     port: 5672
-    username: http-adapter@HONO
-    password: http-secret
+    username: "http-adapter@HONO"
+    password: "http-secret"
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
   credentials:
     name: 'Hono HTTP Adapter'
-    host: ${hono.registration.host}
+    host: "${hono.registration.host}"
     port: 5672
-    username: http-adapter@HONO
-    password: http-secret
+    username: "http-adapter@HONO"
+    password: "http-secret"
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
   tenant:
     name: 'Hono HTTP Adapter'
-    host: ${hono.registration.host}
+    host: "${hono.registration.host}"
     port: 5672
-    username: http-adapter@HONO
-    password: http-secret
+    username: "http-adapter@HONO"
+    password: "http-secret"
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
   commandRouter:
     name: 'Hono HTTP Adapter'
-    host: ${hono.commandrouter.host}
+    host: "${hono.commandrouter.host}"
     port: 5672
-    username: http-adapter@HONO
-    password: http-secret
+    username: "http-adapter@HONO"
+    password: "http-secret"
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
   command:
     name: 'Hono HTTP Adapter'
-    host: ${hono.amqp-network.host}
+    host: "${hono.amqp-network.host}"
     port: 5673
-    amqpHostname: hono-internal
-    keyPath: /etc/hono/certs/http-adapter-key.pem
-    certPath: /etc/hono/certs/http-adapter-cert.pem
-    trustStorePath: /etc/hono/certs/trustStore.jks
-    trustStorePassword: "file:/etc/hono/certs/trust-store-password"
+    amqpHostname: "hono-internal"
+    keyPath: "/opt/hono/config/certs/http-adapter-key.pem"
+    certPath: "/opt/hono/config/certs/http-adapter-cert.pem"
+    trustStorePath: "/opt/hono/config/certs/trustStore.jks"
+    trustStorePassword: "file:/opt/hono/config/certs/trust-store-password"
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
-  vertx:
-    maxEventLoopExecuteTime: ${max.event-loop.execute-time}
-    preferNative: true
   kafka:
     commonClientConfig:
       bootstrap.servers: ${hono.kafka.bootstrap.servers}
@@ -96,13 +93,3 @@ quarkus:
         level: DEBUG
   vertx:
     max-event-loop-execute-time: ${max.event-loop.execute-time}
-
-spring:
-  jmx:
-    enabled: false
-
-management:
-  port: -1
-
-server:
-  port: -1
