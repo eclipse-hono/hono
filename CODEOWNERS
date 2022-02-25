@@ -5,7 +5,6 @@
 /adapter-base-spring/                 @dejanb @sophokles73
 
 /adapters/                            @calohmn @kaniyan
-/adapters/amqp-vertx/                 @calohmn
 /adapters/amqp-vertx-base/            @calohmn
 /adapters/amqp-vertx-quarkus/         @calohmn
 
