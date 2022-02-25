@@ -34,7 +34,6 @@
     <module>http-vertx-quarkus</module>
     <module>lora-vertx-base</module>
     <module>lora-vertx-quarkus</module>
-    <module>mqtt-vertx</module>
     <module>mqtt-vertx-base</module>
     <module>mqtt-vertx-quarkus</module>
     <module>sigfox-vertx</module>
