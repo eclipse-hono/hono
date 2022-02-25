@@ -1,7 +1,8 @@
 ---
 title: "Device Connection API Specification"
 linkTitle: "Device Connection API"
-weight: 425
+hidden: true # does not show up in the menu, but shows up in the version selector and can be accessed from links
+weight: 0
 resources:
   - src: preconditions.svg
   - src: get_last_known_gateway_success.svg
@@ -12,7 +13,7 @@ The *Device Connection API* is used by *Protocol Adapters* to set and retrieve i
 <!--more-->
 
 {{% notice info %}}
-The Device Connection API is deprecated and will be replaced by the [Command Router API]({{< relref "/api/command-router" >}}).
+The Device Connection API has been replaced by the [Command Router API]({{< relref "/api/command-router" >}}).
 {{% /notice %}}
 
 The Device Connection API is defined by means of AMQP 1.0 message exchanges, i.e. a client needs to connect to the Device Connection service component using an AMQP 1.0 client in order to invoke operations of the API as described in the following sections.

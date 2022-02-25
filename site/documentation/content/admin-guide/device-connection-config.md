@@ -1,7 +1,8 @@
 +++
 title = "Configuring the Device Connection Service"
 linkTitle = "Device Connection Service Configuration"
-weight = 317
+hidden = true # does not show up in the menu, but shows up in the version selector and can be accessed from links
+weight = 0
 +++
 
 The Device Connection service provides an implementation of Eclipse Hono&trade;'s [Device Connection API]({{< relref "/api/device-connection" >}}).
@@ -13,10 +14,8 @@ instance that the gateway used by the device is connected to.
 <!--more-->
 
 {{% notice info %}}
-The Device Connection service is deprecated and will be removed from Hono completely in version 2.0.0.
-Protocol adapters use the [Command Router service]({{< relref "/admin-guide/command-router-config" >}}) by default.
-For backwards compatibility, adapters can still be configured to use the Device Connection service as described in
-the [Protocol Adapter Options Guide]({{< relref "common-config.md/#device-connection-service-connection-configuration" >}}).
+The Device Connection service has been removed in Hono 2.0.0.
+Protocol adapters now use the [Command Router service]({{< relref "/admin-guide/command-router-config" >}}) instead.
 {{% /notice %}}
 
 The Device Connection component provides a production grade implementation of the Device Connection API which uses a
