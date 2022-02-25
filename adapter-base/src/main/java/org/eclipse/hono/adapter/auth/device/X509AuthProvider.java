@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,7 +19,6 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
@@ -40,7 +39,6 @@ public class X509AuthProvider extends CredentialsApiAuthProvider<SubjectDnCreden
      * @param tracer The tracer instance.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    @Autowired
     public X509AuthProvider(final CredentialsClient credentialsClient, final Tracer tracer) {
         super(credentialsClient, tracer);
     }

@@ -2,7 +2,6 @@
 
 /adapter-base/                        @dejanb @sophokles73
 /adapter-base-quarkus/                @dejanb @sophokles73
-/adapter-base-spring/                 @dejanb @sophokles73
 
 /adapters/                            @calohmn @kaniyan
 /adapters/amqp-vertx-base/            @calohmn

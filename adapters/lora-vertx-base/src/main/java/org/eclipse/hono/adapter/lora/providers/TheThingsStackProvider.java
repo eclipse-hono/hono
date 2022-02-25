@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,7 +23,6 @@ import javax.enterprise.context.ApplicationScoped;
 import org.eclipse.hono.adapter.lora.GatewayInfo;
 import org.eclipse.hono.adapter.lora.LoraMessageType;
 import org.eclipse.hono.adapter.lora.LoraMetaData;
-import org.springframework.stereotype.Component;
 
 import com.google.common.io.BaseEncoding;
 
@@ -34,7 +33,6 @@ import io.vertx.core.json.JsonObject;
 /**
  * A LoRaWAN provider with API for The Thing Stack.
  */
-@Component
 @ApplicationScoped
 public class TheThingsStackProvider extends JsonBasedLoraProvider {
 
