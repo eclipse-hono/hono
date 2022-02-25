@@ -156,8 +156,7 @@
     <hono.amqp-adapter.native-image-args></hono.amqp-adapter.native-image-args>
 
     <hono.coap-adapter.host>hono-adapter-coap</hono.coap-adapter.host>
-    <hono.coap-adapter.image>hono-adapter-coap-vertx</hono.coap-adapter.image>
-    <hono.coap-adapter.config-dir>opt/hono/config</hono.coap-adapter.config-dir>
+    <hono.coap-adapter.image>hono-adapter-coap-vertx-quarkus</hono.coap-adapter.image>
     <hono.coap-adapter.max-mem>314572800</hono.coap-adapter.max-mem>
     <hono.coap-adapter.java-options>${default.java-options}</hono.coap-adapter.java-options>
     <hono.coap-adapter.native-image-args></hono.coap-adapter.native-image-args>
@@ -522,7 +521,6 @@
       <properties>
         <hono.image-suffix></hono.image-suffix>
         <hono.amqp-adapter.config-dir>etc/hono</hono.amqp-adapter.config-dir>
-        <hono.coap-adapter.config-dir>etc/hono</hono.coap-adapter.config-dir>
         <hono.http-adapter.config-dir>etc/hono</hono.http-adapter.config-dir>
         <hono.mqtt-adapter.config-dir>etc/hono</hono.mqtt-adapter.config-dir>
         <hono.command-router.config-dir>etc/hono</hono.command-router.config-dir>
@@ -540,6 +538,7 @@
         <hono.image-suffix>-quarkus-native</hono.image-suffix>
         <hono.amqp-adapter.max-mem>67108864</hono.amqp-adapter.max-mem>
 
+        <hono.coap-adapter.image>hono-adapter-coap-vertx-quarkus-native</hono.coap-adapter.image>
         <hono.coap-adapter.max-mem>67108864</hono.coap-adapter.max-mem>
 
         <hono.http-adapter.max-mem>67108864</hono.http-adapter.max-mem>
@@ -1576,7 +1575,7 @@
                   <name>${docker.repository}/hono-adapter-coap-test:${project.version}</name>
                   <build>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${docker.repository}/${hono.coap-adapter.image}${hono.image-suffix}:${project.version}</from>
+                    <from>${docker.repository}/${hono.coap-adapter.image}:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>
@@ -1585,14 +1584,14 @@
                         <fileSets>
                           <fileSet>
                             <directory>${project.build.directory}/resources/coap</directory>
-                            <outputDirectory>${hono.coap-adapter.config-dir}</outputDirectory>
+                            <outputDirectory>opt/hono/config</outputDirectory>
                             <includes>
                               <include>*</include>
                             </includes>
                           </fileSet>
                           <fileSet>
                             <directory>${project.build.directory}/certs</directory>
-                            <outputDirectory>etc/hono/certs</outputDirectory>
+                            <outputDirectory>opt/hono/config/certs</outputDirectory>
                             <includes>
                               <include>coap-adapter-*.pem</include>
                               <include>trusted-certs.pem</include>
@@ -1623,11 +1622,8 @@
                     </cmd>
                     <env>
                       <SMALLRYE_CONFIG_LOCATIONS>
-                        /${hono.coap-adapter.config-dir}/logging-quarkus-${logging.profile}.yml
+                        /opt/hono/config/logging-quarkus-${logging.profile}.yml
                       </SMALLRYE_CONFIG_LOCATIONS>
-                      <LOGGING_CONFIG>file:/${hono.coap-adapter.config-dir}/logback-spring.xml</LOGGING_CONFIG>
-                      <SPRING_CONFIG_LOCATION>file:/${hono.coap-adapter.config-dir}/</SPRING_CONFIG_LOCATION>
-                      <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${hono.coap-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <JAEGER_SERVICE_NAME>${hono.coap-adapter.host}</JAEGER_SERVICE_NAME>
