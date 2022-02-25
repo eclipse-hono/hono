@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -30,6 +30,7 @@ import org.eclipse.hono.commandrouter.CommandRouterMetrics;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.MessagingType;
@@ -39,6 +40,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.micrometer.core.instrument.Timer;
+import io.opentracing.Span;
+import io.opentracing.SpanContext;
+import io.opentracing.Tracer;
+import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
@@ -53,6 +58,7 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
     protected final TenantClient tenantClient;
+    protected final Tracer tracer;
 
     private final CommandTargetMapper commandTargetMapper;
     private final InternalCommandSender internalCommandSender;
@@ -65,18 +71,21 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
      * @param commandTargetMapper The mapper component to determine the command target.
      * @param internalCommandSender The command sender to publish commands to the internal command topic.
      * @param metrics The component to use for reporting metrics.
+     * @param tracer The tracer instance.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public AbstractMappingAndDelegatingCommandHandler(
             final TenantClient tenantClient,
             final CommandTargetMapper commandTargetMapper,
             final InternalCommandSender internalCommandSender,
-            final CommandRouterMetrics metrics) {
+            final CommandRouterMetrics metrics,
+            final Tracer tracer) {
 
         this.tenantClient = Objects.requireNonNull(tenantClient);
         this.commandTargetMapper = Objects.requireNonNull(commandTargetMapper);
         this.internalCommandSender = Objects.requireNonNull(internalCommandSender);
         this.metrics = Objects.requireNonNull(metrics);
+        this.tracer = Objects.requireNonNull(tracer);
     }
 
     @Override
@@ -274,5 +283,23 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
                             command.getPayloadSize(),
                             timer);
                 });
+    }
+
+    /**
+     * Creates and starts an <em>OpenTracing</em> span for a mapping/delegation operation.
+     *
+     * @param tenantId The tenant identifier.
+     * @param deviceId The device identifier.
+     * @param spanContext Existing span context.
+     * @return The created and started span.
+     */
+    protected final Span createSpan(final String tenantId, final String deviceId, final SpanContext spanContext) {
+        final String operationName = "map and delegate command";
+        final Tracer.SpanBuilder spanBuilder = TracingHelper
+                .buildChildSpan(tracer, spanContext, operationName, getClass().getSimpleName())
+                .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CONSUMER)
+                .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
+                .withTag(TracingHelper.TAG_DEVICE_ID, deviceId);
+        return spanBuilder.start();
     }
 }

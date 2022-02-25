@@ -402,7 +402,8 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
             final SpanContext followsFromSpanContext = commandHandler != null
                     ? commandHandler.getConsumerCreationSpanContext()
                     : null;
-            final Span currentSpan = CommandContext.createSpan(tracer, command, spanContext, followsFromSpanContext);
+            final Span currentSpan = CommandContext.createSpan(tracer, command, spanContext, followsFromSpanContext,
+                    getClass().getSimpleName());
             currentSpan.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
             KafkaTracingHelper.TAG_OFFSET.set(currentSpan, record.offset());
 

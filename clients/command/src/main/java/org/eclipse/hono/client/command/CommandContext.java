@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,7 +18,6 @@ import java.util.Objects;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.impl.CommandConsumer;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.ExecutionContext;
 import org.eclipse.hono.util.MessageHelper;
@@ -122,17 +121,18 @@ public interface CommandContext extends ExecutionContext {
      * @param parentSpanContext The context of the span to reference as parent span.
      * @param followsFromSpanContext A span context for which to add a <em>follows-from</em> reference,
      *                               e.g. the span context for the operation to create the command consumer.
+     * @param componentName The component to set for the span.
      * @return The created span.
      * @throws NullPointerException if tracer or command is {@code null}.
      */
     static Span createSpan(final Tracer tracer, final Command command, final SpanContext parentSpanContext,
-            final SpanContext followsFromSpanContext) {
+            final SpanContext followsFromSpanContext, final String componentName) {
         Objects.requireNonNull(tracer);
         Objects.requireNonNull(command);
         // we set the component tag to the class name because we have no access to
         // the name of the enclosing component we are running in
         final Tracer.SpanBuilder spanBuilder = TracingHelper
-                .buildChildSpan(tracer, parentSpanContext, "handle command", CommandConsumer.class.getSimpleName())
+                .buildChildSpan(tracer, parentSpanContext, "handle command", componentName)
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CONSUMER)
                 .withTag(TracingHelper.TAG_TENANT_ID, command.getTenant())
                 .withTag(TracingHelper.TAG_DEVICE_ID, command.getDeviceId());
