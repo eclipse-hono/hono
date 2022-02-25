@@ -29,6 +29,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The file based device registry has been removed.
 * The Spring Boot based variant of the AMQP protocol adapter has been removed.
 * The Spring Boot based variant of the HTTP protocol adapter has been removed.
+* The Spring Boot based variant of the MQTT protocol adapter has been removed.
 
 ## 1.12.1
 

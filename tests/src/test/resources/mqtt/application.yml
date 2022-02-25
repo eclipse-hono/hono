@@ -2,82 +2,79 @@ hono:
   app:
     maxInstances: 1
   connectionEvents:
-    producer: logging
-    logLevel: debug
+    producer: "logging"
+    logLevel: "debug"
   healthCheck:
-    insecurePortBindAddress: 0.0.0.0
+    insecurePortBindAddress: "0.0.0.0"
     insecurePort: ${vertx.health.port}
   mqtt:
-    bindAddress: 0.0.0.0
-    insecurePortBindAddress: 0.0.0.0
+    bindAddress: "0.0.0.0"
+    insecurePortBindAddress: "0.0.0.0"
     insecurePortEnabled: true
-    keyPath: /etc/hono/certs/mqtt-adapter-key.pem
-    certPath: /etc/hono/certs/mqtt-adapter-cert.pem
+    keyPath: "/opt/hono/config/certs/mqtt-adapter-key.pem"
+    certPath: "/opt/hono/config/certs/mqtt-adapter-cert.pem"
     sendMessageToDeviceTimeout: ${adapter.sendMessageToDeviceTimeout}
   messaging:
     name: 'Hono MQTT Adapter'
-    host: ${hono.amqp-network.host}
+    host: "${hono.amqp-network.host}"
     port: 5673
-    amqpHostname: hono-internal
-    keyPath: /etc/hono/certs/mqtt-adapter-key.pem
-    certPath: /etc/hono/certs/mqtt-adapter-cert.pem
-    trustStorePath: /etc/hono/certs/trusted-certs.pem
+    amqpHostname: "hono-internal"
+    keyPath: "/opt/hono/config/certs/mqtt-adapter-key.pem"
+    certPath: "/opt/hono/config/certs/mqtt-adapter-cert.pem"
+    trustStorePath: "/opt/hono/config/certs/trusted-certs.pem"
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
   registration:
     name: 'Hono MQTT Adapter'
-    host: ${hono.registration.host}
+    host: "${hono.registration.host}"
     port: 5672
-    username: mqtt-adapter@HONO
-    password: mqtt-secret
+    username: "mqtt-adapter@HONO"
+    password: "mqtt-secret"
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
   credentials:
     name: 'Hono MQTT Adapter'
-    host: ${hono.registration.host}
+    host: "${hono.registration.host}"
     port: 5672
-    username: mqtt-adapter@HONO
-    password: mqtt-secret
+    username: "mqtt-adapter@HONO"
+    password: "mqtt-secret"
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
   tenant:
     name: 'Hono MQTT Adapter'
-    host: ${hono.registration.host}
+    host: "${hono.registration.host}"
     port: 5672
-    username: mqtt-adapter@HONO
-    password: mqtt-secret
+    username: "mqtt-adapter@HONO"
+    password: "mqtt-secret"
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
   commandRouter:
     name: 'Hono MQTT Adapter'
-    host: ${hono.commandrouter.host}
+    host: "${hono.commandrouter.host}"
     port: 5672
-    username: mqtt-adapter@HONO
-    password: mqtt-secret
+    username: "mqtt-adapter@HONO"
+    password: "mqtt-secret"
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
   command:
     name: 'Hono MQTT Adapter'
-    host: ${hono.amqp-network.host}
+    host: "${hono.amqp-network.host}"
     port: 5673
-    amqpHostname: hono-internal
-    keyPath: /etc/hono/certs/mqtt-adapter-key.pem
-    certPath: /etc/hono/certs/mqtt-adapter-cert.pem
-    trustStorePath: /etc/hono/certs/trusted-certs.pem
+    amqpHostname: "hono-internal"
+    keyPath: "/opt/hono/config/certs/mqtt-adapter-key.pem"
+    certPath: "/opt/hono/config/certs/mqtt-adapter-cert.pem"
+    trustStorePath: "/opt/hono/config/certs/trusted-certs.pem"
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
-  vertx:
-    maxEventLoopExecuteTime: ${max.event-loop.execute-time}
-    preferNative: true
   kafka:
     commonClientConfig:
-      bootstrap.servers: ${hono.kafka.bootstrap.servers}
+      bootstrap.servers: "${hono.kafka.bootstrap.servers}"
 
 quarkus:
   jaeger:
@@ -94,13 +91,3 @@ quarkus:
         level: DEBUG
   vertx:
     max-event-loop-execute-time: ${max.event-loop.execute-time}
-
-spring:
-  jmx:
-    enabled: false
-
-management:
-  port: -1
-
-server:
-  port: -1

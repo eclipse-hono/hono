@@ -17,7 +17,6 @@
 /adapters/lora-vertx-base/            @calohmn
 /adapters/lora-vertx-quarkus/         @calohmn
 
-/adapters/mqtt-vertx/                 @ctron @kaniyan
 /adapters/mqtt-vertx-base/            @ctron @kaniyan
 /adapters/mqtt-vertx-quarkus/         @ctron @kaniyan
 

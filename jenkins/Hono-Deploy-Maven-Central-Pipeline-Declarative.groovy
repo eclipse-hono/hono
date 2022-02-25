@@ -136,7 +136,6 @@ spec:
                   :hono-adapter-coap-vertx-quarkus,\
                   :hono-adapter-http-vertx-quarkus,\
                   :hono-adapter-lora-vertx-quarkus,\
-                  :hono-adapter-mqtt-vertx,\
                   :hono-adapter-mqtt-vertx-quarkus,\
                   :hono-adapter-sigfox-vertx-quarkus,\
                   :hono-cli,\
