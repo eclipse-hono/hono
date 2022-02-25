@@ -13,10 +13,6 @@ resources:
 *Protocol Adapters* use the *Command Router API* to supply information with which a Command Router service component can route command & control messages to the protocol adapters that the target devices are connected to.
 <!--more-->
 
-{{% notice info %}}
-The Command Router API will replace the now deprecated [Device Connection API]({{< relref "/api/device-connection" >}}).
-{{% /notice %}}
-
 The Command Router API is defined by means of AMQP 1.0 message exchanges, i.e. a client needs to connect to the service component using an AMQP 1.0 client in order to invoke operations of the API as described in the following sections.
 
 <a name="preconditions"></a>
