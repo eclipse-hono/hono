@@ -16,7 +16,8 @@
 /adapters/http-vertx-base/            @ctron @calohmn
 /adapters/http-vertx-quarkus/         @ctron @calohmn
 
-/adapters/lora-vertx/                 @calohmn
+/adapters/lora-vertx-base/            @calohmn
+/adapters/lora-vertx-quarkus/         @calohmn
 
 /adapters/mqtt-vertx/                 @ctron @kaniyan
 /adapters/mqtt-vertx-base/            @ctron @kaniyan

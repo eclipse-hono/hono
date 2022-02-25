@@ -20,7 +20,6 @@ IMAGES="hono-adapter-amqp-vertx \
         hono-adapter-coap-vertx-quarkus \
         hono-adapter-http-vertx \
         hono-adapter-http-vertx-quarkus \
-        hono-adapter-lora-vertx \
         hono-adapter-lora-vertx-quarkus \
         hono-adapter-mqtt-vertx \
         hono-adapter-mqtt-vertx-quarkus \
