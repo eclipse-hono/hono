@@ -207,10 +207,6 @@
 
       <dependencies>
         <dependency>
-          <groupId>io.netty</groupId>
-          <artifactId>netty-tcnative</artifactId>
-        </dependency>
-        <dependency>
           <groupId>io.quarkus</groupId>
           <artifactId>quarkus-caffeine</artifactId>
         </dependency>
