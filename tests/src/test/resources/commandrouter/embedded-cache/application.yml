@@ -53,6 +53,8 @@ hono:
 
 quarkus:
   jaeger:
+    agent-host-port: "${jaeger.agent-host-port}"
+    sampler-manager-host-port: "${jaeger.sampler-manager-host-port}"
     service-name: "${hono.commandrouter.host}"
   log:
     console:
