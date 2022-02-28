@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,10 +17,7 @@ import java.util.Objects;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.eclipse.hono.service.AbstractEndpoint;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonConnection;
@@ -57,8 +54,6 @@ public abstract class AbstractAmqpEndpoint<T> extends AbstractEndpoint implement
      * @param props The properties.
      * @throws NullPointerException if props is {@code null}.
      */
-    @Qualifier(Constants.QUALIFIER_AMQP)
-    @Autowired(required = false)
     public final void setConfiguration(final T props) {
         this.config = Objects.requireNonNull(props);
     }

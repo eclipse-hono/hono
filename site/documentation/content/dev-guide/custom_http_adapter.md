@@ -58,7 +58,7 @@ In the custom HTTP protocol adapter adapt the routes according to your needs.
 
 ## Build and run the custom HTTP Protocol Adapter
  
-If you have Hono running, you can launch your custom HTTP protocol adapter as a Docker Container or a Spring Boot application.
+If you have Hono running, you can launch your custom HTTP protocol adapter as a Docker Container or a Quarkus application.
 
 You may adopt the Maven profile `build-docker-image` from the Maven POM file of the standard HTTP Adapter into your 
 custom adapter's Maven POM file. 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,7 +21,6 @@ import org.eclipse.hono.util.ConfigurationSupportingVerticle;
 import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import io.netty.handler.ssl.OpenSsl;
 import io.opentracing.Tracer;
@@ -63,7 +62,6 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      *
      * @param opentracingTracer The tracer.
      */
-    @Autowired(required = false)
     public final void setTracer(final Tracer opentracingTracer) {
         log.info("using OpenTracing Tracer implementation [{}]", opentracingTracer.getClass().getName());
         this.tracer = Objects.requireNonNull(opentracingTracer);
@@ -75,7 +73,6 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * @param healthCheckServer The health check server.
      * @throws NullPointerException if healthCheckServer is {@code null}.
      */
-    @Autowired(required = false)
     public void setHealthCheckServer(final HealthCheckServer healthCheckServer) {
         this.healthCheckServer = Objects.requireNonNull(healthCheckServer);
     }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,10 +16,6 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 import org.eclipse.hono.service.auth.AuthenticationService.AuthenticationAttemptOutcome;
-import org.eclipse.hono.util.AuthenticationConstants;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Component;
 
 import io.vertx.core.Vertx;
 import io.vertx.proton.sasl.ProtonSaslAuthenticator;
@@ -28,7 +24,6 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
 /**
  * A factory for objects performing SASL authentication on an AMQP connection.
  */
-@Component
 public final class HonoSaslAuthenticatorFactory implements ProtonSaslAuthenticatorFactory {
 
     private final AuthenticationService authenticationService;
@@ -38,7 +33,7 @@ public final class HonoSaslAuthenticatorFactory implements ProtonSaslAuthenticat
      * Creates a new factory for a Vertx environment.
      * <p>
      * Verifies credentials by means of sending authentication requests to address
-     * {@link AuthenticationConstants#EVENT_BUS_ADDRESS_AUTHENTICATION_IN} on the Vert.x
+     * {@link org.eclipse.hono.util.AuthenticationConstants#EVENT_BUS_ADDRESS_AUTHENTICATION_IN} on the Vert.x
      * Event Bus.
      *
      * @param vertx the Vertx environment to run the factory in.
@@ -47,10 +42,8 @@ public final class HonoSaslAuthenticatorFactory implements ProtonSaslAuthenticat
      *            on the Vert.x event bus. Used for determining the supported SASL mechanisms.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    @Autowired
     public HonoSaslAuthenticatorFactory(
             final Vertx vertx,
-            @Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION)
             final AuthTokenHelper validator,
             final AuthenticationService actualAuthenticationService) {
         this(new EventBusAuthenticationService(vertx, validator,
@@ -61,7 +54,7 @@ public final class HonoSaslAuthenticatorFactory implements ProtonSaslAuthenticat
      * Creates a new factory for a Vertx environment.
      * <p>
      * Verifies credentials by means of sending authentication requests to address
-     * {@link AuthenticationConstants#EVENT_BUS_ADDRESS_AUTHENTICATION_IN} on the Vert.x
+     * {@link org.eclipse.hono.util.AuthenticationConstants#EVENT_BUS_ADDRESS_AUTHENTICATION_IN} on the Vert.x
      * Event Bus.
      *
      * @param vertx the Vertx environment to run the factory in.

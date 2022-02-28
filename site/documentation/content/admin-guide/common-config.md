@@ -29,15 +29,6 @@ environment variables or corresponding system properties:
 | `QUARKUS_VERTX_MAX_EVENT_LOOP_EXECUTE_TIME`<br>`quarkus.vertx.max-event-loop-execute-time` | no | `PT2S` | The maximum duration that a task on the event loop may run without being considered to block the event loop. The value needs to be a string that represents an [ISO-8601 Duration](https://en.wikipedia.org/wiki/ISO_8601#Durations). |
 | `QUARKUS_VERTX_PREFER_NATIVE_TRANSPORT`<br>`quarkus.vertx.prefer-native-transport`| no | `true` | Enables/disables *epoll()* support on Linux/MacOS. See the [notes below](./#epoll) for an explanation of the benefits of enabling *epoll*. It is generally safe to set this property to `true` because Netty will disable native transport if the platform doesn't support it. |
 
-The vert.x framework instance used to run Hono's (deprecated) Spring Boot based components can be configured using the
-following environment variables or corresponding system properties:
-
-| OS Environment Variable<br>Java System Property | Mandatory | Default | Description                                 |
-| :---------------------------------------------- | :-------: | :------ | :------------------------------------------ |
-| `HONO_VERTX_DNSQUERYTIMEOUT`<br>`hono.vertx.dnsQueryTimeout` | no | `5000` | The amount of time (in milliseconds) after which a DNS query is considered to be failed. Setting this variable to a smaller value may help to reduce the time required to establish connections to the services this adapter depends on. However, setting it to a value that is too small for any DNS query to succeed will effectively prevent any connections to be established at all. |
-| `HONO_VERTX_MAXEVENTLOOPEXECUTETIME`<br>`hono.vertx.maxEventLoopExecuteTime` | no | `PT2S` | The maximum duration that a task on the event loop may run without being considered to block the event loop. The value needs to be a string that represents an [ISO-8601 Duration](https://en.wikipedia.org/wiki/ISO_8601#Durations). |
-| `HONO_VERTX_PREFERNATIVE`<br>`hono.vertx.preferNative`| no | `false` | Enables/disables *epoll()* support on Linux/MacOS. See the [notes below](./#epoll) for an explanation of the benefits of enabling *epoll*. It is generally safe to set this property to `true` because Netty will disable native transport if the platform doesn't support it. |
-
 <a name="epoll"></a>
 ### Using Native Transport on Linux/MacOS
 
@@ -47,9 +38,7 @@ applications using Hono.
 
 The *Netty* framework supports using `epoll()` on Linux/MacOS x86_64 based systems.
 
-Hono's components support native transport by default. For the (deprecated) Spring Boot based variant of the components,
-support for native transport needs to be enabled explicitly by means of setting the *HONO_VERTX_PREFERNATIVE*
-environment variable to `true`.
+Hono's components support native transport out of the box.
 
 ## Protocol Adapter Options
 

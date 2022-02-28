@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,8 +24,6 @@ import java.util.Set;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractServiceBase;
 import org.eclipse.hono.util.Constants;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.opentracing.tag.Tags;
 import io.vertx.core.CompositeFuture;
@@ -66,7 +64,6 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
      *
      * @param definedEndpoints The endpoints.
      */
-    @Autowired(required = false)
     public final void addEndpoints(final Set<HttpEndpoint> definedEndpoints) {
         Objects.requireNonNull(definedEndpoints);
         for (final HttpEndpoint ep : definedEndpoints) {
@@ -101,13 +98,10 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
      *
      * @param authHandler The handler.
      */
-    @Autowired(required = false)
     public void setAuthHandler(final AuthenticationHandler authHandler) {
         this.authHandler = authHandler;
     }
 
-    @Autowired
-    @Qualifier(Constants.QUALIFIER_HTTP)
     @Override
     public final void setConfig(final T configuration) {
         setSpecificConfig(configuration);

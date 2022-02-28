@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,8 +22,6 @@ import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -110,8 +108,6 @@ public final class VertxBasedHealthCheckServer implements HealthCheckServer {
      * @param resourceProviders Additional resources to expose.
      * @throws NullPointerException if provider list is {@code null}.
      */
-    @Autowired(required = false)
-    @Qualifier("healthchecks")
     public void setAdditionalResources(final List<Handler<Router>> resourceProviders) {
         Objects.requireNonNull(resourceProviders);
         this.additionalResources.addAll(resourceProviders);

@@ -34,7 +34,7 @@ system failure.
 
 Hono uses [Micrometer](https://micrometer.io/) for providing metrics. It is
 possible to drop in any Micrometer compatible back end. Hono also uses the
-Micrometer integration with Spring Boot and Vert.x.
+Micrometer integration with Vert.x.
 
 Please refer to the [Micrometer documentation](https://micrometer.io/docs)
 for details regarding the configuration of a specific Micrometer back end.

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -33,7 +33,6 @@ import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
@@ -113,7 +112,6 @@ public abstract class AbstractRequestResponseEndpoint<T extends ServiceConfigPro
      *
      * @param authService The service.
      */
-    @Autowired(required = false)
     public final void setAuthorizationService(final AuthorizationService authService) {
         this.authorizationService = authService;
     }
