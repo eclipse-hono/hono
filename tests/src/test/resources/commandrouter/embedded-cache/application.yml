@@ -2,57 +2,54 @@ hono:
   app:
     maxInstances: 1
   healthCheck:
-    insecurePortBindAddress: 0.0.0.0
+    insecurePortBindAddress: "0.0.0.0"
     insecurePort: ${vertx.health.port}
   auth:
-    host: ${hono.auth.host}
+    host: "${hono.auth.host}"
     port: 5671
-    name: command-router
-    trustStorePath: "/etc/hono/certs/trusted-certs.pem"
+    name: "command-router"
+    trustStorePath: "/opt/hono/config/certs/trusted-certs.pem"
     validation:
-      certPath: "/etc/hono/certs/auth-server-cert.pem"
+      certPath: "/opt/hono/config/certs/auth-server-cert.pem"
   commandRouter:
     amqp:
       insecurePortEnabled: true
-      insecurePortBindAddress: 0.0.0.0
+      insecurePortBindAddress: "0.0.0.0"
     cache:
       embedded:
-        configurationFile: "/${hono.command-router.config-dir}/cache-config.xml"
+        configurationFile: "/opt/hono/config/cache-config.xml"
   registration:
     name: 'Hono Command Router'
-    host: ${hono.registration.host}
+    host: "${hono.registration.host}"
     port: 5672
-    username: command-router@HONO
-    password: cmd-router-secret
+    username: "command-router@HONO"
+    password: "cmd-router-secret"
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
   tenant:
     name: 'Hono Command Router'
-    host: ${hono.registration.host}
+    host: "${hono.registration.host}"
     port: 5672
-    username: command-router@HONO
-    password: cmd-router-secret
+    username: "command-router@HONO"
+    password: "cmd-router-secret"
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
   command:
     name: 'Hono Command Router'
-    host: ${hono.amqp-network.host}
+    host: "${hono.amqp-network.host}"
     port: 5673
-    amqpHostname: hono-internal
-    keyPath: /etc/hono/certs/command-router-key.pem
-    certPath: /etc/hono/certs/command-router-cert.pem
-    trustStorePath: /etc/hono/certs/trusted-certs.pem
+    amqpHostname: "hono-internal"
+    keyPath: "/opt/hono/config/certs/command-router-key.pem"
+    certPath: "/opt/hono/config/certs/command-router-cert.pem"
+    trustStorePath: "/opt/hono/config/certs/trusted-certs.pem"
     linkEstablishmentTimeout: ${link.establishment.timeout}
     flowLatency: ${flow.latency}
     requestTimeout: ${request.timeout}
   kafka:
     commonClientConfig:
-      bootstrap.servers: ${hono.kafka.bootstrap.servers}
-  vertx:
-    maxEventLoopExecuteTime: ${max.event-loop.execute-time}
-    preferNative: true
+      bootstrap.servers: "${hono.kafka.bootstrap.servers}"
 
 quarkus:
   jaeger:
@@ -69,8 +66,3 @@ quarkus:
         level: DEBUG
   vertx:
     max-event-loop-execute-time: ${max.event-loop.execute-time}
-
-spring:
-  jmx:
-    enabled: false
-

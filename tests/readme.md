@@ -144,16 +144,6 @@ In order to stop and remove the Docker containers started by a test run, use:
 mvn verify -PstopContainers
 ```
 
-### Running the Tests with the Spring Boot based Components
-
-By default, the integration tests are run using the Quarkus based Hono components. For some components there is only
-the original Spring Boot based variant available. The tests can be run using the Spring Boot based variant of all
-components by means of setting the `hono.components.type` Maven property to value `spring-boot`:
-
-```sh
-mvn verify -Prun-tests -Dhono.components.type=spring-boot
-```
-
 ### Running the Tests with the Command Router using an embedded Cache
 
 The Command Router component by default stores routing information in a dedicated Infinispan server.

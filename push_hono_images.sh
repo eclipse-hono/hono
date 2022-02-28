@@ -21,7 +21,6 @@ IMAGES="hono-adapter-amqp-vertx-quarkus \
         hono-adapter-mqtt-vertx-quarkus \
         hono-adapter-sigfox-vertx-quarkus \
         hono-service-auth-quarkus \
-        hono-service-command-router \
         hono-service-command-router-quarkus \
         hono-service-device-registry-jdbc-quarkus \
         hono-service-device-registry-mongodb-quarkus"

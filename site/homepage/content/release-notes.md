@@ -31,6 +31,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The Spring Boot based variant of the HTTP protocol adapter has been removed.
 * The Spring Boot based variant of the MQTT protocol adapter has been removed.
 * Usage and implementations of the Device Connection API have been removed.
+* The Spring Boot based variant of the Command Router has been removed.
 
 ## 1.12.1
 
