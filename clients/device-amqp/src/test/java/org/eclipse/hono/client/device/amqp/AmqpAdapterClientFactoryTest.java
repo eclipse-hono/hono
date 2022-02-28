@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,7 +24,7 @@ import static com.google.common.truth.Truth.assertThat;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.SendMessageSampler;
-import org.eclipse.hono.client.impl.HonoClientUnitTestHelper;
+import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -47,13 +47,13 @@ public class AmqpAdapterClientFactoryTest {
     @BeforeAll
     public static void setUp() {
 
-        final HonoConnection connection = HonoClientUnitTestHelper.mockHonoConnection(mock(Vertx.class));
+        final HonoConnection connection = AmqpClientUnitTestHelper.mockHonoConnection(mock(Vertx.class));
         when(connection.isConnected(anyLong())).thenReturn(Future.succeededFuture());
 
-        final ProtonSender protonSender = HonoClientUnitTestHelper.mockProtonSender();
+        final ProtonSender protonSender = AmqpClientUnitTestHelper.mockProtonSender();
         when(connection.createSender(any(), any(), any())).thenReturn(Future.succeededFuture(protonSender));
 
-        final ProtonReceiver receiver = HonoClientUnitTestHelper.mockProtonReceiver();
+        final ProtonReceiver receiver = AmqpClientUnitTestHelper.mockProtonReceiver();
         when(connection.createReceiver(anyString(), any(), any(), any())).thenReturn(Future.succeededFuture(receiver));
 
         factory = AmqpAdapterClientFactory.create(connection, "my-tenant", SendMessageSampler.Factory.noop());

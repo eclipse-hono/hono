@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -31,7 +31,7 @@ import java.util.function.BiConsumer;
 import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.ReconnectListener;
-import org.eclipse.hono.client.impl.HonoClientUnitTestHelper;
+import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -62,7 +62,7 @@ public class AmqpAdapterClientCommandConsumerTest {
     @BeforeEach
     public void setUp() {
 
-        connection = HonoClientUnitTestHelper.mockHonoConnection(mock(Vertx.class));
+        connection = AmqpClientUnitTestHelper.mockHonoConnection(mock(Vertx.class));
         when(connection.isConnected(anyLong())).thenReturn(Future.succeededFuture());
         originalReceiver = createNewProtonReceiver(connection);
     }

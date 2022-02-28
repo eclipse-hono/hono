@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,7 +25,7 @@ import java.util.Map;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.impl.HonoClientUnitTestHelper;
+import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.MessageHelper;
@@ -65,7 +65,7 @@ public abstract class AbstractAmqpAdapterClientDownstreamSenderTestBase {
      */
     @BeforeEach
     public void setUp() {
-        sender = HonoClientUnitTestHelper.mockProtonSender();
+        sender = AmqpClientUnitTestHelper.mockProtonSender();
 
         protonDelivery = mock(ProtonDelivery.class);
         when(protonDelivery.remotelySettled()).thenReturn(true);
@@ -78,7 +78,7 @@ public abstract class AbstractAmqpAdapterClientDownstreamSenderTestBase {
         spanBuilder = TracingMockSupport.mockSpanBuilder(span);
         final Tracer tracer = TracingMockSupport.mockTracer(spanBuilder);
 
-        connection = HonoClientUnitTestHelper.mockHonoConnection(mock(Vertx.class));
+        connection = AmqpClientUnitTestHelper.mockHonoConnection(mock(Vertx.class));
 
         when(connection.getTracer()).thenReturn(tracer);
         when(connection.createSender(any(), any(), any())).thenReturn(Future.succeededFuture(sender));
