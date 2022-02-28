@@ -22,9 +22,8 @@ means of starting the corresponding [Docker image](https://hub.docker.com/r/ecli
 created from it.
 
 {{% notice info %}}
-The Command Router had originally been implemented as a Spring Boot application. That variant has been deprecated with Hono
-1.10.0 and will be completely removed in Hono 2.0.0.
-The [Spring Boot based Docker image](https://hub.docker.com/r/eclipse/hono-service-command-router/) will be available until then.
+The Command Router had originally been implemented as a Spring Boot application. That variant has been removed in Hono
+2.0.0.
 {{% /notice %}}
 
 ## Service Configuration

@@ -86,9 +86,8 @@
     <!--
      Command Router related properties.
      -->
-    <hono.command-router.config-dir>opt/hono/config</hono.command-router.config-dir>
     <hono.command-router.config-src>clustered-cache</hono.command-router.config-src>
-    <hono.command-router.image>hono-service-command-router</hono.command-router.image>
+    <hono.command-router.image>hono-service-command-router-quarkus</hono.command-router.image>
     <hono.command-router.max-mem>300000000</hono.command-router.max-mem>
     <hono.command-router.java-options>${default.java-options}</hono.command-router.java-options>
     <hono.command-router.native-image-args></hono.command-router.native-image-args>
@@ -507,19 +506,6 @@
       </properties>
     </profile>
     <profile>
-      <id>components-spring-boot</id>
-      <activation>
-        <property>
-          <name>hono.components.type</name>
-          <value>spring-boot</value>
-        </property>
-      </activation>
-      <properties>
-        <hono.image-suffix></hono.image-suffix>
-        <hono.command-router.config-dir>etc/hono</hono.command-router.config-dir>
-      </properties>
-    </profile>
-    <profile>
       <id>components-quarkus-native</id>
       <activation>
         <property>
@@ -545,6 +531,7 @@
         <hono.auth-server.image>hono-service-auth-quarkus-native</hono.auth-server.image>
         <hono.auth-server.max-mem>33554432</hono.auth-server.max-mem>
         <hono.auth-server.nativeTlsRequired>false</hono.auth-server.nativeTlsRequired>
+        <hono.command-router.image>hono-service-command-router-quarkus-native</hono.command-router.image>
         <hono.command-router.max-mem>67108864</hono.command-router.max-mem>
         <hono.deviceregistry.mongodb.image>hono-service-device-registry-mongodb-quarkus-native</hono.deviceregistry.mongodb.image>
         <hono.deviceregistry.mongodb.max-mem>150000000</hono.deviceregistry.mongodb.max-mem>
@@ -1245,7 +1232,7 @@
                   <name>${docker.repository}/hono-service-command-router-test:${project.version}</name>
                   <build>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${docker.repository}/${hono.command-router.image}${hono.image-suffix}:${project.version}</from>
+                    <from>${docker.repository}/${hono.command-router.image}:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>
@@ -1254,21 +1241,21 @@
                         <fileSets>
                           <fileSet>
                             <directory>${project.build.directory}/resources/commandrouter</directory>
-                            <outputDirectory>${hono.command-router.config-dir}</outputDirectory>
+                            <outputDirectory>opt/hono/config</outputDirectory>
                             <includes>
                               <include>*</include>
                             </includes>
                           </fileSet>
                           <fileSet>
                             <directory>${project.build.directory}/resources/commandrouter/${hono.command-router.config-src}</directory>
-                            <outputDirectory>${hono.command-router.config-dir}</outputDirectory>
+                            <outputDirectory>opt/hono/config</outputDirectory>
                             <includes>
                               <include>*</include>
                             </includes>
                           </fileSet>
                           <fileSet>
                             <directory>${project.build.directory}/certs</directory>
-                            <outputDirectory>etc/hono/certs</outputDirectory>
+                            <outputDirectory>opt/hono/config/certs</outputDirectory>
                             <includes>
                               <include>command-router-*.pem</include>
                               <include>auth-server-cert.pem</include>
@@ -1299,11 +1286,8 @@
                     </cmd>
                     <env>
                       <SMALLRYE_CONFIG_LOCATIONS>
-                        /${hono.command-router.config-dir}/logging-quarkus-${logging.profile}.yml
+                        /opt/hono/config/logging-quarkus-${logging.profile}.yml
                       </SMALLRYE_CONFIG_LOCATIONS>
-                      <LOGGING_CONFIG>file:///${hono.command-router.config-dir}/logback-spring.xml</LOGGING_CONFIG>
-                      <SPRING_CONFIG_LOCATION>file:///${hono.command-router.config-dir}/</SPRING_CONFIG_LOCATION>
-                      <SPRING_PROFILES_ACTIVE>${logging.profile}</SPRING_PROFILES_ACTIVE>
                       <JDK_JAVA_OPTIONS>${hono.command-router.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                       <JAEGER_SERVICE_NAME>${hono.commandrouter.host}</JAEGER_SERVICE_NAME>
