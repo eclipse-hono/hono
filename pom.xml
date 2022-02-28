@@ -238,7 +238,6 @@
     <module>legal</module>
     <module>service-base</module>
     <module>service-base-quarkus</module>
-    <module>service-base-spring</module>
     <module>services</module>
     <module>site</module>
     <module>test-utils</module>

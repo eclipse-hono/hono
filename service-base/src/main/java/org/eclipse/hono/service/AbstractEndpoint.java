@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,7 +17,6 @@ import java.util.Objects;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
@@ -66,7 +65,6 @@ public abstract class AbstractEndpoint implements Endpoint {
      *
      * @param opentracingTracer The tracer.
      */
-    @Autowired(required = false)
     public final void setTracer(final Tracer opentracingTracer) {
         logger.info("using OpenTracing Tracer implementation [{}]", opentracingTracer.getClass().getName());
         this.tracer = Objects.requireNonNull(opentracingTracer);

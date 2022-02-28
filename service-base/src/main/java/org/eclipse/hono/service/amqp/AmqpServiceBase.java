@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -35,8 +35,6 @@ import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.Strings;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
@@ -77,8 +75,6 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      */
     protected abstract String getServiceName();
 
-    @Autowired
-    @Qualifier(Constants.QUALIFIER_AMQP)
     @Override
     public void setConfig(final T configuration) {
         setSpecificConfig(configuration);
@@ -112,7 +108,6 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      *
      * @param definedEndpoints The endpoints.
      */
-    @Autowired(required = false)
     public void addEndpoints(final List<AmqpEndpoint> definedEndpoints) {
         Objects.requireNonNull(definedEndpoints);
         for (final AmqpEndpoint ep : definedEndpoints) {
@@ -170,7 +165,6 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      * @param factory The factory.
      * @throws NullPointerException if factory is {@code null}.
      */
-    @Autowired(required = false)
     public void setSaslAuthenticatorFactory(final ProtonSaslAuthenticatorFactory factory) {
         this.saslAuthenticatorFactory = Objects.requireNonNull(factory);
     }

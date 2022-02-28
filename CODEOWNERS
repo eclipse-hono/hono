@@ -35,7 +35,6 @@
 
 /service-base/                        @dejanb @sophokles73
 /service-base-quarkus/                @dejanb @sophokles73
-/service-base-spring/                 @dejanb @sophokles73
 
 /services/                                  @dejanb @kaniyan
 /services/base-jdbc/                        @ctron

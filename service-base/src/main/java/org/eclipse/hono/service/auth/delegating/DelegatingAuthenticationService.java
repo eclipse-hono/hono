@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,11 +22,6 @@ import org.eclipse.hono.client.AuthenticationServerClient;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.auth.AbstractHonoAuthenticationService;
-import org.eclipse.hono.util.AuthenticationConstants;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Service;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
@@ -42,15 +37,12 @@ import io.vertx.ext.healthchecks.Status;
  * <p>
  * This is the default authentication service for all Hono services.
  */
-@Service
-@Profile("!authentication-impl")
 public class DelegatingAuthenticationService extends AbstractHonoAuthenticationService<AuthenticationServerClientConfigProperties> implements HealthCheckProvider {
 
     private AuthenticationServerClient client;
     private ConnectionFactory factory;
     private DnsClient dnsClient;
 
-    @Autowired
     @Override
     public void setConfig(final AuthenticationServerClientConfigProperties configuration) {
         setSpecificConfig(configuration);
@@ -77,7 +69,6 @@ public class DelegatingAuthenticationService extends AbstractHonoAuthenticationS
      * @param dnsClient The client.
      * @throws NullPointerException if client is {@code null}.
      */
-    @Autowired(required = false)
     public void setDnsClient(final DnsClient dnsClient) {
         this.dnsClient = Objects.requireNonNull(dnsClient);
     }
@@ -88,8 +79,7 @@ public class DelegatingAuthenticationService extends AbstractHonoAuthenticationS
      * @param connectionFactory The factory.
      * @throws NullPointerException if the factory is {@code null}.
      */
-    @Autowired
-    public void setConnectionFactory(@Qualifier(AuthenticationConstants.QUALIFIER_AUTHENTICATION) final ConnectionFactory connectionFactory) {
+    public void setConnectionFactory(final ConnectionFactory connectionFactory) {
         this.factory = Objects.requireNonNull(connectionFactory);
     }
 
