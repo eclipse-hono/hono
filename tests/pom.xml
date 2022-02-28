@@ -180,6 +180,8 @@
     <trace.frames>0</trace.frames>
     <jaeger.disabled>true</jaeger.disabled>
     <jaeger.host>hono-jaeger</jaeger.host>
+    <jaeger.agent-host-port>${jaeger.host}:6831</jaeger.agent-host-port>
+    <jaeger.sampler-manager-host-port>${jaeger.host}:5778</jaeger.sampler-manager-host-port>
     <jaeger.query.port>18080</jaeger.query.port>
   </properties>
 
@@ -366,6 +368,14 @@
         <service.startup.timeout>240000</service.startup.timeout>
       </properties>
     </profile>
+
+    <profile>
+      <id>jaeger</id>
+      <properties>
+        <jaeger.disabled>false</jaeger.disabled>
+      </properties>
+    </profile>
+
     <profile>
       <id>embedded_cache</id>
       <activation>
@@ -1110,9 +1120,6 @@
                       </SMALLRYE_CONFIG_LOCATIONS>
                       <JDK_JAVA_OPTIONS>${hono.deviceregistry.mongodb.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
-                      <JAEGER_SERVICE_NAME>${hono.registration.host}</JAEGER_SERVICE_NAME>
-                      <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
-                      <JAEGER_SAMPLER_MANAGER_HOST_PORT>${jaeger.host}:5778</JAEGER_SAMPLER_MANAGER_HOST_PORT>
                     </env>
                     <log>
                       <prefix>REGISTRY</prefix>
@@ -1209,9 +1216,6 @@
                       </SMALLRYE_CONFIG_LOCATIONS>
                       <JDK_JAVA_OPTIONS>${hono.deviceregistry.jdbc.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
-                      <JAEGER_SERVICE_NAME>${hono.registration.host}</JAEGER_SERVICE_NAME>
-                      <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
-                      <JAEGER_SAMPLER_MANAGER_HOST_PORT>${jaeger.host}:5778</JAEGER_SAMPLER_MANAGER_HOST_PORT>
                     </env>
                     <log>
                       <prefix>REGISTRY</prefix>
@@ -1290,9 +1294,6 @@
                       </SMALLRYE_CONFIG_LOCATIONS>
                       <JDK_JAVA_OPTIONS>${hono.command-router.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
-                      <JAEGER_SERVICE_NAME>${hono.commandrouter.host}</JAEGER_SERVICE_NAME>
-                      <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
-                      <JAEGER_SAMPLER_MANAGER_HOST_PORT>${jaeger.host}:5778</JAEGER_SAMPLER_MANAGER_HOST_PORT>
                     </env>
                     <log>
                       <prefix>CMDROUTER</prefix>
@@ -1374,9 +1375,6 @@
                       </SMALLRYE_CONFIG_LOCATIONS>
                       <JDK_JAVA_OPTIONS>${hono.http-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
-                      <JAEGER_SERVICE_NAME>${hono.http-adapter.host}</JAEGER_SERVICE_NAME>
-                      <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
-                      <JAEGER_SAMPLER_MANAGER_HOST_PORT>${jaeger.host}:5778</JAEGER_SAMPLER_MANAGER_HOST_PORT>
                     </env>
                     <log>
                       <prefix>HTTP</prefix>
@@ -1448,9 +1446,6 @@
                       </SMALLRYE_CONFIG_LOCATIONS>
                       <JDK_JAVA_OPTIONS>${hono.mqtt-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
-                      <JAEGER_SERVICE_NAME>${hono.mqtt-adapter.host}</JAEGER_SERVICE_NAME>
-                      <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
-                      <JAEGER_SAMPLER_MANAGER_HOST_PORT>${jaeger.host}:5778</JAEGER_SAMPLER_MANAGER_HOST_PORT>
                     </env>
                     <log>
                       <prefix>MQTT</prefix>
@@ -1523,9 +1518,6 @@
                       </SMALLRYE_CONFIG_LOCATIONS>
                       <JDK_JAVA_OPTIONS>${hono.amqp-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
-                      <JAEGER_SERVICE_NAME>${hono.amqp-adapter.host}</JAEGER_SERVICE_NAME>
-                      <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
-                      <JAEGER_SAMPLER_MANAGER_HOST_PORT>${jaeger.host}:5778</JAEGER_SAMPLER_MANAGER_HOST_PORT>
                     </env>
                     <log>
                       <prefix>AMQP</prefix>
@@ -1597,9 +1589,6 @@
                       </SMALLRYE_CONFIG_LOCATIONS>
                       <JDK_JAVA_OPTIONS>${hono.coap-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
-                      <JAEGER_SERVICE_NAME>${hono.coap-adapter.host}</JAEGER_SERVICE_NAME>
-                      <JAEGER_AGENT_HOST>${jaeger.host}</JAEGER_AGENT_HOST>
-                      <JAEGER_SAMPLER_MANAGER_HOST_PORT>${jaeger.host}:5778</JAEGER_SAMPLER_MANAGER_HOST_PORT>
                     </env>
                     <log>
                       <prefix>COAP</prefix>
@@ -1812,11 +1801,5 @@
       </build>
     </profile>
 
-    <profile>
-      <id>jaeger</id>
-      <properties>
-        <jaeger.disabled>false</jaeger.disabled>
-      </properties>
-    </profile>
   </profiles>
 </project>
