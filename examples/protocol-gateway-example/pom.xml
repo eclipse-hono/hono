@@ -25,7 +25,10 @@
   <artifactId>protocol-gateway</artifactId>
 
   <name>Hono Protocol Gateway example</name>
-  <description>A simple example to illustrate how a protocol gateway could be implemented using classes from the Hono client module</description>
+  <description>
+      A Quarkus based, simple example to illustrate how a protocol gateway could be implemented using Hono client
+      classes.
+  </description>
   <url>https://www.eclipse.org/hono</url>
 
   <dependencies>
@@ -42,24 +45,12 @@
       <artifactId>hono-client-device-amqp</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-logging</artifactId>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-vertx</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-autoconfigure</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>jakarta.annotation</groupId>
-      <artifactId>jakarta.annotation-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.yaml</groupId>
-      <artifactId>snakeyaml</artifactId>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-config-yaml</artifactId>
     </dependency>
   </dependencies>
 
@@ -70,8 +61,8 @@
         <artifactId>maven-dependency-plugin</artifactId>
       </plugin>
       <plugin>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-maven-plugin</artifactId>
+        <groupId>io.quarkus</groupId>
+        <artifactId>quarkus-maven-plugin</artifactId>
       </plugin>
     </plugins>
   </build>

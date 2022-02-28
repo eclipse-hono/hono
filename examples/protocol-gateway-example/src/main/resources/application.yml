@@ -1,7 +1,3 @@
-spring:
-  profiles:
-    active: dev
-
 gateway:
   tcp:
    insecurePort: 6666
@@ -12,3 +8,18 @@ gateway:
     username: gw@DEFAULT_TENANT
     password: gw-secret
     serverRole: AMQP adapter
+
+quarkus:
+  log:
+    console:
+      color: true
+    level: INFO
+    min-level: TRACE
+    category:
+      "io.quarkus.vertx.core.runtime":
+        level: DEBUG
+  vertx:
+    prefer-native-transport: true
+    warning-exception-time: "PT1.5S"
+    resolver:
+      cache-max-time-to-live: 0

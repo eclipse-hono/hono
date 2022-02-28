@@ -21,8 +21,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
+import javax.enterprise.context.Dependent;
+import javax.enterprise.event.Observes;
+import javax.inject.Inject;
+import javax.inject.Named;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.MessageConsumer;
@@ -34,9 +36,9 @@ import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 
+import io.quarkus.runtime.ShutdownEvent;
+import io.quarkus.runtime.StartupEvent;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
@@ -47,7 +49,7 @@ import io.vertx.proton.ProtonDelivery;
 /**
  * Example protocol gateway service to send messages to Hono's AMQP adapter.
  */
-@Service
+@Dependent
 public class ProtocolGateway {
 
     private static final String CMD_LOGIN = "login";
@@ -74,10 +76,11 @@ public class ProtocolGateway {
      * @param server The TCP server that devices connect to.
      * @param tenant The tenant that this gateway can accept device connections for.
      */
-    @Autowired
+    @Inject
     public ProtocolGateway(
             final AmqpAdapterClientFactory factory,
             final TcpServer server,
+            @Named("TENANT_ID")
             final String tenant) {
         this.amqpAdapterClientFactory = factory;
         this.server = server;
@@ -87,24 +90,25 @@ public class ProtocolGateway {
     /**
      * Starts up the protocol gateway.
      *
-     * @return A future indicating the outcome of starting the gateway.
+     * @param ev The startup event.
      */
-    @PostConstruct
-    public Future<Void> start() {
+    public void onStart(@Observes final StartupEvent ev) {
 
         server.setConnectHandler(this::handleConnect);
-        return amqpAdapterClientFactory.connect()
+        amqpAdapterClientFactory.connect()
+                .onSuccess(ok -> LOG.info("successfully connected to Hono's AMQP adapter"))
+                .onFailure(t -> LOG.error("failed to connect to Hono's AMQP adapter"))
                 .compose(ok -> server.start())
                 .onSuccess(s -> LOG.info("successfully started example protocol gateway [tenant: {}]", tenant))
-                .onFailure(t -> LOG.error("failed to start protocol gateway", t))
-                .mapEmpty();
+                .onFailure(t -> LOG.error("failed to start protocol gateway", t));
     }
 
     /**
-     * Stops the protocol gateway.
+     * Stops the gateway.
+     *
+     * @param ev The event indicating shutdown.
      */
-    @PreDestroy
-    public void stop() {
+    public void onStop(final @Observes ShutdownEvent ev) {
         server.stop().onComplete(r -> amqpAdapterClientFactory.disconnect());
     }
 
