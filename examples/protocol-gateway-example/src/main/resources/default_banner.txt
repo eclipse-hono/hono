@@ -8,8 +8,7 @@
                 | |                                        
                 |_|                                        
 
-Eclipse Hono Example Protocol Gateway ${application.formatted-version}
-using Spring Boot ${spring-boot.formatted-version}
+Eclipse Hono Example Protocol Gateway
 
 Go to https://www.eclipse.org/hono for more information.
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,12 +15,15 @@ package org.eclipse.hono.example.protocolgateway;
 
 import java.util.Optional;
 
+import javax.enterprise.context.Dependent;
+import javax.inject.Inject;
+
 import org.eclipse.hono.config.ServerConfig;
+import org.eclipse.hono.config.quarkus.ServerOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
+import io.smallrye.config.ConfigMapping;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -32,7 +35,7 @@ import io.vertx.core.net.NetSocket;
  * The TCP server that devices connect to.
  *
  */
-@Component
+@Dependent
 public class TcpServer {
 
     private static final Logger LOG = LoggerFactory.getLogger(TcpServer.class);
@@ -45,12 +48,15 @@ public class TcpServer {
 
     /**
      * @param vertx The vert.x instance to run on.
-     * @param config The server configuration to use.
+     * @param serverOptions The server configuration to use.
      */
-    @Autowired
-    public TcpServer(final Vertx vertx, final ServerConfig config) {
+    @Inject
+    public TcpServer(
+            final Vertx vertx,
+            @ConfigMapping(prefix = "gateway.tcp")
+            final ServerOptions serverOptions) {
         this.vertx = vertx;
-        this.config = config;
+        this.config = new ServerConfig(serverOptions);
     }
 
     /**
