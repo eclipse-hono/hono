@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -46,6 +46,6 @@ public interface CommandResponder extends AmqpSenderLink {
      * @throws NullPointerException if any of deviceId, targetAddress, or correlationId is {@code null}.
      */
     Future<ProtonDelivery> sendCommandResponse(String deviceId, String targetAddress, String correlationId, int status,
-            byte[] payload, String contentType, Map<String, ?> properties);
+            byte[] payload, String contentType, Map<String, Object> properties);
 
 }

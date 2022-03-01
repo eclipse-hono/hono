@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -61,7 +61,7 @@ public class AmqpExampleDevice {
 
     private final Vertx VERTX = Vertx.vertx();
     private final ClientConfigProperties config = new ClientConfigProperties();
-    private final Map<String, String> customApplicationProperties = new HashMap<>();
+    private final Map<String, Object> customApplicationProperties = new HashMap<>();
     private AmqpAdapterClientFactory factory;
 
     private AmqpExampleDevice() {

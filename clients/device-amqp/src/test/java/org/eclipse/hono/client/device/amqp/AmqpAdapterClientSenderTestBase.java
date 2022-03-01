@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.client;
+package org.eclipse.hono.client.device.amqp;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -25,6 +25,7 @@ import java.util.Map;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
@@ -44,7 +45,7 @@ import io.vertx.proton.ProtonSender;
  * Base class for tests of the downstream senders of the AMQP Adapter client.
  *
  */
-public abstract class AbstractAmqpAdapterClientDownstreamSenderTestBase {
+public abstract class AmqpAdapterClientSenderTestBase {
 
     protected static final String TENANT_ID = "test-tenant";
     protected static final String DEVICE_ID = "test-device";
@@ -52,7 +53,7 @@ public abstract class AbstractAmqpAdapterClientDownstreamSenderTestBase {
     protected static final byte[] PAYLOAD = "test-value".getBytes();
     protected static final String TEST_PROPERTY_KEY = "test-key";
     protected static final String TEST_PROPERTY_VALUE = "test-value";
-    protected static final Map<String, String> APPLICATION_PROPERTIES = Collections.singletonMap(TEST_PROPERTY_KEY,
+    protected static final Map<String, Object> APPLICATION_PROPERTIES = Collections.singletonMap(TEST_PROPERTY_KEY,
             TEST_PROPERTY_VALUE);
 
     protected ProtonSender sender;

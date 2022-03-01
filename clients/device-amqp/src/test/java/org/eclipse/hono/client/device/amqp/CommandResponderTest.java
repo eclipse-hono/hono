@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,8 +21,7 @@ import static org.mockito.Mockito.verify;
 import static com.google.common.truth.Truth.assertThat;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.AbstractAmqpAdapterClientDownstreamSenderTestBase;
-import org.eclipse.hono.client.device.amqp.internal.AmqpAdapterClientCommandResponseSender;
+import org.eclipse.hono.client.device.amqp.impl.AmqpAdapterClientCommandResponseSender;
 import org.eclipse.hono.util.CommandConstants;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,7 +37,7 @@ import io.vertx.proton.ProtonDelivery;
  *
  */
 @ExtendWith(VertxExtension.class)
-public class CommandResponderTest extends AbstractAmqpAdapterClientDownstreamSenderTestBase {
+public class CommandResponderTest extends AmqpAdapterClientSenderTestBase {
 
     private static final String ADDRESS = CommandConstants.COMMAND_RESPONSE_ENDPOINT + "/" + TENANT_ID + "/" + DEVICE_ID
             + "/123";
@@ -122,7 +121,7 @@ public class CommandResponderTest extends AbstractAmqpAdapterClientDownstreamSen
     }
 
     private CommandResponder createCommandResponder() {
-        return AmqpAdapterClientCommandResponseSender.createWithAnonymousLinkAddress(connection, TENANT_ID, s -> {
+        return AmqpAdapterClientCommandResponseSender.create(connection, TENANT_ID, s -> {
         }).result();
     }
 

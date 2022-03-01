@@ -11,20 +11,21 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.client.device.amqp.internal;
+package org.eclipse.hono.client.device.amqp.impl;
 
 import java.util.Objects;
 import java.util.function.BiConsumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.MessageConsumer;
-import org.eclipse.hono.client.impl.AbstractConsumer;
+import org.eclipse.hono.client.amqp.AbstractHonoClient;
+import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonQoS;
@@ -32,9 +33,9 @@ import io.vertx.proton.ProtonReceiver;
 
 /**
  * A wrapper around an AMQP receiver link for consuming commands from Hono's AMQP adapter. This implementation tries to
- * restore closed links by trying to create a new link each time the link is closed.
+ * restore closed links by trying to create a new link each time the connection is closed.
  */
-public class AmqpAdapterClientCommandConsumer extends AbstractConsumer {
+public class AmqpAdapterClientCommandConsumer extends AbstractHonoClient implements CommandConsumer {
 
     private static final Logger LOG = LoggerFactory.getLogger(AmqpAdapterClientCommandConsumer.class);
 
@@ -43,9 +44,11 @@ public class AmqpAdapterClientCommandConsumer extends AbstractConsumer {
      *
      * @param connection The connection to the AMQP Messaging Network over which commands are received.
      * @param receiver The receiver link for command messages.
+     * @throws NullPointerException if connection or receiver is {@code null}.
      */
     private AmqpAdapterClientCommandConsumer(final HonoConnection connection, final ProtonReceiver receiver) {
-        super(connection, receiver);
+        super(connection);
+        this.receiver = Objects.requireNonNull(receiver);
     }
 
     /**
@@ -61,7 +64,7 @@ public class AmqpAdapterClientCommandConsumer extends AbstractConsumer {
      * @return A future indicating the outcome of the creation attempt.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public static Future<MessageConsumer> create(
+    public static Future<CommandConsumer> create(
             final HonoConnection con,
             final String tenantId,
             final String deviceId,
@@ -88,7 +91,7 @@ public class AmqpAdapterClientCommandConsumer extends AbstractConsumer {
      * @return A future indicating the outcome of the creation attempt.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public static Future<MessageConsumer> create(
+    public static Future<CommandConsumer> create(
             final HonoConnection con,
             final BiConsumer<ProtonDelivery, Message> messageHandler) {
 
@@ -100,7 +103,7 @@ public class AmqpAdapterClientCommandConsumer extends AbstractConsumer {
         return createCommandConsumer(con, messageHandler, address);
     }
 
-    private static Future<MessageConsumer> createCommandConsumer(final HonoConnection con,
+    private static Future<CommandConsumer> createCommandConsumer(final HonoConnection con,
             final BiConsumer<ProtonDelivery, Message> messageHandler, final ResourceIdentifier address) {
 
         return con.isConnected(con.getConfig().getLinkEstablishmentTimeout())
@@ -133,4 +136,8 @@ public class AmqpAdapterClientCommandConsumer extends AbstractConsumer {
         return receiver;
     }
 
+    @Override
+    public final Future<Void> close(final SpanContext spanContext) {
+        return closeLinks();
+    }
 }

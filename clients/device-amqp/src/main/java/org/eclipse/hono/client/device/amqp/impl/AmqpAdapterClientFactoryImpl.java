@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,24 +11,23 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.client.impl;
+package org.eclipse.hono.client.device.amqp.impl;
 
 import java.util.Objects;
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.device.amqp.AmqpAdapterClientFactory;
 import org.eclipse.hono.client.device.amqp.AmqpSenderLink;
 import org.eclipse.hono.client.device.amqp.CommandResponder;
 import org.eclipse.hono.client.device.amqp.EventSender;
 import org.eclipse.hono.client.device.amqp.TelemetrySender;
-import org.eclipse.hono.client.device.amqp.internal.AmqpAdapterClientCommandConsumer;
-import org.eclipse.hono.client.device.amqp.internal.AmqpAdapterClientCommandResponseSender;
-import org.eclipse.hono.client.device.amqp.internal.AmqpAdapterClientEventSenderImpl;
-import org.eclipse.hono.client.device.amqp.internal.AmqpAdapterClientTelemetrySenderImpl;
+import org.eclipse.hono.client.impl.AbstractHonoClientFactory;
+import org.eclipse.hono.client.impl.CachingClientFactory;
+import org.eclipse.hono.client.impl.ClientFactory;
 import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.EventConstants;
@@ -47,7 +46,7 @@ public final class AmqpAdapterClientFactoryImpl extends AbstractHonoClientFactor
     private final CachingClientFactory<CommandResponder> commandResponseSenderClientFactory;
 
     private final String tenantId;
-    private final ClientFactory<MessageConsumer> commandConsumerFactory;
+    private final ClientFactory<CommandConsumer> commandConsumerFactory;
 
     /**
      * Creates a new factory instance for an existing connection and a given tenant.
@@ -69,9 +68,6 @@ public final class AmqpAdapterClientFactoryImpl extends AbstractHonoClientFactor
         this.tenantId = tenantId;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected void onDisconnect() {
         telemetrySenderClientFactory.clearState();
@@ -79,9 +75,6 @@ public final class AmqpAdapterClientFactoryImpl extends AbstractHonoClientFactor
         commandResponseSenderClientFactory.clearState();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<TelemetrySender> getOrCreateTelemetrySender() {
 
@@ -90,16 +83,13 @@ public final class AmqpAdapterClientFactoryImpl extends AbstractHonoClientFactor
                 .compose(v -> connection.executeOnContext(result -> {
                     telemetrySenderClientFactory.getOrCreateClient(
                             cacheKey,
-                            () -> AmqpAdapterClientTelemetrySenderImpl.createWithAnonymousLinkAddress(
+                            () -> AmqpAdapterClientTelemetrySenderImpl.create(
                                     connection, tenantId,
                                     onSenderClosed -> telemetrySenderClientFactory.removeClient(cacheKey)),
                             result);
                 }));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<EventSender> getOrCreateEventSender() {
 
@@ -108,18 +98,15 @@ public final class AmqpAdapterClientFactoryImpl extends AbstractHonoClientFactor
                 .compose(v -> connection.executeOnContext(result -> {
                     eventSenderClientFactory.getOrCreateClient(
                             cacheKey,
-                            () -> AmqpAdapterClientEventSenderImpl.createWithAnonymousLinkAddress(
+                            () -> AmqpAdapterClientEventSenderImpl.create(
                                     connection, tenantId,
                                     onSenderClosed -> eventSenderClientFactory.removeClient(cacheKey)),
                             result);
                 }));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public Future<MessageConsumer> createDeviceSpecificCommandConsumer(final String deviceId,
+    public Future<CommandConsumer> createDeviceSpecificCommandConsumer(final String deviceId,
             final Consumer<Message> messageHandler) {
 
         Objects.requireNonNull(deviceId);
@@ -134,11 +121,8 @@ public final class AmqpAdapterClientFactoryImpl extends AbstractHonoClientFactor
                 result));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public Future<MessageConsumer> createCommandConsumer(final Consumer<Message> messageHandler) {
+    public Future<CommandConsumer> createCommandConsumer(final Consumer<Message> messageHandler) {
 
         Objects.requireNonNull(messageHandler);
 
@@ -149,9 +133,6 @@ public final class AmqpAdapterClientFactoryImpl extends AbstractHonoClientFactor
                 result));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<CommandResponder> getOrCreateCommandResponseSender() {
 
@@ -160,7 +141,7 @@ public final class AmqpAdapterClientFactoryImpl extends AbstractHonoClientFactor
                 .compose(v -> connection.executeOnContext(result -> {
                     commandResponseSenderClientFactory.getOrCreateClient(
                             cacheKey,
-                            () -> AmqpAdapterClientCommandResponseSender.createWithAnonymousLinkAddress(
+                            () -> AmqpAdapterClientCommandResponseSender.create(
                                     connection, tenantId,
                                     onSenderClosed -> commandResponseSenderClientFactory.removeClient(cacheKey)),
                             result);

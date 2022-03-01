@@ -27,7 +27,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.MessageConsumer;
+import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.device.amqp.AmqpAdapterClientFactory;
 import org.eclipse.hono.example.protocolgateway.TcpServer;
 import org.eclipse.hono.util.EventConstants;
@@ -124,11 +124,10 @@ public class ProtocolGateway {
         commandParser.handler(data -> handleData(socket, dict, data));
         socket.closeHandler(remoteClose -> {
             LOG.debug("device closed connection");
-            Optional.ofNullable((MessageConsumer) dict.get(KEY_COMMAND_CONSUMER))
+            Optional.ofNullable((CommandConsumer) dict.get(KEY_COMMAND_CONSUMER))
                 .ifPresent(c -> {
-                    c.close(res -> {
-                        LOG.debug("closed device's command consumer");
-                    });
+                    c.close(null)
+                            .onComplete(res -> LOG.debug("closed device's command consumer"));
                 });
             socket.close();
         });
@@ -274,11 +273,10 @@ public class ProtocolGateway {
         Optional.ofNullable(dictionary.get(KEY_COMMAND_CONSUMER))
             .ifPresentOrElse(
                     obj -> {
-                        ((MessageConsumer) obj).close(result);
+                        ((CommandConsumer) obj).close(null)
+                                .onComplete(result);
                     },
-                    () -> {
-                        result.fail("device not subscribed to commands");
-                    });
+                    () -> result.fail("device not subscribed to commands"));
         return result.future();
     }
 
@@ -289,7 +287,7 @@ public class ProtocolGateway {
      * @param socket The socket to use for sending commands to the device.
      * @return A future indicating the outcome.
      */
-    private Future<MessageConsumer> subscribe(final String deviceId, final NetSocket socket) {
+    private Future<CommandConsumer> subscribe(final String deviceId, final NetSocket socket) {
 
         final Consumer<Message> messageHandler = m -> {
 

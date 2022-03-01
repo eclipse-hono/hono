@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,9 +18,9 @@ import java.util.function.Consumer;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.SendMessageSampler;
-import org.eclipse.hono.client.impl.AmqpAdapterClientFactoryImpl;
+import org.eclipse.hono.client.command.CommandConsumer;
+import org.eclipse.hono.client.device.amqp.impl.AmqpAdapterClientFactoryImpl;
 
 import io.vertx.core.Future;
 
@@ -101,7 +101,7 @@ public interface AmqpAdapterClientFactory extends ConnectionLifecycle<HonoConnec
      *
      * @see "https://www.eclipse.org/hono/docs/dev/user-guide/amqp-adapter/"
      */
-    Future<MessageConsumer> createDeviceSpecificCommandConsumer(String deviceId, Consumer<Message> messageHandler);
+    Future<CommandConsumer> createDeviceSpecificCommandConsumer(String deviceId, Consumer<Message> messageHandler);
 
     /**
      * Creates a client for consuming commands from Hono's AMQP protocol adapter for an authenticated device or on a
@@ -116,7 +116,7 @@ public interface AmqpAdapterClientFactory extends ConnectionLifecycle<HonoConnec
      *
      * @see "https://www.eclipse.org/hono/docs/dev/user-guide/amqp-adapter/"
      */
-    Future<MessageConsumer> createCommandConsumer(Consumer<Message> messageHandler);
+    Future<CommandConsumer> createCommandConsumer(Consumer<Message> messageHandler);
 
     /**
      * Gets a client for sending command responses to Hono's AMQP protocol adapter.
