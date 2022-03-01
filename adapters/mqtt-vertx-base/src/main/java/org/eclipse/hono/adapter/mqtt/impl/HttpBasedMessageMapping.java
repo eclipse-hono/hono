@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,7 +28,6 @@ import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.config.MapperEndpoint;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
-import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,18 +74,8 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
         this.mqttProtocolAdapterProperties = Objects.requireNonNull(protocolAdapterConfig);
     }
 
-    private static MappedMessage unmodifiedMappedMessage(
-            final MqttContext ctx,
-            final ResourceIdentifier targetAddress) {
-        return new MappedMessage(
-                targetAddress,
-                // create a copy of the original Buffer in order to
-                // de-couple the new Buffer from the original buffer's underlying
-                // Netty ByteBuf which might be altered during the course of processing
-                // the returned MappedMessage
-                Optional.ofNullable(ctx.message().payload())
-                    .map(Buffer::copy)
-                    .orElseGet(Buffer::buffer));
+    private static MappedMessage unmodifiedMappedMessage(final MqttContext ctx) {
+        return new MappedMessage(ctx.deviceId(), ctx.payload());
     }
 
     /**
@@ -109,29 +98,38 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
      *         URL could be found. The future will be succeeded with the message contained in the
      *         response body if the returned status code is 200.
      *         Otherwise, the future will be failed with a {@link ServerErrorException}.
+     * @throws IllegalArgumentException if the given MQTT context is associated with tenant/device identifiers different
+     *         to the ones given via the <em>tenantId</em> and <em>registrationAssertion</em> parameters.
      */
     @Override
     public Future<MappedMessage> mapDownstreamMessage(
             final MqttContext ctx,
-            final ResourceIdentifier targetAddress,
+            final String tenantId,
             final RegistrationAssertion registrationInfo) {
 
         Objects.requireNonNull(ctx);
+        Objects.requireNonNull(tenantId);
         Objects.requireNonNull(registrationInfo);
+
+        if (!registrationInfo.getDeviceId().equals(ctx.deviceId())) {
+            throw new IllegalArgumentException("registration assertion and MQTT context refer to different device identifiers");
+        } else if (!tenantId.equals(ctx.tenant())) {
+            throw new IllegalArgumentException("given tenant identifier does not match the one associated with given MQTT context");
+        }
 
         final Promise<MappedMessage> result = Promise.promise();
         final String mapper = registrationInfo.getDownstreamMessageMapper();
 
         if (Strings.isNullOrEmpty(mapper)) {
-            LOG.debug("no payload mapping configured for {}", ctx.authenticatedDevice());
-            result.complete(unmodifiedMappedMessage(ctx, targetAddress));
+            LOG.debug("no payload mapping configured for device [{}]", ctx.deviceId());
+            result.complete(unmodifiedMappedMessage(ctx));
         } else {
             final MapperEndpoint mapperEndpoint = mqttProtocolAdapterProperties.getMapperEndpoint(mapper);
             if (mapperEndpoint == null) {
-                LOG.debug("no mapping endpoint [name: {}] found for {}", mapper, ctx.authenticatedDevice());
-                result.complete(unmodifiedMappedMessage(ctx, targetAddress));
+                LOG.debug("no mapping endpoint [name: {}] found for device [{}]", mapper, ctx.deviceId());
+                result.complete(unmodifiedMappedMessage(ctx));
             } else {
-                mapDownstreamMessageRequest(ctx, targetAddress, registrationInfo, mapperEndpoint, result);
+                mapDownstreamMessageRequest(ctx, tenantId, registrationInfo, mapperEndpoint, result);
             }
         }
 
@@ -220,7 +218,7 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
 
     private void mapDownstreamMessageRequest(
             final MqttContext ctx,
-            final ResourceIdentifier targetAddress,
+            final String tenantId,
             final RegistrationAssertion registrationInfo,
             final MapperEndpoint mapperEndpoint,
             final Handler<AsyncResult<MappedMessage>> resultHandler) {
@@ -235,7 +233,8 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
                 headers.add(property.getKey(), Json.encode(value));
             }
         });
-        headers.add(MessageHelper.APP_PROPERTY_ORIG_ADDRESS, ctx.message().topicName());
+        headers.add(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
+        headers.add(MessageHelper.APP_PROPERTY_ORIG_ADDRESS, ctx.getOrigAddress());
         if (ctx.contentType() != null) {
             headers.add(HttpHeaders.CONTENT_TYPE.toString(), ctx.contentType());
         }
@@ -245,10 +244,10 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
         webClient.post(mapperEndpoint.getPort(), mapperEndpoint.getHost(), mapperEndpoint.getUri())
             .putHeaders(headers)
             .ssl(mapperEndpoint.isTlsEnabled())
-            .sendBuffer(ctx.message().payload(), httpResponseAsyncResult -> {
+            .sendBuffer(ctx.payload(), httpResponseAsyncResult -> {
                 if (httpResponseAsyncResult.failed()) {
-                    LOG.debug("failed to map message [origin: {}] using mapping service [host: {}, port: {}, URI: {}]",
-                            ctx.authenticatedDevice(),
+                    LOG.debug("failed to map message [original device: {}] using mapping service [host: {}, port: {}, URI: {}]",
+                            ctx.deviceId(),
                             mapperEndpoint.getHost(), mapperEndpoint.getPort(), mapperEndpoint.getUri(),
                             httpResponseAsyncResult.cause());
                     result.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, httpResponseAsyncResult.cause()));
@@ -260,13 +259,13 @@ public final class HttpBasedMessageMapping implements MessageMapping<MqttContext
 
                         final String mappedDeviceId = Optional.ofNullable(additionalProperties.remove(MessageHelper.APP_PROPERTY_DEVICE_ID))
                                 .map(id -> {
-                                    LOG.debug("original {} has been mapped to [device-id: {}]", ctx.authenticatedDevice(), id);
+                                    LOG.debug("original device [{}] has been mapped to [{}]", ctx.deviceId(), id);
                                     return id;
                                 })
-                                .orElseGet(() -> targetAddress.getResourceId());
+                                .orElseGet(registrationInfo::getDeviceId);
 
                         result.complete(new MappedMessage(
-                                ResourceIdentifier.from(targetAddress.getEndpoint(), targetAddress.getTenantId(), mappedDeviceId),
+                                mappedDeviceId,
                                 httpResponse.bodyAsBuffer(),
                                 additionalProperties));
                     } else {

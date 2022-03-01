@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,8 +18,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-import org.eclipse.hono.util.ResourceIdentifier;
-
 import io.vertx.core.buffer.Buffer;
 
 /**
@@ -27,47 +25,47 @@ import io.vertx.core.buffer.Buffer;
  */
 public final class MappedMessage {
 
-    private final ResourceIdentifier targetAddress;
+    private final String targetDeviceId;
     private final Buffer payload;
     private final Map<String, String> additionalProperties = new HashMap<>();
 
     /**
      * Creates a new mapping result.
      *
-     * @param targetAddress The target address that the original message has been mapped to.
+     * @param targetDeviceId The identifier of the target device that the original message has been mapped to.
      * @param payload The payload that the original message has been mapped to.
      * @throws NullPointerException if targetAddress is {@code null}.
      */
-    public MappedMessage(final ResourceIdentifier targetAddress, final Buffer payload) {
-        this(targetAddress, payload, null);
+    public MappedMessage(final String targetDeviceId, final Buffer payload) {
+        this(targetDeviceId, payload, null);
     }
 
     /**
      * Creates a new mapping result.
      *
-     * @param targetAddress The target address that the original message has been mapped to.
+     * @param targetDeviceId The identifier of the target device that the original message has been mapped to.
      * @param payload The payload that the original message has been mapped to.
      * @param additionalProperties Extra properties that should be included with the mapped message.
      * @throws NullPointerException if targetAddress is {@code null}.
      */
     public MappedMessage(
-            final ResourceIdentifier targetAddress,
+            final String targetDeviceId,
             final Buffer payload,
             final Map<String, String> additionalProperties) {
 
-        this.targetAddress = Objects.requireNonNull(targetAddress);
+        this.targetDeviceId = Objects.requireNonNull(targetDeviceId);
         this.payload = Optional.ofNullable(payload).orElseGet(Buffer::buffer);
         Optional.ofNullable(additionalProperties)
             .ifPresent(props -> this.additionalProperties.putAll(additionalProperties));
     }
 
     /**
-     * Gets the address that the message should be forwarded to.
+     * Gets the identifier of the device that the message should be forwarded to.
      *
-     * @return The address.
+     * @return The device identifier.
      */
-    public ResourceIdentifier getTargetAddress() {
-        return targetAddress;
+    public String getTargetDeviceId() {
+        return targetDeviceId;
     }
 
     /**

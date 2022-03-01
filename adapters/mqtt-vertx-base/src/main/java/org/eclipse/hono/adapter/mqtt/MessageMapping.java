@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,7 +16,6 @@ package org.eclipse.hono.adapter.mqtt;
 import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.util.ExecutionContext;
 import org.eclipse.hono.util.RegistrationAssertion;
-import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
@@ -41,9 +40,9 @@ public interface MessageMapping<T extends ExecutionContext> {
      * target address. In all other cases, this method returns a failed future with a {@link org.eclipse.hono.client.ServiceInvocationException}.
      *
      * @param ctx              The context in which the message has been uploaded.
-     * @param targetAddress    The downstream address that the message will be forwarded to.
+     * @param tenantId         The tenant that the device that uploaded the message belongs to.
      * @param registrationInfo The information included in the registration assertion for
-     *                         the authenticated device that has uploaded the message.
+     *                         the device that has uploaded the message.
      * @return                 A successful future containing the mapped message.
      *                         Otherwise, the future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException}
      *                         if the message could not be mapped.
@@ -51,7 +50,7 @@ public interface MessageMapping<T extends ExecutionContext> {
      */
     Future<MappedMessage> mapDownstreamMessage(
             T ctx,
-            ResourceIdentifier targetAddress,
+            String tenantId,
             RegistrationAssertion registrationInfo);
 
     /**

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -92,13 +92,13 @@ public class VertxBasedMqttProtocolAdapterTest {
      * @param ctx The helper to use for running tests on vert.x.
      */
     @Test
-    public void testMapTopicFailsForUnknownEndpoint(final VertxTestContext ctx) {
+    public void testCheckQosAndMapTopicFailsForUnknownEndpoint(final VertxTestContext ctx) {
 
         givenAnAdapter();
 
         // WHEN a device publishes a message to a topic with an unknown endpoint
         final MqttPublishMessage message = newMessage(MqttQoS.AT_MOST_ONCE, "unknown");
-        adapter.mapTopic(newContext(message, span, null)).onComplete(ctx.failing(t -> {
+        adapter.checkQosAndMapTopic(newContext(message, span, null)).onComplete(ctx.failing(t -> {
             // THEN the message cannot be mapped to a topic
             assertServiceInvocationException(ctx, t, HttpURLConnection.HTTP_NOT_FOUND);
             ctx.completeNow();
@@ -111,13 +111,13 @@ public class VertxBasedMqttProtocolAdapterTest {
      * @param ctx The helper to use for running tests on vert.x.
      */
     @Test
-    public void testMapTopicFailsForQoS2TelemetryMessage(final VertxTestContext ctx) {
+    public void testCheckQosAndMapTopicFailsForQoS2TelemetryMessage(final VertxTestContext ctx) {
 
         givenAnAdapter();
 
         // WHEN a device publishes a message with QoS 2 to a "telemetry" topic
         final MqttPublishMessage message = newMessage(MqttQoS.EXACTLY_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
-        adapter.mapTopic(newContext(message, span, null)).onComplete(ctx.failing(t -> {
+        adapter.checkQosAndMapTopic(newContext(message, span, null)).onComplete(ctx.failing(t -> {
             // THEN the message cannot be mapped to a topic
             assertServiceInvocationException(ctx, t, HttpURLConnection.HTTP_BAD_REQUEST);
             ctx.completeNow();
@@ -130,13 +130,13 @@ public class VertxBasedMqttProtocolAdapterTest {
      * @param ctx The helper to use for running tests on vert.x.
      */
     @Test
-    public void testMapTopicFailsForQoS0EventMessage(final VertxTestContext ctx) {
+    public void testCheckQosAndMapTopicFailsForQoS0EventMessage(final VertxTestContext ctx) {
 
         givenAnAdapter();
 
         // WHEN a device publishes a message with QoS 0 to an "event" topic
         final MqttPublishMessage message = newMessage(MqttQoS.AT_MOST_ONCE, EventConstants.EVENT_ENDPOINT);
-        adapter.mapTopic(newContext(message, span, null)).onComplete(ctx.failing(t -> {
+        adapter.checkQosAndMapTopic(newContext(message, span, null)).onComplete(ctx.failing(t -> {
             // THEN the message cannot be mapped to a topic
             assertServiceInvocationException(ctx, t, HttpURLConnection.HTTP_BAD_REQUEST);
             ctx.completeNow();
@@ -149,13 +149,13 @@ public class VertxBasedMqttProtocolAdapterTest {
      * @param ctx The helper to use for running tests on vert.x.
      */
     @Test
-    public void testMapTopicFailsForQoS2EventMessage(final VertxTestContext ctx) {
+    public void testCheckQosAndMapTopicFailsForQoS2EventMessage(final VertxTestContext ctx) {
 
         givenAnAdapter();
 
         // WHEN a device publishes a message with QoS 2 to an "event" topic
         final MqttPublishMessage message = newMessage(MqttQoS.EXACTLY_ONCE, EventConstants.EVENT_ENDPOINT);
-        adapter.mapTopic(newContext(message, span, null)).onComplete(ctx.failing(t -> {
+        adapter.checkQosAndMapTopic(newContext(message, span, null)).onComplete(ctx.failing(t -> {
             // THEN the message cannot be mapped to a topic
             assertServiceInvocationException(ctx, t, HttpURLConnection.HTTP_BAD_REQUEST);
             ctx.completeNow();
@@ -253,37 +253,37 @@ public class VertxBasedMqttProtocolAdapterTest {
      * @param ctx The helper to use for running tests on vert.x.
      */
     @Test
-    public void testMapTopicSupportsShortAndLongTopicNames(final VertxTestContext ctx) {
+    public void testCheckQosAndMapTopicSupportsShortAndLongTopicNames(final VertxTestContext ctx) {
 
         givenAnAdapter();
 
         MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, EventConstants.EVENT_ENDPOINT);
         MqttContext context = newContext(message, span, null);
-        adapter.mapTopic(context).onComplete(ctx.succeeding(address -> {
+        adapter.checkQosAndMapTopic(context).onComplete(ctx.succeeding(address -> {
             ctx.verify(() -> assertThat(MetricsTags.EndpointType.fromString(address.getEndpoint())).isEqualTo(MetricsTags.EndpointType.EVENT));
         }));
 
         message = newMessage(MqttQoS.AT_LEAST_ONCE, EventConstants.EVENT_ENDPOINT_SHORT);
         context = newContext(message, span, null);
-        adapter.mapTopic(context).onComplete(ctx.succeeding(address -> {
+        adapter.checkQosAndMapTopic(context).onComplete(ctx.succeeding(address -> {
             ctx.verify(() -> assertThat(MetricsTags.EndpointType.fromString(address.getEndpoint())).isEqualTo(MetricsTags.EndpointType.EVENT));
         }));
 
         message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
         context = newContext(message, span, null);
-        adapter.mapTopic(context).onComplete(ctx.succeeding(address -> {
+        adapter.checkQosAndMapTopic(context).onComplete(ctx.succeeding(address -> {
             ctx.verify(() -> assertThat(MetricsTags.EndpointType.fromString(address.getEndpoint())).isEqualTo(MetricsTags.EndpointType.TELEMETRY));
         }));
 
         message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT_SHORT);
         context = newContext(message, span, null);
-        adapter.mapTopic(context).onComplete(ctx.succeeding(address -> {
+        adapter.checkQosAndMapTopic(context).onComplete(ctx.succeeding(address -> {
             ctx.verify(() -> assertThat(MetricsTags.EndpointType.fromString(address.getEndpoint())).isEqualTo(MetricsTags.EndpointType.TELEMETRY));
         }));
 
         message = newMessage(MqttQoS.AT_LEAST_ONCE, "unknown");
         context = newContext(message, span, null);
-        adapter.mapTopic(context).onSuccess(v -> ctx.failNow("should not have succeeded mapping topic"));
+        adapter.checkQosAndMapTopic(context).onSuccess(v -> ctx.failNow("should not have succeeded mapping topic"));
         ctx.completeNow();
 
     }

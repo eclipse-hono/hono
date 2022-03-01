@@ -645,83 +645,64 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     /**
      * Forwards a message to the AMQP Messaging Network.
      *
-     * @param ctx The context in which the MQTT message has been published.
-     * @param resource The resource that the message should be forwarded to.
-     * @param message The message to send.
+     * @param ctx The context created for the MQTT message that is to be forwarded.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will succeed if the message has been forwarded successfully.
      *         Otherwise the future will fail with a {@link ServiceInvocationException}.
-     * @throws NullPointerException if any of context, resource or payload is {@code null}.
-     * @throws IllegalArgumentException if the payload is empty.
+     * @throws NullPointerException if ctx is {@code null}.
+     * @throws IllegalArgumentException if the context does not contain tenant/device information.
      */
-    public final Future<Void> uploadMessage(
-            final MqttContext ctx,
-            final ResourceIdentifier resource,
-            final MqttPublishMessage message) {
-
+    public final Future<Void> uploadMessage(final MqttContext ctx) {
         Objects.requireNonNull(ctx);
-        Objects.requireNonNull(resource);
-        Objects.requireNonNull(message);
+        verifyTenantAndDeviceContextIsSet(ctx);
 
-        switch (MetricsTags.EndpointType.fromString(resource.getEndpoint())) {
+        switch (ctx.endpoint()) {
         case TELEMETRY:
-            return uploadTelemetryMessage(
-                    ctx,
-                    resource.getTenantId(),
-                    resource.getResourceId(),
-                    message.payload());
+            return uploadTelemetryMessage(ctx);
         case EVENT:
-            return uploadEventMessage(
-                    ctx,
-                    resource.getTenantId(),
-                    resource.getResourceId(),
-                    message.payload());
+            return uploadEventMessage(ctx);
         case COMMAND:
-            return uploadCommandResponseMessage(ctx, resource);
+            return uploadCommandResponseMessage(ctx);
         default:
             return Future
                     .failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "unsupported endpoint"));
         }
+    }
 
+    private void verifyTenantAndDeviceContextIsSet(final MqttContext ctx) {
+        if (ctx.tenant() == null || ctx.deviceId() == null) {
+            throw new IllegalArgumentException("context does not contain tenant/device information");
+        }
     }
 
     /**
      * Forwards a telemetry message to the AMQP Messaging Network.
      *
      * @param ctx The context in which the MQTT message has been published.
-     * @param tenant The tenant of the device that has produced the data.
-     * @param deviceId The id of the device that has produced the data.
-     * @param payload The message payload to send.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will succeed if the message has been forwarded successfully.
      *         Otherwise the future will fail with a {@link ServiceInvocationException}.
-     * @throws NullPointerException if any of context, tenant, device ID or payload is {@code null}.
-     * @throws IllegalArgumentException if the context does not contain a
-     *              telemetry message or if the payload is empty.
+     * @throws NullPointerException if ctx is {@code null}.
+     * @throws IllegalArgumentException if the context does not contain a telemetry message
+     *         or tenant/device information is not set.
      */
-    public final Future<Void> uploadTelemetryMessage(
-            final MqttContext ctx,
-            final String tenant,
-            final String deviceId,
-            final Buffer payload) {
-
+    public final Future<Void> uploadTelemetryMessage(final MqttContext ctx) {
         Objects.requireNonNull(ctx);
-        Objects.requireNonNull(tenant);
-        Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(payload);
 
         if (ctx.endpoint() != EndpointType.TELEMETRY) {
             throw new IllegalArgumentException("context does not contain telemetry message but " +
                 ctx.endpoint().getCanonicalName());
         }
+        verifyTenantAndDeviceContextIsSet(ctx);
 
-        final MetricsTags.QoS qos = MetricsTags.QoS.from(ctx.message().qosLevel().value());
-        final Future<TenantObject> tenantTracker = getTenantConfiguration(tenant, ctx.getTracingContext());
+        final Buffer payload = ctx.payload();
+        final MetricsTags.QoS qos = MetricsTags.QoS.from(ctx.qosLevel().value());
+        final Future<TenantObject> tenantTracker = getTenantConfiguration(ctx.tenant(), ctx.getTracingContext());
 
         return tenantTracker
-                .compose(tenantObject -> uploadMessage(ctx, tenantObject, deviceId, payload, ctx.endpoint()))
+                .compose(tenantObject -> uploadMessage(ctx, tenantObject, ctx.deviceId(), payload, ctx.endpoint()))
                 .compose(success -> {
                     metrics.reportTelemetry(
                             ctx.endpoint(),
@@ -749,38 +730,29 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * Forwards an event to the AMQP Messaging Network.
      *
      * @param ctx The context in which the MQTT message has been published.
-     * @param tenant The tenant of the device that has produced the data.
-     * @param deviceId The id of the device that has produced the data.
-     * @param payload The message payload to send.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will succeed if the message has been forwarded successfully.
      *         Otherwise the future will fail with a {@link ServiceInvocationException}.
-     * @throws NullPointerException if any of context, tenant, device ID or payload is {@code null}.
-     * @throws IllegalArgumentException if the context does not contain an
-     *              event or if the payload is empty.
+     * @throws NullPointerException if any of ctx, tenant or deviceId is {@code null}.
+     * @throws IllegalArgumentException if the context does not contain an event
+     *         or tenant/device information is not set.
      */
-    public final Future<Void> uploadEventMessage(
-            final MqttContext ctx,
-            final String tenant,
-            final String deviceId,
-            final Buffer payload) {
-
+    public final Future<Void> uploadEventMessage(final MqttContext ctx) {
         Objects.requireNonNull(ctx);
-        Objects.requireNonNull(tenant);
-        Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(payload);
 
         if (ctx.endpoint() != EndpointType.EVENT) {
             throw new IllegalArgumentException("context does not contain event but " +
                 ctx.endpoint().getCanonicalName());
         }
+        verifyTenantAndDeviceContextIsSet(ctx);
 
-        final MetricsTags.QoS qos = MetricsTags.QoS.from(ctx.message().qosLevel().value());
-        final Future<TenantObject> tenantTracker = getTenantConfiguration(tenant, ctx.getTracingContext());
+        final Buffer payload = ctx.payload();
+        final MetricsTags.QoS qos = MetricsTags.QoS.from(ctx.qosLevel().value());
+        final Future<TenantObject> tenantTracker = getTenantConfiguration(ctx.tenant(), ctx.getTracingContext());
 
         return tenantTracker
-                .compose(tenantObject -> uploadMessage(ctx, tenantObject, deviceId, payload, ctx.endpoint()))
+                .compose(tenantObject -> uploadMessage(ctx, tenantObject, ctx.deviceId(), payload, ctx.endpoint()))
                 .compose(success -> {
                     metrics.reportTelemetry(
                             ctx.endpoint(),
@@ -808,21 +780,26 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      * Uploads a command response message.
      *
      * @param ctx The context in which the MQTT message has been published.
-     * @param targetAddress The address that the response should be forwarded to.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will succeed if the message has been uploaded successfully.
      *         Otherwise, the future will fail with a {@link ServiceInvocationException}.
-     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @throws NullPointerException if ctx is {@code null}.
+     * @throws IllegalArgumentException if the context does not contain a command response
+     *         or tenant/device information is not set.
      */
-    public final Future<Void> uploadCommandResponseMessage(
-            final MqttContext ctx,
-            final ResourceIdentifier targetAddress) {
-
+    public final Future<Void> uploadCommandResponseMessage(final MqttContext ctx) {
         Objects.requireNonNull(ctx);
-        Objects.requireNonNull(targetAddress);
 
-        final String[] addressPath = targetAddress.getResourcePath();
+        if (ctx.endpoint() != EndpointType.COMMAND) {
+            throw new IllegalArgumentException("context does not contain command response message but " +
+                    ctx.endpoint().getCanonicalName());
+        }
+        verifyTenantAndDeviceContextIsSet(ctx);
+
+        final String[] addressPath = ctx.topic().getResourcePath();
+        final String tenantId = ctx.tenant();
+        final String deviceId = ctx.deviceId();
         Integer status = null;
         String reqId = null;
 
@@ -835,12 +812,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 status = Integer.parseInt(addressPath[CommandConstants.TOPIC_POSITION_RESPONSE_STATUS]);
             } catch (final NumberFormatException e) {
                 log.trace("got invalid status code [{}] [tenant-id: {}, device-id: {}]",
-                        addressPath[CommandConstants.TOPIC_POSITION_RESPONSE_STATUS], targetAddress.getTenantId(), targetAddress.getResourceId());
+                        addressPath[CommandConstants.TOPIC_POSITION_RESPONSE_STATUS], tenantId, deviceId);
             }
             if (status != null) {
                 reqId = addressPath[CommandConstants.TOPIC_POSITION_RESPONSE_REQ_ID];
-                final CommandResponse commandResponse = CommandResponse.fromRequestId(reqId, targetAddress.getTenantId(),
-                        targetAddress.getResourceId(), ctx.message().payload(), ctx.contentType(), status);
+                final CommandResponse commandResponse = CommandResponse.fromRequestId(reqId, tenantId,
+                        deviceId, ctx.payload(), ctx.contentType(), status);
 
                 commandResponseTracker = commandResponse != null ? Future.succeededFuture(commandResponse)
                         : Future.failedFuture(new ClientErrorException(
@@ -855,21 +832,21 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         final Span currentSpan = TracingHelper
                 .buildChildSpan(tracer, ctx.getTracingContext(), "upload Command response", getTypeName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
-                .withTag(TracingHelper.TAG_TENANT_ID, targetAddress.getTenantId())
-                .withTag(TracingHelper.TAG_DEVICE_ID, targetAddress.getResourceId())
+                .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
+                .withTag(TracingHelper.TAG_DEVICE_ID, deviceId)
                 .withTag(Constants.HEADER_COMMAND_RESPONSE_STATUS, status)
                 .withTag(Constants.HEADER_COMMAND_REQUEST_ID, reqId)
                 .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), ctx.authenticatedDevice() != null)
                 .start();
 
-        final int payloadSize = Optional.ofNullable(ctx.message().payload()).map(Buffer::length).orElse(0);
-        final Future<TenantObject> tenantTracker = getTenantConfiguration(targetAddress.getTenantId(), ctx.getTracingContext());
+        final int payloadSize = ctx.payload().length();
+        final Future<TenantObject> tenantTracker = getTenantConfiguration(tenantId, ctx.getTracingContext());
 
         return CompositeFuture.all(tenantTracker, commandResponseTracker)
                 .compose(success -> {
                     final Future<RegistrationAssertion> deviceRegistrationTracker = getRegistrationAssertion(
-                            targetAddress.getTenantId(),
-                            targetAddress.getResourceId(),
+                            tenantId,
+                            deviceId,
                             ctx.authenticatedDevice(),
                             currentSpan.context());
                     final Future<Void> tenantValidationTracker = CompositeFuture.all(
@@ -885,10 +862,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 })
                 .compose(delivery -> {
                     log.trace("successfully forwarded command response from device [tenant-id: {}, device-id: {}]",
-                            targetAddress.getTenantId(), targetAddress.getResourceId());
+                            tenantId, deviceId);
                     metrics.reportCommand(
                             Direction.RESPONSE,
-                            targetAddress.getTenantId(),
+                            tenantId,
                             tenantTracker.result(),
                             ProcessingOutcome.FORWARDED,
                             payloadSize,
@@ -906,7 +883,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     currentSpan.finish();
                     metrics.reportCommand(
                             Direction.RESPONSE,
-                            targetAddress.getTenantId(),
+                            tenantId,
                             tenantTracker.result(),
                             ProcessingOutcome.from(t),
                             payloadSize,
@@ -973,7 +950,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         }).map(ok -> {
 
             log.trace("successfully processed message [topic: {}, QoS: {}] from device [tenantId: {}, deviceId: {}]",
-                    ctx.message().topicName(), ctx.message().qosLevel(), tenantObject.getTenantId(), deviceId);
+                    ctx.getOrigAddress(), ctx.qosLevel(), tenantObject.getTenantId(), deviceId);
             // check that the remote MQTT client is still connected before sending PUBACK
             if (ctx.isAtLeastOnce() && ctx.deviceEndpoint().isConnected()) {
                 currentSpan.log(EVENT_SENDING_PUBACK);
@@ -1084,7 +1061,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             final Map<String, Object> props,
             final Span currentSpan) {
 
-        if (context.message().isRetain()) {
+        if (context.isRetain()) {
             currentSpan.log("device wants to retain message");
             props.put(MessageHelper.ANNOTATION_X_OPT_RETAIN, Boolean.TRUE);
         }

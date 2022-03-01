@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,7 +25,6 @@ import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.client.command.CommandContext;
-import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 
@@ -34,7 +33,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.Json;
-import io.vertx.mqtt.messages.MqttPublishMessage;
 
 
 /**
@@ -70,33 +68,21 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
         this.messageMapping = messageMappingService;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected Future<Void> onPublishedMessage(final MqttContext ctx) {
 
-        return mapTopic(ctx)
+        return checkQosAndMapTopic(ctx)
                 .compose(address -> validateAddress(address, ctx.authenticatedDevice()))
-                .compose(targetAddress -> mapMessage(ctx, targetAddress))
-                .compose(mappedMessage -> {
-                    final MqttPublishMessage mqttPublishMessage = MqttPublishMessage.create(
-                            ctx.message().messageId(),
-                            ctx.message().qosLevel(),
-                            ctx.message().isDup(),
-                            ctx.message().isRetain(),
-                            ctx.message().topicName(),
-                            mappedMessage.getPayload().getByteBuf());
-                    return uploadMessage(ctx, mappedMessage.getTargetAddress(), mqttPublishMessage);
-                })
+                .compose(targetAddress -> mapMessageAndUpdateContext(ctx, targetAddress))
+                .compose(mappedMessage -> uploadMessage(ctx))
                 .recover(t -> {
-                    log.debug("discarding message [topic: {}] from {}",
-                            ctx.message().topicName(), ctx.authenticatedDevice(), t);
+                    log.debug("discarding message [topic: {}, authenticated device: {}]",
+                            ctx.getOrigAddress(), ctx.authenticatedDevice(), t);
                     return Future.failedFuture(t);
                 });
     }
 
-    private Future<MappedMessage> mapMessage(
+    private Future<MappedMessage> mapMessageAndUpdateContext(
             final MqttContext ctx,
             final ResourceIdentifier targetAddress) {
 
@@ -105,10 +91,14 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
                 targetAddress.getResourceId(),
                 ctx.authenticatedDevice(),
                 ctx.getTracingContext())
-                .compose(registrationInfo -> messageMapping.mapDownstreamMessage(ctx, targetAddress, registrationInfo))
+                .compose(registrationInfo -> messageMapping.mapDownstreamMessage(
+                        ctx,
+                        targetAddress.getTenantId(), 
+                        registrationInfo))
                 .map(mappedMessage -> {
                     ctx.put(MAPPER_DATA, mappedMessage.getAdditionalProperties());
-                    ctx.applyMappedTargetAddress(mappedMessage.getTargetAddress());
+                    ctx.applyMappedTargetDeviceId(mappedMessage.getTargetDeviceId());
+                    ctx.applyMappedPayload(mappedMessage.getPayload());
                     return mappedMessage;
                 });
     }
@@ -134,24 +124,23 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
         }
     }
 
-    Future<ResourceIdentifier> mapTopic(final MqttContext context) {
+    Future<ResourceIdentifier> checkQosAndMapTopic(final MqttContext context) {
 
         final Promise<ResourceIdentifier> result = Promise.promise();
-        final ResourceIdentifier topic = context.topic();
-        final MqttQoS qos = context.message().qosLevel();
+        final MqttQoS qos = context.qosLevel();
 
-        switch (MetricsTags.EndpointType.fromString(topic.getEndpoint())) {
+        switch (context.endpoint()) {
             case TELEMETRY:
                 if (MqttQoS.EXACTLY_ONCE.equals(qos)) {
                     // client tries to send telemetry message using QoS 2
                     result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "QoS 2 not supported for telemetry messages"));
                 } else {
-                    result.complete(topic);
+                    result.complete(context.topic());
                 }
                 break;
             case EVENT:
                 if (MqttQoS.AT_LEAST_ONCE.equals(qos)) {
-                    result.complete(topic);
+                    result.complete(context.topic());
                 } else {
                     // client tries to send event message using QoS 0 or 2
                     result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "Only QoS 1 supported for event messages"));
@@ -162,20 +151,17 @@ public final class VertxBasedMqttProtocolAdapter extends AbstractVertxBasedMqttP
                     // client tries to send control message using QoS 2
                     result.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "QoS 2 not supported for command response messages"));
                 } else {
-                    result.complete(topic);
+                    result.complete(context.topic());
                 }
                 break;
             default:
                 // MQTT client is trying to publish on a not supported endpoint
-                log.debug("no such endpoint [{}]", topic.getEndpoint());
+                log.debug("no such endpoint [{}]", context.endpoint());
                 result.fail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "no such endpoint"));
         }
         return result.future();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected Future<Buffer> getCommandPayload(final CommandContext ctx) {
         final Command command = ctx.getCommand();

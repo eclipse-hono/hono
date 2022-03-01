@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -42,7 +42,6 @@ import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
-import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -104,14 +103,14 @@ public class HttpBasedMessageMappingTest {
     public void testMapMessageSucceedsIfNoMapperIsSet(final VertxTestContext ctx) {
 
         config.setMapperEndpoints(Map.of("mapper", MapperEndpoint.from("host", 1234, "/uri", false)));
-        final ResourceIdentifier targetAddress = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, "gateway");
         final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
-        final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, "gateway"));
+        final String deviceId = "gateway";
+        final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, deviceId));
 
-        messageMapping.mapDownstreamMessage(context, targetAddress, new RegistrationAssertion("gateway"))
+        messageMapping.mapDownstreamMessage(context, TEST_TENANT_ID, new RegistrationAssertion(deviceId))
             .onComplete(ctx.succeeding(mappedMessage -> {
                 ctx.verify(() -> {
-                    assertThat(mappedMessage.getTargetAddress()).isEqualTo(targetAddress);
+                    assertThat(mappedMessage.getTargetDeviceId()).isEqualTo(deviceId);
                     assertThat(mappedMessage.getPayload()).isEqualTo(message.payload());
                     assertThat(mappedMessage.getAdditionalProperties()).isEmpty();
                     verify(mapperWebClient, never()).post(anyInt(), anyString(), anyString());
@@ -130,15 +129,15 @@ public class HttpBasedMessageMappingTest {
     @Test
     public void testMapMessageSucceedsIfNoMapperEndpointIsConfigured(final VertxTestContext ctx) {
 
-        final ResourceIdentifier targetAddress = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, "gateway");
         final MqttPublishMessage message = newMessage(MqttQoS.AT_LEAST_ONCE, TelemetryConstants.TELEMETRY_ENDPOINT);
-        final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, "gateway"));
+        final String deviceId = "gateway";
+        final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, deviceId));
 
-        final RegistrationAssertion assertion = new RegistrationAssertion("gateway").setDownstreamMessageMapper("mapper");
-        messageMapping.mapDownstreamMessage(context, targetAddress, assertion)
+        final RegistrationAssertion assertion = new RegistrationAssertion(deviceId).setDownstreamMessageMapper("mapper");
+        messageMapping.mapDownstreamMessage(context, TEST_TENANT_ID, assertion)
             .onComplete(ctx.succeeding(mappedMessage -> {
                 ctx.verify(() -> {
-                    assertThat(mappedMessage.getTargetAddress()).isEqualTo(targetAddress);
+                    assertThat(mappedMessage.getTargetDeviceId()).isEqualTo(deviceId);
                     assertThat(mappedMessage.getPayload()).isEqualTo(message.payload());
                     assertThat(mappedMessage.getAdditionalProperties()).isEmpty();
                     verify(mapperWebClient, never()).post(anyInt(), anyString(), anyString());
@@ -158,7 +157,6 @@ public class HttpBasedMessageMappingTest {
     public void testMapMessageSucceeds(final VertxTestContext ctx) {
 
         config.setMapperEndpoints(Map.of("mapper", MapperEndpoint.from("host", 1234, "/uri", false)));
-        final ResourceIdentifier targetAddress = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, "gateway");
         final String newDeviceId = "new-device";
 
         final HttpRequest<Buffer> httpRequest = mock(HttpRequest.class, withSettings().defaultAnswer(RETURNS_SELF));
@@ -184,10 +182,10 @@ public class HttpBasedMessageMappingTest {
         final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, "gateway"));
 
         final RegistrationAssertion assertion = new RegistrationAssertion("gateway").setDownstreamMessageMapper("mapper");
-        messageMapping.mapDownstreamMessage(context, targetAddress, assertion)
+        messageMapping.mapDownstreamMessage(context, TEST_TENANT_ID, assertion)
             .onComplete(ctx.succeeding(mappedMessage -> {
                 ctx.verify(() -> {
-                    assertThat(mappedMessage.getTargetAddress().getResourceId()).isEqualTo("new-device");
+                    assertThat(mappedMessage.getTargetDeviceId()).isEqualTo("new-device");
                     assertThat(mappedMessage.getPayload()).isEqualTo(responseBody);
                     assertThat(mappedMessage.getAdditionalProperties()).doesNotContainKey(MessageHelper.APP_PROPERTY_DEVICE_ID);
                     assertThat(mappedMessage.getAdditionalProperties()).containsEntry("foo", "bar");
@@ -218,7 +216,6 @@ public class HttpBasedMessageMappingTest {
     public void testMappingFailsForWhenPayloadCannotMapped(final VertxTestContext ctx) {
 
         config.setMapperEndpoints(Map.of("mapper", MapperEndpoint.from("host", 1234, "/uri", false)));
-        final ResourceIdentifier targetAddress = ResourceIdentifier.from(TelemetryConstants.TELEMETRY_ENDPOINT, TEST_TENANT_ID, "gateway");
 
         final HttpRequest<Buffer> httpRequest = mock(HttpRequest.class, withSettings().defaultAnswer(RETURNS_SELF));
 
@@ -230,7 +227,7 @@ public class HttpBasedMessageMappingTest {
         final MqttContext context = newContext(message, span, new Device(TEST_TENANT_ID, "gateway"));
 
         final RegistrationAssertion assertion = new RegistrationAssertion("gateway").setDownstreamMessageMapper("mapper");
-        messageMapping.mapDownstreamMessage(context, targetAddress, assertion)
+        messageMapping.mapDownstreamMessage(context, TEST_TENANT_ID, assertion)
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
                     assertThat(t).isInstanceOf(ServerErrorException.class);
