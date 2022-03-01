@@ -32,6 +32,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The Spring Boot based variant of the MQTT protocol adapter has been removed.
 * Usage and implementations of the Device Connection API have been removed.
 * The Spring Boot based variant of the Command Router has been removed.
+* The `org.eclipse.hono.client.device.amqp.AmqpAdapterClientFactory` class has been moved from the *hono-client* module
+  to the new *hono-client-device-amqp* module.
 
 ## 1.12.1
 
