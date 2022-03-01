@@ -64,7 +64,8 @@ abstract class ResourceTestBase extends CoapProtocolAdapterMockSupport<CoapProto
         when(request.getType()).thenReturn(requestType);
         when(request.isConfirmable()).thenReturn(requestType == Type.CON);
         when(request.getOptions()).thenReturn(options);
-        final Exchange exchange = new Exchange(request, Origin.REMOTE, mock(Executor.class));
+        final Object identity = "dummy";
+        final Exchange exchange = new Exchange(request, identity, Origin.REMOTE, mock(Executor.class));
         final CoapExchange coapExchange = mock(CoapExchange.class);
         when(coapExchange.advanced()).thenReturn(exchange);
         Optional.ofNullable(payload).ifPresent(b -> when(coapExchange.getRequestPayload()).thenReturn(b.getBytes()));

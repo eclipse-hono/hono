@@ -126,10 +126,15 @@ public class TracingSupportingHonoResourceTest {
     }
 
     private Exchange newExchange(final Request request) {
-        final Exchange exchange = new Exchange(request, Origin.REMOTE, null);
+        final Object identity = "dummy";
+        final Exchange exchange = new Exchange(request, identity, Origin.REMOTE, (cmd) -> {
+            cmd.run();
+        });
         exchange.setEndpoint(endpoint);
         doAnswer(invocation -> {
-            exchange.setResponse(invocation.getArgument(1));
+            exchange.execute(() -> {
+                exchange.setResponse(invocation.getArgument(1));
+            });
             return null;
         }).when(endpoint).sendResponse(eq(exchange), any(Response.class));
         return exchange;

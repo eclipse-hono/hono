@@ -20,7 +20,6 @@ import java.util.Set;
 import org.eclipse.californium.core.CoapServer;
 import org.eclipse.californium.core.coap.CoAP;
 import org.eclipse.californium.core.network.Endpoint;
-import org.eclipse.californium.core.network.config.NetworkConfig;
 import org.eclipse.californium.core.server.resources.Resource;
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.util.Constants;
@@ -181,27 +180,32 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         }
 
         log.info("creating new CoAP server");
-        final CoapServer newServer = new CoapServer(NetworkConfig.createStandardWithoutFile());
-        final Future<Endpoint> secureEndpointFuture = endpointFactory.getSecureEndpoint()
-                .onFailure(t -> log.info("not creating secure endpoint: {}", t.getMessage()))
-                .map(ep -> {
-                    newServer.addEndpoint(ep);
-                    this.secureEndpoint = ep;
-                    return ep;
-                });
-        final Future<Endpoint> insecureEndpointFuture = endpointFactory.getInsecureEndpoint()
-                .onFailure(t -> log.info("not creating insecure endpoint: {}", t.getMessage()))
-                .map(ep -> {
-                    newServer.addEndpoint(ep);
-                    this.insecureEndpoint = ep;
-                    return ep;
+        return endpointFactory.getCoapServerConfiguration()
+                .onFailure(t -> log.info("not creating coap server: {}", t.getMessage()))
+                .compose(config -> {
+                    final CoapServer newServer = new CoapServer(config);
+                    final Future<Endpoint> secureEndpointFuture = endpointFactory.getSecureEndpoint()
+                            .onFailure(t -> log.info("not creating secure endpoint: {}", t.getMessage()))
+                            .map(ep -> {
+                                newServer.addEndpoint(ep);
+                                this.secureEndpoint = ep;
+                                return ep;
+                            });
+                    final Future<Endpoint> insecureEndpointFuture = endpointFactory.getInsecureEndpoint()
+                            .onFailure(t -> log.info("not creating insecure endpoint: {}", t.getMessage()))
+                            .map(ep -> {
+                                newServer.addEndpoint(ep);
+                                this.insecureEndpoint = ep;
+                                return ep;
+                            });
+
+                    return CompositeFuture.any(insecureEndpointFuture, secureEndpointFuture)
+                            .map(ok -> {
+                                this.server = newServer;
+                                return newServer;
+                            });
                 });
 
-        return CompositeFuture.any(insecureEndpointFuture, secureEndpointFuture)
-                .map(ok -> {
-                    this.server = newServer;
-                    return newServer;
-                });
     }
 
     private void addResources(final CoapServer startingServer) {

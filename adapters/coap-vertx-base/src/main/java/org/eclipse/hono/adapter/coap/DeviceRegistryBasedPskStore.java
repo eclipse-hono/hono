@@ -22,9 +22,9 @@ import javax.crypto.SecretKey;
 
 import org.eclipse.californium.elements.auth.AdditionalInfo;
 import org.eclipse.californium.scandium.dtls.ConnectionId;
+import org.eclipse.californium.scandium.dtls.HandshakeResultHandler;
 import org.eclipse.californium.scandium.dtls.PskPublicInformation;
 import org.eclipse.californium.scandium.dtls.PskSecretResult;
-import org.eclipse.californium.scandium.dtls.PskSecretResultHandler;
 import org.eclipse.californium.scandium.dtls.pskstore.AdvancedPskStore;
 import org.eclipse.californium.scandium.util.SecretUtil;
 import org.eclipse.californium.scandium.util.ServerNames;
@@ -55,7 +55,7 @@ public class DeviceRegistryBasedPskStore implements AdvancedPskStore {
     private final CoapProtocolAdapter adapter;
     private final Tracer tracer;
 
-    private volatile PskSecretResultHandler californiumResultHandler;
+    private volatile HandshakeResultHandler californiumResultHandler;
 
     /**
      * Creates a new resolver.
@@ -194,14 +194,15 @@ public class DeviceRegistryBasedPskStore implements AdvancedPskStore {
             final PskPublicInformation identity,
             final String hmacAlgorithm,
             final SecretKey otherSecret,
-            final byte[] seed) {
+            final byte[] seed,
+            final boolean useExtendedMasterSecret) {
 
         adapter.runOnContext((v) -> loadCredentialsForDevice(cid, identity));
         return null;
     }
 
     @Override
-    public void setResultHandler(final PskSecretResultHandler resultHandler) {
+    public void setResultHandler(final HandshakeResultHandler resultHandler) {
         californiumResultHandler = resultHandler;
     }
 }

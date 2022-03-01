@@ -14,12 +14,9 @@
 package org.eclipse.hono.adapter.coap;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.Executor;
 
-import org.eclipse.californium.core.network.Endpoint;
 import org.eclipse.californium.core.network.Exchange;
 import org.eclipse.californium.core.observe.ObserveRelation;
 import org.eclipse.californium.core.server.resources.Resource;
@@ -176,20 +173,8 @@ class VertxCoapResource implements Resource {
     }
 
     @Override
-    public ExecutorService getExecutor() {
+    public Executor getExecutor() {
         return resource.getExecutor();
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public ScheduledThreadPoolExecutor getSecondaryExecutor() {
-        return resource.getSecondaryExecutor();
-    }
-
-    @Override
-    public List<Endpoint> getEndpoints() {
-        return resource.getEndpoints();
-    }
 }
