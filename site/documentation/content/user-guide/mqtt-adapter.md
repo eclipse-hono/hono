@@ -775,9 +775,9 @@ functionality are therefore subject to change without prior notice.
 {{% /notice %}}
 
 This feature is useful in scenarios where devices are connected to the adapter via a gateway but the gateway is not
-able to include the device ID in the topic that the gateway publishes data to. The gateway will use the plain `telemetry`
-or `event` topics in this case. The message payload will usually contain the identifier of the device that the data
-originates from.
+able to include the device ID in the topic that the gateway publishes data to. The gateway will use the plain `telemetry`,
+`event` or `command` topics in this case. The message payload will usually contain the identifier of the device that the
+data originates from.
 
 The same functionality can also be used to transform the payload of messages uploaded by a device. This can be used for
 example to transform binary encoded data into a JSON document which can be consumed more easily by downstream consumers.

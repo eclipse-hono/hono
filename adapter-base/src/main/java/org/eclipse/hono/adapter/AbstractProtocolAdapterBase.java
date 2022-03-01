@@ -552,6 +552,9 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
     /**
      * Validates a message's target address for consistency with Hono's addressing rules.
+     * <p>
+     * It is ensured that the returned address contains tenant and device identifiers, adopting them from the
+     * given device information if not already set.
      *
      * @param address The address to validate.
      * @param authenticatedDevice The device that has uploaded the message.

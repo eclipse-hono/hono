@@ -124,6 +124,7 @@ An implementation of the mapper needs to be provided. Following data will be pro
 - HTTP headers:
   - orig_address
   - content-type
+  - tenant_id
   - all strings configured during registration
 - Body
   - The payload of the message is provided in the body of the mapping request

@@ -656,7 +656,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
                 outcome,
                 EndpointType.EVENT,
                 (adapter, mqttContext) -> {
-                    adapter.uploadEventMessage(mqttContext, "my-tenant", "4712", mqttContext.message().payload())
+                    adapter.uploadEventMessage(mqttContext)
                             .onComplete(ctx.succeedingThenComplete());
                 });
     }
@@ -680,7 +680,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
                 EndpointType.TELEMETRY,
                 (adapter, mqttContext) -> {
                     // WHEN forwarding a telemetry message that has been published with QoS 1
-                    adapter.uploadTelemetryMessage(mqttContext, "my-tenant", "4712", mqttContext.message().payload())
+                    adapter.uploadTelemetryMessage(mqttContext)
                             .onComplete(ctx.succeedingThenComplete());
                 });
     }
@@ -749,10 +749,8 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         when(messageFromDevice.topicName()).thenReturn("command/my-tenant/4712/res/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200");
 
         // ... with an empty payload
-        when(messageFromDevice.payload()).thenReturn(null);
-        final ResourceIdentifier address = ResourceIdentifier
-                .fromString("command/my-tenant/4712/res/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200");
-        adapter.uploadCommandResponseMessage(newMqttContext(messageFromDevice, endpoint, span), address)
+        when(messageFromDevice.payload()).thenReturn(Buffer.buffer());
+        adapter.uploadCommandResponseMessage(newMqttContext(messageFromDevice, endpoint, span))
                 .onComplete(ctx.succeeding(result -> {
                     ctx.verify(() -> {
                         verify(sender).sendCommandResponse(
@@ -795,9 +793,10 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         when(messageFromDevice.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
         when(messageFromDevice.messageId()).thenReturn(5555555);
         when(messageFromDevice.topicName()).thenReturn("e/my-tenant/4712");
+        when(messageFromDevice.payload()).thenReturn(payload);
         final MqttContext context = newMqttContext(messageFromDevice, endpoint, span);
 
-        adapter.uploadEventMessage(context, "my-tenant", "4712", payload)
+        adapter.uploadEventMessage(context)
             .onSuccess(ok -> ctx.failNow("should not have succeeded sending message downstream"));
         assertEventHasBeenSentDownstream("my-tenant", "4712", null);
         // and the peer rejects the message
@@ -845,7 +844,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         when(messageFromDevice.payload()).thenReturn(payload);
         final MqttContext context = newMqttContext(messageFromDevice, endpoint, span);
 
-        adapter.uploadTelemetryMessage(context, "my-tenant", "4712", payload)
+        adapter.uploadTelemetryMessage(context)
             .onComplete(ctx.succeeding(ok -> {
 
                 ctx.verify(() -> {
@@ -1157,38 +1156,28 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
 
         ResourceIdentifier resourceId = ResourceIdentifier.from("telemetry", "my-tenant", "4712");
         when(messageFromDevice.topicName()).thenReturn(resourceId.toString());
-        adapter.uploadMessage(
-                newMqttContext(messageFromDevice, endpoint, span),
-                resourceId,
-                messageFromDevice).onFailure(ctx::failNow);
+        adapter.uploadMessage(newMqttContext(messageFromDevice, endpoint, span))
+                .onFailure(ctx::failNow);
 
         resourceId = ResourceIdentifier.from("event", "my-tenant", "4712");
         when(messageFromDevice.topicName()).thenReturn(resourceId.toString());
-        adapter.uploadMessage(
-                newMqttContext(messageFromDevice, endpoint, span),
-                resourceId,
-                messageFromDevice).onFailure(ctx::failNow);
+        adapter.uploadMessage(newMqttContext(messageFromDevice, endpoint, span))
+                .onFailure(ctx::failNow);
 
         resourceId = ResourceIdentifier.from("t", "my-tenant", "4712");
         when(messageFromDevice.topicName()).thenReturn(resourceId.toString());
-        adapter.uploadMessage(
-                newMqttContext(messageFromDevice, endpoint, span),
-                resourceId,
-                messageFromDevice).onFailure(ctx::failNow);
+        adapter.uploadMessage(newMqttContext(messageFromDevice, endpoint, span))
+                .onFailure(ctx::failNow);
 
         resourceId = ResourceIdentifier.from("e", "my-tenant", "4712");
         when(messageFromDevice.topicName()).thenReturn(resourceId.toString());
-        adapter.uploadMessage(
-                newMqttContext(messageFromDevice, endpoint, span),
-                resourceId,
-                messageFromDevice).onFailure(ctx::failNow);
+        adapter.uploadMessage(newMqttContext(messageFromDevice, endpoint, span))
+                .onFailure(ctx::failNow);
 
         resourceId = ResourceIdentifier.from("unknown", "my-tenant", "4712");
         when(messageFromDevice.topicName()).thenReturn(resourceId.toString());
-        adapter.uploadMessage(
-                newMqttContext(messageFromDevice, endpoint, span),
-                resourceId,
-                messageFromDevice).onComplete(ctx.failing(t -> {
+        adapter.uploadMessage(newMqttContext(messageFromDevice, endpoint, span))
+                .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> assertThat(t).isInstanceOf(ClientErrorException.class));
                 }));
         ctx.completeNow();
@@ -1320,11 +1309,11 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
         when(msg.topicName()).thenReturn("t/my-tenant/the-device");
         when(msg.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
-        adapter.uploadTelemetryMessage(
-                newMqttContext(msg, client, span),
-                "my-tenant",
-                "the-device",
-                Buffer.buffer("test")).onComplete(ctx.failing(t -> {
+        when(msg.payload()).thenReturn(Buffer.buffer("test"));
+        final MqttContext context = newMqttContext(msg, client, span);
+
+        adapter.uploadTelemetryMessage(context)
+                .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN the message has not been sent downstream
                         assertNoTelemetryMessageHasBeenSentDownstream();
@@ -1367,11 +1356,11 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
         when(msg.topicName()).thenReturn("e/my-tenant/the-device");
         when(msg.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
-        adapter.uploadEventMessage(
-                newMqttContext(msg, client, span),
-                "my-tenant",
-                "the-device",
-                Buffer.buffer("test")).onComplete(ctx.failing(t -> {
+        when(msg.payload()).thenReturn(Buffer.buffer("test"));
+        final MqttContext context = newMqttContext(msg, client, span);
+
+        adapter.uploadEventMessage(context)
+                .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
                         // THEN the message has not been sent downstream
                         assertNoEventHasBeenSentDownstream();
@@ -1412,14 +1401,13 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
 
         // WHEN a device of "tenant" publishes a command response message
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
-        when(msg.topicName()).thenReturn("e/tenant/device");
+        final String requestId = Commands.encodeRequestIdParameters("cmd123", "to", "deviceId", MessagingType.amqp);
+        final String topic = String.format("%s/tenant/device/res/%s/200", getCommandEndpoint(), requestId);
+        when(msg.topicName()).thenReturn(topic);
         when(msg.qosLevel()).thenReturn(MqttQoS.AT_MOST_ONCE);
         when(msg.payload()).thenReturn(Buffer.buffer("test"));
 
-        adapter.uploadMessage(newMqttContext(msg, mockEndpoint(), span),
-                ResourceIdentifier.fromString(String.format("%s/tenant/device/res/%s/200", getCommandEndpoint(),
-                        Commands.encodeRequestIdParameters("cmd123", "to", "deviceId", MessagingType.amqp))),
-                msg)
+        adapter.uploadMessage(newMqttContext(msg, mockEndpoint(), span))
                 .onComplete(ctx.failing(t -> {
                     ctx.verify(() -> {
 
@@ -1461,11 +1449,11 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         final MqttPublishMessage msg = mock(MqttPublishMessage.class);
         when(msg.topicName()).thenReturn("e/tenant/device/?hono-ttl=30&param2=value2");
         when(msg.qosLevel()).thenReturn(MqttQoS.AT_LEAST_ONCE);
-        adapter.uploadEventMessage(
-                newMqttContext(msg, mockEndpoint(), span),
-                "tenant",
-                "device",
-                Buffer.buffer("test")).onComplete(ctx.succeeding(t -> {
+        when(msg.payload()).thenReturn(Buffer.buffer("test"));
+        final MqttContext context = newMqttContext(msg, mockEndpoint(), span);
+
+        adapter.uploadEventMessage(context)
+                .onComplete(ctx.succeeding(t -> {
                     ctx.verify(() -> {
                         // THEN the TTL value of the amqp message is 30 seconds.
                         assertEventHasBeenSentDownstream("tenant", "device", null, 30L);
@@ -1553,8 +1541,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
 
             @Override
             protected Future<Void> onPublishedMessage(final MqttContext ctx) {
-                final ResourceIdentifier topic = ResourceIdentifier.fromString(ctx.message().topicName());
-                return uploadTelemetryMessage(ctx, topic.getTenantId(), topic.getResourceId(), ctx.message().payload());
+                return uploadTelemetryMessage(ctx);
             }
         };
         adapter.setConfig(configuration);

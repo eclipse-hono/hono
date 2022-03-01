@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -30,6 +30,7 @@ import org.eclipse.hono.util.Strings;
 import io.micrometer.core.instrument.Timer.Sample;
 import io.netty.handler.codec.mqtt.MqttQoS;
 import io.opentracing.Span;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.messages.MqttPublishMessage;
 
@@ -45,14 +46,18 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
     private final MqttPublishMessage message;
     private final MqttEndpoint deviceEndpoint;
     private final Device authenticatedDevice;
-    private ResourceIdentifier topic;
-    private Optional<ResourceIdentifier> mappedTargetAddress = Optional.empty();
+
+    // --- fields that are effectively final, may be null if topic is invalid ---
     private String contentType;
-    private Sample timer;
     private MetricsTags.EndpointType endpoint;
     private PropertyBag propertyBag;
     private Optional<Duration> timeToLive = Optional.empty();
     private ErrorHandlingMode errorHandlingMode = ErrorHandlingMode.DEFAULT;
+
+    // --- fields that may get changed via setters; may be null ---
+    private ResourceIdentifier topic;
+    private Buffer mappedPayload;
+    private Sample timer;
 
     /**
      * Modes defining how to handle errors raised when a device publishes a message.
@@ -111,19 +116,6 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
         this.authenticatedDevice = authenticatedDevice;
     }
 
-    private static Optional<Duration> determineTimeToLive(final PropertyBag properties) {
-        try {
-            final Duration timeToLive = Optional.ofNullable(properties)
-                    .map(propBag -> propBag.getProperty(Constants.HEADER_TIME_TO_LIVE))
-                    .map(Long::parseLong)
-                    .map(ttl -> ttl < 0 ? null : Duration.ofSeconds(ttl))
-                    .orElse(null);
-            return Optional.ofNullable(timeToLive);
-        } catch (final NumberFormatException e) {
-            return Optional.empty();
-        }
-    }
-
     /**
      * Creates a new context for a published message.
      *
@@ -180,6 +172,19 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
         return result;
     }
 
+    private static Optional<Duration> determineTimeToLive(final PropertyBag properties) {
+        try {
+            final Duration timeToLive = Optional.ofNullable(properties)
+                    .map(propBag -> propBag.getProperty(Constants.HEADER_TIME_TO_LIVE))
+                    .map(Long::parseLong)
+                    .map(ttl -> ttl < 0 ? null : Duration.ofSeconds(ttl))
+                    .orElse(null);
+            return Optional.ofNullable(timeToLive);
+        } catch (final NumberFormatException e) {
+            return Optional.empty();
+        }
+    }
+
     @Override
     public QoS getRequestedQos() {
 
@@ -194,12 +199,35 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
     }
 
     /**
-     * Gets the MQTT message to process.
+     * Gets the QOS level of the message.
      *
-     * @return The message.
+     * @return The level.
      */
-    public MqttPublishMessage message() {
-        return message;
+    public MqttQoS qosLevel() {
+        return message.qosLevel();
+    }
+
+    /**
+     * Checks if the message needs to be retained.
+     *
+     * @return {@code true} if the message needs to be retained.
+     */
+    public boolean isRetain() {
+        return message.isRetain();
+    }
+
+    /**
+     * Gets the message payload.
+     * <p>
+     * If a mapped message payload was set via {@link #applyMappedPayload(Buffer)},
+     * it will be returned here. Otherwise the payload of the message from the device is used.
+     *
+     * @return The payload (not null).
+     */
+    public Buffer payload() {
+        return Optional.ofNullable(mappedPayload)
+                .or(() -> Optional.ofNullable(message.payload()))
+                .orElseGet(Buffer::buffer);
     }
 
     /**
@@ -250,7 +278,13 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
     }
 
     /**
-     * Gets the topic that the message has been published to.
+     * Gets the topic that the message is associated with.
+     * <p>
+     * Note that the returned resource might be different from the original topic
+     * (as returned via {@link #getOrigAddress()}) in that the topic part representing
+     * the device identifier may have been updated via {@link #applyMappedTargetDeviceId(String)}.
+     * <p>
+     * Any property bag parameters set in the original topic name will be excluded in the returned value.
      *
      * @return The topic or {@code null} if the topic could not be
      *         parsed into a resource identifier.
@@ -260,14 +294,32 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
     }
 
     /**
-     * Apply a mapped targetAddress to this mqtt context.
+     * Applies a mapped target device identifier to this mqtt context.
      * <p>
-     * The device identifier included in the address overrides the device identifier derived from the message topic.
+     * The given device identifier overrides the one derived from the message topic.
      *
-     * @param mappedTargetAddress The mappedTargetAddress.
+     * @param mappedTargetDeviceId The mapped target device identifier.
+     * @throws NullPointerException if mappedTargetDeviceId is {@code null}.
      */
-    public void applyMappedTargetAddress(final ResourceIdentifier mappedTargetAddress) {
-        this.mappedTargetAddress = Optional.ofNullable(mappedTargetAddress);
+    public void applyMappedTargetDeviceId(final String mappedTargetDeviceId) {
+        Objects.requireNonNull(mappedTargetDeviceId);
+
+        if (topic != null && !mappedTargetDeviceId.equals(topic.getResourceId())) {
+            topic = ResourceIdentifier.from(
+                    topic,
+                    topic.getTenantId(),
+                    mappedTargetDeviceId);
+        }
+    }
+
+    /**
+     * Applies a mapped message payload which will override the original message payload
+     * in the {@link #payload()} method.
+     *
+     * @param payload The payload.
+     */
+    public void applyMappedPayload(final Buffer payload) {
+        this.mappedPayload = Objects.requireNonNull(payload);
     }
 
     /**
@@ -290,10 +342,11 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
     }
 
     /**
-     * Gets the identifier of the device that the message originates from.
+     * Gets the identifier of the device that the message is associated with.
      * <p>
-     * It is taken from the message topic or, if not set there, from
-     * the authenticated device.
+     * If a mapped target device identifier has been set, it will be returned here.
+     * Otherwise the identifier is taken from the message topic or, if not set there,
+     * from the authenticated device.
      * <p>
      * In a scenario of a gateway sending a message on behalf of an edge
      * device, the returned identifier is the edge device identifier.
@@ -304,9 +357,7 @@ public final class MqttContext extends MapBasedTelemetryExecutionContext {
      */
     public String deviceId() {
 
-        if (mappedTargetAddress.isPresent() && !Strings.isNullOrEmpty(mappedTargetAddress.get().getResourceId())) {
-            return mappedTargetAddress.get().getResourceId();
-        } else if (topic != null && !Strings.isNullOrEmpty(topic.getResourceId())) {
+        if (topic != null && !Strings.isNullOrEmpty(topic.getResourceId())) {
             return topic.getResourceId();
         } else if (authenticatedDevice != null) {
             return authenticatedDevice.getDeviceId();
