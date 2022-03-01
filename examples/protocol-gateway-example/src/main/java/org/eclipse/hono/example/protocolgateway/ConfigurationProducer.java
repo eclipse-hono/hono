@@ -22,7 +22,6 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.device.amqp.AmqpAdapterClientFactory;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.quarkus.ClientOptions;
@@ -74,7 +73,6 @@ public class ConfigurationProducer {
 
         return AmqpAdapterClientFactory.create(
                 amqpAdapterConnection,
-                tenantId,
-                SendMessageSampler.Factory.noop());
+                tenantId);
     }
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,6 +12,8 @@
  *******************************************************************************/
 
 package org.eclipse.hono.client.impl;
+
+import java.util.Objects;
 
 import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.DisconnectListener;
@@ -35,9 +37,10 @@ public abstract class ConnectionLifecycleWrapper<T> implements ConnectionLifecyc
      * Creates a new ConnectionLifecycleWrapper instance.
      *
      * @param delegate The object to invoke the ConnectionLifecycle methods on.
+     * @throws NullPointerException if delegate is {@code null}.
      */
     protected ConnectionLifecycleWrapper(final ConnectionLifecycle<T> delegate) {
-        this.delegate = delegate;
+        this.delegate = Objects.requireNonNull(delegate);
     }
 
     @Override

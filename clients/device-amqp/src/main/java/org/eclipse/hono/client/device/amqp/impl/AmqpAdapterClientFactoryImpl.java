@@ -18,16 +18,15 @@ import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.device.amqp.AmqpAdapterClientFactory;
 import org.eclipse.hono.client.device.amqp.AmqpSenderLink;
 import org.eclipse.hono.client.device.amqp.CommandResponder;
 import org.eclipse.hono.client.device.amqp.EventSender;
 import org.eclipse.hono.client.device.amqp.TelemetrySender;
-import org.eclipse.hono.client.impl.AbstractHonoClientFactory;
 import org.eclipse.hono.client.impl.CachingClientFactory;
 import org.eclipse.hono.client.impl.ClientFactory;
+import org.eclipse.hono.client.impl.ConnectionLifecycleWrapper;
 import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.EventConstants;
@@ -39,7 +38,10 @@ import io.vertx.core.Future;
  * A factory for creating clients for Hono's AMQP adapter that uses caching for the senders to ensure that they always
  * contain a open Vert.x ProtonSender.
  */
-public final class AmqpAdapterClientFactoryImpl extends AbstractHonoClientFactory implements AmqpAdapterClientFactory {
+public final class AmqpAdapterClientFactoryImpl extends ConnectionLifecycleWrapper<HonoConnection>
+        implements AmqpAdapterClientFactory {
+
+    private final HonoConnection connection;
 
     private final CachingClientFactory<TelemetrySender> telemetrySenderClientFactory;
     private final CachingClientFactory<EventSender> eventSenderClientFactory;
@@ -53,23 +55,21 @@ public final class AmqpAdapterClientFactoryImpl extends AbstractHonoClientFactor
      *
      * @param connection The connection to use.
      * @param tenantId The ID of the tenant to be used for the clients created by this factory.
-     * @param samplerFactory The sampler factory to use.
-     * @throws NullPointerException if any of the parameters is {@code null}
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public AmqpAdapterClientFactoryImpl(final HonoConnection connection, final String tenantId, final SendMessageSampler.Factory samplerFactory) {
-        super(connection, samplerFactory);
-        Objects.requireNonNull(tenantId);
+    public AmqpAdapterClientFactoryImpl(final HonoConnection connection, final String tenantId) {
+        super(connection);
+        this.connection = Objects.requireNonNull(connection);
+        this.tenantId = Objects.requireNonNull(tenantId);
+        this.connection.addDisconnectListener(con -> onDisconnect());
 
         telemetrySenderClientFactory = new CachingClientFactory<>(connection.getVertx(), AmqpSenderLink::isOpen);
         eventSenderClientFactory = new CachingClientFactory<>(connection.getVertx(), AmqpSenderLink::isOpen);
         commandResponseSenderClientFactory = new CachingClientFactory<>(connection.getVertx(), AmqpSenderLink::isOpen);
         commandConsumerFactory = new ClientFactory<>();
-
-        this.tenantId = tenantId;
     }
 
-    @Override
-    protected void onDisconnect() {
+    private void onDisconnect() {
         telemetrySenderClientFactory.clearState();
         eventSenderClientFactory.clearState();
         commandResponseSenderClientFactory.clearState();
@@ -146,5 +146,16 @@ public final class AmqpAdapterClientFactoryImpl extends AbstractHonoClientFactor
                                     onSenderClosed -> commandResponseSenderClientFactory.removeClient(cacheKey)),
                             result);
                 }));
+    }
+
+    /**
+     * Gets the default timeout used when checking whether this client factory is connected to the service.
+     * <p>
+     * The value returned here is the {@link org.eclipse.hono.config.ClientConfigProperties#getLinkEstablishmentTimeout()}.
+     *
+     * @return The timeout value in milliseconds.
+     */
+    private long getDefaultConnectionCheckTimeout() {
+        return connection.getConfig().getLinkEstablishmentTimeout();
     }
 }

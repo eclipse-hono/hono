@@ -22,7 +22,6 @@ import static org.mockito.Mockito.when;
 import static com.google.common.truth.Truth.assertThat;
 
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.client.command.CommandConsumer;
 import org.junit.jupiter.api.BeforeAll;
@@ -56,7 +55,7 @@ public class AmqpAdapterClientFactoryTest {
         final ProtonReceiver receiver = AmqpClientUnitTestHelper.mockProtonReceiver();
         when(connection.createReceiver(anyString(), any(), any(), any())).thenReturn(Future.succeededFuture(receiver));
 
-        factory = AmqpAdapterClientFactory.create(connection, "my-tenant", SendMessageSampler.Factory.noop());
+        factory = AmqpAdapterClientFactory.create(connection, "my-tenant");
     }
 
     /**

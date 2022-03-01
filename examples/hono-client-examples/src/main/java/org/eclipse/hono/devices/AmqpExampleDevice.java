@@ -18,7 +18,6 @@ import java.util.Map;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.device.amqp.AmqpAdapterClientFactory;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -96,7 +95,7 @@ public class AmqpExampleDevice {
     }
 
     private void startDevice(final HonoConnection connection) {
-        factory = AmqpAdapterClientFactory.create(connection, TENANT_ID, SendMessageSampler.Factory.noop());
+        factory = AmqpAdapterClientFactory.create(connection, TENANT_ID);
 
         sendTelemetryMessageWithQos0();
 
