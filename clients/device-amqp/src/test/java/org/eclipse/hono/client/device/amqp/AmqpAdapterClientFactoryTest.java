@@ -22,9 +22,9 @@ import static org.mockito.Mockito.when;
 import static com.google.common.truth.Truth.assertThat;
 
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
+import org.eclipse.hono.client.command.CommandConsumer;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -92,7 +92,7 @@ public class AmqpAdapterClientFactoryTest {
      */
     @Test
     public void testCreateDeviceSpecificCommandConsumerReturnsInstance() {
-        final Future<MessageConsumer> commandConsumer = factory.createDeviceSpecificCommandConsumer("my-device", x -> {
+        final Future<CommandConsumer> commandConsumer = factory.createDeviceSpecificCommandConsumer("my-device", x -> {
         });
         assertThat(commandConsumer.succeeded()).isTrue();
         assertThat(commandConsumer.result()).isNotNull();
@@ -103,7 +103,7 @@ public class AmqpAdapterClientFactoryTest {
      */
     @Test
     public void testCreateCommandConsumerReturnsInstance() {
-        final Future<MessageConsumer> commandConsumer = factory.createCommandConsumer(x -> {
+        final Future<CommandConsumer> commandConsumer = factory.createCommandConsumer(x -> {
         });
         assertThat(commandConsumer.succeeded()).isTrue();
         assertThat(commandConsumer.result()).isNotNull();

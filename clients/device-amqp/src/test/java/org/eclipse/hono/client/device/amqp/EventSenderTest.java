@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,8 +20,7 @@ import static org.mockito.Mockito.verify;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import org.eclipse.hono.client.AbstractAmqpAdapterClientDownstreamSenderTestBase;
-import org.eclipse.hono.client.device.amqp.internal.AmqpAdapterClientEventSenderImpl;
+import org.eclipse.hono.client.device.amqp.impl.AmqpAdapterClientEventSenderImpl;
 import org.eclipse.hono.util.EventConstants;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,7 +36,7 @@ import io.vertx.proton.ProtonDelivery;
  *
  */
 @ExtendWith(VertxExtension.class)
-public class EventSenderTest extends AbstractAmqpAdapterClientDownstreamSenderTestBase {
+public class EventSenderTest extends AmqpAdapterClientSenderTestBase {
 
     private static final String ADDRESS = EventConstants.EVENT_ENDPOINT + "/" + TENANT_ID + "/" + DEVICE_ID;
 
@@ -118,7 +117,7 @@ public class EventSenderTest extends AbstractAmqpAdapterClientDownstreamSenderTe
     }
 
     private EventSender createEventSender() {
-        return AmqpAdapterClientEventSenderImpl.createWithAnonymousLinkAddress(connection, TENANT_ID, s -> {
+        return AmqpAdapterClientEventSenderImpl.create(connection, TENANT_ID, s -> {
                 }).result();
     }
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,8 +13,7 @@
 
 package org.eclipse.hono.client.device.amqp;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
+import io.vertx.core.Future;
 
 /**
  * Interface for classes that manage a Vert.x based AMQP sender link.
@@ -26,10 +25,9 @@ public interface AmqpSenderLink {
      * <p>
      * The underlying AMQP connection to the server is not affected by this operation.
      *
-     * @param closeHandler A handler that is called back with the outcome of the attempt to close the link.
-     * @throws NullPointerException if the handler is {@code null}.
+     * @return A future that is completed when the link has been closed.
      */
-    void close(Handler<AsyncResult<Void>> closeHandler);
+    Future<Void> close();
 
     /**
      * Checks if this sender is (locally) open.

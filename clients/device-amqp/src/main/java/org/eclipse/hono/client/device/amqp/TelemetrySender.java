@@ -54,7 +54,7 @@ public interface TelemetrySender extends AmqpSenderLink {
             String deviceId,
             byte[] payload,
             String contentType,
-            Map<String, ?> properties);
+            Map<String, Object> properties);
 
     /**
      * Sends a telemetry message for a given device and waits for the disposition indicating the outcome of the
@@ -86,6 +86,6 @@ public interface TelemetrySender extends AmqpSenderLink {
             String deviceId,
             byte[] payload,
             String contentType,
-            Map<String, ?> properties);
+            Map<String, Object> properties);
 
 }

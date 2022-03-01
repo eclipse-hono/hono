@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -109,6 +109,27 @@ public class GenericSenderLink extends AbstractHonoClient {
                     .map(List::of)
                     .orElse(Collections.emptyList());
         }
+    }
+
+    /**
+     * Creates a new AMQP sender link for publishing messages on the anonymous link address.
+     * <p>
+     * This method is to be used for creating links that are independent of a particular tenant.
+     *
+     * @param con The connection to the Hono server.
+     * @param remoteCloseHook The handler to invoke when the link is closed by the peer (may be {@code null}). The
+     *            sender's target address is provided as an argument to the handler.
+     * @return A future indicating the outcome.
+     * @throws NullPointerException if any of the parameters except remoteCloseHook is {@code null}.
+     */
+    public static Future<GenericSenderLink> create(
+            final HonoConnection con,
+            final Handler<String> remoteCloseHook) {
+
+        Objects.requireNonNull(con);
+
+        return con.createSender(null, ProtonQoS.AT_LEAST_ONCE, remoteCloseHook)
+                .map(sender -> new GenericSenderLink(con, sender, null, null, SendMessageSampler.noop()));
     }
 
     /**

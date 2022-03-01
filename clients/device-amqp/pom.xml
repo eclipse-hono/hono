@@ -30,6 +30,18 @@
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-amqp-common</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-command</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-command-amqp</artifactId>
+    </dependency>
     <!-- Testing -->
     <dependency>
       <groupId>ch.qos.logback</groupId>

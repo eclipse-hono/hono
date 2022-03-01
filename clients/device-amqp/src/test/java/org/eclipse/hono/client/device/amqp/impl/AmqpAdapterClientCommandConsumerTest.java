@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.client.device.amqp.internal;
+package org.eclipse.hono.client.device.amqp.impl;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -29,9 +29,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 
 import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.MessageConsumer;
 import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
+import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -74,7 +74,7 @@ public class AmqpAdapterClientCommandConsumerTest {
     @SuppressWarnings("unchecked")
     public void testCreateSucceeds() {
 
-        final Future<MessageConsumer> consumerFuture = AmqpAdapterClientCommandConsumer.create(connection,
+        final Future<CommandConsumer> consumerFuture = AmqpAdapterClientCommandConsumer.create(connection,
                 mock(BiConsumer.class));
 
         verify(connection).createReceiver(eq("command"), eq(ProtonQoS.AT_LEAST_ONCE), any(),
@@ -93,7 +93,7 @@ public class AmqpAdapterClientCommandConsumerTest {
 
         final String tenantId = "testTenantId";
         final String deviceId = "testDeviceId";
-        final Future<MessageConsumer> consumerFuture = AmqpAdapterClientCommandConsumer.create(connection, tenantId,
+        final Future<CommandConsumer> consumerFuture = AmqpAdapterClientCommandConsumer.create(connection, tenantId,
                 deviceId, mock(BiConsumer.class));
 
         verify(connection).createReceiver(eq("command/" + tenantId + "/" + deviceId), eq(ProtonQoS.AT_LEAST_ONCE),
@@ -117,7 +117,7 @@ public class AmqpAdapterClientCommandConsumerTest {
 
         // GIVEN a connected command consumer
         @SuppressWarnings("unchecked")
-        final Future<MessageConsumer> consumerFuture = AmqpAdapterClientCommandConsumer.create(connection,
+        final Future<CommandConsumer> consumerFuture = AmqpAdapterClientCommandConsumer.create(connection,
                 mock(BiConsumer.class));
 
         final AmqpAdapterClientCommandConsumer commandConsumer = (AmqpAdapterClientCommandConsumer) consumerFuture

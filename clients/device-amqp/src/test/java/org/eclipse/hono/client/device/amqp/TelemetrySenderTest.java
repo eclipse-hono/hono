@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,8 +20,7 @@ import static org.mockito.Mockito.verify;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import org.eclipse.hono.client.AbstractAmqpAdapterClientDownstreamSenderTestBase;
-import org.eclipse.hono.client.device.amqp.internal.AmqpAdapterClientTelemetrySenderImpl;
+import org.eclipse.hono.client.device.amqp.impl.AmqpAdapterClientTelemetrySenderImpl;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,7 +36,7 @@ import io.vertx.proton.ProtonDelivery;
  *
  */
 @ExtendWith(VertxExtension.class)
-public class TelemetrySenderTest extends AbstractAmqpAdapterClientDownstreamSenderTestBase {
+public class TelemetrySenderTest extends AmqpAdapterClientSenderTestBase {
 
     private static final String ADDRESS = TelemetryConstants.TELEMETRY_ENDPOINT + "/" + TENANT_ID + "/" + DEVICE_ID;
 
@@ -157,7 +156,7 @@ public class TelemetrySenderTest extends AbstractAmqpAdapterClientDownstreamSend
     }
 
     private TelemetrySender createTelemetrySender() {
-        return AmqpAdapterClientTelemetrySenderImpl.createWithAnonymousLinkAddress(connection, TENANT_ID, s -> {
+        return AmqpAdapterClientTelemetrySenderImpl.create(connection, TENANT_ID, s -> {
         }).result();
     }
 }
