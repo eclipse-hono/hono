@@ -24,8 +24,8 @@ import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.amqp.connection.ConnectionLifecycle;
 import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Lifecycle;

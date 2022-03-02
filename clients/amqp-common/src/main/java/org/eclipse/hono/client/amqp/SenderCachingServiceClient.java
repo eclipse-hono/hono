@@ -18,8 +18,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.impl.CachingClientFactory;
 import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.Constants;

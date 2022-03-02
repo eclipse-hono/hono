@@ -19,7 +19,7 @@ import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.command.amqp.ProtonBasedCommand;
 import org.eclipse.hono.client.command.amqp.ProtonBasedCommandContext;
 import org.eclipse.hono.client.command.amqp.ProtonBasedInternalCommandSender;

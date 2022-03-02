@@ -17,8 +17,8 @@ import java.util.Objects;
 import java.util.function.BiConsumer;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.amqp.AbstractHonoClient;
+import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.ResourceIdentifier;

@@ -21,7 +21,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
-import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.device.amqp.AmqpAdapterClientFactory;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.quarkus.ClientOptions;

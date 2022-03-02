@@ -32,10 +32,10 @@ import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
 import org.apache.qpid.jms.JmsQueue;
-import org.eclipse.hono.client.ConnectionLifecycle;
-import org.eclipse.hono.client.DisconnectListener;
-import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.amqp.connection.ConnectionLifecycle;
+import org.eclipse.hono.client.amqp.connection.DisconnectListener;
+import org.eclipse.hono.client.amqp.connection.ReconnectListener;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.Strings;

@@ -17,7 +17,7 @@ import java.util.Objects;
 import java.util.function.BiConsumer;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

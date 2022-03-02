@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.client.impl;
+package org.eclipse.hono.client.amqp.connection.impl;
 
 import java.net.HttpURLConnection;
 import java.util.ArrayList;
@@ -35,12 +35,12 @@ import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.UnsignedLong;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.DisconnectListener;
-import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.ReconnectListener;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
+import org.eclipse.hono.client.amqp.connection.DisconnectListener;
+import org.eclipse.hono.client.amqp.connection.HonoConnection;
+import org.eclipse.hono.client.amqp.connection.ReconnectListener;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.util.Constants;

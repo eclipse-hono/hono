@@ -37,7 +37,7 @@ import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.Target;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.commandrouter.CommandRouterMetrics;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;

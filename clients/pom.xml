@@ -29,6 +29,7 @@
 
   <modules>
     <module>amqp-common</module>
+    <module>amqp-connection</module>
     <module>application</module>
     <module>application-amqp</module>
     <module>application-kafka</module>

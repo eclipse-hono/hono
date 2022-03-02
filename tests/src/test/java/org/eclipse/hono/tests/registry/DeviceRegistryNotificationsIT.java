@@ -18,7 +18,7 @@ import static com.google.common.truth.Truth.assertWithMessage;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.notification.amqp.ProtonBasedNotificationReceiver;
 import org.eclipse.hono.client.notification.kafka.KafkaBasedNotificationReceiver;
 import org.eclipse.hono.client.notification.kafka.NotificationKafkaConsumerConfigProperties;

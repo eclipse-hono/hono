@@ -29,9 +29,9 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.eclipse.hono.client.ConnectionLifecycle;
-import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.ReconnectListener;
+import org.eclipse.hono.client.amqp.connection.ConnectionLifecycle;
+import org.eclipse.hono.client.amqp.connection.HonoConnection;
+import org.eclipse.hono.client.amqp.connection.ReconnectListener;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;

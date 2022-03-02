@@ -20,8 +20,8 @@ import java.util.Objects;
 
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;

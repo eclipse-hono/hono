@@ -18,10 +18,10 @@ import java.util.concurrent.CompletableFuture;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
-import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.RequestResponseClientOptions;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.kafka.CommonKafkaClientOptions;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaAdminClientOptions;

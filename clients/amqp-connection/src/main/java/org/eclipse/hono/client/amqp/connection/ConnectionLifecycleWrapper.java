@@ -11,13 +11,9 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.client.impl;
+package org.eclipse.hono.client.amqp.connection;
 
 import java.util.Objects;
-
-import org.eclipse.hono.client.ConnectionLifecycle;
-import org.eclipse.hono.client.DisconnectListener;
-import org.eclipse.hono.client.ReconnectListener;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;

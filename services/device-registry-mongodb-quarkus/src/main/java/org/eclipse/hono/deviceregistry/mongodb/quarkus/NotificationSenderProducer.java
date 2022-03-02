@@ -18,7 +18,7 @@ import javax.enterprise.inject.Produces;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
-import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.notification.amqp.ProtonBasedNotificationSender;
 import org.eclipse.hono.client.notification.kafka.KafkaBasedNotificationSender;

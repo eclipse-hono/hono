@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,10 +11,10 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.client;
+package org.eclipse.hono.client.amqp.connection;
 
 import org.apache.qpid.proton.amqp.Symbol;
-import org.eclipse.hono.client.impl.HonoConnectionImpl;
+import org.eclipse.hono.client.amqp.connection.impl.HonoConnectionImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
 
 import io.opentracing.Tracer;
@@ -147,8 +147,8 @@ public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
      * to the peer using the same options and behavior as used for establishing the initial connection.
      *
      * @return A future that will be completed with the connected client once the connection has been established.
-     *         The future will fail with a {@link ServiceInvocationException} if the connection cannot be
-     *         established, e.g. because
+     *         The future will fail with a {@link org.eclipse.hono.client.ServiceInvocationException} if the connection
+     *         cannot be established, e.g. because
      *         <ul>
      *         <li>authentication of the client failed, or</li>
      *         <li>one of the client's <em>shutdown</em> methods has been invoked before the connection could be
@@ -183,7 +183,8 @@ public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
      *
      * @param options The options to use. If {@code null} a set of default properties will be used.
      * @return A future that will succeed with the connected client once the connection has been established. The future
-     *         will fail with a {@link ServiceInvocationException} if the connection cannot be established, e.g. because
+     *         will fail with a {@link org.eclipse.hono.client.ServiceInvocationException} if the connection cannot be
+     *         established, e.g. because
      *         <ul>
      *         <li>authentication of the client failed, or</li>
      *         <li>one of the client's <em>shutdown</em> methods has been invoked before the connection could be
@@ -278,7 +279,7 @@ public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
      *                  fail the promise that is passed into the handler.
      * @return The future containing the result of the promise passed in to the handler
      *         for executing the code. The future thus indicates the outcome of executing
-     *         the code. The future will always be failed with a {@link ServerErrorException}
+     *         the code. The future will always be failed with a {@link org.eclipse.hono.client.ServerErrorException}
      *         if this connection's <em>context</em> property is {@code null}.
      */
     <T> Future<T> executeOnContext(Handler<Promise<T>> codeToRun);
@@ -292,7 +293,8 @@ public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
      * @param qos The quality of service to use for the link.
      * @param remoteCloseHook The handler to invoke when the link is closed by the peer (may be {@code null}).
      * @return A future for the created link. The future will be completed once the link is open.
-     *         The future will fail with a {@link ServiceInvocationException} if the link cannot be opened.
+     *         The future will fail with a {@link org.eclipse.hono.client.ServiceInvocationException} if the link cannot
+     *         be opened.
      * @throws NullPointerException if qos is {@code null}.
      */
     Future<ProtonSender> createSender(
@@ -311,7 +313,8 @@ public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
      * @param messageHandler The handler to invoke with every message received.
      * @param remoteCloseHook The handler to invoke when the link is closed at the peer's request (may be {@code null}).
      * @return A future for the created link. The future will be completed once the link is open.
-     *         The future will fail with a {@link ServiceInvocationException} if the link cannot be opened.
+     *         The future will fail with a {@link org.eclipse.hono.client.ServiceInvocationException} if the link cannot
+     *         be opened.
      * @throws NullPointerException if any of the arguments other than close hook is {@code null}.
      */
     Future<ProtonReceiver> createReceiver(
@@ -334,7 +337,8 @@ public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
      *                     <em>flow</em> method.
      * @param remoteCloseHook The handler to invoke when the link is closed at the peer's request (may be {@code null}).
      * @return A future for the created link. The future will be completed once the link is open.
-     *         The future will fail with a {@link ServiceInvocationException} if the link cannot be opened.
+     *         The future will fail with a {@link org.eclipse.hono.client.ServiceInvocationException} if the link cannot
+     *         be opened.
      * @throws NullPointerException if any of the arguments other than close hook is {@code null}.
      * @throws IllegalArgumentException if the pre-fetch size is &lt; 0.
      */
@@ -360,7 +364,8 @@ public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
      *                   during handling.
      * @param remoteCloseHook The handler to invoke when the link is closed at the peer's request (may be {@code null}).
      * @return A future for the created link. The future will be completed once the link is open.
-     *         The future will fail with a {@link ServiceInvocationException} if the link cannot be opened.
+     *         The future will fail with a {@link org.eclipse.hono.client.ServiceInvocationException} if the link cannot
+     *         be opened.
      * @throws NullPointerException if any of the arguments other than close hook is {@code null}.
      * @throws IllegalArgumentException if the pre-fetch size is &lt; 0.
      */
