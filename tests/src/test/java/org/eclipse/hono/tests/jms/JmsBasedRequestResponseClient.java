@@ -36,6 +36,7 @@ import org.apache.qpid.proton.amqp.Symbol;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
+import org.eclipse.hono.client.amqp.connection.ErrorConverter;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.Pair;
 import org.eclipse.hono.util.RequestResponseResult;
@@ -202,7 +203,7 @@ public class JmsBasedRequestResponseClient<R extends RequestResponseResult<?>> {
             if (matcher.matches()) {
                 final Symbol condition = Symbol.getSymbol(matcher.group(2));
                 final String description = matcher.group(1);
-                return StatusCodeMapper.fromTransferError(condition, description);
+                return ErrorConverter.fromTransferError(condition, description);
             }
         }
         return new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, cause);

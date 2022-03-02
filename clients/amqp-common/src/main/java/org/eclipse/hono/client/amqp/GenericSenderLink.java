@@ -39,7 +39,7 @@ import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.SendMessageTimeoutException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.StatusCodeMapper;
+import org.eclipse.hono.client.amqp.connection.ErrorConverter;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -548,7 +548,7 @@ public class GenericSenderLink extends AbstractHonoClient {
         if (Rejected.class.isInstance(remoteState)) {
             final Rejected rejected = (Rejected) remoteState;
             e = Optional.ofNullable(rejected.getError())
-                    .map(StatusCodeMapper::fromTransferError)
+                    .map(ErrorConverter::fromTransferError)
                     .orElseGet(() -> new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else if (Released.class.isInstance(remoteState)) {
             e = new MessageNotProcessedException();

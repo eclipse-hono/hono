@@ -34,7 +34,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.StatusCodeMapper;
+import org.eclipse.hono.client.amqp.connection.ErrorConverter;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.HonoProtonHelper;
@@ -651,7 +651,7 @@ public class RequestResponseClient<R extends RequestResponseResult<?>> extends A
                         if (rejected.getError() != null) {
                             LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}]: {}",
                                     requestTargetAddress, request.getSubject(), correlationId, rejected.getError());
-                            failedResult.fail(StatusCodeMapper.fromTransferError(rejected.getError()));
+                            failedResult.fail(ErrorConverter.fromTransferError(rejected.getError()));
                             cancelRequest(correlationId, failedResult.future());
                         } else {
                             LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}]",

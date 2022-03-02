@@ -18,7 +18,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
-import org.eclipse.hono.client.StatusCodeMapper;
+import org.eclipse.hono.client.amqp.connection.ErrorConverter;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.AfterEach;
@@ -316,7 +316,7 @@ public abstract class AmqpAdapterTestBase {
                             hostname, IntegrationTestSupport.AMQPS_PORT);
 
                     return Optional.ofNullable(unopenedConnection.getRemoteCondition())
-                            .map(condition -> Future.<ProtonConnection>failedFuture(StatusCodeMapper.fromAttachError(condition)))
+                            .map(condition -> Future.<ProtonConnection>failedFuture(ErrorConverter.fromAttachError(condition)))
                             .orElseGet(() -> Future.failedFuture(t));
                 });
     }
