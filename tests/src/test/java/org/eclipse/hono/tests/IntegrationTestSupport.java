@@ -57,6 +57,7 @@ import org.eclipse.hono.application.client.kafka.impl.KafkaApplicationClientImpl
 import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.SendMessageTimeoutException;
 import org.eclipse.hono.client.amqp.GenericSenderLink;
+import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
@@ -65,7 +66,6 @@ import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProper
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
-import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.management.credentials.Credentials;
 import org.eclipse.hono.service.management.credentials.PasswordCredential;
 import org.eclipse.hono.service.management.credentials.PskCredential;

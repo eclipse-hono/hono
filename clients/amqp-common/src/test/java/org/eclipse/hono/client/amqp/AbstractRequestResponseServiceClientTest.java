@@ -25,8 +25,8 @@ import static org.mockito.Mockito.when;
 import java.time.Duration;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
-import org.eclipse.hono.client.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.amqp.config.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.client.impl.CachingClientFactory;

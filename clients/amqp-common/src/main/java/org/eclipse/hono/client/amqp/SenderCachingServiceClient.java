@@ -19,9 +19,9 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.amqp.config.AddressHelper;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.impl.CachingClientFactory;
-import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.TelemetryConstants;

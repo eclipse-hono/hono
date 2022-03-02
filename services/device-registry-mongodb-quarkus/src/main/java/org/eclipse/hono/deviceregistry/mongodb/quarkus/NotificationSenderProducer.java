@@ -18,13 +18,13 @@ import javax.enterprise.inject.Produces;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
+import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.notification.amqp.ProtonBasedNotificationSender;
 import org.eclipse.hono.client.notification.kafka.KafkaBasedNotificationSender;
 import org.eclipse.hono.client.notification.kafka.NotificationKafkaProducerConfigProperties;
 import org.eclipse.hono.client.util.ServiceClient;
-import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.deviceregistry.util.ServiceClientAdapter;
 import org.eclipse.hono.notification.NotificationConstants;
 import org.eclipse.hono.notification.NotificationEventBusSupport;

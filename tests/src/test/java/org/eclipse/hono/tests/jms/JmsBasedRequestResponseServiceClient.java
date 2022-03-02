@@ -25,7 +25,7 @@ import javax.jms.Message;
 import javax.jms.TextMessage;
 
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RequestResponseResult;

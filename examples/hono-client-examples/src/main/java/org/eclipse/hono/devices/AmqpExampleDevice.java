@@ -18,9 +18,9 @@ import java.util.Map;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.device.amqp.AmqpAdapterClientFactory;
-import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.MessageHelper;
 
 import io.vertx.core.Vertx;

@@ -24,8 +24,8 @@ import javax.jms.Message;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.StatusCodeMapper;
+import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
-import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.RegistrationConstants;

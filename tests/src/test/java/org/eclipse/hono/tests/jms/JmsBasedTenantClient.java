@@ -23,8 +23,8 @@ import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.StatusCodeMapper;
+import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.client.registry.TenantClient;
-import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;

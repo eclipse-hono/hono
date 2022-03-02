@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.config;
+package org.eclipse.hono.client.amqp.config;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -19,7 +19,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 
-import org.eclipse.hono.config.quarkus.AuthenticatingClientOptions;
+import org.eclipse.hono.config.AbstractConfig;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.Strings;
 

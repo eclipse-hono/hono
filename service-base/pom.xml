@@ -35,6 +35,10 @@
     </dependency>
     <dependency>
      <groupId>org.eclipse.hono</groupId>
+     <artifactId>hono-client-common</artifactId>
+    </dependency>
+    <dependency>
+     <groupId>org.eclipse.hono</groupId>
      <artifactId>hono-client-amqp-connection</artifactId>
      <optional>true</optional>
     </dependency>
@@ -79,12 +83,13 @@
       <artifactId>vertx-micrometer-metrics</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.github.ben-manes.caffeine</groupId>
-      <artifactId>caffeine</artifactId>
-    </dependency>
-    <dependency>
       <groupId>io.opentracing</groupId>
       <artifactId>opentracing-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.github.ben-manes.caffeine</groupId>
+      <artifactId>caffeine</artifactId>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>

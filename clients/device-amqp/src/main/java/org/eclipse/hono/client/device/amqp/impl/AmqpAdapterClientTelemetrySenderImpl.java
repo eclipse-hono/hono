@@ -18,10 +18,10 @@ import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.amqp.GenericSenderLink;
+import org.eclipse.hono.client.amqp.config.AddressHelper;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.device.amqp.TelemetrySender;
 import org.eclipse.hono.client.device.amqp.TraceableTelemetrySender;
-import org.eclipse.hono.util.AddressHelper;
 import org.eclipse.hono.util.TelemetryConstants;
 
 import io.opentracing.Span;

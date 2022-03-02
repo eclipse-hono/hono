@@ -17,7 +17,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.hono.cli.AbstractCliClient;
-import org.eclipse.hono.config.ClientConfigProperties;
+import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 

@@ -15,8 +15,8 @@ package org.eclipse.hono.client.amqp.connection;
 
 import java.util.UUID;
 
+import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.client.amqp.connection.impl.ConnectionFactoryImpl;
-import org.eclipse.hono.config.ClientConfigProperties;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;

@@ -63,11 +63,6 @@
       <groupId>io.opentracing</groupId>
       <artifactId>opentracing-noop</artifactId>
     </dependency>
-    <dependency>
-      <groupId>io.smallrye.config</groupId>
-      <artifactId>smallrye-config</artifactId>
-      <optional>true</optional>
-    </dependency>
 
     <!-- testing -->
     <dependency>

@@ -12,7 +12,7 @@
  *******************************************************************************/
 package org.eclipse.hono.adapter.resourcelimits;
 
-import org.eclipse.hono.config.AuthenticatingClientConfigProperties;
+import org.eclipse.hono.client.amqp.config.AuthenticatingClientConfigProperties;
 
 /**
  * Properties for configuring the Prometheus based resource limit checks.

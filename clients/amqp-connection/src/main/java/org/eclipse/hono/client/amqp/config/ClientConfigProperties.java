@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,13 +11,12 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.config;
+package org.eclipse.hono.client.amqp.config;
 
 import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-import org.eclipse.hono.config.quarkus.ClientOptions;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.Strings;
 
@@ -605,7 +604,9 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
 
     /**
      * Gets the rewrite rule for downstream addresses.
-     * See {@link org.eclipse.hono.util.AddressHelper#rewrite(String, ClientConfigProperties)} for more information about syntax and behavior of this property.
+     * <p>
+     * See {@link org.eclipse.hono.client.amqp.config.AddressHelper#rewrite(String, ClientConfigProperties)} for more
+     * information about syntax and behavior of this property.
      *
      * @return The rewrite rule to be applied to the address.
      */
@@ -615,12 +616,13 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
 
     /**
      * Sets the rewrite rule for downstream addresses.
+     * <p>
      * This method parses the rule and tries to precompile the pattern to be used.
      * The pattern and replacement can be obtained by {@link #getAddressRewritePattern()} and
      * {@link #getAddressRewriteReplacement()} methods.
-     *
+     * <p>
      * For more information about syntax and behavior of this property see
-     * {@link org.eclipse.hono.util.AddressHelper#rewrite(String, ClientConfigProperties)} method.
+     * {@link org.eclipse.hono.client.amqp.config.AddressHelper#rewrite(String, ClientConfigProperties)} method.
      *
      * @param addressRewriteRule The rewrite rule to be applied to the address.
      */

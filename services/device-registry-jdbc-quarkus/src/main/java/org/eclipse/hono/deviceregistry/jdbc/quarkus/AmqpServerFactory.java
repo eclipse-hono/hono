@@ -21,6 +21,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 
 import org.eclipse.hono.client.SendMessageSampler;
+import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
@@ -29,7 +30,6 @@ import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.client.telemetry.kafka.KafkaBasedEventSender;
 import org.eclipse.hono.client.util.MessagingClientProvider;
-import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.quarkus.ServiceOptions;
 import org.eclipse.hono.deviceregistry.jdbc.config.DeviceServiceOptions;
