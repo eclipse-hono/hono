@@ -12,10 +12,12 @@
  */
 
 
-package org.eclipse.hono.client;
+package org.eclipse.hono.client.amqp.config;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import org.eclipse.hono.client.amqp.config.RequestResponseClientConfigProperties;
+import org.eclipse.hono.client.amqp.config.RequestResponseClientOptions;
 import org.eclipse.hono.test.ConfigMappingSupport;
 import org.junit.jupiter.api.Test;
 

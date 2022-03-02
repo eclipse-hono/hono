@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.config;
+package org.eclipse.hono.client.amqp.config;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -23,7 +23,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
 
-import org.eclipse.hono.config.quarkus.AuthenticatingClientOptions;
+import org.eclipse.hono.client.amqp.config.AuthenticatingClientConfigProperties;
+import org.eclipse.hono.client.amqp.config.AuthenticatingClientOptions;
+import org.eclipse.hono.config.FileFormat;
 import org.eclipse.hono.config.quarkus.GenericOptions;
 import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.Test;
@@ -45,7 +47,7 @@ public class AuthenticatingClientConfigPropertiesTest {
     public void testLoadCredentialsFromPropertiesFile() {
 
         final String path = resources.resolve("credentials").toString();
-        final ClientConfigProperties props = new ClientConfigProperties();
+        final AuthenticatingClientConfigProperties props = new AuthenticatingClientConfigProperties();
         props.setCredentialsPath(path);
         assertThat(props.getUsername()).isEqualTo("foo");
         assertThat(props.getPassword()).isEqualTo("bar");

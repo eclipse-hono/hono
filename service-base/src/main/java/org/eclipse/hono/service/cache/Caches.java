@@ -17,7 +17,7 @@ package org.eclipse.hono.service.cache;
 import java.time.Duration;
 import java.util.Optional;
 
-import org.eclipse.hono.client.RequestResponseClientConfigProperties;
+import org.eclipse.hono.client.amqp.config.RequestResponseClientConfigProperties;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.RequestResponseResult;
 

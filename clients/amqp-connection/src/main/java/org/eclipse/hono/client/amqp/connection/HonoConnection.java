@@ -14,8 +14,8 @@
 package org.eclipse.hono.client.amqp.connection;
 
 import org.apache.qpid.proton.amqp.Symbol;
+import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.client.amqp.connection.impl.HonoConnectionImpl;
-import org.eclipse.hono.config.ClientConfigProperties;
 
 import io.opentracing.Tracer;
 import io.vertx.core.AsyncResult;

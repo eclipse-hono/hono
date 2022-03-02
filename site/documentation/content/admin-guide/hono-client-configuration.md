@@ -19,9 +19,8 @@ the `HONO_CREDENTIALS` prefix.
 ## Connection Properties
 
 The following table provides an overview of the environment variables and corresponding system properties for
-configuring an AMQP connection to a peer. Note that the variables map to the properties of classes
-`org.eclipse.hono.config.ClientConfigProperties` and `org.eclipse.client.RequestResponseClientConfigProperties` which can be used to
-configure a client programmatically.
+configuring an AMQP connection to a peer. Note that the variables map to the properties of class
+`org.eclipse.hono.client.amqp.config.ClientConfigProperties` which can be used to configure a client programmatically.
 
 The variable names contain `${PREFIX}` as a placeholder for the particular *common prefix* being used. The `${prefix}`
 placeholder used in the Java system properties is the same as `${PREFIX}`, using all lower case characters and `.`
@@ -86,7 +85,8 @@ being passed into their constructor will cache responses to service invocations 
    as the maximum age.
 
 The following table provides an overview of the environment variables and corresponding system properties for
-configuring the clients' caching behavior.
+configuring the clients' caching behavior. Note that the variables map to the properties of class
+`org.eclipse.hono.client.amqp.config.RequestResponseClientConfigProperties` which can be used to configure a client programmatically.
 
 | OS Environment Variable<br>Java System Property | Mandatory | Default Value | Description  |
 | :---------------------------------------------- | :-------: | :------------ | :------------|

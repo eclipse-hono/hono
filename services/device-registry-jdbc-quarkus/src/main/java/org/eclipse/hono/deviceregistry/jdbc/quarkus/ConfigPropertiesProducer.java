@@ -19,12 +19,12 @@ import javax.enterprise.inject.Produces;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
+import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
+import org.eclipse.hono.client.amqp.config.ClientOptions;
 import org.eclipse.hono.client.kafka.CommonKafkaClientOptions;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerOptions;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.client.notification.kafka.NotificationKafkaProducerConfigProperties;
-import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.config.quarkus.ClientOptions;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigOptions;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 import org.eclipse.hono.service.auth.delegating.AuthenticationServerClientConfigProperties;

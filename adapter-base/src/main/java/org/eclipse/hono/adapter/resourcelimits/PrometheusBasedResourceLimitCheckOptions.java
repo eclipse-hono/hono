@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.adapter.resourcelimits;
 
-import org.eclipse.hono.config.quarkus.AuthenticatingClientOptions;
+import org.eclipse.hono.client.amqp.config.AuthenticatingClientOptions;
 
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.ConfigMapping.NamingStrategy;

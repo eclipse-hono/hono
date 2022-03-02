@@ -11,9 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.client;
-
-import org.eclipse.hono.config.ClientConfigProperties;
+package org.eclipse.hono.client.amqp.config;
 
 /**
  * Configuration properties for clients invoking request/response operations

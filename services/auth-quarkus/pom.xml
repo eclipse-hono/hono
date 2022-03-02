@@ -48,6 +48,10 @@
         </exclusion>
       </exclusions>
     </dependency>
+    <dependency>
+     <groupId>org.eclipse.hono</groupId>
+     <artifactId>hono-client-amqp-connection</artifactId>
+    </dependency>
   </dependencies>
 
   <build>

@@ -19,8 +19,8 @@ import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.client.registry.TenantClient;
-import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.jms.JmsBasedHonoConnection;
 import org.eclipse.hono.tests.jms.JmsBasedTenantClient;

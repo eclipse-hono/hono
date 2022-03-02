@@ -11,9 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.client;
-
-import org.eclipse.hono.config.quarkus.ClientOptions;
+package org.eclipse.hono.client.amqp.config;
 
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;

@@ -19,9 +19,9 @@ import java.net.HttpURLConnection;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.client.amqp.connection.ConnectionFactory;
 import org.eclipse.hono.client.amqp.connection.impl.ConnectionFactoryImpl;
-import org.eclipse.hono.config.ClientConfigProperties;
 import org.eclipse.hono.service.auth.delegating.AuthenticationServerClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.junit.jupiter.api.BeforeEach;

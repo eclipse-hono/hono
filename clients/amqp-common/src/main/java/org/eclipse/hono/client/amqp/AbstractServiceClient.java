@@ -86,8 +86,8 @@ public abstract class AbstractServiceClient implements ConnectionLifecycle<HonoC
      * The returned span will already contain the following tags:
      * <ul>
      * <li>{@link Tags#COMPONENT} - set to <em>hono-client</em></li>
-     * <li>{@link Tags#PEER_HOSTNAME} - set to {@link org.eclipse.hono.config.ClientConfigProperties#getHost()}</li>
-     * <li>{@link Tags#PEER_PORT} - set to {@link org.eclipse.hono.config.ClientConfigProperties#getPort()}</li>
+     * <li>{@link Tags#PEER_HOSTNAME} - set to {@link org.eclipse.hono.client.amqp.config.ClientConfigProperties#getHost()}</li>
+     * <li>{@link Tags#PEER_PORT} - set to {@link org.eclipse.hono.client.amqp.config.ClientConfigProperties#getPort()}</li>
      * <li>{@link TracingHelper#TAG_PEER_CONTAINER} - set to {@link HonoConnection#getRemoteContainerId()}</li>
      * </ul>
      *
@@ -107,8 +107,8 @@ public abstract class AbstractServiceClient implements ConnectionLifecycle<HonoC
      * The returned span will already contain the following tags:
      * <ul>
      * <li>{@link Tags#COMPONENT} - set to <em>hono-client</em></li>
-     * <li>{@link Tags#PEER_HOSTNAME} - set to {@link org.eclipse.hono.config.ClientConfigProperties#getHost()}</li>
-     * <li>{@link Tags#PEER_PORT} - set to {@link org.eclipse.hono.config.ClientConfigProperties#getPort()}</li>
+     * <li>{@link Tags#PEER_HOSTNAME} - set to {@link org.eclipse.hono.client.amqp.config.ClientConfigProperties#getHost()}</li>
+     * <li>{@link Tags#PEER_PORT} - set to {@link org.eclipse.hono.client.amqp.config.ClientConfigProperties#getPort()}</li>
      * <li>{@link TracingHelper#TAG_PEER_CONTAINER} - set to {@link HonoConnection#getRemoteContainerId()}</li>
      * </ul>
      *
@@ -200,7 +200,7 @@ public abstract class AbstractServiceClient implements ConnectionLifecycle<HonoC
     /**
      * Gets the default timeout used when checking whether this client is connected to the service.
      * <p>
-     * The value returned here is the {@link org.eclipse.hono.config.ClientConfigProperties#getLinkEstablishmentTimeout()}.
+     * The value returned here is the {@link org.eclipse.hono.client.amqp.config.ClientConfigProperties#getLinkEstablishmentTimeout()}.
      *
      * @return The timeout value in milliseconds.
      */
