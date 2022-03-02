@@ -37,8 +37,8 @@ import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.amqp.connection.DisconnectListener;
+import org.eclipse.hono.client.amqp.connection.ErrorConverter;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.ReconnectListener;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -617,7 +617,7 @@ public class HonoConnectionImpl implements HonoConnection {
                                     "cannot open sender", senderOpen.cause()));
                         } else {
                             log.debug("opening sender [{}] failed: {} - {}", targetAddress, error.getCondition(), error.getDescription());
-                            senderPromise.tryFail(StatusCodeMapper.fromAttachError(error));
+                            senderPromise.tryFail(ErrorConverter.fromAttachError(error));
                         }
 
                     } else if (HonoProtonHelper.isLinkEstablished(sender)) {
@@ -765,7 +765,7 @@ public class HonoConnectionImpl implements HonoConnection {
                                     "cannot open receiver", recvOpen.cause()));
                         } else {
                             log.debug("opening receiver [{}] failed: {} - {}", sourceAddress, error.getCondition(), error.getDescription());
-                            receiverPromise.tryFail(StatusCodeMapper.fromAttachError(error));
+                            receiverPromise.tryFail(ErrorConverter.fromAttachError(error));
                         }
                     } else if (HonoProtonHelper.isLinkEstablished(receiver)) {
                         log.debug("receiver open [source: {}]", sourceAddress);
