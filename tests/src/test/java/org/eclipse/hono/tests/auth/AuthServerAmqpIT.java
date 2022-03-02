@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,12 +17,12 @@ import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
 
-import org.eclipse.hono.client.AuthenticationServerClient;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.amqp.connection.ConnectionFactory;
+import org.eclipse.hono.client.amqp.connection.impl.ConnectionFactoryImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.connection.ConnectionFactory;
-import org.eclipse.hono.connection.impl.ConnectionFactoryImpl;
+import org.eclipse.hono.service.auth.delegating.AuthenticationServerClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

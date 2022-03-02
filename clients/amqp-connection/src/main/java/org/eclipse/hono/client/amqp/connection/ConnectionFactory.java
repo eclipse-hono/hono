@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,12 +11,12 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.connection;
+package org.eclipse.hono.client.amqp.connection;
 
 import java.util.UUID;
 
+import org.eclipse.hono.client.amqp.connection.impl.ConnectionFactoryImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.connection.impl.ConnectionFactoryImpl;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;

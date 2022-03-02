@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.connection.impl;
+package org.eclipse.hono.client.amqp.connection.impl;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -29,8 +29,9 @@ import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.eclipse.hono.client.amqp.connection.ConnectTimeoutException;
+import org.eclipse.hono.client.amqp.connection.impl.ConnectionFactoryImpl;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.connection.ConnectTimeoutException;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.BeforeEach;

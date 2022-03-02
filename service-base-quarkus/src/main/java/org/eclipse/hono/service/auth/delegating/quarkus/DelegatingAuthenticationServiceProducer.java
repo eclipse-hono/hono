@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,7 +17,7 @@ package org.eclipse.hono.service.auth.delegating.quarkus;
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
 
-import org.eclipse.hono.connection.ConnectionFactory;
+import org.eclipse.hono.client.amqp.connection.ConnectionFactory;
 import org.eclipse.hono.service.auth.AuthTokenHelperImpl;
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,7 +18,7 @@ import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.eclipse.hono.connection.ConnectionFactory;
+import org.eclipse.hono.client.amqp.connection.ConnectionFactory;
 import org.eclipse.hono.util.Constants;
 
 import io.vertx.core.AsyncResult;
