@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -289,15 +289,15 @@ public class JmsBasedRequestResponseClient<R extends RequestResponseResult<?>> {
         try {
             final ServiceInvocationException error;
             if (message instanceof TextMessage) {
-                error = ServiceInvocationException.create(status, ((TextMessage) message).getText());
+                error = StatusCodeMapper.from(status, ((TextMessage) message).getText());
             } else if (message instanceof BytesMessage) {
                 final BytesMessage byteMessage = (BytesMessage) message;
                 error = Optional.ofNullable(byteMessage.getBody(byte[].class))
-                        .map(b -> ServiceInvocationException.create(status, new String(b, StandardCharsets.UTF_8)))
-                        .orElseGet(() -> ServiceInvocationException.create(status));
+                        .map(b -> StatusCodeMapper.from(status, new String(b, StandardCharsets.UTF_8)))
+                        .orElseGet(() -> StatusCodeMapper.from(status, null));
             } else {
                 // ignore body
-                error = ServiceInvocationException.create(status);
+                error = StatusCodeMapper.from(status, null);
             }
             resultHandler.handle(Future.failedFuture(error));
         } catch (JMSException e) {

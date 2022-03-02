@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -31,7 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.kafka.clients.admin.Admin;
-import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandHandlers;
 import org.eclipse.hono.client.command.CommandResponse;
@@ -126,7 +126,7 @@ public class KafkaBasedInternalCommandConsumerTest {
         final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
         commandHandlers.putCommandHandler(tenantId, deviceId, null, commandHandler, context);
         when(tenantClient.get(eq("myTenant"), any())).thenReturn(
-                Future.failedFuture(ServiceInvocationException.create(tenantServiceErrorCode)));
+                Future.failedFuture(StatusCodeMapper.from(tenantServiceErrorCode, "failed to retrieve tenant")));
 
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(deviceId,
                 getHeaders(tenantId, deviceId, subject, 0L));

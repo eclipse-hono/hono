@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,7 +19,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
@@ -219,11 +219,10 @@ public abstract class AbstractAutoProvisioningEventSender implements Lifecycle {
                         TracingHelper.logError(
                                 span,
                                 "failed to mark device's auto-provisioning notification as having been sent");
-                        return Future.failedFuture(ServiceInvocationException.create(
+                        return Future.failedFuture(StatusCodeMapper.from(
                                 tenantId,
                                 result.getStatus(),
-                                "failed to mark device's auto-provisioning notification as having been sent",
-                                null));
+                                "failed to mark device's auto-provisioning notification as having been sent"));
                     }
                 });
     }

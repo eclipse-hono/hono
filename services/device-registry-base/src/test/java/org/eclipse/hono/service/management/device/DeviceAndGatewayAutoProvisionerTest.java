@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -38,7 +38,7 @@ import java.util.UUID;
 
 import javax.security.auth.x500.X500Principal;
 
-import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.service.management.Id;
@@ -447,8 +447,10 @@ public class DeviceAndGatewayAutoProvisionerTest {
                 any(),
                 any(Map.class),
                 any()))
-                        .thenReturn(Future.failedFuture(ServiceInvocationException.create(
-                                HttpURLConnection.HTTP_INTERNAL_ERROR, "error sending event")));
+                        .thenReturn(Future.failedFuture(StatusCodeMapper.from(
+                                tenantId,
+                                HttpURLConnection.HTTP_INTERNAL_ERROR,
+                                "error sending event")));
 
         // WHEN provisioning a device/gateway from a certificate
         deviceAndGatewayAutoProvisioner

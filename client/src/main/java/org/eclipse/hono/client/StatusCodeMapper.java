@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -50,7 +50,8 @@ public abstract class StatusCodeMapper {
      * @param result The result containing the status code.
      * @return The exception.
      * @throws NullPointerException if result is {@code null}.
-     * @throws IllegalArgumentException if the result statusCode does not represent a valid error code (i.e. it is not &ge; 400 and &lt; 600)
+     * @throws IllegalArgumentException if the result statusCode does not represent a valid error code (i.e. it is
+     *                                  not &ge; 400 and &lt; 600)
      */
     public static final ServiceInvocationException from(final RequestResponseResult<?> result) {
 
@@ -63,7 +64,8 @@ public abstract class StatusCodeMapper {
      * @param result The result containing the status code.
      * @return The exception.
      * @throws NullPointerException if result is {@code null}.
-     * @throws IllegalArgumentException if the result statusCode does not represent a valid error code (i.e. it is not &ge; 400 and &lt; 600)
+     * @throws IllegalArgumentException if the result statusCode does not represent a valid error code (i.e. it is
+     *                                  not &ge; 400 and &lt; 600)
      */
     public static final ServiceInvocationException from(final RegistrationResult result) {
 
@@ -75,24 +77,60 @@ public abstract class StatusCodeMapper {
     /**
      * Creates an exception for a status code and detail message.
      *
-     * @param statusCode The status code.
-     * @param detailMessage The detail message.
+     * @param statusCode The status code to map.
+     * @param detailMessage The detail message or {@code null} if no details are known.
      * @return The exception.
-     * @throws IllegalArgumentException if the statusCode does not represent a valid error code (i.e. it is not &ge; 400 and &lt; 600)
+     * @throws IllegalArgumentException if the statusCode does not represent a valid error code (i.e. it is
+     *         not &ge; 400 and &lt; 600)
      */
     public static final ServiceInvocationException from(final int statusCode, final String detailMessage) {
 
-        if (200 <= statusCode && statusCode < 300) {
-            throw new IllegalArgumentException("status code " + statusCode + " does not represent an error");
-        } else if (400 <= statusCode && statusCode < 500) {
+        return from(null, statusCode, detailMessage, null);
+    }
+
+    /**
+     * Creates an exception for a status code and detail message.
+     *
+     * @param tenant The tenant that the exception occurred in the scope of or {@code null} if unknown.
+     * @param statusCode The status code to map.
+     * @param detailMessage The detail message or {@code null} if no details are known.
+     * @return The exception.
+     * @throws IllegalArgumentException if the statusCode does not represent a valid error code (i.e. it is
+     *                                  not &ge; 400 and &lt; 600)
+     */
+    public static final ServiceInvocationException from(
+            final String tenant,
+            final int statusCode,
+            final String detailMessage) {
+
+        return from(tenant, statusCode, detailMessage, null);
+    }
+
+    /**
+     * Creates a new exception for a tenant, an error code, a detail message and a root cause.
+     *
+     * @param tenant The tenant that the exception occurred in the scope of or {@code null} if unknown.
+     * @param statusCode The status code to map.
+     * @param detailMessage The detail message or {@code null} if no details are known.
+     * @param cause The root cause.
+     * @return The new exception.
+     * @throws IllegalArgumentException if the code is not &ge; 400 and &lt; 600.
+     */
+    public static final ServiceInvocationException from(
+            final String tenant,
+            final int statusCode,
+            final String detailMessage,
+            final Throwable cause) {
+
+        if (statusCode >= 400 && statusCode < 500) {
             switch (statusCode) {
             case HttpURLConnection.HTTP_CONFLICT:
-                return new ResourceConflictException(detailMessage);
+                return new ResourceConflictException(tenant, detailMessage, cause);
             default:
-                return new ClientErrorException(statusCode, detailMessage);
+                return new ClientErrorException(tenant, statusCode, detailMessage, cause);
             }
-        } else if (500 <= statusCode && statusCode < 600) {
-            return new ServerErrorException(statusCode, detailMessage);
+        } else if (statusCode >= 500 && statusCode < 600) {
+            return new ServerErrorException(tenant, statusCode, detailMessage, cause);
         } else {
             throw new IllegalArgumentException(String.format("illegal error code [%d], must be >= 400 and < 600", statusCode));
         }

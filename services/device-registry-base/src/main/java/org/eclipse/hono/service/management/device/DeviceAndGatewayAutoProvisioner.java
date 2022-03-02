@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,6 +24,7 @@ import java.util.Set;
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.deviceregistry.service.device.AbstractAutoProvisioningEventSender;
@@ -178,11 +179,10 @@ public final class DeviceAndGatewayAutoProvisioner extends AbstractAutoProvision
                     if (deviceResult.isOk()) {
                         return deviceResult;
                     } else {
-                        throw ServiceInvocationException.create(
+                        throw StatusCodeMapper.from(
                                 tenantId,
                                 deviceResult.getStatus(),
-                                "error retrieving device registration information",
-                                null);
+                                "error retrieving device registration information");
                     }
                 })
                 .compose(deviceResult -> {

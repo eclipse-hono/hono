@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -89,63 +89,6 @@ public abstract class ServiceInvocationException extends RuntimeException {
             this.errorCode = errorCode;
         }
         this.tenant = tenant;
-    }
-
-    /**
-     * Creates a new exception for an error code.
-     *
-     * @param errorCode The code representing the erroneous outcome.
-     * @return The new exception.
-     * @throws IllegalArgumentException if the code is not &ge; 400 and &lt; 600.
-     */
-    public static ServiceInvocationException create(final int errorCode) {
-        return create(null, errorCode, null, null);
-    }
-
-    /**
-     * Creates a new exception for an error code and a detail message.
-     *
-     * @param errorCode The code representing the erroneous outcome.
-     * @param msg The detail message.
-     * @return The new exception.
-     * @throws IllegalArgumentException if the code is not &ge; 400 and &lt; 600.
-     */
-    public static ServiceInvocationException create(final int errorCode, final String msg) {
-        return create(null, errorCode, msg, null);
-    }
-
-    /**
-     * Creates a new exception for an error code, a detail message and a root cause.
-     *
-     * @param errorCode The code representing the erroneous outcome.
-     * @param msg The detail message.
-     * @param cause The root cause.
-     * @return The new exception.
-     * @throws IllegalArgumentException if the code is not &ge; 400 and &lt; 600.
-     */
-    public static ServiceInvocationException create(final int errorCode, final String msg, final Throwable cause) {
-        return create(null, errorCode, msg, cause);
-    }
-
-    /**
-     * Creates a new exception for a tenant, an error code, a detail message and a root cause.
-     *
-     * @param tenant The tenant that the exception occurred in the scope of or {@code null} if unknown.
-     * @param errorCode The code representing the erroneous outcome.
-     * @param msg The detail message.
-     * @param cause The root cause.
-     * @return The new exception.
-     * @throws IllegalArgumentException if the code is not &ge; 400 and &lt; 600.
-     */
-    public static ServiceInvocationException create(final String tenant, final int errorCode, final String msg,
-            final Throwable cause) {
-        if (errorCode >= 400 && errorCode < 500) {
-            return new ClientErrorException(tenant, errorCode, msg, cause);
-        } else if (errorCode >= 500 && errorCode < 600) {
-            return new ServerErrorException(tenant, errorCode, msg, cause);
-        } else {
-            throw new IllegalArgumentException(String.format("illegal error code [%d], must be >= 400 and < 600", errorCode));
-        }
     }
 
     /**

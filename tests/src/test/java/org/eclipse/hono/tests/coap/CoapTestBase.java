@@ -62,6 +62,7 @@ import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.config.KeyLoader;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
@@ -964,7 +965,7 @@ public abstract class CoapTestBase {
                                             // not the preceding telemetry/event message
                                             final String msg = "Error sending command response: " + thr.getMessage();
                                             return Future.failedFuture(thr instanceof ServiceInvocationException
-                                                    ? ServiceInvocationException.create(tenantId, ((ServiceInvocationException) thr).getErrorCode(), msg, thr)
+                                                    ? StatusCodeMapper.from(tenantId, ((ServiceInvocationException) thr).getErrorCode(), msg, thr)
                                                     : new RuntimeException(msg, thr));
                                         });
                             });

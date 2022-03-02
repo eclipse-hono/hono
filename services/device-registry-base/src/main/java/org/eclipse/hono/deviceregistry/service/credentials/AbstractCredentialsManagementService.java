@@ -23,7 +23,7 @@ import java.util.Set;
 
 import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
@@ -180,11 +180,10 @@ public abstract class AbstractCredentialsManagementService implements Credential
 
                 .tenantExists(tenantId, span)
                 .compose(result -> result.isError()
-                        ? Future.failedFuture(ServiceInvocationException.create(
+                        ? Future.failedFuture(StatusCodeMapper.from(
                                 tenantId,
                                 result.getStatus(),
-                                "tenant does not exist",
-                                null))
+                                "tenant does not exist"))
                         : processReadCredentials(DeviceKey.from(result.getPayload(), deviceId), span))
 
                 // strip private information

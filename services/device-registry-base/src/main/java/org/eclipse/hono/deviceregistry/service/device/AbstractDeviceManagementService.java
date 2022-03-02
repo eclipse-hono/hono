@@ -22,6 +22,7 @@ import java.util.UUID;
 
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
@@ -271,11 +272,10 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
         return this.tenantInformationService
                 .tenantExists(tenantId, span)
                 .compose(result -> result.isError()
-                        ? Future.failedFuture(ServiceInvocationException.create(
+                        ? Future.failedFuture(StatusCodeMapper.from(
                                 tenantId,
                                 result.getStatus(),
-                                "tenant does not exist",
-                                null))
+                                "tenant does not exist"))
                         : processCreateDevice(DeviceKey.from(result.getPayload(), deviceIdValue), device, span))
                 .onSuccess(result -> NotificationEventBusSupport.sendNotification(vertx,
                         new DeviceChangeNotification(LifecycleChange.CREATE, tenantId, deviceIdValue, Instant.now(),
@@ -293,11 +293,10 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
         return this.tenantInformationService
                 .tenantExists(tenantId, span)
                 .compose(result -> result.isError()
-                        ? Future.failedFuture(ServiceInvocationException.create(
+                        ? Future.failedFuture(StatusCodeMapper.from(
                                 tenantId,
                                 result.getStatus(),
-                                "tenant does not exist",
-                                null))
+                                "tenant does not exist"))
                         : processReadDevice(DeviceKey.from(result.getPayload(), deviceId), span))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
@@ -319,11 +318,10 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
         return this.tenantInformationService
                 .tenantExists(tenantId, span)
                 .compose(result -> result.isError()
-                        ? Future.failedFuture(ServiceInvocationException.create(
+                        ? Future.failedFuture(StatusCodeMapper.from(
                                 tenantId,
                                 result.getStatus(),
-                                "tenant does not exist",
-                                null))
+                                "tenant does not exist"))
                         : processUpdateDevice(DeviceKey.from(result.getPayload(), deviceId), device, resourceVersion, span))
                 .onSuccess(result -> NotificationEventBusSupport.sendNotification(vertx,
                         new DeviceChangeNotification(LifecycleChange.UPDATE, tenantId, deviceId, Instant.now(),
@@ -424,11 +422,10 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
         return this.tenantInformationService
                 .tenantExists(tenantId, span)
                 .compose(result -> result.isError()
-                        ? Future.failedFuture(ServiceInvocationException.create(
+                        ? Future.failedFuture(StatusCodeMapper.from(
                                 tenantId,
                                 result.getStatus(),
-                                "tenant does not exist",
-                                null))
+                                "tenant does not exist"))
                         : processSearchDevices(tenantId, pageSize, pageOffset, filters, sortOptions, span))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }

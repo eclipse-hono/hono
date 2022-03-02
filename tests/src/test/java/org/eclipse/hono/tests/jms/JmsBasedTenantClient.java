@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,7 +22,6 @@ import javax.jms.Message;
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.config.ClientConfigProperties;
@@ -145,7 +144,7 @@ public class JmsBasedTenantClient extends JmsBasedRequestResponseServiceClient<T
                         return TenantResult.from(getStatus(message), tenant, getCacheDirective(message));
                     } catch (DecodeException e) {
                         LOG.warn("Tenant service returned malformed payload", e);
-                        throw ServiceInvocationException.create(
+                        throw StatusCodeMapper.from(
                                 HttpURLConnection.HTTP_INTERNAL_ERROR,
                                 "Tenant service returned malformed payload");
                     }

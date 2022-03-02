@@ -1,5 +1,5 @@
 /*******************************************************************************
-O * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+O * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,7 +22,6 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
-import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
@@ -215,7 +214,7 @@ public class HonoHttpDevice {
                             });
                         }
                     } else {
-                        result.completeExceptionally(ServiceInvocationException.create(response.statusCode()));
+                        result.completeExceptionally(StatusCodeMapper.from(response.statusCode(), response.statusMessage()));
                     }
                 });
 
