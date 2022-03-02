@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.client;
+package org.eclipse.hono.service.auth.delegating;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
@@ -21,7 +21,10 @@ import javax.security.sasl.AuthenticationException;
 
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.auth.HonoUserAdapter;
-import org.eclipse.hono.connection.ConnectionFactory;
+import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.amqp.connection.ConnectionFactory;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;

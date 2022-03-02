@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.connection.impl;
+package org.eclipse.hono.client.amqp.connection.impl;
 
 import java.util.LinkedHashSet;
 import java.util.Objects;
@@ -20,9 +20,9 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
+import org.eclipse.hono.client.amqp.connection.ConnectTimeoutException;
+import org.eclipse.hono.client.amqp.connection.ConnectionFactory;
 import org.eclipse.hono.config.ClientConfigProperties;
-import org.eclipse.hono.connection.ConnectTimeoutException;
-import org.eclipse.hono.connection.ConnectionFactory;
 import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

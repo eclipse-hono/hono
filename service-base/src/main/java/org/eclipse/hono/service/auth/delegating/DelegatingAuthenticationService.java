@@ -18,8 +18,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.auth.HonoUser;
-import org.eclipse.hono.client.AuthenticationServerClient;
-import org.eclipse.hono.connection.ConnectionFactory;
+import org.eclipse.hono.client.amqp.connection.ConnectionFactory;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.auth.AbstractHonoAuthenticationService;
 
