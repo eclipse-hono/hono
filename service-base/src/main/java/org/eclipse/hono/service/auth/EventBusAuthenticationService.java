@@ -23,7 +23,7 @@ import org.eclipse.hono.auth.AuthoritiesImpl;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.StatusCodeMapper;
+import org.eclipse.hono.client.util.StatusCodeMapper;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

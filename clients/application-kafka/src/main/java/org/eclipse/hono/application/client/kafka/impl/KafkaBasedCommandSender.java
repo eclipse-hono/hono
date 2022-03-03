@@ -32,7 +32,6 @@ import org.eclipse.hono.application.client.CommandSender;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
 import org.eclipse.hono.client.SendMessageTimeoutException;
-import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.consumer.HonoKafkaConsumer;
@@ -40,6 +39,7 @@ import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProper
 import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
+import org.eclipse.hono.client.util.StatusCodeMapper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;

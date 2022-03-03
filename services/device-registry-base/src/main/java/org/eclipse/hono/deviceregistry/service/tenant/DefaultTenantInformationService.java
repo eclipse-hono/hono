@@ -16,7 +16,7 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
 
-import org.eclipse.hono.client.StatusCodeMapper;
+import org.eclipse.hono.client.util.StatusCodeMapper;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.Result;
 import org.eclipse.hono.service.management.tenant.Tenant;

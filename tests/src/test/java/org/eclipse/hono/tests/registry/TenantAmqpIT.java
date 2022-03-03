@@ -13,8 +13,8 @@
 
 package org.eclipse.hono.tests.registry;
 
-import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
+import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.tests.IntegrationTestSupport;

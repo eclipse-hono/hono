@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.client;
+package org.eclipse.hono.client.amqp.connection;
 
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 

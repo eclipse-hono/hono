@@ -20,13 +20,13 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.amqp.AbstractServiceClient;
 import org.eclipse.hono.client.amqp.config.AddressHelper;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
+import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.command.CommandConsumer;
-import org.eclipse.hono.client.impl.CachingClientFactory;
 import org.eclipse.hono.client.registry.TenantClient;
+import org.eclipse.hono.client.util.CachingClientFactory;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterMetrics;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;

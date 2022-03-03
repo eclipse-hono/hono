@@ -17,11 +17,11 @@ package org.eclipse.hono.client.amqp;
 import java.util.Objects;
 import java.util.UUID;
 
-import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.amqp.connection.ConnectionLifecycle;
 import org.eclipse.hono.client.amqp.connection.DisconnectListener;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.ReconnectListener;
+import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Lifecycle;

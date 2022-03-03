@@ -20,13 +20,13 @@ import java.util.Optional;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.command.CommandAlreadyProcessedException;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandResponse;
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.command.CommandToBeReprocessedException;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
+import org.eclipse.hono.client.util.StatusCodeMapper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MapBasedExecutionContext;

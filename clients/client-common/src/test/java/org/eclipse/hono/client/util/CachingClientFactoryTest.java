@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.client.impl;
+package org.eclipse.hono.client.util;
 
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.notNull;
@@ -27,6 +27,7 @@ import java.net.HttpURLConnection;
 
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.util.CachingClientFactory;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

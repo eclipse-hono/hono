@@ -62,7 +62,7 @@ import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.StatusCodeMapper;
+import org.eclipse.hono.client.util.StatusCodeMapper;
 import org.eclipse.hono.config.KeyLoader;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;

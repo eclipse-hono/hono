@@ -25,11 +25,11 @@ import static org.mockito.Mockito.when;
 import java.time.Duration;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
-import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.amqp.config.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
+import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
-import org.eclipse.hono.client.impl.CachingClientFactory;
+import org.eclipse.hono.client.util.CachingClientFactory;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.CacheDirective;
 import org.junit.jupiter.api.BeforeEach;

@@ -21,10 +21,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.amqp.AbstractServiceClient;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
-import org.eclipse.hono.client.impl.CachingClientFactory;
+import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
+import org.eclipse.hono.client.util.CachingClientFactory;
 import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationReceiver;
 import org.eclipse.hono.notification.NotificationType;

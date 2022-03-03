@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.client.impl;
+package org.eclipse.hono.client.util;
 
 import java.net.HttpURLConnection;
 import java.util.ArrayList;
@@ -44,21 +44,9 @@ public class ClientFactory<T> {
     /**
      * Clears all state.
      * <p>
-     * Simply invokes clearState(Void).
+     * All pending creation requests are failed.
      */
     public final void clearState() {
-        clearState(null);
-    }
-
-    /**
-     * Clears all state.
-     * <p>
-     * All pending creation requests are failed.
-     *
-     * @param v Dummy parameter required so that this
-     *          method can be used as a {@code Handler<Void>}.
-     */
-    public final void clearState(final Void v) {
         failAllCreationRequests();
         doClearState();
     }

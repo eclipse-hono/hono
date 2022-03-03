@@ -28,8 +28,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
+import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.MessageHelper;

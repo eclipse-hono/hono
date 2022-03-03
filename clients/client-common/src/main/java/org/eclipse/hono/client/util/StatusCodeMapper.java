@@ -11,12 +11,16 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.client;
+package org.eclipse.hono.client.util;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.ResourceConflictException;
+import org.eclipse.hono.client.ServerErrorException;
+import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.RequestResponseResult;

@@ -39,21 +39,15 @@
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-client</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>io.vertx</groupId>
-          <artifactId>vertx-proton</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client-kafka-common</artifactId>
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.opentracing</groupId>
+      <artifactId>opentracing-noop</artifactId>
     </dependency>
 
     <!-- testing -->

@@ -27,15 +27,15 @@
   <dependencies>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-common</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client-registry</artifactId>
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client-amqp-common</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-client</artifactId>
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>

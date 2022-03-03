@@ -37,11 +37,11 @@ import org.eclipse.hono.adapter.lora.providers.LoraProviderMalformedPayloadExcep
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.registry.TenantDisabledOrNotRegisteredException;
+import org.eclipse.hono.client.util.StatusCodeMapper;
 import org.eclipse.hono.service.http.HttpContext;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.http.TracingHandler;
