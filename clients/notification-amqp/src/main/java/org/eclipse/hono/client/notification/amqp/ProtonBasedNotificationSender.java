@@ -16,9 +16,9 @@ package org.eclipse.hono.client.notification.amqp;
 import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.amqp.SenderCachingServiceClient;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
+import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationSender;
 import org.eclipse.hono.util.MessageHelper;

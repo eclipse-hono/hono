@@ -38,6 +38,9 @@ description = "Information about changes in recent Hono releases. Includes new f
   *org.eclipse.hono.adapter.AbstractProtocolAdapterBase*.
 * Removed deprecated *org.eclipse.hono.util.BufferResult* class.
 * Removed deprecated *org.eclipse.hono.service.http.AbstractEventBusHttpEndpoint* class.
+* The *client* module has been removed. Its deprecated classes have been removed and the remaining classes have been
+  moved to the *client-common*, *amqp-connection* and *amqp-common* modules. The classes for configuring AMQP client
+  connections have been moved from the *core* to the *amqp-connection* module.
 
 ## 1.12.1
 

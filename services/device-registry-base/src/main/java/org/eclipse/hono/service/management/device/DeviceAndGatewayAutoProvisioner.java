@@ -24,9 +24,9 @@ import java.util.Set;
 import javax.security.auth.x500.X500Principal;
 
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.util.MessagingClientProvider;
+import org.eclipse.hono.client.util.StatusCodeMapper;
 import org.eclipse.hono.deviceregistry.service.device.AbstractAutoProvisioningEventSender;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
 import org.eclipse.hono.service.management.credentials.CommonCredential;

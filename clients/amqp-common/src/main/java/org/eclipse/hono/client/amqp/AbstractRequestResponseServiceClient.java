@@ -24,12 +24,12 @@ import java.util.stream.Collectors;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.amqp.config.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
-import org.eclipse.hono.client.impl.CachingClientFactory;
+import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
+import org.eclipse.hono.client.util.CachingClientFactory;
+import org.eclipse.hono.client.util.StatusCodeMapper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.MessageHelper;

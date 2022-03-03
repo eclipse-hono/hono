@@ -36,12 +36,12 @@ import org.eclipse.hono.adapter.resourcelimits.PrometheusBasedResourceLimitCheck
 import org.eclipse.hono.adapter.resourcelimits.PrometheusBasedResourceLimitChecks;
 import org.eclipse.hono.adapter.resourcelimits.PrometheusBasedResourceLimitChecksConfig;
 import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
-import org.eclipse.hono.client.SendMessageSampler;
 import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.client.amqp.config.ClientOptions;
 import org.eclipse.hono.client.amqp.config.RequestResponseClientConfigProperties;
 import org.eclipse.hono.client.amqp.config.RequestResponseClientOptions;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
+import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.command.CommandRouterClient;
 import org.eclipse.hono.client.command.CommandRouterCommandConsumerFactory;

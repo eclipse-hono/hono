@@ -20,11 +20,11 @@ import java.util.Optional;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.application.client.CommandSender;
 import org.eclipse.hono.application.client.DownstreamMessage;
-import org.eclipse.hono.client.SendMessageSampler;
-import org.eclipse.hono.client.StatusCodeMapper;
 import org.eclipse.hono.client.amqp.SenderCachingServiceClient;
 import org.eclipse.hono.client.amqp.config.AddressHelper;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
+import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
+import org.eclipse.hono.client.util.StatusCodeMapper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
 

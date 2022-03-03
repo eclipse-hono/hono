@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.client.impl;
+package org.eclipse.hono.client.util;
 
 import java.net.HttpURLConnection;
 import java.util.HashMap;
