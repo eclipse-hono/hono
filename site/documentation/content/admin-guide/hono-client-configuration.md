@@ -3,31 +3,35 @@ title = "Hono Client Configuration"
 weight = 340
 +++
 
-The `org.eclipse.hono.client.HonoConnection` factory can be used to create AMQP 1.0 connections to Hono's service components.
-<!--more-->
+Hono comes with a set of Java packages that contain classes for interacting with Hono's service components via AMQP 1.0.
+Hono's protocol adapters use these classes to query the device registry, receive commands and to forward events,
+telemetry and command response messages to downstream business applications.
 
-The factory uses environment variables and/or command line options to configure the connection to the service and the caching of
-responses to service invocations. All variables used for configuring the connection factory for a particular service share a
-common *prefix*. This way, multiple sets of variables can be used to configure multiple factories for connecting to different
-service endpoints without interfering with each other. For example, the set of variables for configuring the connection factory
-for the Device Registration service may use the common prefix `HONO_REGISTRATION` whereas the set for configuring the factory
-for the Credentials service may use `HONO_CREDENTIALS`.
+<!--more-->
+All these classes require an instance of `org.eclipse.hono.client.amqp.connection.HonoConnection` which represents an
+AMQP 1.0 connection to a peer. The properties of the connection can be configured by means of environment variables and/or
+Java system properties. All these variables share a common *prefix*. This way, multiple sets of variables can be used
+to configure multiple connections to different service endpoints without interfering with each other. For example,
+the set of variables for configuring a protocol adapter's connection to the Device Registration service use the common
+prefix `HONO_REGISTRATION` whereas the set of variables for configuring the connection to the Credentials service use
+the `HONO_CREDENTIALS` prefix.
 
 ## Connection Properties
 
-The following table provides an overview of the configuration variables and corresponding system properties for configuring
-the AMQP connection to the service.
-Note that the variables map to the properties of classes `org.eclipse.hono.config.ClientConfigProperties`
-and `org.eclipse.client.RequestResponseClientConfigProperties` which can be used to programmatically configure a client.
+The following table provides an overview of the environment variables and corresponding system properties for
+configuring an AMQP connection to a peer. Note that the variables map to the properties of classes
+`org.eclipse.hono.config.ClientConfigProperties` and `org.eclipse.client.RequestResponseClientConfigProperties` which can be used to
+configure a client programmatically.
 
-The variable names contain `${PREFIX}` as a placeholder for the particular *common prefix* being used. The `${prefix}` placeholder
-used in the command line option name is the same as `${PREFIX}`, using all lower case characters and `.` instead of `_` as the
-delimiter,  e.g. the variable prefix `HONO_CREDENTIALS` corresponds to the command line option prefix `hono.credentials`).
+The variable names contain `${PREFIX}` as a placeholder for the particular *common prefix* being used. The `${prefix}`
+placeholder used in the Java system properties is the same as `${PREFIX}`, using all lower case characters and `.`
+instead of `_` as the delimiter, e.g. the environment variable prefix `HONO_CREDENTIALS` corresponds to the Java system
+property prefix `hono.credentials`.
 
 | OS Environment Variable<br>Java System Property | Mandatory | Default Value | Description  |
 | :---------------------------------------------- | :-------: | :------------ | :------------|
-| `${PREFIX}_AMQPHOSTNAME`<br>`${prefix}.amqpHostname` | no | - | The name to use as the *hostname* in the client's AMQP *open* frame during connection establishment. This variable can be used to indicate the *virtual host* to connect to on the server. |
-| `${PREFIX}_CERTPATH`<br>`${prefix}.certPath` | no | - | The absolute path to the PEM file containing the certificate that the client should use for authenticating to the server. This variable must be used in conjunction with `${PREFIX}_KEYPATH`.<br>Alternatively, the `${PREFIX}_KEYSTOREPATH` variable can be used to configure a key store containing both the key as well as the certificate. |
+| `${PREFIX}_AMQPHOSTNAME`<br>`${prefix}.amqpHostname`   | no | - | The name to use as the *hostname* in the client's AMQP *open* frame during connection establishment. This variable can be used to indicate the *virtual host* to connect to on the server. |
+| `${PREFIX}_CERTPATH`<br>`${prefix}.certPath`           | no | - | The absolute path to the PEM file containing the certificate that the client should use for authenticating to the server. This variable must be used in conjunction with `${PREFIX}_KEYPATH`.<br>Alternatively, the `${PREFIX}_KEYSTOREPATH` variable can be used to configure a key store containing both the key as well as the certificate. |
 | `${PREFIX}_CONNECTTIMEOUT`<br>`${prefix}.connectTimeout` | no | `5000` | The maximum amount of time (milliseconds) that the client should wait for the AMQP connection to be opened. This includes the time for TCP/TLS connection establishment, SASL handshake and exchange of the AMQP <em>open</em> frame. This property can be used to tune the time period to wait according to the network latency involved with the connection between the client and the service. |
 | `${PREFIX}_CREDENTIALSPATH`<br>`${prefix}.credentialsPath` | no | - | The absolute path to a properties file that contains a *username* and a *password* property to use for authenticating to the service.<br>This variable is an alternative to using `${PREFIX}_USERNAME` and `${PREFIX}_PASSWORD` which has the advantage of not needing to expose the secret (password) in the client process' environment. |
 | `${PREFIX}_FLOWLATENCY`<br>`${prefix}.flowLatency` | no | `20` | The maximum amount of time (milliseconds) that the client should wait for *credits* after a link to the service has been established. |
@@ -61,26 +65,28 @@ delimiter,  e.g. the variable prefix `HONO_CREDENTIALS` corresponds to the comma
 
 ## Response Caching
 
-The clients created by a Hono client factory support the caching of responses received in response to service invocations.
-Caching can greatly improve performance by preventing costly invocations of remote service operations. However,
-it usually only makes sense for resources that do not change too frequently. The Hono client follows the
-[approach to caching used in HTTP 1.1](https://tools.ietf.org/html/rfc2616#section-13.4). In particular, it supports
-[*cache directives*](https://tools.ietf.org/html/rfc2616#section-14.9) that a service includes in the response messages
-it sends back to the Hono client.
+The clients for interacting with the device registry services support the caching of responses received in response to
+service invocations. Caching can greatly improve performance by preventing repeated (and costly) invocations of remote
+service operations using the same request parameters. However, it usually only makes sense for resources that do not
+change too frequently.
 
-In order to enable caching, the `org.eclipse.hono.client.impl.HonoClientImpl` factory class needs to be configured with a
-cache manager using the *setCacheManager* method. Any specific client created by the factory will then cache responses
-to service invocations based on the following rules:
+The clients follow the [approach to caching used in HTTP 1.1](https://tools.ietf.org/html/rfc2616#section-13.4). In
+particular, they consider [*cache directives*](https://tools.ietf.org/html/rfc2616#section-14.9) that a service includes
+in the response messages it sends back to the client.
+
+Instances of `org.eclipse.hono.client.amqp.AbstractRequestResponseServiceClient` that have been created with a response cache
+being passed into their constructor will cache responses to service invocations based on the following rules:
 
 1. If the response contains a `no-cache` directive, the response is not cached at all.
 2. Otherwise, if the response contains a `max-age` directive, the response is cached for the number of seconds determined
    as the minimum of the value contained in the directive and the value of the `${PREFIX}_RESPONSECACHEDEFAULTTIMEOUT` variable.
 3. Otherwise, if the response message does not contain any of the above directives and the response's status code is one
    of the codes defined in [RFC 2616, Section 13.4 Response Cacheability](https://tools.ietf.org/html/rfc2616#section-13.4),
-   the response is put to the cache using the default timeout defined by the `${PREFIX}_RESPONSECACHEDEFAULTTIMEOUT` variable as the maximum age.
+   the response is put to the cache using the default timeout defined by the `${PREFIX}_RESPONSECACHEDEFAULTTIMEOUT` variable
+   as the maximum age.
 
-The following table provides an overview of the configuration variables and corresponding system properties for
-configuring the Hono client's caching behavior.
+The following table provides an overview of the environment variables and corresponding system properties for
+configuring the clients' caching behavior.
 
 | OS Environment Variable<br>Java System Property | Mandatory | Default Value | Description  |
 | :---------------------------------------------- | :-------: | :------------ | :------------|
