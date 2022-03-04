@@ -3,11 +3,11 @@ title = "Secure Communication"
 weight = 350
 +++
 
-The individual components of an Eclipse Hono&trade; installation, e.g. the protocol adapters, *AMQP Messaging Network*,
+The individual components of an Eclipse Hono&trade; installation, e.g. the protocol adapters, messaging infrastructure,
 *Hono Auth* etc. and the clients attaching to Hono in order to send and receive data all communicate with each other
-using AMQP 1.0 over TCP. The Hono components and the clients will usually not be located on the same local network but
-will probably communicate over public networking infrastructure. For most use cases it is therefore desirable, if not
-necessary, to provide for confidentiality of the data being transferred between these components.
+over IP based networking infrastructure. The Hono components and the clients will usually not be located on the same
+local network but will probably communicate over public networking infrastructure. For most use cases it is therefore
+desirable, if not necessary, to provide for confidentiality of the data being transferred between these components.
 
 This section describes how Hono supports confidentiality by means of *Transport Layer Security* (TLS)
 and how to configure it.
@@ -25,62 +25,77 @@ Using TLS in this way requires configuring the server component with a cryptogra
 *certificate* which *binds* an *identity claim* to the public key. It is out of scope of this document to describe the
 full process of creating such a key pair and acquiring a corresponding certificate. The `demo-certs` module already
 contains a set of keys and certificates to be used for evaluation and demonstration purposes. Throughout the rest of
-this section we will use these keys and certificates . Please refer to the `demo-certs/README.md` file for details
+this section we will use these keys and certificates. Please refer to the `demo-certs/README.md` file for details
 regarding how to create your own keys and certificates.
 
-Within a Hono installation the following communication channels can be secured with TLS:
-
-1. Applications connecting to *Dispatch Router* - Client applications consuming e.g. Telemetry data from Hono connect
-   to the AMQP Messaging Network. This connection can be secured by configuring the client and the messaging network for TLS.
-1. *Device Registry* connecting to *Auth Server* - The Device Registry connects to the Auth Server in order to verify
-   client credentials and determine the client's authorities. This (internal) connection can (should) be secured by
-   configuring the Auth Server and Device Registry for TLS.
-1. *Protocol Adapter* to *Device Registry* - A protocol adapter connects to the Device Registry in order to retrieve
-   assertions regarding the registration status of devices. This (internal) connection can be secured by configuring
-   the protocol adapter and the Device Registry for TLS.
-1. *Protocol Adapter* connecting to *AMQP Messaging Network* - A protocol adapter connects to the messaging network in
-   order to forward telemetry data and commands hence and forth between downstream components (client applications)
-   and devices. This (internal) connection can be secured by configuring the Dispatch Router and the protocol adapters
-   for TLS.
-1. *Devices* connecting to a *Protocol Adapter* - Devices use TLS to both authenticate the protocol adapter and to
-   establish an encrypted channel that provides integrity and privacy when transmitting data. Note that the specifics
-   of if and how TLS can be used with a particular protocol adapter is specific to the transport protocol the adapter
-   uses for communicating with the devices.
-1. *Liveness/readiness probes* connecting to *Service Health Checks* - Systems like Kubernetes are periodically checking
-   the health status of the individual services . This communication can be secured by configuring the health check of
-   the individual services to expose a secure endpoint.
+The following sections provide information regarding the configuration of TLS for Hono's components.
 
 ### Auth Server
 
-The Auth Server supports the use of TLS for connections to clients. Please refer to the
+The Auth Server supports the use of TLS for incoming connections to its Authentication API endpoint. Please refer to the
 [Auth Server admin guide]({{< relref "auth-server-config.md" >}}) for details regarding the required configuration steps.
 
 The `demo-certs/certs` folder includes the following demo keys and certificates to be used with the Auth Server for that purpose.
 
-| File                 | Description                                                      |
-| :------------------- | :--------------------------------------------------------------- |
+| File                | Description                                                      |
+| :------------------ | :--------------------------------------------------------------- |
 | `auth-server-key.pem`  | The example private key for creating signatures. |
 | `auth-server-cert.pem` | The example certificate asserting the server's identity. |
 | `trusted-certs.pem`    | Trusted CA certificates to use for verifying signatures. |
 
+### Kafka Broker
+
+Please refer to the [Apache Kafka documentation](https://kafka.apache.org/documentation/#configuration) for
+details regarding the configuration of TLS.
+
+The `demo-certs/certs` folder includes the following demo keys and certificates to be used with the Kafka broker for
+that purpose:
+
+| File               | Description                                                      |
+| :----------------- | :--------------------------------------------------------------- |
+| `trusted-certs.pem`   | Trusted CA certificates to use for verifying signatures. |
 
 ### Dispatch Router
 
-The Dispatch Router reads its configuration from a file on startup (the default location is `/etc/qpid-dispatch/qdrouterd.conf`).
 Please refer to the [Dispatch Router documentation](https://qpid.apache.org/components/dispatch-router/index.html) for
-details regarding the configuration of TLS/SSL.
+details regarding the configuration of TLS.
 
-The `demo-certs/certs` folder includes the following demo keys and certificates to be used with the Dispatch Router for that purpose:
+The `demo-certs/certs` folder includes the following demo keys and certificates to be used with the Dispatch Router for
+that purpose:
 
-| File                | Description                                                      |
-| :------------------ | :--------------------------------------------------------------- |
+| File               | Description                                                      |
+| :----------------- | :--------------------------------------------------------------- |
 | `qdrouter-key.pem`    | The example private key for creating signatures. |
 | `qdrouter-cert.pem`   | The example certificate asserting the server's identity. |
 | `trusted-certs.pem`   | Trusted CA certificates to use for verifying signatures. |
 
+### Command Router
+
+
+The Command Router supports the use of TLS for incoming connections to its Command Router API endpoint. It also supports
+using TLS for outgoing connections to the Authentication, Tenant and Device Registration service endpoints, the
+messaging infrastructure and the data grid used for storing routing information.
+
+Please refer to the [Command Router admin guide]({{< relref "command-router-config.md" >}}) for
+details regarding the required configuration steps.
+
+The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the file based Device
+Registry for that purpose.
+
+| File                   | Description                                                      |
+| :--------------------- | :--------------------------------------------------------------- |
+| `auth-server-cert.pem`    | The certificate of the Auth Server, used to verify the signatures of tokens issued by the Auth Server. |
+| `command-router-key.pem`  | The example private key for creating signatures. |
+| `command-router-cert.pem`  | The example certificate asserting the server's identity. |
+| `trusted-certs.pem`       | Trusted CA certificates to use for verifying signatures. |
+
+
 ### JDBC Based Device Registry
 
-The JDBC based Device Registry supports the use of TLS for connections to protocol adapters and the Auth Server.
+The JDBC based Device Registry supports the use of TLS for incoming connections to its Tenant, Device Registration,
+Credentials and Device Registry Management API endpoints. It also supports using TLS for outgoing connections to the
+Authentication service endpoint and the database server.
+
 Please refer to the [JDBC based Device Registry admin guide]({{< relref "jdbc-device-registry-config.md" >}}) for
 details regarding the required configuration steps.
 
@@ -97,46 +112,72 @@ Registry for that purpose.
 
 ### MongoDB Based Device Registry
 
-The MongoDB based Device Registry supports the use of TLS for connections to protocol adapters and the Auth Server.
+The MongoDB based Device Registry supports the use of TLS for incoming connections to its Tenant, Device Registration,
+Credentials and Device Registry Management API endpoints. It also supports using TLS for outgoing connections to the
+Authentication service endpoint and the Mongo database server.
+
 Please refer to the [MongoDB based Device Registry admin guide]({{< relref "mongodb-device-registry-config.md" >}}) for
 details regarding the required configuration steps.
 
 The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the MongoDB based Device
 Registry for that purpose.
 
-| File                     | Description                                                      |
-| :----------------------- | :--------------------------------------------------------------- |
-| `auth-server-cert.pem`     | The certificate of the Auth Server, used to verify the signatures of tokens issued by the Auth Server. |
+| File                   | Description                                                      |
+| :--------------------- | :--------------------------------------------------------------- |
+| `auth-server-cert.pem`    | The certificate of the Auth Server, used to verify the signatures of tokens issued by the Auth Server. |
 | `device-registry-key.pem`  | The example private key for creating signatures. |
 | `device-registry-cert.pem` | The example certificate asserting the server's identity. |
-| `trusted-certs.pem`        | Trusted CA certificates to use for verifying signatures. |
+| `trusted-certs.pem`       | Trusted CA certificates to use for verifying signatures. |
+
+### AMQP Adapter
+
+The adapter supports the use of TLS for incoming connections from devices. It also supports the use of TLS for
+outgoing connections to the Tenant, Device Registration, Credentials and Command Router service endpoints and the
+messaging infrastructure.
+
+For this purpose, the adapter can be configured with a server certificate and private key.
+Please refer to the [AMQP adapter admin guide]({{< relref "amqp-adapter-config.md" >}}) for details regarding the required
+configuration steps.
+
+The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the adapter for that purpose.
+
+| File                | Description                                                      |
+| :------------------ | :--------------------------------------------------------------- |
+| `amqp-adapter-key.pem`  | The example private key for creating signatures. |
+| `amqp-adapter-cert.pem` | The example certificate asserting the adapter's identity. |
+| `trusted-certs.pem`    | Trusted CA certificates to use for verifying signatures. |
+
 
 ### CoAP Adapter
 
-The CoAP adapter supports the use of TLS for its connections to the Tenant service, the Device Registration service, the
-Credentials service and the AMQP Messaging Network. The adapter also supports the use of DTLS for connections with devices.
+The adapter supports the use of *Datagram TLS* (DTLS) for incoming connections from devices. It also supports the use
+of TLS for outgoing connections to the Tenant, Device Registration, Credentials and Command Router service endpoints and
+the messaging infrastructure.
+
 For this purpose, the adapter can be configured with a server certificate and private key.
 Please refer to the [CoAP adapter admin guide]({{< relref "coap-adapter-config.md" >}}) for details regarding the required
 configuration steps.
 
-The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the CoAP adapter for that purpose.
+The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the adapter for that purpose.
 
-| File                  | Description                                                      |
-| :-------------------- | :--------------------------------------------------------------- |
+| File                | Description                                                      |
+| :------------------ | :--------------------------------------------------------------- |
 | `coap-adapter-key.pem`  | The example private key for creating signatures. |
 | `coap-adapter-cert.pem` | The example certificate asserting the adapter's identity. |
-| `trusted-certs.pem`     | Trusted CA certificates to use for verifying signatures. |
+| `trusted-certs.pem`    | Trusted CA certificates to use for verifying signatures. |
 
 
 ### HTTP Adapter
 
-The HTTP adapter supports the use of TLS for its connections to the Tenant service, the Device Registration service,
-the Credentials service and the AMQP Messaging Network. The adapter also supports the use of TLS for connections with
-devices. For this purpose, the adapter can be configured with a server certificate and private key.
+The adapter supports the use of TLS for incoming connections from devices. It also supports the use of TLS for
+outgoing connections to the Tenant, Device Registration, Credentials and Command Router service endpoints and the
+messaging infrastructure.
+
+For this purpose, the adapter can be configured with a server certificate and private key.
 Please refer to the [HTTP adapter admin guide]({{< relref "http-adapter-config.md" >}}) for details regarding the
 required configuration steps.
 
-The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the HTTP adapter for that purpose.
+The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the adapter for that purpose.
 
 | File                      | Description                                                      |
 | :------------------------ | :--------------------------------------------------------------- |
@@ -147,13 +188,15 @@ The `demo-certs/certs` folder contains the following demo keys and certificates 
 
 ### MQTT Adapter
 
-The MQTT adapter supports the use of TLS for its connections to the Tenant service, the Device Registration service,
-the Credentials service and the AMQP Messaging Network. The adapter also supports the use of TLS for connections with
-devices. For this purpose, the adapter can be configured with a server certificate and private key.
+The adapter supports the use of TLS for incoming connections from devices. It also supports the use of TLS for
+outgoing connections to the Tenant, Device Registration, Credentials and Command Router service endpoints and the
+messaging infrastructure.
+
+For this purpose, the adapter can be configured with a server certificate and private key.
 Please refer to the [MQTT adapter admin guide]({{< relref "mqtt-adapter-config.md" >}}) for details regarding the
 required configuration steps.
 
-The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the MQTT adapter for that purpose.
+The `demo-certs/certs` folder contains the following demo keys and certificates to be used with the adapter for that purpose.
 
 | File                      | Description                                                      |
 | :------------------------ | :--------------------------------------------------------------- |
@@ -162,23 +205,25 @@ The `demo-certs/certs` folder contains the following demo keys and certificates 
 | `trusted-certs.pem`     | Trusted CA certificates to use for verifying signatures. |
 
 
+### Business Application
 
-### Client Application
+When the connection between a business application and Hono's messaging infrastructure (i.e. the Kafka broker or the
+Dispatch Router) is supposed to be secured by TLS (which is a good idea), then the application needs to be
+configured to trust the CA that signed the messaging infrastructure's certificate.
 
-When the connection between an application client and Hono (i.e. the Dispatch Router) is supposed to be secured by
-TLS (which is a good idea), then the client application needs to be configured to trust the CA that signed the Dispatch
-Router's certificate chain.
-Clients can use the `org.eclipse.hono.client.HonoConnection.newConnection(ClientConfigProperties)` method to establish a connection
-to Hono. The `org.eclipse.hono.config.ClientConfigProperties` instance passed in to the method needs to be configured
-with the trust store containing the CA's certificate.
-Please refer to the [Hono Client configuration guide]({{< relref "hono-client-configuration.md" >}}) for details regarding the
-corresponding configuration properties that need to be set.
+Applications can use Hono's `org.eclipse.hono.application.client.kafka.impl.KafkaApplicationClientImpl` and/or
+`org.eclipse.hono.application.client.amqp.ProtonBasedApplicationClient` classes to interact with Hono's messaging infrastructure.
+The clients need to be configured with a trust store that contains the messaging infrastructure's CA certificate.
+
+Please refer to the [Hono Client Configuration Guide]({{< relref "hono-client-configuration" >}}) and
+[Hono Kafka Client Configuration Guide]({{< relref "hono-kafka-client-configuration" >}}) for details
+regarding the configuration of the clients.
 
 The `demo-certs/certs` folder contains the following demo keys to be used with client applications for that purpose.
 
-| File                      | Description                                                      |
-| :------------------------ | :--------------------------------------------------------------- |
-| `trusted-certs.pem`     | Trusted CA certificates to use for verifying signatures. |
+| File              | Description                                              |
+| :---------------- | :------------------------------------------------------- |
+| `trusted-certs.pem`  | Trusted CA certificates to use for verifying signatures. |
 
 ## Using OpenSSL
 
