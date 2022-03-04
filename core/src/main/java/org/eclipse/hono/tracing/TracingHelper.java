@@ -175,13 +175,35 @@ public final class TracingHelper {
      * Marks an <em>OpenTracing</em> span as erroneous and logs an exception.
      * <p>
      * This method does <em>not</em> finish the span.
+     * <p>
+     * If the given error represents an unexpected error (e.g. a {@code NullPointerException}), a <em>WARN</em>
+     * log entry will be created on the {@link Logger} of this class. To suppress this, the
+     * {@link #logError(Span, Throwable, boolean)} method may be used instead, invoking it with {@code true} as value
+     * for the {@code skipUnexpectedErrorCheck} parameter.
      *
      * @param span The span to mark.
      * @param error The exception that has occurred.
      * @throws NullPointerException if error is {@code null}.
      */
     public static void logError(final Span span, final Throwable error) {
-        logUnexpectedError(error, span);
+        logError(span, error, false);
+    }
+
+    /**
+     * Marks an <em>OpenTracing</em> span as erroneous and logs an exception.
+     * <p>
+     * This method does <em>not</em> finish the span.
+     *
+     * @param span The span to mark.
+     * @param error The exception that has occurred.
+     * @param skipUnexpectedErrorCheck Whether to skip the check for an unexpected error, meaning no <em>WARN</em> log
+     *            entry will be created for such an error.
+     * @throws NullPointerException if error is {@code null}.
+     */
+    public static void logError(final Span span, final Throwable error, final boolean skipUnexpectedErrorCheck) {
+        if (!skipUnexpectedErrorCheck) {
+            logUnexpectedError(error, span);
+        }
         if (span != null) {
             logError(span, getErrorLogItems(error));
         }
@@ -236,6 +258,9 @@ public final class TracingHelper {
      * Marks an <em>OpenTracing</em> span as erroneous, logs a message and an error.
      * <p>
      * This method does <em>not</em> finish the span.
+     * <p>
+     * If the given error represents an unexpected error (e.g. a {@code NullPointerException}), a <em>WARN</em>
+     * log entry will be created on the {@link Logger} of this class.
      *
      * @param span The span to mark.
      * @param message The message to log on the span.
