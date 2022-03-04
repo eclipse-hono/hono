@@ -91,6 +91,7 @@ public class ComponentMetaDataDecorator extends WebSpanDecorator.StandardTags {
     @Override
     public void onFailure(final Throwable throwable, final HttpServerResponse response, final Span span) {
         LOG.trace("logging failed processing of request");
-        TracingHelper.logError(span, throwable);
+        final boolean skipUnexpectedErrorCheck = response.getStatusCode() >= 400 && response.getStatusCode() < 500; // client error
+        TracingHelper.logError(span, throwable, skipUnexpectedErrorCheck);
     }
 }
