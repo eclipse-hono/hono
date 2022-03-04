@@ -133,6 +133,35 @@ public class DefaultFailureHandlerTest {
     }
 
     /**
+     * Verifies that the handler writes the detail message of the failure
+     * to the response and keeps the RoutingContext error status code.
+     */
+    @Test
+    public void testHandlerWritesDetailMessageToBodyAndKeepsErrorStatus() {
+
+        final String detailMessage = "detail message";
+
+        final HttpServerRequest request = mock(HttpServerRequest.class, Mockito.RETURNS_MOCKS);
+        final HttpServerResponse response = mock(HttpServerResponse.class);
+        when(response.ended()).thenReturn(false);
+        final RoutingContext ctx = mock(RoutingContext.class);
+        when(ctx.request()).thenReturn(request);
+        when(ctx.response()).thenReturn(response);
+        when(ctx.failed()).thenReturn(true);
+        when(ctx.statusCode()).thenReturn(403);
+        when(ctx.failure()).thenReturn(new IllegalStateException(detailMessage));
+
+        final DefaultFailureHandler handler = new DefaultFailureHandler();
+        handler.handle(ctx);
+
+        final ArgumentCaptor<Buffer> bufferCaptor = ArgumentCaptor.forClass(Buffer.class);
+        verify(response).setStatusCode(HttpURLConnection.HTTP_FORBIDDEN);
+        verify(response).write(bufferCaptor.capture());
+        assertErrorResponse(bufferCaptor.getValue(), detailMessage);
+        verify(response).end();
+    }
+
+    /**
      * Verifies that the handler writes the detail message and error code of the failure
      * to the response.
      */

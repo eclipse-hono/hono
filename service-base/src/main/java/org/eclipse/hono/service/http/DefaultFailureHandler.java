@@ -38,7 +38,8 @@ import io.vertx.ext.web.handler.HttpException;
  * property and sets the HTTP response's status code and body based on the exception
  * type. If the error is a {@code ServiceInvocationException} then the response's
  * status code and body are set to the exception's <em>errorCode</em> and <em>message</em>
- * property values respectively. Otherwise the status code is set to 500.
+ * property values respectively. Otherwise the status code is set to the one from the HTTP
+ * response, if it is an error status code, or otherwise it is set to 500.
  */
 public class DefaultFailureHandler implements Handler<RoutingContext> {
 
@@ -65,16 +66,18 @@ public class DefaultFailureHandler implements Handler<RoutingContext> {
                         ctx.request().method(), HttpUtils.getAbsoluteURI(ctx.request()), ctx.statusCode(), ctx.getBody(),
                         ctx.failure());
                 if (ctx.failure() != null) {
+                    final int statusCode;
                     if (ctx.failure() instanceof ServiceInvocationException) {
-                        final ServiceInvocationException e = (ServiceInvocationException) ctx.failure();
-                        sendError(ctx.response(), e.getErrorCode(), e.getMessage());
+                        statusCode = ((ServiceInvocationException) ctx.failure()).getErrorCode();
                     } else if (ctx.failure() instanceof HttpException) {
-                        final HttpException e = (HttpException) ctx.failure();
-                        sendError(ctx.response(), e.getStatusCode(), e.getMessage());
+                        statusCode = ((HttpException) ctx.failure()).getStatusCode();
+                    } else if (ctx.statusCode() >= 400 && ctx.statusCode() < 600) {
+                        statusCode = ctx.statusCode();
                     } else {
                         LOG.debug("unexpected internal failure", ctx.failure());
-                        sendError(ctx.response(), HttpURLConnection.HTTP_INTERNAL_ERROR, ctx.failure().getMessage());
+                        statusCode = HttpURLConnection.HTTP_INTERNAL_ERROR;
                     }
+                    sendError(ctx.response(), statusCode, ctx.failure().getMessage());
                 } else if (ctx.statusCode() != -1) {
                     sendError(ctx.response(), ctx.statusCode(), null);
                 } else {
