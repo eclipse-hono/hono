@@ -18,8 +18,8 @@ import java.util.function.Function;
 import org.eclipse.hono.application.client.ApplicationClient;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
-import org.eclipse.hono.client.ConnectionLifecycle;
-import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.amqp.connection.ConnectionLifecycle;
+import org.eclipse.hono.client.amqp.connection.HonoConnection;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;

@@ -16,8 +16,8 @@ package org.eclipse.hono.client.device.amqp;
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.ConnectionLifecycle;
-import org.eclipse.hono.client.HonoConnection;
+import org.eclipse.hono.client.amqp.connection.ConnectionLifecycle;
+import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.device.amqp.impl.AmqpAdapterClientFactoryImpl;
 

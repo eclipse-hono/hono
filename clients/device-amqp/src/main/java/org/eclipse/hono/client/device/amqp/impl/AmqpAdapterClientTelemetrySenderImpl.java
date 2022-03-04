@@ -17,8 +17,8 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.HonoConnection;
 import org.eclipse.hono.client.amqp.GenericSenderLink;
+import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.device.amqp.TelemetrySender;
 import org.eclipse.hono.client.device.amqp.TraceableTelemetrySender;
 import org.eclipse.hono.util.AddressHelper;

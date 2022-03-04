@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.client;
+package org.eclipse.hono.client.amqp.connection;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -29,7 +29,7 @@ public interface ConnectionLifecycle<T> {
      * Establishes the underlying AMQP connection to the service.
      *
      * @return A future that will be completed with the established connection.
-     *         The future will be failed with a {@link ServiceInvocationException} if the
+     *         The future will be failed with a {@link org.eclipse.hono.client.ServiceInvocationException} if the
      *         connection cannot be established, e.g. because
      *         <ul>
      *         <li>authentication failed, or</li>
@@ -60,7 +60,7 @@ public interface ConnectionLifecycle<T> {
      *
      * @return A succeeded future if this connection is established.
      *         Otherwise, the future will be failed with a
-     *         {@link ServerErrorException}.
+     *         {@link org.eclipse.hono.client.ServerErrorException}.
      */
     Future<Void> isConnected();
 
@@ -77,7 +77,7 @@ public interface ConnectionLifecycle<T> {
      * @param waitForCurrentConnectAttemptTimeout The maximum number of milliseconds to wait for
      *                                            an ongoing connection attempt to finish.
      * @return A succeeded future if this connection is established.
-     *         Otherwise, the future will be failed with a {@link ServerErrorException}.
+     *         Otherwise, the future will be failed with a {@link org.eclipse.hono.client.ServerErrorException}.
      */
     default Future<Void> isConnected(final long waitForCurrentConnectAttemptTimeout) {
         return isConnected();

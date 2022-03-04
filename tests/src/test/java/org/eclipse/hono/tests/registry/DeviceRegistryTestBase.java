@@ -17,8 +17,8 @@ import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Objects;
 
-import org.eclipse.hono.client.ConnectionLifecycle;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.amqp.connection.ConnectionLifecycle;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Lifecycle;
 import org.junit.jupiter.api.AfterEach;

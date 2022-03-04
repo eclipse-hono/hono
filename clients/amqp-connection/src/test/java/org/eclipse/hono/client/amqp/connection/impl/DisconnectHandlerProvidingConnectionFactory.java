@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.client.impl;
+package org.eclipse.hono.client.amqp.connection.impl;
 
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;

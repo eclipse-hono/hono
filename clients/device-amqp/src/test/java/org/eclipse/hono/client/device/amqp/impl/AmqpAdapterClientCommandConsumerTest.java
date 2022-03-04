@@ -28,8 +28,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 
-import org.eclipse.hono.client.HonoConnection;
-import org.eclipse.hono.client.ReconnectListener;
+import org.eclipse.hono.client.amqp.connection.HonoConnection;
+import org.eclipse.hono.client.amqp.connection.ReconnectListener;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.test.VertxMockSupport;

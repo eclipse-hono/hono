@@ -33,6 +33,10 @@
       <artifactId>hono-client-common</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-amqp-connection</artifactId>
+    </dependency>
+    <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-core</artifactId>
     </dependency>
@@ -57,11 +61,6 @@
           <artifactId>vertx-auth-common</artifactId>
         </exclusion>
       </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-proton</artifactId>
-      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>io.opentracing</groupId>

@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.client;
+package org.eclipse.hono.client.amqp.connection;
 
 
 /**
