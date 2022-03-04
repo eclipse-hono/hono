@@ -15,6 +15,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   themselves as belonging to that tenant or device are getting closed now.
 * The Quarkus variant of the MongoDB device registry did not accept HTTP endpoint credentials that worked with the
   Spring Boot based variant because password hashes were created in lower case instead of upper case. This has been fixed.
+* In some cases, invalid HTTP requests to the HTTP adapter or the Device Registry caused a response
+  with a 500 status code instead of the corresponding 4xx status code. This has been fixed.
 
 ## 1.12.0
 
