@@ -41,6 +41,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The *client* module has been removed. Its deprecated classes have been removed and the remaining classes have been
   moved to the *client-common*, *amqp-connection* and *amqp-common* modules. The classes for configuring AMQP client
   connections have been moved from the *core* to the *amqp-connection* module.
+* The *core* module no longer supports Java 8 but has been changed to require at least Java 11 as all the other modules.
 
 ## 1.12.1
 
