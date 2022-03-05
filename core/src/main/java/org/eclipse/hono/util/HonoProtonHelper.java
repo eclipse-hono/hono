@@ -266,7 +266,6 @@ public final class HonoProtonHelper {
      * <li>the given number of milliseconds have passed</li>
      * </ul>
      * After that the link's resources are freed up.
-     * <p>
      *
      * @param context The vert.x context to run on.
      * @param link The link to close. If {@code null}, the given handler is invoked immediately.

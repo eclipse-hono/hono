@@ -29,10 +29,6 @@
   <inceptionYear>2016</inceptionYear>
   <url>https://www.eclipse.org/hono</url>
 
-  <properties>
-    <maven.compiler.release>8</maven.compiler.release>
-  </properties>
-
   <dependencies>
     <dependency>
       <groupId>io.vertx</groupId>
@@ -86,6 +82,45 @@
       <groupId>io.smallrye.config</groupId>
       <artifactId>smallrye-config</artifactId>
       <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-core</artifactId>
+      <optional>true</optional>
+      <exclusions>
+        <exclusion>
+          <groupId>org.jboss.logmanager</groupId>
+          <artifactId>jboss-logmanager-embedded</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.jboss.logging</groupId>
+          <artifactId>jboss-logging-annotations</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>io.quarkus</groupId>
+          <artifactId>quarkus-development-mode-spi</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>io.quarkus</groupId>
+          <artifactId>quarkus-bootstrap-runner</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.jboss.slf4j</groupId>
+          <artifactId>slf4j-jboss-logmanager</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.graalvm.sdk</groupId>
+          <artifactId>graal-sdk</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>io.quarkus</groupId>
+          <artifactId>quarkus-fs-util</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.wildfly.common</groupId>
+          <artifactId>wildfly-common</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <!--  testing -->
@@ -160,19 +195,6 @@
       </plugins>
     </pluginManagement>
     <plugins>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>animal-sniffer-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>verify_java8_compatibility</id>
-            <phase>test</phase>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
       <plugin>
         <!-- 
           Copy legal documents from "legal" module to "target/classes" folder

@@ -45,10 +45,6 @@
     they implement the required API(s).
   </description>
 
-  <properties>
-    <maven.compiler.release>11</maven.compiler.release>
-  </properties>
-
   <dependencies>
     <dependency>
       <groupId>org.eclipse.hono</groupId>

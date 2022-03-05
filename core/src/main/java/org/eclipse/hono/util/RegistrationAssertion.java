@@ -27,10 +27,13 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
 /**
  * Encapsulates the registration assertion information for a device as defined by the
  * <a href="https://www.eclipse.org/hono/docs/api/device-registration/">Device Registration API</a>.
  */
+@RegisterForReflection
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(content = Include.NON_EMPTY)
 public final class RegistrationAssertion {

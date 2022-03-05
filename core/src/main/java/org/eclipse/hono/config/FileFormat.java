@@ -16,9 +16,12 @@ package org.eclipse.hono.config;
 import java.util.HashMap;
 import java.util.Map;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
 /**
  * File formats for using key materials.
  */
+@RegisterForReflection
 public enum FileFormat {
     /**
      * PEM encoded PKCS#1 or PKCS#8.
