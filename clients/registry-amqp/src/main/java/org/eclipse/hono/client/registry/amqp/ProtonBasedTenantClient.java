@@ -38,7 +38,7 @@ import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
 import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.RegistrationConstants;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantConstants.TenantAction;
 import org.eclipse.hono.util.TenantObject;
@@ -160,7 +160,7 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseServic
         span.setTag(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
         return get(
                 responseCacheKey,
-                () -> new JsonObject().put(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId),
+                () -> new JsonObject().put(RequestResponseApiConstants.FIELD_PAYLOAD_TENANT_ID, tenantId),
                 span);
     }
 
@@ -175,7 +175,7 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseServic
         TAG_SUBJECT_DN.set(span, subjectDnRfc2253);
         return get(
                 responseCacheKey,
-                () -> new JsonObject().put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDnRfc2253),
+                () -> new JsonObject().put(RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDnRfc2253),
                 span);
     }
 
@@ -191,7 +191,7 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseServic
                                     TenantAction.get.toString(),
                                     null,
                                     payloadSupplier.get().toBuffer(),
-                                    RegistrationConstants.CONTENT_TYPE_APPLICATION_JSON,
+                                    RequestResponseApiConstants.CONTENT_TYPE_APPLICATION_JSON,
                                     this::getRequestResponseResult,
                                     currentSpan))));
         return mapResultAndFinishSpan(resultTracker, tenantResult -> {

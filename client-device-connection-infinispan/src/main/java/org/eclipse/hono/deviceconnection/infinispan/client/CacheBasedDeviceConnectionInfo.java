@@ -32,6 +32,7 @@ import org.eclipse.hono.util.AdapterInstanceStatus;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -538,7 +539,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
         final JsonArray adapterInstancesArray = new JsonArray(new ArrayList<>(deviceToAdapterInstanceMap.size()));
         for (final Map.Entry<String, String> resultEntry : deviceToAdapterInstanceMap.entrySet()) {
             final JsonObject entryJson = new JsonObject();
-            entryJson.put(DeviceConnectionConstants.FIELD_PAYLOAD_DEVICE_ID, resultEntry.getKey());
+            entryJson.put(RequestResponseApiConstants.FIELD_PAYLOAD_DEVICE_ID, resultEntry.getKey());
             entryJson.put(DeviceConnectionConstants.FIELD_ADAPTER_INSTANCE_ID, resultEntry.getValue());
             adapterInstancesArray.add(entryJson);
         }

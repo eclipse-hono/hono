@@ -16,7 +16,7 @@ package org.eclipse.hono.auth;
 import java.security.Principal;
 import java.util.Objects;
 
-import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 
 import io.vertx.core.json.JsonObject;
 
@@ -42,8 +42,8 @@ public class Device implements Principal {
 
     private JsonObject getPrincipal(final String tenantId, final String deviceId) {
         return new JsonObject()
-                .put(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID, Objects.requireNonNull(tenantId))
-                .put(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID, Objects.requireNonNull(deviceId));
+                .put(RequestResponseApiConstants.FIELD_PAYLOAD_TENANT_ID, Objects.requireNonNull(tenantId))
+                .put(RequestResponseApiConstants.FIELD_PAYLOAD_DEVICE_ID, Objects.requireNonNull(deviceId));
     }
 
     /**
@@ -61,7 +61,7 @@ public class Device implements Principal {
      * @return The identifier.
      */
     public final String getTenantId() {
-        return principal.getString(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID);
+        return principal.getString(RequestResponseApiConstants.FIELD_PAYLOAD_TENANT_ID);
     }
 
     /**
@@ -70,7 +70,7 @@ public class Device implements Principal {
      * @return The identifier.
      */
     public final String getDeviceId() {
-        return principal.getString(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID);
+        return principal.getString(RequestResponseApiConstants.FIELD_PAYLOAD_DEVICE_ID);
     }
 
     /**
@@ -86,9 +86,9 @@ public class Device implements Principal {
     @Override
     public final String toString() {
         return String.format("device [%s: %s, %s: %s]",
-                CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID,
+                RequestResponseApiConstants.FIELD_PAYLOAD_DEVICE_ID,
                 getDeviceId(),
-                CredentialsConstants.FIELD_PAYLOAD_TENANT_ID,
+                RequestResponseApiConstants.FIELD_PAYLOAD_TENANT_ID,
                 getTenantId());
     }
 

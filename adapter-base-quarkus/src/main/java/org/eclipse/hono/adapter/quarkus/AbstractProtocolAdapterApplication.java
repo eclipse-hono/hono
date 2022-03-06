@@ -603,11 +603,10 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             notificationConfig.setServerRole("Notification");
             notificationReceiver = new ProtonBasedNotificationReceiver(HonoConnection.newConnection(vertx, notificationConfig, tracer));
         }
-        NotificationConstants.DEVICE_REGISTRY_NOTIFICATION_TYPES.forEach(notificationType -> {
-            notificationReceiver.registerConsumer(notificationType, notification -> {
-                NotificationEventBusSupport.sendNotification(vertx, notification);
-            });
-        });
+        NotificationConstants.DEVICE_REGISTRY_NOTIFICATION_TYPES.forEach(notificationType ->
+            notificationReceiver.registerConsumer(
+                    notificationType,
+                    notification -> NotificationEventBusSupport.sendNotification(vertx, notification)));
         return notificationReceiver;
     }
 

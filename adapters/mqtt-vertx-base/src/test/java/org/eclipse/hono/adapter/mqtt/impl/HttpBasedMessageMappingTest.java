@@ -202,7 +202,7 @@ public class HttpBasedMessageMappingTest {
         final MultiMap addedHeaders = headersCaptor.getValue();
 
         assertThat(addedHeaders.contains(MessageHelper.APP_PROPERTY_ORIG_ADDRESS, topic, false)).isTrue();
-        assertThat(addedHeaders.contains(HttpHeaders.CONTENT_TYPE.toString(), "text/plain", false));
+        assertThat(addedHeaders.contains(HttpHeaders.CONTENT_TYPE.toString(), "text/plain", false)).isTrue();
     }
 
     /**

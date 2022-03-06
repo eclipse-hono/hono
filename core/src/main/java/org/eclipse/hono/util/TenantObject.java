@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022  Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -67,13 +67,13 @@ public final class TenantObject extends JsonBackedValueObject {
      * @throws NullPointerException if identifier is {@code null}.
      */
     public TenantObject(
-            @JsonProperty(value = TenantConstants.FIELD_PAYLOAD_TENANT_ID, required = true)
+            @JsonProperty(value = RequestResponseApiConstants.FIELD_PAYLOAD_TENANT_ID, required = true)
             final String tenantId,
-            @JsonProperty(value = TenantConstants.FIELD_ENABLED, required = true)
+            @JsonProperty(value = RequestResponseApiConstants.FIELD_ENABLED, required = true)
             final boolean enabled) {
         Objects.requireNonNull(tenantId);
-        setProperty(TenantConstants.FIELD_PAYLOAD_TENANT_ID, tenantId);
-        setProperty(TenantConstants.FIELD_ENABLED, enabled);
+        setProperty(RequestResponseApiConstants.FIELD_PAYLOAD_TENANT_ID, tenantId);
+        setProperty(RequestResponseApiConstants.FIELD_ENABLED, enabled);
     }
 
     /**
@@ -97,7 +97,7 @@ public final class TenantObject extends JsonBackedValueObject {
      */
     @JsonIgnore
     public String getTenantId() {
-        return getProperty(TenantConstants.FIELD_PAYLOAD_TENANT_ID, String.class);
+        return getProperty(RequestResponseApiConstants.FIELD_PAYLOAD_TENANT_ID, String.class);
     }
 
     /**
@@ -107,7 +107,7 @@ public final class TenantObject extends JsonBackedValueObject {
      */
     @JsonIgnore
     public boolean isEnabled() {
-        return getProperty(TenantConstants.FIELD_ENABLED, Boolean.class, true);
+        return getProperty(RequestResponseApiConstants.FIELD_ENABLED, Boolean.class, true);
     }
 
     /**
@@ -176,12 +176,12 @@ public final class TenantObject extends JsonBackedValueObject {
         Objects.requireNonNull(subjectDn);
 
         final JsonObject trustedCa = new JsonObject();
-        trustedCa.put(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.RFC2253));
+        trustedCa.put(RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn.getName(X500Principal.RFC2253));
         trustedCa.put(TenantConstants.FIELD_PAYLOAD_PUBLIC_KEY, publicKey);
         trustedCa.put(TenantConstants.FIELD_PAYLOAD_KEY_ALGORITHM, publicKeyAlgorithm);
         trustedCa.put(TenantConstants.FIELD_AUTO_PROVISIONING_ENABLED, autoProvisioningEnabled);
         Optional.ofNullable(authIdTemplate)
-                .ifPresent(t -> trustedCa.put(TenantConstants.FIELD_PAYLOAD_AUTH_ID_TEMPLATE, t));
+                .ifPresent(t -> trustedCa.put(RequestResponseApiConstants.FIELD_PAYLOAD_AUTH_ID_TEMPLATE, t));
         final JsonArray cas = getProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, JsonArray.class, new JsonArray());
         trustAnchors = null;
         return setProperty(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA, cas.add(trustedCa));
@@ -269,7 +269,7 @@ public final class TenantObject extends JsonBackedValueObject {
                 .stream()
                 .filter(JsonObject.class::isInstance)
                 .map(JsonObject.class::cast)
-                .filter(ca -> subjectDn.equals(getProperty(ca, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class)))
+                .filter(ca -> subjectDn.equals(getProperty(ca, RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class)))
                 .map(caInUse -> getProperty(caInUse, TenantConstants.FIELD_AUTO_PROVISIONING_ENABLED, Boolean.class, false))
                 .findFirst().orElse(false);
     }
@@ -291,8 +291,8 @@ public final class TenantObject extends JsonBackedValueObject {
                 .stream()
                 .filter(JsonObject.class::isInstance)
                 .map(JsonObject.class::cast)
-                .filter(ca -> subjectDn.equals(getProperty(ca, TenantConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class)))
-                .map(caInUse -> getProperty(caInUse, TenantConstants.FIELD_PAYLOAD_AUTH_ID_TEMPLATE, String.class))
+                .filter(ca -> subjectDn.equals(getProperty(ca, RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN, String.class)))
+                .map(caInUse -> getProperty(caInUse, RequestResponseApiConstants.FIELD_PAYLOAD_AUTH_ID_TEMPLATE, String.class))
                 .filter(Objects::nonNull)
                 .findFirst();
     }
@@ -525,7 +525,7 @@ public final class TenantObject extends JsonBackedValueObject {
      */
     @JsonIgnore
     public JsonObject getDefaults() {
-        return getProperty(TenantConstants.FIELD_PAYLOAD_DEFAULTS, JsonObject.class, new JsonObject());
+        return getProperty(RequestResponseApiConstants.FIELD_PAYLOAD_DEFAULTS, JsonObject.class, new JsonObject());
     }
 
     /**
@@ -537,7 +537,7 @@ public final class TenantObject extends JsonBackedValueObject {
      */
     @JsonIgnore
     public TenantObject setDefaults(final JsonObject defaultProperties) {
-        setProperty(TenantConstants.FIELD_PAYLOAD_DEFAULTS, Objects.requireNonNull(defaultProperties));
+        setProperty(RequestResponseApiConstants.FIELD_PAYLOAD_DEFAULTS, Objects.requireNonNull(defaultProperties));
         return this;
     }
 

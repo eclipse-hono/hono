@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -30,7 +30,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 public class Adapter {
 
-    @JsonProperty(RegistryManagementConstants.FIELD_ENABLED)
+    @JsonProperty(RequestResponseApiConstants.FIELD_ENABLED)
     private boolean enabled = false;
 
     @JsonProperty(value = RegistryManagementConstants.FIELD_ADAPTERS_TYPE, required = true)

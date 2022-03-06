@@ -47,7 +47,6 @@ import org.eclipse.hono.service.auth.ValidityBasedTrustOptions;
 import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;
 import org.eclipse.hono.service.util.ServiceBaseUtils;
 import org.eclipse.hono.util.EventConstants;
-import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.QoS;
@@ -66,8 +65,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.DecodeException;
-import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.TrustOptions;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
@@ -388,23 +385,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Stops a service client.
-     * <p>
-     * This method invokes the client's {@link Lifecycle#stop()} method.
-     *
-     * @param client The client to stop.
-     * @return A future indicating the outcome of stopping the client.
-     * @deprecated Simply use the client's {@link Lifecycle#stop()} method instead.
-     */
-    @Deprecated(forRemoval = true)
-    protected final Future<Void> stopServiceClient(final Lifecycle client) {
-
-        return Optional.ofNullable(client)
-                .map(Lifecycle::stop)
-                .orElse(Future.succeededFuture());
-    }
-
-    /**
      * Invoked directly before the adapter is shut down.
      * <p>
      * This default implementation always completes the promise.
@@ -632,36 +612,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     }
 
     /**
-     * Starts a service client.
-     * <p>
-     * This method invokes the given client's {@link Lifecycle#start()} method.
-     *
-     * @param serviceClient The client to start.
-     * @param serviceName The name of the service that the client is for (used for logging).
-     * @return A future indicating the outcome of starting the client. If the given client is {@code null}, a succeeded
-     *         future will be returned.
-     * @throws NullPointerException if serviceName is {@code null} and serviceClient is not {@code null}.
-     * @deprecated Simply use the client's {@link Lifecycle#start()} method instead.
-     */
-    @Deprecated(forRemoval = true)
-    protected final Future<Void> startServiceClient(final Lifecycle serviceClient, final String serviceName) {
-
-        if (serviceClient == null) {
-            return Future.succeededFuture();
-        }
-
-        Objects.requireNonNull(serviceName);
-
-        return serviceClient.start().map(c -> {
-            log.info("{} client [{}] successfully connected", serviceName, serviceClient);
-            return c;
-        }).recover(t -> {
-            log.warn("{} client [{}] failed to connect", serviceName, serviceClient, t);
-            return Future.failedFuture(t);
-        });
-    }
-
-    /**
      * Forwards a response message that has been sent by a device in reply to a
      * command to the sender of the command.
      * <p>
@@ -706,14 +656,12 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
 
         return gatewayId
                 .compose(gwId -> getRegistrationClient().assertRegistration(tenantId, deviceId, gwId, context))
-                .onSuccess(assertion -> {
-                    // the updateLastGateway invocation shouldn't delay or possibly fail the surrounding operation
-                    // so don't wait for the outcome here
-                    updateLastGateway(assertion, tenantId, deviceId, authenticatedDevice, context)
-                            .onFailure(t -> {
-                                log.warn("failed to update last gateway [tenantId: {}, deviceId: {}]", tenantId, deviceId, t);
-                            });
-                }).recover(error -> {
+                // the updateLastGateway invocation shouldn't delay or possibly fail the surrounding operation
+                // so don't wait for the outcome here
+                .onSuccess(assertion -> updateLastGateway(assertion, tenantId, deviceId, authenticatedDevice, context)
+                            .onFailure(t -> log.warn("failed to update last gateway [tenantId: {}, deviceId: {}]",
+                                    tenantId, deviceId, t)))
+                .recover(error -> {
                     final int errorCode = ServiceInvocationException.extractStatusCode(error);
                     if (errorCode == HttpURLConnection.HTTP_NOT_FOUND) {
                         return Future.failedFuture(new DeviceDisabledOrNotRegisteredException(tenantId, errorCode));
@@ -723,44 +671,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                         return Future.failedFuture(error);
                     }
                 });
-    }
-
-    /**
-     * Updates the last known gateway associated with the given device.
-     *
-     * @param registrationAssertion The registration assertion JSON object as returned by
-     *            {@link #getRegistrationAssertion(String, String, Device, SpanContext)}.
-     * @param tenantId The tenant that the device belongs to.
-     * @param deviceId The device to update the last known gateway for.
-     * @param authenticatedDevice The device that has authenticated to this protocol adapter.
-     *            <p>
-     *            If not {@code null} then the authenticated device is compared to the given tenant and device ID. If
-     *            they differ in the device identifier, then the authenticated device is considered to be a gateway
-     *            acting on behalf of the device.
-     * @param context The currently active OpenTracing span that is used to trace the operation.
-     * @return The registration assertion.
-     * @throws NullPointerException if any of tenant or device ID are {@code null}.
-     * @deprecated Use {@link #updateLastGateway(RegistrationAssertion, String, String, Device, SpanContext)}
-     *             instead.
-     */
-    @Deprecated
-    protected final Future<JsonObject> updateLastGateway(
-            final JsonObject registrationAssertion,
-            final String tenantId,
-            final String deviceId,
-            final Device authenticatedDevice,
-            final SpanContext context) {
-        try {
-            return updateLastGateway(
-                    registrationAssertion.mapTo(RegistrationAssertion.class),
-                    tenantId,
-                    deviceId,
-                    authenticatedDevice,
-                    context)
-                .map(registrationAssertion);
-        } catch (final DecodeException e) {
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, e));
-        }
     }
 
     /**
@@ -1131,9 +1041,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                     final Context currentContext = Vertx.currentContext();
 
                     if (currentContext != context) {
-                        context.runOnContext(action -> {
-                            procedure.tryComplete(Status.OK());
-                        });
+                        context.runOnContext(action -> procedure.tryComplete(Status.OK()));
                     } else {
                         log.debug("Protocol Adapter - HealthCheck Server context match. Assume protocol adapter is alive.");
                         procedure.tryComplete(Status.OK());
@@ -1238,11 +1146,8 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                     return getRegistrationAssertion(authenticatedDevice.getTenantId(),
                             authenticatedDevice.getDeviceId(), null, spanContext)
                                     .map(ok -> false)
-                                    .recover(e -> {
-                                        // and if the gateway is not registered then it is a terminal error
-                                        return Future
-                                                .succeededFuture(e instanceof DeviceDisabledOrNotRegisteredException);
-                                    });
+                                    // and if the gateway is not registered then it is a terminal error
+                                    .recover(e -> Future.succeededFuture(e instanceof DeviceDisabledOrNotRegisteredException));
                 } else {
                     return Future.succeededFuture(true);
                 }

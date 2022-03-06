@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -49,7 +49,7 @@ public final class RegistrationAssertion {
      * @param deviceId The identifier of the device.
      */
     public RegistrationAssertion(
-            @JsonProperty(value = RegistrationConstants.FIELD_PAYLOAD_DEVICE_ID, required = true)
+            @JsonProperty(value = RequestResponseApiConstants.FIELD_PAYLOAD_DEVICE_ID, required = true)
             final String deviceId) {
 
         Objects.requireNonNull(deviceId);
@@ -137,7 +137,7 @@ public final class RegistrationAssertion {
      *
      * @return An unmodifiable view on the properties.
      */
-    @JsonProperty(value = RegistrationConstants.FIELD_PAYLOAD_DEFAULTS)
+    @JsonProperty(value = RequestResponseApiConstants.FIELD_PAYLOAD_DEFAULTS)
     public Map<String, Object> getDefaults() {
         return Collections.unmodifiableMap(defaults);
     }

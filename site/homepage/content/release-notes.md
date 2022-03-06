@@ -34,6 +34,10 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The Spring Boot based variant of the Command Router has been removed.
 * The `org.eclipse.hono.client.device.amqp.AmqpAdapterClientFactory` class has been moved from the *hono-client* module
   to the new *hono-client-device-amqp* module.
+* Removed deprecated *startServiceClient*, *stopServiceClient* and *updateLastGateway* methods of class
+  *org.eclipse.hono.adapter.AbstractProtocolAdapterBase*.
+* Removed deprecated *org.eclipse.hono.util.BufferResult* class.
+* Removed deprecated *org.eclipse.hono.service.http.AbstractEventBusHttpEndpoint* class.
 
 ## 1.12.1
 

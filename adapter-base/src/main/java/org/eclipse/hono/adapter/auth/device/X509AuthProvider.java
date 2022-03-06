@@ -17,8 +17,8 @@ import java.util.Objects;
 
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.registry.CredentialsClient;
-import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 
 import io.opentracing.Tracer;
 import io.vertx.core.Future;
@@ -69,17 +69,17 @@ public class X509AuthProvider extends CredentialsApiAuthProvider<SubjectDnCreden
 
         Objects.requireNonNull(authInfo);
         try {
-            final String tenantId = authInfo.getString(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID);
-            final String subjectDn = authInfo.getString(CredentialsConstants.FIELD_PAYLOAD_SUBJECT_DN);
-            final String authIdTemplate = authInfo.getString(CredentialsConstants.FIELD_PAYLOAD_AUTH_ID_TEMPLATE);
+            final String tenantId = authInfo.getString(RequestResponseApiConstants.FIELD_PAYLOAD_TENANT_ID);
+            final String subjectDn = authInfo.getString(RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN);
+            final String authIdTemplate = authInfo.getString(RequestResponseApiConstants.FIELD_PAYLOAD_AUTH_ID_TEMPLATE);
             if (tenantId == null || subjectDn == null) {
                 return null;
             } else {
                 final JsonObject clientContext = authInfo.copy();
                 // credentials object already contains tenant ID and subject DN, so remove them from the client context
-                clientContext.remove(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID);
-                clientContext.remove(CredentialsConstants.FIELD_PAYLOAD_SUBJECT_DN);
-                clientContext.remove(CredentialsConstants.FIELD_PAYLOAD_AUTH_ID_TEMPLATE);
+                clientContext.remove(RequestResponseApiConstants.FIELD_PAYLOAD_TENANT_ID);
+                clientContext.remove(RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN);
+                clientContext.remove(RequestResponseApiConstants.FIELD_PAYLOAD_AUTH_ID_TEMPLATE);
                 return SubjectDnCredentials.create(tenantId, subjectDn, authIdTemplate, clientContext);
             }
         } catch (final ClassCastException | IllegalArgumentException e) {

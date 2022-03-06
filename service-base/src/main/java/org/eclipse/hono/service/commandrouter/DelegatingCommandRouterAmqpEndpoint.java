@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -27,6 +27,7 @@ import org.eclipse.hono.service.amqp.AbstractDelegatingRequestResponseEndpoint;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandRouterConstants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.opentracing.Span;
@@ -140,7 +141,7 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
                 resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, error));
             }
         }
-        return finishSpanOnFutureCompletion(span, resultFuture.map(res -> CommandRouterConstants.getAmqpReply(
+        return finishSpanOnFutureCompletion(span, resultFuture.map(res -> RequestResponseApiConstants.getAmqpReply(
                 CommandRouterConstants.COMMAND_ROUTER_ENDPOINT,
                 tenantId,
                 request,
@@ -204,7 +205,7 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
                     tenantId, deviceId, adapterInstanceId, lifespan.getSeconds());
 
             resultFuture = getService().registerCommandConsumer(tenantId, deviceId, adapterInstanceId, lifespan, span)
-                    .map(res -> CommandRouterConstants.getAmqpReply(
+                    .map(res -> RequestResponseApiConstants.getAmqpReply(
                             CommandRouterConstants.COMMAND_ROUTER_ENDPOINT,
                             tenantId,
                             request,
@@ -248,7 +249,7 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
                     tenantId, deviceId, adapterInstanceId);
 
             resultFuture = getService().unregisterCommandConsumer(tenantId, deviceId, adapterInstanceId, span)
-                    .map(res -> CommandRouterConstants.getAmqpReply(
+                    .map(res -> RequestResponseApiConstants.getAmqpReply(
                             CommandRouterConstants.COMMAND_ROUTER_ENDPOINT,
                             tenantId,
                             request,
@@ -283,7 +284,7 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
                 span.log(Map.of("no_of_tenants", tenantIds.size()));
                 return getService().enableCommandRouting(tenantIds, span);
             })
-            .map(result -> CommandRouterConstants.getAmqpReply(targetAddress.getEndpoint(), null, request, result));
+            .map(result -> RequestResponseApiConstants.getAmqpReply(targetAddress.getEndpoint(), null, request, result));
 
         return finishSpanOnFutureCompletion(span, response);
     }

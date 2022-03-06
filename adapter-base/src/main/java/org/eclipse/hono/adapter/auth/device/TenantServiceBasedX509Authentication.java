@@ -35,6 +35,7 @@ import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.service.auth.X509CertificateChainValidator;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsConstants;
+import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -190,9 +191,10 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
                                                 .append(deviceCert.getIssuerX500Principal().getName(X500Principal.RFC2253))
                                                 .append("]").append(System.lineSeparator())
                                                 .append("with trust anchors:").append(System.lineSeparator());
-                                        trustAnchors.stream().forEach(ta -> {
-                                            b.append("Trust Anchor [subject-dn: ").append(ta.getCAName()).append("]");
-                                        });
+                                        trustAnchors.stream()
+                                            .forEach(ta -> b.append("Trust Anchor [subject-dn: ")
+                                                .append(ta.getCAName())
+                                                .append("]"));
                                         log.trace(b.toString());
                                     }
                                     final List<X509Certificate> chainToValidate = List.of(deviceCert);
@@ -229,7 +231,7 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
                     }
                     span.log("failed to look up tenant using trust anchor");
 
-                    if (statusCode == HttpURLConnection.HTTP_NOT_FOUND && requestedHostNames.size() > 0) {
+                    if (statusCode == HttpURLConnection.HTTP_NOT_FOUND && !requestedHostNames.isEmpty()) {
 
                         final String hostName = requestedHostNames.get(0);
                         final int idx = hostName.indexOf('.');
@@ -306,10 +308,10 @@ public final class TenantServiceBasedX509Authentication implements X509Authentic
                 tenant.getTenantId(), subjectDn, issuerDn);
 
         final JsonObject authInfo = new JsonObject()
-                .put(CredentialsConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn)
-                .put(CredentialsConstants.FIELD_PAYLOAD_TENANT_ID, tenant.getTenantId());
+                .put(RequestResponseApiConstants.FIELD_PAYLOAD_SUBJECT_DN, subjectDn)
+                .put(RequestResponseApiConstants.FIELD_PAYLOAD_TENANT_ID, tenant.getTenantId());
         tenant.getAuthIdTemplate(issuerDn)
-                .ifPresent(t -> authInfo.put(CredentialsConstants.FIELD_PAYLOAD_AUTH_ID_TEMPLATE, t));
+                .ifPresent(t -> authInfo.put(RequestResponseApiConstants.FIELD_PAYLOAD_AUTH_ID_TEMPLATE, t));
 
         if (tenant.isAutoProvisioningEnabled(issuerDn)) {
             try {

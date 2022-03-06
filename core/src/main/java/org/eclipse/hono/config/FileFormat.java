@@ -52,8 +52,8 @@ public enum FileFormat {
      * If the file format is not provided the method will try to detect it by a call to {@link #detect(String)}.
      *
      * @param format The provided format, may be {@code null}
-     * @param path The path to check, may be {@code null}, in which the result will be {@link Optional#empty()}.
-     * @return The provided or detected file format, may return {@code null} if the path is {@code null} or the format
+     * @param path The path to check, may be {@code null}.
+     * @return The provided or detected file format or {@code null}, if the path is {@code null} or the format
      *         could not be detected. Never returns {@code null} when parameter {@code format} is not {@code null}.
      */
     public static FileFormat orDetect(final FileFormat format, final String path) {

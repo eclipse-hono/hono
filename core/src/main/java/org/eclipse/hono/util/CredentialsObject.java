@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -94,7 +94,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
      */
     @JsonIgnore
     public String getDeviceId() {
-        return getProperty(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID, String.class);
+        return getProperty(RequestResponseApiConstants.FIELD_PAYLOAD_DEVICE_ID, String.class);
     }
 
     /**
@@ -105,7 +105,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
      */
     @JsonIgnore
     public CredentialsObject setDeviceId(final String deviceId) {
-        setProperty(CredentialsConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
+        setProperty(RequestResponseApiConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
         return this;
     }
 
@@ -162,7 +162,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
      */
     @JsonIgnore
     public boolean isEnabled() {
-        return getProperty(CredentialsConstants.FIELD_ENABLED, Boolean.class, true);
+        return getProperty(RequestResponseApiConstants.FIELD_ENABLED, Boolean.class, true);
     }
 
     /**
@@ -175,7 +175,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
      */
     @JsonIgnore
     public CredentialsObject setEnabled(final boolean enabled) {
-        setProperty(CredentialsConstants.FIELD_ENABLED, enabled);
+        setProperty(RequestResponseApiConstants.FIELD_ENABLED, enabled);
         return this;
     }
 
@@ -461,7 +461,7 @@ public final class CredentialsObject extends JsonBackedValueObject {
 
     private static boolean isSecretEnabled(final JsonObject secret) {
         Objects.requireNonNull(secret);
-        return getProperty(secret, CredentialsConstants.FIELD_ENABLED, Boolean.class, true);
+        return getProperty(secret, RequestResponseApiConstants.FIELD_ENABLED, Boolean.class, true);
     }
 
     /**
