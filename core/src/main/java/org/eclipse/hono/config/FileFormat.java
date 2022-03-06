@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,7 +15,6 @@ package org.eclipse.hono.config;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * File formats for using key materials.
@@ -71,11 +70,11 @@ public enum FileFormat {
     }
 
     /**
-     * Detect the file format based on the file name extension.
+     * Detects the file format based on a file name's extension.
      *
-     * @param path The relative or absolute file name, may be {@code null}
-     * @return the detected file format, may return {@code null} if the path is {@code null} or the format culd not be
-     *         detected.
+     * @param path The relative or absolute file name, may be {@code null}.
+     * @return The file format or {@code null} if the path is {@code null} or the file name's extension is
+     *         not supported.
      */
     public static FileFormat detect(final String path) {
 
