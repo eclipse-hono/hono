@@ -105,19 +105,19 @@ public class DeviceRegistryBasedCertificateVerifier implements NewAdvancedCertif
     /**
      * Validate certificate used by a device in a x509 based DTLS handshake and load device.
      *
-     * @param session The DTLS session to be negotiated with the device.
+     * @param serverNames The server names provided by the device via SNI .
      * @param certPath certificate path.
      * @param span tracing span.
      */
     private Future<AdditionalInfo> validateCertificateAndLoadDevice(
-            final DTLSSession session,
+            final ServerNames serverNames,
             final CertPath certPath,
             final Span span) {
 
         final var certificateList = certPath.getCertificates();
         final Certificate[] certChain = certificateList.toArray(new Certificate[certificateList.size()]);
         final Promise<AdditionalInfo> authResult = Promise.promise();
-        final List<String> requestedHostNames = Optional.ofNullable(session.getServerNames())
+        final List<String> requestedHostNames = Optional.ofNullable(serverNames)
             .map(names -> StreamSupport.stream(names.spliterator(), false)
                     .filter(serverName -> serverName.getType() == NameType.HOST_NAME)
                     .map(ServerName::getNameAsString)
@@ -176,7 +176,7 @@ public class DeviceRegistryBasedCertificateVerifier implements NewAdvancedCertif
                 .withTag(Tags.COMPONENT.getKey(), adapter.getTypeName())
                 .start();
 
-        validateCertificateAndLoadDevice(session, certPath, span)
+        validateCertificateAndLoadDevice(session.getServerNames(), certPath, span)
                 .map(info -> {
                     // set AdditionalInfo as customArgument here
                     return new CertificateVerificationResult(cid, certPath, info);
