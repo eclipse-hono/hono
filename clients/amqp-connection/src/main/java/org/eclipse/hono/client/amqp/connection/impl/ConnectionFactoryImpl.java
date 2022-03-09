@@ -15,6 +15,7 @@ package org.eclipse.hono.client.amqp.connection.impl;
 
 import java.util.LinkedHashSet;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -31,6 +32,7 @@ import io.netty.handler.ssl.OpenSsl;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.net.JdkSSLEngineOptions;
 import io.vertx.core.net.KeyCertOptions;
@@ -47,7 +49,7 @@ import io.vertx.proton.sasl.impl.ProtonSaslPlainImpl;
  */
 public final class ConnectionFactoryImpl implements ConnectionFactory {
 
-    private static final Logger logger = LoggerFactory.getLogger(ConnectionFactoryImpl.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConnectionFactoryImpl.class);
     private static final String PROTOCOL_AMQP = "amqp";
     private static final String PROTOCOL_AMQPS = "amqps";
 
@@ -109,44 +111,41 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
     }
 
     @Override
-    public void connect(
+    public Future<ProtonConnection> connect(
             final ProtonClientOptions options,
             final Handler<AsyncResult<ProtonConnection>> closeHandler,
-            final Handler<ProtonConnection> disconnectHandler,
-            final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
-        connect(options, null, null, closeHandler, disconnectHandler, connectionResultHandler);
+            final Handler<ProtonConnection> disconnectHandler) {
+        return connect(options, null, null, closeHandler, disconnectHandler);
     }
 
     @Override
-    public void connect(
+    public Future<ProtonConnection> connect(
             final ProtonClientOptions options,
             final String username,
             final String password,
             final Handler<AsyncResult<ProtonConnection>> closeHandler,
-            final Handler<ProtonConnection> disconnectHandler,
-            final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
-        connect(options, username, password, null, closeHandler, disconnectHandler, connectionResultHandler);
+            final Handler<ProtonConnection> disconnectHandler) {
+        return connect(options, username, password, null, closeHandler, disconnectHandler);
     }
 
     @Override
-    public void connect(
+    public Future<ProtonConnection> connect(
             final ProtonClientOptions options,
             final String username,
             final String password,
             final String containerId,
             final Handler<AsyncResult<ProtonConnection>> closeHandler,
-            final Handler<ProtonConnection> disconnectHandler,
-            final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
+            final Handler<ProtonConnection> disconnectHandler) {
 
-        Objects.requireNonNull(connectionResultHandler);
-        final ProtonClientOptions clientOptions = options != null ? options : createClientOptions();
-        final String effectiveUsername = username == null ? config.getUsername() : username;
-        final String effectivePassword = password == null ? config.getPassword() : password;
+        final Promise<ProtonConnection> connectionResultHandler = Promise.promise();
+        final ProtonClientOptions clientOptions = Optional.ofNullable(options).orElseGet(this::createClientOptions);
+        final String effectiveUsername = Optional.ofNullable(username).orElseGet(config::getUsername);
+        final String effectivePassword = Optional.ofNullable(password).orElseGet(config::getPassword);
         addOptions(clientOptions, effectiveUsername, effectivePassword);
-        final String effectiveContainerId = containerId == null ? getContainerIdDefault() : containerId;
+        final String effectiveContainerId = Optional.ofNullable(containerId).orElseGet(this::getContainerIdDefault);
 
-        final ProtonClient client = protonClient != null ? protonClient : ProtonClient.create(vertx);
-        logger.debug("connecting to AMQP 1.0 container [{}://{}:{}, role: {}]",
+        final ProtonClient client = Optional.ofNullable(protonClient).orElseGet(() -> ProtonClient.create(vertx));
+        LOGGER.debug("connecting to AMQP 1.0 container [{}://{}:{}, role: {}]",
                 clientOptions.isSsl() ? PROTOCOL_AMQPS : PROTOCOL_AMQP,
                 config.getHost(),
                 config.getPort(),
@@ -168,8 +167,16 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
                 config.getPort(),
                 effectiveUsername,
                 effectivePassword,
-                conAttempt -> handleConnectionAttemptResult(conAttempt, effectiveContainerId, connectionTimeoutTimerId,
-                        connectionTimeoutReached, clientOptions, closeHandler, disconnectHandler, connectionResultHandler));
+                conAttempt -> handleConnectionAttemptResult(
+                        conAttempt,
+                        effectiveContainerId,
+                        connectionTimeoutTimerId,
+                        connectionTimeoutReached,
+                        clientOptions,
+                        closeHandler,
+                        disconnectHandler,
+                        connectionResultHandler));
+        return connectionResultHandler.future();
     }
 
     private String getContainerIdDefault() {
@@ -178,7 +185,7 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
 
     private void failConnectionAttempt(final ProtonClientOptions clientOptions,
                                        final Handler<AsyncResult<ProtonConnection>> connectionResultHandler, final Throwable cause) {
-        logger.debug("can't connect to AMQP 1.0 container [{}://{}:{}, role: {}]: {}",
+        LOGGER.debug("can't connect to AMQP 1.0 container [{}://{}:{}, role: {}]: {}",
                 clientOptions.isSsl() ? PROTOCOL_AMQPS : PROTOCOL_AMQP,
                 config.getHost(),
                 config.getPort(),
@@ -210,7 +217,7 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
         } else {
 
             // at this point the SASL exchange has completed successfully
-            logger.debug("connected to AMQP 1.0 container [{}://{}:{}, role: {}], opening connection ...",
+            LOGGER.debug("connected to AMQP 1.0 container [{}://{}:{}, role: {}], opening connection ...",
                     clientOptions.isSsl() ? PROTOCOL_AMQPS : PROTOCOL_AMQP,
                     config.getHost(),
                     config.getPort(),
@@ -231,7 +238,7 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
                             closeAndDisconnect(downstreamConnection);
                         } else {
                             if (openCon.succeeded()) {
-                                logger.debug("connection to container [{}] at [{}://{}:{}, role: {}] open",
+                                LOGGER.debug("connection to container [{}] at [{}://{}:{}, role: {}] open",
                                         downstreamConnection.getRemoteContainer(),
                                         clientOptions.isSsl() ? PROTOCOL_AMQPS : PROTOCOL_AMQP,
                                         config.getHost(),
@@ -253,7 +260,7 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
                             vertx.cancelTimer(connectionTimeoutTimerId);
                         }
                         if (connectionTimeoutReached.get()) {
-                            logger.warn("ignoring error - connection attempt already timed out: can't open connection to container [{}] at [{}://{}:{}, role: {}]: {}",
+                            LOGGER.warn("ignoring error - connection attempt already timed out: can't open connection to container [{}] at [{}://{}:{}, role: {}]: {}",
                                     downstreamConnection.getRemoteContainer(),
                                     clientOptions.isSsl() ? PROTOCOL_AMQPS : PROTOCOL_AMQP,
                                     config.getHost(),
@@ -261,7 +268,7 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
                                     config.getServerRole(),
                                     "underlying connection was disconnected while opening AMQP connection");
                         } else {
-                            logger.warn("can't open connection to container [{}] at [{}://{}:{}, role: {}]: {}",
+                            LOGGER.warn("can't open connection to container [{}] at [{}://{}:{}, role: {}]: {}",
                                     downstreamConnection.getRemoteContainer(),
                                     clientOptions.isSsl() ? PROTOCOL_AMQPS : PROTOCOL_AMQP,
                                     config.getHost(),
@@ -284,7 +291,7 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
 
     private void handleTimedOutConnectionAttemptResult(final AsyncResult<ProtonConnection> conAttempt, final ProtonClientOptions clientOptions) {
         if (conAttempt.succeeded()) {
-            logger.debug("ignoring successful connection attempt to AMQP 1.0 container [{}://{}:{}, role: {}]: attempt already timed out",
+            LOGGER.debug("ignoring successful connection attempt to AMQP 1.0 container [{}://{}:{}, role: {}]: attempt already timed out",
                     clientOptions.isSsl() ? PROTOCOL_AMQPS : PROTOCOL_AMQP,
                     config.getHost(),
                     config.getPort(),
@@ -292,7 +299,7 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
             final ProtonConnection downstreamConnection = conAttempt.result();
             closeAndDisconnect(downstreamConnection);
         } else {
-            logger.debug("ignoring failed connection attempt to AMQP 1.0 container [{}://{}:{}, role: {}]: attempt already timed out",
+            LOGGER.debug("ignoring failed connection attempt to AMQP 1.0 container [{}://{}:{}, role: {}]: attempt already timed out",
                     clientOptions.isSsl() ? PROTOCOL_AMQPS : PROTOCOL_AMQP,
                     config.getHost(),
                     config.getPort(),
@@ -304,7 +311,7 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
     private void logTimedOutOpenHandlerResult(final AsyncResult<ProtonConnection> openConnectionResult,
             final ProtonConnection downstreamConnection, final ProtonClientOptions clientOptions) {
         if (openConnectionResult.succeeded()) {
-            logger.debug("ignoring received open frame from container [{}] at [{}://{}:{}, role: {}]: connection attempt already timed out",
+            LOGGER.debug("ignoring received open frame from container [{}] at [{}://{}:{}, role: {}]: connection attempt already timed out",
                     downstreamConnection.getRemoteContainer(),
                     clientOptions.isSsl() ? PROTOCOL_AMQPS : PROTOCOL_AMQP,
                     config.getHost(),
@@ -313,7 +320,7 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
         } else {
             final ErrorCondition error = downstreamConnection.getRemoteCondition();
             if (error == null) {
-                logger.warn("ignoring failure to open connection to container [{}] at [{}://{}:{}, role: {}]: attempt already timed out",
+                LOGGER.warn("ignoring failure to open connection to container [{}] at [{}://{}:{}, role: {}]: attempt already timed out",
                         downstreamConnection.getRemoteContainer(),
                         clientOptions.isSsl() ? PROTOCOL_AMQPS : PROTOCOL_AMQP,
                         config.getHost(),
@@ -321,7 +328,7 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
                         config.getServerRole(),
                         openConnectionResult.cause());
             } else {
-                logger.warn("ignoring failure to open connection to container [{}] at [{}://{}:{}, role: {}]: attempt already timed out; error: {} -{}",
+                LOGGER.warn("ignoring failure to open connection to container [{}] at [{}://{}:{}, role: {}]: attempt already timed out; error: {} -{}",
                         downstreamConnection.getRemoteContainer(),
                         clientOptions.isSsl() ? PROTOCOL_AMQPS : PROTOCOL_AMQP,
                         config.getHost(),
@@ -337,7 +344,7 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
             final ProtonConnection downstreamConnection, final ProtonClientOptions clientOptions) {
         final ErrorCondition error = downstreamConnection.getRemoteCondition();
         if (error == null) {
-            logger.warn("can't open connection to container [{}] at [{}://{}:{}, role: {}]",
+            LOGGER.warn("can't open connection to container [{}] at [{}://{}:{}, role: {}]",
                     downstreamConnection.getRemoteContainer(),
                     clientOptions.isSsl() ? PROTOCOL_AMQPS : PROTOCOL_AMQP,
                     config.getHost(),
@@ -345,7 +352,7 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
                     config.getServerRole(),
                     openCon.cause());
         } else {
-            logger.warn("can't open connection to container [{}] at [{}://{}:{}, role: {}]: {} -{}",
+            LOGGER.warn("can't open connection to container [{}] at [{}://{}:{}, role: {}]: {} -{}",
                     downstreamConnection.getRemoteContainer(),
                     clientOptions.isSsl() ? PROTOCOL_AMQPS : PROTOCOL_AMQP,
                     config.getHost(),
@@ -385,15 +392,15 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
             final boolean supportsKeyManagerFactory =  OpenSsl.supportsKeyManagerFactory();
             final boolean useOpenSsl = isOpenSslAvailable && supportsKeyManagerFactory;
 
-            logger.debug("OpenSSL [available: {}, supports KeyManagerFactory: {}]",
+            LOGGER.debug("OpenSSL [available: {}, supports KeyManagerFactory: {}]",
                     isOpenSslAvailable, supportsKeyManagerFactory);
 
             if (useOpenSsl) {
-                logger.debug("using OpenSSL [version: {}] instead of JVM's default SSL engine",
+                LOGGER.debug("using OpenSSL [version: {}] instead of JVM's default SSL engine",
                         OpenSsl.versionString());
                 clientOptions.setOpenSslEngineOptions(new OpenSSLEngineOptions());
             } else {
-                logger.debug("using JVM's default SSL engine");
+                LOGGER.debug("using JVM's default SSL engine");
                 clientOptions.setJdkSslEngineOptions(new JdkSSLEngineOptions());
             }
 
@@ -406,14 +413,14 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
             // the list's order
             final Set<String> protocols = new LinkedHashSet<>(config.getSecureProtocols().size());
             config.getSecureProtocols().forEach(p -> {
-                logger.debug("enabling secure protocol [{}]", p);
+                LOGGER.debug("enabling secure protocol [{}]", p);
                 protocols.add(p);
             });
             clientOptions.setEnabledSecureTransportProtocols(protocols);
 
             config.getSupportedCipherSuites()
                 .forEach(suiteName -> {
-                    logger.debug("adding supported cipher suite [{}]", suiteName);
+                    LOGGER.debug("adding supported cipher suite [{}]", suiteName);
                     clientOptions.addEnabledCipherSuite(suiteName);
                 });
         }

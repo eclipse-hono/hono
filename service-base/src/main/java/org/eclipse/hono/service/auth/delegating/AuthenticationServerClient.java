@@ -97,14 +97,13 @@ public final class AuthenticationServerClient {
         options.setReconnectAttempts(3).setReconnectInterval(50);
         options.addEnabledSaslMechanism(AuthenticationConstants.MECHANISM_PLAIN);
 
-        final Promise<ProtonConnection> connectAttempt = Promise.promise();
-        factory.connect(options, authcid, password, null, null, connectAttempt);
+        final var connectAttempt = factory.connect(options, authcid, password, null, null);
 
-        return connectAttempt.future()
+        return connectAttempt
                 .compose(openCon -> getToken(openCon))
                 .recover(t -> Future.failedFuture(mapConnectionFailureToServiceInvocationException(t)))
                 .onComplete(s -> {
-                    Optional.ofNullable(connectAttempt.future().result())
+                    Optional.ofNullable(connectAttempt.result())
                         .ifPresent(con -> {
                             LOG.debug("closing connection to Authentication service");
                             con.close();

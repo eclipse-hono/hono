@@ -51,44 +51,41 @@ public class DisconnectHandlerProvidingConnectionFactory implements ConnectionFa
     }
 
     @Override
-    public void connect(
+    public Future<ProtonConnection> connect(
             final ProtonClientOptions options,
             final Handler<AsyncResult<ProtonConnection>> closeHandler,
-            final Handler<ProtonConnection> disconnectHandler,
-            final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
-        connect(options, null, null, closeHandler, disconnectHandler, connectionResultHandler);
+            final Handler<ProtonConnection> disconnectHandler) {
+        return connect(options, null, null, closeHandler, disconnectHandler);
     }
 
     @Override
-    public void connect(
+    public Future<ProtonConnection> connect(
             final ProtonClientOptions options,
             final String username,
             final String password,
             final Handler<AsyncResult<ProtonConnection>> closeHandler,
-            final Handler<ProtonConnection> disconnectHandler,
-            final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
-        connect(options, null, null, null, closeHandler, disconnectHandler, connectionResultHandler);
+            final Handler<ProtonConnection> disconnectHandler) {
+        return connect(options, null, null, null, closeHandler, disconnectHandler);
     }
 
     @Override
-    public void connect(
+    public Future<ProtonConnection> connect(
             final ProtonClientOptions options,
             final String username,
             final String password,
             final String containerId,
             final Handler<AsyncResult<ProtonConnection>> closeHandler,
-            final Handler<ProtonConnection> disconnectHandler,
-            final Handler<AsyncResult<ProtonConnection>> connectionResultHandler) {
+            final Handler<ProtonConnection> disconnectHandler) {
 
         connectInvocations.incrementAndGet();
         this.closeHandler = closeHandler;
         this.disconnectHandler = disconnectHandler;
         if (expectedFailingConnectionAttempts.getCount() > 0) {
             expectedFailingConnectionAttempts.countDown();
-            connectionResultHandler.handle(Future.failedFuture(causeForFailure));
+            return Future.failedFuture(causeForFailure);
         } else {
             expectedSucceedingConnectionAttempts.countDown();
-            connectionResultHandler.handle(Future.succeededFuture(connectionToCreate));
+            return Future.succeededFuture(connectionToCreate);
         }
     }
 

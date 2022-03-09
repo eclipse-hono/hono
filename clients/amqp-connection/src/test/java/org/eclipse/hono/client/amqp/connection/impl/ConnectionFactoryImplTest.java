@@ -31,7 +31,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.client.amqp.connection.ConnectTimeoutException;
-import org.eclipse.hono.client.amqp.connection.impl.ConnectionFactoryImpl;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,7 +42,6 @@ import org.mockito.Mockito;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
@@ -57,6 +55,7 @@ import io.vertx.proton.ProtonConnection;
  *
  */
 @ExtendWith(VertxExtension.class)
+@Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class ConnectionFactoryImplTest {
 
     private static final String PREFIX_KEY_PATH = "target/certs/";
@@ -83,7 +82,6 @@ public class ConnectionFactoryImplTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
     public void testConnectInvokesHandlerOnFailureToConnect(final VertxTestContext ctx) {
 
         // GIVEN a factory configured to connect to a non-existing server
@@ -91,11 +89,12 @@ public class ConnectionFactoryImplTest {
         final ConnectionFactoryImpl factory = new ConnectionFactoryImpl(vertx, props);
 
         // WHEN trying to connect to the server
-        factory.connect(null, null, null, ctx.failing(t -> {
-            // THEN the connection attempt fails but does not time out
-            ctx.verify(() -> assertFalse(t instanceof ConnectTimeoutException));
-            ctx.completeNow();
-        }));
+        factory.connect(null, null, null)
+            .onComplete(ctx.failing(t -> {
+                // THEN the connection attempt fails but does not time out
+                ctx.verify(() -> assertFalse(t instanceof ConnectTimeoutException));
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -104,8 +103,8 @@ public class ConnectionFactoryImplTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
     public void testConnectInvokesHandlerOnConnectTimeout(final VertxTestContext ctx) {
+
         final long connectTimeout = 200L;
 
         // GIVEN a factory configured to connect to a server with a mocked ProtonClient that won't actually try to connect
@@ -116,16 +115,17 @@ public class ConnectionFactoryImplTest {
             return 1L;
         });
 
-        final ConnectionFactoryImpl factory = new ConnectionFactoryImpl(vertx, props);
         final ProtonClient protonClientMock = mock(ProtonClient.class);
+        final ConnectionFactoryImpl factory = new ConnectionFactoryImpl(vertx, props);
         factory.setProtonClient(protonClientMock);
 
         // WHEN trying to connect to the server
-        factory.connect(null, null, null, ctx.failing(t -> {
-            // THEN the connection attempt fails with a TimeoutException and the given handler is invoked
-            ctx.verify(() -> assertTrue(t instanceof ConnectTimeoutException));
-            ctx.completeNow();
-        }));
+        factory.connect(null, null, null)
+            .onComplete(ctx.failing(t -> {
+                // THEN the connection attempt fails with a TimeoutException and the given handler is invoked
+                ctx.verify(() -> assertTrue(t instanceof ConnectTimeoutException));
+                ctx.completeNow();
+            }));
         timeoutHandlerRef.get().handle(1L);
     }
 
@@ -136,7 +136,6 @@ public class ConnectionFactoryImplTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
     public void testConnectIgnoresSuccessfulOpenAfterTimeout(final VertxTestContext ctx) {
         final long connectTimeout = 200L;
 
@@ -155,15 +154,22 @@ public class ConnectionFactoryImplTest {
             final Handler<AsyncResult<ProtonConnection>> resultHandler = invocation.getArgument(5);
             resultHandler.handle(Future.succeededFuture(protonConnectionMock));
             return null;
-        }).when(protonClientMock).connect(any(ProtonClientOptions.class), any(), anyInt(), any(), any(), VertxMockSupport.anyHandler());
+        }).when(protonClientMock).connect(
+                any(ProtonClientOptions.class),
+                any(),
+                anyInt(),
+                any(),
+                any(),
+                VertxMockSupport.anyHandler());
         factory.setProtonClient(protonClientMock);
 
         // WHEN trying to connect to the server
-        factory.connect(null, null, null, ctx.failing(t -> {
-            // THEN the connection attempt fails with a TimeoutException and the given handler is invoked
-            ctx.verify(() -> assertTrue(t instanceof ConnectTimeoutException));
-            ctx.completeNow();
-        }));
+        factory.connect(null, null, null)
+            .onComplete(ctx.failing(t -> {
+                // THEN the connection attempt fails with a TimeoutException and the given handler is invoked
+                ctx.verify(() -> assertTrue(t instanceof ConnectTimeoutException));
+                ctx.completeNow();
+            }));
         final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> openHandlerCaptor = VertxMockSupport.argumentCaptorHandler();
         verify(protonConnectionMock).openHandler(openHandlerCaptor.capture());
         // trigger timeout
@@ -181,7 +187,6 @@ public class ConnectionFactoryImplTest {
      * @param ctx The vert.x test context.
      */
     @Test
-    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
     public void testConnectIgnoresFailedOpenAfterTimeout(final VertxTestContext ctx) {
         final long connectTimeout = 200L;
 
@@ -200,21 +205,29 @@ public class ConnectionFactoryImplTest {
             final Handler<AsyncResult<ProtonConnection>> resultHandler = invocation.getArgument(5);
             resultHandler.handle(Future.succeededFuture(protonConnectionMock));
             return null;
-        }).when(protonClientMock).connect(any(ProtonClientOptions.class), any(), anyInt(), any(), any(), VertxMockSupport.anyHandler());
+        }).when(protonClientMock).connect(
+                any(ProtonClientOptions.class),
+                any(),
+                anyInt(),
+                any(),
+                any(),
+                VertxMockSupport.anyHandler());
         factory.setProtonClient(protonClientMock);
 
         // WHEN trying to connect to the server
-        factory.connect(null, null, null, ctx.failing(t -> {
-            // THEN the connection attempt fails with a TimeoutException and the given handler is invoked
-            ctx.verify(() -> assertTrue(t instanceof ConnectTimeoutException));
-            ctx.completeNow();
-        }));
+        factory.connect(null, null, null)
+            .onComplete(ctx.failing(t -> {
+                // THEN the connection attempt fails with a TimeoutException and the given handler is invoked
+                ctx.verify(() -> assertTrue(t instanceof ConnectTimeoutException));
+                ctx.completeNow();
+            }));
         final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> openHandlerCaptor = VertxMockSupport.argumentCaptorHandler();
         verify(protonConnectionMock).openHandler(openHandlerCaptor.capture());
         // trigger timeout
         timeoutHandlerRef.get().handle(1L);
         // call openHandler - that will be too late for the connect invocation to succeed
-        openHandlerCaptor.getValue().handle(Future.failedFuture("amqp:resource-limit-exceeded -connection disallowed by local policy"));
+        openHandlerCaptor.getValue().handle(Future.failedFuture(
+                "amqp:resource-limit-exceeded -connection disallowed by local policy"));
         // and the connection will be disconnected
         verify(protonConnectionMock).disconnect();
     }
@@ -233,20 +246,24 @@ public class ConnectionFactoryImplTest {
             final Handler<AsyncResult<ProtonConnection>> resultHandler = invocation.getArgument(5);
             resultHandler.handle(Future.succeededFuture(protonConnectionMock));
             return null;
-        }).when(protonClientMock).connect(any(ProtonClientOptions.class), any(), anyInt(), any(), any(), VertxMockSupport.anyHandler());
+        }).when(protonClientMock).connect(
+                any(ProtonClientOptions.class),
+                any(),
+                anyInt(),
+                any(),
+                any(),
+                VertxMockSupport.anyHandler());
         factory.setProtonClient(protonClientMock);
 
         // WHEN trying to connect to the server
-        final Promise<ProtonConnection> resultHandler = Promise.promise();
-
-        factory.connect(new ProtonClientOptions(), null, null, resultHandler);
+        final var connectionResult = factory.connect(new ProtonClientOptions(), null, null);
 
         // THEN the disconnect handler gets called which calls the given result handler with a failure
         final ArgumentCaptor<Handler<ProtonConnection>> disconnectHandlerCaptor = VertxMockSupport.argumentCaptorHandler();
         verify(protonConnectionMock).disconnectHandler(disconnectHandlerCaptor.capture());
         disconnectHandlerCaptor.getValue().handle(protonConnectionMock);
         // as we call handler ourselves handling is synchronous here
-        assertTrue(resultHandler.future().failed(), "Connection result handler was not failed");
+        assertTrue(connectionResult.failed(), "Connection result handler was not failed");
     }
 
     /**
@@ -263,12 +280,18 @@ public class ConnectionFactoryImplTest {
         factory.setProtonClient(client);
 
         // WHEN connecting to the server using empty strings for username and password
-        factory.connect(options, "", "", null, null, c -> {});
+        factory.connect(options, "", "", null, null);
 
         // THEN the factory does not enable the SASL_PLAIN mechanism when establishing
         // the connection
         final ArgumentCaptor<ProtonClientOptions> optionsCaptor = ArgumentCaptor.forClass(ProtonClientOptions.class);
-        verify(client).connect(optionsCaptor.capture(), anyString(), anyInt(), eq(""), eq(""), VertxMockSupport.anyHandler());
+        verify(client).connect(
+                optionsCaptor.capture(),
+                anyString(),
+                anyInt(),
+                eq(""),
+                eq(""),
+                VertxMockSupport.anyHandler());
         assertFalse(optionsCaptor.getValue().getEnabledSaslMechanisms().contains("PLAIN"));
     }
 
@@ -286,11 +309,17 @@ public class ConnectionFactoryImplTest {
         factory.setProtonClient(client);
 
         // WHEN connecting to the server using non-empty strings for username and password
-        factory.connect(options, "user", "pw", null, null, c -> {});
+        factory.connect(options, "user", "pw", null, null);
 
         // THEN the factory uses SASL_PLAIN when establishing the connection
         final ArgumentCaptor<ProtonClientOptions> optionsCaptor = ArgumentCaptor.forClass(ProtonClientOptions.class);
-        verify(client).connect(optionsCaptor.capture(), anyString(), anyInt(), eq("user"), eq("pw"), VertxMockSupport.anyHandler());
+        verify(client).connect(
+                optionsCaptor.capture(),
+                anyString(),
+                anyInt(),
+                eq("user"),
+                eq("pw"),
+                VertxMockSupport.anyHandler());
         assertTrue(optionsCaptor.getValue().getEnabledSaslMechanisms().contains("PLAIN"));
     }
 
@@ -310,11 +339,17 @@ public class ConnectionFactoryImplTest {
         factory.setProtonClient(client);
 
         // WHEN connecting to the server
-        factory.connect(null, null, null, c -> {});
+        factory.connect(null, null, null);
 
         // THEN the factory uses TLS when establishing the connection
         final ArgumentCaptor<ProtonClientOptions> optionsCaptor = ArgumentCaptor.forClass(ProtonClientOptions.class);
-        verify(client).connect(optionsCaptor.capture(), eq("remote.host"), anyInt(), any(), any(), VertxMockSupport.anyHandler());
+        verify(client).connect(
+                optionsCaptor.capture(),
+                eq("remote.host"),
+                anyInt(),
+                any(),
+                any(),
+                VertxMockSupport.anyHandler());
         assertTrue(optionsCaptor.getValue().isSsl());
     }
 
@@ -334,11 +369,17 @@ public class ConnectionFactoryImplTest {
         factory.setProtonClient(client);
 
         // WHEN connecting to the server
-        factory.connect(null, null, null, c -> {});
+        factory.connect(null, null, null);
 
         // THEN the factory uses TLS when establishing the connection
         final ArgumentCaptor<ProtonClientOptions> optionsCaptor = ArgumentCaptor.forClass(ProtonClientOptions.class);
-        verify(client).connect(optionsCaptor.capture(), eq("remote.host"), anyInt(), any(), any(), VertxMockSupport.anyHandler());
+        verify(client).connect(
+                optionsCaptor.capture(),
+                eq("remote.host"),
+                anyInt(),
+                any(),
+                any(),
+                VertxMockSupport.anyHandler());
         assertTrue(optionsCaptor.getValue().isSsl());
     }
 
@@ -357,11 +398,17 @@ public class ConnectionFactoryImplTest {
         factory.setProtonClient(client);
 
         // WHEN connecting to the server
-        factory.connect(null, null, null, c -> {});
+        factory.connect(null, null, null);
 
         // THEN the factory sets the max-message-size when establishing the connection
         final ArgumentCaptor<ProtonClientOptions> optionsCaptor = ArgumentCaptor.forClass(ProtonClientOptions.class);
-        verify(client).connect(optionsCaptor.capture(), eq("remote.host"), anyInt(), any(), any(), VertxMockSupport.anyHandler());
+        verify(client).connect(
+                optionsCaptor.capture(),
+                eq("remote.host"),
+                anyInt(),
+                any(),
+                any(),
+                VertxMockSupport.anyHandler());
         assertThat(optionsCaptor.getValue().getMaxFrameSize()).isEqualTo(64 * 1024);
     }
 
@@ -381,11 +428,17 @@ public class ConnectionFactoryImplTest {
         factory.setProtonClient(client);
 
         // WHEN connecting to the server
-        factory.connect(null, null, null, c -> {});
+        factory.connect(null, null, null);
 
         // THEN the factory uses TLS when establishing the connection
         final ArgumentCaptor<ProtonClientOptions> optionsCaptor = ArgumentCaptor.forClass(ProtonClientOptions.class);
-        verify(client).connect(optionsCaptor.capture(), eq("remote.host"), anyInt(), any(), any(), VertxMockSupport.anyHandler());
+        verify(client).connect(
+                optionsCaptor.capture(),
+                eq("remote.host"),
+                anyInt(),
+                any(),
+                any(),
+                VertxMockSupport.anyHandler());
         assertTrue(optionsCaptor.getValue().isSsl());
         assertThat(optionsCaptor.getValue().getEnabledCipherSuites())
             .containsExactly("TLS_PSK_WITH_AES_256_CCM_8", "TLS_ECDHE_ECDSA_WITH_AES_256_CCM_8");

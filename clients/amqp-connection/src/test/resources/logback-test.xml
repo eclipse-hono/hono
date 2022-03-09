@@ -29,7 +29,6 @@
   <logger name="org.eclipse.hono.auth" level="WARN"/>
   <logger name="org.eclipse.hono.client" level="WARN"/>
   <logger name="org.eclipse.hono.config" level="WARN"/>
-  <logger name="org.eclipse.hono.connection" level="WARN"/>
   <logger name="org.eclipse.hono.util" level="WARN"/>
 
 </configuration>

@@ -82,30 +82,12 @@ import io.vertx.proton.sasl.SaslSystemException;
  * invocation of any of the connect methods will then use the same approach as
  * described above to determine the Context to use.
  */
-public class HonoConnectionImpl implements HonoConnection {
+public final class HonoConnectionImpl implements HonoConnection {
 
-    /**
-     * A logger to be shared with subclasses.
-     */
-    protected final Logger log = LoggerFactory.getLogger(HonoConnectionImpl.class);
-    /**
-     * The configuration properties for this client.
-     */
-    protected final ClientConfigProperties clientConfigProperties;
-    /**
-     * The vert.x instance to run on.
-     */
-    protected final Vertx vertx;
+    private static final Logger LOG = LoggerFactory.getLogger(HonoConnectionImpl.class);
 
-    /**
-     * The AMQP connection to the peer.
-     */
-    protected ProtonConnection connection;
-    /**
-     * The vert.x Context to use for interacting with the peer.
-     */
-    protected volatile Context context;
-
+    private final ClientConfigProperties clientConfigProperties;
+    private final Vertx vertx;
     private final List<DisconnectListener<HonoConnection>> disconnectListeners = new ArrayList<>();
     private final List<DisconnectListener<HonoConnection>> oneTimeDisconnectListeners = Collections.synchronizedList(new ArrayList<>());
     private final List<ReconnectListener<HonoConnection>> reconnectListeners = new ArrayList<>();
@@ -114,14 +96,21 @@ public class HonoConnectionImpl implements HonoConnection {
     private final ConnectionFactory connectionFactory;
     private final Object connectionLock = new Object();
     private final AtomicReference<ConnectionAttempt> currentConnectionAttempt = new AtomicReference<>();
-
     private final String containerId;
     private final DeferredConnectionCheckHandler deferredConnectionCheckHandler;
 
+    /**
+     * The vert.x Context to use for interacting with the peer.
+     */
+    private Context context;
     private ProtonClientOptions lastUsedClientOptions;
     private List<Symbol> offeredCapabilities = Collections.emptyList();
     private Tracer tracer = NoopTracerFactory.create();
     private ProtonSession session;
+    /**
+     * The AMQP connection to the peer.
+     */
+    private ProtonConnection connection;
 
     /**
      * Creates a new client for a set of configuration properties.
@@ -134,22 +123,26 @@ public class HonoConnectionImpl implements HonoConnection {
      * @throws NullPointerException if vertx or clientConfigProperties is {@code null}.
      */
     public HonoConnectionImpl(final Vertx vertx, final ClientConfigProperties clientConfigProperties) {
-        this(vertx, null, clientConfigProperties);
+        this(vertx, clientConfigProperties, null);
     }
 
     /**
      * Creates a new client for a set of configuration properties.
-     * <p>
-     * <em>NB</em> Make sure to always use the same set of configuration properties for both the connection factory as
-     * well as the Hono client in order to prevent unexpected behavior.
      *
-     * @param vertx The Vert.x instance to execute the client on.
-     * @param connectionFactory The factory to use for creating an AMQP connection to the Hono server.
-     * @param clientConfigProperties The configuration properties to use.
-     * @throws NullPointerException if vertx or clientConfigProperties is {@code null}.
+     * @param vertx The Vert.x instance to run the connection on.
+     * @param clientConfigProperties The configuration properties to use. This constructor creates and then uses a copy
+     *                               of the passed in properties object.
+     *                               <p>
+     *                               <em>NB</em> When passing in a connection factory, make sure that the connection
+     *                               factory is using the client configuration passed in via this parameter.
+     * @param connectionFactory The factory to use for creating an AMQP connection to the peer or {@code null} in order
+     *                          to use the default connection factory based on the given client configuration.
+     * @throws NullPointerException if vertx or clientConfigProperties are {@code null}.
      */
-    public HonoConnectionImpl(final Vertx vertx, final ConnectionFactory connectionFactory,
-            final ClientConfigProperties clientConfigProperties) {
+    public HonoConnectionImpl(
+            final Vertx vertx,
+            final ClientConfigProperties clientConfigProperties,
+            final ConnectionFactory connectionFactory) {
 
         Objects.requireNonNull(vertx);
         Objects.requireNonNull(clientConfigProperties);
@@ -163,51 +156,51 @@ public class HonoConnectionImpl implements HonoConnection {
         }
         this.containerId = ConnectionFactory.createContainerId(clientConfigProperties.getName(),
                 clientConfigProperties.getServerRole(), UUID.randomUUID());
-        this.clientConfigProperties = clientConfigProperties;
+        this.clientConfigProperties = new ClientConfigProperties(clientConfigProperties);
     }
 
     @Override
-    public final Vertx getVertx() {
+    public Vertx getVertx() {
         return vertx;
     }
 
     /**
-     * Sets the OpenTracing {@code Tracer} to use for tracing messages
-     * published by devices across Hono's components.
+     * Sets the OpenTracing {@code Tracer} to associate with this connection.
      * <p>
      * If not set explicitly, the {@code NoopTracer} from OpenTracing will
      * be used.
      *
      * @param opentracingTracer The tracer.
+     * @throws NullPointerException if tracer is {@code null}.
      */
-    public final void setTracer(final Tracer opentracingTracer) {
-        log.info("using OpenTracing implementation [{}]", opentracingTracer.getClass().getName());
-        this.tracer = Objects.requireNonNull(opentracingTracer);
+    public void setTracer(final Tracer opentracingTracer) {
+        Objects.requireNonNull(opentracingTracer);
+        LOG.info("using OpenTracing implementation [{}]", opentracingTracer.getClass().getName());
+        this.tracer = opentracingTracer;
     }
 
     /**
-     * Gets the OpenTracing {@code Tracer} to use for tracing the processing
-     * of messages received from or sent to devices.
+     * Gets the OpenTracing {@code Tracer} that is associated with this connection.
      *
      * @return The tracer.
      */
     @Override
-    public final Tracer getTracer() {
+    public Tracer getTracer() {
         return tracer;
     }
 
     @Override
-    public final ClientConfigProperties getConfig() {
+    public ClientConfigProperties getConfig() {
         return clientConfigProperties;
     }
 
     @Override
-    public final void addDisconnectListener(final DisconnectListener<HonoConnection> listener) {
+    public void addDisconnectListener(final DisconnectListener<HonoConnection> listener) {
         disconnectListeners.add(listener);
     }
 
     @Override
-    public final void addReconnectListener(final ReconnectListener<HonoConnection> listener) {
+    public void addReconnectListener(final ReconnectListener<HonoConnection> listener) {
         reconnectListeners.add(listener);
     }
 
@@ -224,7 +217,7 @@ public class HonoConnectionImpl implements HonoConnection {
      *         property is {@code null}.
      */
     @Override
-    public final <T> Future<T> executeOnContext(final Handler<Promise<T>> codeToRun) {
+    public <T> Future<T> executeOnContext(final Handler<Promise<T>> codeToRun) {
 
         if (context == null) {
             // this means that the connection to the peer is not established (yet) and no (re)connect attempt is in progress
@@ -235,7 +228,7 @@ public class HonoConnectionImpl implements HonoConnection {
     }
 
     @Override
-    public final Future<Void> isConnected() {
+    public Future<Void> isConnected() {
         return executeOnContext(this::checkConnected);
     }
 
@@ -244,7 +237,7 @@ public class HonoConnectionImpl implements HonoConnection {
      *
      * @return A succeeded future if this client is connected.
      */
-    protected final Future<Void> checkConnected() {
+    private Future<Void> checkConnected() {
         final Promise<Void> result = Promise.promise();
         checkConnected(result);
         return result.future();
@@ -260,7 +253,7 @@ public class HonoConnectionImpl implements HonoConnection {
     }
 
     @Override
-    public final Future<Void> isConnected(final long waitForCurrentConnectAttemptTimeout) {
+    public Future<Void> isConnected(final long waitForCurrentConnectAttemptTimeout) {
         return executeOnContext(result -> checkConnected(result, waitForCurrentConnectAttemptTimeout));
     }
 
@@ -269,7 +262,7 @@ public class HonoConnectionImpl implements HonoConnection {
             resultHandler.handle(Future.succeededFuture());
         } else if (waitForCurrentConnectAttemptTimeout > 0 && deferredConnectionCheckHandler.isConnectionAttemptInProgress()) {
             // connect attempt in progress - let its completion complete the resultHandler here
-            log.debug("connection attempt to server [{}:{}] in progress, connection check will be completed with its result",
+            LOG.debug("connection attempt to server [{}:{}] in progress, connection check will be completed with its result",
                     connectionFactory.getHost(), connectionFactory.getPort());
             final boolean added = deferredConnectionCheckHandler.addConnectionCheck(resultHandler,
                     waitForCurrentConnectAttemptTimeout);
@@ -297,7 +290,7 @@ public class HonoConnectionImpl implements HonoConnection {
     }
 
     @Override
-    public final boolean isShutdown() {
+    public boolean isShutdown() {
         return shuttingDown.get();
     }
 
@@ -307,7 +300,7 @@ public class HonoConnectionImpl implements HonoConnection {
      * @param connection The connection to use.
      * @param session The session to use for links created on the connection.
      */
-    void setConnection(final ProtonConnection connection, final ProtonSession session) {
+    private void setConnection(final ProtonConnection connection, final ProtonSession session) {
         synchronized (connectionLock) {
             this.connection = connection;
             this.session = session;
@@ -327,14 +320,14 @@ public class HonoConnectionImpl implements HonoConnection {
      *
      * @return The connection.
      */
-    protected final ProtonConnection getConnection() {
+    protected ProtonConnection getConnection() {
         synchronized (connectionLock) {
             return this.connection;
         }
     }
 
     @Override
-    public final boolean supportsCapability(final Symbol capability) {
+    public boolean supportsCapability(final Symbol capability) {
         if (capability == null) {
             return false;
         } else {
@@ -345,12 +338,12 @@ public class HonoConnectionImpl implements HonoConnection {
     }
 
     @Override
-    public final Future<HonoConnection> connect() {
+    public Future<HonoConnection> connect() {
         return connect(null);
     }
 
     @Override
-    public final Future<HonoConnection> connect(final ProtonClientOptions options) {
+    public Future<HonoConnection> connect(final ProtonClientOptions options) {
         final Promise<HonoConnection> result = Promise.promise();
         connect(options, result, false);
         return result.future();
@@ -367,14 +360,14 @@ public class HonoConnectionImpl implements HonoConnection {
             return;
         }
         context = vertx.getOrCreateContext();
-        log.trace("running on vert.x context [event-loop context: {}]", context.isEventLoopContext());
+        LOG.trace("running on vert.x context [event-loop context: {}]", context.isEventLoopContext());
 
         // context cannot be null thus it is safe to
         // ignore the Future returned by executeOrRunContext
         executeOnContext(ignore -> {
 
             if (isConnectedInternal()) {
-                log.debug("already connected to server [{}:{}, role: {}]",
+                LOG.debug("already connected to server [{}:{}, role: {}]",
                         connectionFactory.getHost(),
                         connectionFactory.getPort(),
                         connectionFactory.getServerRole());
@@ -384,7 +377,7 @@ public class HonoConnectionImpl implements HonoConnection {
                 if (connectionAttempt.start(isReconnect)) {
                     lastUsedClientOptions = options;
                 } else {
-                    log.debug("already trying to connect to server ...");
+                    LOG.debug("already trying to connect to server ...");
                     connectionHandler.handle(Future.failedFuture(
                             new ClientErrorException(HttpURLConnection.HTTP_CONFLICT, "already connecting to server")));
                 }
@@ -395,13 +388,13 @@ public class HonoConnectionImpl implements HonoConnection {
     private void onRemoteClose(final AsyncResult<ProtonConnection> remoteClose) {
 
         if (remoteClose.failed()) {
-            log.info("remote server [{}:{}, role: {}] closed connection: {}",
+            LOG.info("remote server [{}:{}, role: {}] closed connection: {}",
                     connectionFactory.getHost(),
                     connectionFactory.getPort(),
                     connectionFactory.getServerRole(),
                     remoteClose.cause().getMessage());
         } else {
-            log.info("remote server [{}:{}, role: {}] closed connection",
+            LOG.info("remote server [{}:{}, role: {}] closed connection",
                     connectionFactory.getHost(),
                     connectionFactory.getPort(),
                     connectionFactory.getServerRole());
@@ -414,9 +407,9 @@ public class HonoConnectionImpl implements HonoConnection {
     private void onRemoteDisconnect(final ProtonConnection con) {
 
         if (con != connection) {
-            log.warn("cannot handle failure of unknown connection");
+            LOG.warn("cannot handle failure of unknown connection");
         } else {
-            log.debug("lost connection to server [{}:{}, role: {}]",
+            LOG.debug("lost connection to server [{}:{}, role: {}]",
                     connectionFactory.getHost(),
                     connectionFactory.getPort(),
                     connectionFactory.getServerRole());
@@ -447,9 +440,9 @@ public class HonoConnectionImpl implements HonoConnection {
     }
 
     /**
-     * Reset all connection and link based state.
+     * Resets all connection and link based state.
      */
-    protected void clearState() {
+    private void clearState() {
         setConnection(null, null);
     }
 
@@ -467,7 +460,7 @@ public class HonoConnectionImpl implements HonoConnection {
         try {
             listener.onDisconnect(this);
         } catch (final Exception ex) {
-            log.warn("error executing disconnectHandler", ex);
+            LOG.warn("error executing disconnectHandler", ex);
         }
     }
 
@@ -477,7 +470,7 @@ public class HonoConnectionImpl implements HonoConnection {
      * @param reconnectAttempt The reconnect attempt.
      * @return The delay in milliseconds.
      */
-    final long getReconnectMaxDelay(final int reconnectAttempt) {
+    long getReconnectMaxDelay(final int reconnectAttempt) {
         if (reconnectAttempt <= 0) {
             return 0L;
         } else if (reconnectAttempt <= 31) {
@@ -538,7 +531,7 @@ public class HonoConnectionImpl implements HonoConnection {
         if (connection == null) {
             throw new IllegalStateException("no connection to create session for");
         } else {
-            log.debug("establishing AMQP session with server [{}:{}, role: {}]",
+            LOG.debug("establishing AMQP session with server [{}:{}, role: {}]",
                     connectionFactory.getHost(),
                     connectionFactory.getPort(),
                     connectionFactory.getServerRole());
@@ -572,7 +565,7 @@ public class HonoConnectionImpl implements HonoConnection {
      * @throws NullPointerException if qos is {@code null}.
      */
     @Override
-    public final Future<ProtonSender> createSender(
+    public Future<ProtonSender> createSender(
             final String targetAddress,
             final ProtonQoS qos,
             final Handler<String> closeHook) {
@@ -595,7 +588,7 @@ public class HonoConnectionImpl implements HonoConnection {
                 sender.setQoS(qos);
                 sender.setAutoSettle(true);
                 final DisconnectListener<HonoConnection> disconnectBeforeOpenListener = (con) -> {
-                    log.debug("opening sender [{}] failed: got disconnected", targetAddress);
+                    LOG.debug("opening sender [{}] failed: got disconnected", targetAddress);
                     senderPromise.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected"));
                 };
                 oneTimeDisconnectListeners.add(disconnectBeforeOpenListener);
@@ -605,23 +598,23 @@ public class HonoConnectionImpl implements HonoConnection {
 
                     // the result future may have already been completed here in case of a link establishment timeout
                     if (senderPromise.future().isComplete()) {
-                        log.debug("ignoring server response for opening sender [{}]: sender creation already timed out", targetAddress);
+                        LOG.debug("ignoring server response for opening sender [{}]: sender creation already timed out", targetAddress);
                     } else if (senderOpen.failed()) {
                         // this means that we have received the peer's attach
                         // and the subsequent detach frame in one TCP read
                         final ErrorCondition error = sender.getRemoteCondition();
                         if (error == null) {
-                            log.debug("opening sender [{}] failed", targetAddress, senderOpen.cause());
+                            LOG.debug("opening sender [{}] failed", targetAddress, senderOpen.cause());
                             senderPromise.tryFail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
                                     "cannot open sender", senderOpen.cause()));
                         } else {
-                            log.debug("opening sender [{}] failed: {} - {}", targetAddress, error.getCondition(), error.getDescription());
+                            LOG.debug("opening sender [{}] failed: {} - {}", targetAddress, error.getCondition(), error.getDescription());
                             senderPromise.tryFail(ErrorConverter.fromAttachError(error));
                         }
 
                     } else if (HonoProtonHelper.isLinkEstablished(sender)) {
 
-                        log.debug("sender open [target: {}, sendQueueFull: {}, remote max-message-size: {}]",
+                        LOG.debug("sender open [target: {}, sendQueueFull: {}, remote max-message-size: {}]",
                                 targetAddress, sender.sendQueueFull(), sender.getRemoteMaxMessageSize());
                         final long remoteMaxMessageSize = Optional.ofNullable(sender.getRemoteMaxMessageSize())
                                 .map(UnsignedLong::longValue)
@@ -632,20 +625,20 @@ public class HonoConnectionImpl implements HonoConnection {
                             final String msg = String.format(
                                     "peer does not support minimum max-message-size [required: %d, supported: %d",
                                     clientConfigProperties.getMinMaxMessageSize(), remoteMaxMessageSize);
-                            log.debug(msg);
+                            LOG.debug(msg);
                             senderPromise.tryFail(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED, msg));
                         } else if (sender.getCredit() <= 0) {
                             // wait on credits a little time, if not already given
                             final long waitOnCreditsTimerId = vertx.setTimer(clientConfigProperties.getFlowLatency(),
                                     timerID -> {
-                                        log.debug("sender [target: {}] has {} credits after grace period of {}ms",
+                                        LOG.debug("sender [target: {}] has {} credits after grace period of {}ms",
                                                 targetAddress,
                                                 sender.getCredit(), clientConfigProperties.getFlowLatency());
                                         sender.sendQueueDrainHandler(null);
                                         senderPromise.tryComplete(sender);
                                     });
                             sender.sendQueueDrainHandler(replenishedSender -> {
-                                log.debug("sender [target: {}] has received {} initial credits",
+                                LOG.debug("sender [target: {}] has received {} initial credits",
                                         targetAddress, replenishedSender.getCredit());
                                 if (vertx.cancelTimer(waitOnCreditsTimerId)) {
                                     result.tryComplete(replenishedSender);
@@ -661,7 +654,7 @@ public class HonoConnectionImpl implements HonoConnection {
                         // this means that the peer did not create a local terminus for the link
                         // and will send a detach frame for closing the link very shortly
                         // see AMQP 1.0 spec section 2.6.3
-                        log.debug("peer did not create terminus for target [{}] and will detach the link", targetAddress);
+                        LOG.debug("peer did not create terminus for target [{}] and will detach the link", targetAddress);
                         senderPromise.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
                     }
                 });
@@ -729,21 +722,21 @@ public class HonoConnectionImpl implements HonoConnection {
                 receiver.setPrefetch(preFetchSize);
                 receiver.handler((delivery, message) -> {
                     HonoProtonHelper.onReceivedMessageDeliveryUpdatedFromRemote(delivery,
-                            d -> log.debug("got unexpected disposition update for received message [remote state: {}]", delivery.getRemoteState()));
+                            d -> LOG.debug("got unexpected disposition update for received message [remote state: {}]", delivery.getRemoteState()));
                     try {
                         messageHandler.handle(delivery, message);
-                        if (log.isTraceEnabled()) {
+                        if (LOG.isTraceEnabled()) {
                             final int remainingCredits = receiver.getCredit() - receiver.getQueued();
-                            log.trace("handling message [remotely settled: {}, queued messages: {}, remaining credit: {}]",
+                            LOG.trace("handling message [remotely settled: {}, queued messages: {}, remaining credit: {}]",
                                     delivery.remotelySettled(), receiver.getQueued(), remainingCredits);
                         }
                     } catch (final Exception ex) {
-                        log.warn("error handling message", ex);
+                        LOG.warn("error handling message", ex);
                         ProtonHelper.released(delivery, true);
                     }
                 });
                 final DisconnectListener<HonoConnection> disconnectBeforeOpenListener = (con) -> {
-                    log.debug("opening receiver [{}] failed: got disconnected", sourceAddress);
+                    LOG.debug("opening receiver [{}] failed: got disconnected", sourceAddress);
                     receiverPromise.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected"));
                 };
                 oneTimeDisconnectListeners.add(disconnectBeforeOpenListener);
@@ -753,27 +746,27 @@ public class HonoConnectionImpl implements HonoConnection {
 
                     // the result future may have already been completed here in case of a link establishment timeout
                     if (receiverPromise.future().isComplete()) {
-                        log.debug("ignoring server response for opening receiver [{}]: receiver creation already timed out", sourceAddress);
+                        LOG.debug("ignoring server response for opening receiver [{}]: receiver creation already timed out", sourceAddress);
                     } else if (recvOpen.failed()) {
                         // this means that we have received the peer's attach
                         // and the subsequent detach frame in one TCP read
                         final ErrorCondition error = receiver.getRemoteCondition();
                         if (error == null) {
-                            log.debug("opening receiver [{}] failed", sourceAddress, recvOpen.cause());
+                            LOG.debug("opening receiver [{}] failed", sourceAddress, recvOpen.cause());
                             receiverPromise.tryFail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
                                     "cannot open receiver", recvOpen.cause()));
                         } else {
-                            log.debug("opening receiver [{}] failed: {} - {}", sourceAddress, error.getCondition(), error.getDescription());
+                            LOG.debug("opening receiver [{}] failed: {} - {}", sourceAddress, error.getCondition(), error.getDescription());
                             receiverPromise.tryFail(ErrorConverter.fromAttachError(error));
                         }
                     } else if (HonoProtonHelper.isLinkEstablished(receiver)) {
-                        log.debug("receiver open [source: {}]", sourceAddress);
+                        LOG.debug("receiver open [source: {}]", sourceAddress);
                         receiverPromise.tryComplete(recvOpen.result());
                     } else {
                         // this means that the peer did not create a local terminus for the link
                         // and will send a detach frame for closing the link very shortly
                         // see AMQP 1.0 spec section 2.6.3
-                        log.debug("peer did not create terminus for source [{}] and will detach the link", sourceAddress);
+                        LOG.debug("peer did not create terminus for source [{}] and will detach the link", sourceAddress);
                         receiverPromise.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
                     }
                 });
@@ -800,7 +793,7 @@ public class HonoConnectionImpl implements HonoConnection {
             final Promise<?> result) {
 
         if (link.isOpen() && !HonoProtonHelper.isLinkEstablished(link)) {
-            log.info("link establishment [peer: {}] timed out after {}ms",
+            LOG.info("link establishment [peer: {}] timed out after {}ms",
                     clientConfig.getHost(), clientConfig.getLinkEstablishmentTimeout());
             link.close();
             // don't free the link here - this may result in an inconsistent session state (see PROTON-2177)
@@ -820,10 +813,10 @@ public class HonoConnectionImpl implements HonoConnection {
         final String address = link instanceof ProtonSender ? link.getTarget().getAddress() :
             link.getSource().getAddress();
         if (error == null) {
-            log.debug("{} [{}] detached (with closed={}) by peer [{}]",
+            LOG.debug("{} [{}] detached (with closed={}) by peer [{}]",
                     type, address, closed, remoteContainer);
         } else {
-            log.debug("{} [{}] detached (with closed={}) by peer [{}]: {} - {}",
+            LOG.debug("{} [{}] detached (with closed={}) by peer [{}]: {} - {}",
                     type, address, closed, remoteContainer, error.getCondition(), error.getDescription());
         }
         link.close();
@@ -833,14 +826,14 @@ public class HonoConnectionImpl implements HonoConnection {
     }
 
     @Override
-    public final void shutdown() {
+    public void shutdown() {
         // we don't want to block any event loop thread (even if it's different from the one of the 'context' variable)
         // therefore the latch used for blocking is not used in that case
         final CountDownLatch latch = Context.isOnEventLoopThread() ? null : new CountDownLatch(1);
 
         shutdown(done -> {
             if (!done.succeeded()) {
-                log.warn("could not close connection to server", done.cause());
+                LOG.warn("could not close connection to server", done.cause());
             }
             if (latch != null) {
                 latch.countDown();
@@ -851,7 +844,7 @@ public class HonoConnectionImpl implements HonoConnection {
                 // use a timeout slightly higher than the one used in closeConnection()
                 final int timeout = getCloseConnectionTimeout() + 20;
                 if (!latch.await(timeout, TimeUnit.MILLISECONDS)) {
-                    log.warn("shutdown of client timed out after {}ms", timeout);
+                    LOG.warn("shutdown of client timed out after {}ms", timeout);
                 }
             } catch (final InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -860,7 +853,7 @@ public class HonoConnectionImpl implements HonoConnection {
     }
 
     @Override
-    public final void shutdown(final Handler<AsyncResult<Void>> completionHandler) {
+    public void shutdown(final Handler<AsyncResult<Void>> completionHandler) {
         Objects.requireNonNull(completionHandler);
         cancelCurrentConnectionAttempt("client is getting shut down");
         if (shuttingDown.compareAndSet(Boolean.FALSE, Boolean.TRUE)) {
@@ -872,16 +865,16 @@ public class HonoConnectionImpl implements HonoConnection {
     }
 
     @Override
-    public final void disconnect() {
+    public void disconnect() {
         // we don't want to block any event loop thread (even if it's different from the one of the 'context' variable)
         // therefore the latch used for blocking is not used in that case
         final CountDownLatch latch = Context.isOnEventLoopThread() ? null : new CountDownLatch(1);
 
         disconnect(disconnectResult -> {
             if (disconnectResult.succeeded()) {
-                log.info("successfully disconnected from the server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
+                LOG.info("successfully disconnected from the server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
             } else {
-                log.warn("could not disconnect from the server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
+                LOG.warn("could not disconnect from the server [{}:{}]", connectionFactory.getHost(), connectionFactory.getPort());
             }
             if (latch != null) {
                 latch.countDown();
@@ -892,7 +885,7 @@ public class HonoConnectionImpl implements HonoConnection {
                 // use a timeout slightly higher than the one used in closeConnection()
                 final int timeout = getCloseConnectionTimeout() + 20;
                 if (!latch.await(timeout, TimeUnit.MILLISECONDS)) {
-                    log.warn("Disconnecting from server [{}:{}, role: {}] timed out after {}ms",
+                    LOG.warn("Disconnecting from server [{}:{}, role: {}] timed out after {}ms",
                             connectionFactory.getHost(),
                             connectionFactory.getPort(),
                             connectionFactory.getServerRole(),
@@ -905,7 +898,7 @@ public class HonoConnectionImpl implements HonoConnection {
     }
 
     @Override
-    public final void disconnect(final Handler<AsyncResult<Void>> completionHandler) {
+    public void disconnect(final Handler<AsyncResult<Void>> completionHandler) {
         Objects.requireNonNull(completionHandler);
         cancelCurrentConnectionAttempt("client got disconnected");
         if (disconnecting.compareAndSet(Boolean.FALSE, Boolean.TRUE)) {
@@ -955,13 +948,13 @@ public class HonoConnectionImpl implements HonoConnection {
                     connectionToClose.disconnectHandler(null); // make sure we are not trying to re-connect
                     final Handler<AsyncResult<ProtonConnection>> closeHandler = remoteClose -> {
                         if (remoteClose.succeeded()) {
-                            log.info("closed connection to container [{}] at [{}:{}, role: {}]",
+                            LOG.info("closed connection to container [{}] at [{}:{}, role: {}]",
                                     connectionToClose.getRemoteContainer(),
                                     connectionFactory.getHost(),
                                     connectionFactory.getPort(),
                                     connectionFactory.getServerRole());
                         } else {
-                            log.info("closed connection to container [{}] at [{}:{}, role: {}]",
+                            LOG.info("closed connection to container [{}] at [{}:{}, role: {}]",
                                     connectionToClose.getRemoteContainer(),
                                     connectionFactory.getHost(),
                                     connectionFactory.getPort(),
@@ -976,7 +969,7 @@ public class HonoConnectionImpl implements HonoConnection {
                     };
                     final int timeout = getCloseConnectionTimeout();
                     final long timerId = vertx.setTimer(timeout, tid -> {
-                        log.debug("did not receive remote peer's [{}:{}, role: {}]] close frame after {}ms",
+                        LOG.debug("did not receive remote peer's [{}:{}, role: {}]] close frame after {}ms",
                                 connectionFactory.getHost(),
                                 connectionFactory.getPort(),
                                 connectionFactory.getServerRole(),
@@ -989,7 +982,7 @@ public class HonoConnectionImpl implements HonoConnection {
                             closeHandler.handle(remoteClose);
                         }
                     });
-                    log.info("closing connection to container [{}] at [{}:{}, role: {}] ...",
+                    LOG.info("closing connection to container [{}] at [{}:{}, role: {}] ...",
                             connectionToClose.getRemoteContainer(),
                             connectionFactory.getHost(),
                             connectionFactory.getPort(),
@@ -997,7 +990,7 @@ public class HonoConnectionImpl implements HonoConnection {
                     connectionToClose.close();
                 }).onComplete(handler);
             } else {
-                log.info("connection to server [{}:{}, role: {}] already closed",
+                LOG.info("connection to server [{}:{}, role: {}] already closed",
                         connectionFactory.getHost(),
                         connectionFactory.getPort(),
                         connectionFactory.getServerRole());
@@ -1072,7 +1065,7 @@ public class HonoConnectionImpl implements HonoConnection {
             }
             final boolean timerCancelled = Optional.ofNullable(reconnectTimerId)
                     .map(vertx::cancelTimer).orElse(false);
-            log.debug("cancelled {} connection attempt [#{}] to server [{}:{}, role: {}]",
+            LOG.debug("cancelled {} connection attempt [#{}] to server [{}:{}, role: {}]",
                     timerCancelled ? "upcoming" : "ongoing",
                     connectAttempts.get() + 1,
                     connectionFactory.getHost(),
@@ -1086,7 +1079,7 @@ public class HonoConnectionImpl implements HonoConnection {
             if (cancelled.get()) {
                 return;
             }
-            log.debug("starting attempt [#{}] to connect to server [{}:{}, role: {}]",
+            LOG.debug("starting attempt [#{}] to connect to server [{}:{}, role: {}]",
                     connectAttempts.get() + 1,
                     connectionFactory.getHost(),
                     connectionFactory.getPort(),
@@ -1098,34 +1091,30 @@ public class HonoConnectionImpl implements HonoConnection {
                     null,
                     containerId,
                     HonoConnectionImpl.this::onRemoteClose,
-                    HonoConnectionImpl.this::onRemoteDisconnect,
-                    conAttempt -> {
-                        if (conAttempt.failed()) {
-                            reconnect(conAttempt.cause());
-                        } else {
-                            final ProtonConnection newConnection = conAttempt.result();
-                            if (cancelled.get()) {
-                                log.debug("attempt [#{}]: connected but will directly be closed because attempt got cancelled; server [{}:{}, role: {}]",
-                                        connectAttempts.get() + 1,
-                                        connectionFactory.getHost(),
-                                        connectionFactory.getPort(),
-                                        connectionFactory.getServerRole());
-                                newConnection.closeHandler(null);
-                                newConnection.disconnectHandler(null);
-                                newConnection.close();
-                            } else {
-                                log.debug("attempt [#{}]: connected to server [{}:{}, role: {}]; remote container: {}",
-                                        connectAttempts.get() + 1,
-                                        connectionFactory.getHost(),
-                                        connectionFactory.getPort(),
-                                        connectionFactory.getServerRole(),
-                                        newConnection.getRemoteContainer());
-                                final ProtonSession defaultSession = createDefaultSession(newConnection);
-                                setConnection(newConnection, defaultSession);
-                                connectionHandler.handle(Future.succeededFuture(HonoConnectionImpl.this));
-                            }
-                        }
-                    });
+                    HonoConnectionImpl.this::onRemoteDisconnect)
+                .onFailure(t -> reconnect(t))
+                .onSuccess(newConnection -> {
+                    if (cancelled.get()) {
+                        LOG.debug("attempt [#{}]: connected but will directly be closed because attempt got cancelled; server [{}:{}, role: {}]",
+                                connectAttempts.get() + 1,
+                                connectionFactory.getHost(),
+                                connectionFactory.getPort(),
+                                connectionFactory.getServerRole());
+                        newConnection.closeHandler(null);
+                        newConnection.disconnectHandler(null);
+                        newConnection.close();
+                    } else {
+                        LOG.debug("attempt [#{}]: connected to server [{}:{}, role: {}]; remote container: {}",
+                                connectAttempts.get() + 1,
+                                connectionFactory.getHost(),
+                                connectionFactory.getPort(),
+                                connectionFactory.getServerRole(),
+                                newConnection.getRemoteContainer());
+                        final ProtonSession defaultSession = createDefaultSession(newConnection);
+                        setConnection(newConnection, defaultSession);
+                        connectionHandler.handle(Future.succeededFuture(HonoConnectionImpl.this));
+                    }
+                });
         }
 
         private void reconnect(final Throwable connectionFailureCause) {
@@ -1136,13 +1125,13 @@ public class HonoConnectionImpl implements HonoConnection {
                 logConnectionError(connectionFailureCause);
             }
             if (vertx instanceof VertxInternal && ((VertxInternal) vertx).closeFuture().isClosed()) {
-                log.info("stopping attempts to re-connect to server [{}:{}, role: {}], vertx instance is closed",
+                LOG.info("stopping attempts to re-connect to server [{}:{}, role: {}], vertx instance is closed",
                         connectionFactory.getHost(),
                         connectionFactory.getPort(),
                         connectionFactory.getServerRole());
                 connectionHandler.handle(Future.failedFuture(mapConnectionAttemptFailure(connectionFailureCause)));
             } else if (clientConfigProperties.getReconnectAttempts() - connectAttempts.get() == 0) {
-                log.info("max number of attempts [{}] to re-connect to server [{}:{}, role: {}] have been made, giving up",
+                LOG.info("max number of attempts [{}] to re-connect to server [{}:{}, role: {}] have been made, giving up",
                         clientConfigProperties.getReconnectAttempts(),
                         connectionFactory.getHost(),
                         connectionFactory.getPort(),
@@ -1157,7 +1146,7 @@ public class HonoConnectionImpl implements HonoConnection {
                         ? ThreadLocalRandom.current().nextLong(clientConfigProperties.getReconnectMinDelay(), reconnectMaxDelay)
                         : clientConfigProperties.getReconnectMinDelay();
                 if (reconnectDelay > 0) {
-                    log.trace("scheduling new connection attempt in {}ms ...", reconnectDelay);
+                    LOG.trace("scheduling new connection attempt in {}ms ...", reconnectDelay);
                     reconnectTimerId = vertx.setTimer(reconnectDelay, tid -> {
                         reconnectTimerId = null;
                         connect();
@@ -1192,14 +1181,14 @@ public class HonoConnectionImpl implements HonoConnection {
 
         private void logConnectionError(final Throwable connectionFailureCause) {
             if (isNoteworthyConnectionError(connectionFailureCause)) {
-                log.warn("attempt [#{}] to connect to server [{}:{}, role: {}] failed",
+                LOG.warn("attempt [#{}] to connect to server [{}:{}, role: {}] failed",
                         connectAttempts.get() + 1,
                         clientConfigProperties.getHost(),
                         clientConfigProperties.getPort(),
                         connectionFactory.getServerRole(),
                         connectionFailureCause);
             } else {
-                log.debug("attempt [#{}] to connect to server [{}:{}, role: {}] failed",
+                LOG.debug("attempt [#{}] to connect to server [{}:{}, role: {}] failed",
                         connectAttempts.get() + 1,
                         clientConfigProperties.getHost(),
                         clientConfigProperties.getPort(),

@@ -19,6 +19,7 @@ import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.client.amqp.connection.impl.ConnectionFactoryImpl;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonClientOptions;
@@ -67,14 +68,13 @@ public interface ConnectionFactory {
      *            {@code null}).
      * @param disconnectHandler The handler to invoke when the connection to the server is lost unexpectedly (may be
      *            {@code null}).
-     * @param connectionResultHandler The callback to invoke with the outcome of the connection attempt.
+     * @return A future indicating the outcome of the connection attempt.
      * @throws NullPointerException if the result handler is {@code null}.
      */
-    void connect(
+    Future<ProtonConnection> connect(
             ProtonClientOptions options,
             Handler<AsyncResult<ProtonConnection>> closeHandler,
-            Handler<ProtonConnection> disconnectHandler,
-            Handler<AsyncResult<ProtonConnection>> connectionResultHandler);
+            Handler<ProtonConnection> disconnectHandler);
 
     /**
      * Connects to a server.
@@ -88,16 +88,15 @@ public interface ConnectionFactory {
      *            {@code null}).
      * @param disconnectHandler The handler to invoke when the connection to the server is lost unexpectedly (may be
      *            {@code null}).
-     * @param connectionResultHandler The callback to invoke with the outcome of the connection attempt.
+     * @return A future indicating the outcome of the connection attempt.
      * @throws NullPointerException if the result handler is {@code null}.
      */
-    void connect(
+    Future<ProtonConnection> connect(
             ProtonClientOptions options,
             String username,
             String password,
             Handler<AsyncResult<ProtonConnection>> closeHandler,
-            Handler<ProtonConnection> disconnectHandler,
-            Handler<AsyncResult<ProtonConnection>> connectionResultHandler);
+            Handler<ProtonConnection> disconnectHandler);
 
     /**
      * Connects to a server.
@@ -113,17 +112,16 @@ public interface ConnectionFactory {
      *            {@code null}).
      * @param disconnectHandler The handler to invoke when the connection to the server is lost unexpectedly (may be
      *            {@code null}).
-     * @param connectionResultHandler The callback to invoke with the outcome of the connection attempt.
+     * @return A future indicating the outcome of the connection attempt.
      * @throws NullPointerException if the result handler is {@code null}.
      */
-    void connect(
+    Future<ProtonConnection> connect(
             ProtonClientOptions options,
             String username,
             String password,
             String containerId,
             Handler<AsyncResult<ProtonConnection>> closeHandler,
-            Handler<ProtonConnection> disconnectHandler,
-            Handler<AsyncResult<ProtonConnection>> connectionResultHandler);
+            Handler<ProtonConnection> disconnectHandler);
 
     /**
      * Create a new {@link ConnectionFactory} using the default implementation.

@@ -47,6 +47,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The *core* module is no longer an OSGi bundle.
 * The `org.eclipse.hono.service.auth.AuthenticationService`'s method signatures have been changed to return a Future
   instead of accepting a `Handler<AsyncResult>`.
+* The `org.eclipse.hono.client.amqp.connection.ConnectionFactory`'s method signatures have been changed to return a Future
+  instead of accepting a `Handler<AsyncResult>`.
 
 ## 1.12.1
 

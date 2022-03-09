@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.client.amqp.connection;
 
+import java.util.Optional;
+
 import org.apache.qpid.proton.amqp.Symbol;
 import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.client.amqp.connection.impl.HonoConnectionImpl;
@@ -90,14 +92,18 @@ public interface HonoConnection extends ConnectionLifecycle<HonoConnection> {
      *
      * @param vertx The vert.x instance to use.
      * @param clientConfigProperties The client properties to use.
-     * @param tracer The OpenTracing tracer.
+     * @param tracer The OpenTracing tracer or {@code null} if no tracer should be associated with the connection.
      * @return The newly created connection. Note that the underlying AMQP connection will not be established
      *         until one of its <em>connect</em> methods is invoked.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    static HonoConnection newConnection(final Vertx vertx, final ClientConfigProperties clientConfigProperties, final Tracer tracer) {
+    static HonoConnection newConnection(
+            final Vertx vertx,
+            final ClientConfigProperties clientConfigProperties,
+            final Tracer tracer) {
+
         final HonoConnectionImpl connection = new HonoConnectionImpl(vertx, clientConfigProperties);
-        connection.setTracer(tracer);
+        Optional.ofNullable(tracer).ifPresent(connection::setTracer);
         return connection;
     }
 
