@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -30,7 +30,7 @@ import io.vertx.core.json.JsonObject;
  * <p>
  * This class registers a listener for address {@link AuthenticationConstants#EVENT_BUS_ADDRESS_AUTHENTICATION_IN}.
  * Messages are expected to be {@code JsonObject} typed. Apart from that this class makes no assumption regarding
- * the content of the message. The listener simply invokes the {@link #authenticate(JsonObject, io.vertx.core.Handler)}
+ * the content of the message. The listener simply invokes the {@link #authenticate(JsonObject)}
  * method with the received message. If the handler succeeds, the result is sent back via the event bus as a reply
  * to the original authentication request. Otherwise, a failure reply is sent using the error code from the handler
  * exception.
@@ -44,8 +44,11 @@ public abstract class BaseAuthenticationService<T> extends ConfigurationSupporti
 
     @Override
     public final void start(final Promise<Void> startPromise) {
-        authRequestConsumer = vertx.eventBus().consumer(AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN, this::processMessage);
-        LOG.info("listening on event bus [address: {}] for authentication requests", AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN);
+        authRequestConsumer = vertx.eventBus().consumer(
+                AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN,
+                this::processMessage);
+        LOG.info("listening on event bus [address: {}] for authentication requests",
+                AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN);
         doStart(startPromise);
     }
 
@@ -64,7 +67,8 @@ public abstract class BaseAuthenticationService<T> extends ConfigurationSupporti
 
     @Override
     public final void stop(final Promise<Void> stopPromise) {
-        LOG.info("unregistering event bus listener [address: {}]", AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN);
+        LOG.info("unregistering event bus listener [address: {}]",
+                AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN);
         authRequestConsumer.unregister();
         doStop(stopPromise);
     }
@@ -84,14 +88,8 @@ public abstract class BaseAuthenticationService<T> extends ConfigurationSupporti
 
     private void processMessage(final Message<JsonObject> message) {
         final JsonObject body = message.body();
-        authenticate(body, validation -> {
-            if (validation.succeeded()) {
-                message.reply(AuthenticationConstants.getAuthenticationReply(validation.result().getToken()));
-            } else {
-                message.fail(ServiceInvocationException.extractStatusCode(validation.cause()),
-                        validation.cause().getMessage());
-            }
-        });
+        authenticate(body)
+            .onSuccess(user -> message.reply(AuthenticationConstants.getAuthenticationReply(user.getToken())))
+            .onFailure(t -> message.fail(ServiceInvocationException.extractStatusCode(t), t.getMessage()));
     }
-
 }

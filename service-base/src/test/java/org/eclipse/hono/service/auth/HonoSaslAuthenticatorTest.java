@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,7 +16,6 @@ package org.eclipse.hono.service.auth;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -27,14 +26,11 @@ import org.apache.qpid.proton.engine.Sasl.SaslOutcome;
 import org.apache.qpid.proton.engine.Sasl.SaslState;
 import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.impl.RecordImpl;
-import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.auth.AuthenticationService.AuthenticationAttemptOutcome;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
@@ -55,6 +51,8 @@ public class HonoSaslAuthenticatorTest {
     @Test
     public void testProcessFinishesHandshakeOnAuthenticationFailure() {
         final var authService = mock(AuthenticationService.class);
+        when(authService.authenticate(any(JsonObject.class)))
+            .thenReturn(Future.failedFuture(new ClientErrorException(401, "no such user")));
         @SuppressWarnings("unchecked")
         final Consumer<AuthenticationService.AuthenticationAttemptOutcome> meter = mock(Consumer.class);
         final NetSocket socket = mock(NetSocket.class);
@@ -72,14 +70,7 @@ public class HonoSaslAuthenticatorTest {
 
         final Handler<Boolean> completionHandler = VertxMockSupport.mockHandler();
         authenticator.process(completionHandler);
-        verify(completionHandler, never()).handle(any(Boolean.class));
-        verify(meter, never()).accept(any(AuthenticationAttemptOutcome.class));
-        verify(sasl, never()).done(any(SaslOutcome.class));
-
-        final ArgumentCaptor<Handler<AsyncResult<HonoUser>>> resultHandler = VertxMockSupport.argumentCaptorHandler();
-        verify(authService).authenticate(any(JsonObject.class), resultHandler.capture());
-        resultHandler.getValue().handle(Future.failedFuture(new ClientErrorException(401, "no such user")));
-
+        verify(authService).authenticate(any(JsonObject.class));
         verify(completionHandler).handle(Boolean.TRUE);
         verify(sasl).done(SaslOutcome.PN_SASL_AUTH);
         verify(meter).accept(AuthenticationAttemptOutcome.UNAUTHORIZED);

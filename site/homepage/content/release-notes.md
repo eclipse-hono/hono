@@ -43,6 +43,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   connections have been moved from the *core* to the *amqp-connection* module.
 * The *core* module no longer supports Java 8 but has been changed to require at least Java 11 as all the other modules.
 * The *core* module is no longer an OSGi bundle.
+* The `org.eclipse.hono.service.auth.AuthenticationService`'s method signatures have been changed to return a Future
+  instead of accepting a `Handler<AsyncResult>`.
 
 ## 1.12.1
 

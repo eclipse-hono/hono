@@ -84,12 +84,13 @@ public class AuthServerAmqpIT {
     @Test
     public void testTokenRetrievalSucceedsForAuthenticatedUser(final VertxTestContext ctx) {
 
-        client.verifyPlain(null, "hono-client", "secret", ctx.succeeding(user -> {
-            ctx.verify(() -> {
-                assertThat(user.getToken()).isNotNull();
-            });
-            ctx.completeNow();
-        }));
+        client.verifyPlain(null, "hono-client", "secret")
+            .onComplete(ctx.succeeding(user -> {
+                ctx.verify(() -> {
+                    assertThat(user.getToken()).isNotNull();
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -99,13 +100,14 @@ public class AuthServerAmqpIT {
      */
     @Test
     public void testTokenRetrievalFailsForUnauthenticatedUser(final VertxTestContext ctx) {
-        client.verifyPlain(null, "no-such-user", "secret", ctx.failing(t -> {
-            ctx.verify(() -> {
-                assertThat(t).isInstanceOf(ClientErrorException.class);
-                assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED);
-            });
-            ctx.completeNow();
-        }));
+        client.verifyPlain(null, "no-such-user", "secret")
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    assertThat(t).isInstanceOf(ClientErrorException.class);
+                    assertThat(((ClientErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED);
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -117,13 +119,14 @@ public class AuthServerAmqpIT {
     public void testTokenRetrievalFailsForFailureToConnect(final VertxTestContext ctx) {
 
         client = getClient("127.0.0.1", 13412);
-        client.verifyPlain(null, "hono-client", "secret", ctx.failing(t -> {
-            ctx.verify(() -> {
-                assertThat(t).isInstanceOf(ServerErrorException.class);
-                assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
-            });
-            ctx.completeNow();
-        }));
+        client.verifyPlain(null, "hono-client", "secret")
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    assertThat(t).isInstanceOf(ServerErrorException.class);
+                    assertThat(((ServerErrorException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
+                });
+                ctx.completeNow();
+            }));
     }
 
 }

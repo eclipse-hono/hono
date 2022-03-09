@@ -30,9 +30,7 @@ import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonClientOptions;
@@ -74,13 +72,14 @@ public final class AuthenticationServerClient {
      *
      * @param authzid The identity to act as.
      * @param subjectDn The Subject DN.
-     * @param authenticationResultHandler The handler to invoke with the authentication result. On successful authentication,
+     * @return A future indicating the outcome of the authentication attempt. On successful authentication,
      *                                    the result contains a JWT with the authenticated user's claims.
      */
-    public void verifyExternal(final String authzid, final String subjectDn, final Handler<AsyncResult<HonoUser>> authenticationResultHandler) {
+    public Future<HonoUser> verifyExternal(final String authzid, final String subjectDn) {
         // unsupported mechanism (until we get better control over client SASL params in vertx-proton)
-        authenticationResultHandler.handle(Future
-                .failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "unsupported mechanism")));
+        return Future.failedFuture(new ClientErrorException(
+                HttpURLConnection.HTTP_BAD_REQUEST,
+                "unsupported mechanism"));
     }
 
     /**
@@ -89,11 +88,10 @@ public final class AuthenticationServerClient {
      * @param authzid The identity to act as.
      * @param authcid The username.
      * @param password The password.
-     * @param authenticationResultHandler The handler to invoke with the authentication result. On successful authentication,
+     * @return A future indicating the outcome of the authentication attempt. On successful authentication,
      *                                    the result contains a JWT with the authenticated user's claims.
      */
-    public void verifyPlain(final String authzid, final String authcid, final String password,
-            final Handler<AsyncResult<HonoUser>> authenticationResultHandler) {
+    public Future<HonoUser> verifyPlain(final String authzid, final String authcid, final String password) {
 
         final ProtonClientOptions options = new ProtonClientOptions();
         options.setReconnectAttempts(3).setReconnectInterval(50);
@@ -102,32 +100,34 @@ public final class AuthenticationServerClient {
         final Promise<ProtonConnection> connectAttempt = Promise.promise();
         factory.connect(options, authcid, password, null, null, connectAttempt);
 
-        connectAttempt.future()
-        .compose(openCon -> getToken(openCon))
-        .onComplete(s -> {
-            if (s.succeeded()) {
-                authenticationResultHandler.handle(Future.succeededFuture(s.result()));
-            } else {
-                authenticationResultHandler
-                .handle(Future.failedFuture(mapConnectionFailureToServiceInvocationException(s.cause())));
-            }
-            Optional.ofNullable(connectAttempt.future().result())
-            .ifPresent(con -> {
-                LOG.debug("closing connection to Authentication service");
-                con.close();
-            });
-        });
+        return connectAttempt.future()
+                .compose(openCon -> getToken(openCon))
+                .recover(t -> Future.failedFuture(mapConnectionFailureToServiceInvocationException(t)))
+                .onComplete(s -> {
+                    Optional.ofNullable(connectAttempt.future().result())
+                        .ifPresent(con -> {
+                            LOG.debug("closing connection to Authentication service");
+                            con.close();
+                        });
+                });
     }
 
-    private ServiceInvocationException mapConnectionFailureToServiceInvocationException(final Throwable connectionFailureCause) {
+    private ServiceInvocationException mapConnectionFailureToServiceInvocationException(
+            final Throwable connectionFailureCause) {
 
         final ServiceInvocationException exception;
         if (connectionFailureCause instanceof AuthenticationException) {
-            exception = new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "failed to authenticate with Authentication service");
+            exception = new ClientErrorException(
+                    HttpURLConnection.HTTP_UNAUTHORIZED,
+                    "failed to authenticate with Authentication service");
         } else if (connectionFailureCause instanceof MechanismMismatchException) {
-            exception = new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "Authentication service does not support SASL mechanism");
+            exception = new ClientErrorException(
+                    HttpURLConnection.HTTP_UNAUTHORIZED,
+                    "Authentication service does not support SASL mechanism");
         } else {
-            exception = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "failed to connect to Authentication service",
+            exception = new ServerErrorException(
+                    HttpURLConnection.HTTP_UNAVAILABLE,
+                    "failed to connect to Authentication service",
                     connectionFailureCause);
         }
         LOG.debug("mapped exception [{}] thrown during SASL handshake to [{}]",
@@ -184,7 +184,9 @@ public final class AuthenticationServerClient {
         return result.future();
     }
 
-    private static Future<ProtonReceiver> openReceiver(final ProtonConnection openConnection, final ProtonMessageHandler messageHandler) {
+    private static Future<ProtonReceiver> openReceiver(
+            final ProtonConnection openConnection,
+            final ProtonMessageHandler messageHandler) {
 
         final Promise<ProtonReceiver> result = Promise.promise();
         final ProtonReceiver recv = openConnection.createReceiver(AuthenticationConstants.ENDPOINT_NAME_AUTHENTICATION);

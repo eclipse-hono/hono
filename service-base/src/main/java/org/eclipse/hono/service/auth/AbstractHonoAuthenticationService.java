@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,9 +25,7 @@ import org.eclipse.hono.util.AuthenticationConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -93,7 +91,7 @@ public abstract class AbstractHonoAuthenticationService<T> extends BaseAuthentic
      * </pre>
      */
     @Override
-    public final void authenticate(final JsonObject authRequest, final Handler<AsyncResult<HonoUser>> resultHandler) {
+    public final Future<HonoUser> authenticate(final JsonObject authRequest) {
 
         final String mechanism = Objects.requireNonNull(authRequest).getString(AuthenticationConstants.FIELD_MECHANISM);
         log.debug("received authentication request [mechanism: {}]", mechanism);
@@ -109,10 +107,10 @@ public abstract class AbstractHonoAuthenticationService<T> extends BaseAuthentic
                 final String authcid = fields[1];
                 final String pwd = fields[2];
                 log.debug("processing PLAIN authentication request [authzid: {}, authcid: {}, pwd: *****]", authzid, authcid);
-                verifyPlain(authzid, authcid, pwd, resultHandler);
+                return verifyPlain(authzid, authcid, pwd);
             } catch (final CredentialException e) {
                 // response did not contain expected values
-                resultHandler.handle(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, e)));
+                return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, e));
             }
 
         } else if (isSupportedMechanism && AuthenticationConstants.MECHANISM_EXTERNAL.equals(mechanism)) {
@@ -120,11 +118,12 @@ public abstract class AbstractHonoAuthenticationService<T> extends BaseAuthentic
             final String authzid = new String(authRequest.getBinary(AuthenticationConstants.FIELD_SASL_RESPONSE), StandardCharsets.UTF_8);
             final String subject = authRequest.getString(AuthenticationConstants.FIELD_SUBJECT_DN);
             log.debug("processing EXTERNAL authentication request [Subject DN: {}]", subject);
-            verifyExternal(authzid, subject, resultHandler);
+            return verifyExternal(authzid, subject);
 
         } else {
-            resultHandler.handle(Future.failedFuture(
-                    new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "unsupported SASL mechanism")));
+            return Future.failedFuture(new ClientErrorException(
+                    HttpURLConnection.HTTP_BAD_REQUEST,
+                    "unsupported SASL mechanism"));
         }
     }
 
@@ -136,11 +135,10 @@ public abstract class AbstractHonoAuthenticationService<T> extends BaseAuthentic
      * @param authzid The identity the client wants to act as. If {@code null} the username is used.
      * @param authcid The username.
      * @param password The password.
-     * @param authenticationResultHandler The handler to invoke with the authentication result. On successful authentication,
+     * @return A future indicating the outcome of the authentication attempt. On successful authentication,
      *                                    the result contains the authenticated user.
      */
-    public abstract void verifyPlain(String authzid, String authcid, String password,
-            Handler<AsyncResult<HonoUser>> authenticationResultHandler);
+    public abstract Future<HonoUser> verifyPlain(String authzid, String authcid, String password);
 
     /**
      * Verifies a Subject DN that has been provided by a client in a SASL EXTERNAL exchange.
@@ -149,10 +147,10 @@ public abstract class AbstractHonoAuthenticationService<T> extends BaseAuthentic
      *
      * @param authzid The identity the client wants to act as. If {@code null} the granted authorization identity is derived from the subject DN.
      * @param subjectDn The Subject DN.
-     * @param authenticationResultHandler The handler to invoke with the authentication result. On successful authentication,
+     * @return A future indicating the outcome of the authentication attempt. On successful authentication,
      *                                    the result contains the authenticated user.
      */
-    public abstract void verifyExternal(String authzid, String subjectDn, Handler<AsyncResult<HonoUser>> authenticationResultHandler);
+    public abstract Future<HonoUser> verifyExternal(String authzid, String subjectDn);
 
     @Override
     public String toString() {

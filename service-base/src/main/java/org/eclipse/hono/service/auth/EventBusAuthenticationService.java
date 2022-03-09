@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -31,9 +31,8 @@ import org.slf4j.LoggerFactory;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.JwtException;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.ReplyException;
@@ -88,19 +87,20 @@ public final class EventBusAuthenticationService implements AuthenticationServic
     }
 
     @Override
-    public void authenticate(final JsonObject authRequest, final Handler<AsyncResult<HonoUser>> authenticationResultHandler) {
+    public Future<HonoUser> authenticate(final JsonObject authRequest) {
 
+        final Promise<HonoUser> result = Promise.promise();
         final DeliveryOptions options = new DeliveryOptions().setSendTimeout(AUTH_REQUEST_TIMEOUT_MILLIS);
         vertx.eventBus().request(AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN, authRequest, options, reply -> {
             if (reply.succeeded()) {
-                final JsonObject result = (JsonObject) reply.result().body();
-                final String token = result.getString(AuthenticationConstants.FIELD_TOKEN);
+                final JsonObject resultBody = (JsonObject) reply.result().body();
+                final String token = resultBody.getString(AuthenticationConstants.FIELD_TOKEN);
                 log.debug("received token [length: {}] in response to authentication request", token.length());
                 try {
-                    final Jws<Claims> expandedToken = tokenValidator.expand(result.getString(AuthenticationConstants.FIELD_TOKEN));
-                    authenticationResultHandler.handle(Future.succeededFuture(new HonoUserImpl(expandedToken, token)));
+                    final Jws<Claims> expandedToken = tokenValidator.expand(resultBody.getString(AuthenticationConstants.FIELD_TOKEN));
+                    result.complete(new HonoUserImpl(expandedToken, token));
                 } catch (final JwtException e) {
-                    authenticationResultHandler.handle(Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, e)));
+                    result.fail(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, e));
                 }
             } else {
                 final ServiceInvocationException resultException;
@@ -129,10 +129,11 @@ public final class EventBusAuthenticationService implements AuthenticationServic
                 } else {
                     resultException = new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, reply.cause());
                 }
-                authenticationResultHandler.handle(Future.failedFuture(resultException));
+                result.fail(resultException);
             }
         });
 
+        return result.future();
     }
 
     /**

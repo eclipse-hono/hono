@@ -22,8 +22,7 @@ import org.eclipse.hono.client.amqp.connection.ConnectionFactory;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.auth.AbstractHonoAuthenticationService;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
+import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.dns.DnsClient;
 import io.vertx.core.impl.VertxInternal;
@@ -36,7 +35,9 @@ import io.vertx.ext.healthchecks.Status;
  * <p>
  * This is the default authentication service for all Hono services.
  */
-public class DelegatingAuthenticationService extends AbstractHonoAuthenticationService<AuthenticationServerClientConfigProperties> implements HealthCheckProvider {
+public class DelegatingAuthenticationService
+    extends AbstractHonoAuthenticationService<AuthenticationServerClientConfigProperties>
+    implements HealthCheckProvider {
 
     private AuthenticationServerClient client;
     private ConnectionFactory factory;
@@ -151,15 +152,13 @@ public class DelegatingAuthenticationService extends AbstractHonoAuthenticationS
     }
 
     @Override
-    public void verifyExternal(final String authzid, final String subjectDn, final Handler<AsyncResult<HonoUser>> authenticationResultHandler) {
-        client.verifyExternal(authzid, subjectDn, authenticationResultHandler);
+    public Future<HonoUser> verifyExternal(final String authzid, final String subjectDn) {
+        return client.verifyExternal(authzid, subjectDn);
     }
 
     @Override
-    public void verifyPlain(final String authzid, final String authcid, final String password,
-            final Handler<AsyncResult<HonoUser>> authenticationResultHandler) {
-
-        client.verifyPlain(authzid, authcid, password, authenticationResultHandler);
+    public Future<HonoUser> verifyPlain(final String authzid, final String authcid, final String password) {
+        return client.verifyPlain(authzid, authcid, password);
     }
 
     @Override

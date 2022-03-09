@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -89,10 +89,11 @@ public class EventBusAuthenticationServiceTest {
         });
 
         final EventBusAuthenticationService eventBusAuthService = new EventBusAuthenticationService(vertx, authTokenHelperForValidating);
-        eventBusAuthService.authenticate(new JsonObject(), ctx.succeeding(t -> {
-            ctx.verify(() -> assertThat(t.getToken()).isEqualTo(token));
-            ctx.completeNow();
-        }));
+        eventBusAuthService.authenticate(new JsonObject())
+            .onComplete(ctx.succeeding(t -> {
+                ctx.verify(() -> assertThat(t.getToken()).isEqualTo(token));
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -105,13 +106,14 @@ public class EventBusAuthenticationServiceTest {
     public void testAuthenticateFailureNoHandler(final VertxTestContext ctx) {
 
         final EventBusAuthenticationService eventBusAuthService = new EventBusAuthenticationService(vertx, authTokenHelperForValidating);
-        eventBusAuthService.authenticate(new JsonObject(), ctx.failing(t -> {
-            ctx.verify(() -> {
-                assertThat(t).isInstanceOf(ServerErrorException.class);
-                assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_INTERNAL_ERROR);
-            });
-            ctx.completeNow();
-        }));
+        eventBusAuthService.authenticate(new JsonObject())
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    assertThat(t).isInstanceOf(ServerErrorException.class);
+                    assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_INTERNAL_ERROR);
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -130,14 +132,15 @@ public class EventBusAuthenticationServiceTest {
         });
 
         final EventBusAuthenticationService eventBusAuthService = new EventBusAuthenticationService(vertx, authTokenHelperForValidating);
-        eventBusAuthService.authenticate(new JsonObject(), ctx.failing(t -> {
-            ctx.verify(() -> {
-                assertThat(t).isInstanceOf(ClientErrorException.class);
-                assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED);
-                assertThat(t.getMessage()).isEqualTo(failureMessage);
-            });
-            ctx.completeNow();
-        }));
+        eventBusAuthService.authenticate(new JsonObject())
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    assertThat(t).isInstanceOf(ClientErrorException.class);
+                    assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_UNAUTHORIZED);
+                    assertThat(t.getMessage()).isEqualTo(failureMessage);
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -157,14 +160,15 @@ public class EventBusAuthenticationServiceTest {
         });
 
         final EventBusAuthenticationService eventBusAuthService = new EventBusAuthenticationService(vertx, authTokenHelperForValidating);
-        eventBusAuthService.authenticate(new JsonObject(), ctx.failing(t -> {
-            ctx.verify(() -> {
-                assertThat(t).isInstanceOf(ServerErrorException.class);
-                assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_INTERNAL_ERROR);
-                assertThat(t.getMessage()).isEqualTo(failureMessage);
-            });
-            ctx.completeNow();
-        }));
+        eventBusAuthService.authenticate(new JsonObject())
+            .onComplete(ctx.failing(t -> {
+                ctx.verify(() -> {
+                    assertThat(t).isInstanceOf(ServerErrorException.class);
+                    assertThat(((ServiceInvocationException) t).getErrorCode()).isEqualTo(HttpURLConnection.HTTP_INTERNAL_ERROR);
+                    assertThat(t.getMessage()).isEqualTo(failureMessage);
+                });
+                ctx.completeNow();
+            }));
     }
 
     private String createTestToken() {

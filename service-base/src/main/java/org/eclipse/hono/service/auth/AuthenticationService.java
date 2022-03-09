@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,8 +15,7 @@ package org.eclipse.hono.service.auth;
 
 import org.eclipse.hono.auth.HonoUser;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
+import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -76,24 +75,22 @@ public interface AuthenticationService {
      *                                        // wants to act as (may be null)
      * }
      * </pre>
-     * <p>
-     * If the authentication succeeds, the given handler is to be invoked with an {@code AsyncResult} containing
-     * the authenticated user.
-     * <p>
-     * If the authentication fails, the given handler should be invoked with a failed {@code AsyncResult}, containing
-     * the authentication error as a {@code ServiceInvocationException}.
-     * In the case of wrong credentials, this would look like this:
-     * <pre>
-     * authenticationResultHandler.handle(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_UNAUTHORIZED, "unauthorized")));
-     * </pre>
-     * In the case of a server error, a {@code ServerErrorException} with a corresponding status code should be used.
      *
      * @param authRequest The authentication information provided by the client in the SASL exchange.
-     * @param authenticationResultHandler The handler to invoke with the authentication result. If authentication succeeds,
-     *                                    the result contains the authenticated user. Otherwise the failed result
-     *                                    {@code ServiceInvocationException} indicates the error status.
+     * @return A future indicating the outcome of the authentication attempt. If authentication succeeds,
+     *                                    the result is completed with the authenticated user. Otherwise the future is
+     *                                    failed with a {@code ServiceInvocationException}.
+     *                                    <p>
+     *                                    In case of wrong credentials, this would look like this:
+     *                                    <pre>
+     *                                    return Future.failedFuture(new ClientErrorException(
+     *                                        HttpURLConnection.HTTP_UNAUTHORIZED,
+     *                                        "unauthorized"));
+     *                                    </pre>
+     *                                    In case of a server error, the returned Future should be failed with a
+     *                                    {@code ServerErrorException} having a corresponding status code.
      */
-    void authenticate(JsonObject authRequest, Handler<AsyncResult<HonoUser>> authenticationResultHandler);
+    Future<HonoUser> authenticate(JsonObject authRequest);
 
     /**
      * Gets the SASL mechanisms supported by this service.

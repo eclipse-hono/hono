@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -122,7 +122,8 @@ public class FileBasedAuthenticationServiceTest {
     public void testVerifyPlainFailsForMissingUsername(final VertxTestContext ctx) {
 
         givenAStartedService()
-            .onSuccess(ok -> authService.verifyPlain(null, null, "pwd", ctx.failing(t -> ctx.completeNow())));
+            .compose(ok -> authService.verifyPlain(null, null, "pwd"))
+            .onComplete(ctx.failing(t -> ctx.completeNow()));
         ;
     }
 
@@ -136,7 +137,8 @@ public class FileBasedAuthenticationServiceTest {
     public void testVerifyPlainFailsForMissingPassword(final VertxTestContext ctx) {
 
         givenAStartedService()
-            .onSuccess(ok -> authService.verifyPlain(null, "user", null, ctx.failing(t -> ctx.completeNow())));
+            .compose(ok -> authService.verifyPlain(null, "user", null))
+            .onComplete(ctx.failing(t -> ctx.completeNow()));
     }
 
     /**
@@ -149,10 +151,11 @@ public class FileBasedAuthenticationServiceTest {
     public void testVerifyPlainSucceedsForMatchingPassword(final VertxTestContext ctx) {
 
         givenAStartedService()
-            .onSuccess(ok -> authService.verifyPlain(null, "hono-client@HONO", "secret", ctx.succeeding(res -> {
+            .compose(ok -> authService.verifyPlain(null, "hono-client@HONO", "secret"))
+            .onComplete(ctx.succeeding(res -> {
                 assertUserAndToken(ctx, res, "hono-client@HONO", TOKEN);
                 ctx.completeNow();
-            })));
+            }));
     }
 
     /**
@@ -165,10 +168,11 @@ public class FileBasedAuthenticationServiceTest {
     public void testVerifyPlainGrantsAuthorizationId(final VertxTestContext ctx) {
 
         givenAStartedService()
-            .onSuccess(ok -> authService.verifyPlain("userB", "http-adapter@HONO", "secret", ctx.succeeding(res -> {
+            .compose(ok -> authService.verifyPlain("userB", "http-adapter@HONO", "secret"))
+            .onComplete(ctx.succeeding(res -> {
                 assertUserAndToken(ctx, res, "userB", TOKEN);
                 ctx.completeNow();
-            })));
+            }));
     }
 
     /**
@@ -182,10 +186,11 @@ public class FileBasedAuthenticationServiceTest {
     public void testVerifyPlainRefusesAuthorizationId(final VertxTestContext ctx) {
 
         givenAStartedService()
-            .onSuccess(ok -> authService.verifyPlain("userB", "hono-client@HONO", "secret", ctx.succeeding(res -> {
+            .compose(ok -> authService.verifyPlain("userB", "hono-client@HONO", "secret"))
+            .onComplete(ctx.succeeding(res -> {
                 assertUserAndToken(ctx, res, "hono-client@HONO", TOKEN);
                 ctx.completeNow();
-            })));
+            }));
     }
 
     /**
@@ -198,10 +203,11 @@ public class FileBasedAuthenticationServiceTest {
     public void testVerifyPlainRefusesNonExistingAuthorizationId(final VertxTestContext ctx) {
 
         givenAStartedService()
-            .onSuccess(ok -> authService.verifyPlain("userC", "http-adapter@HONO", "secret", ctx.succeeding(res -> {
+            .compose(ok -> authService.verifyPlain("userC", "http-adapter@HONO", "secret"))
+            .onComplete(ctx.succeeding(res -> {
                 assertUserAndToken(ctx, res, "http-adapter@HONO", TOKEN);
                 ctx.completeNow();
-            })));
+            }));
     }
 
     /**
@@ -214,7 +220,8 @@ public class FileBasedAuthenticationServiceTest {
     public void testVerifyExternalFailsForMissingSubjectDn(final VertxTestContext ctx) {
 
         givenAStartedService()
-            .onSuccess(ok -> authService.verifyExternal(null, null, ctx.failing(t -> ctx.completeNow())));
+            .compose(ok -> authService.verifyExternal(null, null))
+            .onComplete(ctx.failing(t -> ctx.completeNow()));
     }
 
     /**
@@ -227,10 +234,11 @@ public class FileBasedAuthenticationServiceTest {
     public void testVerifyExternalGrantsCommonName(final VertxTestContext ctx) {
 
         givenAStartedService()
-            .onSuccess(ok -> authService.verifyExternal(null, "CN=userB", ctx.succeeding(res -> {
+            .compose(ok -> authService.verifyExternal(null, "CN=userB"))
+            .onComplete(ctx.succeeding(res -> {
                 assertUserAndToken(ctx, res, "userB", TOKEN);
                 ctx.completeNow();
-            })));
+            }));
     }
 
     /**
@@ -243,10 +251,11 @@ public class FileBasedAuthenticationServiceTest {
     public void testVerifyExternalGrantsAuthorizationId(final VertxTestContext ctx) {
 
         givenAStartedService()
-            .onSuccess(ok -> authService.verifyExternal("userB", "CN=mqtt-adapter", ctx.succeeding(res -> {
+            .compose(ok -> authService.verifyExternal("userB", "CN=mqtt-adapter"))
+            .onComplete(ctx.succeeding(res -> {
                 assertUserAndToken(ctx, res, "userB", TOKEN);
                 ctx.completeNow();
-            })));
+            }));
     }
 
     /**
@@ -259,10 +268,11 @@ public class FileBasedAuthenticationServiceTest {
     public void testVerifyExternalRefusesNonExistingAuthorizationId(final VertxTestContext ctx) {
 
         givenAStartedService()
-            .onSuccess(ok -> authService.verifyExternal("userC", "CN=mqtt-adapter", ctx.succeeding(res -> {
+            .compose(ok -> authService.verifyExternal("userC", "CN=mqtt-adapter"))
+            .onComplete(ctx.succeeding(res -> {
                 assertUserAndToken(ctx, res, "mqtt-adapter", TOKEN);
                 ctx.completeNow();
-            })));
+            }));
     }
 
     /**
@@ -276,10 +286,11 @@ public class FileBasedAuthenticationServiceTest {
     public void testVerifyExternalRefusesAuthorizationId(final VertxTestContext ctx) {
 
         givenAStartedService()
-            .onSuccess(ok -> authService.verifyExternal("userB", "CN=userA", ctx.succeeding(res -> {
+            .compose(ok -> authService.verifyExternal("userB", "CN=userA"))
+            .onComplete(ctx.succeeding(res -> {
                 assertUserAndToken(ctx, res, "userA", TOKEN);
                 ctx.completeNow();
-            })));
+            }));
     }
 
     /**
@@ -293,13 +304,14 @@ public class FileBasedAuthenticationServiceTest {
 
         final ResourceIdentifier registration = ResourceIdentifier.fromString("registration/tenant");
         givenAStartedService()
-            .onSuccess(ok -> authService.verifyPlain(null, "hono-client@HONO", "secret", ctx.succeeding(res -> {
+            .compose(ok -> authService.verifyPlain(null, "hono-client@HONO", "secret"))
+            .onComplete(ctx.succeeding(res -> {
                 ctx.verify(() -> {
                     assertThat(res.getAuthorities().isAuthorized(registration, "assert")).isTrue();
                     assertThat(res.getAuthorities().isAuthorized(registration, "add")).isTrue();
-                    ctx.completeNow();
                 });
-            })));
+                ctx.completeNow();
+            }));
     }
 
     private static void assertUserAndToken(

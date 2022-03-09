@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -34,9 +34,8 @@ import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.NetSocket;
 import io.vertx.proton.ProtonConnection;
@@ -131,10 +130,7 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
 
             final byte[] saslResponse = new byte[sasl.pending()];
             sasl.recv(saslResponse, 0, saslResponse.length);
-            final Promise<HonoUser> authTracker = Promise.promise();
-            verify(chosenMechanism, saslResponse, authTracker);
-
-            authTracker.future()
+            verify(chosenMechanism, saslResponse)
                 .map(user -> {
                     LOG.debug("authentication of client [authorization ID: {}] succeeded", user.getName());
                     Constants.setClientPrincipal(protonConnection, user);
@@ -201,7 +197,7 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
         return succeeded;
     }
 
-    private void verify(final String mechanism, final byte[] saslResponse, final Handler<AsyncResult<HonoUser>> authResultHandler) {
+    private Future<HonoUser> verify(final String mechanism, final byte[] saslResponse) {
 
         final JsonObject authRequest = AuthenticationConstants.getAuthenticationRequest(mechanism, saslResponse);
         if (clientCertificate != null) {
@@ -209,6 +205,6 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
             LOG.debug("client has provided X.509 certificate [subject DN: {}]", subjectDn);
             authRequest.put(AuthenticationConstants.FIELD_SUBJECT_DN, subjectDn);
         }
-        authenticationService.authenticate(authRequest, authResultHandler);
+        return authenticationService.authenticate(authRequest);
     }
 }
