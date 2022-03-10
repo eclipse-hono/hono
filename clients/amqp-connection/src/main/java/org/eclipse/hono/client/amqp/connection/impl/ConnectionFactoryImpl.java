@@ -24,6 +24,7 @@ import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.client.amqp.connection.ConnectTimeoutException;
 import org.eclipse.hono.client.amqp.connection.ConnectionFactory;
+import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -137,7 +138,6 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
             final Handler<AsyncResult<ProtonConnection>> closeHandler,
             final Handler<ProtonConnection> disconnectHandler) {
 
-        final Promise<ProtonConnection> connectionResultHandler = Promise.promise();
         final ProtonClientOptions clientOptions = Optional.ofNullable(options).orElseGet(this::createClientOptions);
         final String effectiveUsername = Optional.ofNullable(username).orElseGet(config::getUsername);
         final String effectivePassword = Optional.ofNullable(password).orElseGet(config::getPassword);
@@ -145,6 +145,8 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
         final String effectiveContainerId = Optional.ofNullable(containerId).orElseGet(this::getContainerIdDefault);
 
         final ProtonClient client = Optional.ofNullable(protonClient).orElseGet(() -> ProtonClient.create(vertx));
+        final Promise<ProtonConnection> connectionAttempt = Promise.promise();
+
         LOGGER.debug("connecting to AMQP 1.0 container [{}://{}:{}, role: {}]",
                 clientOptions.isSsl() ? PROTOCOL_AMQPS : PROTOCOL_AMQP,
                 config.getHost(),
@@ -155,7 +157,7 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
         final Long connectionTimeoutTimerId = config.getConnectTimeout() > 0
                 ? vertx.setTimer(config.getConnectTimeout(), id -> {
                     if (connectionTimeoutReached.compareAndSet(false, true)) {
-                        failConnectionAttempt(clientOptions, connectionResultHandler, new ConnectTimeoutException(
+                        failConnectionAttempt(clientOptions, connectionAttempt, new ConnectTimeoutException(
                                 "connection attempt timed out after " + config.getConnectTimeout() + "ms"));
                     }
                 })
@@ -175,16 +177,18 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
                         clientOptions,
                         closeHandler,
                         disconnectHandler,
-                        connectionResultHandler));
-        return connectionResultHandler.future();
+                        connectionAttempt));
+        return connectionAttempt.future();
     }
 
     private String getContainerIdDefault() {
         return ConnectionFactory.createContainerId(config.getName(), config.getServerRole(), UUID.randomUUID());
     }
 
-    private void failConnectionAttempt(final ProtonClientOptions clientOptions,
-                                       final Handler<AsyncResult<ProtonConnection>> connectionResultHandler, final Throwable cause) {
+    private void failConnectionAttempt(
+            final ProtonClientOptions clientOptions,
+            final Handler<AsyncResult<ProtonConnection>> connectionResultHandler,
+            final Throwable cause) {
         LOGGER.debug("can't connect to AMQP 1.0 container [{}://{}:{}, role: {}]: {}",
                 clientOptions.isSsl() ? PROTOCOL_AMQPS : PROTOCOL_AMQP,
                 config.getHost(),
@@ -210,9 +214,7 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
         }
 
         if (conAttempt.failed()) {
-            if (connectionTimeoutTimerId != null) {
-                vertx.cancelTimer(connectionTimeoutTimerId);
-            }
+            Optional.ofNullable(connectionTimeoutTimerId).ifPresent(vertx::cancelTimer);
             failConnectionAttempt(clientOptions, connectionResultHandler, conAttempt.cause());
         } else {
 
@@ -227,38 +229,32 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
                     .setContainer(containerId)
                     .setHostname(config.getAmqpHostname())
                     .openHandler(openCon -> {
-                        if (connectionTimeoutTimerId != null) {
-                            vertx.cancelTimer(connectionTimeoutTimerId);
-                        }
+                        Optional.ofNullable(connectionTimeoutTimerId).ifPresent(vertx::cancelTimer);
                         downstreamConnection.disconnectHandler(null);
 
                         if (connectionTimeoutReached.get()) {
                             logTimedOutOpenHandlerResult(openCon, downstreamConnection, clientOptions);
                             // close the connection again
                             closeAndDisconnect(downstreamConnection);
+                        } else if (openCon.succeeded()) {
+                            LOGGER.debug("connection to container [{}] at [{}://{}:{}, role: {}] open",
+                                    downstreamConnection.getRemoteContainer(),
+                                    clientOptions.isSsl() ? PROTOCOL_AMQPS : PROTOCOL_AMQP,
+                                    config.getHost(),
+                                    config.getPort(),
+                                    config.getServerRole());
+                            downstreamConnection.disconnectHandler(disconnectHandler);
+                            downstreamConnection.closeHandler(closeHandler);
+                            connectionResultHandler.handle(Future.succeededFuture(downstreamConnection));
                         } else {
-                            if (openCon.succeeded()) {
-                                LOGGER.debug("connection to container [{}] at [{}://{}:{}, role: {}] open",
-                                        downstreamConnection.getRemoteContainer(),
-                                        clientOptions.isSsl() ? PROTOCOL_AMQPS : PROTOCOL_AMQP,
-                                        config.getHost(),
-                                        config.getPort(),
-                                        config.getServerRole());
-                                downstreamConnection.disconnectHandler(disconnectHandler);
-                                downstreamConnection.closeHandler(closeHandler);
-                                connectionResultHandler.handle(Future.succeededFuture(downstreamConnection));
-                            } else {
-                                logFailedOpenHandlerResult(openCon, downstreamConnection, clientOptions);
-                                // close the connection again
-                                closeAndDisconnect(downstreamConnection);
+                            logFailedOpenHandlerResult(openCon, downstreamConnection, clientOptions);
+                            // close the connection again
+                            closeAndDisconnect(downstreamConnection);
 
-                                connectionResultHandler.handle(Future.failedFuture(openCon.cause()));
-                            }
+                            connectionResultHandler.handle(Future.failedFuture(openCon.cause()));
                         }
                     }).disconnectHandler(disconnectedCon -> {
-                        if (connectionTimeoutTimerId != null) {
-                            vertx.cancelTimer(connectionTimeoutTimerId);
-                        }
+                        Optional.ofNullable(connectionTimeoutTimerId).ifPresent(vertx::cancelTimer);
                         if (connectionTimeoutReached.get()) {
                             LOGGER.warn("ignoring error - connection attempt already timed out: can't open connection to container [{}] at [{}://{}:{}, role: {}]: {}",
                                     downstreamConnection.getRemoteContainer(),
@@ -275,29 +271,31 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
                                     config.getPort(),
                                     config.getServerRole(),
                                     "underlying connection was disconnected while opening AMQP connection");
-                            connectionResultHandler.handle(Future
-                                    .failedFuture("underlying connection was disconnected while opening AMQP connection"));
+                            connectionResultHandler.handle(Future.failedFuture(
+                                    "underlying connection was disconnected while opening AMQP connection"));
                         }
                     }).open();
         }
     }
 
-    private void closeAndDisconnect(final ProtonConnection downstreamConnection) {
-        downstreamConnection.closeHandler(null);
-        downstreamConnection.disconnectHandler(null);
-        downstreamConnection.close();
-        downstreamConnection.disconnect();
+    private Future<Void> closeAndDisconnect(final ProtonConnection downstreamConnection) {
+        return HonoProtonHelper.closeConnection(
+                downstreamConnection,
+                config.getCloseConnectionTimeout(),
+                vertx.getOrCreateContext());
     }
 
-    private void handleTimedOutConnectionAttemptResult(final AsyncResult<ProtonConnection> conAttempt, final ProtonClientOptions clientOptions) {
+    private void handleTimedOutConnectionAttemptResult(
+            final AsyncResult<ProtonConnection> conAttempt,
+            final ProtonClientOptions clientOptions) {
+
         if (conAttempt.succeeded()) {
             LOGGER.debug("ignoring successful connection attempt to AMQP 1.0 container [{}://{}:{}, role: {}]: attempt already timed out",
                     clientOptions.isSsl() ? PROTOCOL_AMQPS : PROTOCOL_AMQP,
                     config.getHost(),
                     config.getPort(),
                     config.getServerRole());
-            final ProtonConnection downstreamConnection = conAttempt.result();
-            closeAndDisconnect(downstreamConnection);
+            closeAndDisconnect(conAttempt.result());
         } else {
             LOGGER.debug("ignoring failed connection attempt to AMQP 1.0 container [{}://{}:{}, role: {}]: attempt already timed out",
                     clientOptions.isSsl() ? PROTOCOL_AMQPS : PROTOCOL_AMQP,
@@ -308,8 +306,11 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
         }
     }
 
-    private void logTimedOutOpenHandlerResult(final AsyncResult<ProtonConnection> openConnectionResult,
-            final ProtonConnection downstreamConnection, final ProtonClientOptions clientOptions) {
+    private void logTimedOutOpenHandlerResult(
+            final AsyncResult<ProtonConnection> openConnectionResult,
+            final ProtonConnection downstreamConnection,
+            final ProtonClientOptions clientOptions) {
+
         if (openConnectionResult.succeeded()) {
             LOGGER.debug("ignoring received open frame from container [{}] at [{}://{}:{}, role: {}]: connection attempt already timed out",
                     downstreamConnection.getRemoteContainer(),
@@ -340,8 +341,11 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
         }
     }
 
-    private void logFailedOpenHandlerResult(final AsyncResult<ProtonConnection> openCon,
-            final ProtonConnection downstreamConnection, final ProtonClientOptions clientOptions) {
+    private void logFailedOpenHandlerResult(
+            final AsyncResult<ProtonConnection> openCon,
+            final ProtonConnection downstreamConnection,
+            final ProtonClientOptions clientOptions) {
+
         final ErrorCondition error = downstreamConnection.getRemoteCondition();
         if (error == null) {
             LOGGER.warn("can't open connection to container [{}] at [{}://{}:{}, role: {}]",

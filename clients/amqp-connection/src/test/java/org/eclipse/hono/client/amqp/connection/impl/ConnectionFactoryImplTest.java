@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.client.amqp.connection.ConnectTimeoutException;
 import org.eclipse.hono.test.VertxMockSupport;
+import org.eclipse.hono.util.AmqpErrorException;
 import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,6 +41,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -132,75 +134,50 @@ public class ConnectionFactoryImplTest {
     /**
      * Verifies that a connection attempt is failed if there is a timeout opening the connection
      * and verifies that a subsequently received 'open' frame is ignored.
-     *
-     * @param ctx The vert.x test context.
      */
     @Test
-    public void testConnectIgnoresSuccessfulOpenAfterTimeout(final VertxTestContext ctx) {
-        final long connectTimeout = 200L;
+    public void testConnectIgnoresSuccessfulOpenAfterTimeout() {
 
-        // GIVEN a factory configured to connect to a server with a mocked ProtonClient that won't actually try to connect
-        props.setConnectTimeout((int) connectTimeout);
-        final AtomicReference<Handler<Long>> timeoutHandlerRef = new AtomicReference<>();
-        when(vertx.setTimer(eq(connectTimeout), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
-            timeoutHandlerRef.set(invocation.getArgument(1));
-            return 1L;
-        });
-
-        final ConnectionFactoryImpl factory = new ConnectionFactoryImpl(vertx, props);
-        final ProtonClient protonClientMock = mock(ProtonClient.class);
-        final ProtonConnection protonConnectionMock = mock(ProtonConnection.class, Mockito.RETURNS_SELF);
-        doAnswer(invocation -> {
-            final Handler<AsyncResult<ProtonConnection>> resultHandler = invocation.getArgument(5);
-            resultHandler.handle(Future.succeededFuture(protonConnectionMock));
-            return null;
-        }).when(protonClientMock).connect(
-                any(ProtonClientOptions.class),
-                any(),
-                anyInt(),
-                any(),
-                any(),
-                VertxMockSupport.anyHandler());
-        factory.setProtonClient(protonClientMock);
-
-        // WHEN trying to connect to the server
-        factory.connect(null, null, null)
-            .onComplete(ctx.failing(t -> {
-                // THEN the connection attempt fails with a TimeoutException and the given handler is invoked
-                ctx.verify(() -> assertTrue(t instanceof ConnectTimeoutException));
-                ctx.completeNow();
-            }));
-        final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> openHandlerCaptor = VertxMockSupport.argumentCaptorHandler();
-        verify(protonConnectionMock).openHandler(openHandlerCaptor.capture());
-        // trigger timeout
-        timeoutHandlerRef.get().handle(1L);
-        // call openHandler - that will be too late for the connect invocation to succeed
-        openHandlerCaptor.getValue().handle(Future.succeededFuture(protonConnectionMock));
-        // and the connection will be disconnected
-        verify(protonConnectionMock).disconnect();
+        testConnectIgnoresRemoteOpenAfterTimeout(Future.succeededFuture());
     }
 
     /**
      * Verifies that a connection attempt is failed if there is a timeout opening the connection
      * and verifies that a subsequently triggered failed open handler is ignored.
-     *
-     * @param ctx The vert.x test context.
      */
     @Test
-    public void testConnectIgnoresFailedOpenAfterTimeout(final VertxTestContext ctx) {
-        final long connectTimeout = 200L;
+    public void testConnectIgnoresFailedOpenAfterTimeout() {
 
-        // GIVEN a factory configured to connect to a server with a mocked ProtonClient that won't actually try to connect
+        testConnectIgnoresRemoteOpenAfterTimeout(Future.failedFuture(new AmqpErrorException(
+                "amqp:resource-limit-exceeded", "connection disallowed by local policy")));
+    }
+
+    private void testConnectIgnoresRemoteOpenAfterTimeout(final AsyncResult<ProtonConnection> remoteOpen) {
+
+        // GIVEN a factory configured to time out a connection attempt after 500ms
+        final long connectTimeout = 500L;
         props.setConnectTimeout((int) connectTimeout);
-        final AtomicReference<Handler<Long>> timeoutHandlerRef = new AtomicReference<>();
-        when(vertx.setTimer(eq(connectTimeout), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
-            timeoutHandlerRef.set(invocation.getArgument(1));
-            return 1L;
-        });
+        final long closeConnectionTimeout = props.getCloseConnectionTimeout();
 
-        final ConnectionFactoryImpl factory = new ConnectionFactoryImpl(vertx, props);
-        final ProtonClient protonClientMock = mock(ProtonClient.class);
+        final Context context = VertxMockSupport.mockContext(vertx);
+        when(vertx.getOrCreateContext()).thenReturn(context);
+        // keep a reference to the connect timeout handler
+        final AtomicReference<Handler<Long>> connectTimeoutHandlerRef = new AtomicReference<>();
+        when(vertx.setTimer(eq(connectTimeout), VertxMockSupport.anyHandler()))
+            .thenAnswer(invocation -> {
+                connectTimeoutHandlerRef.set(invocation.getArgument(1));
+                return 1L;
+            });
+        // keep a reference to the close timeout handler
+        final AtomicReference<Handler<Long>> closeTimeoutHandlerRef = new AtomicReference<>();
+        when(vertx.setTimer(eq(closeConnectionTimeout), VertxMockSupport.anyHandler()))
+            .thenAnswer(invocation -> {
+                closeTimeoutHandlerRef.set(invocation.getArgument(1));
+                return 1L;
+            });
+
         final ProtonConnection protonConnectionMock = mock(ProtonConnection.class, Mockito.RETURNS_SELF);
+        final ProtonClient protonClientMock = mock(ProtonClient.class);
         doAnswer(invocation -> {
             final Handler<AsyncResult<ProtonConnection>> resultHandler = invocation.getArgument(5);
             resultHandler.handle(Future.succeededFuture(protonConnectionMock));
@@ -212,23 +189,30 @@ public class ConnectionFactoryImplTest {
                 any(),
                 any(),
                 VertxMockSupport.anyHandler());
+
+        final ConnectionFactoryImpl factory = new ConnectionFactoryImpl(vertx, props);
         factory.setProtonClient(protonClientMock);
 
         // WHEN trying to connect to the server
-        factory.connect(null, null, null)
-            .onComplete(ctx.failing(t -> {
-                // THEN the connection attempt fails with a TimeoutException and the given handler is invoked
-                ctx.verify(() -> assertTrue(t instanceof ConnectTimeoutException));
-                ctx.completeNow();
-            }));
+        final Future<ProtonConnection> connectAttempt = factory.connect(null, null, null);
+        assertThat(connectAttempt.isComplete()).isFalse();
+        // and the connection attempt times out
+        connectTimeoutHandlerRef.get().handle(1L);
+
+        // THEN the connect attempt fails
+        assertThat(connectAttempt.failed()).isTrue();
+        assertThat(connectAttempt.cause()).isInstanceOf(ConnectTimeoutException.class);
+
+        // and when the peer finally sends its open frame
         final ArgumentCaptor<Handler<AsyncResult<ProtonConnection>>> openHandlerCaptor = VertxMockSupport.argumentCaptorHandler();
         verify(protonConnectionMock).openHandler(openHandlerCaptor.capture());
-        // trigger timeout
-        timeoutHandlerRef.get().handle(1L);
-        // call openHandler - that will be too late for the connect invocation to succeed
-        openHandlerCaptor.getValue().handle(Future.failedFuture(
-                "amqp:resource-limit-exceeded -connection disallowed by local policy"));
-        // and the connection will be disconnected
+        openHandlerCaptor.getValue().handle(remoteOpen);
+
+        // the connection will be closed
+        verify(protonConnectionMock).close();
+        // and when the peer doesn't send its close frame
+        closeTimeoutHandlerRef.get().handle(1L);
+        // the underlying TCP connection is released
         verify(protonConnectionMock).disconnect();
     }
 
