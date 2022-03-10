@@ -16,7 +16,6 @@ import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -455,10 +454,10 @@ public class HonoConnectionImpl implements HonoConnection {
     }
 
     private void notifyDisconnectHandlers() {
-        for (final DisconnectListener<HonoConnection> listener : disconnectListeners) {
+        for (final var listener : disconnectListeners) {
             notifyDisconnectHandler(listener);
         }
-        for (final Iterator<DisconnectListener<HonoConnection>> iter = oneTimeDisconnectListeners.iterator(); iter.hasNext();) {
+        for (final var iter = oneTimeDisconnectListeners.iterator(); iter.hasNext();) {
             notifyDisconnectHandler(iter.next());
             iter.remove();
         }
@@ -468,7 +467,7 @@ public class HonoConnectionImpl implements HonoConnection {
         try {
             listener.onDisconnect(this);
         } catch (final Exception ex) {
-            log.warn("error running disconnectHandler", ex);
+            log.warn("error executing disconnectHandler", ex);
         }
     }
 
@@ -944,18 +943,14 @@ public class HonoConnectionImpl implements HonoConnection {
 
     private void closeConnection(final Handler<AsyncResult<Void>> completionHandler) {
 
-        final Handler<AsyncResult<Object>> handler = attempt -> {
+        final Handler<AsyncResult<Void>> handler = attempt -> {
             disconnecting.compareAndSet(Boolean.TRUE, Boolean.FALSE);
-            if (attempt.succeeded()) {
-                completionHandler.handle(Future.succeededFuture());
-            } else {
-                completionHandler.handle(Future.failedFuture(attempt.cause()));
-            }
+            completionHandler.handle(attempt);
         };
 
         synchronized (connectionLock) {
             if (isConnectedInternal()) {
-                executeOnContext(r -> {
+                executeOnContext((Promise<Void> r) -> {
                     final ProtonConnection connectionToClose = connection;
                     connectionToClose.disconnectHandler(null); // make sure we are not trying to re-connect
                     final Handler<AsyncResult<ProtonConnection>> closeHandler = remoteClose -> {
@@ -973,13 +968,19 @@ public class HonoConnectionImpl implements HonoConnection {
                                     connectionFactory.getServerRole(),
                                     remoteClose.cause());
                         }
+                        // release underlying TCP/TLS connection
+                        connectionToClose.disconnect();
                         notifyDisconnectHandlers();
                         clearState();
                         r.complete();
                     };
                     final int timeout = getCloseConnectionTimeout();
                     final long timerId = vertx.setTimer(timeout, tid -> {
-                        log.info("did not receive remote peer's close frame after {}ms", timeout);
+                        log.debug("did not receive remote peer's [{}:{}, role: {}]] close frame after {}ms",
+                                connectionFactory.getHost(),
+                                connectionFactory.getPort(),
+                                connectionFactory.getServerRole(),
+                                timeout);
                         closeHandler.handle(Future.succeededFuture());
                     });
                     connectionToClose.closeHandler(remoteClose -> {
