@@ -4,6 +4,13 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
+## 1.12.2 (not yet released)
+
+### Fixes & Enhancements
+
+* The Quarkus variant of the MongoDB device registry did not accept HTTP endpoint credentials that worked with the
+  Spring Boot based variant because password hashes were created in lower case instead of upper case. This has been fixed.
+
 ## 1.12.1
 
 ### Fixes & Enhancements

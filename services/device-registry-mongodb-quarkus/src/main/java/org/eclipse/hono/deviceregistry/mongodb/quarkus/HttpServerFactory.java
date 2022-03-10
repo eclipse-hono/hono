@@ -36,6 +36,8 @@ import org.slf4j.LoggerFactory;
 
 import io.opentracing.Tracer;
 import io.vertx.core.Vertx;
+import io.vertx.ext.auth.User;
+import io.vertx.ext.auth.mongo.HashSaltStyle;
 import io.vertx.ext.auth.mongo.MongoAuthenticationOptions;
 import io.vertx.ext.auth.mongo.impl.DefaultHashStrategy;
 import io.vertx.ext.auth.mongo.impl.MongoAuthenticationImpl;
@@ -106,7 +108,17 @@ public class HttpServerFactory {
             mongoAuthOptions.setCollectionName(authConfig.getCollectionName());
             mongoAuthOptions.setUsernameField(authConfig.getUsernameField());
             mongoAuthOptions.setPasswordField(authConfig.getPasswordField());
-            final var hashStrategy = new DefaultHashStrategy();
+            final var hashStrategy = new DefaultHashStrategy() {
+                @Override
+                public String computeHash(final String password, final User user) {
+                    final String hash = super.computeHash(password, user);
+                    // apply workaround for https://github.com/vert-x3/vertx-auth/issues/534 TODO remove after update to vert.x 4.2.5
+                    if (getSaltStyle() != HashSaltStyle.NO_SALT) {
+                        return hash.toUpperCase();
+                    }
+                    return hash;
+                }
+            };
             Optional.ofNullable(authConfig.getHashAlgorithm())
                 .ifPresent(hashStrategy::setAlgorithm);
             Optional.ofNullable(authConfig.getSaltStyle())
