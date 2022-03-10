@@ -17,6 +17,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   guide. This has been fixed.
 * The connection pool configuration for the HotRod client in the Quarkus variant of the Command Router component
   didn't support using property names in camel-case. This has been fixed.
+* *HonoConnectionImpl* instances failed to release/close the underlying TCP/TLS connection when its *disconnect* or
+  *shutdown* method had been invoked. This has been fixed.
 
 ### API Changes
 
