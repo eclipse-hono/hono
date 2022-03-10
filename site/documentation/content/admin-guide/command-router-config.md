@@ -197,8 +197,32 @@ The following table provides an overview of the configuration variables and corr
 | `HONO_COMMANDROUTER_CACHE_REMOTE_AUTHUSERNAME`<br>`hono.commandRouter.cache.remote.authUsername` | yes | - | The username to use for authenticating to the server. |
 | `HONO_COMMANDROUTER_CACHE_REMOTE_AUTHPASSWORD`<br>`hono.commandRouter.cache.remote.authPassword` | yes | - | The password to use for authenticating to the server. |
 | `HONO_COMMANDROUTER_CACHE_REMOTE_SASLMECHANISM`<br>`hono.commandRouter.cache.remote.saslMechanism` | yes | - | The SASL mechanism to use for authenticating to the server. |
+| `HONO_COMMANDROUTER_CACHE_REMOTE_CLUSTER_[*]`<br>`hono.commandRouter.cache.remote.cluster.[*]` | no | - | Alternate cluster definition. Example: <br>Property: `hono.commandRouter.cache.remote.cluster.siteA`, value: `hostA1:11222;hostA2:11223`. |
+| `HONO_COMMANDROUTER_CACHE_REMOTE_CONNECTIONPOOL_EXHAUSTEDACTION`<br>`hono.commandRouter.cache.remote.connectionPool.exhaustedAction` | no | `WAIT` | Specifies what happens when asking for a connection from a server's pool, and that pool is exhausted. Valid values are `WAIT`, `CREATE_NEW` and `EXCEPTION`. |
+| `HONO_COMMANDROUTER_CACHE_REMOTE_CONNECTIONPOOL_MAXACTIVE`<br>`hono.commandRouter.cache.remote.connectionPool.maxActive` | no | `-1` (no limit) | Maximum number of connections per server. |
+| `HONO_COMMANDROUTER_CACHE_REMOTE_CONNECTIONPOOL_MAXPENDINGREQUESTS`<br>`hono.commandRouter.cache.remote.connectionPool.maxPendingRequests` | no | `-1` (no limit) | Specifies the maximum number of requests sent over a single connection at one instant. |
+| `HONO_COMMANDROUTER_CACHE_REMOTE_CONNECTIONPOOL_MAXWAIT`<br>`hono.commandRouter.cache.remote.connectionPool.maxWait` | no | `-1` (no limit) | Time to wait in milliseconds for a connection to become available if `exhaustedAction` is `WAIT`. |
+| `HONO_COMMANDROUTER_CACHE_REMOTE_CONNECTIONPOOL_MINEVICTABLEIDLETIME`<br>`hono.commandRouter.cache.remote.connectionPool.minEvictableIdleTime` | no | `-1` (no limit) | Minimum amount of time that an connection may sit idle in the pool. |
+| `HONO_COMMANDROUTER_CACHE_REMOTE_CONNECTIONPOOL_MINIDLE`<br>`hono.commandRouter.cache.remote.connectionPool.minIdle` | no | `-1` (no limit) | Minimum number of idle connections (per server) that should always be available. |
+| `HONO_COMMANDROUTER_CACHE_REMOTE_CONNECTTIMEOUT`<br>`hono.commandRouter.cache.remote.connectTimeout` | no | `60000` | The timeout for connections in milliseconds. |
+| `HONO_COMMANDROUTER_CACHE_REMOTE_DEFAULTEXECUTORFACTORY_POOLSIZE`<br>`hono.commandRouter.cache.remote.defaultExecutorFactory.poolSize` | no | `99` | Size of the thread pool. |
+| `HONO_COMMANDROUTER_CACHE_REMOTE_DEFAULTEXECUTORFACTORY_THREADNAMEPREFIX`<br>`hono.commandRouter.cache.remote.defaultExecutorFactory.threadnamePrefix` | no | `HotRod-client-async-pool` | Prefix for the default executor thread names. |
+| `HONO_COMMANDROUTER_CACHE_REMOTE_DEFAULTEXECUTORFACTORY_THREADNAMESUFFIX`<br>`hono.commandRouter.cache.remote.defaultExecutorFactory.threadnameSuffix` | no | - | Suffix for the default executor thread names. |
+| `HONO_COMMANDROUTER_CACHE_REMOTE_KEYALIAS`<br>`hono.commandRouter.cache.remote.keyAlias` | no | - | The alias of the key to use, in case the keyStore contains multiple certificates. |
+| `HONO_COMMANDROUTER_CACHE_REMOTE_KEYSTORECERTIFICATEPASSWORD`<br>`hono.commandRouter.cache.remote.keyStoreCertificatePassword` | no | - | The certificate password in the keystore. |
+| `HONO_COMMANDROUTER_CACHE_REMOTE_KEYSTOREFILENAME`<br>`hono.commandRouter.cache.remote.keyStoreFileName` | no | - | The filename of a keystore to use when using client certificate authentication. |
+| `HONO_COMMANDROUTER_CACHE_REMOTE_KEYSTOREPASSWORD`<br>`hono.commandRouter.cache.remote.keyStorePassword` | no | - | The keystore password. |
+| `HONO_COMMANDROUTER_CACHE_REMOTE_KEYSTORETYPE`<br>`hono.commandRouter.cache.remote.keyStoreType` | no | `JKS` | The keystore type. |
+| `HONO_COMMANDROUTER_CACHE_REMOTE_SASLPROPERTIES_[*]`<br>`hono.commandRouter.cache.remote.saslProperties.[*]` | no | - | A SASL property (specific to the used SASL mechanism). |
+| `HONO_COMMANDROUTER_CACHE_REMOTE_SOCKETTIMEOUT`<br>`hono.commandRouter.cache.remote.socketTimeout` | no | `60000` | The timeout for socket read/writes in milliseconds. |
+| `HONO_COMMANDROUTER_CACHE_REMOTE_SSLCIPHERS`<br>`hono.commandRouter.cache.remote.sslCiphers` | no | - | A list of ciphers, separated with spaces and in order of preference, that are used during the SSL handshake to negotiate a cryptographic algorithm for key encryption. By default, the SSL protocol (e.g. TLSv1.2) determines which ciphers to use. You should customize the cipher list with caution to avoid vulnerabilities from weak algorithms. For details about cipher lists and possible values, refer to the [OpenSSL documentation](https://www.openssl.org/docs/man1.1.1/man1/ciphers). |
+| `HONO_COMMANDROUTER_CACHE_REMOTE_SSLPROTOCOL`<br>`hono.commandRouter.cache.remote.sslProtocol` | no | - | The SSL protocol to use (e.g. `TLSv1.2`). |
+| `HONO_COMMANDROUTER_CACHE_REMOTE_TRUSTSTOREFILENAME`<br>`hono.commandRouter.cache.remote.trustStoreFileName` | no | - | The path of the trust store. |
+| `HONO_COMMANDROUTER_CACHE_REMOTE_TRUSTSTOREPASSWORD`<br>`hono.commandRouter.cache.remote.trustStorePassword` | no | - | The password of the trust store. |
+| `HONO_COMMANDROUTER_CACHE_REMOTE_TRUSTSTORETYPE`<br>`hono.commandRouter.cache.remote.trustStoreType` | no | `JKS` | The type of the trust store. Valid values are `JKS`, `JCEKS`, `PCKS12` and `PEM`. |
+| `HONO_COMMANDROUTER_CACHE_REMOTE_USESSL`<br>`hono.commandRouter.cache.remote.useSSL` | no | `false` | Enable TLS (implicitly enabled if a trust store is set). |
 
-In general, the service supports all configuration properties of the [Infinispan Hotrod client](https://docs.jboss.org/infinispan/12.1/apidocs/org/infinispan/client/hotrod/configuration/package-summary.html#package.description) using `hono.commandRouter.cache.remote` instead of the `infinispan.client.hotrod` prefix.
+See also the [Infinispan Hotrod client documentation](https://docs.jboss.org/infinispan/13.0/apidocs/org/infinispan/client/hotrod/configuration/package-summary.html#package.description).
 
 ### Embedded cache
 
@@ -206,7 +230,7 @@ The following table provides an overview of the configuration variables and corr
 
 | OS Environment Variable<br>Java System Property | Mandatory | Default | Description                                                             |
 | :------------------------------------------ | :-------: | :------ | :-----------------------------------------------------------------------|
-| `HONO_COMMANDROUTER_CACHE_EMBEDDED_CONFIGURATIONFILE`<br>`hono.commandRouter.cache.embedded.configurationFile` | yes | - | The absolute path to an Infinispan configuration file. Also see the [Infinispan Configuration Schema](https://docs.jboss.org/infinispan/12.1/configdocs/infinispan-config-12.1.html). |
+| `HONO_COMMANDROUTER_CACHE_EMBEDDED_CONFIGURATIONFILE`<br>`hono.commandRouter.cache.embedded.configurationFile` | yes | - | The absolute path to an Infinispan configuration file. Also see the [Infinispan Configuration Schema](https://docs.jboss.org/infinispan/13.0/configdocs/infinispan-config-13.0.html). |
 
 ## Authentication Service Connection Configuration
 
