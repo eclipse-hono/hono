@@ -13,6 +13,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   *hono.mongodb.connectionString* property. This has been fixed.
 * When a tenant or device gets disabled or deleted, any open AMQP or MQTT connections from clients having authenticated
   themselves as belonging to that tenant or device are getting closed now.
+* The Quarkus variant of the MongoDB device registry did not accept HTTP endpoint credentials that worked with the
+  Spring Boot based variant because password hashes were created in lower case instead of upper case. This has been fixed.
 
 ## 1.12.0
 
