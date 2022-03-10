@@ -561,7 +561,7 @@
                   from related modules "target/config" folder so that we can include them in the image.
                  -->
                 <id>copy_demo_certs</id>
-                <phase>generate-resources</phase>
+                <phase>generate-test-resources</phase>
                 <goals>
                   <goal>unpack-dependencies</goal>
                 </goals>

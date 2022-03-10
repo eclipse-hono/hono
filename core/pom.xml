@@ -187,7 +187,7 @@
               to "target/classes" folder so that we can use them in test cases.
              -->
             <id>copy_demo_certs</id>
-            <phase>generate-resources</phase>
+            <phase>generate-test-resources</phase>
             <goals>
               <goal>unpack-dependencies</goal>
             </goals>
