@@ -556,6 +556,17 @@ public class ClientConfigProperties extends AuthenticatingClientConfigProperties
     }
 
     /**
+     * Gets the maximum amount of time a client should wait for a peer's AMQP 1.0 <em>close</em> performative
+     * when closing a connection.
+     *
+     * @return The maximum number of milliseconds to wait.
+     */
+    public final int getCloseConnectionTimeout() {
+        final int connectTimeoutToUse = connectTimeout > 0 ? connectTimeout : DEFAULT_CONNECT_TIMEOUT;
+        return connectTimeoutToUse / 2;
+    }
+
+    /**
      * Gets the interval in milliseconds in which frames are sent to the remote peer to check 
      * that the connection is still alive.
      * <p>

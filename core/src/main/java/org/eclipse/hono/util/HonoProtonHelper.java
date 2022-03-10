@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,6 +23,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonLink;
 import io.vertx.proton.ProtonReceiver;
@@ -325,6 +326,49 @@ public final class HonoProtonHelper {
     }
 
     /**
+     * Closes an AMQP 1.0 connection and releases the underlying TCP/TLS connection.
+     *
+     * @param connectionToClose The connection to close.
+     * @param timeoutMillis The maximum number of milliseconds to wait for the peer's <em>close</em> frame.
+     *                      The given value is capped to at least 200ms.
+     * @param vertxContext The context to close the connection on.
+     * @return A future indicating the outcome closing the connection. The future will be succeeded if the peer's
+     *         close frame did not contain an error or if the peer's close frame has not been received within the
+     *         given timeout period. Otherwise, the future will be failed with the error conveyed in the peer's
+     *         close frame. Any handlers registered on the returned future will be executed on the given context.
+     * @throws NullPointerException if connection or context are {@code null}.
+     */
+    public static Future<Void> closeConnection(
+            final ProtonConnection connectionToClose,
+            final int timeoutMillis,
+            final Context vertxContext) {
+
+        Objects.requireNonNull(connectionToClose);
+        Objects.requireNonNull(vertxContext);
+
+        final int timeout = Math.max(timeoutMillis, 200);
+
+        return executeOnContext(vertxContext, (Promise<ProtonConnection> r) -> {
+            connectionToClose.disconnectHandler(null); // make sure we are not trying to re-connect
+            final Handler<AsyncResult<ProtonConnection>> closeHandler = remoteClose -> {
+                connectionToClose.disconnect();
+                r.handle(remoteClose);
+            };
+            final long timerId = vertxContext.owner().setTimer(timeout, tid -> {
+                LOG.debug("did not receive remote peer's close frame after {}ms", timeout);
+                closeHandler.handle(Future.succeededFuture(connectionToClose));
+            });
+            connectionToClose.closeHandler(remoteClose -> {
+                if (vertxContext.owner().cancelTimer(timerId)) {
+                    // timer has not fired yet
+                    closeHandler.handle(remoteClose);
+                }
+            });
+            connectionToClose.close();
+        }).mapEmpty();
+    }
+
+    /**
      * Sets a handler that will be invoked when the given message delivery of a received message gets updated from the
      * remote peer before the local receiver updates the delivery.
      * <p>
@@ -335,9 +379,11 @@ public final class HonoProtonHelper {
      * @param delivery The delivery to set the handler on. Must be a delivery provided by a <em>ProtonReceiver</em>
      *            handler. Note that the delivery actually needs to be a {@link ProtonDeliveryImpl}, otherwise the
      *            given handler won't get registered.
-     * @param handler The handler to invoke.
+     * @param handler The handler to invoke or {@code null}.
      */
-    public static void onReceivedMessageDeliveryUpdatedFromRemote(final ProtonDelivery delivery, final Handler<ProtonDelivery> handler) {
+    public static void onReceivedMessageDeliveryUpdatedFromRemote(
+            final ProtonDelivery delivery,
+            final Handler<ProtonDelivery> handler) {
         if (delivery instanceof ProtonDeliveryImpl) {
             ((ProtonDeliveryImpl) delivery).handler(handler);
         }

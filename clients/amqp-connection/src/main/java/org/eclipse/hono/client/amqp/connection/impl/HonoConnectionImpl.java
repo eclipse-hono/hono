@@ -842,7 +842,7 @@ public final class HonoConnectionImpl implements HonoConnection {
         if (latch != null) {
             try {
                 // use a timeout slightly higher than the one used in closeConnection()
-                final int timeout = getCloseConnectionTimeout() + 20;
+                final int timeout = clientConfigProperties.getCloseConnectionTimeout() + 20;
                 if (!latch.await(timeout, TimeUnit.MILLISECONDS)) {
                     LOG.warn("shutdown of client timed out after {}ms", timeout);
                 }
@@ -883,7 +883,7 @@ public final class HonoConnectionImpl implements HonoConnection {
         if (latch != null) {
             try {
                 // use a timeout slightly higher than the one used in closeConnection()
-                final int timeout = getCloseConnectionTimeout() + 20;
+                final int timeout = clientConfigProperties.getCloseConnectionTimeout() + 20;
                 if (!latch.await(timeout, TimeUnit.MILLISECONDS)) {
                     LOG.warn("Disconnecting from server [{}:{}, role: {}] timed out after {}ms",
                             connectionFactory.getHost(),
@@ -943,52 +943,35 @@ public final class HonoConnectionImpl implements HonoConnection {
 
         synchronized (connectionLock) {
             if (isConnectedInternal()) {
-                executeOnContext((Promise<Void> r) -> {
-                    final ProtonConnection connectionToClose = connection;
-                    connectionToClose.disconnectHandler(null); // make sure we are not trying to re-connect
-                    final Handler<AsyncResult<ProtonConnection>> closeHandler = remoteClose -> {
-                        if (remoteClose.succeeded()) {
-                            LOG.info("closed connection to container [{}] at [{}:{}, role: {}]",
+
+                final ProtonConnection connectionToClose = connection;
+                LOG.info("closing connection to container [{}] at [{}:{}, role: {}] ...",
+                        connectionToClose.getRemoteContainer(),
+                        connectionFactory.getHost(),
+                        connectionFactory.getPort(),
+                        connectionFactory.getServerRole());
+                HonoProtonHelper.closeConnection(
+                        connectionToClose,
+                        clientConfigProperties.getCloseConnectionTimeout(),
+                        context)
+                    .onSuccess(con -> LOG.info("closed connection to container [{}] at [{}:{}, role: {}]",
                                     connectionToClose.getRemoteContainer(),
                                     connectionFactory.getHost(),
                                     connectionFactory.getPort(),
-                                    connectionFactory.getServerRole());
-                        } else {
-                            LOG.info("closed connection to container [{}] at [{}:{}, role: {}]",
+                                    connectionFactory.getServerRole()))
+                    .onFailure(t -> LOG.info("closed connection to container [{}] at [{}:{}, role: {}]",
                                     connectionToClose.getRemoteContainer(),
                                     connectionFactory.getHost(),
                                     connectionFactory.getPort(),
                                     connectionFactory.getServerRole(),
-                                    remoteClose.cause());
-                        }
-                        // release underlying TCP/TLS connection
-                        connectionToClose.disconnect();
+                                    t))
+                    .map((Void) null)
+                    .onComplete(result -> {
                         notifyDisconnectHandlers();
                         clearState();
-                        r.complete();
-                    };
-                    final int timeout = getCloseConnectionTimeout();
-                    final long timerId = vertx.setTimer(timeout, tid -> {
-                        LOG.debug("did not receive remote peer's [{}:{}, role: {}]] close frame after {}ms",
-                                connectionFactory.getHost(),
-                                connectionFactory.getPort(),
-                                connectionFactory.getServerRole(),
-                                timeout);
-                        closeHandler.handle(Future.succeededFuture());
-                    });
-                    connectionToClose.closeHandler(remoteClose -> {
-                        if (vertx.cancelTimer(timerId)) {
-                            // timer has not fired yet
-                            closeHandler.handle(remoteClose);
-                        }
-                    });
-                    LOG.info("closing connection to container [{}] at [{}:{}, role: {}] ...",
-                            connectionToClose.getRemoteContainer(),
-                            connectionFactory.getHost(),
-                            connectionFactory.getPort(),
-                            connectionFactory.getServerRole());
-                    connectionToClose.close();
-                }).onComplete(handler);
+                    })
+                    .onComplete(completionHandler);
+
             } else {
                 LOG.info("connection to server [{}:{}, role: {}] already closed",
                         connectionFactory.getHost(),
@@ -997,13 +980,6 @@ public final class HonoConnectionImpl implements HonoConnection {
                 handler.handle(Future.succeededFuture());
             }
         }
-    }
-
-    private int getCloseConnectionTimeout() {
-        final int connectTimeoutToUse = clientConfigProperties.getConnectTimeout() > 0
-                ? clientConfigProperties.getConnectTimeout()
-                : ClientConfigProperties.DEFAULT_CONNECT_TIMEOUT;
-        return connectTimeoutToUse / 2;
     }
 
     /**
