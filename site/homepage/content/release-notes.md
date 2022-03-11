@@ -17,6 +17,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   Spring Boot based variant because password hashes were created in lower case instead of upper case. This has been fixed.
 * In some cases, invalid HTTP requests to the HTTP adapter or the Device Registry caused a response
   with a 500 status code instead of the corresponding 4xx status code. This has been fixed.
+* *HonoConnectionImpl* instances failed to release/close the underlying TCP/TLS connection when its *disconnect* or
+  *shutdown* method had been invoked. This has been fixed.
 
 ## 1.12.0
 

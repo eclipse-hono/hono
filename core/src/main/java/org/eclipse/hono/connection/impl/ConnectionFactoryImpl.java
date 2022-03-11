@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -32,6 +32,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.net.JdkSSLEngineOptions;
 import io.vertx.core.net.KeyCertOptions;
 import io.vertx.core.net.OpenSSLEngineOptions;
 import io.vertx.core.net.TrustOptions;
@@ -388,11 +389,12 @@ public final class ConnectionFactoryImpl implements ConnectionFactory {
                     isOpenSslAvailable, supportsKeyManagerFactory);
 
             if (useOpenSsl) {
-                logger.debug("using OpenSSL [version: {}] instead of JDK's default SSL engine",
+                logger.debug("using OpenSSL [version: {}] instead of JVM's default SSL engine",
                         OpenSsl.versionString());
-                clientOptions.setSslEngineOptions(new OpenSSLEngineOptions());
+                clientOptions.setOpenSslEngineOptions(new OpenSSLEngineOptions());
             } else {
-                logger.debug("using JDK's default SSL engine");
+                logger.debug("using JVM's default SSL engine");
+                clientOptions.setJdkSslEngineOptions(new JdkSSLEngineOptions());
             }
 
             if (config.isHostnameVerificationRequired()) {
