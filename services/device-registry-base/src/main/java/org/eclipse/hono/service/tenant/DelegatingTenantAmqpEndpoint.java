@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,6 +22,7 @@ import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AbstractDelegatingRequestResponseEndpoint;
+import org.eclipse.hono.service.amqp.AbstractRequestResponseEndpoint;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -145,7 +146,11 @@ public class DelegatingTenantAmqpEndpoint<S extends TenantService>
             final Span span) {
 
         return getService().get(tenantId, span)
-                .map(tr -> TenantConstants.getAmqpReply(TenantConstants.TENANT_ENDPOINT, tenantId, request, tr));
+                .map(tr -> AbstractRequestResponseEndpoint.getAmqpReply(
+                        TenantConstants.TENANT_ENDPOINT,
+                        tenantId,
+                        request,
+                        tr));
     }
 
     private Future<Message> processGetByCaRequest(final Message request, final String subjectDn,
@@ -161,7 +166,11 @@ public class DelegatingTenantAmqpEndpoint<S extends TenantService>
                             TenantConstants.FIELD_PAYLOAD_TENANT_ID);
                     TracingHelper.TAG_TENANT_ID.set(span, tenantId);
                 }
-                return TenantConstants.getAmqpReply(TenantConstants.TENANT_ENDPOINT, tenantId, request, tr);
+                return AbstractRequestResponseEndpoint.getAmqpReply(
+                        TenantConstants.TENANT_ENDPOINT,
+                        tenantId,
+                        request,
+                        tr);
             });
         } catch (final IllegalArgumentException e) {
             TracingHelper.logError(span, "illegal subject DN provided by client: " + subjectDn);

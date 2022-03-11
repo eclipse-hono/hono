@@ -16,7 +16,9 @@ import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
@@ -31,7 +33,7 @@ import org.eclipse.hono.service.auth.ClaimsBasedAuthorizationService;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.RequestResponseApiConstants;
+import org.eclipse.hono.util.RequestResponseResult;
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.opentracing.Span;
@@ -40,6 +42,7 @@ import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.ReplyException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
@@ -70,6 +73,91 @@ public abstract class AbstractRequestResponseEndpoint<T extends ServiceConfigPro
      */
     protected AbstractRequestResponseEndpoint(final Vertx vertx) {
         super(Objects.requireNonNull(vertx));
+    }
+
+    /**
+     * Creates an AMQP message from a result to a service invocation.
+     *
+     * @param endpoint The service endpoint that the operation has been invoked on.
+     * @param tenantId The id of the tenant (may be {@code null}).
+     * @param request The request message.
+     * @param result The result message.
+     * @return The AMQP message.
+     * @throws NullPointerException if endpoint, request or result is {@code null}.
+     * @throws IllegalArgumentException if the result does not contain a correlation ID.
+     */
+    public static final Message getAmqpReply(
+            final String endpoint,
+            final String tenantId,
+            final Message request,
+            final RequestResponseResult<JsonObject> result) {
+
+        Objects.requireNonNull(endpoint);
+        Objects.requireNonNull(request);
+        Objects.requireNonNull(result);
+
+        final Object correlationId = MessageHelper.getCorrelationId(request);
+
+        if (correlationId == null) {
+            throw new IllegalArgumentException("request must contain correlation ID");
+        }
+
+        final String deviceId = MessageHelper.getDeviceId(request);
+
+        final ResourceIdentifier address = ResourceIdentifier.from(endpoint, tenantId, deviceId);
+
+        final Message message = ProtonHelper.message();
+        message.setMessageId(UUID.randomUUID().toString());
+        message.setCorrelationId(correlationId.toString());
+        message.setAddress(address.toString());
+
+        final Map<String, Object> map = new HashMap<>();
+        map.put(MessageHelper.APP_PROPERTY_STATUS, result.getStatus());
+        if (tenantId != null) {
+            map.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
+        }
+        if (deviceId != null) {
+            map.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+        }
+        if (result.getCacheDirective() != null) {
+            map.put(MessageHelper.APP_PROPERTY_CACHE_CONTROL, result.getCacheDirective().toString());
+        }
+        message.setApplicationProperties(new ApplicationProperties(map));
+
+        MessageHelper.setJsonPayload(message, result.getPayload());
+
+        return message;
+    }
+
+
+    /**
+     * Creates an AMQP (response) message for conveying an erroneous outcome of an operation.
+     *
+     * @param requestMessage The request message to create the response for.
+     * @param status The status code.
+     * @param errorDescription An (optional) error description which will be put to a <em>Data</em>
+     *                         section.
+     * @return The response message.
+     * @throws NullPointerException if request message is {@code null}.
+     * @throws IllegalArgumentException if the status code is &lt; 100 or &gt;= 600.
+     */
+    public static final Message getErrorMessage(
+            final Message requestMessage,
+            final int status,
+            final String errorDescription) {
+
+        Objects.requireNonNull(requestMessage);
+        if (status < 100 || status >= 600) {
+            throw new IllegalArgumentException("illegal status code");
+        }
+
+        final Message message = ProtonHelper.message();
+        MessageHelper.addStatus(message, status);
+        message.setCorrelationId(MessageHelper.getCorrelationId(requestMessage));
+        if (errorDescription != null) {
+            MessageHelper.setPayload(message, MessageHelper.CONTENT_TYPE_TEXT_PLAIN, Buffer.buffer(errorDescription));
+        }
+        return message;
     }
 
     /**
@@ -241,7 +329,7 @@ public abstract class AbstractRequestResponseEndpoint<T extends ServiceConfigPro
 
                             final ServiceInvocationException ex = getServiceInvocationException(t);
                             Tags.HTTP_STATUS.set(currentSpan, ex.getErrorCode());
-                            return RequestResponseApiConstants.getErrorMessage(ex.getErrorCode(), ex.getMessage(), requestMessage);
+                            return getErrorMessage(requestMessage, ex.getErrorCode(), ex.getMessage());
                         })
                         .map(amqpMessage -> {
                             Tags.HTTP_STATUS.set(currentSpan, MessageHelper.getStatus(amqpMessage));

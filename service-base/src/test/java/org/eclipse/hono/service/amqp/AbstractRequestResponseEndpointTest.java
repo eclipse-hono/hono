@@ -37,8 +37,10 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.amqp.connection.AmqpConstants;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.auth.AuthorizationService;
+import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.RequestResponseResult;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,6 +50,7 @@ import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
@@ -376,5 +379,33 @@ public class AbstractRequestResponseEndpointTest {
 
         // THEN open has to be called
         verify(sender2).open();
+    }
+
+    /**
+     * Verifies that the AMQP reply created by the helper from a JSON response
+     * contains a cache control property.
+     */
+    @Test
+    public void testGetAmqpReplyAddsCacheDirective() {
+
+        // GIVEN a response that is not supposed to be cached by a client
+        final CacheDirective directive = CacheDirective.noCacheDirective();
+        final Message request = ProtonHelper.message();
+        request.setCorrelationId("message-id");
+        final RequestResponseResult<JsonObject> response = new RequestResponseResult<>(
+                HttpURLConnection.HTTP_OK,
+                null,
+                directive,
+                null);
+
+        // WHEN creating the AMQP message for the response
+        final Message reply = AbstractRequestResponseEndpoint.getAmqpReply(
+                "endpoint",
+                "my-tenant",
+                request,
+                response);
+
+        // THEN the message contains the corresponding cache control property
+        assertThat(MessageHelper.getCacheDirective(reply)).isEqualTo(directive.toString());
     }
 }
