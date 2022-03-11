@@ -50,6 +50,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The `org.eclipse.hono.client.amqp.connection.ConnectionFactory`'s method signatures have been changed to return a Future
   instead of accepting a `Handler<AsyncResult>`.
 * Removed unused classes `org.eclipse.hono.util.EventBusMessage` and `org.eclipse.hono.util.MessageTap`.
+* Moved `org.eclipse.hono.util.BaseMessageFilter` to service-base module.
 
 ## 1.12.1
 

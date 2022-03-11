@@ -14,7 +14,7 @@
 package org.eclipse.hono.service.commandrouter;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.util.BaseMessageFilter;
+import org.eclipse.hono.service.BaseMessageFilter;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
