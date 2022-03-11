@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,6 +18,7 @@ import java.util.Objects;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.Source;
 import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.client.amqp.connection.AmqpConstants;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
@@ -111,8 +112,9 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
         metrics.reportConnectionAttempt(AuthenticationService.AuthenticationAttemptOutcome.SUCCEEDED, clientType);
         vertx.setTimer(5000, closeCon -> {
             if (!connection.isDisconnected()) {
-                LOG.debug("connection with client [{}] timed out after 5 seconds, closing connection", connection.getRemoteContainer());
-                connection.setCondition(ProtonHelper.condition(Constants.AMQP_ERROR_INACTIVITY,
+                LOG.debug("connection with client [{}] timed out after 5 seconds, closing connection",
+                        connection.getRemoteContainer());
+                connection.setCondition(ProtonHelper.condition(AmqpConstants.AMQP_ERROR_INACTIVITY,
                         "client must retrieve token within 5 secs after opening connection")).close();
             }
         });
@@ -146,9 +148,12 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
         if (endpoint == null) {
             handleUnknownEndpoint(con, sender, targetResource.toString());
         } else {
-            final HonoUser user = Constants.getClientPrincipal(con);
-            if (Constants.SUBJECT_ANONYMOUS.equals(user.getName())) {
-                con.setCondition(ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS, "client must authenticate using SASL")).close();
+            final HonoUser user = AmqpConstants.getClientPrincipal(con);
+            if (AmqpConstants.SUBJECT_ANONYMOUS.equals(user.getName())) {
+                con.setCondition(ProtonHelper.condition(
+                        AmqpError.UNAUTHORIZED_ACCESS,
+                        "client must authenticate using SASL"))
+                    .close();
             } else {
                 sender.setSource(sender.getRemoteSource());
                 endpoint.onLinkAttach(con, sender, targetResource);

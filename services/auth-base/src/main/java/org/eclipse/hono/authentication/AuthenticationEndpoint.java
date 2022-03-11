@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,9 +16,9 @@ package org.eclipse.hono.authentication;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.HonoUser;
+import org.eclipse.hono.client.amqp.connection.AmqpConstants;
 import org.eclipse.hono.service.amqp.AbstractAmqpEndpoint;
 import org.eclipse.hono.util.AuthenticationConstants;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 
@@ -54,7 +54,7 @@ public class AuthenticationEndpoint extends AbstractAmqpEndpoint<Object> {
     public final void onLinkAttach(final ProtonConnection con, final ProtonSender sender, final ResourceIdentifier targetResource) {
 
         if (ProtonQoS.AT_LEAST_ONCE.equals(sender.getRemoteQoS())) {
-            final HonoUser user = Constants.getClientPrincipal(con);
+            final HonoUser user = AmqpConstants.getClientPrincipal(con);
             sender.setQoS(ProtonQoS.AT_LEAST_ONCE).open();
             logger.debug("transferring token to client...");
             final Message tokenMsg = ProtonHelper.message(user.getToken());

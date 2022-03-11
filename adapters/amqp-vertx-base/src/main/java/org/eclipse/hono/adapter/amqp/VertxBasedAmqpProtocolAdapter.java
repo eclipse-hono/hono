@@ -55,6 +55,7 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.amqp.connection.AmqpConstants;
 import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.command.CommandContext;
@@ -522,7 +523,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     span.context()))
             .map(ok -> {
                 con.setContainer(getTypeName());
-                con.setOfferedCapabilities(new Symbol[] {Constants.CAP_ANONYMOUS_RELAY});
+                con.setOfferedCapabilities(new Symbol[] {AmqpConstants.CAP_ANONYMOUS_RELAY});
                 con.open();
                 log.debug("connection with device [container: {}] established", con.getRemoteContainer());
                 span.log("connection established");
@@ -1498,7 +1499,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             final ServiceInvocationException error = (ServiceInvocationException) t;
             switch (error.getErrorCode()) {
             case HttpURLConnection.HTTP_BAD_REQUEST:
-                return ProtonHelper.condition(Constants.AMQP_BAD_REQUEST, errorMessage);
+                return ProtonHelper.condition(AmqpConstants.AMQP_BAD_REQUEST, errorMessage);
             case HttpURLConnection.HTTP_FORBIDDEN:
                 return ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS, errorMessage);
             case HttpUtils.HTTP_TOO_MANY_REQUESTS:

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -26,7 +26,7 @@ import org.apache.qpid.proton.amqp.Symbol;
 import org.eclipse.hono.auth.Authorities;
 import org.eclipse.hono.auth.AuthoritiesImpl;
 import org.eclipse.hono.auth.HonoUser;
-import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.client.amqp.connection.AmqpConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -98,7 +98,7 @@ public class AddressAuthzHelper {
                 LOG.debug("client connection [container: {}] includes properties: {}", connection.getRemoteContainer(), props);
             }
         }
-        final HonoUser clientPrincipal = Constants.getClientPrincipal(connection);
+        final HonoUser clientPrincipal = AmqpConstants.getClientPrincipal(connection);
         final Map<String, String[]> permissions = getPermissionsFromAuthorities(clientPrincipal.getAuthorities());
         final Map<Symbol, Object> properties = new HashMap<>();
         final boolean isLegacy = isLegacyClient(connection);

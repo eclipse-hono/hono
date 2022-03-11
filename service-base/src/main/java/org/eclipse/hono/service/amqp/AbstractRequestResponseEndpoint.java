@@ -24,11 +24,11 @@ import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.amqp.connection.AmqpConstants;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.auth.AuthorizationService;
 import org.eclipse.hono.service.auth.ClaimsBasedAuthorizationService;
 import org.eclipse.hono.tracing.TracingHelper;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RequestResponseApiConstants;
@@ -198,7 +198,7 @@ public abstract class AbstractRequestResponseEndpoint<T extends ServiceConfigPro
             final ProtonDelivery delivery,
             final Message requestMessage) {
 
-        final HonoUser clientPrincipal = Constants.getClientPrincipal(con);
+        final HonoUser clientPrincipal = AmqpConstants.getClientPrincipal(con);
         final String replyTo = requestMessage.getReplyTo();
         final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, requestMessage);
         final Span currentSpan = TracingHelper.buildServerChildSpan(tracer, spanContext, "process request message", getName())
@@ -207,7 +207,7 @@ public abstract class AbstractRequestResponseEndpoint<T extends ServiceConfigPro
                 .start();
 
         if (!passesFormalVerification(targetAddress, requestMessage)) {
-            MessageHelper.rejected(delivery, new ErrorCondition(Constants.AMQP_BAD_REQUEST, "malformed request message"));
+            MessageHelper.rejected(delivery, new ErrorCondition(AmqpConstants.AMQP_BAD_REQUEST, "malformed request message"));
             flowCreditToRequestor(receiver, replyTo);
             TracingHelper.logError(currentSpan, "malformed request message");
             currentSpan.finish();

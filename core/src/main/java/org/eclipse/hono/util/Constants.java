@@ -12,33 +12,11 @@
  *******************************************************************************/
 package org.eclipse.hono.util;
 
-import java.util.Collections;
-import java.util.Map;
-import java.util.Objects;
-
-import org.apache.qpid.proton.amqp.Symbol;
-import org.apache.qpid.proton.engine.Record;
-import org.eclipse.hono.auth.Activity;
-import org.eclipse.hono.auth.Authorities;
-import org.eclipse.hono.auth.HonoUser;
-import org.eclipse.hono.auth.HonoUserAdapter;
-
-import io.vertx.proton.ProtonConnection;
-
 /**
  * Constants used throughout Hono.
  *
  */
 public final class Constants {
-
-    /**
-     * Indicates that an AMQP request cannot be processed due to a perceived client error.
-     */
-    public static final Symbol AMQP_BAD_REQUEST = Symbol.valueOf("hono:bad-request");
-    /**
-     * Indicates that an AMQP connection is closed due to inactivity.
-     */
-    public static final Symbol AMQP_ERROR_INACTIVITY = Symbol.valueOf("hono:inactivity");
 
     /**
      * The default separator character for target addresses.
@@ -98,19 +76,6 @@ public final class Constants {
     public static final String HEADER_QOS_LEVEL = "QoS-Level";
 
     /**
-     * The AMQP capability indicating support for routing messages as defined by
-     * <a href="http://docs.oasis-open.org/amqp/anonterm/v1.0/anonterm-v1.0.html">
-     * Anonymous Terminus for Message Routing</a>.
-     */
-    public static final Symbol CAP_ANONYMOUS_RELAY = Symbol.valueOf("ANONYMOUS-RELAY");
-
-    /**
-     * The key that an authenticated client's principal is stored under in a {@code ProtonConnection}'s
-     * attachments.
-     */
-    public static final String KEY_CLIENT_PRINCIPAL = "CLIENT_PRINCIPAL";
-
-    /**
      * The vert.x event bus address that the ID of a tenant that timed out is published to.
      */
     public static final String EVENT_BUS_ADDRESS_TENANT_TIMED_OUT = "tenant.timeout";
@@ -160,11 +125,6 @@ public final class Constants {
     public static final String QUALIFIER_MESSAGING = "messaging";
 
     /**
-     * The subject name to use for anonymous clients.
-     */
-    public static final String SUBJECT_ANONYMOUS = "ANONYMOUS";
-
-    /**
      * The field name of JSON payloads containing a device ID.
      */
     public static final String JSON_FIELD_DEVICE_ID = "device-id";
@@ -176,40 +136,6 @@ public final class Constants {
      * The field name of a JSON payload containing a description.
      */
     public static final String JSON_FIELD_DESCRIPTION = "description";
-
-    /**
-     * The principal to use for anonymous clients.
-     */
-    public static final HonoUser PRINCIPAL_ANONYMOUS = new HonoUserAdapter() {
-
-        private final Authorities authorities = new Authorities() {
-
-            @Override
-            public Map<String, Object> asMap() {
-                return Collections.emptyMap();
-            }
-
-            @Override
-            public boolean isAuthorized(final ResourceIdentifier resourceId, final Activity intent) {
-                return false;
-            }
-
-            @Override
-            public boolean isAuthorized(final ResourceIdentifier resourceId, final String operation) {
-                return false;
-            }
-        };
-
-        @Override
-        public String getName() {
-            return SUBJECT_ANONYMOUS;
-        }
-
-        @Override
-        public Authorities getAuthorities() {
-            return authorities;
-        }
-    };
 
     /**
      * The header name defined for setting the <em>time till disconnect</em> for device command readiness notification
@@ -250,48 +176,4 @@ public final class Constants {
 
     private Constants() {
     }
-
-    /**
-     * Gets the principal representing an authenticated peer.
-     *
-     * @param record The attachments to retrieve the principal from.
-     * @return The principal representing the authenticated client or {@link Constants#PRINCIPAL_ANONYMOUS}
-     *         if the client has not been authenticated or record is {@code null}.
-     */
-    public static HonoUser getClientPrincipal(final Record record) {
-
-        if (record != null) {
-            final HonoUser client = record.get(KEY_CLIENT_PRINCIPAL, HonoUser.class);
-            return client != null ? client : PRINCIPAL_ANONYMOUS;
-        } else {
-            return PRINCIPAL_ANONYMOUS;
-        }
-    }
-
-    /**
-     * Gets the principal representing a connection's client.
-     *
-     * @param con The connection to get the principal for.
-     * @return The principal representing the authenticated client or {@link Constants#PRINCIPAL_ANONYMOUS}
-     *         if the client has not been authenticated.
-     * @throws NullPointerException if the connection is {@code null}.
-     */
-    public static HonoUser getClientPrincipal(final ProtonConnection con) {
-        final Record attachments = Objects.requireNonNull(con).attachments();
-        return getClientPrincipal(attachments);
-    }
-
-    /**
-     * Gets the principal representing a connection's client.
-     *
-     * @param con The connection to get the principal for.
-     * @param principal The principal representing the authenticated client.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
-    public static void setClientPrincipal(final ProtonConnection con, final HonoUser principal) {
-        Objects.requireNonNull(principal);
-        final Record attachments = Objects.requireNonNull(con).attachments();
-        attachments.set(KEY_CLIENT_PRINCIPAL, HonoUser.class, principal);
-    }
-
 }

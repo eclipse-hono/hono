@@ -19,7 +19,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Instant;
 
-import org.eclipse.hono.application.client.TimeUntilDisconnectNotification;
 import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.Test;
 

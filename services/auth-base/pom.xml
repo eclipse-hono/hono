@@ -43,6 +43,10 @@
       </exclusions>
     </dependency>
     <dependency>
+     <groupId>org.eclipse.hono</groupId>
+     <artifactId>hono-client-amqp-connection</artifactId>
+    </dependency>
+    <dependency>
       <groupId>io.smallrye.config</groupId>
       <artifactId>smallrye-config</artifactId>
       <optional>true</optional>
