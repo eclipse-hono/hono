@@ -151,7 +151,7 @@ public final class AmqpAdapterClientFactoryImpl extends ConnectionLifecycleWrapp
     /**
      * Gets the default timeout used when checking whether this client factory is connected to the service.
      * <p>
-     * The value returned here is the {@link org.eclipse.hono.config.ClientConfigProperties#getLinkEstablishmentTimeout()}.
+     * The value returned here is the {@code org.eclipse.hono.amqp.config.ClientConfigProperties#getLinkEstablishmentTimeout()}.
      *
      * @return The timeout value in milliseconds.
      */

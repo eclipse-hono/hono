@@ -208,7 +208,7 @@ public class TableAdapterStore extends AbstractDeviceStore {
      *
      * @return A future tracking the outcome of the operation.
      *
-     * @see org.eclipse.hono.deviceregistry.service.device.AbstractRegistrationService#resolveGroupMembers(String, JsonArray, Span)
+     * @see org.eclipse.hono.deviceregistry.service.device.AbstractRegistrationService#resolveGroupMembers(String, io.vertx.core.json.JsonArray, Span)
      */
     public Future<Set<String>> resolveGroupMembers(final String tenantId, final Set<String> viaGroups, final SpanContext spanContext) {
 
