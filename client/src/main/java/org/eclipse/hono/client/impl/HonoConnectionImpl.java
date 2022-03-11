@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -946,18 +946,14 @@ public class HonoConnectionImpl implements HonoConnection {
 
     private void closeConnection(final Handler<AsyncResult<Void>> completionHandler) {
 
-        final Handler<AsyncResult<Object>> handler = attempt -> {
+        final Handler<AsyncResult<Void>> handler = attempt -> {
             disconnecting.compareAndSet(Boolean.TRUE, Boolean.FALSE);
-            if (attempt.succeeded()) {
-                completionHandler.handle(Future.succeededFuture());
-            } else {
-                completionHandler.handle(Future.failedFuture(attempt.cause()));
-            }
+            completionHandler.handle(attempt);
         };
 
         synchronized (connectionLock) {
             if (isConnectedInternal()) {
-                executeOnContext(r -> {
+                executeOnContext((Promise<Void> r) -> {
                     final ProtonConnection connectionToClose = connection;
                     connectionToClose.disconnectHandler(null); // make sure we are not trying to re-connect
                     final Handler<AsyncResult<ProtonConnection>> closeHandler = remoteClose -> {
@@ -975,13 +971,19 @@ public class HonoConnectionImpl implements HonoConnection {
                                     connectionFactory.getServerRole(),
                                     remoteClose.cause());
                         }
+                        // release underlying TCP/TLS connection
+                        connectionToClose.disconnect();
                         notifyDisconnectHandlers();
                         clearState();
                         r.complete();
                     };
                     final int timeout = getCloseConnectionTimeout();
                     final long timerId = vertx.setTimer(timeout, tid -> {
-                        log.info("did not receive remote peer's close frame after {}ms", timeout);
+                        log.debug("did not receive remote peer's [{}:{}, role: {}]] close frame after {}ms",
+                                connectionFactory.getHost(),
+                                connectionFactory.getPort(),
+                                connectionFactory.getServerRole(),
+                                timeout);
                         closeHandler.handle(Future.succeededFuture());
                     });
                     connectionToClose.closeHandler(remoteClose -> {
