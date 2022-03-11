@@ -51,6 +51,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   instead of accepting a `Handler<AsyncResult>`.
 * Removed unused classes `org.eclipse.hono.util.EventBusMessage` and `org.eclipse.hono.util.MessageTap`.
 * Moved `org.eclipse.hono.util.BaseMessageFilter` to service-base module.
+* Moved `org.eclipse.hono.util.AmqpErrorException` to amqp-connection client module.
 
 ## 1.12.1
 
