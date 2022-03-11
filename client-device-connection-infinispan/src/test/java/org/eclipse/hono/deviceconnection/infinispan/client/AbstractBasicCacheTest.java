@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -58,10 +58,9 @@ abstract class AbstractBasicCacheTest {
     protected abstract BasicCache<String, String> getCache();
 
     /**
-     * Gets the Infinispan cache used by the cache instance returned by
-     * {@link #getCache()}.
+     * Gets the Infinispan cache used by the cache instance.
      *
-     * @return The connected Infinispan getCache().
+     * @return The connected Infinispan cache.
      */
     protected abstract org.infinispan.commons.api.BasicCache<Object, Object> givenAConnectedInfinispanCache();
 

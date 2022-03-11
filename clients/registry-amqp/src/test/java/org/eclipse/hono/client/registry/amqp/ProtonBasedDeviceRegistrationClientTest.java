@@ -456,7 +456,6 @@ class ProtonBasedDeviceRegistrationClientTest {
                 registrationAssertion);
         when(cache.getIfPresent(any())).thenReturn(registrationResult);
 
-        @SuppressWarnings("unchecked")
         final ArgumentCaptor<AnnotatedCacheKey<?>> responseCacheKey = ArgumentCaptor.forClass(AnnotatedCacheKey.class);
         when(cache.getIfPresent(responseCacheKey.capture())).thenReturn(registrationResult);
 

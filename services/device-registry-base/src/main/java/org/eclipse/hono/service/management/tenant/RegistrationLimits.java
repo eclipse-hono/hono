@@ -27,7 +27,10 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
 @RegisterForReflection
 public class RegistrationLimits {
 
-    static final int UNLIMITED = -1;
+    /**
+     * The value indicating an unlimited resource.
+     */
+    public static final int UNLIMITED = -1;
 
     @JsonProperty(RegistryManagementConstants.FIELD_MAX_DEVICES)
     private int maxNumberOfDevices = UNLIMITED;

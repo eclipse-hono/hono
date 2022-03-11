@@ -40,7 +40,10 @@ import io.vertx.ext.sql.UpdateResult;
  */
 public abstract class AbstractStore implements HealthCheckProvider, AutoCloseable {
 
-    private static final String DEFAULT_CHECK_SQL = "SELECT 1";
+    /**
+     * The default statement to use for checking if a connection is live.
+     */
+    public static final String DEFAULT_CHECK_SQL = "SELECT 1";
 
     private final JDBCClient client;
     private final Tracer tracer;

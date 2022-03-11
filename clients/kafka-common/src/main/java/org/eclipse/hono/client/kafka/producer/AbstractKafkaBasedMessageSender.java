@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -138,8 +138,8 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
     /**
      * Sends a message to a Kafka broker and waits for the outcome.
      * <p>
-     * This method {@linkplain #encodePropertiesAsKafkaHeaders(Map, Span) encodes the given properties}
-     * and then delegates to {@link #sendAndWaitForOutcome(String, String, String, Buffer, List, Span)}.
+     * This method encodes the given properties and then delegates to
+     * {@link #sendAndWaitForOutcome(String, String, String, Buffer, List, Span)}.
      *
      * @param topic The topic to send the message to.
      * @param tenantId The tenant that the device belongs to.

@@ -70,18 +70,21 @@ import io.vertx.kafka.client.consumer.impl.KafkaReadStreamImpl;
  * letting records be consumed by a given handler after the {@link #start()} method has been
  * called.
  * <p>
- * Includes adapted partition assignment handling concerning partition position resets,
- * see {@link #ensurePositionsHaveBeenSetIfNeeded(Set)}.
+ * Includes adapted partition assignment handling concerning partition position resets.
  */
 @RegisterForReflection(targets = io.vertx.kafka.client.consumer.impl.KafkaReadStreamImpl.class)
 public class HonoKafkaConsumer implements Lifecycle {
+
+    /**
+     * The default timeout to use when polling the broker for messages.
+     */
+    public static final long DEFAULT_POLL_TIMEOUT_MILLIS = 250;
 
     /**
      * Timeout used waiting for a rebalance after a subscription was updated.
      */
     private static final long WAIT_FOR_REBALANCE_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(30);
     private static final long OBSOLETE_METRICS_REMOVAL_DELAY_MILLIS = TimeUnit.SECONDS.toMillis(30);
-    private static final long DEFAULT_POLL_TIMEOUT_MILLIS = 250;
     private static final String MSG_CONSUMER_NOT_INITIALIZED_STARTED = "consumer not initialized/started";
 
     protected final Logger log = LoggerFactory.getLogger(getClass());

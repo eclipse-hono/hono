@@ -234,9 +234,6 @@ public abstract class CommonCredential {
 
     /**
      * Merges another set of credentials into this one.
-     * <p>
-     * The secrets of the other credentials are merged into this one's
-     * by means of the {@link CommonSecret#merge(CommonSecret)} method.
      *
      * @param other The credentials to be merged.
      * @return A reference to this for fluent use.

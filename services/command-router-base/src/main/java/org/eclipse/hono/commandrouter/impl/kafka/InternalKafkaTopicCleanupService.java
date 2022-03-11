@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 
 import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
 import org.eclipse.hono.client.kafka.HonoTopic;
+import org.eclipse.hono.client.kafka.HonoTopic.Type;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaClientFactory;
 import org.eclipse.hono.commandrouter.AdapterInstanceStatusService;
@@ -43,7 +44,7 @@ import io.vertx.core.Vertx;
 import io.vertx.kafka.admin.KafkaAdminClient;
 
 /**
- * A service to delete obsolete {@link HonoTopic.Type#COMMAND_INTERNAL} topics.
+ * A service to delete obsolete {@link Type#COMMAND_INTERNAL} topics.
  */
 public class InternalKafkaTopicCleanupService implements Lifecycle {
 

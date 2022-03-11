@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -82,7 +82,7 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecords;
  * This consumer limits the number of records being currently in processing to prevent memory issues and reduce the
  * load on dependent services.
  * When the number of records for which handling is still incomplete has reached the throttling threshold of
- * {@value THROTTLING_THRESHOLD_PERCENTAGE_OF_MAX_POLL_RECORDS} percent of the configured maximum number of records per
+ * {@value #THROTTLING_THRESHOLD_PERCENTAGE_OF_MAX_POLL_RECORDS} percent of the configured maximum number of records per
  * poll operation (<em>max.poll.records</em> config value), then polling is paused for a short time. If the number of
  * unprocessed records still isn't getting less, the poll operation is resumed (so that associated management task are
  * still done) but record fetching from all assigned topic partitions is suspended until the throttling threshold is

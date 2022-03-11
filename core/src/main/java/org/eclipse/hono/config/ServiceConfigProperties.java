@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -41,13 +41,13 @@ public class ServiceConfigProperties extends ServerConfig {
      */
     public  static final long DEFAULT_SEND_TIMEOUT_IN_MS = 3000;
 
-    private static final int MIN_PAYLOAD_SIZE  = 128; // bytes
-
     /**
      * The minimum send timeout value in milliseconds is 500 ms
      * and any value less than this minimum value is not accepted.
      */
-    private static final long MIN_SEND_TIMEOUT_IN_MS = 500;
+    public static final long MIN_SEND_TIMEOUT_IN_MS = 500;
+
+    private static final int MIN_PAYLOAD_SIZE  = 128; // bytes
 
     private long eventLoopBlockedCheckTimeout = 5000L;
     private boolean networkDebugLoggingEnabled = false;

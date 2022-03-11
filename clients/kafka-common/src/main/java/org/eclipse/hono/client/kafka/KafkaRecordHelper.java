@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -41,12 +41,12 @@ public final class KafkaRecordHelper {
      * The name of the Integer Kafka record header that contains the index of the tenant topic partition
      * that a command record was originally stored in.
      */
-    private static final String HEADER_ORIGINAL_PARTITION = "orig-partition";
+    public static final String HEADER_ORIGINAL_PARTITION = "orig-partition";
     /**
      * The name of the Long Kafka record header that contains the offset in the tenant topic partition
      * that a command record was originally stored in.
      */
-    private static final String HEADER_ORIGINAL_OFFSET = "orig-offset";
+    public static final String HEADER_ORIGINAL_OFFSET = "orig-offset";
 
     private KafkaRecordHelper() {
     }

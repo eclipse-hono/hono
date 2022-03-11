@@ -65,16 +65,16 @@ public class ProtonBasedCommandRouterClient extends AbstractRequestResponseServi
     /**
      * Interval in "set last known gateway" requests are done.
      */
-    static final long SET_LAST_KNOWN_GATEWAY_UPDATE_INTERVAL_MILLIS = 400L;
+    protected static final long SET_LAST_KNOWN_GATEWAY_UPDATE_INTERVAL_MILLIS = 400L;
     /**
      * Maximum number of entries in a "set last known gateway" batch request.
      */
-    static final int SET_LAST_KNOWN_GATEWAY_UPDATE_MAX_ENTRIES = 100;
+    protected static final int SET_LAST_KNOWN_GATEWAY_UPDATE_MAX_ENTRIES = 100;
     /**
      * The maximum number of "set last known gateway" requests triggered in one go. Subsequent requests will only be
      * sent after these requests are finished.
      */
-    static final int SET_LAST_KNOWN_GATEWAY_UPDATE_MAX_PARALLEL_REQ = 50;
+    protected static final int SET_LAST_KNOWN_GATEWAY_UPDATE_MAX_PARALLEL_REQ = 50;
 
     private static final Logger LOG = LoggerFactory.getLogger(ProtonBasedCommandRouterClient.class);
 
@@ -182,7 +182,7 @@ public class ProtonBasedCommandRouterClient extends AbstractRequestResponseServi
      * {@inheritDoc}
      * <p>
      * This implementation always returns a succeeded future and strives to set the gateway with a delay of at most
-     * {@value SET_LAST_KNOWN_GATEWAY_UPDATE_INTERVAL_MILLIS} ms as part of a batch request.
+     * {@value #SET_LAST_KNOWN_GATEWAY_UPDATE_INTERVAL_MILLIS} ms as part of a batch request.
      */
     @Override
     public Future<Void> setLastKnownGatewayForDevice(

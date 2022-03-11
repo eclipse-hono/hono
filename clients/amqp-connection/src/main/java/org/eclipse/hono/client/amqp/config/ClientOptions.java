@@ -176,7 +176,7 @@ public interface ClientOptions {
      * Gets the rewrite rule for downstream addresses.
      *
      * @return The rewrite rule to be applied to the address.
-     * @see org.eclipse.hono.client.amqp.config.AddressHelper#rewrite(String, org.eclipse.hono.client.amqp.config.ClientConfigProperties)
+     * @see org.eclipse.hono.client.amqp.config.AddressHelper#rewrite(String, ClientConfigProperties)
      */
     Optional<String> addressRewriteRule();
 

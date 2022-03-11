@@ -86,7 +86,7 @@ import io.vertx.proton.ProtonSender;
 
 
 /**
- * Tests verifying behavior of {@link ProtonBasedCredentialsClientTest}.
+ * Tests verifying behavior of {@link ProtonBasedCredentialsClient}.
  *
  */
 @ExtendWith(VertxExtension.class)
@@ -570,7 +570,6 @@ class ProtonBasedCredentialsClientTest {
         final CredentialsResult<CredentialsObject> credentialsResult = CredentialsResult.from(HttpURLConnection.HTTP_OK,
                 new CredentialsObject(deviceId, authId, credentialsType));
 
-        @SuppressWarnings("unchecked")
         final ArgumentCaptor<AnnotatedCacheKey<?>> responseCacheKey = ArgumentCaptor.forClass(AnnotatedCacheKey.class);
         when(cache.getIfPresent(responseCacheKey.capture())).thenReturn(credentialsResult);
 

@@ -66,8 +66,13 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
  */
 public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
         implements CommandSender<KafkaMessageContext> {
+
+    /**
+     * The default number of milliseconds to wait for the Kafka cluster to accept a command message.
+     */
+    protected static final long DEFAULT_COMMAND_TIMEOUT_IN_MS = 10000;
+
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaBasedCommandSender.class);
-    private static final long DEFAULT_COMMAND_TIMEOUT_IN_MS = 10000;
 
     private final Vertx vertx;
     private final MessagingKafkaConsumerConfigProperties consumerConfig;
@@ -176,7 +181,7 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
      * If set it will be ignored.
      * <p>
      * If the timeout duration is {@code null} then the default timeout value of 
-     * {@value DEFAULT_COMMAND_TIMEOUT_IN_MS} ms is used.
+     * {@value #DEFAULT_COMMAND_TIMEOUT_IN_MS} ms is used.
      */
     @Override
     public Future<DownstreamMessage<KafkaMessageContext>> sendCommand(

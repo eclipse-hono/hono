@@ -27,8 +27,15 @@ import io.vertx.core.json.JsonObject;
  */
 public final class MongoDbConfigProperties {
 
-    private static final int DEFAULT_PORT = 27017;
-    private static final int DEFAULT_SERVER_SELECTION_TIMEOUT_IN_MS = 1000;
+    /**
+     * The default port to connect to.
+     */
+    public static final int DEFAULT_PORT = 27017;
+    /**
+     * The default number of milliseconds to wait for a cluster-member to be selected.
+     */
+    public static final int DEFAULT_SERVER_SELECTION_TIMEOUT_IN_MS = 1000;
+
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbConfigProperties.class);
 
     private String host = "localhost";
@@ -210,7 +217,7 @@ public final class MongoDbConfigProperties {
      * Gets the timeout for selecting a Mongo DB server for an operation.
      * <p>
      * When this property is not set, the Vert.x Mongo DB client uses a default value of 
-     * {@value DEFAULT_SERVER_SELECTION_TIMEOUT_IN_MS} ms.
+     * {@value #DEFAULT_SERVER_SELECTION_TIMEOUT_IN_MS} ms.
      *
      * @return The server selection timeout in milliseconds.
      */
@@ -222,7 +229,7 @@ public final class MongoDbConfigProperties {
      * Sets the timeout for selecting a Mongo DB server for an operation.
      * <p>
      * When this property is not set, the Vert.x Mongo DB client uses a default value of 
-     * {@value DEFAULT_SERVER_SELECTION_TIMEOUT_IN_MS} ms.
+     * {@value #DEFAULT_SERVER_SELECTION_TIMEOUT_IN_MS} ms.
      *
      * @param serverSelectionTimeoutInMs The server selection timeout in milliseconds.
      * @return A reference to this for fluent use.

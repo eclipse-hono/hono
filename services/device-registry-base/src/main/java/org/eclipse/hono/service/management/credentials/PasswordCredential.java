@@ -105,7 +105,7 @@ public class PasswordCredential extends CommonCredential {
     /**
      * {@inheritDoc}
      *
-     * @return A predicate that matches the identifier against the {@linkplain #PATTERN_AUTH_ID_VALUE auth-id pattern}.
+     * @return A predicate that matches the identifier against the auth-id pattern.
      */
     @Override
     protected Predicate<String> getAuthIdValidator() {

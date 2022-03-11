@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -47,10 +47,12 @@ public class KafkaClientFactory {
      * signifying unlimited retries.
      */
     public static final Duration UNLIMITED_RETRIES_DURATION = Duration.ofSeconds(-1);
+    /**
+     * The number of milliseconds to wait before retrying to create a client.
+     */
+    public static final int CLIENT_CREATION_RETRY_DELAY_MILLIS = 100;
 
     private static final Logger LOG = LoggerFactory.getLogger(KafkaClientFactory.class);
-
-    private static final int CLIENT_CREATION_RETRY_DELAY_MILLIS = 100;
 
     private static final Pattern COMMA_WITH_WHITESPACE = Pattern.compile("\\s*,\\s*");
 

@@ -26,7 +26,7 @@ public abstract class AbstractMongoDbBasedRegistryConfigProperties {
      * The default number of seconds that information returned by the service's
      * operations may be cached for.
      */
-    private static final int DEFAULT_MAX_AGE_SECONDS = 180;
+    public static final int DEFAULT_MAX_AGE_SECONDS = 180;
 
     private int cacheMaxAge = DEFAULT_MAX_AGE_SECONDS;
     /**

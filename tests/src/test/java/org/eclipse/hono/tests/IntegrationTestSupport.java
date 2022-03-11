@@ -482,9 +482,17 @@ public final class IntegrationTestSupport {
      */
     public static final String PARAMETERIZED_TEST_NAME_PATTERN = "{displayName} [{index}]; parameters: {argumentsWithNames}";
 
+    /**
+     * The default factor to apply when determining the timeout to use for executing test cases in a CI environment.
+     */
+    public static final int TEST_ENVIRONMENT_TIMEOUT_MULTIPLICATOR = 2;
+
+    /**
+     * The number of seconds to add to the default timeout when creating Kafka topics.
+     */
+    public static final int KAFKA_TOPIC_CREATION_ADD_TO_TIMEOUT = 2; // seconds to add
+
     private static final Logger LOGGER = LoggerFactory.getLogger(IntegrationTestSupport.class);
-    private static final int TEST_ENVIRONMENT_TIMEOUT_MULTIPLICATOR = 2;
-    private static final int KAFKA_TOPIC_CREATION_ADD_TO_TIMEOUT = 2; // seconds to add
 
     private static final boolean testEnv = Optional.ofNullable(System.getenv("CI"))
             .map(s -> {
@@ -776,8 +784,9 @@ public final class IntegrationTestSupport {
      * @return The time out in seconds. The value will be
      *         {@value IntegrationTestSupport#DEFAULT_TEST_SETUP_TIMEOUT_SECONDS}
      *         multiplied by the value returned by {@link #getTimeoutMultiplicator()}.
-     *         If Kafka as messaging system is used, an extra {@value IntegrationTestSupport#KAFKA_TOPIC_CREATION_ADD_TO_TIMEOUT}
-     *         seconds are added (for creation/propagation of topics created during setup).
+     *         If Kafka as messaging system is used, an extra
+     *         {@value IntegrationTestSupport#KAFKA_TOPIC_CREATION_ADD_TO_TIMEOUT} seconds are added
+     *         (for creation/propagation of topics created during setup).
      */
     public static long getTestSetupTimeout() {
         return DEFAULT_TEST_SETUP_TIMEOUT_SECONDS * getTimeoutMultiplicator()

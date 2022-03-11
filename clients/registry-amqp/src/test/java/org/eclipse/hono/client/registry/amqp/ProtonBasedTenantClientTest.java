@@ -539,7 +539,6 @@ class ProtonBasedTenantClientTest {
         final TenantResult<TenantObject> tenantResult = TenantResult.from(HttpURLConnection.HTTP_OK,
                 new TenantObject(tenantId, false));
 
-        @SuppressWarnings("unchecked")
         final ArgumentCaptor<AnnotatedCacheKey<?>> responseCacheKey = ArgumentCaptor.forClass(AnnotatedCacheKey.class);
         when(cache.getIfPresent(responseCacheKey.capture())).thenReturn(tenantResult);
 

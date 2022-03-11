@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -53,10 +53,15 @@ import io.vertx.proton.ProtonDelivery;
  * @see <a href="https://www.eclipse.org/hono/docs/api/command-and-control/">
  *      Command &amp; Control API for AMQP 1.0 Specification</a>
  */
-final class ProtonBasedRequestResponseCommandClient extends
+public final class ProtonBasedRequestResponseCommandClient extends
         AbstractRequestResponseServiceClient<DownstreamMessage<AmqpMessageContext>, RequestResponseResult<DownstreamMessage<AmqpMessageContext>>> {
+
+    /**
+     * The default number of milliseconds to wait for a disposition for a command message.
+     */
+    protected static final long DEFAULT_COMMAND_TIMEOUT_IN_MS = 10000;
+
     private static final Logger LOGGER = LoggerFactory.getLogger(ProtonBasedRequestResponseCommandClient.class);
-    private static final long DEFAULT_COMMAND_TIMEOUT_IN_MS = 10000;
     private int messageCounter;
 
     /**
@@ -95,7 +100,7 @@ final class ProtonBasedRequestResponseCommandClient extends
      *                identifier generated using {@link UUID#randomUUID()} is used.
      * @param properties The headers to include in the command message as AMQP application properties.
      * @param timeout The duration after which the send command request times out. If the timeout is {@code null}
-     *                then the default timeout value of {@value DEFAULT_COMMAND_TIMEOUT_IN_MS} ms is used.
+     *                then the default timeout value of {@value #DEFAULT_COMMAND_TIMEOUT_IN_MS} ms is used.
      *                If the timeout duration is set to 0 then the send command request never times out.
      * @param context The currently active OpenTracing span context that is used to trace the execution of this
      *            operation or {@code null} if no span is currently active.

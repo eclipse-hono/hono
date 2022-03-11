@@ -31,7 +31,10 @@ import io.vertx.core.json.JsonObject;
 @ApplicationScoped
 public class KerlinkProviderCustomContentType extends JsonBasedLoraProvider {
 
-    private static final String HEADER_CONTENT_TYPE_KERLINK_JSON = "application/vnd.kerlink.iot-v1+json";
+    /**
+     * The content type indicating a custom kerlink message.
+     */
+    public static final String HEADER_CONTENT_TYPE_KERLINK_JSON = "application/vnd.kerlink.iot-v1+json";
 
     private static final String FIELD_UPLINK_DEVICE_EUI = "devEui";
     private static final String FIELD_UPLINK_USER_DATA = "userdata";
