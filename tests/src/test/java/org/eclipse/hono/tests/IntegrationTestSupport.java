@@ -52,6 +52,7 @@ import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.application.client.MessageProperties;
+import org.eclipse.hono.application.client.TimeUntilDisconnectNotification;
 import org.eclipse.hono.application.client.amqp.ProtonBasedApplicationClient;
 import org.eclipse.hono.application.client.kafka.impl.KafkaApplicationClientImpl;
 import org.eclipse.hono.client.SendMessageTimeoutException;
@@ -81,7 +82,6 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantConstants;
-import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

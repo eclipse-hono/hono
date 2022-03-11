@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,17 +12,16 @@
  *******************************************************************************/
 
 
-package org.eclipse.hono.util;
+package org.eclipse.hono.application.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.Optional;
+import java.time.Instant;
 
-import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.application.client.TimeUntilDisconnectNotification;
+import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.Test;
-
-import io.vertx.proton.ProtonHelper;
 
 /**
  * Tests TimeUntilDisconnectNotification.
@@ -35,12 +34,11 @@ public class TimeUntilDisconnectNotificationTest {
     @Test
     public void testNotificationIsConstructedIfTtdIsSetToPositiveValue() {
 
-        final Message msg = createTestMessage();
-        MessageHelper.addProperty(msg, MessageHelper.APP_PROPERTY_DEVICE_TTD, Integer.valueOf(10));
-        final Optional<TimeUntilDisconnectNotification> ttdNotificationOpt = TimeUntilDisconnectNotification.fromMessage(msg);
-        assertTrue(ttdNotificationOpt.isPresent());
-
-        final TimeUntilDisconnectNotification notification = ttdNotificationOpt.get();
+        final var notification = new TimeUntilDisconnectNotification(
+                Constants.DEFAULT_TENANT,
+                "4711",
+                10,
+                Instant.now());
         assertNotificationProperties(notification);
         assertEquals(Integer.valueOf(10), notification.getTtd());
     }
@@ -51,14 +49,14 @@ public class TimeUntilDisconnectNotificationTest {
     @Test
     public void testNotificationIsConstructedIfTtdIsSetToUnlimited() {
 
-        final Message msg = createTestMessage();
-        MessageHelper.addProperty(msg, MessageHelper.APP_PROPERTY_DEVICE_TTD, MessageHelper.TTD_VALUE_UNLIMITED);
-        final Optional<TimeUntilDisconnectNotification> ttdNotificationOpt = TimeUntilDisconnectNotification.fromMessage(msg);
-        assertTrue(ttdNotificationOpt.isPresent());
-        final TimeUntilDisconnectNotification notification = ttdNotificationOpt.get();
+        final var notification = new TimeUntilDisconnectNotification(
+                Constants.DEFAULT_TENANT,
+                "4711",
+                -1,
+                Instant.now());
 
         assertNotificationProperties(notification);
-        assertEquals(notification.getTtd(), Integer.valueOf(MessageHelper.TTD_VALUE_UNLIMITED));
+        assertEquals(notification.getTtd(), Integer.valueOf(-1));
     }
 
     private void assertNotificationProperties(final TimeUntilDisconnectNotification notification) {
@@ -66,13 +64,4 @@ public class TimeUntilDisconnectNotificationTest {
         assertTrue(Constants.DEFAULT_TENANT.equals(notification.getTenantId()));
         assertTrue("4711".equals(notification.getDeviceId()));
     }
-
-    private Message createTestMessage() {
-        final Message msg = ProtonHelper.message();
-        MessageHelper.setCreationTime(msg);
-        MessageHelper.addDeviceId(msg, "4711");
-        MessageHelper.addAnnotation(msg, MessageHelper.APP_PROPERTY_TENANT_ID, Constants.DEFAULT_TENANT);
-        return msg;
-    }
-
 }

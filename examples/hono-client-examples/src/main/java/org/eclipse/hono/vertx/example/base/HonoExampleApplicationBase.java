@@ -27,6 +27,7 @@ import org.eclipse.hono.application.client.ApplicationClient;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
+import org.eclipse.hono.application.client.TimeUntilDisconnectNotification;
 import org.eclipse.hono.application.client.amqp.AmqpApplicationClient;
 import org.eclipse.hono.application.client.amqp.ProtonBasedApplicationClient;
 import org.eclipse.hono.application.client.kafka.impl.KafkaApplicationClientImpl;
@@ -39,7 +40,6 @@ import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.util.Lifecycle;
-import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

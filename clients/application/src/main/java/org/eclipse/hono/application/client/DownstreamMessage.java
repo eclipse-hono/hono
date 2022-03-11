@@ -18,7 +18,6 @@ import java.time.Instant;
 import java.util.Optional;
 
 import org.eclipse.hono.util.QoS;
-import org.eclipse.hono.util.TimeUntilDisconnectNotification;
 
 import io.vertx.core.buffer.Buffer;
 

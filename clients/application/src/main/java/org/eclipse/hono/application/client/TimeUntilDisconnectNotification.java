@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,13 +11,12 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.util;
+package org.eclipse.hono.application.client;
 
 import java.time.Instant;
-import java.util.Objects;
 import java.util.Optional;
 
-import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.util.MessageHelper;
 
 /**
  * Contains all information about a device that is indicating being ready to receive an upstream message.
@@ -27,7 +26,7 @@ public final class TimeUntilDisconnectNotification {
     /**
      * Define the maximum time in milliseconds until a disconnect notification is expired to be 10000 days.
      */
-    private static final long MAX_EXPIRY_MILLISECONDS = (long) 60 * 60 * 24 * 10000 * 1000;
+    private static final long MAX_EXPIRY_MILLISECONDS = 60 * 60 * 24 * 10000 * 1000L;
 
     private final String tenantId;
 
@@ -40,21 +39,25 @@ public final class TimeUntilDisconnectNotification {
     private final Instant creationTime;
 
     /**
-     * Build a notification object to indicate that a device is ready to receive an upstream message.
+     * Creates a notification object to indicate that a device is ready to receive an upstream message.
      *
      * @param tenantId The identifier of the tenant of the device the notification is constructed for.
      * @param deviceId The id of the device the notification is constructed for.
-     * @param ttd The time until the device <em>disconnects</em> again.
-     * @param creationTime The Instant that points to when the notification message was created at the client (adapter).
+     * @param ttd The number of seconds after which the device will <em>disconnects</em> again.
+     * @param creationTime The point in time at which the notification message has been created.
      * @throws NullPointerException If readyUntil is null.
      */
-    public TimeUntilDisconnectNotification(final String tenantId, final String deviceId, final Integer ttd,
+    public TimeUntilDisconnectNotification(
+            final String tenantId,
+            final String deviceId,
+            final Integer ttd,
             final Instant creationTime) {
+
         this.tenantId = tenantId;
         this.deviceId = deviceId;
         this.ttd = ttd;
-        this.readyUntil = getReadyUntilInstantFromTtd(ttd, creationTime);
         this.creationTime = creationTime;
+        this.readyUntil = getReadyUntilInstantFromTtd(ttd, creationTime);
     }
 
     /**
@@ -122,46 +125,6 @@ public final class TimeUntilDisconnectNotification {
                 .append("]").toString();
     }
 
-    /**
-     * Creates a notification from an AMQP message.
-     * <p>
-     * The notification will contain information extracted from the AMQP message
-     * as follows:
-     * <ul>
-     * <li><em>ttd</em> - the value of the {@link MessageHelper#APP_PROPERTY_DEVICE_TTD} application property</li>
-     * <li><em>tenantId</em> - the value of the {@link MessageHelper#APP_PROPERTY_TENANT_ID} application property</li>
-     * <li><em>deviceId</em> - the value of the {@link MessageHelper#APP_PROPERTY_DEVICE_ID} application property</li>
-     * <li><em>creationTime</em> - the value of the message's <em>creation-time</em> property</li>
-     * <li><em>readyUntil</em> - the instant until the device will remain connected</li>
-     * </ul>
-     *
-     * @param msg Message that is evaluated.
-     * @return A notification if the message contains a
-     *         TTD value in its {@link MessageHelper#APP_PROPERTY_DEVICE_TTD}
-     *         application property or {@code null} otherwise.
-     * @throws NullPointerException If msg is {@code null}.
-     */
-        public static Optional<TimeUntilDisconnectNotification> fromMessage(final Message msg) {
-
-        final Integer ttd = MessageHelper.getTimeUntilDisconnect(msg);
-
-        if (ttd == null) {
-            return Optional.empty();
-        } else if (ttd == 0 || isDeviceCurrentlyConnected(msg)) {
-            final String tenantId = MessageHelper.getTenantIdAnnotation(msg);
-            final String deviceId = MessageHelper.getDeviceId(msg);
-
-            if (tenantId != null && deviceId != null) {
-                final Instant creationTime = Instant.ofEpochMilli(msg.getCreationTime());
-
-                final TimeUntilDisconnectNotification notification =
-                        new TimeUntilDisconnectNotification(tenantId, deviceId, ttd, creationTime);
-                return Optional.of(notification);
-            }
-        }
-        return Optional.empty();
-    }
-
     private static Instant getReadyUntilInstantFromTtd(final Integer ttd, final Instant startingFrom) {
         if (ttd == MessageHelper.TTD_VALUE_UNLIMITED) {
             return Instant.MAX;
@@ -215,24 +178,5 @@ public final class TimeUntilDisconnectNotification {
                 return Instant.now().isBefore(creationTimeInstant.plusSeconds(ttdValue));
             }
         }).orElse(false);
-    }
-
-    /**
-     * Checks if a device is currently connected to a protocol adapter.
-     * <p>
-     * If this method returns {@code true} an attempt could be made to send a command to the device.
-     * <p>
-     * This method uses the message's creation time and TTD value to determine the point in time
-     * until which the device will remain connected.
-     *
-     * @param msg The message that is checked for a TTD value.
-     * @return {@code true} if the TTD value contained in the message indicates that the device will
-     *         stay connected for some additional time.
-     * @throws NullPointerException If msg is {@code null}.
-     */
-    public static boolean isDeviceCurrentlyConnected(final Message msg) {
-        Objects.requireNonNull(msg);
-
-        return isDeviceCurrentlyConnected(MessageHelper.getTimeUntilDisconnect(msg), msg.getCreationTime());
     }
 }
