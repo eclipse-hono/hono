@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,6 +20,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AbstractDelegatingRequestResponseEndpoint;
+import org.eclipse.hono.service.amqp.AbstractRequestResponseEndpoint;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -168,7 +169,7 @@ public class DelegatingCredentialsAmqpEndpoint<S extends CredentialsService> ext
                             .ifPresent(deviceIdFromPayload -> {
                                 TracingHelper.TAG_DEVICE_ID.set(span, deviceIdFromPayload);
                             });
-                    return CredentialsConstants.getAmqpReply(
+                    return AbstractRequestResponseEndpoint.getAmqpReply(
                             CredentialsConstants.CREDENTIALS_ENDPOINT,
                             tenantId,
                             request,

@@ -42,7 +42,6 @@ import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
-import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -179,7 +178,7 @@ public class ProtonBasedDeviceRegistrationClient extends AbstractRequestResponse
                                     RegistrationConstants.ACTION_ASSERT,
                                     properties,
                                     null,
-                                    RequestResponseApiConstants.CONTENT_TYPE_APPLICATION_JSON,
+                                    MessageHelper.CONTENT_TYPE_APPLICATION_JSON,
                                     this::getRequestResponseResult,
                                     span);
                         })

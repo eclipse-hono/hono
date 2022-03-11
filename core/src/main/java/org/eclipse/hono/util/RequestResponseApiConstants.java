@@ -12,27 +12,10 @@
  *******************************************************************************/
 package org.eclipse.hono.util;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
-
-import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
-import org.apache.qpid.proton.message.Message;
-
-import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.JsonObject;
-import io.vertx.proton.ProtonHelper;
-
 /**
  * Constants &amp; utility methods that are common to APIs that follow the request response pattern.
  */
 public abstract class RequestResponseApiConstants {
-
-    /**
-     * The MIME type representing the String representation of a JSON Object.
-     */
-    public static final String CONTENT_TYPE_APPLICATION_JSON = MessageHelper.CONTENT_TYPE_APPLICATION_JSON;
 
     /**
      * The name of the property which contains default properties that protocol adapters
@@ -89,88 +72,5 @@ public abstract class RequestResponseApiConstants {
      * Empty default constructor.
      */
     protected RequestResponseApiConstants() {
-    }
-
-    /**
-     * Creates an AMQP message from a result to a service invocation.
-     *
-     * @param endpoint The service endpoint that the operation has been invoked on.
-     * @param tenantId The id of the tenant (may be {@code null}).
-     * @param request The request message.
-     * @param result The result message.
-     * @return The AMQP message.
-     * @throws NullPointerException if endpoint, request or result is {@code null}.
-     * @throws IllegalArgumentException if the result does not contain a correlation ID.
-     */
-    public static final Message getAmqpReply(
-            final String endpoint,
-            final String tenantId,
-            final Message request,
-            final RequestResponseResult<JsonObject> result) {
-
-        Objects.requireNonNull(endpoint);
-        Objects.requireNonNull(request);
-        Objects.requireNonNull(result);
-
-        final Object correlationId = MessageHelper.getCorrelationId(request);
-
-        if (correlationId == null) {
-            throw new IllegalArgumentException("request must contain correlation ID");
-        }
-
-        final String deviceId = MessageHelper.getDeviceId(request);
-
-        final ResourceIdentifier address = ResourceIdentifier.from(endpoint, tenantId, deviceId);
-
-        final Message message = ProtonHelper.message();
-        message.setMessageId(UUID.randomUUID().toString());
-        message.setCorrelationId(correlationId.toString());
-        message.setAddress(address.toString());
-
-        final Map<String, Object> map = new HashMap<>();
-        map.put(MessageHelper.APP_PROPERTY_STATUS, result.getStatus());
-        if (tenantId != null) {
-            map.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-        }
-        if (deviceId != null) {
-            map.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
-        }
-        if (result.getCacheDirective() != null) {
-            map.put(MessageHelper.APP_PROPERTY_CACHE_CONTROL, result.getCacheDirective().toString());
-        }
-        message.setApplicationProperties(new ApplicationProperties(map));
-
-        MessageHelper.setJsonPayload(message, result.getPayload());
-
-        return message;
-    }
-
-    /**
-     * Creates an AMQP (response) message for conveying an erroneous outcome of an operation.
-     *
-     * @param status The status code.
-     * @param errorDescription An (optional) error description which will be put to a <em>Data</em>
-     *                         section.
-     * @param requestMessage The request message.
-     * @return The response message.
-     * @throws IllegalArgumentException if the status code is &lt; 100 or &gt;= 600.
-     */
-    public static final Message getErrorMessage(
-            final int status,
-            final String errorDescription,
-            final Message requestMessage) {
-
-        Objects.requireNonNull(requestMessage);
-        if (status < 100 || status >= 600) {
-            throw new IllegalArgumentException("illegal status code");
-        }
-
-        final Message message = ProtonHelper.message();
-        MessageHelper.addStatus(message, status);
-        message.setCorrelationId(MessageHelper.getCorrelationId(requestMessage));
-        if (errorDescription != null) {
-            MessageHelper.setPayload(message, MessageHelper.CONTENT_TYPE_TEXT_PLAIN, Buffer.buffer(errorDescription));
-        }
-        return message;
     }
 }

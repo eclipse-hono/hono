@@ -58,7 +58,6 @@ import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -258,7 +257,7 @@ class ProtonBasedCredentialsClientTest {
         final JsonObject credentialsObject = newCredentialsResult("device", authId);
         final CredentialsResult<CredentialsObject> credentialsResult = client.getResult(
                 HttpURLConnection.HTTP_OK,
-                RequestResponseApiConstants.CONTENT_TYPE_APPLICATION_JSON,
+                MessageHelper.CONTENT_TYPE_APPLICATION_JSON,
                 credentialsObject.toBuffer(),
                 null,
                 null);
@@ -297,7 +296,7 @@ class ProtonBasedCredentialsClientTest {
         final JsonObject credentialsObject = newCredentialsResult("device", authId);
         final CredentialsResult<CredentialsObject> credentialsResult = client.getResult(
                 HttpURLConnection.HTTP_OK,
-                RequestResponseApiConstants.CONTENT_TYPE_APPLICATION_JSON,
+                MessageHelper.CONTENT_TYPE_APPLICATION_JSON,
                 credentialsObject.toBuffer(),
                 null,
                 null);

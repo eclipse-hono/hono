@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,6 +19,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AbstractDelegatingRequestResponseEndpoint;
+import org.eclipse.hono.service.amqp.AbstractRequestResponseEndpoint;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -110,7 +111,7 @@ public class DelegatingRegistrationAmqpEndpoint<S extends RegistrationService> e
                         tenantId, deviceId, gatewayId);
                 result = getService().assertRegistration(tenantId, deviceId, gatewayId, span);
             }
-            resultFuture = result.map(res -> RegistrationConstants.getAmqpReply(
+            resultFuture = result.map(res -> AbstractRequestResponseEndpoint.getAmqpReply(
                     RegistrationConstants.REGISTRATION_ENDPOINT,
                     tenantId,
                     request,

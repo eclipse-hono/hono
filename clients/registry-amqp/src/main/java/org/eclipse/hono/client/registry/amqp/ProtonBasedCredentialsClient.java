@@ -39,7 +39,6 @@ import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -212,7 +211,7 @@ public class ProtonBasedCredentialsClient extends AbstractRequestResponseService
                                     CredentialsConstants.CredentialsAction.get.toString(),
                                     null,
                                     specification.toBuffer(),
-                                    RequestResponseApiConstants.CONTENT_TYPE_APPLICATION_JSON,
+                                    MessageHelper.CONTENT_TYPE_APPLICATION_JSON,
                                     this::getRequestResponseResult,
                                     span);
                         })

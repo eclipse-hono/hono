@@ -195,7 +195,7 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseServic
                                     TenantAction.get.toString(),
                                     null,
                                     payloadSupplier.get().toBuffer(),
-                                    RequestResponseApiConstants.CONTENT_TYPE_APPLICATION_JSON,
+                                    MessageHelper.CONTENT_TYPE_APPLICATION_JSON,
                                     this::getRequestResponseResult,
                                     currentSpan))));
         return mapResultAndFinishSpan(resultTracker, tenantResult -> {
