@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,10 +13,9 @@
 
 package org.eclipse.hono.util;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
-
-import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 
 /**
  * A container for the result returned by Hono's Tenant API.
@@ -30,14 +29,14 @@ public final class TenantResult<T> extends RequestResponseResult<T> {
             final int status,
             final T payload,
             final CacheDirective cacheDirective,
-            final ApplicationProperties applicationProperties) {
-        super(status, payload, cacheDirective, applicationProperties);
+            final Map<String, Object> responseProperties) {
+        super(status, payload, cacheDirective, responseProperties);
     }
 
     /**
      * Creates a new result for a status code.
      *
-     * @param status The status code indicating the outcome of the request.
+     * @param status The code indicating the outcome of processing the request.
      * @param <T> The type of the payload conveyed in the result.
      * @return The result.
      */
@@ -48,8 +47,9 @@ public final class TenantResult<T> extends RequestResponseResult<T> {
     /**
      * Creates a new result for a status code and payload.
      *
-     * @param status The status code indicating the outcome of the request.
-     * @param payload The payload to convey to the sender of the request.
+     * @param status The code indicating the outcome of processing the request.
+     * @param payload The payload to contained in the response message or {@code null}, if the response does not
+     *                contain any payload data.
      * @param <T> The type of the payload conveyed in the result.
      * @return The result.
      */
@@ -60,10 +60,12 @@ public final class TenantResult<T> extends RequestResponseResult<T> {
     /**
      * Creates a new result for a status code and payload.
      *
-     * @param status The status code indicating the outcome of the request.
-     * @param payload The payload to convey to the sender of the request.
+     * @param status The code indicating the outcome of processing the request.
+     * @param payload The payload to contained in the response message or {@code null}, if the response does not
+     *                contain any payload data.
+     * @param cacheDirective Restrictions regarding the caching of the payload by the receiver of the result
+     *                       or {@code null} if no restrictions apply.
      * @param <T> The type of the payload conveyed in the result.
-     * @param cacheDirective Restrictions regarding the caching of the payload.
      * @return The result.
      */
     public static <T> TenantResult<T> from(final int status, final T payload, final CacheDirective cacheDirective) {
@@ -73,26 +75,28 @@ public final class TenantResult<T> extends RequestResponseResult<T> {
     /**
      * Creates a new result for a status code and payload.
      *
-     * @param status The status code indicating the outcome of the request.
-     * @param payload The payload to convey to the sender of the request.
+     * @param status The code indicating the outcome of processing the request.
+     * @param payload The payload to contained in the response message or {@code null}, if the response does not
+     *                contain any payload data.
+     * @param cacheDirective Restrictions regarding the caching of the payload by the receiver of the result
+     *                       or {@code null} if no restrictions apply.
+     * @param responseProperties Arbitrary additional properties conveyed in the response message or {@code null}, if
+     *                           the response does not contain additional properties.
      * @param <T> The type of the payload conveyed in the result.
-     * @param cacheDirective Restrictions regarding the caching of the payload.
-     * @param applicationProperties Arbitrary properties conveyed in the response message's
-     *                              <em>application-properties</em>.
      * @return The result.
      */
     public static <T> TenantResult<T> from(
             final int status,
             final T payload,
             final CacheDirective cacheDirective,
-            final ApplicationProperties applicationProperties) {
-        return new TenantResult<>(status, payload, cacheDirective, applicationProperties);
+            final Map<String, Object> responseProperties) {
+        return new TenantResult<>(status, payload, cacheDirective, responseProperties);
     }
 
     /**
      * Map the payload type, if set.
      *
-     * @param mapper The mapper to apply, if a payload is set.
+     * @param mapper The mapping function to use for transforming the payload to the target type.
      * @param <U> The target type.
      * @return The mapped result.
      */
@@ -101,7 +105,6 @@ public final class TenantResult<T> extends RequestResponseResult<T> {
                 getStatus(),
                 Optional.ofNullable(getPayload()).map(mapper).orElse(null),
                 getCacheDirective(),
-                new ApplicationProperties(getApplicationProperties())
-        );
+                getResponseProperties());
     }
 }

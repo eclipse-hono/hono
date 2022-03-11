@@ -53,6 +53,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 * Moved `org.eclipse.hono.util.BaseMessageFilter` to service-base module.
 * Moved `org.eclipse.hono.util.AmqpErrorException` to amqp-connection client module.
 * Moved `org.eclipse.hono.util.TimeUntilDisconnectNotification` to application client module.
+* The `org.eclipse.hono.util.RequestResponseResult` class hierarchy's dependency on the Proton-J `ApplicationProperties` class
+  has been removed. Instead, the constructors now accept a standard Map containing the properties.
 
 ## 1.12.1
 

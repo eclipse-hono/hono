@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -163,17 +163,20 @@ public class ProtonBasedCommandRouterClient extends AbstractRequestResponseServi
             final CacheDirective cacheDirective,
             final ApplicationProperties applicationProperties) {
 
+        final var props = Optional.ofNullable(applicationProperties)
+                .map(ApplicationProperties::getValue)
+                .orElse(null);
+
         if (payload == null) {
-            return new RequestResponseResult<>(status, null, null, applicationProperties);
+            return new RequestResponseResult<>(status, null, null, props);
         } else {
             try {
                 // ignoring given cacheDirective param here - command router results shall not be cached
                 return new RequestResponseResult<>(status, new JsonObject(payload),
-                        CacheDirective.noCacheDirective(), applicationProperties);
+                        CacheDirective.noCacheDirective(), props);
             } catch (final DecodeException e) {
                 LOG.warn("received malformed payload from Command Router service", e);
-                return new RequestResponseResult<>(HttpURLConnection.HTTP_INTERNAL_ERROR, null, null,
-                        applicationProperties);
+                return new RequestResponseResult<>(HttpURLConnection.HTTP_INTERNAL_ERROR, null, null, props);
             }
         }
     }

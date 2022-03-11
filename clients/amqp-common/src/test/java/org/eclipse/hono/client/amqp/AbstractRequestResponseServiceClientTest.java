@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -23,6 +23,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
+import java.util.Optional;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.eclipse.hono.client.amqp.config.RequestResponseClientConfigProperties;
@@ -81,7 +82,13 @@ class AbstractRequestResponseServiceClientTest {
                     final Buffer payload,
                     final CacheDirective cacheDirective,
                     final ApplicationProperties applicationProperties) {
-                return SimpleRequestResponseResult.from(status, payload, cacheDirective, applicationProperties);
+                return SimpleRequestResponseResult.from(
+                        status,
+                        payload,
+                        cacheDirective,
+                        Optional.ofNullable(applicationProperties)
+                            .map(ApplicationProperties::getValue)
+                            .orElse(null));
             }
 
             @Override

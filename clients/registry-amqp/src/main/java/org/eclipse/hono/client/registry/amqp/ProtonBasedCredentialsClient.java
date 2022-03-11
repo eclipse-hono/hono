@@ -16,6 +16,7 @@ package org.eclipse.hono.client.registry.amqp;
 
 import java.net.HttpURLConnection;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.eclipse.hono.client.ClientErrorException;
@@ -135,19 +136,23 @@ public class ProtonBasedCredentialsClient extends AbstractRequestResponseService
             final CacheDirective cacheDirective,
             final ApplicationProperties applicationProperties) {
 
+        final var props = Optional.ofNullable(applicationProperties)
+                .map(ApplicationProperties::getValue)
+                .orElse(null);
+
         if (isSuccessResponse(status, contentType, payload)) {
             try {
                 return CredentialsResult.from(
                         status,
                         Json.decodeValue(payload, CredentialsObject.class),
                         cacheDirective,
-                        applicationProperties);
+                        props);
             } catch (final DecodeException e) {
                 LOG.warn("received malformed payload from Credentials service", e);
-                return CredentialsResult.from(HttpURLConnection.HTTP_INTERNAL_ERROR, null, null, applicationProperties);
+                return CredentialsResult.from(HttpURLConnection.HTTP_INTERNAL_ERROR, null, null, props);
             }
         } else {
-            return CredentialsResult.from(status, null, null, applicationProperties);
+            return CredentialsResult.from(status, null, null, props);
         }
     }
 

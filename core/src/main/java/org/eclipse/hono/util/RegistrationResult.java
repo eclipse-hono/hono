@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,9 +13,8 @@
 
 package org.eclipse.hono.util;
 
-import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
+import java.util.Map;
 
-import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -28,14 +27,14 @@ public final class RegistrationResult extends RequestResponseResult<JsonObject> 
             final int status,
             final JsonObject payload,
             final CacheDirective cacheDirective,
-            final ApplicationProperties applicationProperties) {
-        super(status, payload, cacheDirective, applicationProperties);
+            final Map<String, Object> responseProperties) {
+        super(status, payload, cacheDirective, responseProperties);
     }
 
     /**
      * Creates a new result for a status code.
      *
-     * @param status The status code.
+     * @param status The code indicating the outcome of processing the request.
      * @return The result.
      */
     public static RegistrationResult from(final int status) {
@@ -45,8 +44,9 @@ public final class RegistrationResult extends RequestResponseResult<JsonObject> 
     /**
      * Creates a new result for a status code and a payload.
      *
-     * @param status The status code.
-     * @param payload The payload to include in the result.
+     * @param status The code indicating the outcome of processing the request.
+     * @param payload The payload to contained in the response message or {@code null}, if the response does not
+     *                contain any payload data.
      * @return The result.
      */
     public static RegistrationResult from(final int status, final JsonObject payload) {
@@ -56,11 +56,11 @@ public final class RegistrationResult extends RequestResponseResult<JsonObject> 
     /**
      * Creates a new result for a status code and a payload.
      *
-     * @param status The status code.
-     * @param payload The string representation of the JSON payload
-     *                to include in the result (may be {@code null}).
+     * @param status The code indicating the outcome of processing the request.
+     * @param payload The payload to contained in the response message or {@code null}, if the response does not
+     *                contain any payload data.
      * @return The result.
-     * @throws DecodeException if the given payload is not valid JSON.
+     * @throws io.vertx.core.json.DecodeException if the given payload is not valid JSON.
      */
     public static RegistrationResult from(final int status, final String payload) {
         if (payload != null) {
@@ -73,9 +73,11 @@ public final class RegistrationResult extends RequestResponseResult<JsonObject> 
     /**
      * Creates a new result for a status code and a payload.
      *
-     * @param status The status code.
-     * @param payload The payload to include in the result.
-     * @param cacheDirective Restrictions regarding the caching of the payload.
+     * @param status The code indicating the outcome of processing the request.
+     * @param payload The payload to contained in the response message or {@code null}, if the response does not
+     *                contain any payload data.
+     * @param cacheDirective Restrictions regarding the caching of the payload by the receiver of the result
+     *                       or {@code null} if no restrictions apply.
      * @return The result.
      */
     public static RegistrationResult from(final int status, final JsonObject payload, final CacheDirective cacheDirective) {
@@ -85,18 +87,20 @@ public final class RegistrationResult extends RequestResponseResult<JsonObject> 
     /**
      * Creates a new result for a status code and a payload.
      *
-     * @param status The status code.
-     * @param payload The payload to include in the result.
-     * @param cacheDirective Restrictions regarding the caching of the payload.
-     * @param applicationProperties Arbitrary properties conveyed in the response message's
-     *                              <em>application-properties</em>.
+     * @param status The code indicating the outcome of processing the request.
+     * @param payload The payload to contained in the response message or {@code null}, if the response does not
+     *                contain any payload data.
+     * @param cacheDirective Restrictions regarding the caching of the payload by the receiver of the result
+     *                       or {@code null} if no restrictions apply.
+     * @param responseProperties Arbitrary additional properties conveyed in the response message or {@code null}, if
+     *                           the response does not contain additional properties.
      * @return The result.
      */
     public static RegistrationResult from(
             final int status,
             final JsonObject payload,
             final CacheDirective cacheDirective,
-            final ApplicationProperties applicationProperties) {
-        return new RegistrationResult(status, payload, cacheDirective, applicationProperties);
+            final Map<String, Object> responseProperties) {
+        return new RegistrationResult(status, payload, cacheDirective, responseProperties);
     }
 }
