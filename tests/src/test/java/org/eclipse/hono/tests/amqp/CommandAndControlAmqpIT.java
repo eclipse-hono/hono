@@ -43,7 +43,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.SendMessageTimeoutException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.amqp.GenericSenderLink;
-import org.eclipse.hono.client.amqp.connection.AmqpConstants;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.service.management.tenant.Tenant;
@@ -227,7 +227,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             final Object correlationId = msg.getCorrelationId();
             log.debug("received command [name: {}, reply-to: {}, correlation-id: {}]", command, msg.getReplyTo(), correlationId);
             final Rejected rejected = new Rejected();
-            rejected.setError(new ErrorCondition(AmqpConstants.AMQP_BAD_REQUEST, REJECTED_COMMAND_ERROR_MESSAGE));
+            rejected.setError(new ErrorCondition(AmqpUtils.AMQP_BAD_REQUEST, REJECTED_COMMAND_ERROR_MESSAGE));
             delivery.disposition(rejected, true);
             receiver.flow(1);
         };

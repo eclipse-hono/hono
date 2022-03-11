@@ -27,7 +27,7 @@ import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.Source;
 import org.eclipse.hono.auth.Activity;
 import org.eclipse.hono.auth.HonoUser;
-import org.eclipse.hono.client.amqp.connection.AmqpConstants;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractServiceBase;
 import org.eclipse.hono.service.auth.AuthorizationService;
@@ -213,7 +213,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     protected final void closeExpiredConnection(final ProtonConnection con) {
 
         if (!con.isDisconnected()) {
-            final HonoUser clientPrincipal = AmqpConstants.getClientPrincipal(con);
+            final HonoUser clientPrincipal = AmqpUtils.getClientPrincipal(con);
             if (clientPrincipal != null) {
                 log.debug("client's [{}] access token has expired, closing connection", clientPrincipal.getName());
                 con.disconnectHandler(null);
@@ -516,7 +516,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
             if (endpoint == null) {
                 handleUnknownEndpoint(con, receiver, targetResource.toString());
             } else {
-                final HonoUser user = AmqpConstants.getClientPrincipal(con);
+                final HonoUser user = AmqpUtils.getClientPrincipal(con);
                 getAuthorizationService().isAuthorized(user, targetResource, Activity.WRITE).onComplete(authAttempt -> {
                     if (authAttempt.succeeded() && authAttempt.result()) {
                         receiver.setSource(receiver.getRemoteSource());
@@ -551,7 +551,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
         if (endpoint == null) {
             handleUnknownEndpoint(con, sender, targetResource.toString());
         } else {
-            final HonoUser user = AmqpConstants.getClientPrincipal(con);
+            final HonoUser user = AmqpUtils.getClientPrincipal(con);
             getAuthorizationService().isAuthorized(user, targetResource, Activity.READ).onComplete(authAttempt -> {
                 if (authAttempt.succeeded() && authAttempt.result()) {
                     sender.setSource(sender.getRemoteSource());
@@ -627,7 +627,7 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
     protected void processRemoteOpen(final ProtonConnection connection) {
 
         log.debug("processing open frame from client container [{}]", connection.getRemoteContainer());
-        final HonoUser clientPrincipal = AmqpConstants.getClientPrincipal(connection);
+        final HonoUser clientPrincipal = AmqpUtils.getClientPrincipal(connection);
         processDesiredCapabilities(connection, connection.getRemoteDesiredCapabilities());
         final Duration delay = Duration.between(Instant.now(), clientPrincipal.getExpirationTime());
         final WeakReference<ProtonConnection> conRef = new WeakReference<>(connection);

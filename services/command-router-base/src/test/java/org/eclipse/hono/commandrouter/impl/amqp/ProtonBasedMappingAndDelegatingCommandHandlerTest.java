@@ -38,7 +38,7 @@ import org.apache.qpid.proton.amqp.transport.Target;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
-import org.eclipse.hono.client.amqp.connection.AmqpConstants;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.commandrouter.CommandRouterMetrics;
@@ -134,7 +134,7 @@ public class ProtonBasedMappingAndDelegatingCommandHandlerTest {
 
         // THEN the disposition is REJECTED
         verify(delivery).disposition(
-                argThat(state -> AmqpConstants.AMQP_BAD_REQUEST.equals(((Rejected) state).getError().getCondition())),
+                argThat(state -> AmqpUtils.AMQP_BAD_REQUEST.equals(((Rejected) state).getError().getCondition())),
                 eq(true));
         // and the message is not being delegated
         verify(sender, never()).send(any(Message.class), any(Handler.class));

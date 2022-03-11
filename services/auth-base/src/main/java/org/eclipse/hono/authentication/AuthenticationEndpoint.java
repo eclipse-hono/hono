@@ -16,7 +16,7 @@ package org.eclipse.hono.authentication;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.HonoUser;
-import org.eclipse.hono.client.amqp.connection.AmqpConstants;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.service.amqp.AbstractAmqpEndpoint;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -54,7 +54,7 @@ public class AuthenticationEndpoint extends AbstractAmqpEndpoint<Object> {
     public final void onLinkAttach(final ProtonConnection con, final ProtonSender sender, final ResourceIdentifier targetResource) {
 
         if (ProtonQoS.AT_LEAST_ONCE.equals(sender.getRemoteQoS())) {
-            final HonoUser user = AmqpConstants.getClientPrincipal(con);
+            final HonoUser user = AmqpUtils.getClientPrincipal(con);
             sender.setQoS(ProtonQoS.AT_LEAST_ONCE).open();
             logger.debug("transferring token to client...");
             final Message tokenMsg = ProtonHelper.message(user.getToken());

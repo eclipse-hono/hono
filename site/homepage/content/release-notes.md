@@ -57,6 +57,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   has been removed. Instead, the constructors now accept a standard Map containing the properties.
 * Moved several AMQP 1.0 specific constants from `org.eclipse.hono.util.Constants` to
   `org.eclipse.hono.client.amqp.connection.AmqpConstants` in the amqp-connection client module.
+* Moved the code for injecting and extracting a tracing context to/from AMQP 1.0 messages to the amqp-connection
+  client module.
 
 ## 1.12.1
 

@@ -19,7 +19,7 @@ import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.amqp.connection.AmqpConstants;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.command.amqp.ProtonBasedCommand;
 import org.eclipse.hono.client.command.amqp.ProtonBasedCommandContext;
@@ -28,7 +28,6 @@ import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.commandrouter.CommandRouterMetrics;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.commandrouter.impl.AbstractMappingAndDelegatingCommandHandler;
-import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.Strings;
@@ -93,7 +92,7 @@ public class ProtonBasedMappingAndDelegatingCommandHandler extends AbstractMappi
         if (!ResourceIdentifier.isValid(message.getAddress())) {
             log.debug("command message has no valid address");
             final Rejected rejected = new Rejected();
-            rejected.setError(new ErrorCondition(AmqpConstants.AMQP_BAD_REQUEST, "missing or invalid command target address"));
+            rejected.setError(new ErrorCondition(AmqpUtils.AMQP_BAD_REQUEST, "missing or invalid command target address"));
             messageDelivery.disposition(rejected, true);
             return;
         }
@@ -109,7 +108,7 @@ public class ProtonBasedMappingAndDelegatingCommandHandler extends AbstractMappi
         } else if (Strings.isNullOrEmpty(deviceId)) {
             log.debug("invalid command message address: {}", message.getAddress());
             final Rejected rejected = new Rejected();
-            rejected.setError(new ErrorCondition(AmqpConstants.AMQP_BAD_REQUEST, "invalid command target address"));
+            rejected.setError(new ErrorCondition(AmqpUtils.AMQP_BAD_REQUEST, "invalid command target address"));
             messageDelivery.disposition(rejected, true);
             return;
         }
@@ -120,7 +119,7 @@ public class ProtonBasedMappingAndDelegatingCommandHandler extends AbstractMappi
         } else {
             log.debug("received invalid command message: {}", command);
         }
-        final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, message);
+        final SpanContext spanContext = AmqpUtils.extractSpanContext(tracer, message);
         final Span currentSpan = createSpan(tenantId, deviceId, spanContext);
         command.logToSpan(currentSpan);
         final ProtonBasedCommandContext commandContext = new ProtonBasedCommandContext(command, messageDelivery, currentSpan);

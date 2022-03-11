@@ -24,7 +24,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ResourceLimitExceededException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.amqp.connection.AmqpConstants;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 
 /**
  * Utility methods for converting AMQP 1.0 error conditions to
@@ -104,7 +104,7 @@ public final class ErrorConverter {
             return new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN, description);
         } else if (AmqpError.INTERNAL_ERROR.equals(condition)) {
             return new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, description);
-        } else if (AmqpConstants.AMQP_BAD_REQUEST.equals(condition)) {
+        } else if (AmqpUtils.AMQP_BAD_REQUEST.equals(condition)) {
             return new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, description);
         } else {
             return new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, description);

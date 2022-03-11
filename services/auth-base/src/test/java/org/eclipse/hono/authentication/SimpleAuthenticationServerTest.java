@@ -29,7 +29,7 @@ import org.apache.qpid.proton.engine.impl.RecordImpl;
 import org.eclipse.hono.auth.Activity;
 import org.eclipse.hono.auth.AuthoritiesImpl;
 import org.eclipse.hono.auth.HonoUser;
-import org.eclipse.hono.client.amqp.connection.AmqpConstants;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.service.auth.AddressAuthzHelper;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -85,7 +85,7 @@ public class SimpleAuthenticationServerTest {
         when(con.attachments()).thenReturn(attachments);
         when(con.getRemoteContainer()).thenReturn("client container");
         when(con.getRemoteProperties()).thenReturn(properties);
-        AmqpConstants.setClientPrincipal(con, client);
+        AmqpUtils.setClientPrincipal(con, client);
         final Vertx vertx = mock(Vertx.class);
         final SimpleAuthenticationServer server = new SimpleAuthenticationServer();
         server.init(vertx, mock(Context.class));

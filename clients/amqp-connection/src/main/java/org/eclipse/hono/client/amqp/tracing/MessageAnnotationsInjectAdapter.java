@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.tracing;
+package org.eclipse.hono.client.amqp.tracing;
 
 import java.util.HashMap;
 import java.util.Iterator;

@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.tracing;
+package org.eclipse.hono.client.amqp.tracing;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -20,6 +20,8 @@ import java.util.Map;
 
 import org.apache.qpid.proton.codec.WritableBuffer;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.amqp.tracing.MessageAnnotationsExtractAdapter;
+import org.eclipse.hono.client.amqp.tracing.MessageAnnotationsInjectAdapter;
 import org.junit.jupiter.api.Test;
 
 import io.jaegertracing.Configuration;

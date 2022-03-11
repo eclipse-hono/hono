@@ -24,7 +24,7 @@ import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.amqp.connection.AmqpConstants;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.MapBasedExecutionContext;
@@ -112,7 +112,7 @@ public class ProtonBasedCommandContext extends MapBasedExecutionContext implemen
     public void reject(final String error) {
         TracingHelper.logError(getTracingSpan(), "client error trying to deliver or process command: " + error);
         Tags.HTTP_STATUS.set(getTracingSpan(), HttpURLConnection.HTTP_BAD_REQUEST);
-        final ErrorCondition errorCondition = ProtonHelper.condition(AmqpConstants.AMQP_BAD_REQUEST, error);
+        final ErrorCondition errorCondition = ProtonHelper.condition(AmqpUtils.AMQP_BAD_REQUEST, error);
         final Rejected rejected = new Rejected();
         rejected.setError(errorCondition);
         updateDelivery(rejected);
