@@ -4,6 +4,13 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
+## 1.11.3
+
+### Fixes & Enhancements
+
+* *HonoConnectionImpl* instances failed to release/close the underlying TCP/TLS connection when its *disconnect* or
+  *shutdown* method had been invoked. This has been fixed.
+
 ## 1.11.2
 
 ### Fixes & Enhancements
