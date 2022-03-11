@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,8 +15,13 @@ package org.eclipse.hono.util;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import java.net.HttpURLConnection;
+
 import org.apache.qpid.proton.message.Message;
 import org.junit.jupiter.api.Test;
+
+import io.vertx.core.json.JsonObject;
+import io.vertx.proton.ProtonHelper;
 
 
 /**
@@ -34,15 +39,20 @@ public class RequestResponseApiConstantsTest {
 
         // GIVEN a response that is not supposed to be cached by a client
         final CacheDirective directive = CacheDirective.noCacheDirective();
-        final String correlationId = "message-id";
-        final EventBusMessage response = EventBusMessage.forStatusCode(200)
-                .setTenant("my-tenant")
-                .setDeviceId("my-device")
-                .setCacheDirective(directive)
-                .setCorrelationId(correlationId);
+        final Message request = ProtonHelper.message();
+        request.setCorrelationId("message-id");
+        final RequestResponseResult<JsonObject> response = new RequestResponseResult<>(
+                HttpURLConnection.HTTP_OK,
+                null,
+                directive,
+                null);
 
         // WHEN creating the AMQP message for the response
-        final Message reply = RequestResponseApiConstants.getAmqpReply("endpoint", response);
+        final Message reply = RequestResponseApiConstants.getAmqpReply(
+                "endpoint",
+                "my-tenant",
+                request,
+                response);
 
         // THEN the message contains the corresponding cache control property
         assertThat(MessageHelper.getCacheDirective(reply)).isEqualTo(directive.toString());

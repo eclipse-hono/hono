@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -199,42 +199,6 @@ public final class CredentialsConstants extends RequestResponseApiConstants {
         return new JsonObject()
                 .put(FIELD_TYPE, type)
                 .put(FIELD_AUTH_ID, authId);
-    }
-
-    /**
-     * Build a Json object as a request for internal communication via the vert.x event bus.
-     * Clients use this object to build their request that is sent to the processing service.
-     *
-     * @param tenantId The tenant for which the message was processed.
-     * @param deviceId The device that the message relates to.
-     * @param authId The authId of the device that the message relates to.
-     * @param type The type of credentials that the message relates to.
-     * @return JsonObject The JSON object for the request that is to be sent via the vert.x event bus.
-     * @throws NullPointerException if tenant is {@code null}.
-     */
-    public static JsonObject getServiceGetRequestAsJson(
-            final String tenantId,
-            final String deviceId,
-            final String authId,
-            final String type) {
-
-        Objects.requireNonNull(tenantId);
-
-        final JsonObject payload = new JsonObject();
-        if (deviceId != null) {
-            payload.put(FIELD_PAYLOAD_DEVICE_ID, deviceId);
-        }
-        if (authId != null) {
-            payload.put(FIELD_AUTH_ID, authId);
-        }
-        if (type != null) {
-            payload.put(FIELD_TYPE, type);
-        }
-
-        return EventBusMessage.forOperation(CredentialsAction.get.toString())
-                .setTenant(tenantId)
-                .setJsonPayload(payload)
-                .toJson();
     }
 
     /**

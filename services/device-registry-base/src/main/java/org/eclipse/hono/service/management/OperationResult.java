@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,14 +15,10 @@ package org.eclipse.hono.service.management;
 
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Function;
 
 import org.eclipse.hono.util.CacheDirective;
-import org.eclipse.hono.util.EventBusMessage;
 
 import com.google.common.base.MoreObjects.ToStringHelper;
-
-import io.vertx.core.json.JsonObject;
 
 /**
  * An operation response, including a resource version.
@@ -49,23 +45,6 @@ public final class OperationResult<T> extends Result<T> {
 
     public Optional<String> getResourceVersion() {
         return this.resourceVersion;
-    }
-
-    /**
-     * Create a response from the request.
-     *
-     * @param request The request to use as base.
-     * @param payloadMapper The mapper for mapping the payload to the JSON object required by the
-     *            {@link EventBusMessage}.
-     * @return A response message.
-     */
-    @Override
-    public EventBusMessage createResponse(final EventBusMessage request,
-            final Function<T, JsonObject> payloadMapper) {
-
-        final var response = super.createResponse(request, payloadMapper);
-        this.resourceVersion.ifPresent(response::setResourceVersion);
-        return response;
     }
 
     /**

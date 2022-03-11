@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,17 +16,13 @@ package org.eclipse.hono.service.management;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.function.IntFunction;
 
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.CacheDirective;
-import org.eclipse.hono.util.EventBusMessage;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
-
-import io.vertx.core.json.JsonObject;
 
 /**
  * Get a generic response.
@@ -96,29 +92,6 @@ public class Result<T> {
      */
     public static <T> Result<T> from(final int status) {
         return new Result<>(status, null, Optional.empty());
-    }
-
-    /**
-     * Create a response from the request.
-     *
-     * @param request The request to use as base.
-     * @param payloadMapper The mapper for mapping the payload to the JSON object required by the
-     *            {@link EventBusMessage}.
-     * @return A response message.
-     */
-    public EventBusMessage createResponse(final EventBusMessage request,
-            final Function<T, JsonObject> payloadMapper) {
-
-        final var result = request
-                .getResponse(getStatus());
-
-        this.cacheDirective.ifPresent(result::setCacheDirective);
-        if (this.payload != null) {
-            result.setJsonPayload(payloadMapper.apply(this.payload));
-        }
-
-        return result;
-
     }
 
     /**

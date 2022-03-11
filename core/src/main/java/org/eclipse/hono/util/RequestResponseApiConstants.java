@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -92,56 +92,6 @@ public abstract class RequestResponseApiConstants {
     }
 
     /**
-     * Creates an AMQP message from a response to a service invocation.
-     *
-     * @param endpoint The service endpoint that the operation has been invoked on.
-     * @param response The response message.
-     * @return The AMQP message.
-     * @throws NullPointerException if endpoint is {@code null}.
-     * @throws IllegalArgumentException if the response does not contain a correlation ID.
-     */
-    public static final Message getAmqpReply(final String endpoint, final EventBusMessage response) {
-
-        Objects.requireNonNull(endpoint);
-        Objects.requireNonNull(response);
-
-        final Object correlationId = response.getCorrelationId();
-
-        if (correlationId == null) {
-            throw new IllegalArgumentException("response must contain correlation ID");
-        }
-
-        final String tenantId = response.getTenant();
-        final String deviceId = response.getDeviceId();
-        final Integer status = response.getStatus();
-        final String cacheDirective = response.getCacheDirective();
-        final JsonObject payload = response.getJsonPayload();
-        final ResourceIdentifier address = ResourceIdentifier.from(endpoint, tenantId, deviceId);
-
-        final Message message = ProtonHelper.message();
-        message.setMessageId(UUID.randomUUID().toString());
-        message.setCorrelationId(correlationId);
-        message.setAddress(address.toString());
-
-        final Map<String, Object> map = new HashMap<>();
-        map.put(MessageHelper.APP_PROPERTY_STATUS, status);
-        if (tenantId != null) {
-            map.put(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
-        }
-        if (deviceId != null) {
-            map.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
-        }
-        if (cacheDirective != null) {
-            map.put(MessageHelper.APP_PROPERTY_CACHE_CONTROL, cacheDirective);
-        }
-        message.setApplicationProperties(new ApplicationProperties(map));
-
-        MessageHelper.setJsonPayload(message, payload);
-
-        return message;
-    }
-
-    /**
      * Creates an AMQP message from a result to a service invocation.
      *
      * @param endpoint The service endpoint that the operation has been invoked on.
@@ -152,7 +102,11 @@ public abstract class RequestResponseApiConstants {
      * @throws NullPointerException if endpoint, request or result is {@code null}.
      * @throws IllegalArgumentException if the result does not contain a correlation ID.
      */
-    public static final Message getAmqpReply(final String endpoint, final String tenantId, final Message request, final RequestResponseResult<JsonObject> result) {
+    public static final Message getAmqpReply(
+            final String endpoint,
+            final String tenantId,
+            final Message request,
+            final RequestResponseResult<JsonObject> result) {
 
         Objects.requireNonNull(endpoint);
         Objects.requireNonNull(request);
