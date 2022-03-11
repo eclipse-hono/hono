@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -38,13 +38,13 @@ import org.apache.qpid.proton.amqp.transport.Target;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
+import org.eclipse.hono.client.amqp.connection.AmqpConstants;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.commandrouter.CommandRouterMetrics;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.CommandConstants;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.TenantObject;
@@ -134,7 +134,7 @@ public class ProtonBasedMappingAndDelegatingCommandHandlerTest {
 
         // THEN the disposition is REJECTED
         verify(delivery).disposition(
-                argThat(state -> Constants.AMQP_BAD_REQUEST.equals(((Rejected) state).getError().getCondition())),
+                argThat(state -> AmqpConstants.AMQP_BAD_REQUEST.equals(((Rejected) state).getError().getCondition())),
                 eq(true));
         // and the message is not being delegated
         verify(sender, never()).send(any(Message.class), any(Handler.class));

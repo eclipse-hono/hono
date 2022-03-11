@@ -29,10 +29,10 @@ import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.amqp.GenericReceiverLink;
+import org.eclipse.hono.client.amqp.connection.AmqpConstants;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.util.CommandConstants;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.slf4j.Logger;
@@ -350,7 +350,7 @@ public class ProtonBasedApplicationClient extends ProtonBasedCommandSender imple
     private DeliveryState getDeliveryState(final Throwable t) {
         if (t instanceof ClientErrorException) {
             final var rejected = new Rejected();
-            rejected.setError(ProtonHelper.condition(Constants.AMQP_BAD_REQUEST, t.getMessage()));
+            rejected.setError(ProtonHelper.condition(AmqpConstants.AMQP_BAD_REQUEST, t.getMessage()));
             return rejected;
         } else {
             return new Released();

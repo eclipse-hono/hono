@@ -57,6 +57,7 @@ import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.adapter.test.ProtocolAdapterTestSupport;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.amqp.connection.AmqpConstants;
 import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandResponse;
@@ -230,7 +231,8 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
         openHandler.getValue().handle(Future.succeededFuture(deviceConnection));
 
         // THEN the adapter's open frame contains the ANONYMOUS-RELAY capability
-        verify(deviceConnection).setOfferedCapabilities(argThat(caps -> Arrays.asList(caps).contains(Constants.CAP_ANONYMOUS_RELAY)));
+        verify(deviceConnection).setOfferedCapabilities(
+                argThat(caps -> Arrays.asList(caps).contains(AmqpConstants.CAP_ANONYMOUS_RELAY)));
     }
 
 

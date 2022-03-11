@@ -18,9 +18,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
+import org.eclipse.hono.client.amqp.connection.AmqpConstants;
 import org.eclipse.hono.client.amqp.connection.ErrorConverter;
 import org.eclipse.hono.tests.IntegrationTestSupport;
-import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -304,7 +304,7 @@ public abstract class AmqpAdapterTestBase {
         return result.future()
                 .map(con -> {
                     assertThat(unopenedConnection.getRemoteOfferedCapabilities()).asList()
-                            .contains(Constants.CAP_ANONYMOUS_RELAY);
+                            .contains(AmqpConstants.CAP_ANONYMOUS_RELAY);
                     this.context = Vertx.currentContext();
                     this.connection = unopenedConnection;
                     log.info("AMQPS connection to adapter [{}:{}] established",

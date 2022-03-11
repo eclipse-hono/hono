@@ -23,8 +23,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
 
-import org.eclipse.hono.client.amqp.config.AuthenticatingClientConfigProperties;
-import org.eclipse.hono.client.amqp.config.AuthenticatingClientOptions;
 import org.eclipse.hono.config.FileFormat;
 import org.eclipse.hono.config.quarkus.GenericOptions;
 import org.eclipse.hono.util.Constants;

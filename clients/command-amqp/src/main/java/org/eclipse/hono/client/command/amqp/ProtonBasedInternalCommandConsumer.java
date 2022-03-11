@@ -21,6 +21,7 @@ import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.NoConsumerException;
 import org.eclipse.hono.client.amqp.AbstractServiceClient;
+import org.eclipse.hono.client.amqp.connection.AmqpConstants;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.command.CommandContext;
@@ -29,7 +30,6 @@ import org.eclipse.hono.client.command.CommandHandlers;
 import org.eclipse.hono.client.command.InternalCommandConsumer;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.MessageHelper;
 
@@ -121,7 +121,7 @@ public class ProtonBasedInternalCommandConsumer extends AbstractServiceClient im
         } catch (final IllegalArgumentException e) {
             log.debug("address of command message is invalid: {}", msg.getAddress());
             final Rejected rejected = new Rejected();
-            rejected.setError(new ErrorCondition(Constants.AMQP_BAD_REQUEST, "invalid command target address"));
+            rejected.setError(new ErrorCondition(AmqpConstants.AMQP_BAD_REQUEST, "invalid command target address"));
             delivery.disposition(rejected, true);
             return;
         }
