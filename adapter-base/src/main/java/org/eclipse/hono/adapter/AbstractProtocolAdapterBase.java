@@ -46,6 +46,7 @@ import org.eclipse.hono.service.AbstractServiceBase;
 import org.eclipse.hono.service.auth.ValidityBasedTrustOptions;
 import org.eclipse.hono.service.metric.MetricsTags.ConnectionAttemptOutcome;
 import org.eclipse.hono.service.util.ServiceBaseUtils;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
@@ -986,7 +987,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
                 final Map<String, Object> props = new HashMap<>();
                 props.put(MessageHelper.APP_PROPERTY_ORIG_ADAPTER, getTypeName());
                 props.put(MessageHelper.APP_PROPERTY_QOS, QoS.AT_LEAST_ONCE.ordinal());
-                props.put(MessageHelper.APP_PROPERTY_DEVICE_TTD, ttd);
+                props.put(CommandConstants.MSG_PROPERTY_DEVICE_TTD, ttd);
                 return getEventSender(tenantConfigTracker.result()).sendEvent(
                         tenantConfigTracker.result(),
                         tokenTracker.result(),

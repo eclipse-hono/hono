@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -46,6 +46,7 @@ import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
 import org.eclipse.hono.tracing.TenantTraceSamplingHelper;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
@@ -658,12 +659,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         final Future<Integer> ttdTracker = CompositeFuture.all(tenantValidationTracker, tokenTracker)
                 .compose(ok -> {
                     final Integer ttdParam = getTimeUntilDisconnectFromRequest(ctx);
-                    return getTimeUntilDisconnect(tenantTracker.result(), ttdParam).map(effectiveTtd -> {
-                        if (effectiveTtd != null) {
-                            currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_TTD, effectiveTtd);
-                        }
-                        return effectiveTtd;
-                    });
+                    return getTimeUntilDisconnect(tenantTracker.result(), ttdParam)
+                            .onSuccess(effectiveTtd -> Optional.ofNullable(effectiveTtd)
+                                    .ifPresent(v -> TracingHelper.TAG_DEVICE_TTD.set(currentSpan, v)));
                 });
         final Future<CommandConsumer> commandConsumerTracker = ttdTracker
                 .compose(ttd -> createCommandConsumer(
@@ -681,7 +679,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             final Map<String, Object> props = getDownstreamMessageProperties(ctx);
             Optional.ofNullable(commandConsumerTracker.result())
                     .map(c -> ttdTracker.result())
-                    .ifPresent(ttd -> props.put(MessageHelper.APP_PROPERTY_DEVICE_TTD, ttd));
+                    .ifPresent(ttd -> props.put(CommandConstants.MSG_PROPERTY_DEVICE_TTD, ttd));
             props.put(MessageHelper.APP_PROPERTY_QOS, ctx.getRequestedQos().ordinal());
 
             customizeDownstreamMessageProperties(props, ctx);
@@ -996,7 +994,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             return Future.succeededFuture();
         }
         final AtomicBoolean requestProcessed = new AtomicBoolean(false);
-        uploadMessageSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_TTD, ttdSecs);
+        TracingHelper.TAG_DEVICE_TTD.set(uploadMessageSpan, ttdSecs);
 
         final Span waitForCommandSpan = TracingHelper
                 .buildChildSpan(tracer, uploadMessageSpan.context(),

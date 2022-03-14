@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -48,9 +48,9 @@ import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Adapter;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
@@ -727,7 +727,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
                 eq(org.eclipse.hono.util.QoS.AT_MOST_ONCE),
                 eq("text/plain"),
                 any(Buffer.class),
-                argThat(props -> props.get(MessageHelper.APP_PROPERTY_DEVICE_TTD).equals(20)),
+                argThat(props -> props.get(CommandConstants.MSG_PROPERTY_DEVICE_TTD).equals(20)),
                 any());
     }
 

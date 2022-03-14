@@ -83,6 +83,11 @@ public class CommandConstants {
      * The name of the message property containing the identifier of a protocol adapter instance.
      */
     public static final String MSG_PROPERTY_ADAPTER_INSTANCE_ID = "adapter_instance_id";
+    /**
+     * The name of the message property containing the time (in seconds) until a device will be available for receiving
+     * an upstream (command) message (short for <em>Time till Disconnect</em>).
+     */
+    public static final String MSG_PROPERTY_DEVICE_TTD = "ttd";
 
     /**
      * Position of the status code in the MQTT command response topic.

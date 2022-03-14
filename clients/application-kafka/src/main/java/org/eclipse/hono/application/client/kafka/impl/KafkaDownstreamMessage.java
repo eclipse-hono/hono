@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,6 +25,7 @@ import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
 import org.eclipse.hono.application.client.kafka.KafkaMessageProperties;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 
@@ -98,7 +99,7 @@ public class KafkaDownstreamMessage implements DownstreamMessage<KafkaMessageCon
     }
 
     private Integer getTimeTillDisconnectHeaderValue(final List<KafkaHeader> headers) {
-        return KafkaRecordHelper.getHeaderValue(headers, MessageHelper.APP_PROPERTY_DEVICE_TTD, Integer.class)
+        return KafkaRecordHelper.getHeaderValue(headers, CommandConstants.MSG_PROPERTY_DEVICE_TTD, Integer.class)
                 .orElse(null);
     }
 

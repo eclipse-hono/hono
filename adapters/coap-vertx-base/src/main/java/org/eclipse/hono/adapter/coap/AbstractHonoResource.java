@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -42,7 +42,6 @@ import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantObject;
@@ -289,12 +288,8 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                     .compose(ok -> {
                         final Integer ttdParam = context.getTimeUntilDisconnect();
                         return getAdapter().getTimeUntilDisconnect(tenantTracker.result(), ttdParam)
-                                .map(effectiveTtd -> {
-                                    if (effectiveTtd != null) {
-                                        currentSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_TTD, effectiveTtd);
-                                    }
-                                    return effectiveTtd;
-                                });
+                                .onSuccess(effectiveTtd -> Optional.ofNullable(effectiveTtd)
+                                        .ifPresent(v -> TracingHelper.TAG_DEVICE_TTD.set(currentSpan, v)));
                     });
             final Future<CommandConsumer> commandConsumerTracker = ttdTracker
                     .compose(ttd -> createCommandConsumer(
@@ -311,7 +306,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                     final Map<String, Object> props = getAdapter().getDownstreamMessageProperties(context);
                     Optional.ofNullable(commandConsumer)
                             .map(c -> ttdTracker.result())
-                            .ifPresent(ttd -> props.put(MessageHelper.APP_PROPERTY_DEVICE_TTD, ttd));
+                            .ifPresent(ttd -> props.put(CommandConstants.MSG_PROPERTY_DEVICE_TTD, ttd));
                     customizeDownstreamMessageProperties(props, context);
 
                     if (context.isConfirmable()) {
@@ -506,7 +501,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
             return Future.succeededFuture();
         }
         final AtomicBoolean requestProcessed = new AtomicBoolean(false);
-        uploadMessageSpan.setTag(MessageHelper.APP_PROPERTY_DEVICE_TTD, ttdSecs);
+        TracingHelper.TAG_DEVICE_TTD.set(uploadMessageSpan, ttdSecs);
 
         final Span waitForCommandSpan = TracingHelper
                 .buildChildSpan(getTracer(), uploadMessageSpan.context(),

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -41,6 +41,7 @@ import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.TelemetrySender;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
@@ -439,7 +440,7 @@ public abstract class ProtocolAdapterMockSupport {
                 argThat(assertion -> assertion.getDeviceId().equals(deviceId)),
                 eq(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION),
                 any(),
-                argThat(props -> ttd.equals(props.get(MessageHelper.APP_PROPERTY_DEVICE_TTD))),
+                argThat(props -> ttd.equals(props.get(CommandConstants.MSG_PROPERTY_DEVICE_TTD))),
                 any());
     }
 
@@ -466,7 +467,7 @@ public abstract class ProtocolAdapterMockSupport {
                 argThat(assertion -> assertion.getDeviceId().equals(deviceId)),
                 eq(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION),
                 any(),
-                argThat(props -> ttd.equals(props.get(MessageHelper.APP_PROPERTY_DEVICE_TTD))),
+                argThat(props -> ttd.equals(props.get(CommandConstants.MSG_PROPERTY_DEVICE_TTD))),
                 any());
     }
 

@@ -64,11 +64,6 @@ public final class MessageHelper {
      */
     public static final String APP_PROPERTY_DEVICE_ID = "device_id";
     /**
-     * The name of the AMQP 1.0 message application property containing the time until disconnect of the device that is available
-     * for receiving an upstream message for the given number of seconds (short for <em>Time til Disconnect</em>).
-     */
-    public static final String APP_PROPERTY_DEVICE_TTD = "ttd";
-    /**
      * The name of the AMQP 1.0 message application property containing the id of the gateway that wants to report data
      * on behalf of another device.
      */
@@ -592,23 +587,27 @@ public final class MessageHelper {
     /**
      * Adds a property indicating a device's <em>time until disconnect</em> property to an AMQP 1.0 message.
      * <p>
-     * The value is put to the message's <em>application-properties</em> under key {@link #APP_PROPERTY_DEVICE_TTD}.
+     * The value is put to the message's <em>application-properties</em> under key
+     * {@value CommandConstants#MSG_PROPERTY_DEVICE_TTD}.
      *
      * @param msg The message to add the property to.
      * @param timeUntilDisconnect The value of the property (number of seconds).
      */
     public static void addTimeUntilDisconnect(final Message msg, final int timeUntilDisconnect) {
-        addProperty(msg, APP_PROPERTY_DEVICE_TTD, timeUntilDisconnect);
+        addProperty(msg, CommandConstants.MSG_PROPERTY_DEVICE_TTD, timeUntilDisconnect);
     }
 
     /**
-     * Gets the value of a message's {@link #APP_PROPERTY_DEVICE_TTD} application property.
+     * Gets the value of a message's {@value CommandConstants#MSG_PROPERTY_DEVICE_TTD} application property.
      *
      * @param msg The message to get the property from.
      * @return The property value or {@code null} if not set.
      */
     public static Integer getTimeUntilDisconnect(final Message msg) {
-        return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_DEVICE_TTD, Integer.class);
+        return getApplicationProperty(
+                msg.getApplicationProperties(),
+                CommandConstants.MSG_PROPERTY_DEVICE_TTD,
+                Integer.class);
     }
 
     /**

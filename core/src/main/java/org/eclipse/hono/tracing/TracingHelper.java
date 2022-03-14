@@ -91,6 +91,10 @@ public final class TracingHelper {
      */
     public static final StringTag TAG_DEVICE_ID = new StringTag(MessageHelper.APP_PROPERTY_DEVICE_ID);
     /**
+     * An OpenTracing tag that contains the time that a device will wait for an upstream message before disconnecting.
+     */
+    public static final IntTag TAG_DEVICE_TTD = new IntTag(CommandConstants.MSG_PROPERTY_DEVICE_TTD);
+    /**
      * An OpenTracing tag that contains the gateway identifier.
      */
     public static final StringTag TAG_GATEWAY_ID = new StringTag(MessageHelper.APP_PROPERTY_GATEWAY_ID);
