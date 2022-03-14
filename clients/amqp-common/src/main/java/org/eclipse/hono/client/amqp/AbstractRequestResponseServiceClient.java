@@ -338,8 +338,10 @@ public abstract class AbstractRequestResponseServiceClient<T, R extends RequestR
                         .filter(keyPredicate)
                         .collect(Collectors.toSet());
 
-                log.debug("removing {} responses from the cache", matchingKeys.size());
-                responseCache.invalidateAll(matchingKeys);
+                if (!matchingKeys.isEmpty()) {
+                    log.debug("removing {} responses from the cache", matchingKeys.size());
+                    responseCache.invalidateAll(matchingKeys);
+                }
             });
         }
     }
