@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
+import org.eclipse.hono.adapter.HttpContext;
 import org.eclipse.hono.adapter.auth.device.CredentialsApiAuthProvider;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentials;
 import org.eclipse.hono.auth.Device;
@@ -35,7 +36,6 @@ import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandResponse;
 import org.eclipse.hono.service.http.ComponentMetaDataDecorator;
 import org.eclipse.hono.service.http.DefaultFailureHandler;
-import org.eclipse.hono.service.http.HttpContext;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.http.TracingHandler;
 import org.eclipse.hono.service.http.WebSpanDecorator;

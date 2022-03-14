@@ -10,9 +10,10 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.util;
+package org.eclipse.hono.adapter;
 
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.util.MapBasedExecutionContext;
 
 import io.opentracing.Span;
 

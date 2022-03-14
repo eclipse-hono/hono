@@ -32,11 +32,11 @@ import org.eclipse.californium.core.network.Endpoint;
 import org.eclipse.californium.core.network.Exchange;
 import org.eclipse.californium.core.network.Exchange.Origin;
 import org.eclipse.californium.core.server.resources.CoapExchange;
+import org.eclipse.hono.adapter.TelemetryExecutionContext;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.RegistrationAssertion;
-import org.eclipse.hono.util.TelemetryExecutionContext;
 import org.eclipse.hono.util.TenantObject;
 
 import io.opentracing.SpanContext;

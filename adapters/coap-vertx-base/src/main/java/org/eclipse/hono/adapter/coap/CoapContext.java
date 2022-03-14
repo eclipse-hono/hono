@@ -23,10 +23,10 @@ import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.coap.MediaTypeRegistry;
 import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.server.resources.CoapExchange;
+import org.eclipse.hono.adapter.MapBasedTelemetryExecutionContext;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
-import org.eclipse.hono.util.MapBasedTelemetryExecutionContext;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.TenantObject;
 

@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.hono.adapter.HttpContext;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.adapter.auth.device.UsernamePasswordAuthProvider;
 import org.eclipse.hono.adapter.auth.device.UsernamePasswordCredentials;
@@ -27,7 +28,6 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.client.command.CommandContext;
-import org.eclipse.hono.service.http.HttpContext;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Constants;

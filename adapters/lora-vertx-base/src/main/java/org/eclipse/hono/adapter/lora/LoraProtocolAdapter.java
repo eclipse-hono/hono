@@ -22,6 +22,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.eclipse.hono.adapter.HttpContext;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.adapter.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.adapter.auth.device.TenantServiceBasedX509Authentication;
@@ -42,7 +43,6 @@ import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.registry.TenantDisabledOrNotRegisteredException;
 import org.eclipse.hono.client.util.StatusCodeMapper;
-import org.eclipse.hono.service.http.HttpContext;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.service.http.TracingHandler;
 import org.eclipse.hono.service.metric.MetricsTags;

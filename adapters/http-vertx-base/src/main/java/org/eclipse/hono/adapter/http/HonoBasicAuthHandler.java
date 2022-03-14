@@ -16,10 +16,10 @@ package org.eclipse.hono.adapter.http;
 import java.util.Base64;
 import java.util.Objects;
 
+import org.eclipse.hono.adapter.HttpContext;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.adapter.auth.device.ExecutionContextAuthHandler;
 import org.eclipse.hono.adapter.auth.device.PreCredentialsValidationHandler;
-import org.eclipse.hono.service.http.HttpContext;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;

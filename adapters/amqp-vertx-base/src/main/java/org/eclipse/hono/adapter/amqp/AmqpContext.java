@@ -17,9 +17,9 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.adapter.MapBasedTelemetryExecutionContext;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
-import org.eclipse.hono.util.MapBasedTelemetryExecutionContext;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.ResourceIdentifier;
