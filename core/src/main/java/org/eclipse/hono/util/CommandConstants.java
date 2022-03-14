@@ -80,6 +80,11 @@ public class CommandConstants {
     public static final String CONTENT_TYPE_DELIVERY_FAILURE_NOTIFICATION = "application/vnd.eclipse-hono-delivery-failure-notification+json";
 
     /**
+     * The name of the message property containing the identifier of a protocol adapter instance.
+     */
+    public static final String MSG_PROPERTY_ADAPTER_INSTANCE_ID = "adapter_instance_id";
+
+    /**
      * Position of the status code in the MQTT command response topic.
      * {@code command/[tenant]/[device-id]/res/<req-id>/<status>}
      */

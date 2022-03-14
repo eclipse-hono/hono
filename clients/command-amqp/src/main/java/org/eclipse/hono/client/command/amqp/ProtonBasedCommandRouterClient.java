@@ -38,6 +38,7 @@ import org.eclipse.hono.client.util.CachingClientFactory;
 import org.eclipse.hono.client.util.StatusCodeMapper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.CommandRouterConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.MessageHelper;
@@ -380,12 +381,12 @@ public class ProtonBasedCommandRouterClient extends AbstractRequestResponseServi
 
         final int lifespanSeconds = lifespan != null && lifespan.getSeconds() <= Integer.MAX_VALUE ? (int) lifespan.getSeconds() : -1;
         final Map<String, Object> properties = createDeviceIdProperties(deviceId);
-        properties.put(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
+        properties.put(CommandConstants.MSG_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
         properties.put(MessageHelper.APP_PROPERTY_LIFESPAN, lifespanSeconds);
 
         final Span currentSpan = newChildSpan(context, "register command consumer");
         TracingHelper.setDeviceTags(currentSpan, tenantId, deviceId);
-        currentSpan.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
+        TracingHelper.TAG_ADAPTER_INSTANCE_ID.set(currentSpan, adapterInstanceId);
         currentSpan.setTag(MessageHelper.APP_PROPERTY_LIFESPAN, lifespanSeconds);
 
         final Future<RequestResponseResult<JsonObject>> resultTracker = getOrCreateClient(tenantId)
@@ -418,11 +419,11 @@ public class ProtonBasedCommandRouterClient extends AbstractRequestResponseServi
         Objects.requireNonNull(adapterInstanceId);
 
         final Map<String, Object> properties = createDeviceIdProperties(deviceId);
-        properties.put(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
+        properties.put(CommandConstants.MSG_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
 
         final Span currentSpan = newChildSpan(context, "unregister command consumer");
         TracingHelper.setDeviceTags(currentSpan, tenantId, deviceId);
-        currentSpan.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
+        TracingHelper.TAG_ADAPTER_INSTANCE_ID.set(currentSpan, adapterInstanceId);
 
         return getOrCreateClient(tenantId)
                 .compose(client -> client.createAndSendRequest(

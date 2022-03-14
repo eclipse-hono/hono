@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -373,12 +373,12 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
     }
 
     private void setTagsForSingleResultWithGateway(final Span span, final String adapterInstanceId, final String gatewayId) {
-        span.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
+        setTagsForSingleResult(span, adapterInstanceId);
         span.setTag(MessageHelper.APP_PROPERTY_GATEWAY_ID, gatewayId);
     }
 
     private void setTagsForSingleResult(final Span span, final String adapterInstanceId) {
-        span.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
+        TracingHelper.TAG_ADAPTER_INSTANCE_ID.set(span, adapterInstanceId);
     }
 
     private Future<JsonObject> getInstancesGettingLastKnownGatewayFirst(

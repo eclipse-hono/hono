@@ -45,7 +45,7 @@ import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.registry.TenantDisabledOrNotRegisteredException;
-import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -404,7 +404,7 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
                     : null;
             final Span currentSpan = CommandContext.createSpan(tracer, command, spanContext, followsFromSpanContext,
                     getClass().getSimpleName());
-            currentSpan.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
+            TracingHelper.TAG_ADAPTER_INSTANCE_ID.set(currentSpan, adapterInstanceId);
             KafkaTracingHelper.TAG_OFFSET.set(currentSpan, record.offset());
 
             final var commandContext = new KafkaBasedCommandContext(command, commandResponseSender, currentSpan);

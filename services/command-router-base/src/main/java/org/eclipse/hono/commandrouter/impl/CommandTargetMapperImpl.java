@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -139,8 +139,7 @@ public class CommandTargetMapperImpl implements CommandTargetMapper {
         final String infoMsg = String.format("command target%s:%s adapter instance '%s'", choiceInfo, gatewayInfo, targetAdapterInstance);
         LOG.debug(infoMsg);
         span.log(infoMsg);
-
-        span.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, targetAdapterInstance);
+        TracingHelper.TAG_ADAPTER_INSTANCE_ID.set(span, targetAdapterInstance);
         return Future.succeededFuture(targetInstanceObject);
     }
 

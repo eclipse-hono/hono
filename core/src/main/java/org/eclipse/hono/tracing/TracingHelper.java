@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,6 +22,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,6 +50,10 @@ import io.vertx.core.json.JsonObject;
  */
 public final class TracingHelper {
 
+    /**
+     * An OpenTracing tag indicating the identifier of a protocol adapter instance.
+     */
+    public static final StringTag TAG_ADAPTER_INSTANCE_ID = new StringTag(CommandConstants.MSG_PROPERTY_ADAPTER_INSTANCE_ID);
     /**
      * An OpenTracing tag indicating if a client (device) has been authenticated.
      */

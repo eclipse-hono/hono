@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -45,6 +45,7 @@ import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.CacheDirective;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.CommandRouterConstants;
 import org.eclipse.hono.util.CommandRouterConstants.CommandRouterAction;
 import org.eclipse.hono.util.MessageHelper;
@@ -654,12 +655,16 @@ public class ProtonBasedCommandRouterClientTest {
         // THEN the message being sent contains the device ID in its properties
         final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
         assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo(deviceId);
-        assertThat(MessageHelper.getApplicationProperty(sentMessage.getApplicationProperties(),
-                MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, String.class))
-                .isEqualTo("adapterInstanceId");
-        assertThat(MessageHelper.getApplicationProperty(sentMessage.getApplicationProperties(),
-                MessageHelper.APP_PROPERTY_LIFESPAN, Integer.class))
-                .isEqualTo(Integer.valueOf(-1));
+        assertThat(MessageHelper.getApplicationProperty(
+                sentMessage.getApplicationProperties(),
+                CommandConstants.MSG_PROPERTY_ADAPTER_INSTANCE_ID,
+                String.class))
+            .isEqualTo("adapterInstanceId");
+        assertThat(MessageHelper.getApplicationProperty(
+                sentMessage.getApplicationProperties(),
+                MessageHelper.APP_PROPERTY_LIFESPAN,
+                Integer.class))
+            .isEqualTo(Integer.valueOf(-1));
         assertThat(sentMessage.getMessageId()).isNotNull();
         assertThat(sentMessage.getSubject()).isEqualTo(CommandRouterAction.REGISTER_COMMAND_CONSUMER.getSubject());
         assertThat(MessageHelper.getJsonPayload(sentMessage)).isNull();
@@ -682,12 +687,16 @@ public class ProtonBasedCommandRouterClientTest {
         // THEN the message being sent contains the device ID in its properties
         final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
         assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo(deviceId);
-        assertThat(MessageHelper.getApplicationProperty(sentMessage.getApplicationProperties(),
-                MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, String.class))
-                .isEqualTo("adapterInstanceId");
-        assertThat(MessageHelper.getApplicationProperty(sentMessage.getApplicationProperties(),
-                MessageHelper.APP_PROPERTY_LIFESPAN, Integer.class))
-                .isEqualTo(lifespanSeconds);
+        assertThat(MessageHelper.getApplicationProperty(
+                sentMessage.getApplicationProperties(),
+                CommandConstants.MSG_PROPERTY_ADAPTER_INSTANCE_ID,
+                String.class))
+            .isEqualTo("adapterInstanceId");
+        assertThat(MessageHelper.getApplicationProperty(
+                sentMessage.getApplicationProperties(),
+                MessageHelper.APP_PROPERTY_LIFESPAN,
+                Integer.class))
+            .isEqualTo(lifespanSeconds);
         assertThat(sentMessage.getMessageId()).isNotNull();
         assertThat(sentMessage.getSubject()).isEqualTo(CommandRouterAction.REGISTER_COMMAND_CONSUMER.getSubject());
         assertThat(MessageHelper.getJsonPayload(sentMessage)).isNull();
@@ -709,9 +718,11 @@ public class ProtonBasedCommandRouterClientTest {
         // THEN the message being sent contains the device ID in its properties
         final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
         assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo(deviceId);
-        assertThat(MessageHelper.getApplicationProperty(sentMessage.getApplicationProperties(),
-                MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, String.class))
-                .isEqualTo(adapterInstanceId);
+        assertThat(MessageHelper.getApplicationProperty(
+                sentMessage.getApplicationProperties(),
+                CommandConstants.MSG_PROPERTY_ADAPTER_INSTANCE_ID,
+                String.class))
+            .isEqualTo(adapterInstanceId);
         assertThat(sentMessage.getMessageId()).isNotNull();
         assertThat(sentMessage.getSubject()).isEqualTo(CommandRouterAction.UNREGISTER_COMMAND_CONSUMER.getSubject());
         assertThat(MessageHelper.getJsonPayload(sentMessage)).isNull();

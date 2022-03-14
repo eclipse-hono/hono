@@ -25,6 +25,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AbstractDelegatingRequestResponseEndpoint;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.CommandRouterConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RequestResponseApiConstants;
@@ -179,10 +180,14 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
             final ResourceIdentifier targetAddress, final SpanContext spanContext) {
         final String tenantId = targetAddress.getTenantId();
         final String deviceId = MessageHelper.getDeviceId(request);
-        final String adapterInstanceId = MessageHelper.getApplicationProperty(request.getApplicationProperties(),
-                MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, String.class);
-        final Integer lifespanSecondsOrNull = MessageHelper.getApplicationProperty(request.getApplicationProperties(),
-                MessageHelper.APP_PROPERTY_LIFESPAN, Integer.class);
+        final String adapterInstanceId = MessageHelper.getApplicationProperty(
+                request.getApplicationProperties(),
+                CommandConstants.MSG_PROPERTY_ADAPTER_INSTANCE_ID,
+                String.class);
+        final Integer lifespanSecondsOrNull = MessageHelper.getApplicationProperty(
+                request.getApplicationProperties(),
+                MessageHelper.APP_PROPERTY_LIFESPAN,
+                Integer.class);
 
         final Span span = TracingHelper.buildServerChildSpan(
                 tracer,
@@ -197,9 +202,8 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
             final Duration lifespan = lifespanSecondsOrNull != null ? Duration.ofSeconds(lifespanSecondsOrNull) : Duration.ofSeconds(-1);
-            TracingHelper.TAG_TENANT_ID.set(span, tenantId);
-            TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
-            span.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
+            TracingHelper.setDeviceTags(span, tenantId, deviceId);
+            TracingHelper.TAG_ADAPTER_INSTANCE_ID.set(span, adapterInstanceId);
             span.setTag(MessageHelper.APP_PROPERTY_LIFESPAN, lifespan.getSeconds());
             logger.debug("register command consumer [tenant-id: {}, device-id: {}, adapter-instance-id {}, lifespan: {}s]",
                     tenantId, deviceId, adapterInstanceId, lifespan.getSeconds());
@@ -227,8 +231,10 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
             final ResourceIdentifier targetAddress, final SpanContext spanContext) {
         final String tenantId = targetAddress.getTenantId();
         final String deviceId = MessageHelper.getDeviceId(request);
-        final String adapterInstanceId = MessageHelper.getApplicationProperty(request.getApplicationProperties(),
-                MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, String.class);
+        final String adapterInstanceId = MessageHelper.getApplicationProperty(
+                request.getApplicationProperties(),
+                CommandConstants.MSG_PROPERTY_ADAPTER_INSTANCE_ID,
+                String.class);
 
         final Span span = TracingHelper.buildServerChildSpan(
                 tracer,
@@ -242,9 +248,8 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
             TracingHelper.logError(span, "missing tenant, device and/or adapter instance id");
             resultFuture = Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
         } else {
-            TracingHelper.TAG_TENANT_ID.set(span, tenantId);
-            TracingHelper.TAG_DEVICE_ID.set(span, deviceId);
-            span.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
+            TracingHelper.setDeviceTags(span, tenantId, deviceId);
+            TracingHelper.TAG_ADAPTER_INSTANCE_ID.set(span, adapterInstanceId);
             logger.debug("unregister command consumer [tenant-id: {}, device-id: {}, adapter-instance-id {}]",
                     tenantId, deviceId, adapterInstanceId);
 

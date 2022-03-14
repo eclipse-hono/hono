@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -78,10 +78,6 @@ public final class MessageHelper {
      * a device was auto-provisioned.
      */
     public static final String APP_PROPERTY_REGISTRATION_STATUS = "hono_registration_status";
-    /**
-     * The name of the AMQP 1.0 message application property containing the id of a protocol adapter instance.
-     */
-    public static final String APP_PROPERTY_ADAPTER_INSTANCE_ID = "adapter_instance_id";
     /**
      * The name of the AMQP 1.0 message application property containing a lifespan value in seconds.
      */

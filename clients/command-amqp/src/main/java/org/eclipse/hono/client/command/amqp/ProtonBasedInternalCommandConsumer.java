@@ -31,7 +31,6 @@ import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.HonoProtonHelper;
-import org.eclipse.hono.util.MessageHelper;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
@@ -139,7 +138,7 @@ public class ProtonBasedInternalCommandConsumer extends AbstractServiceClient im
                 : null;
         final Span currentSpan = CommandContext.createSpan(tracer, command, spanContext, followsFromSpanContext,
                 getClass().getSimpleName());
-        currentSpan.setTag(MessageHelper.APP_PROPERTY_ADAPTER_INSTANCE_ID, adapterInstanceId);
+        TracingHelper.TAG_ADAPTER_INSTANCE_ID.set(currentSpan, adapterInstanceId);
 
         final CommandContext commandContext = new ProtonBasedCommandContext(command, delivery, currentSpan);
 
