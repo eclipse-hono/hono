@@ -911,7 +911,6 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         when(msg.topicSubscriptions()).thenReturn(subscriptions);
 
         final var mqttDeviceEndpoint = adapter.createMqttDeviceEndpoint(endpoint, null, OptionalInt.empty());
-        endpoint.closeHandler(handler -> mqttDeviceEndpoint.onClose());
         mqttDeviceEndpoint.onSubscribe(msg);
 
         // THEN the adapter creates a command consumer that is checked periodically
@@ -1058,7 +1057,6 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         when(msg.topicSubscriptions()).thenReturn(subscriptions);
 
         final var mqttDeviceEndpoint = adapter.createMqttDeviceEndpoint(endpoint, null, OptionalInt.empty());
-        endpoint.closeHandler(handler -> mqttDeviceEndpoint.onClose());
         mqttDeviceEndpoint.onSubscribe(msg);
 
         // THEN the adapter creates a command consumer that is checked periodically

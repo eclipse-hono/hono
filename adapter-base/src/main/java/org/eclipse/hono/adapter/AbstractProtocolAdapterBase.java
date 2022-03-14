@@ -105,7 +105,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @param sample The sample.
      * @throws NullPointerException if ctx is {@code null}.
      */
-    protected static final void addMicrometerSample(final CommandContext ctx, final Sample sample) {
+    public static void addMicrometerSample(final CommandContext ctx, final Sample sample) {
         Objects.requireNonNull(ctx);
         ctx.put(KEY_MICROMETER_SAMPLE, sample);
     }
@@ -118,7 +118,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         contain a sample.
      * @throws NullPointerException if ctx is {@code null}.
      */
-    protected static final Sample getMicrometerSample(final CommandContext ctx) {
+    public static Sample getMicrometerSample(final CommandContext ctx) {
         Objects.requireNonNull(ctx);
         return ctx.get(KEY_MICROMETER_SAMPLE);
     }
@@ -754,7 +754,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         Otherwise the future will contain the configuration information.
      * @throws NullPointerException if tenant ID is {@code null}.
      */
-    protected final Future<TenantObject> getTenantConfiguration(final String tenantId, final SpanContext context) {
+    public final Future<TenantObject> getTenantConfiguration(final String tenantId, final SpanContext context) {
 
         Objects.requireNonNull(tenantId);
 
@@ -882,7 +882,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         event.
      * @see ConnectionEventProducer#disconnected(ConnectionEventProducer.Context, String, String, Device, io.vertx.core.json.JsonObject, SpanContext)
      */
-    protected Future<Void> sendDisconnectedEvent(final String remoteId, final Device authenticatedDevice, final SpanContext context) {
+    public Future<Void> sendDisconnectedEvent(final String remoteId, final Device authenticatedDevice, final SpanContext context) {
         if (this.connectionEventProducer != null) {
             return Optional.ofNullable(authenticatedDevice)
                     .map(device -> getTenantClient().get(device.getTenantId(), context)
@@ -927,7 +927,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         Otherwise, it will be failed with a {@link ServiceInvocationException}.
      * @throws NullPointerException if any of tenant or device ID are {@code null}.
      */
-    protected final Future<Void> sendConnectedTtdEvent(
+    public final Future<Void> sendConnectedTtdEvent(
             final String tenant,
             final String deviceId,
             final Device authenticatedDevice,
@@ -953,7 +953,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      *         Otherwise, it will be failed with a {@link ServiceInvocationException}.
      * @throws NullPointerException if any of tenant or device ID are {@code null}.
      */
-    protected final Future<Void> sendDisconnectedTtdEvent(
+    public final Future<Void> sendDisconnectedTtdEvent(
             final String tenant,
             final String deviceId,
             final Device authenticatedDevice,
@@ -1130,7 +1130,7 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
      * @return A future indicating the outcome of the check.
      * @throws NullPointerException if error is {@code null}.
      */
-    protected Future<Boolean> isTerminalError(final Throwable error, final String deviceId,
+    public Future<Boolean> isTerminalError(final Throwable error, final String deviceId,
             final Device authenticatedDevice, final SpanContext spanContext) {
 
         Objects.requireNonNull(error);

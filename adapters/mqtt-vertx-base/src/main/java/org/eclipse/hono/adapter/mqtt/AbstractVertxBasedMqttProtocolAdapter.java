@@ -14,23 +14,13 @@
 package org.eclipse.hono.adapter.mqtt;
 
 import java.net.HttpURLConnection;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
@@ -51,13 +41,10 @@ import org.eclipse.hono.adapter.auth.device.X509AuthProvider;
 import org.eclipse.hono.adapter.limiting.ConnectionLimitManager;
 import org.eclipse.hono.adapter.limiting.DefaultConnectionLimitManager;
 import org.eclipse.hono.adapter.limiting.MemoryBasedConnectionLimitStrategy;
-import org.eclipse.hono.adapter.mqtt.MqttContext.ErrorHandlingMode;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.command.Command;
-import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandResponse;
 import org.eclipse.hono.notification.NotificationEventBusSupport;
@@ -77,32 +64,21 @@ import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.Futures;
 import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.Pair;
 import org.eclipse.hono.util.RegistrationAssertion;
-import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantObject;
 
-import io.micrometer.core.instrument.Timer.Sample;
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
-import io.netty.handler.codec.mqtt.MqttQoS;
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
-import io.opentracing.log.Fields;
+import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.JsonObject;
 import io.vertx.mqtt.MqttConnectionException;
 import io.vertx.mqtt.MqttEndpoint;
 import io.vertx.mqtt.MqttServer;
 import io.vertx.mqtt.MqttServerOptions;
-import io.vertx.mqtt.MqttTopicSubscription;
-import io.vertx.mqtt.messages.MqttPublishMessage;
-import io.vertx.mqtt.messages.MqttSubscribeMessage;
-import io.vertx.mqtt.messages.MqttUnsubscribeMessage;
 
 /**
  * A base class for implementing Vert.x based Hono protocol adapters for publishing events &amp; telemetry data using
@@ -133,10 +109,8 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      */
     protected static final int MAX_MSG_SIZE_VARIABLE_HEADER_SIZE = 128;
 
-    private static final String EVENT_SENDING_PUBACK = "sending PUBACK";
     private static final int IANA_MQTT_PORT = 1883;
     private static final int IANA_SECURE_MQTT_PORT = 8883;
-    private static final String LOG_FIELD_TOPIC_FILTER = "filter";
 
     private final AtomicReference<Promise<Void>> stopResultPromiseRef = new AtomicReference<>();
 
@@ -149,7 +123,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     /**
      * The endpoints representing the currently connected, authenticated MQTT devices.
      */
-    private final Set<MqttDeviceEndpoint> connectedAuthenticatedDeviceEndpoints = new HashSet<>();
+    private final Set<MqttDeviceEndpoint<T>> connectedAuthenticatedDeviceEndpoints = new HashSet<>();
 
     /**
      * Sets the authentication handler to use for authenticating devices.
@@ -182,9 +156,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     }
 
     /**
-     * Sets the metrics for this service.
+     * Sets the metrics for this adapter.
      *
-     * @param metrics The metrics
+     * @param metrics The metrics.
      */
     public final void setMetrics(final MqttAdapterMetrics metrics) {
         Optional.ofNullable(metrics)
@@ -193,12 +167,21 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     }
 
     /**
-     * Gets the metrics for this service.
+     * Gets the metrics for this adapter.
      *
-     * @return The metrics
+     * @return The metrics.
      */
     protected final MqttAdapterMetrics getMetrics() {
         return metrics;
+    }
+
+    /**
+     * Gets the tracer for this adapter.
+     *
+     * @return The tracer.
+     */
+    protected final Tracer getTracer() {
+        return tracer;
     }
 
     /**
@@ -305,7 +288,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
             return bindMqttServer(options, server).map(s -> {
                 server = s;
-                return (Void) null;
+                return null;
             });
         } else {
             return Future.succeededFuture();
@@ -323,7 +306,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
             return bindMqttServer(options, insecureServer).map(createdServer -> {
                 insecureServer = createdServer;
-                return (Void) null;
+                return null;
             });
         } else {
             return Future.succeededFuture();
@@ -407,7 +390,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
     }
 
     private void closeDeviceConnectionsOnDeviceOrTenantChange(final Predicate<Device> deviceMatchPredicate, final String reason) {
-        final List<MqttDeviceEndpoint> deviceEndpoints = connectedAuthenticatedDeviceEndpoints.stream()
+        final List<MqttDeviceEndpoint<T>> deviceEndpoints = connectedAuthenticatedDeviceEndpoints.stream()
                 .filter(ep -> deviceMatchPredicate.test(ep.getAuthenticatedDevice()))
                 .collect(Collectors.toList()); // using intermediate list since connectedAuthenticatedDeviceEndpoints is modified in the close() method
         deviceEndpoints.forEach(ep -> {
@@ -454,6 +437,15 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             .map(ok -> (Void) null)
             .onComplete(ar -> log.info("MQTT server(s) closed"))
             .onComplete(stopPromise);
+    }
+
+    /**
+     * Checks whether the {@link #stop(Promise)} method has been called.
+     *
+     * @return {@code true} if this adapter is (being) stopped.
+     */
+    protected final boolean stopCalled() {
+        return stopResultPromiseRef.get() != null;
     }
 
     /**
@@ -603,7 +595,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
      */
     private Future<Device> handleEndpointConnectionWithoutAuthentication(final MqttEndpoint endpoint) {
 
-        registerEndpointHandlers(endpoint, null, OptionalInt.empty());
+        createMqttDeviceEndpoint(endpoint, null, OptionalInt.empty());
         metrics.incrementUnauthenticatedConnections();
         log.debug("unauthenticated device [clientId: {}] connected", endpoint.clientIdentifier());
         return Future.succeededFuture(null);
@@ -627,7 +619,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     if (connectionClosedPrematurely.get()) { // check whether client disconnected during credentials validation
                         return Future.failedFuture("connection already closed");
                     }
-                    registerEndpointHandlers(endpoint, authenticatedDevice, context.getTraceSamplingPriority());
+                    createMqttDeviceEndpoint(endpoint, authenticatedDevice, context.getTraceSamplingPriority());
                     metrics.incrementConnections(authenticatedDevice.getTenantId());
                     return Future.succeededFuture((Device) authenticatedDevice);
                 })
@@ -872,7 +864,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                             ctx.getTimer());
                     // check that the remote MQTT client is still connected before sending PUBACK
                     if (ctx.isAtLeastOnce() && ctx.deviceEndpoint().isConnected()) {
-                        currentSpan.log(EVENT_SENDING_PUBACK);
+                        currentSpan.log("sending PUBACK");
                         ctx.acknowledge();
                     }
                     currentSpan.finish();
@@ -953,7 +945,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                     ctx.getOrigAddress(), ctx.qosLevel(), tenantObject.getTenantId(), deviceId);
             // check that the remote MQTT client is still connected before sending PUBACK
             if (ctx.isAtLeastOnce() && ctx.deviceEndpoint().isConnected()) {
-                currentSpan.log(EVENT_SENDING_PUBACK);
+                currentSpan.log("sending PUBACK");
                 ctx.acknowledge();
             }
             currentSpan.finish();
@@ -975,7 +967,12 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         });
     }
 
-    private void onBeforeEndpointClose(final MqttDeviceEndpoint endpoint) {
+    /**
+     * Performs clean-up operations concerning the given endpoint before it gets closed.
+     *
+     * @param endpoint The endpoint that is about to be closed.
+     */
+    public final void onBeforeEndpointClose(final MqttDeviceEndpoint<T> endpoint) {
         if (endpoint.getAuthenticatedDevice() != null) {
             connectedAuthenticatedDeviceEndpoints.remove(endpoint);
         }
@@ -1067,17 +1064,9 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         }
     }
 
-    private void registerEndpointHandlers(final MqttEndpoint endpoint, final Device authenticatedDevice,
+    final MqttDeviceEndpoint<T> createMqttDeviceEndpoint(final MqttEndpoint endpoint, final Device authenticatedDevice,
             final OptionalInt traceSamplingPriority) {
-
-        final MqttDeviceEndpoint deviceEndpoint = createMqttDeviceEndpoint(endpoint, authenticatedDevice,
-                traceSamplingPriority);
-        deviceEndpoint.registerHandlers();
-    }
-
-    final MqttDeviceEndpoint createMqttDeviceEndpoint(final MqttEndpoint endpoint, final Device authenticatedDevice,
-            final OptionalInt traceSamplingPriority) {
-        final MqttDeviceEndpoint mqttDeviceEndpoint = new MqttDeviceEndpoint(endpoint, authenticatedDevice,
+        final MqttDeviceEndpoint<T> mqttDeviceEndpoint = new MqttDeviceEndpoint<>(this, endpoint, authenticatedDevice,
                 traceSamplingPriority);
         if (authenticatedDevice != null) {
             connectedAuthenticatedDeviceEndpoints.add(mqttDeviceEndpoint);
@@ -1107,814 +1096,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
             }
         } else {
             return MqttConnectReturnCode.CONNECTION_REFUSED_NOT_AUTHORIZED;
-        }
-    }
-
-    /**
-     * The endpoint representing a connected MQTT device.
-     */
-    public class MqttDeviceEndpoint {
-
-        private final MqttEndpoint endpoint;
-        /**
-         * The authenticated identity of the device or {@code null} if the device has not been authenticated.
-         */
-        private final Device authenticatedDevice;
-        private final OptionalInt traceSamplingPriority;
-        private final Map<Subscription.Key, Pair<CommandSubscription, CommandConsumer>> commandSubscriptions = new ConcurrentHashMap<>();
-        private final Map<Subscription.Key, ErrorSubscription> errorSubscriptions = new HashMap<>();
-        private final PendingPubAcks pendingAcks = new PendingPubAcks(vertx);
-
-        private Throwable protocolLevelException;
-
-        /**
-         * Creates a new MqttDeviceEndpoint.
-         *
-         * @param endpoint The endpoint representing the connection to the device.
-         * @param authenticatedDevice The authenticated identity of the device or {@code null} if the device has not been authenticated.
-         * @param traceSamplingPriority The sampling priority to be applied on the <em>OpenTracing</em> spans
-         *                              created in the context of this endpoint.
-         * @throws NullPointerException if endpoint or traceSamplingPriority is {@code null}.
-         */
-        public MqttDeviceEndpoint(final MqttEndpoint endpoint, final Device authenticatedDevice, final OptionalInt traceSamplingPriority) {
-            this.endpoint = Objects.requireNonNull(endpoint);
-            this.authenticatedDevice = authenticatedDevice;
-            this.traceSamplingPriority = Objects.requireNonNull(traceSamplingPriority);
-        }
-
-        /**
-         * Gets the authenticated device.
-         *
-         * @return The authenticated device or {@code null}.
-         */
-        protected final Device getAuthenticatedDevice() {
-            return authenticatedDevice;
-        }
-
-        /**
-         * Registers the handlers on the contained MqttEndpoint.
-         */
-        protected final void registerHandlers() {
-            endpoint.publishHandler(this::handlePublishedMessage);
-            endpoint.publishAcknowledgeHandler(this::handlePubAck);
-            endpoint.subscribeHandler(this::onSubscribe);
-            endpoint.unsubscribeHandler(this::onUnsubscribe);
-            endpoint.closeHandler(v -> onClose());
-            endpoint.exceptionHandler(this::onProtocolLevelError);
-        }
-
-        /**
-         * To be called by the MqttEndpoint exceptionHandler. The given exception could for example be a
-         * {@code io.netty.handler.codec.TooLongFrameException} if the MQTT max message size was exceeded.
-         * The MQTT server will close the connection on such an error, triggering a subsequent invocation of
-         * the endpoint closeHandler.
-         *
-         * @param throwable The exception.
-         */
-        private void onProtocolLevelError(final Throwable throwable) {
-            if (authenticatedDevice == null) {
-                log.debug("protocol-level exception occurred [client ID: {}]", endpoint.clientIdentifier(), throwable);
-            } else {
-                log.debug("protocol-level exception occurred [tenant-id: {}, device-id: {}, client ID: {}]",
-                        authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId(),
-                        endpoint.clientIdentifier(), throwable);
-            }
-            this.protocolLevelException = throwable;
-        }
-
-        /**
-         * Invoked when a device sends an MQTT <em>PUBLISH</em> packet.
-         *
-         * @param message The message received from the device.
-         * @throws NullPointerException if message is {@code null}.
-         */
-        protected final void handlePublishedMessage(final MqttPublishMessage message) {
-            Objects.requireNonNull(message);
-            // try to extract a SpanContext from the property bag of the message's topic (if set)
-            final SpanContext spanContext = Optional.ofNullable(message.topicName())
-                    .flatMap(topic -> Optional.ofNullable(PropertyBag.fromTopic(message.topicName())))
-                    .map(propertyBag -> TracingHelper.extractSpanContext(tracer, propertyBag::getPropertiesIterator))
-                    .orElse(null);
-            final Span span = newChildSpan(spanContext, "PUBLISH");
-            span.setTag(Tags.MESSAGE_BUS_DESTINATION.getKey(), message.topicName());
-            span.setTag(TracingHelper.TAG_QOS.getKey(), message.qosLevel().toString());
-            traceSamplingPriority.ifPresent(prio -> TracingHelper.setTraceSamplingPriority(span, prio));
-
-            final MqttContext context = MqttContext.fromPublishPacket(message, endpoint, span, authenticatedDevice);
-            context.setTimer(getMetrics().startTimer());
-
-            final Future<Void> spanPreparationFuture = authenticatedDevice == null
-                    ? applyTraceSamplingPriorityForTopicTenant(context.topic(), span)
-                    : Future.succeededFuture();
-
-            spanPreparationFuture
-                    .compose(v -> checkTopic(context))
-                    .compose(ok -> onPublishedMessage(context))
-                    .onSuccess(ok -> {
-                        Tags.HTTP_STATUS.set(span, HttpURLConnection.HTTP_ACCEPTED);
-                        onMessageSent(context);
-                        span.finish();
-                    })
-                    .onFailure(error -> handlePublishedMessageError(context, error, span));
-        }
-
-        private void handlePublishedMessageError(final MqttContext context, final Throwable error, final Span span) {
-            final ErrorSubscription errorSubscription = getErrorSubscription(context);
-            final Future<Void> errorSentIfNeededFuture = Optional.ofNullable(errorSubscription)
-                    .map(v -> publishError(errorSubscription, context, error, span.context()))
-                    .orElseGet(Future::succeededFuture);
-
-            Tags.HTTP_STATUS.set(span, ServiceInvocationException.extractStatusCode(error));
-            TracingHelper.logError(span, error);
-
-            if (!(error instanceof ClientErrorException)) {
-                onMessageUndeliverable(context);
-            }
-
-            errorSentIfNeededFuture
-                    .compose(ok -> isTerminalError(error, context.deviceId(), authenticatedDevice, span.context()))
-                    .onComplete(ar -> {
-                        final boolean isTerminalError = ar.succeeded() ? ar.result() : false;
-                        final ErrorHandlingMode errorHandlingMode = context
-                                .getErrorHandlingMode(errorSubscription != null);
-
-                        if (errorHandlingMode == ErrorHandlingMode.DISCONNECT || isTerminalError) {
-                            if (context.deviceEndpoint().isConnected()) {
-                                span.log("closing connection to device");
-                                context.deviceEndpoint().close();
-                            }
-                        } else if (context.isAtLeastOnce()) {
-                            if (errorHandlingMode == ErrorHandlingMode.SKIP_ACK) {
-                                span.log("skipped sending PUBACK");
-                            } else if (context.deviceEndpoint().isConnected()) {
-                                span.log(EVENT_SENDING_PUBACK);
-                                context.acknowledge();
-                            }
-                        }
-                        span.finish();
-                    });
-        }
-
-        /**
-         * Applies the trace sampling priority configured for the tenant derived from the given topic on the given span.
-         * <p>
-         * This is for unauthenticated MQTT connections where the tenant id gets taken from the message topic.
-         *
-         * @param topic The topic (may be {@code null}).
-         * @param span The <em>OpenTracing</em> span to apply the configuration to.
-         * @return A succeeded future indicating the outcome of the operation. A failure to determine the tenant is ignored
-         *         here.
-         * @throws NullPointerException if span is {@code null}.
-         */
-        protected final Future<Void> applyTraceSamplingPriorityForTopicTenant(final ResourceIdentifier topic, final Span span) {
-            Objects.requireNonNull(span);
-            if (topic == null || topic.getTenantId() == null) {
-                // an invalid address is ignored here
-                return Future.succeededFuture();
-            }
-            return getTenantConfiguration(topic.getTenantId(), span.context())
-                    .map(tenantObject -> {
-                        TracingHelper.setDeviceTags(span, tenantObject.getTenantId(), null);
-                        TenantTraceSamplingHelper.applyTraceSamplingPriority(tenantObject, null, span);
-                        return (Void) null;
-                    })
-                    .recover(t -> Future.succeededFuture());
-        }
-
-        private Future<Void> checkTopic(final MqttContext context) {
-            if (context.topic() == null) {
-                return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed topic name"));
-            } else {
-                return Future.succeededFuture();
-            }
-        }
-
-        private ErrorSubscription getErrorSubscription(final MqttContext context) {
-            ErrorSubscription result = null;
-            if (context.tenant() != null && context.deviceId() != null) {
-                // first check for a subscription with the device id taken from the topic or the authenticated device
-                // (handles case where a gateway is publishing for specific edge devices and has individual error subscriptions for them)
-                result = errorSubscriptions.get(ErrorSubscription.getKey(context.tenant(), context.deviceId()));
-            }
-            if (result == null && context.authenticatedDevice() != null) {
-                // otherwise check using the authenticated device (ie. potentially gateway) id
-                result = errorSubscriptions
-                        .get(ErrorSubscription.getKey(context.tenant(), context.authenticatedDevice().getDeviceId()));
-            }
-            return result;
-        }
-
-        /**
-         * Invoked when a device sends an MQTT <em>PUBACK</em> packet.
-         *
-         * @param msgId The message/packet id.
-         * @throws NullPointerException if msgId is {@code null}.
-         */
-        public final void handlePubAck(final Integer msgId) {
-            Objects.requireNonNull(msgId);
-            pendingAcks.handlePubAck(msgId);
-        }
-
-        /**
-         * Invoked when a device sends an MQTT <em>SUBSCRIBE</em> packet.
-         * <p>
-         * This method supports topic filters for subscribing to commands
-         * and error messages as defined by Hono's
-         * <a href="https://www.eclipse.org/hono/docs/user-guide/mqtt-adapter/#command-control">
-         * MQTT adapter user guide</a>.
-         * <p>
-         * When a device subscribes to a command topic filter, this method opens a
-         * command consumer for receiving commands from applications for the device and
-         * sends an empty notification downstream, indicating that the device will be
-         * ready to receive commands until further notice.
-         *
-         * @param subscribeMsg The subscribe request received from the device.
-         * @throws NullPointerException if subscribeMsg is {@code null}.
-         */
-        protected final void onSubscribe(final MqttSubscribeMessage subscribeMsg) {
-            Objects.requireNonNull(subscribeMsg);
-            final Map<Object, Future<Subscription>> uniqueSubscriptions = new HashMap<>();
-            final Deque<Future<Subscription>> subscriptionOutcomes = new ArrayDeque<>(subscribeMsg.topicSubscriptions().size());
-
-            final Span span = newSpan("SUBSCRIBE");
-
-            // process in reverse order and skip equivalent subscriptions, meaning the last of such subscriptions shall be used
-            // (done with respect to MQTT 3.1.1 spec section 3.8.4, processing multiple filters as if they had been submitted
-            //  using multiple separate SUBSCRIBE packets)
-            final Deque<MqttTopicSubscription> topicSubscriptions = new LinkedList<>(subscribeMsg.topicSubscriptions());
-            topicSubscriptions.descendingIterator().forEachRemaining(mqttTopicSub -> {
-
-                final Future<Subscription> result;
-                final Subscription sub = CommandSubscription.hasCommandEndpointPrefix(mqttTopicSub.topicName())
-                        ? CommandSubscription.fromTopic(mqttTopicSub, authenticatedDevice)
-                        : ErrorSubscription.fromTopic(mqttTopicSub, authenticatedDevice);
-
-                if (sub == null) {
-                    TracingHelper.logError(span, String.format("unsupported topic filter [%s]", mqttTopicSub.topicName()));
-                    log.debug("cannot create subscription [filter: {}, requested QoS: {}]: unsupported topic filter",
-                            mqttTopicSub.topicName(), mqttTopicSub.qualityOfService());
-                    result = Future.failedFuture(new IllegalArgumentException("unsupported topic filter"));
-                } else {
-                    if (uniqueSubscriptions.containsKey(sub.getKey())) {
-                        final Map<String, Object> items = new HashMap<>(3);
-                        items.put(Fields.EVENT, "ignoring duplicate subscription");
-                        items.put(LOG_FIELD_TOPIC_FILTER, sub.getTopic());
-                        items.put("requested QoS", sub.getQos());
-                        span.log(items);
-                        result = uniqueSubscriptions.get(sub.getKey());
-                    } else {
-                        result = registerSubscription(sub, span);
-                        uniqueSubscriptions.put(sub.getKey(), result);
-                    }
-                }
-                subscriptionOutcomes.addFirst(result); // add first to get the same order as in the SUBSCRIBE packet
-            });
-
-            // wait for all futures to complete before sending SUBACK
-            CompositeFuture.join(new ArrayList<>(subscriptionOutcomes)).onComplete(v -> {
-
-                if (endpoint.isConnected()) {
-                    // return a status code for each topic filter contained in the SUBSCRIBE packet
-                    final List<MqttQoS> grantedQosLevels = subscriptionOutcomes.stream()
-                            .map(future -> future.failed() ? MqttQoS.FAILURE : future.result().getQos())
-                            .collect(Collectors.toList());
-                    endpoint.subscribeAcknowledge(subscribeMsg.messageId(), grantedQosLevels);
-
-                    // now that we have informed the device about the outcome,
-                    // we can send empty notifications for succeeded (distinct) command subscriptions downstream
-                    subscriptionOutcomes.stream()
-                            .filter(subFuture -> subFuture.succeeded() && subFuture.result() instanceof CommandSubscription)
-                            .map(subFuture -> ((CommandSubscription) subFuture.result()).getKey())
-                            .distinct()
-                            .forEach(cmdSubKey -> {
-                                sendConnectedTtdEvent(cmdSubKey.getTenant(), cmdSubKey.getDeviceId(), authenticatedDevice, span.context());
-                            });
-                } else {
-                    TracingHelper.logError(span, "skipped sending command subscription notification - endpoint not connected anymore");
-                    log.debug("skipped sending command subscription notification - endpoint not connected anymore [tenant-id: {}, device-id: {}]",
-                            Optional.ofNullable(authenticatedDevice).map(Device::getTenantId).orElse(""),
-                            Optional.ofNullable(authenticatedDevice).map(Device::getDeviceId).orElse(""));
-                }
-                span.finish();
-            });
-        }
-
-        private Future<Subscription> registerSubscription(final Subscription sub, final Span span) {
-            return (sub instanceof CommandSubscription)
-                    ? registerCommandSubscription((CommandSubscription) sub, span)
-                    : registerErrorSubscription((ErrorSubscription) sub, span);
-        }
-
-        private Future<Subscription> registerCommandSubscription(final CommandSubscription cmdSub, final Span span) {
-
-            if (MqttQoS.EXACTLY_ONCE.equals(cmdSub.getQos())) {
-                TracingHelper.logError(span, String.format("topic filter [%s] with unsupported QoS 2", cmdSub.getTopic()));
-                return Future.failedFuture(new IllegalArgumentException("QoS 2 not supported for command subscription"));
-            }
-            return createCommandConsumer(cmdSub, span)
-                    .map(consumer -> {
-                        cmdSub.logSubscribeSuccess(span);
-                        log.debug("created subscription [tenant: {}, device: {}, filter: {}, QoS: {}]",
-                                cmdSub.getTenant(), cmdSub.getDeviceId(), cmdSub.getTopic(), cmdSub.getQos());
-                        final Pair<CommandSubscription, CommandConsumer> existingCmdSub = commandSubscriptions.get(cmdSub.getKey());
-                        if (existingCmdSub != null) {
-                            span.log(String.format("subscription replaces previous subscription [QoS %s, filter %s]",
-                                    existingCmdSub.one().getQos(), existingCmdSub.one().getTopic()));
-                            log.debug("previous subscription [QoS {}, filter {}] is getting replaced",
-                                    existingCmdSub.one().getQos(), existingCmdSub.one().getTopic());
-                        }
-                        commandSubscriptions.put(cmdSub.getKey(), Pair.of(cmdSub, consumer));
-                        return (Subscription) cmdSub;
-                    }).recover(t -> {
-                        cmdSub.logSubscribeFailure(span, t);
-                        log.debug("cannot create subscription [tenant: {}, device: {}, filter: {}, requested QoS: {}]",
-                                cmdSub.getTenant(), cmdSub.getDeviceId(), cmdSub.getTopic(), cmdSub.getQos(), t);
-                        return Future.failedFuture(t);
-                    });
-        }
-
-        private Future<Subscription> registerErrorSubscription(final ErrorSubscription errorSub, final Span span) {
-
-            if (!MqttQoS.AT_MOST_ONCE.equals(errorSub.getQos())) {
-                TracingHelper.logError(span, String.format("topic filter [%s] with unsupported QoS %d", errorSub.getTopic(), errorSub.getQos().value()));
-                return Future.failedFuture(new IllegalArgumentException(String.format("QoS %d not supported for error subscription", errorSub.getQos().value())));
-            }
-            return Future.succeededFuture()
-                    .compose(v -> {
-                        // in case of a gateway having subscribed for a specific device,
-                        // check the via-gateways, ensuring that the gateway may act on behalf of the device at this point in time
-                        if (errorSub.isGatewaySubscriptionForSpecificDevice()) {
-                            return getRegistrationAssertion(
-                                    authenticatedDevice.getTenantId(),
-                                    errorSub.getDeviceId(),
-                                    authenticatedDevice,
-                                    span.context());
-                        }
-                        return Future.succeededFuture();
-                    }).recover(t -> {
-                        errorSub.logSubscribeFailure(span, t);
-                        log.debug("cannot create subscription [tenant: {}, device: {}, filter: {}, requested QoS: {}]",
-                                errorSub.getTenant(), errorSub.getDeviceId(), errorSub.getTopic(), errorSub.getQos(), t);
-                        return Future.failedFuture(t);
-                    }).compose(v -> {
-                        errorSubscriptions.put(errorSub.getKey(), errorSub);
-                        errorSub.logSubscribeSuccess(span);
-                        log.debug("created subscription [tenant: {}, device: {}, filter: {}, QoS: {}]",
-                                errorSub.getTenant(), errorSub.getDeviceId(), errorSub.getTopic(), errorSub.getQos());
-                        return Future.succeededFuture(errorSub);
-                    });
-        }
-
-        /**
-         * Publishes an error message to the device.
-         * <p>
-         * Used for an error that occurred in the context of the given MqttContext,
-         * while processing an MQTT message published by a device.
-         *
-         * @param subscription The device's command subscription.
-         * @param context The context in which the error occurred.
-         * @param error The error exception.
-         * @param spanContext The span context.
-         * @return A future indicating the outcome of the operation.
-         * @throws NullPointerException if any of the parameters except spanContext is {@code null}.
-         */
-        protected final Future<Void> publishError(
-                final ErrorSubscription subscription,
-                final MqttContext context,
-                final Throwable error,
-                final SpanContext spanContext) {
-
-            Objects.requireNonNull(subscription);
-            Objects.requireNonNull(context);
-            Objects.requireNonNull(error);
-
-            final Span span = newChildSpan(spanContext, "publish error to device");
-
-            final int errorCode = ServiceInvocationException.extractStatusCode(error);
-            final String correlationId = Optional.ofNullable(context.correlationId()).orElse("-1");
-            final String publishTopic = subscription.getErrorPublishTopic(context, errorCode);
-            Tags.MESSAGE_BUS_DESTINATION.set(span, publishTopic);
-            TracingHelper.TAG_QOS.set(span, subscription.getQos().name());
-
-            final JsonObject errorJson = new JsonObject();
-            errorJson.put("code", errorCode);
-            errorJson.put("message", ServiceInvocationException.getErrorMessageForExternalClient(error));
-            errorJson.put("timestamp", ZonedDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MILLIS)
-                    .format(DateTimeFormatter.ISO_INSTANT));
-            errorJson.put(MessageHelper.SYS_PROPERTY_CORRELATION_ID, correlationId);
-
-            final String targetInfo = authenticatedDevice != null && !authenticatedDevice.getDeviceId().equals(context.deviceId())
-                    ? String.format("gateway [%s], device [%s]", authenticatedDevice.getDeviceId(), context.deviceId())
-                    : String.format("device [%s]", context.deviceId());
-
-            return publish(publishTopic, errorJson.toBuffer(), subscription.getQos())
-                    .onSuccess(msgId -> {
-                        log.debug("published error message [packet-id: {}] to {} [tenant-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
-                                msgId, targetInfo, subscription.getTenant(), endpoint.clientIdentifier(),
-                                subscription.getQos(), publishTopic);
-                        span.log(subscription.getQos().value() > 0 ? "published error message, packet-id: " + msgId
-                                : "published error message");
-                    }).onFailure(thr -> {
-                        log.debug("error publishing error message to {} [tenant-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
-                                targetInfo, subscription.getTenant(), endpoint.clientIdentifier(),
-                                subscription.getQos(), publishTopic, thr);
-                        TracingHelper.logError(span, "failed to publish error message", thr);
-                    }).map(msgId -> (Void) null)
-                    .onComplete(ar -> span.finish());
-        }
-
-        private Future<CommandConsumer> createCommandConsumer(final CommandSubscription subscription, final Span span) {
-
-            final Handler<CommandContext> commandHandler = commandContext -> {
-
-                Tags.COMPONENT.set(commandContext.getTracingSpan(), getTypeName());
-                TracingHelper.TAG_CLIENT_ID.set(commandContext.getTracingSpan(), endpoint.clientIdentifier());
-                final Sample timer = metrics.startTimer();
-                final Command command = commandContext.getCommand();
-                final Future<TenantObject> tenantTracker = getTenantConfiguration(subscription.getTenant(), commandContext.getTracingContext());
-
-                tenantTracker.compose(tenantObject -> {
-                    if (command.isValid()) {
-                        return checkMessageLimit(tenantObject, command.getPayloadSize(), commandContext.getTracingContext());
-                    } else {
-                        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed command message"));
-                    }
-                }).compose(success -> {
-                    // in case of a gateway having subscribed for a specific device,
-                    // check the via-gateways, ensuring that the gateway may act on behalf of the device at this point in time
-                    if (subscription.isGatewaySubscriptionForSpecificDevice()) {
-                        return getRegistrationAssertion(
-                                authenticatedDevice.getTenantId(),
-                                subscription.getDeviceId(),
-                                authenticatedDevice,
-                                commandContext.getTracingContext());
-                    }
-                    return Future.succeededFuture();
-                }).compose(success -> {
-                    addMicrometerSample(commandContext, timer);
-                    onCommandReceived(tenantTracker.result(), subscription, commandContext);
-                    return Future.succeededFuture();
-                }).onFailure(t -> {
-                    if (t instanceof ClientErrorException) {
-                        commandContext.reject(t);
-                    } else {
-                        commandContext.release(t);
-                    }
-                    metrics.reportCommand(
-                            command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
-                            subscription.getTenant(),
-                            tenantTracker.result(),
-                            ProcessingOutcome.from(t),
-                            command.getPayloadSize(),
-                            timer);
-                });
-            };
-
-            final Future<RegistrationAssertion> tokenTracker = Optional.ofNullable(authenticatedDevice)
-                    .map(v -> getRegistrationAssertion(
-                            authenticatedDevice.getTenantId(),
-                            subscription.getDeviceId(),
-                            authenticatedDevice,
-                            span.context()))
-                    .orElseGet(Future::succeededFuture);
-
-            if (subscription.isGatewaySubscriptionForSpecificDevice()) {
-                // gateway scenario
-                return tokenTracker.compose(v -> getCommandConsumerFactory().createCommandConsumer(
-                        subscription.getTenant(),
-                        subscription.getDeviceId(),
-                        subscription.getAuthenticatedDeviceId(),
-                        commandHandler,
-                        null,
-                        span.context()));
-            } else {
-                return tokenTracker.compose(v -> getCommandConsumerFactory().createCommandConsumer(
-                        subscription.getTenant(),
-                        subscription.getDeviceId(),
-                        commandHandler,
-                        null,
-                        span.context()));
-            }
-        }
-
-        /**
-         * Called for a command to be delivered to a device.
-         *
-         * @param tenantObject The tenant configuration object.
-         * @param subscription The device's command subscription.
-         * @param commandContext The command to be delivered.
-         * @throws NullPointerException if any of the parameters are {@code null}.
-         */
-        protected final void onCommandReceived(
-                final TenantObject tenantObject,
-                final CommandSubscription subscription,
-                final CommandContext commandContext) {
-
-            Objects.requireNonNull(tenantObject);
-            Objects.requireNonNull(subscription);
-            Objects.requireNonNull(commandContext);
-
-            final Command command = commandContext.getCommand();
-            final String publishTopic = subscription.getCommandPublishTopic(command);
-            Tags.MESSAGE_BUS_DESTINATION.set(commandContext.getTracingSpan(), publishTopic);
-            TracingHelper.TAG_QOS.set(commandContext.getTracingSpan(), subscription.getQos().name());
-
-            final String targetInfo = command.isTargetedAtGateway()
-                ? String.format("gateway [%s], device [%s]", command.getGatewayId(), command.getDeviceId())
-                : String.format("device [%s]", command.getDeviceId());
-
-            getCommandPayload(commandContext)
-                    .map(mappedPayload -> Optional.ofNullable(mappedPayload).orElseGet(Buffer::buffer))
-                    .onSuccess(payload -> {
-                        publish(publishTopic, payload, subscription.getQos())
-                                .onSuccess(msgId -> {
-                                    log.debug("published command [packet-id: {}] to {} [tenant-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
-                                            msgId, targetInfo, subscription.getTenant(), endpoint.clientIdentifier(),
-                                            subscription.getQos(), publishTopic);
-                                    commandContext.getTracingSpan()
-                                            .log(subscription.getQos().value() > 0
-                                                    ? "published command, packet-id: " + msgId
-                                                    : "published command");
-                                    afterCommandPublished(msgId, commandContext, tenantObject, subscription);
-                                })
-                                .onFailure(thr -> {
-                                    log.debug("error publishing command to {} [tenant-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
-                                            targetInfo, subscription.getTenant(), endpoint.clientIdentifier(),
-                                            subscription.getQos(), publishTopic, thr);
-                                    TracingHelper.logError(commandContext.getTracingSpan(), "failed to publish command", thr);
-                                    reportPublishedCommand(
-                                            tenantObject,
-                                            subscription,
-                                            commandContext,
-                                            ProcessingOutcome.from(thr));
-                                    commandContext.release(thr);
-                                });
-                    }).onFailure(t -> {
-                        log.debug("error mapping command [tenant-id: {}, MQTT client-id: {}, QoS: {}]",
-                                subscription.getTenant(), endpoint.clientIdentifier(), subscription.getQos(), t);
-                        TracingHelper.logError(commandContext.getTracingSpan(), "failed to map command", t);
-                        reportPublishedCommand(
-                                tenantObject,
-                                subscription,
-                                commandContext,
-                                ProcessingOutcome.from(t));
-                        commandContext.release(t);
-                    });
-        }
-
-        private Future<Integer> publish(final String topic, final Buffer payload, final MqttQoS qosLevel) {
-            final Promise<Integer> publishSentPromise = Promise.promise();
-            try {
-                endpoint.publish(topic, payload, qosLevel, false, false, publishSentPromise);
-            } catch (final Exception e) {
-                publishSentPromise.fail(!endpoint.isConnected()
-                        ? new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "connection to device already closed")
-                        : new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, e));
-            }
-            return publishSentPromise.future();
-        }
-
-        private void afterCommandPublished(
-                final Integer publishedMsgId,
-                final CommandContext commandContext,
-                final TenantObject tenantObject,
-                final CommandSubscription subscription) {
-
-            final boolean requiresPuback = MqttQoS.AT_LEAST_ONCE.equals(subscription.getQos());
-
-            if (requiresPuback) {
-                final Handler<Integer> onAckHandler = msgId -> {
-                    reportPublishedCommand(tenantObject, subscription, commandContext, ProcessingOutcome.FORWARDED);
-                    log.debug("received PUBACK [packet-id: {}] for command [tenant-id: {}, device-id: {}, MQTT client-id: {}]",
-                            msgId, subscription.getTenant(), subscription.getDeviceId(), endpoint.clientIdentifier());
-                    commandContext.getTracingSpan().log("received PUBACK from device");
-                    commandContext.accept();
-                };
-
-                final Handler<Void> onAckTimeoutHandler = v -> {
-                    log.debug("did not receive PUBACK [packet-id: {}] for command [tenant-id: {}, device-id: {}, MQTT client-id: {}]",
-                            publishedMsgId, subscription.getTenant(), subscription.getDeviceId(), endpoint.clientIdentifier());
-                    commandContext.release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
-                            "did not receive PUBACK from device"));
-                    reportPublishedCommand(tenantObject, subscription, commandContext, ProcessingOutcome.UNDELIVERABLE);
-                };
-                pendingAcks.add(publishedMsgId, onAckHandler, onAckTimeoutHandler, getConfig().getSendMessageToDeviceTimeout());
-            } else {
-                reportPublishedCommand(tenantObject, subscription, commandContext, ProcessingOutcome.FORWARDED);
-                commandContext.accept();
-            }
-        }
-
-        private void reportPublishedCommand(
-                final TenantObject tenantObject,
-                final CommandSubscription subscription,
-                final CommandContext commandContext,
-                final ProcessingOutcome outcome) {
-
-            metrics.reportCommand(
-                    commandContext.getCommand().isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
-                    subscription.getTenant(),
-                    tenantObject,
-                    outcome,
-                    commandContext.getCommand().getPayloadSize(),
-                    getMicrometerSample(commandContext));
-        }
-
-        /**
-         * Invoked when a device sends an MQTT <em>UNSUBSCRIBE</em> packet.
-         * <p>
-         * This method currently only supports topic filters for unsubscribing from
-         * commands as defined by Hono's
-         * <a href="https://www.eclipse.org/hono/docs/user-guide/mqtt-adapter/#command-control">
-         * MQTT adapter user guide</a>.
-         *
-         * @param unsubscribeMsg The unsubscribe request received from the device.
-         * @throws NullPointerException if unsubscribeMsg is {@code null}.
-         */
-        protected final void onUnsubscribe(final MqttUnsubscribeMessage unsubscribeMsg) {
-            Objects.requireNonNull(unsubscribeMsg);
-            final Span span = newSpan("UNSUBSCRIBE");
-
-            @SuppressWarnings("rawtypes")
-            final List<Future> removalDoneFutures = new ArrayList<>(unsubscribeMsg.topics().size());
-            unsubscribeMsg.topics().forEach(topic -> {
-
-                final AtomicReference<Subscription> removedSubscription = new AtomicReference<>();
-                if (CommandSubscription.hasCommandEndpointPrefix(topic)) {
-                    Optional.ofNullable(CommandSubscription.getKey(topic, authenticatedDevice))
-                            .map(commandSubscriptions::remove)
-                            .ifPresent(subscriptionCommandConsumerPair -> {
-                                final CommandSubscription subscription = subscriptionCommandConsumerPair.one();
-                                removedSubscription.set(subscription);
-                                subscription.logUnsubscribe(span);
-                                removalDoneFutures.add(
-                                        onCommandSubscriptionRemoved(subscriptionCommandConsumerPair, span, true));
-                            });
-                } else if (ErrorSubscription.hasErrorEndpointPrefix(topic)) {
-                    Optional.ofNullable(ErrorSubscription.getKey(topic, authenticatedDevice))
-                            .map(errorSubscriptions::remove)
-                            .ifPresent(subscription -> {
-                                removedSubscription.set(subscription);
-                                subscription.logUnsubscribe(span);
-                            });
-                }
-                if (removedSubscription.get() != null) {
-                    log.debug("removed subscription with topic [{}] for device [tenant-id: {}, device-id: {}]",
-                            topic, removedSubscription.get().getTenant(), removedSubscription.get().getDeviceId());
-                } else {
-                    TracingHelper.logError(span, String.format("no subscription found for topic filter [%s]", topic));
-                    log.debug("cannot unsubscribe - no subscription found for topic filter [{}]", topic);
-                }
-            });
-            if (endpoint.isConnected()) {
-                endpoint.unsubscribeAcknowledge(unsubscribeMsg.messageId());
-            }
-            CompositeFuture.join(removalDoneFutures).onComplete(r -> span.finish());
-        }
-
-        private Future<Void> onCommandSubscriptionRemoved(
-                final Pair<CommandSubscription, CommandConsumer> subscriptionConsumerPair, 
-                final Span span, 
-                final boolean sendDisconnectedEvent) {
-
-            final CommandSubscription subscription = subscriptionConsumerPair.one();
-            final CommandConsumer commandConsumer = subscriptionConsumerPair.two();
-            return commandConsumer.close(span.context())
-                    .recover(thr -> {
-                        TracingHelper.logError(span, thr);
-                        // ignore all but precon-failed errors
-                        if (ServiceInvocationException.extractStatusCode(thr) == HttpURLConnection.HTTP_PRECON_FAILED) {
-                            log.debug("command consumer wasn't active anymore - skip sending disconnected event [tenant: {}, device-id: {}]",
-                                    subscription.getTenant(), subscription.getDeviceId());
-                            span.log("command consumer wasn't active anymore - skip sending disconnected event");
-                            return Future.failedFuture(thr);
-                        }
-                        return Future.succeededFuture();
-                    })
-                    .compose(v -> {
-                        if (sendDisconnectedEvent) {
-                            return sendDisconnectedTtdEvent(subscription.getTenant(), subscription.getDeviceId(), span);
-                        }
-                        return Future.succeededFuture();
-                    });
-        }
-
-        private Future<Void> sendDisconnectedTtdEvent(final String tenant, final String device, final Span span) {
-            final Span sendEventSpan = newChildSpan(span.context(), "send Disconnected Event");
-            return AbstractVertxBasedMqttProtocolAdapter.this.sendDisconnectedTtdEvent(tenant, device, authenticatedDevice, sendEventSpan.context())
-                    .onComplete(r -> sendEventSpan.finish()).mapEmpty();
-        }
-
-        private boolean stopCalled() {
-            return stopResultPromiseRef.get() != null;
-        }
-
-        /**
-         * Actively closes the connection to the device.
-         *
-         * @param reason The reason for closing the connection.
-         * @param sendDisconnectedEvent {@code true} if events shall be sent concerning the disconnect.
-         * @throws NullPointerException if reason is {@code null}.
-         */
-        protected final void close(final String reason, final boolean sendDisconnectedEvent) {
-            Objects.requireNonNull(reason);
-
-            final Span span = newSpan("close device connection");
-            endpoint.closeHandler(v -> {});
-            onCloseInternal(span, reason, sendDisconnectedEvent)
-                    .onComplete(ar -> span.finish());
-        }
-
-        /**
-         * To be called by the MqttEndpoint closeHandler.
-         */
-        protected final void onClose() {
-            final Span span;
-            final String reason;
-            if (protocolLevelException != null) {
-                span = newSpan("close connection due to protocol error");
-                TracingHelper.logError(span, protocolLevelException);
-                reason = "protocol error: " + protocolLevelException.toString();
-            } else if (stopCalled()) {
-                span = newSpan("close device connection (server shutdown)");
-                reason = "server shutdown";
-            } else {
-                span = newSpan("CLOSE");
-                reason = null;
-            }
-            onCloseInternal(span, reason, true)
-                    .onComplete(ar -> span.finish());
-        }
-
-        private Future<Void> onCloseInternal(final Span span, final String reason, final boolean sendDisconnectedEvent) {
-            AbstractVertxBasedMqttProtocolAdapter.this.onBeforeEndpointClose(this);
-            AbstractVertxBasedMqttProtocolAdapter.this.onClose(endpoint);
-            final CompositeFuture removalDoneFuture = removeAllCommandSubscriptions(span, sendDisconnectedEvent);
-            if (sendDisconnectedEvent) {
-                sendDisconnectedEvent(endpoint.clientIdentifier(), authenticatedDevice, span.context());
-            }
-            if (authenticatedDevice == null) {
-                metrics.decrementUnauthenticatedConnections();
-            } else {
-                metrics.decrementConnections(authenticatedDevice.getTenantId());
-            }
-            final String reasonSuffix = reason != null ? ("; reason: " + reason) : "";
-            if (endpoint.isConnected()) {
-                final Map<String, String> logFields = new HashMap<>(2);
-                logFields.put(Fields.EVENT, "closing device connection");
-                Optional.ofNullable(reason).ifPresent(r -> logFields.put("reason", r));
-                span.log(logFields);
-
-                if (authenticatedDevice == null) {
-                    log.debug("closing connection to anonymous device [client ID: {}]{}", endpoint.clientIdentifier(), reasonSuffix);
-                } else {
-                    log.debug("closing connection to device [tenant-id: {}, device-id: {}, client ID: {}]{}",
-                            authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId(),
-                            endpoint.clientIdentifier(), reasonSuffix);
-                }
-                endpoint.close();
-            } else {
-                // connection already closed
-                if (authenticatedDevice == null) {
-                    log.debug("connection to anonymous device closed [client ID: {}]{}", endpoint.clientIdentifier(), reasonSuffix);
-                } else {
-                    log.debug("connection to device closed [tenant-id: {}, device-id: {}, client ID: {}]{}",
-                            authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId(),
-                            endpoint.clientIdentifier(), reasonSuffix);
-                }
-            }
-            return removalDoneFuture.mapEmpty();
-        }
-
-        private CompositeFuture removeAllCommandSubscriptions(final Span span, final boolean sendDisconnectedEvent) {
-            @SuppressWarnings("rawtypes")
-            final List<Future> removalFutures = new ArrayList<>(commandSubscriptions.size());
-            for (final var iter = commandSubscriptions.values().iterator(); iter.hasNext();) {
-                final Pair<CommandSubscription, CommandConsumer> pair = iter.next();
-                pair.one().logUnsubscribe(span);
-                removalFutures.add(onCommandSubscriptionRemoved(pair, span, sendDisconnectedEvent));
-                iter.remove();
-            }
-            return CompositeFuture.join(removalFutures);
-        }
-
-        private Span newSpan(final String operationName) {
-            final Span span = newChildSpan(null, operationName);
-            traceSamplingPriority.ifPresent(prio -> TracingHelper.setTraceSamplingPriority(span, prio));
-            return span;
-        }
-
-        private Span newChildSpan(final SpanContext spanContext, final String operationName) {
-            final Span span = TracingHelper.buildChildSpan(tracer, spanContext, operationName, getTypeName())
-                    .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
-                    .withTag(TracingHelper.TAG_CLIENT_ID.getKey(), endpoint.clientIdentifier())
-                    .withTag(TracingHelper.TAG_AUTHENTICATED.getKey(), authenticatedDevice != null)
-                    .start();
-
-            if (authenticatedDevice != null) {
-                TracingHelper.setDeviceTags(span, authenticatedDevice.getTenantId(), authenticatedDevice.getDeviceId());
-            }
-            return span;
         }
     }
 
