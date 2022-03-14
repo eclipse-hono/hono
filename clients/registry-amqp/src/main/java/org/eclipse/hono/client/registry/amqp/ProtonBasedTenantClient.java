@@ -134,19 +134,23 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseServic
             final CacheDirective cacheDirective,
             final ApplicationProperties applicationProperties) {
 
+        final var props = Optional.ofNullable(applicationProperties)
+                .map(ApplicationProperties::getValue)
+                .orElse(null);
+
         if (isSuccessResponse(status, contentType, payload)) {
             try {
                 return TenantResult.from(
                         status,
                         Json.decodeValue(payload, TenantObject.class),
                         cacheDirective,
-                        applicationProperties);
+                        props);
             } catch (final DecodeException e) {
                 LOG.warn("received malformed payload from Tenant service", e);
-                return TenantResult.from(HttpURLConnection.HTTP_INTERNAL_ERROR, null, null, applicationProperties);
+                return TenantResult.from(HttpURLConnection.HTTP_INTERNAL_ERROR, null, null, props);
             }
         } else {
-            return TenantResult.from(status, null, null, applicationProperties);
+            return TenantResult.from(status, null, null, props);
         }
     }
 

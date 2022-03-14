@@ -17,6 +17,7 @@ package org.eclipse.hono.client.registry.amqp;
 import java.net.HttpURLConnection;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.eclipse.hono.client.ClientErrorException;
@@ -135,15 +136,19 @@ public class ProtonBasedDeviceRegistrationClient extends AbstractRequestResponse
             final CacheDirective cacheDirective,
             final ApplicationProperties applicationProperties) {
 
+        final var props = Optional.ofNullable(applicationProperties)
+                .map(ApplicationProperties::getValue)
+                .orElse(null);
+
         if (isSuccessResponse(status, contentType, payload)) {
             try {
-                return RegistrationResult.from(status, new JsonObject(payload), cacheDirective, applicationProperties);
+                return RegistrationResult.from(status, new JsonObject(payload), cacheDirective, props);
             } catch (final DecodeException e) {
                 LOG.warn("received malformed payload from Device Registration service", e);
-                return RegistrationResult.from(HttpURLConnection.HTTP_INTERNAL_ERROR, null, null, applicationProperties);
+                return RegistrationResult.from(HttpURLConnection.HTTP_INTERNAL_ERROR, null, null, props);
             }
         } else {
-            return RegistrationResult.from(status, null, null, applicationProperties);
+            return RegistrationResult.from(status, null, null, props);
         }
     }
 

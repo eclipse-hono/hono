@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,6 +12,9 @@
  *******************************************************************************/
 
 package org.eclipse.hono.client.amqp;
+
+import java.util.Map;
+import java.util.Optional;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.message.Message;
@@ -32,27 +35,28 @@ public final class SimpleRequestResponseResult extends RequestResponseResult<Buf
             final int status,
             final Buffer payload,
             final CacheDirective directive,
-            final ApplicationProperties applicationProperties) {
-        super(status, payload, directive, applicationProperties);
+            final Map<String, Object> responseProperties) {
+        super(status, payload, directive, responseProperties);
     }
 
     /**
      * Creates a new instance for a status code and payload.
      *
-     * @param status The status code.
-     * @param payload The payload.
-     * @param cacheDirective Restrictions regarding the caching of the payload by
-     *                       the receiver of the result (may be {@code null}).
-     * @param applicationProperties Arbitrary properties conveyed in the response message's
-     *                              <em>application-properties</em>.
+     * @param status The code indicating the outcome of processing the request.
+     * @param payload The payload contained in the response message or {@code null}, if the response does not
+     *                contain any payload data.
+     * @param cacheDirective Restrictions regarding the caching of the payload by the receiver of the result
+     *                       or {@code null} if no restrictions apply.
+     * @param responseProperties Arbitrary additional properties conveyed in the response message or {@code null}, if
+     *                           the response does not contain additional properties.
      * @return The instance.
      */
     public static SimpleRequestResponseResult from(
             final int status,
             final Buffer payload,
             final CacheDirective cacheDirective,
-            final ApplicationProperties applicationProperties) {
-        return new SimpleRequestResponseResult(status, payload, cacheDirective, applicationProperties);
+            final Map<String, Object> responseProperties) {
+        return new SimpleRequestResponseResult(status, payload, cacheDirective, responseProperties);
     }
 
     /**
@@ -66,7 +70,9 @@ public final class SimpleRequestResponseResult extends RequestResponseResult<Buf
                 MessageHelper.getStatus(message),
                 MessageHelper.getPayload(message),
                 CacheDirective.from(MessageHelper.getCacheDirective(message)),
-                message.getApplicationProperties());
+                Optional.ofNullable(message.getApplicationProperties())
+                    .map(ApplicationProperties::getValue)
+                    .orElse(null));
     }
 
 }

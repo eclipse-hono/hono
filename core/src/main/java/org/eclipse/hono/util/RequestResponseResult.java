@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,10 +13,8 @@
 package org.eclipse.hono.util;
 
 import java.net.HttpURLConnection;
-import java.util.Collections;
 import java.util.Map;
-
-import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
+import java.util.Optional;
 
 /**
  * A container for the result returned by a Hono API that implements the request response pattern.
@@ -28,32 +26,32 @@ public class RequestResponseResult<T> {
     private final int status;
     private final T payload;
     private final CacheDirective cacheDirective;
-    private final Map<String, Object> applicationProperties;
+    private final Map<String, Object> responseProperties;
 
     /**
      * Creates a new result for a status code and payload.
      *
      * @param status The code indicating the outcome of processing the request.
-     * @param payload The payload to convey to the sender of the request (may be {@code null}).
-     * @param directive Restrictions regarding the caching of the payload by
-     *                       the receiver of the result (may be {@code null}).
-     * @param applicationProperties Arbitrary properties conveyed in the response message's
-     *                              <em>application-properties</em>.
+     * @param payload The payload contained in the response message or {@code null}, if the response does not
+     *                contain any payload data.
+     * @param cacheDirective Restrictions regarding the caching of the payload by the receiver of the result
+     *                       or {@code null} if no restrictions apply.
+     * @param responseProperties Arbitrary additional properties conveyed in the response message or {@code null}, if
+     *                           the response does not contain additional properties.
      */
     public RequestResponseResult(
             final int status,
             final T payload,
-            final CacheDirective directive,
-            final ApplicationProperties applicationProperties) {
+            final CacheDirective cacheDirective,
+            final Map<String, Object> responseProperties) {
 
         this.status = status;
         this.payload = payload;
-        this.cacheDirective = directive;
-        if (applicationProperties == null || applicationProperties.getValue().isEmpty()) {
-            this.applicationProperties = Collections.emptyMap();
-        } else {
-            this.applicationProperties = Collections.unmodifiableMap(applicationProperties.getValue());
-        }
+        this.cacheDirective = cacheDirective;
+        this.responseProperties = Optional.ofNullable(responseProperties)
+                .filter(props -> !props.isEmpty())
+                .map(Map::copyOf)
+                .orElse(Map.of());
     }
 
     /**
@@ -85,31 +83,12 @@ public class RequestResponseResult<T> {
     }
 
     /**
-     * Gets the value of a property conveyed in this response message's
-     * <em>application-properties</em>.
+     * Gets read-only access to the response message's additional properties.
      *
-     * @param <V> The expected value type.
-     * @param key The key of the property.
-     * @param type The expected value type.
-     * @return The value if it is of the expected type or {@code null} otherwise.
+     * @return An unmodifiable view on the (potentially empty) properties.
      */
-    @SuppressWarnings("unchecked")
-    public final <V> V getApplicationProperty(final String key, final Class<V> type) {
-        final Object value = applicationProperties.get(key);
-        if (type.isInstance(value)) {
-            return (V) value;
-        } else {
-            return null;
-        }
-    }
-
-    /**
-     * Gets read-only access to the response message's <em>application-properties</em>.
-     *
-     * @return The unmodifiable map of the application properties. Never returns {@code null}.
-     */
-    public final Map<String, Object> getApplicationProperties() {
-        return applicationProperties;
+    public final Map<String, Object> getResponseProperties() {
+        return responseProperties;
     }
 
     /**
