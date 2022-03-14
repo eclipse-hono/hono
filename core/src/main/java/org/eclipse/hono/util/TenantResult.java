@@ -48,7 +48,7 @@ public final class TenantResult<T> extends RequestResponseResult<T> {
      * Creates a new result for a status code and payload.
      *
      * @param status The code indicating the outcome of processing the request.
-     * @param payload The payload to contained in the response message or {@code null}, if the response does not
+     * @param payload The payload contained in the response message or {@code null}, if the response does not
      *                contain any payload data.
      * @param <T> The type of the payload conveyed in the result.
      * @return The result.
@@ -61,7 +61,7 @@ public final class TenantResult<T> extends RequestResponseResult<T> {
      * Creates a new result for a status code and payload.
      *
      * @param status The code indicating the outcome of processing the request.
-     * @param payload The payload to contained in the response message or {@code null}, if the response does not
+     * @param payload The payload contained in the response message or {@code null}, if the response does not
      *                contain any payload data.
      * @param cacheDirective Restrictions regarding the caching of the payload by the receiver of the result
      *                       or {@code null} if no restrictions apply.
@@ -76,7 +76,7 @@ public final class TenantResult<T> extends RequestResponseResult<T> {
      * Creates a new result for a status code and payload.
      *
      * @param status The code indicating the outcome of processing the request.
-     * @param payload The payload to contained in the response message or {@code null}, if the response does not
+     * @param payload The payload contained in the response message or {@code null}, if the response does not
      *                contain any payload data.
      * @param cacheDirective Restrictions regarding the caching of the payload by the receiver of the result
      *                       or {@code null} if no restrictions apply.
