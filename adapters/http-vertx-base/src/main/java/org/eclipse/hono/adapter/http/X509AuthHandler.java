@@ -18,13 +18,13 @@ import java.util.Objects;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
 
+import org.eclipse.hono.adapter.HttpContext;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.adapter.auth.device.ExecutionContextAuthHandler;
 import org.eclipse.hono.adapter.auth.device.PreCredentialsValidationHandler;
 import org.eclipse.hono.adapter.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.adapter.auth.device.X509Authentication;
 import org.eclipse.hono.service.auth.SniExtensionHelper;
-import org.eclipse.hono.service.http.HttpContext;
 import org.eclipse.hono.service.http.TracingHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

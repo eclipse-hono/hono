@@ -62,7 +62,6 @@ import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
-import org.eclipse.hono.util.TelemetryExecutionContext;
 import org.eclipse.hono.util.TenantConstants;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;

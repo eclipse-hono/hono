@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.util;
+package org.eclipse.hono.adapter;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -19,6 +19,9 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.util.ExecutionContext;
+import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.QoS;
 
 /**
  * A container for information relevant for processing a message sent by a device

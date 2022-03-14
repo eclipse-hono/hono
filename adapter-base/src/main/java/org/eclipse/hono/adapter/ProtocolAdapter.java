@@ -25,7 +25,6 @@ import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.TelemetrySender;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.RegistrationAssertion;
-import org.eclipse.hono.util.TelemetryExecutionContext;
 import org.eclipse.hono.util.TenantObject;
 
 import io.opentracing.SpanContext;

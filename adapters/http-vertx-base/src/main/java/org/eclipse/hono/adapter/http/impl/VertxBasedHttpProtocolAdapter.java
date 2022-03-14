@@ -17,6 +17,7 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.eclipse.hono.adapter.HttpContext;
 import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.adapter.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.adapter.auth.device.TenantServiceBasedX509Authentication;
@@ -29,7 +30,6 @@ import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
 import org.eclipse.hono.adapter.http.X509AuthHandler;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.service.http.HttpContext;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;

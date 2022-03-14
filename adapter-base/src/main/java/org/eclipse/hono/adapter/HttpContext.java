@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.service.http;
+package org.eclipse.hono.adapter;
 
 import java.time.Duration;
 import java.util.Objects;
@@ -19,12 +19,12 @@ import java.util.Optional;
 
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.service.auth.DeviceUser;
+import org.eclipse.hono.service.http.TracingHandler;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.Strings;
-import org.eclipse.hono.util.TelemetryExecutionContext;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;

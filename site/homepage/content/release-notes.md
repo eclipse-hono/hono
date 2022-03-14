@@ -59,6 +59,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   `org.eclipse.hono.client.amqp.connection.AmqpConstants` in the amqp-connection client module.
 * Moved the code for injecting and extracting a tracing context to/from AMQP 1.0 messages to the amqp-connection
   client module.
+* Moved `org.eclipse.hono.util.TelemetryExecutionContext` to adapter-base module.
 
 ## 1.12.1
 
