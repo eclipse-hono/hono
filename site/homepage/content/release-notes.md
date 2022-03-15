@@ -19,6 +19,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   didn't support using property names in camel-case. This has been fixed.
 * *HonoConnectionImpl* instances failed to release/close the underlying TCP/TLS connection when its *disconnect* or
   *shutdown* method had been invoked. This has been fixed.
+* The LoraWAN protocol adapter has been extended with support for *Live Objects* provider.
 
 ### API Changes
 
