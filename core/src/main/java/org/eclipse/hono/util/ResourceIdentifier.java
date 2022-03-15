@@ -48,18 +48,32 @@ public final class ResourceIdentifier {
     private final String resource;
     private final String basePath;
 
-    private ResourceIdentifier(final String[] path) {
+    private ResourceIdentifier(final String... path) {
+
         Objects.requireNonNull(path);
         if (path.length == 0) {
             throw new IllegalArgumentException("path must have at least one segment");
         } else if (Strings.isNullOrEmpty(path[0])) {
             throw new IllegalArgumentException("path must not start with an empty segment");
         }
-        resourcePath = new String[path.length];
-        for (int i = 0; i < path.length; i++) {
-            final String segment = path[i];
-            resourcePath[i] = Strings.isNullOrEmpty(segment) ? null : segment;
+
+        String[] pathToUse = path;
+        if (path.length == 3) {
+            // resource identifier has been created using scheme endpoint/tenant/device
+            // remove trailing nulls
+            for (int i = path.length; i > 0; i--) {
+                if (path[i - 1] != null) {
+                    pathToUse = Arrays.copyOfRange(path, 0, i);
+                    break;
+                }
+            }
         }
+
+        for (int i = 0; i < pathToUse.length; i++) {
+            final String segment = pathToUse[i];
+            pathToUse[i] = Strings.isNullOrEmpty(segment) ? null : segment;
+        }
+        resourcePath = pathToUse;
         resource = createStringRepresentation(0);
         basePath = Optional.ofNullable(getTenantId())
                 .map(tenant -> getEndpoint() + "/" + tenant)
@@ -137,8 +151,9 @@ public final class ResourceIdentifier {
     }
 
     /**
-     * Creates a resource identifier for an endpoint from an other resource identifier. It uses all data from
-     * the original resource identifier but sets the new tenantId and resourceId.
+     * Creates a resource identifier for an endpoint based on another resource identifier.
+     * <p>
+     * It uses all data from the original resource identifier but sets the new tenantId and resourceId.
      *
      * @param resourceIdentifier original resource identifier to copy values from.
      * @param tenantId the tenant identifier (may be {@code null}).
@@ -146,7 +161,11 @@ public final class ResourceIdentifier {
      * @return the resource identifier.
      * @throws NullPointerException if resourceIdentifier is {@code null}.
      */
-    public static ResourceIdentifier from(final ResourceIdentifier resourceIdentifier, final String tenantId, final String resourceId) {
+    public static ResourceIdentifier from(
+            final ResourceIdentifier resourceIdentifier,
+            final String tenantId,
+            final String resourceId) {
+
         Objects.requireNonNull(resourceIdentifier);
         String[] path = resourceIdentifier.getResourcePath();
         if (path.length < 3) {
@@ -166,7 +185,7 @@ public final class ResourceIdentifier {
      * @throws NullPointerException if path is {@code null}.
      * @throws IllegalArgumentException if the path contains no segments or starts with an empty segment.
      */
-    public static ResourceIdentifier fromPath(final String[] path) {
+    public static ResourceIdentifier fromPath(final String... path) {
         return new ResourceIdentifier(path);
     }
 

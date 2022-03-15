@@ -43,7 +43,8 @@ import io.vertx.core.json.JsonObject;
  *
  * @param <S> The type of service this endpoint delegates to.
  */
-public class DelegatingTenantAmqpEndpoint<S extends TenantService> extends AbstractDelegatingRequestResponseEndpoint<S, ServiceConfigProperties> {
+public class DelegatingTenantAmqpEndpoint<S extends TenantService>
+    extends AbstractDelegatingRequestResponseEndpoint<S, ServiceConfigProperties> {
 
     private static final String SPAN_NAME_GET_TENANT = "get Tenant";
 
@@ -215,7 +216,7 @@ public class DelegatingTenantAmqpEndpoint<S extends TenantService> extends Abstr
             return Future.succeededFuture(response);
         } else {
             // verify that payload contains tenant that the client is authorized for
-            final ResourceIdentifier resourceId = ResourceIdentifier.from(TenantConstants.TENANT_ENDPOINT, tenantId, null);
+            final var resourceId = ResourceIdentifier.from(TenantConstants.TENANT_ENDPOINT, tenantId, null);
             return getAuthorizationService().isAuthorized(clientPrincipal, resourceId, request.getSubject())
                     .map(isAuthorized -> {
                         if (isAuthorized) {
@@ -267,7 +268,10 @@ public class DelegatingTenantAmqpEndpoint<S extends TenantService> extends Abstr
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     @Override
-    protected Future<Boolean> isAuthorized(final HonoUser clientPrincipal, final ResourceIdentifier resource, final Message request) {
+    protected Future<Boolean> isAuthorized(
+            final HonoUser clientPrincipal,
+            final ResourceIdentifier resource,
+            final Message request) {
 
         Objects.requireNonNull(request);
 
@@ -276,9 +280,7 @@ public class DelegatingTenantAmqpEndpoint<S extends TenantService> extends Abstr
             // delegate authorization check to filterResource operation
             return Future.succeededFuture(Boolean.TRUE);
         } else {
-            final ResourceIdentifier specificTenantAddress =
-                    ResourceIdentifier.fromPath(new String[] { resource.getEndpoint(), tenantId });
-
+            final var specificTenantAddress = ResourceIdentifier.fromPath(resource.getEndpoint(), tenantId);
             return getAuthorizationService().isAuthorized(clientPrincipal, specificTenantAddress, request.getSubject());
         }
     }
