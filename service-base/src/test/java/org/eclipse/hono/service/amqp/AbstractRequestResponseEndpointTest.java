@@ -34,7 +34,7 @@ import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.client.ClientErrorException;
-import org.eclipse.hono.client.amqp.connection.AmqpConstants;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.auth.AuthorizationService;
 import org.eclipse.hono.util.CacheDirective;
@@ -235,7 +235,7 @@ public class AbstractRequestResponseEndpointTest {
         verify(delivery).disposition(deliveryState.capture(), eq(Boolean.TRUE));
         assertThat(deliveryState.getValue()).isInstanceOf(Accepted.class);
         verify(receiver, never()).close();
-        verify(authService).isAuthorized(AmqpConstants.PRINCIPAL_ANONYMOUS, resource, "unauthorized");
+        verify(authService).isAuthorized(AmqpUtils.PRINCIPAL_ANONYMOUS, resource, "unauthorized");
         // but not being processed
         verify(requestMessageHandler, never()).apply(any(Message.class), any(ResourceIdentifier.class));
         // and a response is sent to the client with status 403
@@ -316,7 +316,7 @@ public class AbstractRequestResponseEndpointTest {
         verify(delivery).disposition(deliveryState.capture(), eq(Boolean.TRUE));
         assertThat(deliveryState.getValue()).isInstanceOf(Accepted.class);
         verify(receiver, never()).close();
-        verify(authService).isAuthorized(AmqpConstants.PRINCIPAL_ANONYMOUS, resource, "get");
+        verify(authService).isAuthorized(AmqpUtils.PRINCIPAL_ANONYMOUS, resource, "get");
         // and being processed
         verify(requestMessageHandler).apply(any(Message.class), any(ResourceIdentifier.class));
 

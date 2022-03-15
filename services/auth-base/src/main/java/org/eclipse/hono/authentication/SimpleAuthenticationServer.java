@@ -18,7 +18,7 @@ import java.util.Objects;
 import org.apache.qpid.proton.amqp.transport.AmqpError;
 import org.apache.qpid.proton.amqp.transport.Source;
 import org.eclipse.hono.auth.HonoUser;
-import org.eclipse.hono.client.amqp.connection.AmqpConstants;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.service.amqp.AmqpServiceBase;
@@ -114,7 +114,7 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
             if (!connection.isDisconnected()) {
                 LOG.debug("connection with client [{}] timed out after 5 seconds, closing connection",
                         connection.getRemoteContainer());
-                connection.setCondition(ProtonHelper.condition(AmqpConstants.AMQP_ERROR_INACTIVITY,
+                connection.setCondition(ProtonHelper.condition(AmqpUtils.AMQP_ERROR_INACTIVITY,
                         "client must retrieve token within 5 secs after opening connection")).close();
             }
         });
@@ -148,8 +148,8 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
         if (endpoint == null) {
             handleUnknownEndpoint(con, sender, targetResource.toString());
         } else {
-            final HonoUser user = AmqpConstants.getClientPrincipal(con);
-            if (AmqpConstants.SUBJECT_ANONYMOUS.equals(user.getName())) {
+            final HonoUser user = AmqpUtils.getClientPrincipal(con);
+            if (AmqpUtils.SUBJECT_ANONYMOUS.equals(user.getName())) {
                 con.setCondition(ProtonHelper.condition(
                         AmqpError.UNAUTHORIZED_ACCESS,
                         "client must authenticate using SASL"))

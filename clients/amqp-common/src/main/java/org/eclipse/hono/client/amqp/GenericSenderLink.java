@@ -40,6 +40,7 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.config.AddressHelper;
 import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.ErrorConverter;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
@@ -340,7 +341,7 @@ public class GenericSenderLink extends AbstractHonoClient {
         TracingHelper.TAG_QOS.set(currentSpan, sender.getQoS().toString());
         Tags.SPAN_KIND.set(currentSpan, Tags.SPAN_KIND_PRODUCER);
         TracingHelper.setDeviceTags(currentSpan, tenantId, MessageHelper.getDeviceId(message));
-        TracingHelper.injectSpanContext(connection.getTracer(), currentSpan.context(), message);
+        AmqpUtils.injectSpanContext(connection.getTracer(), currentSpan.context(), message);
 
         return connection.executeOnContext(result -> {
             if (sender.sendQueueFull()) {

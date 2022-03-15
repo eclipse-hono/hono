@@ -21,7 +21,7 @@ import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.NoConsumerException;
 import org.eclipse.hono.client.amqp.AbstractServiceClient;
-import org.eclipse.hono.client.amqp.connection.AmqpConstants;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.command.CommandContext;
@@ -120,7 +120,7 @@ public class ProtonBasedInternalCommandConsumer extends AbstractServiceClient im
         } catch (final IllegalArgumentException e) {
             log.debug("address of command message is invalid: {}", msg.getAddress());
             final Rejected rejected = new Rejected();
-            rejected.setError(new ErrorCondition(AmqpConstants.AMQP_BAD_REQUEST, "invalid command target address"));
+            rejected.setError(new ErrorCondition(AmqpUtils.AMQP_BAD_REQUEST, "invalid command target address"));
             delivery.disposition(rejected, true);
             return;
         }
@@ -132,7 +132,7 @@ public class ProtonBasedInternalCommandConsumer extends AbstractServiceClient im
             command.setGatewayId(commandHandler.getGatewayId());
         }
 
-        final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, msg);
+        final SpanContext spanContext = AmqpUtils.extractSpanContext(tracer, msg);
         final SpanContext followsFromSpanContext = commandHandler != null
                 ? commandHandler.getConsumerCreationSpanContext()
                 : null;

@@ -27,7 +27,7 @@ import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.engine.impl.RecordImpl;
 import org.eclipse.hono.auth.Activity;
 import org.eclipse.hono.auth.HonoUser;
-import org.eclipse.hono.client.amqp.connection.AmqpConstants;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.auth.AuthorizationService;
 import org.eclipse.hono.test.VertxMockSupport;
@@ -127,7 +127,7 @@ public class AmqpServiceBaseTest {
         final AmqpEndpoint endpoint = mock(AmqpEndpoint.class);
         when(endpoint.getName()).thenReturn(ENDPOINT);
         final AuthorizationService authService = mock(AuthorizationService.class);
-        when(authService.isAuthorized(AmqpConstants.PRINCIPAL_ANONYMOUS, targetAddress, Activity.WRITE))
+        when(authService.isAuthorized(AmqpUtils.PRINCIPAL_ANONYMOUS, targetAddress, Activity.WRITE))
             .thenReturn(Future.succeededFuture(Boolean.TRUE));
         final AmqpServiceBase<ServiceConfigProperties> server = createServer(endpoint);
         server.setAuthorizationService(authService);
@@ -137,7 +137,7 @@ public class AmqpServiceBaseTest {
         final ProtonReceiver receiver = mock(ProtonReceiver.class);
         when(receiver.getRemoteTarget()).thenReturn(target);
         when(receiver.attachments()).thenReturn(mock(Record.class));
-        server.handleReceiverOpen(newConnection(AmqpConstants.PRINCIPAL_ANONYMOUS), receiver);
+        server.handleReceiverOpen(newConnection(AmqpUtils.PRINCIPAL_ANONYMOUS), receiver);
 
         // THEN the server delegates link establishment to the endpoint
         verify(endpoint).onLinkAttach(any(ProtonConnection.class), eq(receiver), eq(targetAddress));
@@ -155,7 +155,7 @@ public class AmqpServiceBaseTest {
         final AmqpEndpoint endpoint = mock(AmqpEndpoint.class);
         when(endpoint.getName()).thenReturn(ENDPOINT);
         final AuthorizationService authService = mock(AuthorizationService.class);
-        when(authService.isAuthorized(AmqpConstants.PRINCIPAL_ANONYMOUS, restrictedTargetAddress, Activity.WRITE))
+        when(authService.isAuthorized(AmqpUtils.PRINCIPAL_ANONYMOUS, restrictedTargetAddress, Activity.WRITE))
             .thenReturn(Future.succeededFuture(Boolean.FALSE));
         final AmqpServiceBase<ServiceConfigProperties> server = createServer(endpoint);
         server.setAuthorizationService(authService);
@@ -165,7 +165,7 @@ public class AmqpServiceBaseTest {
         final ProtonReceiver receiver = mock(ProtonReceiver.class);
         when(receiver.getRemoteTarget()).thenReturn(target);
         when(receiver.setCondition(any())).thenReturn(receiver);
-        server.handleReceiverOpen(newConnection(AmqpConstants.PRINCIPAL_ANONYMOUS), receiver);
+        server.handleReceiverOpen(newConnection(AmqpUtils.PRINCIPAL_ANONYMOUS), receiver);
 
         // THEN the server closes the link with the client
         verify(receiver).close();
@@ -181,7 +181,7 @@ public class AmqpServiceBaseTest {
         // GIVEN a server to which a client is connected
         final Handler<ProtonConnection> publishConnectionClosedEvent = VertxMockSupport.mockHandler();
         final AmqpServiceBase<ServiceConfigProperties> server = createServer(null, publishConnectionClosedEvent);
-        final ProtonConnection con = newConnection(AmqpConstants.PRINCIPAL_ANONYMOUS);
+        final ProtonConnection con = newConnection(AmqpUtils.PRINCIPAL_ANONYMOUS);
         server.onRemoteConnectionOpen(con);
         final ArgumentCaptor<Handler<ProtonConnection>> disconnectHandlerCaptor = VertxMockSupport.argumentCaptorHandler();
         verify(con).disconnectHandler(disconnectHandlerCaptor.capture());
@@ -201,7 +201,7 @@ public class AmqpServiceBaseTest {
 
     private static ProtonConnection newConnection(final HonoUser user) {
         final Record attachments = new RecordImpl();
-        attachments.set(AmqpConstants.KEY_CLIENT_PRINCIPAL, HonoUser.class, user);
+        attachments.set(AmqpUtils.KEY_CLIENT_PRINCIPAL, HonoUser.class, user);
         final ProtonConnection con = mock(ProtonConnection.class);
         when(con.attachments()).thenReturn(attachments);
         when(con.getRemoteContainer()).thenReturn("test-client");

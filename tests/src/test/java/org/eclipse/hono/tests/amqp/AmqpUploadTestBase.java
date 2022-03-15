@@ -35,8 +35,8 @@ import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.amqp.connection.AmqpConstants;
 import org.eclipse.hono.client.amqp.connection.AmqpErrorException;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.DownstreamMessageAssertions;
@@ -169,7 +169,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                 assertThat(delivery.getRemoteState()).isInstanceOf(Rejected.class);
                 final Rejected rejected = (Rejected) delivery.getRemoteState();
                 final ErrorCondition error = rejected.getError();
-                assertThat((Object) error.getCondition()).isEqualTo(AmqpConstants.AMQP_BAD_REQUEST);
+                assertThat((Object) error.getCondition()).isEqualTo(AmqpUtils.AMQP_BAD_REQUEST);
             });
             context.completeNow();
         });

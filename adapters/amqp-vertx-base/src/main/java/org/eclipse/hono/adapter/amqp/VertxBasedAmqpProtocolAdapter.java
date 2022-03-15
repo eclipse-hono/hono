@@ -55,7 +55,7 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.amqp.connection.AmqpConstants;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.command.CommandContext;
@@ -523,7 +523,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     span.context()))
             .map(ok -> {
                 con.setContainer(getTypeName());
-                con.setOfferedCapabilities(new Symbol[] {AmqpConstants.CAP_ANONYMOUS_RELAY});
+                con.setOfferedCapabilities(new Symbol[] {AmqpUtils.CAP_ANONYMOUS_RELAY});
                 con.open();
                 log.debug("connection with device [container: {}] established", con.getRemoteContainer());
                 span.log("connection established");
@@ -719,7 +719,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             HonoProtonHelper.setDetachHandler(receiver, remoteDetach -> onLinkDetach(receiver));
             receiver.handler((delivery, message) -> {
                 try {
-                    final SpanContext spanContext = TracingHelper.extractSpanContext(tracer, message);
+                    final SpanContext spanContext = AmqpUtils.extractSpanContext(tracer, message);
                     final Span msgSpan = newSpan("upload message", authenticatedDevice, traceSamplingPriority, spanContext);
                     HonoProtonHelper.onReceivedMessageDeliveryUpdatedFromRemote(delivery, d -> {
                         log.debug("got unexpected disposition update for message received from device [remote state: {}, container: {}, {}]",
@@ -1499,7 +1499,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             final ServiceInvocationException error = (ServiceInvocationException) t;
             switch (error.getErrorCode()) {
             case HttpURLConnection.HTTP_BAD_REQUEST:
-                return ProtonHelper.condition(AmqpConstants.AMQP_BAD_REQUEST, errorMessage);
+                return ProtonHelper.condition(AmqpUtils.AMQP_BAD_REQUEST, errorMessage);
             case HttpURLConnection.HTTP_FORBIDDEN:
                 return ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS, errorMessage);
             case HttpUtils.HTTP_TOO_MANY_REQUESTS:

@@ -21,7 +21,6 @@ import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
-import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
@@ -138,8 +137,6 @@ public final class TracingHelper {
     public static final String ERROR_CAUSE_OBJECT = "error.cause.object";
 
     private static final String JSON_KEY_SPAN_CONTEXT = "span-context";
-
-    private static final String AMQP_ANNOTATION_NAME_TRACE_CONTEXT = "x-opt-trace-context";
 
     private static final Logger LOG = LoggerFactory.getLogger(TracingHelper.class);
 
@@ -364,46 +361,6 @@ public final class TracingHelper {
         return spanContextContainer instanceof JsonObject
                 ? tracer.extract(Format.Builtin.TEXT_MAP, new JsonObjectExtractAdapter((JsonObject) spanContextContainer))
                 : null;
-    }
-
-    /**
-     * Injects a {@code SpanContext} into an AMQP {@code Message}.
-     * <p>
-     * The span context will be written to the message annotations of the given message.
-     *
-     * @param tracer The Tracer to use for injecting the context.
-     * @param spanContext The context to inject or {@code null} if no context is available.
-     * @param message The AMQP {@code Message} object to inject the context into.
-     * @throws NullPointerException if tracer or message is {@code null}.
-     */
-    public static void injectSpanContext(final Tracer tracer, final SpanContext spanContext, final Message message) {
-
-        Objects.requireNonNull(tracer);
-        Objects.requireNonNull(message);
-
-        if (spanContext != null && !(spanContext instanceof NoopSpanContext)) {
-            tracer.inject(spanContext, Format.Builtin.TEXT_MAP,
-                    new MessageAnnotationsInjectAdapter(message, AMQP_ANNOTATION_NAME_TRACE_CONTEXT));
-        }
-    }
-
-    /**
-     * Extracts a {@code SpanContext} from an AMQP {@code Message}.
-     * <p>
-     * The span context will be read from the message annotations of the given message.
-     *
-     * @param tracer The Tracer to use for extracting the context.
-     * @param message The AMQP {@code Message} to extract the context from.
-     * @return The context or {@code null} if the given {@code Message} does not contain a context.
-     * @throws NullPointerException if any of the parameters are {@code null}.
-     */
-    public static SpanContext extractSpanContext(final Tracer tracer, final Message message) {
-
-        Objects.requireNonNull(tracer);
-        Objects.requireNonNull(message);
-
-        return tracer.extract(Format.Builtin.TEXT_MAP,
-                new MessageAnnotationsExtractAdapter(message, AMQP_ANNOTATION_NAME_TRACE_CONTEXT));
     }
 
     /**

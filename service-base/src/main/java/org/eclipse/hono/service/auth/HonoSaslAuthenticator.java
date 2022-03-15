@@ -28,7 +28,7 @@ import org.apache.qpid.proton.engine.Sasl.SaslOutcome;
 import org.apache.qpid.proton.engine.Transport;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.amqp.connection.AmqpConstants;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.service.auth.AuthenticationService.AuthenticationAttemptOutcome;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.slf4j.Logger;
@@ -46,7 +46,7 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticator;
  * <p>
  * On successful authentication a {@link HonoUser} reflecting the client's
  * <em>authorization id</em> and granted authorities is attached to the {@code ProtonConnection} under key
- * {@link AmqpConstants#KEY_CLIENT_PRINCIPAL}.
+ * {@link AmqpUtils#KEY_CLIENT_PRINCIPAL}.
  * <p>
  * Verification of credentials is delegated to the {@code AuthenticationService} passed in the constructor.
  * <p>
@@ -133,7 +133,7 @@ public final class HonoSaslAuthenticator implements ProtonSaslAuthenticator {
             verify(chosenMechanism, saslResponse)
                 .map(user -> {
                     LOG.debug("authentication of client [authorization ID: {}] succeeded", user.getName());
-                    AmqpConstants.setClientPrincipal(protonConnection, user);
+                    AmqpUtils.setClientPrincipal(protonConnection, user);
                     succeeded = true;
                     // reporting a successful connection attempt is left to the component using this
                     // authenticator in order to also capture context information about the attempt

@@ -37,7 +37,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
-import org.eclipse.hono.client.amqp.connection.AmqpConstants;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.ConnectionFactory;
 import org.eclipse.hono.client.amqp.connection.DisconnectListener;
 import org.eclipse.hono.client.amqp.connection.ErrorConverter;
@@ -575,7 +575,7 @@ public final class HonoConnectionImpl implements HonoConnection {
         return executeOnContext(result -> {
             checkConnected().compose(v -> {
 
-                if (targetAddress == null && !supportsCapability(AmqpConstants.CAP_ANONYMOUS_RELAY)) {
+                if (targetAddress == null && !supportsCapability(AmqpUtils.CAP_ANONYMOUS_RELAY)) {
                     // AnonTerm spec requires peer to offer ANONYMOUS-RELAY capability
                     // before a client can use anonymous terminus
                     return Future.failedFuture(new ServerErrorException(
