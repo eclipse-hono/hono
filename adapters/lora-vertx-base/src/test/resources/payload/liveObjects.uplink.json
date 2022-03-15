@@ -1,0 +1,62 @@
+{
+  "metadata": {
+    "source": "urn:lo:nsid:lora:4883C7DF3001114B",
+    "encoding": "siconia_temperature_humidity_pressure",
+    "group": {
+      "path": "/",
+      "id": "root"
+    },
+    "device": {
+      "location": {
+        "provider": "static",
+        "lon": 2.545599,
+        "lat": 48.82198
+      }
+    },
+    "network": {
+      "lora": {
+        "rssi": -110,
+        "esp": -111.76,
+        "ack": false,
+        "fcnt": 27517,
+        "devEUI": "0102030405060708",
+        "frequency": 868.5,
+        "signalLevel": 5,
+        "gatewayCnt": 5,
+        "sf": 10,
+        "messageType": "UNCONFIRMED_DATA_UP",
+        "port": 10,
+        "snr": 3,
+        "location": {
+          "provider": "lora",
+          "alt": 0,
+          "accuracy": 10000,
+          "lon": 2.526197,
+          "lat": 48.83361
+        },
+        "missingFcnt": 0
+      }
+    }
+  },
+  "streamId": "urn:lora:20635F0108000C8D!uplink",
+  "created": "2021-05-30T19:02:46.789Z",
+  "extra": {
+  },
+  "location": {
+    "provider": "static",
+    "alt": null,
+    "accuracy": null,
+    "lon": 2.545599,
+    "lat": 48.82198
+  },
+  "model": "lora_v0",
+  "id": "60b3e15603b409370d2d2b10",
+  "value": {
+    "payload": "62756D6C7578",
+    "temperature": 21.81,
+    "humidity": 46.3,
+    "pressure": 1013.08
+  },
+  "timestamp": "2021-05-30T19:02:46.161Z",
+  "tags": []
+}
