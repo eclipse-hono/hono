@@ -28,6 +28,7 @@ import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandHandlerWrapper;
 import org.eclipse.hono.client.command.CommandHandlers;
 import org.eclipse.hono.client.command.InternalCommandConsumer;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.HonoProtonHelper;
 

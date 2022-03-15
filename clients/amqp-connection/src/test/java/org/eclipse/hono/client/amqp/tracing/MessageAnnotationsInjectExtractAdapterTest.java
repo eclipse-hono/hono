@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,8 +20,6 @@ import java.util.Map;
 
 import org.apache.qpid.proton.codec.WritableBuffer;
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.amqp.tracing.MessageAnnotationsExtractAdapter;
-import org.eclipse.hono.client.amqp.tracing.MessageAnnotationsInjectAdapter;
 import org.junit.jupiter.api.Test;
 
 import io.jaegertracing.Configuration;
