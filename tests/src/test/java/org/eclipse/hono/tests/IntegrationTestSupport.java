@@ -95,7 +95,6 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
-import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.kafka.admin.KafkaAdminClient;
 
@@ -1531,8 +1530,8 @@ public final class IntegrationTestSupport {
      * of gateway-based auto-provisioning.
      *
      * @param ctx The test context to fail if the notification event does not contain all required properties.
-     * @param provisioningNotificationReceived The promise to complete, once the provisioning notification has been
-     *                                         received.
+     * @param resultHandler The promise to complete, once the provisioning notification and the other message have been
+     *                      received.
      * @param tenantId The tenant for which the consumer should be created.
      * @param deviceId The id of the device which sent the messages.
      *
@@ -1540,11 +1539,16 @@ public final class IntegrationTestSupport {
      */
     public Future<Void> createAutoProvisioningMessageConsumers(
             final VertxTestContext ctx,
-            final Promise<Void> provisioningNotificationReceived,
+            final Promise<Void> resultHandler,
             final String tenantId,
             final String deviceId) {
 
-        final Checkpoint messagesReceived = ctx.checkpoint(2);
+        final Promise<Void> provisioningMessageReceived = Promise.promise();
+        final Promise<Void> telemetryMessageReceived = Promise.promise();
+        CompositeFuture.all(provisioningMessageReceived.future(), telemetryMessageReceived.future())
+            .onSuccess(ok -> resultHandler.complete())
+            .onFailure(t -> resultHandler.fail(t));
+
         return applicationClient.createEventConsumer(
                 tenantId,
                 msg -> {
@@ -1554,10 +1558,9 @@ public final class IntegrationTestSupport {
                         if (msg.getContentType().equals(EventConstants.CONTENT_TYPE_DEVICE_PROVISIONING_NOTIFICATION)) {
                             assertThat(msg.getTenantId()).isEqualTo(tenantId);
                             assertThat(getRegistrationStatus(msg)).isEqualTo(EventConstants.RegistrationStatus.NEW.name());
-                            messagesReceived.flag();
-                            provisioningNotificationReceived.complete();
+                            provisioningMessageReceived.complete();
                         } else {
-                            messagesReceived.flag();
+                            telemetryMessageReceived.tryComplete();
                         }
                     });
                 },
@@ -1567,7 +1570,7 @@ public final class IntegrationTestSupport {
                     msg -> {
                         ctx.verify(() -> {
                             if (!msg.getContentType().equals(EventConstants.CONTENT_TYPE_DEVICE_PROVISIONING_NOTIFICATION)) {
-                                messagesReceived.flag();
+                                telemetryMessageReceived.tryComplete();
                             }
                         });
                     },

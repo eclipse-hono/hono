@@ -56,6 +56,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.SelfSignedCertificate;
+import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.mqtt.messages.MqttConnAckMessage;
 import io.vertx.mqtt.messages.MqttPublishMessage;
@@ -252,6 +253,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
      * @throws InterruptedException if the test fails.
      */
     @Test
+    @Timeout(timeUnit = TimeUnit.SECONDS, value = 15)
     public void testAutoProvisioningViaGateway(final VertxTestContext ctx) throws InterruptedException {
 
         final String tenantId = helper.getRandomTenantId();

@@ -512,6 +512,7 @@ public abstract class CoapTestBase {
      * @throws InterruptedException if the test fails.
      */
     @Test
+    @Timeout(timeUnit = TimeUnit.SECONDS, value = 15)
     public void testAutoProvisioningViaGateway(final VertxTestContext ctx) throws InterruptedException {
 
         final Tenant tenant = new Tenant();

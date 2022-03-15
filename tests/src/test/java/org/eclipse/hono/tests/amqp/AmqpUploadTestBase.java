@@ -235,7 +235,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
      * @param ctx The Vert.x test context.
      */
     @Test
-    @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
+    @Timeout(timeUnit = TimeUnit.SECONDS, value = 15)
     public void testAutoProvisioningViaGateway(final VertxTestContext ctx) {
 
         final String tenantId = helper.getRandomTenantId();
