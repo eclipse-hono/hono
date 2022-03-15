@@ -27,7 +27,6 @@ import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
-import org.apache.qpid.proton.amqp.messaging.Properties;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
@@ -37,7 +36,6 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonDelivery;
-import io.vertx.proton.ProtonHelper;
 
 /**
  * Utility methods for working with Proton {@code Message}s.
@@ -92,11 +90,6 @@ public final class MessageHelper {
      * device.
      */
     public static final String APP_PROPERTY_QOS = "qos";
-    /**
-     * The name of the AMQP 1.0 message application property containing a JWT token asserting a device's registration
-     * status.
-     */
-    public static final String APP_PROPERTY_REGISTRATION_ASSERTION = "reg_assertion";
     /**
      * The name of the AMQP 1.0 message application property containing the resource a message is addressed at.
      */
@@ -218,7 +211,7 @@ public final class MessageHelper {
     }
 
     /**
-     * Gets the value of a message's {@link #APP_PROPERTY_DEVICE_ID} application property.
+     * Gets the value of a message's {@value #APP_PROPERTY_DEVICE_ID} application property.
      *
      * @param msg The message.
      * @return The property value or {@code null} if not set.
@@ -226,21 +219,11 @@ public final class MessageHelper {
      */
     public static String getDeviceId(final Message msg) {
         Objects.requireNonNull(msg);
-        return getDeviceId(msg.getApplicationProperties());
+        return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_DEVICE_ID, String.class);
     }
 
     /**
-     * Gets the value of a message's {@link #APP_PROPERTY_DEVICE_ID} application property.
-     *
-     * @param properties The message's application properties.
-     * @return The property value or {@code null} if not set.
-     */
-    public static String getDeviceId(final ApplicationProperties properties) {
-        return getApplicationProperty(properties, APP_PROPERTY_DEVICE_ID, String.class);
-    }
-
-    /**
-     * Gets the value of a message's {@link #APP_PROPERTY_TENANT_ID} application property.
+     * Gets the value of a message's {@value #APP_PROPERTY_TENANT_ID} application property.
      *
      * @param msg The message.
      * @return The property value or {@code null} if not set.
@@ -248,21 +231,11 @@ public final class MessageHelper {
      */
     public static String getTenantId(final Message msg) {
         Objects.requireNonNull(msg);
-        return getTenantId(msg.getApplicationProperties());
+        return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_TENANT_ID, String.class);
     }
 
     /**
-     * Gets the value of a message's {@link #APP_PROPERTY_TENANT_ID} application property.
-     *
-     * @param properties The message's application properties.
-     * @return The property value or {@code null} if not set.
-     */
-    public static String getTenantId(final ApplicationProperties properties) {
-        return getApplicationProperty(properties, APP_PROPERTY_TENANT_ID, String.class);
-    }
-
-    /**
-     * Gets the value of a message's {@link #APP_PROPERTY_GATEWAY_ID} application property.
+     * Gets the value of a message's {@value #APP_PROPERTY_GATEWAY_ID} application property.
      *
      * @param msg The message.
      * @return The property value or {@code null} if not set.
@@ -270,32 +243,11 @@ public final class MessageHelper {
      */
     public static String getGatewayId(final Message msg) {
         Objects.requireNonNull(msg);
-        return getGatewayId(msg.getApplicationProperties());
+        return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_GATEWAY_ID, String.class);
     }
 
     /**
-     * Gets the value of a message's {@link #APP_PROPERTY_GATEWAY_ID} application property.
-     *
-     * @param properties The message's application properties.
-     * @return The property value or {@code null} if not set.
-     */
-    public static String getGatewayId(final ApplicationProperties properties) {
-        return getApplicationProperty(properties, APP_PROPERTY_GATEWAY_ID, String.class);
-    }
-
-    /**
-     * Gets the value of a message's {@link #APP_PROPERTY_REGISTRATION_STATUS} application property.
-     *
-     * @param msg The message.
-     * @return The property value or {@code null} if not set.
-     * @throws NullPointerException if message is {@code null}.
-     */
-    public static String getRegistrationStatus(final Message msg) {
-        return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_REGISTRATION_STATUS, String.class);
-    }
-
-    /**
-     * Gets the value of a message's {@link #APP_PROPERTY_QOS} application property.
+     * Gets the value of a message's {@value #APP_PROPERTY_QOS} application property.
      *
      * @param msg The message.
      * @return The property value or {@code null} if not set.
@@ -303,72 +255,6 @@ public final class MessageHelper {
      */
     public static Integer getQoS(final Message msg) {
         return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_QOS, Integer.class);
-    }
-
-    /**
-     * Gets the registration assertion conveyed in an AMQP 1.0 message.
-     * <p>
-     * The assertion is expected to be contained in the message's <em>application-properties</em> under key
-     * {@link #APP_PROPERTY_REGISTRATION_ASSERTION}.
-     *
-     * @param msg The message.
-     * @return The assertion or {@code null} if the message does not contain an assertion (at the expected location).
-     */
-    public static String getRegistrationAssertion(final Message msg) {
-        return getRegistrationAssertion(msg, false);
-    }
-
-    /**
-     * Gets and removes the registration assertion conveyed in an AMQP 1.0 message.
-     * <p>
-     * The assertion is expected to be contained in the message's <em>application-properties</em> under key
-     * {@link #APP_PROPERTY_REGISTRATION_ASSERTION}.
-     *
-     * @param msg The message.
-     * @return The assertion or {@code null} if the message does not contain an assertion (at the expected location).
-     */
-    public static String getAndRemoveRegistrationAssertion(final Message msg) {
-        return getRegistrationAssertion(msg, true);
-    }
-
-    private static String getRegistrationAssertion(final Message msg, final boolean removeAssertion) {
-        Objects.requireNonNull(msg);
-        String assertion = null;
-        final ApplicationProperties properties = msg.getApplicationProperties();
-        if (properties != null) {
-            final Object obj;
-            if (removeAssertion) {
-                obj = properties.getValue().remove(APP_PROPERTY_REGISTRATION_ASSERTION);
-            } else {
-                obj = properties.getValue().get(APP_PROPERTY_REGISTRATION_ASSERTION);
-            }
-            if (obj instanceof String) {
-                assertion = (String) obj;
-            }
-        }
-        return assertion;
-    }
-
-    /**
-     * Gets the value of a message's {@link #APP_PROPERTY_DEVICE_ID} annotation.
-     *
-     * @param msg The message.
-     * @return The annotation value or {@code null} if not set.
-     */
-    public static String getDeviceIdAnnotation(final Message msg) {
-        Objects.requireNonNull(msg);
-        return getAnnotation(msg, APP_PROPERTY_DEVICE_ID, String.class);
-    }
-
-    /**
-     * Gets the value of a message's {@link #APP_PROPERTY_TENANT_ID} annotation.
-     *
-     * @param msg The message.
-     * @return The annotation value or {@code null} if not set.
-     */
-    public static String getTenantIdAnnotation(final Message msg) {
-        Objects.requireNonNull(msg);
-        return getAnnotation(msg, APP_PROPERTY_TENANT_ID, String.class);
     }
 
     /**
@@ -408,7 +294,8 @@ public final class MessageHelper {
     public static JsonObject getJsonPayload(final Message msg) {
 
         return Optional.ofNullable(getPayload(msg))
-                .map(buffer -> buffer.length() > 0 ? buffer.toJsonObject() : null)
+                .filter(b -> b.length() > 0)
+                .map(Buffer::toJsonObject)
                 .orElse(null);
     }
 
@@ -530,20 +417,6 @@ public final class MessageHelper {
      */
     public static void addDeviceId(final Message msg, final String deviceId) {
         addProperty(msg, APP_PROPERTY_DEVICE_ID, deviceId);
-    }
-
-    /**
-     * Adds a registration assertion to an AMQP 1.0 message.
-     * <p>
-     * The assertion is put to the message's <em>application-properties</em> under key
-     * {@link #APP_PROPERTY_REGISTRATION_ASSERTION}.
-     *
-     * @param msg The message.
-     * @param token The assertion to add.
-     * @throws NullPointerException if any of the parameters are {@code null}.
-     */
-    public static void addRegistrationAssertion(final Message msg, final String token) {
-        addProperty(msg, APP_PROPERTY_REGISTRATION_ASSERTION, token);
     }
 
     /**
@@ -715,32 +588,6 @@ public final class MessageHelper {
     }
 
     /**
-     * Returns the value to which the specified key is mapped in the message annotations, or {@code null} if the message
-     * annotations contain no mapping for the key.
-     *
-     * @param <T> the expected type of the property to read.
-     * @param msg the message that contains the annotations.
-     * @param key the name of the symbol to return a value for.
-     * @param type the expected type of the value.
-     * @return the annotation's value or {@code null} if no such annotation exists or its value is not of the expected
-     *         type.
-     */
-    @SuppressWarnings("unchecked")
-    public static <T> T getAnnotation(final Message msg, final String key, final Class<T> type) {
-        final MessageAnnotations annotations = msg.getMessageAnnotations();
-        if (annotations == null) {
-            return null;
-        } else {
-            final Object value = annotations.getValue().get(Symbol.getSymbol(key));
-            if (type.isInstance(value)) {
-                return (T) value;
-            } else {
-                return null;
-            }
-        }
-    }
-
-    /**
      * Sets the <em>creation-time</em> of an AMQP 1.0 message
      * to the current point in time.
      * <p>
@@ -877,40 +724,6 @@ public final class MessageHelper {
 
         Objects.requireNonNull(message);
         return message.getBody() instanceof Data;
-    }
-
-    /**
-     * Checks if a message's body consists of an AMQP <em>AmqpValue</em> section.
-     *
-     * @param message The message to check.
-     * @return {@code true} if the body consists of an AmqpValue section, {@code false} otherwise.
-     * @throws NullPointerException If message is {@code null}.
-     */
-    public static boolean hasAmqpValueBody(final Message message) {
-
-        Objects.requireNonNull(message);
-        return message.getBody() instanceof AmqpValue;
-    }
-
-    /**
-     * Returns a copy of the given message.
-     * <p>
-     * This is a shallow copy of the <em>Message</em> object, except for the copied <em>Properties</em>.
-     *
-     * @param message The message to copy.
-     * @return The message copy.
-     */
-    public static Message getShallowCopy(final Message message) {
-        final Message copy = ProtonHelper.message();
-        copy.setDeliveryAnnotations(message.getDeliveryAnnotations());
-        copy.setMessageAnnotations(message.getMessageAnnotations());
-        if (message.getProperties() != null) {
-            copy.setProperties(new Properties(message.getProperties()));
-        }
-        copy.setApplicationProperties(message.getApplicationProperties());
-        copy.setBody(message.getBody());
-        copy.setFooter(message.getFooter());
-        return copy;
     }
 
     /**

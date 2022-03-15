@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,6 +18,7 @@ import java.util.Optional;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Modified;
+import org.apache.qpid.proton.amqp.messaging.Properties;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
@@ -120,11 +121,32 @@ public class ProtonBasedInternalCommandSender extends SenderCachingServiceClient
         return CommandConstants.INTERNAL_COMMAND_ENDPOINT + "/" + Objects.requireNonNull(adapterInstanceId);
     }
 
+    /**
+     * Returns a copy of the given message.
+     * <p>
+     * This is a shallow copy of the <em>Message</em> object, except for the copied <em>Properties</em>.
+     *
+     * @param message The message to copy.
+     * @return The message copy.
+     */
+    private static Message getShallowCopy(final Message message) {
+        final Message copy = ProtonHelper.message();
+        copy.setDeliveryAnnotations(message.getDeliveryAnnotations());
+        copy.setMessageAnnotations(message.getMessageAnnotations());
+        if (message.getProperties() != null) {
+            copy.setProperties(new Properties(message.getProperties()));
+        }
+        copy.setApplicationProperties(message.getApplicationProperties());
+        copy.setBody(message.getBody());
+        copy.setFooter(message.getFooter());
+        return copy;
+    }
+
     private Message adoptOrCreateMessage(final Command command) {
         final Message msg;
         if (command instanceof ProtonBasedCommand) {
             // copy and adapt original message
-            msg = MessageHelper.getShallowCopy(((ProtonBasedCommand) command).getMessage());
+            msg = getShallowCopy(((ProtonBasedCommand) command).getMessage());
         } else {
             // create new message and adopt command properties
             msg = ProtonHelper.message();
