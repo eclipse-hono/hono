@@ -810,7 +810,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 return d;
             }).recover(t -> {
                 if (t instanceof ClientErrorException) {
-                    MessageHelper.rejected(ctx.delivery(), getErrorCondition(t));
+                    AmqpUtils.rejected(ctx.delivery(), getErrorCondition(t));
                 } else {
                     ProtonHelper.released(ctx.delivery(), true);
                 }

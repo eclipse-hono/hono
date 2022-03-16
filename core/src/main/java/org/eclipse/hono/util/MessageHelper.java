@@ -27,15 +27,12 @@ import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
-import org.apache.qpid.proton.amqp.messaging.Rejected;
-import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
-import io.vertx.proton.ProtonDelivery;
 
 /**
  * Utility methods for working with Proton {@code Message}s.
@@ -529,22 +526,6 @@ public final class MessageHelper {
                     return result;
                 });
         props.getValue().put(key, value);
-    }
-
-    /**
-     * Rejects and settles an AMQP 1.0 message.
-     *
-     * @param delivery The message's delivery handle.
-     * @param error The error condition to set as the reason for rejecting the message (may be {@code null}.
-     * @throws NullPointerException if delivery is {@code null}.
-     */
-    public static void rejected(final ProtonDelivery delivery, final ErrorCondition error) {
-
-        Objects.requireNonNull(delivery);
-
-        final Rejected rejected = new Rejected();
-        rejected.setError(error); // doesn't matter if null
-        delivery.disposition(rejected, true);
     }
 
     /**

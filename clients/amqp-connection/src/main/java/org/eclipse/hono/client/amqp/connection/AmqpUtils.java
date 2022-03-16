@@ -17,6 +17,8 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.apache.qpid.proton.amqp.Symbol;
+import org.apache.qpid.proton.amqp.messaging.Rejected;
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.Activity;
@@ -25,6 +27,7 @@ import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.auth.HonoUserAdapter;
 import org.eclipse.hono.client.amqp.tracing.MessageAnnotationsExtractAdapter;
 import org.eclipse.hono.client.amqp.tracing.MessageAnnotationsInjectAdapter;
+import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.opentracing.SpanContext;
@@ -32,6 +35,7 @@ import io.opentracing.Tracer;
 import io.opentracing.noop.NoopSpanContext;
 import io.opentracing.propagation.Format;
 import io.vertx.proton.ProtonConnection;
+import io.vertx.proton.ProtonDelivery;
 
 /**
  * AMQP 1.0 related helper methods.
@@ -188,5 +192,21 @@ public final class AmqpUtils {
 
         return tracer.extract(Format.Builtin.TEXT_MAP,
                 new MessageAnnotationsExtractAdapter(message, AMQP_ANNOTATION_NAME_TRACE_CONTEXT));
+    }
+
+    /**
+     * Rejects and settles an AMQP 1.0 message.
+     *
+     * @param delivery The message's delivery handle.
+     * @param error The error condition to set as the reason for rejecting the message (may be {@code null}.
+     * @throws NullPointerException if delivery is {@code null}.
+     */
+    public static void rejected(final ProtonDelivery delivery, final ErrorCondition error) {
+
+        Objects.requireNonNull(delivery);
+
+        final Rejected rejected = new Rejected();
+        rejected.setError(error); // doesn't matter if null
+        delivery.disposition(rejected, true);
     }
 }

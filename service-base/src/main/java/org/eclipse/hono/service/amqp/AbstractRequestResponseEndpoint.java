@@ -295,7 +295,7 @@ public abstract class AbstractRequestResponseEndpoint<T extends ServiceConfigPro
                 .start();
 
         if (!passesFormalVerification(targetAddress, requestMessage)) {
-            MessageHelper.rejected(delivery, new ErrorCondition(AmqpUtils.AMQP_BAD_REQUEST, "malformed request message"));
+            AmqpUtils.rejected(delivery, new ErrorCondition(AmqpUtils.AMQP_BAD_REQUEST, "malformed request message"));
             flowCreditToRequestor(receiver, replyTo);
             TracingHelper.logError(currentSpan, "malformed request message");
             currentSpan.finish();
