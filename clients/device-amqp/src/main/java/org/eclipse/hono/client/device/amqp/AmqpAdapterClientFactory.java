@@ -24,7 +24,7 @@ import org.eclipse.hono.client.device.amqp.impl.AmqpAdapterClientFactoryImpl;
 import io.vertx.core.Future;
 
 /**
- * A Vert.x based factory for creating clients for Hono's AMQP adapter.
+ * A Vert.x based factory for creating tenant scoped clients for Hono's AMQP adapter.
  */
 public interface AmqpAdapterClientFactory extends ConnectionLifecycle<HonoConnection> {
 

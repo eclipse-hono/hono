@@ -17,6 +17,7 @@ import java.util.Map;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.proton.ProtonDelivery;
 
 /**
@@ -54,7 +55,7 @@ public interface TraceableTelemetrySender extends TelemetrySender {
      */
     Future<ProtonDelivery> send(
             String deviceId,
-            byte[] payload,
+            Buffer payload,
             String contentType,
             Map<String, Object> properties,
             SpanContext context);
@@ -88,7 +89,7 @@ public interface TraceableTelemetrySender extends TelemetrySender {
      */
     Future<ProtonDelivery> sendAndWaitForOutcome(
             String deviceId,
-            byte[] payload,
+            Buffer payload,
             String contentType,
             Map<String, Object> properties,
             SpanContext context);

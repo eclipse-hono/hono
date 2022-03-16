@@ -32,6 +32,7 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
 
@@ -40,6 +41,9 @@ import io.vertx.proton.ProtonHelper;
  */
 public abstract class AbstractAmqpAdapterClientSender implements AmqpSenderLink {
 
+    /**
+     * The identifier of the tenant that this sender is scoped to.
+     */
     protected final String tenantId;
 
     private final HonoConnection connection;
@@ -98,8 +102,13 @@ public abstract class AbstractAmqpAdapterClientSender implements AmqpSenderLink 
      * @param targetAddress The address to send the message to.
      * @return The message.
      */
-    protected final Message createMessage(final String deviceId, final byte[] payload, final String contentType,
-            final Map<String, Object> properties, final String targetAddress) {
+    protected final Message createMessage(
+            final String deviceId,
+            final Buffer payload,
+            final String contentType,
+            final Map<String, Object> properties,
+            final String targetAddress) {
+
         final Message msg = ProtonHelper.message();
         msg.setAddress(targetAddress);
         DownstreamAmqpMessageFactory.addDefaults(msg, properties);

@@ -202,7 +202,7 @@ public class ProtocolGateway {
                         } else {
                             final String[] params = args.split(" ", 2);
                             final String qos = params[0];
-                            final byte[] payload = Optional.ofNullable(params[1]).map(p -> Buffer.buffer(p).getBytes()).orElse(null);
+                            final var payload = Optional.ofNullable(params[1]).map(p -> Buffer.buffer(p)).orElse(null);
                             amqpAdapterClientFactory.getOrCreateTelemetrySender()
                                 .compose(sender -> {
                                     if ("0".equals(qos)) {
@@ -232,7 +232,7 @@ public class ProtocolGateway {
                         if (Strings.isNullOrEmpty(args)) {
                             result.fail("missing payload");
                         } else {
-                            final byte[] payload = Buffer.buffer(args).getBytes();
+                            final var payload = Buffer.buffer(args);
                             amqpAdapterClientFactory.getOrCreateEventSender()
                                 .compose(sender -> sender.send(deviceId, payload, CONTENT_TYPE_BINARY_OPAQUE, null))
                                 .map((Void) null)
@@ -325,7 +325,7 @@ public class ProtocolGateway {
                         command.getReplyTo(),
                         (String) command.getCorrelationId(),
                         HttpURLConnection.HTTP_OK,
-                        payload.getBytes(),
+                        payload,
                         "text/plain",
                         null));
     }

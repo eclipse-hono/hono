@@ -16,6 +16,7 @@ package org.eclipse.hono.client.device.amqp;
 import java.util.Map;
 
 import io.vertx.core.Future;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.proton.ProtonDelivery;
 
 /**
@@ -50,7 +51,7 @@ public interface EventSender extends AmqpSenderLink {
      */
     Future<ProtonDelivery> send(
             String deviceId,
-            byte[] payload,
+            Buffer payload,
             String contentType,
             Map<String, Object> properties);
 }

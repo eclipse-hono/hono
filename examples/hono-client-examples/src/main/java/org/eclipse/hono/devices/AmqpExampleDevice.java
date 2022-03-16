@@ -24,6 +24,7 @@ import org.eclipse.hono.client.device.amqp.AmqpAdapterClientFactory;
 import org.eclipse.hono.util.MessageHelper;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -58,7 +59,7 @@ public class AmqpExampleDevice {
     private static final String AUTH_ID = "sensor1";
     private static final String PASSWORD = "hono-secret";
 
-    private final Vertx VERTX = Vertx.vertx();
+    private final Vertx vertx = Vertx.vertx();
     private final ClientConfigProperties config = new ClientConfigProperties();
     private final Map<String, Object> customApplicationProperties = new HashMap<>();
     private AmqpAdapterClientFactory factory;
@@ -75,6 +76,11 @@ public class AmqpExampleDevice {
 
     }
 
+    /**
+     * Runs the example device.
+     *
+     * @param args Ignored.
+     */
     public static void main(final String[] args) {
 
         final AmqpExampleDevice amqpExampleDevice = new AmqpExampleDevice();
@@ -82,16 +88,13 @@ public class AmqpExampleDevice {
     }
 
     private void connect() {
-        final HonoConnection connection = HonoConnection.newConnection(VERTX, config);
+        final HonoConnection connection = HonoConnection.newConnection(vertx, config);
         connection.connect()
-                .onComplete(ar -> {
-                    if (ar.succeeded()) {
-                        startDevice(ar.result());
-                    } else {
-                        System.out.println("Connection failed: " + ar.cause());
-                        System.exit(1);
-                    }
-                });
+            .onSuccess(this::startDevice)
+            .onFailure(t -> {
+                System.err.println("Failed to establish connection: " + t);
+                System.exit(1);
+            });
     }
 
     private void startDevice(final HonoConnection connection) {
@@ -99,11 +102,11 @@ public class AmqpExampleDevice {
 
         sendTelemetryMessageWithQos0();
 
-        VERTX.setTimer(1000, l -> sendTelemetryMessageWithQos1());
+        vertx.setTimer(1000, l -> sendTelemetryMessageWithQos1());
 
-        VERTX.setTimer(2000, l -> sendEvent());
+        vertx.setTimer(2000, l -> sendEvent());
 
-        VERTX.setTimer(3000, l -> {
+        vertx.setTimer(3000, l -> {
             System.out.println("Waiting for commands... (Press Ctrl+C to stop)");
             factory.createCommandConsumer(this::handleCommand);
         });
@@ -112,51 +115,45 @@ public class AmqpExampleDevice {
     private void sendTelemetryMessageWithQos0() {
         System.out.println();
 
-        final String payload = "42";
+        final var payload = "42";
         factory.getOrCreateTelemetrySender()
-                .compose(telemetrySender -> telemetrySender.send(DEVICE_ID, payload.getBytes(), "text/plain",
-                        customApplicationProperties))
-                .onComplete(ar -> {
-                    if (ar.succeeded()) {
-                        System.out.println("Telemetry message with QoS 'AT_MOST_ONCE' sent: " + payload);
-                    } else {
-                        System.out.println("Sending telemetry message with QoS 'AT_MOST_ONCE' failed: " + ar.cause());
-                    }
-                });
+            .compose(telemetrySender -> telemetrySender.send(
+                    DEVICE_ID,
+                    Buffer.buffer(payload),
+                    "text/plain",
+                    customApplicationProperties))
+            .onSuccess(delivery -> System.out.println("Telemetry message with QoS 'AT_MOST_ONCE' sent: " + payload))
+            .onFailure(t -> System.err.println("Sending telemetry message with QoS 'AT_MOST_ONCE' failed: " + t));
     }
 
     private void sendTelemetryMessageWithQos1() {
-        final JsonObject payload = new JsonObject().put("weather", "cloudy");
+        final var payload = new JsonObject().put("weather", "cloudy");
         factory.getOrCreateTelemetrySender()
-                .compose(telemetrySender -> telemetrySender.sendAndWaitForOutcome(DEVICE_ID,
-                        payload.toBuffer().getBytes(), "application/json", customApplicationProperties))
-                .onComplete(ar -> {
-                    if (ar.succeeded()) {
-                        System.out.println("Telemetry message with QoS 'AT_LEAST_ONCE' sent: " + payload);
-                    } else {
-                        String hint = "";
-                        if (ServiceInvocationException.extractStatusCode(ar.cause()) == 503) {
-                            hint = " (Is there a consumer connected?)";
-                        }
-                        System.out
-                                .println("Sending telemetry message with QoS 'AT_LEAST_ONCE' failed: " + ar.cause() + hint);
-                    }
-                });
+            .compose(telemetrySender -> telemetrySender.sendAndWaitForOutcome(
+                    DEVICE_ID,
+                    payload.toBuffer(),
+                    "application/json",
+                    customApplicationProperties))
+            .onSuccess(delivery -> System.out.println("Telemetry message with QoS 'AT_LEAST_ONCE' sent: " + payload))
+            .onFailure(t -> {
+                String hint = "";
+                if (ServiceInvocationException.extractStatusCode(t) == 503) {
+                    hint = " (Is there a consumer connected?)";
+                }
+                System.err.println("Sending telemetry message with QoS 'AT_LEAST_ONCE' failed: " + t + hint);
+            });
     }
 
     private void sendEvent() {
-        final JsonObject payload = new JsonObject().put("threshold", "exceeded");
+        final var payload = new JsonObject().put("threshold", "exceeded");
         factory.getOrCreateEventSender()
-                .compose(
-                        eventSender -> eventSender.send(DEVICE_ID, payload.toBuffer().getBytes(), "application/json",
-                                customApplicationProperties))
-                .onComplete(ar -> {
-                    if (ar.succeeded()) {
-                        System.out.println("Event sent: " + payload);
-                    } else {
-                        System.out.println("Sending event failed: " + ar.cause());
-                    }
-                });
+            .compose(eventSender -> eventSender.send(
+                    DEVICE_ID,
+                    payload.toBuffer(),
+                    "application/json",
+                    customApplicationProperties))
+            .onSuccess(delivery -> System.out.println("Event sent: " + payload))
+            .onFailure(t -> System.err.println("Sending event failed: " + t));
     }
 
     private void handleCommand(final Message commandMessage) {
@@ -177,16 +174,15 @@ public class AmqpExampleDevice {
     private void sendCommandResponse(final Message command) {
         final JsonObject payload = new JsonObject().put("outcome", "success");
         factory.getOrCreateCommandResponseSender()
-                .compose(commandResponder -> commandResponder.sendCommandResponse(DEVICE_ID, command.getReplyTo(),
-                        command.getCorrelationId().toString(), 200, payload.toBuffer().getBytes(), "application/json",
-                        customApplicationProperties))
-                .onComplete(ar -> {
-                    if (ar.succeeded()) {
-                        System.out.println("Command response sent: " + payload);
-                    } else {
-                        System.out.println("Sending command response failed: " + ar.cause());
-                    }
-                });
+            .compose(commandResponder -> commandResponder.sendCommandResponse(
+                    DEVICE_ID,
+                    command.getReplyTo(),
+                    command.getCorrelationId().toString(),
+                    200,
+                    payload.toBuffer(),
+                    "application/json",
+                    customApplicationProperties))
+            .onSuccess(delivery -> System.out.println("Command response sent: " + payload))
+            .onFailure(t -> System.err.println("Sending command response failed: " + t));
     }
-
 }

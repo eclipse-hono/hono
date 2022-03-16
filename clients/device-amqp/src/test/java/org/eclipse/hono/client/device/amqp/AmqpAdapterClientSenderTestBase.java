@@ -38,6 +38,7 @@ import io.opentracing.Tracer;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonSender;
 
@@ -50,7 +51,7 @@ public abstract class AmqpAdapterClientSenderTestBase {
     protected static final String TENANT_ID = "test-tenant";
     protected static final String DEVICE_ID = "test-device";
     protected static final String CONTENT_TYPE = "text/plain";
-    protected static final byte[] PAYLOAD = "test-value".getBytes();
+    protected static final Buffer PAYLOAD = Buffer.buffer("test-value");
     protected static final String TEST_PROPERTY_KEY = "test-key";
     protected static final String TEST_PROPERTY_VALUE = "test-value";
     protected static final Map<String, Object> APPLICATION_PROPERTIES = Collections.singletonMap(TEST_PROPERTY_KEY,
@@ -112,13 +113,11 @@ public abstract class AmqpAdapterClientSenderTestBase {
 
         assertThat(message.getAddress()).isEqualTo(expectedAddress);
 
-        assertThat(MessageHelper.getPayloadAsString(message)).isEqualTo(new String(PAYLOAD));
+        assertThat(MessageHelper.getPayload(message)).isEqualTo(PAYLOAD);
         assertThat(message.getContentType()).isEqualTo(CONTENT_TYPE);
 
         assertThat(MessageHelper.getApplicationProperty(message.getApplicationProperties(), TEST_PROPERTY_KEY,
                 String.class)).isEqualTo(TEST_PROPERTY_VALUE);
-
-        assertThat(MessageHelper.getDeviceId(message)).isEqualTo(DEVICE_ID);
 
         return message;
     }

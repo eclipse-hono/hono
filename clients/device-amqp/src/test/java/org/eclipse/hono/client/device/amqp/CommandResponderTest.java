@@ -39,8 +39,11 @@ import io.vertx.proton.ProtonDelivery;
 @ExtendWith(VertxExtension.class)
 public class CommandResponderTest extends AmqpAdapterClientSenderTestBase {
 
-    private static final String ADDRESS = CommandConstants.COMMAND_RESPONSE_ENDPOINT + "/" + TENANT_ID + "/" + DEVICE_ID
-            + "/123";
+    private static final String ADDRESS = String.format(
+            "%s/%s/%s/123",
+            CommandConstants.COMMAND_RESPONSE_ENDPOINT,
+            TENANT_ID,
+            DEVICE_ID);
     private static final String CORRELATION_ID = "0";
     private static final int STATUS = 200;
 
@@ -52,12 +55,10 @@ public class CommandResponderTest extends AmqpAdapterClientSenderTestBase {
     @Test
     public void testSendCommandResponseCreatesValidMessage(final VertxTestContext ctx) {
 
-        // GIVEN a CommandResponder instance
-        final CommandResponder commandResponder = createCommandResponder();
-
         // WHEN sending a message using the API...
-        final Future<ProtonDelivery> deliveryFuture = commandResponder.sendCommandResponse(DEVICE_ID,
-                ADDRESS, CORRELATION_ID, STATUS, PAYLOAD, CONTENT_TYPE, APPLICATION_PROPERTIES);
+        final Future<ProtonDelivery> deliveryFuture = createCommandResponder()
+                .compose(responder -> responder.sendCommandResponse(DEVICE_ID, ADDRESS, CORRELATION_ID, STATUS,
+                        PAYLOAD, CONTENT_TYPE, APPLICATION_PROPERTIES));
 
         // ...AND WHEN the disposition is updated by the peer
         updateDisposition();
@@ -77,13 +78,11 @@ public class CommandResponderTest extends AmqpAdapterClientSenderTestBase {
     @Test
     public void testSendCommandResponseWithTracing(final VertxTestContext ctx) {
 
-        // GIVEN a TraceableCommandResponder instance
-        final TraceableCommandResponder commandResponder = ((TraceableCommandResponder) createCommandResponder());
-
         // WHEN sending a message using the API...
         final SpanContext spanContext = mock(SpanContext.class);
-        final Future<ProtonDelivery> deliveryFuture = commandResponder.sendCommandResponse(DEVICE_ID,
-                ADDRESS, CORRELATION_ID, STATUS, PAYLOAD, CONTENT_TYPE, APPLICATION_PROPERTIES, spanContext);
+        final Future<ProtonDelivery> deliveryFuture = createCommandResponder()
+                .compose(responder -> responder.sendCommandResponse(DEVICE_ID, ADDRESS, CORRELATION_ID, STATUS,
+                        PAYLOAD, CONTENT_TYPE, APPLICATION_PROPERTIES, spanContext));
 
         // ...AND WHEN the disposition is updated by the peer
         updateDisposition();
@@ -106,27 +105,27 @@ public class CommandResponderTest extends AmqpAdapterClientSenderTestBase {
     @Test
     public void testSendingWaitsForDispositionUpdate(final VertxTestContext ctx) {
 
-        // GIVEN a CommandResponder instance
-        final CommandResponder commandResponder = createCommandResponder();
-
         // WHEN sending a message using the API
-        final Future<ProtonDelivery> deliveryFuture = commandResponder.sendCommandResponse(DEVICE_ID, ADDRESS,
-                CORRELATION_ID, STATUS, PAYLOAD, CONTENT_TYPE, APPLICATION_PROPERTIES);
-
-        deliveryFuture.onComplete(ctx.succeedingThenComplete());
+        final Future<ProtonDelivery> deliveryFuture = createCommandResponder()
+                .compose(responder -> responder.sendCommandResponse(DEVICE_ID, ADDRESS,
+                CORRELATION_ID, STATUS, PAYLOAD, CONTENT_TYPE, APPLICATION_PROPERTIES));
 
         // THEN the future waits for the disposition to be updated by the peer
         assertThat(deliveryFuture.isComplete()).isFalse();
         updateDisposition();
+
+        deliveryFuture.onComplete(ctx.succeedingThenComplete());
     }
 
-    private CommandResponder createCommandResponder() {
-        return AmqpAdapterClientCommandResponseSender.create(connection, TENANT_ID, s -> {
-        }).result();
+    private Future<TraceableCommandResponder> createCommandResponder() {
+        return AmqpAdapterClientCommandResponseSender.create(
+                connection,
+                TENANT_ID,
+                s -> {});
     }
 
     private void assertMessageConformsAmqpAdapterSpec() {
-        final Message message = assertMessageConformsAmqpAdapterSpec(ADDRESS);
+        final Message message = assertMessageConformsAmqpAdapterSpec(ADDRESS.toString());
         assertThat(message.getCorrelationId()).isEqualTo(CORRELATION_ID);
         assertThat(message.getApplicationProperties().getValue().get("status")).isEqualTo(STATUS);
     }

@@ -22,6 +22,7 @@ import static com.google.common.truth.Truth.assertThat;
 
 import org.eclipse.hono.client.device.amqp.impl.AmqpAdapterClientEventSenderImpl;
 import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -38,7 +39,10 @@ import io.vertx.proton.ProtonDelivery;
 @ExtendWith(VertxExtension.class)
 public class EventSenderTest extends AmqpAdapterClientSenderTestBase {
 
-    private static final String ADDRESS = EventConstants.EVENT_ENDPOINT + "/" + TENANT_ID + "/" + DEVICE_ID;
+    private static final ResourceIdentifier ADDRESS = ResourceIdentifier.from(
+            EventConstants.EVENT_ENDPOINT,
+            TENANT_ID,
+            DEVICE_ID);
 
     /**
      * Verifies that the message created by the client conforms to the expectations of the AMQP adapter.
@@ -48,19 +52,16 @@ public class EventSenderTest extends AmqpAdapterClientSenderTestBase {
     @Test
     public void testSendCreatesValidMessage(final VertxTestContext ctx) {
 
-        // GIVEN a EventSender instance
-        final EventSender eventSender = createEventSender();
-
         // WHEN sending a message using the API...
-        final Future<ProtonDelivery> deliveryFuture = eventSender.send(DEVICE_ID, PAYLOAD, CONTENT_TYPE,
-                APPLICATION_PROPERTIES);
+        final Future<ProtonDelivery> deliveryFuture = createEventSender()
+                .compose(sender -> sender.send(DEVICE_ID, PAYLOAD, CONTENT_TYPE, APPLICATION_PROPERTIES));
 
         // ...AND WHEN the disposition is updated by the peer
         updateDisposition();
 
         deliveryFuture.onComplete(ctx.succeeding(delivery -> {
             // THEN the AMQP message conforms to the expectations of the AMQP protocol adapter
-            ctx.verify(() -> assertMessageConformsAmqpAdapterSpec(ADDRESS));
+            ctx.verify(() -> assertMessageConformsAmqpAdapterSpec(ADDRESS.toString()));
             ctx.completeNow();
         }));
     }
@@ -73,13 +74,11 @@ public class EventSenderTest extends AmqpAdapterClientSenderTestBase {
     @Test
     public void testSendWithTracing(final VertxTestContext ctx) {
 
-        // GIVEN a EventSender instance
-        final TraceableEventSender eventSender = ((TraceableEventSender) createEventSender());
-
         // WHEN sending a message using the API...
         final SpanContext spanContext = mock(SpanContext.class);
-        final Future<ProtonDelivery> deliveryFuture = eventSender.send(DEVICE_ID, PAYLOAD, CONTENT_TYPE,
-                APPLICATION_PROPERTIES, spanContext);
+        final Future<ProtonDelivery> deliveryFuture = createEventSender()
+                .compose(sender -> sender.send(DEVICE_ID, PAYLOAD, CONTENT_TYPE,
+                APPLICATION_PROPERTIES, spanContext));
 
         // ...AND WHEN the disposition is updated by the peer
         updateDisposition();
@@ -88,7 +87,7 @@ public class EventSenderTest extends AmqpAdapterClientSenderTestBase {
             // THEN the given SpanContext is used
             ctx.verify(() -> {
                 verify(spanBuilder).addReference(any(), eq(spanContext));
-                assertMessageConformsAmqpAdapterSpec(ADDRESS);
+                assertMessageConformsAmqpAdapterSpec(ADDRESS.toString());
             });
             ctx.completeNow();
         }));
@@ -102,23 +101,25 @@ public class EventSenderTest extends AmqpAdapterClientSenderTestBase {
     @Test
     public void testSendWaitsForDispositionUpdate(final VertxTestContext ctx) {
 
-        // GIVEN a EventSender instance
-        final EventSender eventSender = createEventSender();
-
         // WHEN sending a message using the API...
-        final Future<ProtonDelivery> deliveryFuture = eventSender.send(DEVICE_ID, PAYLOAD, CONTENT_TYPE,
-                APPLICATION_PROPERTIES);
-
-        deliveryFuture.onComplete(ctx.succeedingThenComplete());
+        final Future<ProtonDelivery> deliveryFuture = createEventSender()
+                .compose(sender -> sender.send(
+                        DEVICE_ID,
+                        PAYLOAD,
+                        CONTENT_TYPE,
+                        APPLICATION_PROPERTIES));
 
         // THEN the future waits for the disposition to be updated by the peer
         assertThat(deliveryFuture.isComplete()).isFalse();
         updateDisposition();
+
+        deliveryFuture.onComplete(ctx.succeedingThenComplete());
     }
 
-    private EventSender createEventSender() {
-        return AmqpAdapterClientEventSenderImpl.create(connection, TENANT_ID, s -> {
-                }).result();
+    private Future<TraceableEventSender> createEventSender() {
+        return AmqpAdapterClientEventSenderImpl.create(
+                connection,
+                TENANT_ID,
+                s -> {});
     }
-
 }

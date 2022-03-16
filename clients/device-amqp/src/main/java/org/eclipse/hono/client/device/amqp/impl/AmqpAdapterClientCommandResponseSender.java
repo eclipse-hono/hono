@@ -29,6 +29,7 @@ import io.opentracing.SpanContext;
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.proton.ProtonDelivery;
 
 /**
@@ -37,7 +38,9 @@ import io.vertx.proton.ProtonDelivery;
 public final class AmqpAdapterClientCommandResponseSender extends AbstractAmqpAdapterClientSender
         implements CommandResponder, TraceableCommandResponder {
 
-    AmqpAdapterClientCommandResponseSender(final HonoConnection connection, final GenericSenderLink senderLink,
+    private AmqpAdapterClientCommandResponseSender(
+            final HonoConnection connection,
+            final GenericSenderLink senderLink,
             final String tenantId) {
         super(connection, senderLink, tenantId);
     }
@@ -55,7 +58,7 @@ public final class AmqpAdapterClientCommandResponseSender extends AbstractAmqpAd
      * @return A future indicating the outcome.
      * @throws NullPointerException if con or tenantId is {@code null}.
      */
-    public static Future<CommandResponder> create(
+    public static Future<TraceableCommandResponder> create(
             final HonoConnection con,
             final String tenantId,
             final Handler<String> remoteCloseHook) {
@@ -68,8 +71,13 @@ public final class AmqpAdapterClientCommandResponseSender extends AbstractAmqpAd
     }
 
     @Override
-    public Future<ProtonDelivery> sendCommandResponse(final String deviceId, final String targetAddress,
-            final String correlationId, final int status, final byte[] payload, final String contentType,
+    public Future<ProtonDelivery> sendCommandResponse(
+            final String deviceId,
+            final String targetAddress,
+            final String correlationId,
+            final int status,
+            final Buffer payload,
+            final String contentType,
             final Map<String, Object> properties) {
 
         Objects.requireNonNull(deviceId);
@@ -81,9 +89,15 @@ public final class AmqpAdapterClientCommandResponseSender extends AbstractAmqpAd
     }
 
     @Override
-    public Future<ProtonDelivery> sendCommandResponse(final String deviceId, final String targetAddress,
-            final String correlationId, final int status, final byte[] payload,
-            final String contentType, final Map<String, Object> properties, final SpanContext context) {
+    public Future<ProtonDelivery> sendCommandResponse(
+            final String deviceId,
+            final String targetAddress,
+            final String correlationId,
+            final int status,
+            final Buffer payload,
+            final String contentType,
+            final Map<String, Object> properties,
+            final SpanContext context) {
 
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(targetAddress);
@@ -95,9 +109,15 @@ public final class AmqpAdapterClientCommandResponseSender extends AbstractAmqpAd
                 properties, span);
     }
 
-    private Future<ProtonDelivery> sendCommandResponse(final String deviceId, final String targetAddress,
-            final String correlationId, final int status, final byte[] payload,
-            final String contentType, final Map<String, Object> properties, final Span span) {
+    private Future<ProtonDelivery> sendCommandResponse(
+            final String deviceId,
+            final String targetAddress,
+            final String correlationId,
+            final int status,
+            final Buffer payload,
+            final String contentType,
+            final Map<String, Object> properties,
+            final Span span) {
 
         final Message message = createMessage(deviceId, payload, contentType, properties, targetAddress);
         message.setCorrelationId(correlationId);

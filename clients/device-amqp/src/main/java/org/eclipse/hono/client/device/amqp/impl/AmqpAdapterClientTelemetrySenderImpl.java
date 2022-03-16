@@ -29,6 +29,7 @@ import io.opentracing.SpanContext;
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.proton.ProtonDelivery;
 
 /**
@@ -37,8 +38,10 @@ import io.vertx.proton.ProtonDelivery;
 public final class AmqpAdapterClientTelemetrySenderImpl extends AbstractAmqpAdapterClientSender
         implements TelemetrySender, TraceableTelemetrySender {
 
-    AmqpAdapterClientTelemetrySenderImpl(final HonoConnection connection, final GenericSenderLink senderLink,
-    final String tenantId) {
+    private AmqpAdapterClientTelemetrySenderImpl(
+            final HonoConnection connection,
+            final GenericSenderLink senderLink,
+            final String tenantId) {
         super(connection, senderLink, tenantId);
     }
 
@@ -55,7 +58,7 @@ public final class AmqpAdapterClientTelemetrySenderImpl extends AbstractAmqpAdap
      * @return A future indicating the outcome.
      * @throws NullPointerException if con or tenantId is {@code null}.
      */
-    public static Future<TelemetrySender> create(
+    public static Future<TraceableTelemetrySender> create(
             final HonoConnection con,
             final String tenantId,
             final Handler<String> remoteCloseHook) {
@@ -68,7 +71,10 @@ public final class AmqpAdapterClientTelemetrySenderImpl extends AbstractAmqpAdap
     }
 
     @Override
-    public Future<ProtonDelivery> send(final String deviceId, final byte[] payload, final String contentType,
+    public Future<ProtonDelivery> send(
+            final String deviceId,
+            final Buffer payload,
+            final String contentType,
             final Map<String, Object> properties) {
 
         Objects.requireNonNull(deviceId);
@@ -79,8 +85,12 @@ public final class AmqpAdapterClientTelemetrySenderImpl extends AbstractAmqpAdap
     }
 
     @Override
-    public Future<ProtonDelivery> send(final String deviceId, final byte[] payload, final String contentType,
-            final Map<String, Object> properties, final SpanContext context) {
+    public Future<ProtonDelivery> send(
+            final String deviceId,
+            final Buffer payload,
+            final String contentType,
+            final Map<String, Object> properties,
+            final SpanContext context) {
 
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(payload);
@@ -91,23 +101,33 @@ public final class AmqpAdapterClientTelemetrySenderImpl extends AbstractAmqpAdap
     }
 
     @Override
-    public Future<ProtonDelivery> sendAndWaitForOutcome(final String deviceId, final byte[] payload,
-            final String contentType, final Map<String, Object> properties) {
+    public Future<ProtonDelivery> sendAndWaitForOutcome(
+            final String deviceId,
+            final Buffer payload,
+            final String contentType,
+            final Map<String, Object> properties) {
 
         final Message msg = createMessage(deviceId, payload, contentType, properties);
         return sendAndWaitForOutcome(msg, NoopSpan.INSTANCE);
     }
 
     @Override
-    public Future<ProtonDelivery> sendAndWaitForOutcome(final String deviceId, final byte[] payload,
-            final String contentType, final Map<String, Object> properties, final SpanContext context) {
+    public Future<ProtonDelivery> sendAndWaitForOutcome(
+            final String deviceId,
+            final Buffer payload,
+            final String contentType,
+            final Map<String, Object> properties,
+            final SpanContext context) {
 
         final Span span = createSpan(deviceId, "send telemetry message", context);
         final Message msg = createMessage(deviceId, payload, contentType, properties);
         return sendAndWaitForOutcome(msg, span);
     }
 
-    private Message createMessage(final String deviceId, final byte[] payload, final String contentType,
+    private Message createMessage(
+            final String deviceId,
+            final Buffer payload,
+            final String contentType,
             final Map<String, Object> properties) {
         final String targetAddress = AddressHelper.getTargetAddress(TelemetryConstants.TELEMETRY_ENDPOINT, tenantId, deviceId, null);
         return createMessage(deviceId, payload, contentType, properties, targetAddress);

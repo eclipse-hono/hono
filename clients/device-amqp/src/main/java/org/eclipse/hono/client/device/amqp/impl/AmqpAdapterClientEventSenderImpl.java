@@ -29,6 +29,7 @@ import io.opentracing.SpanContext;
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.proton.ProtonDelivery;
 
 /**
@@ -37,7 +38,9 @@ import io.vertx.proton.ProtonDelivery;
 public final class AmqpAdapterClientEventSenderImpl extends AbstractAmqpAdapterClientSender
         implements EventSender, TraceableEventSender {
 
-    AmqpAdapterClientEventSenderImpl(final HonoConnection connection, final GenericSenderLink senderLink,
+    private AmqpAdapterClientEventSenderImpl(
+            final HonoConnection connection,
+            final GenericSenderLink senderLink,
             final String tenantId) {
         super(connection, senderLink, tenantId);
     }
@@ -55,7 +58,7 @@ public final class AmqpAdapterClientEventSenderImpl extends AbstractAmqpAdapterC
      * @return A future indicating the outcome.
      * @throws NullPointerException if con or tenantId is {@code null}.
      */
-    public static Future<EventSender> create(
+    public static Future<TraceableEventSender> create(
             final HonoConnection con,
             final String tenantId,
             final Handler<String> remoteCloseHook) {
@@ -68,7 +71,10 @@ public final class AmqpAdapterClientEventSenderImpl extends AbstractAmqpAdapterC
     }
 
     @Override
-    public Future<ProtonDelivery> send(final String deviceId, final byte[] payload, final String contentType,
+    public Future<ProtonDelivery> send(
+            final String deviceId,
+            final Buffer payload,
+            final String contentType,
             final Map<String, Object> properties) {
 
         Objects.requireNonNull(deviceId);
@@ -78,8 +84,12 @@ public final class AmqpAdapterClientEventSenderImpl extends AbstractAmqpAdapterC
     }
 
     @Override
-    public Future<ProtonDelivery> send(final String deviceId, final byte[] payload, final String contentType,
-            final Map<String, Object> properties, final SpanContext context) {
+    public Future<ProtonDelivery> send(
+            final String deviceId,
+            final Buffer payload,
+            final String contentType,
+            final Map<String, Object> properties,
+            final SpanContext context) {
 
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(payload);
@@ -88,8 +98,12 @@ public final class AmqpAdapterClientEventSenderImpl extends AbstractAmqpAdapterC
         return sendAndWaitForOutcome(deviceId, payload, contentType, properties, span);
     }
 
-    private Future<ProtonDelivery> sendAndWaitForOutcome(final String deviceId, final byte[] payload,
-            final String contentType, final Map<String, Object> properties, final Span span) {
+    private Future<ProtonDelivery> sendAndWaitForOutcome(
+            final String deviceId,
+            final Buffer payload,
+            final String contentType,
+            final Map<String, Object> properties,
+            final Span span) {
 
         final String targetAddress = AddressHelper.getTargetAddress(EventConstants.EVENT_ENDPOINT, tenantId, deviceId, null);
         final Message msg = createMessage(deviceId, payload, contentType, properties, targetAddress);

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,6 +16,7 @@ package org.eclipse.hono.client.device.amqp;
 import java.util.Map;
 
 import io.vertx.core.Future;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.proton.ProtonDelivery;
 
 /**
@@ -52,7 +53,7 @@ public interface TelemetrySender extends AmqpSenderLink {
      */
     Future<ProtonDelivery> send(
             String deviceId,
-            byte[] payload,
+            Buffer payload,
             String contentType,
             Map<String, Object> properties);
 
@@ -84,7 +85,7 @@ public interface TelemetrySender extends AmqpSenderLink {
      */
     Future<ProtonDelivery> sendAndWaitForOutcome(
             String deviceId,
-            byte[] payload,
+            Buffer payload,
             String contentType,
             Map<String, Object> properties);
 

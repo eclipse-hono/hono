@@ -17,7 +17,6 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.client.amqp.config.AddressHelper;
 import org.eclipse.hono.client.amqp.connection.ConnectionLifecycleWrapper;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.command.CommandConsumer;
@@ -30,6 +29,7 @@ import org.eclipse.hono.client.util.CachingClientFactory;
 import org.eclipse.hono.client.util.ClientFactory;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TelemetryConstants;
 
 import io.vertx.core.Future;
@@ -41,13 +41,11 @@ import io.vertx.core.Future;
 public final class AmqpAdapterClientFactoryImpl extends ConnectionLifecycleWrapper<HonoConnection>
         implements AmqpAdapterClientFactory {
 
+    private final String tenantId;
     private final HonoConnection connection;
-
     private final CachingClientFactory<TelemetrySender> telemetrySenderClientFactory;
     private final CachingClientFactory<EventSender> eventSenderClientFactory;
     private final CachingClientFactory<CommandResponder> commandResponseSenderClientFactory;
-
-    private final String tenantId;
     private final ClientFactory<CommandConsumer> commandConsumerFactory;
 
     /**
@@ -78,14 +76,16 @@ public final class AmqpAdapterClientFactoryImpl extends ConnectionLifecycleWrapp
     @Override
     public Future<TelemetrySender> getOrCreateTelemetrySender() {
 
-        final String cacheKey = AddressHelper.getTargetAddress(TelemetryConstants.TELEMETRY_ENDPOINT, tenantId, null, null);
+        final String cacheKey = ResourceIdentifier.fromPath(TelemetryConstants.TELEMETRY_ENDPOINT, tenantId).toString();
         return connection.isConnected(getDefaultConnectionCheckTimeout())
                 .compose(v -> connection.executeOnContext(result -> {
                     telemetrySenderClientFactory.getOrCreateClient(
                             cacheKey,
                             () -> AmqpAdapterClientTelemetrySenderImpl.create(
-                                    connection, tenantId,
-                                    onSenderClosed -> telemetrySenderClientFactory.removeClient(cacheKey)),
+                                    connection,
+                                    tenantId,
+                                    onSenderClosed -> telemetrySenderClientFactory.removeClient(cacheKey))
+                                .map(TelemetrySender.class::cast),
                             result);
                 }));
     }
@@ -93,14 +93,16 @@ public final class AmqpAdapterClientFactoryImpl extends ConnectionLifecycleWrapp
     @Override
     public Future<EventSender> getOrCreateEventSender() {
 
-        final String cacheKey = AddressHelper.getTargetAddress(EventConstants.EVENT_ENDPOINT, tenantId, null, null);
+        final String cacheKey = ResourceIdentifier.fromPath(EventConstants.EVENT_ENDPOINT, tenantId).toString();
         return connection.isConnected(getDefaultConnectionCheckTimeout())
                 .compose(v -> connection.executeOnContext(result -> {
                     eventSenderClientFactory.getOrCreateClient(
                             cacheKey,
                             () -> AmqpAdapterClientEventSenderImpl.create(
-                                    connection, tenantId,
-                                    onSenderClosed -> eventSenderClientFactory.removeClient(cacheKey)),
+                                    connection,
+                                    tenantId,
+                                    onSenderClosed -> eventSenderClientFactory.removeClient(cacheKey))
+                                .map(EventSender.class::cast),
                             result);
                 }));
     }
@@ -136,14 +138,18 @@ public final class AmqpAdapterClientFactoryImpl extends ConnectionLifecycleWrapp
     @Override
     public Future<CommandResponder> getOrCreateCommandResponseSender() {
 
-        final String cacheKey = CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT + "/" + tenantId;
+        final String cacheKey = ResourceIdentifier.fromPath(
+                CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT,
+                tenantId)
+            .toString();
         return connection.isConnected(getDefaultConnectionCheckTimeout())
                 .compose(v -> connection.executeOnContext(result -> {
                     commandResponseSenderClientFactory.getOrCreateClient(
                             cacheKey,
                             () -> AmqpAdapterClientCommandResponseSender.create(
                                     connection, tenantId,
-                                    onSenderClosed -> commandResponseSenderClientFactory.removeClient(cacheKey)),
+                                    onSenderClosed -> commandResponseSenderClientFactory.removeClient(cacheKey))
+                                .map(CommandResponder.class::cast),
                             result);
                 }));
     }

@@ -16,6 +16,7 @@ package org.eclipse.hono.client.device.amqp;
 import java.util.Map;
 
 import io.vertx.core.Future;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.proton.ProtonDelivery;
 
 /**
@@ -45,7 +46,13 @@ public interface CommandResponder extends AmqpSenderLink {
      *
      * @throws NullPointerException if any of deviceId, targetAddress, or correlationId is {@code null}.
      */
-    Future<ProtonDelivery> sendCommandResponse(String deviceId, String targetAddress, String correlationId, int status,
-            byte[] payload, String contentType, Map<String, Object> properties);
+    Future<ProtonDelivery> sendCommandResponse(
+            String deviceId,
+            String targetAddress,
+            String correlationId,
+            int status,
+            Buffer payload,
+            String contentType,
+            Map<String, Object> properties);
 
 }
