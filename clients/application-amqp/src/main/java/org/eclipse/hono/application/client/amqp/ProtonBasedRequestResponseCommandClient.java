@@ -15,7 +15,6 @@ package org.eclipse.hono.application.client.amqp;
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,7 +26,6 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.AbstractRequestResponseServiceClient;
 import org.eclipse.hono.client.amqp.RequestResponseClient;
-import org.eclipse.hono.client.amqp.config.AddressHelper;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.util.CachingClientFactory;
@@ -37,6 +35,7 @@ import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RequestResponseResult;
+import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -98,7 +97,6 @@ public final class ProtonBasedRequestResponseCommandClient extends
      * @param replyId An arbitrary string which gets used for the response link address in the form of
      *            <em>command_response/${tenantId}/${replyId}</em>. If it is {@code null} then an unique 
      *                identifier generated using {@link UUID#randomUUID()} is used.
-     * @param properties The headers to include in the command message as AMQP application properties.
      * @param timeout The duration after which the send command request times out. If the timeout is {@code null}
      *                then the default timeout value of {@value #DEFAULT_COMMAND_TIMEOUT_IN_MS} ms is used.
      *                If the timeout duration is set to 0 then the send command request never times out.
@@ -122,7 +120,6 @@ public final class ProtonBasedRequestResponseCommandClient extends
             final String contentType,
             final Buffer data,
             final String replyId,
-            final Map<String, Object> properties,
             final Duration timeout,
             final SpanContext context) {
 
@@ -142,15 +139,14 @@ public final class ProtonBasedRequestResponseCommandClient extends
         final Span currentSpan = newChildSpan(context, "send command and receive response");
 
         return getOrCreateClient(tenantId, replyId)
-                .map(client -> {
-                    client.setRequestTimeout(timeoutInMs);
-                    return client;
-                })
+                .onSuccess(client -> client.setRequestTimeout(timeoutInMs))
                 .compose(client -> {
-                    final String messageTargetAddress = AddressHelper.getTargetAddress(
-                            CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, tenantId, deviceId,
-                            connection.getConfig());
-                    return client.createAndSendRequest(command, messageTargetAddress, properties, data, contentType,
+                    final String messageTargetAddress = ResourceIdentifier.from(
+                                CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT,
+                                tenantId,
+                                deviceId)
+                            .toString();
+                    return client.createAndSendRequest(command, messageTargetAddress, null, data, contentType,
                             this::mapCommandResponse, currentSpan);
                 })
                 .recover(error -> {
@@ -165,7 +161,8 @@ public final class ProtonBasedRequestResponseCommandClient extends
                         final DownstreamMessage<AmqpMessageContext> commandResponseMessage = result.getPayload();
                         setTagsForResult(currentSpan, result);
                         if (result.isError()) {
-                            final String detailMessage = commandResponseMessage.getPayload() != null && commandResponseMessage.getPayload().length() > 0
+                            final String detailMessage = commandResponseMessage.getPayload() != null
+                                    && commandResponseMessage.getPayload().length() > 0
                                     ? commandResponseMessage.getPayload().toString(StandardCharsets.UTF_8)
                                     : null;
                             return Future.failedFuture(StatusCodeMapper.from(result.getStatus(), detailMessage));
@@ -176,12 +173,13 @@ public final class ProtonBasedRequestResponseCommandClient extends
                 .onComplete(r -> currentSpan.finish());
     }
 
-    private RequestResponseResult<DownstreamMessage<AmqpMessageContext>> mapCommandResponse(final Message message,
+    private RequestResponseResult<DownstreamMessage<AmqpMessageContext>> mapCommandResponse(
+            final Message message,
             final ProtonDelivery delivery) {
+
         final DownstreamMessage<AmqpMessageContext> downStreamMessage = ProtonBasedDownstreamMessage.from(message, delivery);
 
-        return Optional
-                .ofNullable(MessageHelper.getStatus(message))
+        return Optional.ofNullable(MessageHelper.getStatus(message))
                 .map(status -> new RequestResponseResult<>(status, downStreamMessage,
                         CacheDirective.from(MessageHelper.getCacheDirective(message)), null))
                 .orElseGet(() -> {
@@ -200,10 +198,13 @@ public final class ProtonBasedRequestResponseCommandClient extends
      * @throws UnsupportedOperationException if this method is invoked.
      */
     @Override
-    protected RequestResponseResult<DownstreamMessage<AmqpMessageContext>> getResult(final int status,
-            final String contentType, final Buffer payload, final CacheDirective cacheDirective,
+    protected RequestResponseResult<DownstreamMessage<AmqpMessageContext>> getResult(
+            final int status,
+            final String contentType,
+            final Buffer payload,
+            final CacheDirective cacheDirective,
             final ApplicationProperties applicationProperties) {
-        // This method is not used but need to be overridden as it is defined as abstract in the parent class
+
         throw new UnsupportedOperationException();
     }
 

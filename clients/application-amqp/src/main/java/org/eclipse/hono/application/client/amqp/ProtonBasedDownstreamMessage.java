@@ -180,7 +180,7 @@ public final class ProtonBasedDownstreamMessage implements DownstreamMessage<Amq
      */
     @Override
     public String getCorrelationId() {
-        return Optional.ofNullable(MessageHelper.getCorrelationId(message))
+        return Optional.ofNullable(message.getCorrelationId())
                 .filter(String.class::isInstance)
                 .map(String.class::cast)
                 .orElse(null);

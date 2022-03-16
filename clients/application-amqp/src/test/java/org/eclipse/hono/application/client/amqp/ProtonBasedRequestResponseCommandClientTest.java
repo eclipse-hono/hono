@@ -23,8 +23,6 @@ import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -104,7 +102,6 @@ public class ProtonBasedRequestResponseCommandClientTest {
     public void testSendCommandSucceeds(final VertxTestContext ctx) {
         final String subject = "setVolume";
         final String replyId = UUID.randomUUID().toString();
-        final Map<String, Object> properties = Map.of("appKey", "appValue");
         final int commandStatus = HttpURLConnection.HTTP_OK;
         final String responseContentType = MessageHelper.CONTENT_TYPE_APPLICATION_JSON;
         final String responsePayload = "{\"status\": 1}";
@@ -112,7 +109,7 @@ public class ProtonBasedRequestResponseCommandClientTest {
         // WHEN sending a command with some application properties and payload
         requestResponseCommandClient
                 .sendCommand(tenantId, deviceId, subject, null, Buffer.buffer("{\"value\": 20}"), replyId,
-                        properties, null, NoopSpan.INSTANCE.context())
+                        null, NoopSpan.INSTANCE.context())
                 .onComplete(ctx.succeeding(response -> {
                     ctx.verify(() -> {
                         // VERIFY the properties of the received response.
@@ -127,7 +124,6 @@ public class ProtonBasedRequestResponseCommandClientTest {
         final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
         assertThat(sentMessage.getSubject()).isEqualTo(subject);
         assertThat(sentMessage.getReplyTo()).endsWith(replyId);
-        assertThat(AmqpUtils.getApplicationProperty(sentMessage, "appKey", String.class)).isEqualTo("appValue");
 
         final Message response = ProtonHelper.message();
         response.setCorrelationId(sentMessage.getMessageId());
@@ -147,14 +143,13 @@ public class ProtonBasedRequestResponseCommandClientTest {
     public void testSendCommandFailsForErrorStatusResponse(final VertxTestContext ctx) {
         final String subject = "setVolume";
         final String replyId = UUID.randomUUID().toString();
-        final Map<String, Object> properties = Map.of("appKey", "appValue");
         final int commandStatus = HttpURLConnection.HTTP_BAD_REQUEST;
         final String responsePayload = "Unsupported command";
 
         // WHEN sending a command with some application properties and payload
         requestResponseCommandClient
                 .sendCommand(tenantId, deviceId, subject, null, Buffer.buffer("{\"value\": 20}"), replyId,
-                        properties, null, NoopSpan.INSTANCE.context())
+                        null, NoopSpan.INSTANCE.context())
                 .onComplete(ctx.failing(thr -> {
                     ctx.verify(() -> {
                         // VERIFY the returned exception
@@ -169,7 +164,6 @@ public class ProtonBasedRequestResponseCommandClientTest {
         final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
         assertThat(sentMessage.getSubject()).isEqualTo(subject);
         assertThat(sentMessage.getReplyTo()).endsWith(replyId);
-        assertThat(AmqpUtils.getApplicationProperty(sentMessage, "appKey", String.class)).isEqualTo("appValue");
 
         final Message response = ProtonHelper.message();
         response.setCorrelationId(sentMessage.getMessageId());
@@ -194,12 +188,16 @@ public class ProtonBasedRequestResponseCommandClientTest {
     @Test
     public void testSendCommandSetsProperties() {
         final String replyId = UUID.randomUUID().toString();
-        final Map<String, Object> applicationProperties = new HashMap<>();
-        applicationProperties.put("appKey", "appValue");
 
-        requestResponseCommandClient
-                .sendCommand(tenantId, deviceId, "doSomething", "text/plain", Buffer.buffer("payload"), replyId,
-                        applicationProperties, null, NoopSpan.INSTANCE.context());
+        requestResponseCommandClient.sendCommand(
+                tenantId,
+                deviceId,
+                "doSomething",
+                "text/plain",
+                Buffer.buffer("payload"),
+                replyId,
+                Duration.ofSeconds(10),
+                NoopSpan.INSTANCE.context());
 
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
         verify(sender).send(messageCaptor.capture(), VertxMockSupport.anyHandler());
@@ -210,8 +208,6 @@ public class ProtonBasedRequestResponseCommandClientTest {
         assertThat(messageCaptor.getValue().getSubject()).isEqualTo("doSomething");
         assertNotNull(messageCaptor.getValue().getMessageId());
         assertThat(messageCaptor.getValue().getContentType()).isEqualTo("text/plain");
-        assertNotNull(messageCaptor.getValue().getApplicationProperties());
-        assertThat(messageCaptor.getValue().getApplicationProperties().getValue().get("appKey")).isEqualTo("appValue");
     }
 
     /**
@@ -223,7 +219,6 @@ public class ProtonBasedRequestResponseCommandClientTest {
     void testSendCommandAndReceiveResponseTimesOut(final VertxTestContext ctx) {
         final String subject = "sendCommandTimesOut";
         final String replyId = UUID.randomUUID().toString();
-        final Map<String, Object> properties = Map.of("appKey", "appValue");
 
         // Run the timer immediately to simulate the time out.
         VertxMockSupport.runTimersImmediately(vertx);
@@ -231,7 +226,7 @@ public class ProtonBasedRequestResponseCommandClientTest {
         // WHEN sending a command with some application properties and payload
         requestResponseCommandClient
                 .sendCommand(tenantId, deviceId, subject, null, Buffer.buffer("test"), replyId,
-                        properties, Duration.ofMillis(1), NoopSpan.INSTANCE.context())
+                        Duration.ofMillis(1), NoopSpan.INSTANCE.context())
                 .onComplete(ctx.failing(error -> {
                     ctx.verify(() -> {
                         // VERIFY the error code.

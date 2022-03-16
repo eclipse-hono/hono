@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -79,15 +79,27 @@ public class Commander extends AbstractApplicationClient {
         final Future<Void> sendResult;
         if (command.isOneWay()) {
             System.out.println("Command sent to device.");
-            sendResult = client.sendOneWayCommand(tenantId, deviceId, command.getName(), command.getContentType(),
-                    Buffer.buffer(command.getPayload()), null, null);
+            sendResult = client.sendOneWayCommand(
+                    tenantId,
+                    deviceId,
+                    command.getName(),
+                    command.getContentType(),
+                    Buffer.buffer(command.getPayload()),
+                    null);
         } else {
             System.out.printf("Command sent to device... [waiting for response for max. %d seconds]", commandTimeOutInSeconds);
             System.out.println();
-            sendResult = client.sendCommand(tenantId, deviceId, command.getName(), command.getContentType(),
-                    Buffer.buffer(command.getPayload()), UUID.randomUUID().toString(), null,
-                    Duration.ofSeconds(commandTimeOutInSeconds), null)
-                    .map(this::printResponse);
+            sendResult = client.sendCommand(
+                    tenantId,
+                    deviceId,
+                    command.getName(),
+                    command.getContentType(),
+                    Buffer.buffer(command.getPayload()),
+                    UUID.randomUUID().toString(),
+                    Duration.ofSeconds(commandTimeOutInSeconds),
+                    null)
+                .onSuccess(this::printResponse)
+                .mapEmpty();
         }
 
         return sendResult.otherwise(error -> {
@@ -102,11 +114,10 @@ public class Commander extends AbstractApplicationClient {
         });
     }
 
-    private Void printResponse(final DownstreamMessage<?> result) {
+    private void printResponse(final DownstreamMessage<?> result) {
         System.out.printf("Received Command response: %s",
                 Optional.ofNullable(result.getPayload()).orElseGet(Buffer::buffer));
         System.out.println();
-        return null;
     }
 
     private Future<Command> getCommandFromUser() {

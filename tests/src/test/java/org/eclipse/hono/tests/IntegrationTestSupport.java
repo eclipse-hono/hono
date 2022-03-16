@@ -1207,7 +1207,7 @@ public final class IntegrationTestSupport {
         LOGGER.trace("sending command [name: {}, contentType: {}, payload: {}]", command, contentType, payload);
         // send the command upstream to the device and receive the command response
         final Future<? extends DownstreamMessage<?>> sendCommandTracker = applicationClient
-                .sendCommand(tenantId, deviceId, command, contentType, payload, null)
+                .sendCommand(tenantId, deviceId, command, contentType, payload)
                 .onComplete(ar -> {
                     vertx.cancelTimer(timerId);
                     timeOutTracker.tryComplete();
@@ -1277,8 +1277,7 @@ public final class IntegrationTestSupport {
 
         // send the one way command upstream to the device
         final Future<Void> sendOneWayCommandTracker = applicationClient
-                .sendOneWayCommand(tenantId, deviceId, command, contentType, payload, null,
-                        NoopSpan.INSTANCE.context())
+                .sendOneWayCommand(tenantId, deviceId, command, contentType, payload, NoopSpan.INSTANCE.context())
                 .onComplete(ar -> {
                     vertx.cancelTimer(timerId);
                     timeOutTracker.tryComplete();

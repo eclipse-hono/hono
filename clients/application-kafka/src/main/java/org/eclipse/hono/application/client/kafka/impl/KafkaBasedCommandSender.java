@@ -145,14 +145,13 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
             final Buffer data,
             final String correlationId,
             final String replyId,
-            final Map<String, Object> properties,
             final SpanContext context) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(command);
         Objects.requireNonNull(correlationId);
 
-        return sendCommand(tenantId, deviceId, command, contentType, data, correlationId, properties, true,
+        return sendCommand(tenantId, deviceId, command, contentType, data, correlationId, true,
                 "send command", context);
     }
 
@@ -163,13 +162,12 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
             final String command,
             final String contentType,
             final Buffer data,
-            final Map<String, Object> properties,
             final SpanContext context) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(command);
 
-        return sendCommand(tenantId, deviceId, command, contentType, data, null, properties, false,
+        return sendCommand(tenantId, deviceId, command, contentType, data, null, false,
                 "send one-way command", context);
     }
 
@@ -191,7 +189,6 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
             final String contentType,
             final Buffer data,
             final String replyId,
-            final Map<String, Object> properties,
             final Duration timeout,
             final SpanContext context) {
         Objects.requireNonNull(tenantId);
@@ -227,7 +224,7 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
                     // Store the correlation id and the expiring command promise
                     pendingCommandResponses.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>())
                             .put(correlationId, expiringCommandPromise);
-                    return sendCommand(tenantId, deviceId, command, contentType, data, correlationId, properties,
+                    return sendCommand(tenantId, deviceId, command, contentType, data, correlationId,
                             true, "send command", span.context())
                                     .onSuccess(sent -> {
                                         LOGGER.debug("sent command [correlation-id: {}], waiting for response", correlationId);
@@ -264,14 +261,20 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
         this.correlationIdSupplier = Objects.requireNonNull(correlationIdSupplier);
     }
 
-    private Future<Void> sendCommand(final String tenantId, final String deviceId, final String command,
-            final String contentType, final Buffer data, final String correlationId,
-            final Map<String, Object> properties, final boolean responseRequired, final String spanOperationName,
+    private Future<Void> sendCommand(
+            final String tenantId,
+            final String deviceId,
+            final String command,
+            final String contentType,
+            final Buffer data,
+            final String correlationId,
+            final boolean responseRequired,
+            final String spanOperationName,
             final SpanContext context) {
 
         final HonoTopic topic = new HonoTopic(HonoTopic.Type.COMMAND, tenantId);
         final Map<String, Object> headerProperties = getHeaderProperties(deviceId, command, contentType, correlationId,
-                responseRequired, properties);
+                responseRequired);
         final String topicName = topic.toString();
         final Span currentSpan = startChildSpan(spanOperationName, topicName, tenantId, deviceId, context);
         return sendAndWaitForOutcome(
@@ -285,12 +288,9 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
     }
 
     private Map<String, Object> getHeaderProperties(final String deviceId, final String subject,
-            final String contentType, final String correlationId, final boolean responseRequired,
-            final Map<String, Object> properties) {
+            final String contentType, final String correlationId, final boolean responseRequired) {
 
-        final Map<String, Object> props = Optional.ofNullable(properties)
-                .map(HashMap::new)
-                .orElseGet(HashMap::new);
+        final Map<String, Object> props = new HashMap<>();
 
         props.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
         props.put(MessageHelper.SYS_PROPERTY_SUBJECT, subject);

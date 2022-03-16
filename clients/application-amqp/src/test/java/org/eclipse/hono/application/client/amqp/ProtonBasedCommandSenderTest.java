@@ -22,7 +22,6 @@ import static org.mockito.Mockito.when;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -105,14 +104,13 @@ public class ProtonBasedCommandSenderTest {
         final String tenantId = UUID.randomUUID().toString();
         final String deviceId = UUID.randomUUID().toString();
         final String subject = "setVolume";
-        final Map<String, Object> applicationProperties = Map.of("appKey", "appValue");
         final ArgumentCaptor<Handler<ProtonDelivery>> dispositionHandlerCaptor = VertxMockSupport.argumentCaptorHandler();
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
 
         // WHEN sending a one-way command with some application properties and payload
         final Future<Void> sendCommandFuture = commandSender
                 .sendOneWayCommand(tenantId, deviceId, subject, null, Buffer.buffer("{\"value\": 20}"),
-                        applicationProperties, NoopSpan.INSTANCE.context())
+                        NoopSpan.INSTANCE.context())
                 .onComplete(ctx.succeedingThenComplete());
 
         // VERIFY that the command is being sent
@@ -128,7 +126,6 @@ public class ProtonBasedCommandSenderTest {
         final Message message = messageCaptor.getValue();
         assertThat(MessageHelper.getDeviceId(message)).isEqualTo(deviceId);
         assertThat(message.getSubject()).isEqualTo(subject);
-        assertThat(AmqpUtils.getApplicationProperty(message, "appKey", String.class)).isEqualTo("appValue");
         assertThat(sendCommandFuture.isComplete()).isTrue();
     }
 
@@ -144,14 +141,13 @@ public class ProtonBasedCommandSenderTest {
         final String subject = "setVolume";
         final String correlationId = UUID.randomUUID().toString();
         final String replyId = "reply-id";
-        final Map<String, Object> applicationProperties = Map.of("appKey", "appValue");
         final ArgumentCaptor<Handler<ProtonDelivery>> dispositionHandlerCaptor = VertxMockSupport.argumentCaptorHandler();
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
 
         // WHEN sending a one-way command with some application properties and payload
         final Future<Void> sendCommandFuture = commandSender
                 .sendAsyncCommand(tenantId, deviceId, subject, null, Buffer.buffer("{\"value\": 20}"),
-                        correlationId, replyId, applicationProperties, NoopSpan.INSTANCE.context())
+                        correlationId, replyId, NoopSpan.INSTANCE.context())
                 .onComplete(ctx.succeedingThenComplete());
 
         // VERIFY that the command is being sent
@@ -167,8 +163,7 @@ public class ProtonBasedCommandSenderTest {
         final Message message = messageCaptor.getValue();
         assertThat(MessageHelper.getDeviceId(message)).isEqualTo(deviceId);
         assertThat(message.getSubject()).isEqualTo(subject);
-        assertThat(MessageHelper.getCorrelationId(message)).isEqualTo(correlationId);
-        assertThat(AmqpUtils.getApplicationProperty(message, "appKey", String.class)).isEqualTo("appValue");
+        assertThat(message.getCorrelationId()).isEqualTo(correlationId);
         assertThat(sendCommandFuture.isComplete()).isTrue();
     }
 

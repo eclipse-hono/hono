@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,7 +19,6 @@ import static com.google.common.truth.Truth.assertThat;
 import java.net.HttpURLConnection;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -138,7 +137,6 @@ public class KafkaBasedCommandSenderTest {
      */
     @Test
     public void testSendAsyncCommandSucceeds(final VertxTestContext ctx) {
-        final Map<String, Object> headerProperties = Map.of("appKey", "appValue");
         final String correlationId = UUID.randomUUID().toString();
         final String subject = "setVolume";
 
@@ -150,7 +148,6 @@ public class KafkaBasedCommandSenderTest {
                 new JsonObject().put("value", 20).toBuffer(),
                 correlationId,
                 null,
-                headerProperties,
                 null)
             .onComplete(ctx.succeeding(ok -> {
                 ctx.verify(() -> {
@@ -173,10 +170,6 @@ public class KafkaBasedCommandSenderTest {
                             commandRecord.headers(),
                             MessageHelper.SYS_PROPERTY_CORRELATION_ID,
                             correlationId);
-                    KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
-                            commandRecord.headers(),
-                            "appKey",
-                            "appValue");
                     verify(span).finish();
                 });
                 ctx.completeNow();
@@ -190,7 +183,6 @@ public class KafkaBasedCommandSenderTest {
      */
     @Test
     public void testSendOneWayCommandSucceeds(final VertxTestContext ctx) {
-        final Map<String, Object> headerProperties = Map.of("appKey", "appValue");
         final String subject = "setVolume";
 
         commandSender.sendOneWayCommand(
@@ -199,7 +191,6 @@ public class KafkaBasedCommandSenderTest {
                 subject,
                 "application/json",
                 new JsonObject().put("value", 20).toBuffer(),
-                headerProperties,
                 NoopSpan.INSTANCE.context())
             .onComplete(ctx.succeeding(ok -> {
                 ctx.verify(() -> {
@@ -218,10 +209,6 @@ public class KafkaBasedCommandSenderTest {
                             commandRecord.headers(),
                             MessageHelper.SYS_PROPERTY_CONTENT_TYPE,
                             "application/json");
-                    KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
-                            commandRecord.headers(),
-                            "appKey",
-                            "appValue");
                     verify(span).finish();
                 });
                 ctx.completeNow();
@@ -229,9 +216,7 @@ public class KafkaBasedCommandSenderTest {
     }
 
     /**
-     * Verifies that
-     * {@link org.eclipse.hono.application.client.CommandSender#sendCommand(String, String, String, String, Buffer, String, Map, Duration, io.opentracing.SpanContext)}
-     * fails as the timeout is reached.
+     * Verifies that the sending a command fails as the timeout is reached.
      *
      * @param ctx The vert.x test context.
      */
@@ -246,7 +231,6 @@ public class KafkaBasedCommandSenderTest {
                     "testCommand",
                     "text/plain",
                     Buffer.buffer("data"),
-                    null,
                     null,
                     Duration.ofMillis(5),
                     null)
@@ -275,9 +259,7 @@ public class KafkaBasedCommandSenderTest {
     }
 
     /**
-     * Verifies that
-     * {@link org.eclipse.hono.application.client.CommandSender#sendCommand(String, String, String, String, Buffer, Map)}
-     * fails if the response status indicates a failure.
+     * Verifies that sending a command fails if the response status indicates a failure.
      *
      * @param ctx The vert.x test context.
      */
@@ -290,9 +272,7 @@ public class KafkaBasedCommandSenderTest {
     }
 
     /**
-     * Verifies that
-     * {@link org.eclipse.hono.application.client.CommandSender#sendCommand(String, String, String, String, Buffer, Map)}
-     * fails if the response does not contain a status header.
+     * Verifies that sending a command fails if the response does not contain a status header.
      *
      * @param ctx The vert.x test context.
      */
@@ -334,8 +314,6 @@ public class KafkaBasedCommandSenderTest {
                 producerConfig,
                 NoopTracerFactory.create());
 
-        final Map<String, Object> headerProperties = new HashMap<>();
-        headerProperties.put("appKey", "appValue");
         final String command = "setVolume";
         final ConsumerRecord<String, Buffer> commandResponseRecord = commandResponseRecord(tenantId,
                 deviceId, correlationId, responseStatus, Buffer.buffer(responsePayload));
@@ -357,7 +335,7 @@ public class KafkaBasedCommandSenderTest {
 
         context.runOnContext(v -> {
             // Send a command to the device
-            commandSender.sendCommand(tenantId, deviceId, command, "text/plain", Buffer.buffer("test"), headerProperties)
+            commandSender.sendCommand(tenantId, deviceId, command, "text/plain", Buffer.buffer("test"))
                     .onComplete(ar -> {
                         ctx.verify(() -> {
                             if (expectSuccess) {
