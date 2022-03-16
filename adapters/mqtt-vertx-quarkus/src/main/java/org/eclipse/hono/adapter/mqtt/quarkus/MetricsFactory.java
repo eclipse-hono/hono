@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -43,6 +43,7 @@ public class MetricsFactory {
             final Vertx vertx,
             final MeterRegistry registry,
             final MqttProtocolAdapterProperties adapterProperties) {
+        // define tags before the first metric gets created in the MicrometerBasedMqttAdapterMetrics constructor
         registry.config().commonTags(MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_MQTT));
         final var metrics = new MicrometerBasedMqttAdapterMetrics(registry, vertx);
         metrics.setProtocolAdapterProperties(adapterProperties);
