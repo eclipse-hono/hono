@@ -58,14 +58,17 @@ public class Application extends AbstractServiceApplication {
     }
 
     @Override
+    protected void setCommonMetricsTags() {
+        LOG.info("adding common tags to meter registry");
+        meterRegistry.config().commonTags(MetricsTags.forService(Constants.SERVICE_NAME_DEVICE_REGISTRY));
+    }
+
+    @Override
     protected void doStart() {
 
         if (!(authenticationService instanceof Verticle)) {
             throw new IllegalStateException("Authentication service must be a vert.x Verticle");
         }
-
-        LOG.info("adding common tags to meter registry");
-        meterRegistry.config().commonTags(MetricsTags.forService(Constants.SERVICE_NAME_DEVICE_REGISTRY));
 
         LOG.info("deploying {} {} instances ...", appConfig.getMaxInstances(), getComponentName());
 
