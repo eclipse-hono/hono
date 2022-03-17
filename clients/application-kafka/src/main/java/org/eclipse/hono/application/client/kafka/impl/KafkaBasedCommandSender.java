@@ -13,7 +13,6 @@
 package org.eclipse.hono.application.client.kafka.impl;
 
 import java.net.HttpURLConnection;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
@@ -318,8 +317,7 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
     }
 
     /**
-     * Maps the status according to
-     * {@link CommandSender#sendCommand(String, String, String, String, Buffer, String, Map, Duration, SpanContext)}.
+     * Maps a command response to a future based on the status property.
      *
      * @param message The received command response.
      * @return The outcome: a succeeded future if the message contains a 2xx status and a failed future otherwise.
@@ -336,10 +334,11 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
         if (StatusCodeMapper.isSuccessful(status)) {
             return Future.succeededFuture(message);
         } else {
-            final String detailMessage = message.getPayload() != null && message.getPayload().length() > 0
-                    ? message.getPayload().toString(StandardCharsets.UTF_8)
-                    : null;
-            return Future.failedFuture(StatusCodeMapper.from(status, detailMessage));
+            final var detail = Optional.ofNullable(message.getPayload())
+                    .filter(b -> b.length() > 0)
+                    .map(Buffer::toString)
+                    .orElse(null);
+            return Future.failedFuture(StatusCodeMapper.from(status, detail));
         }
     }
 
