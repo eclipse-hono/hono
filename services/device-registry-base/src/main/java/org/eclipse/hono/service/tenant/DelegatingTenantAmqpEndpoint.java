@@ -23,6 +23,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AbstractDelegatingRequestResponseEndpoint;
 import org.eclipse.hono.service.amqp.AbstractRequestResponseEndpoint;
+import org.eclipse.hono.service.amqp.GenericRequestMessageFilter;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -239,7 +240,7 @@ public class DelegatingTenantAmqpEndpoint<S extends TenantService>
 
     @Override
     protected boolean passesFormalVerification(final ResourceIdentifier linkTarget, final Message msg) {
-        return TenantMessageFilter.verify(linkTarget, msg);
+        return GenericRequestMessageFilter.isValidRequestMessage(msg);
     }
 
     /**
@@ -255,7 +256,7 @@ public class DelegatingTenantAmqpEndpoint<S extends TenantService>
         if (replyToAddress == null) {
             return false;
         } else {
-            return replyToAddress.getResourcePath().length >= 2;
+            return replyToAddress.length() >= 2;
         }
     }
 

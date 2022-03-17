@@ -16,6 +16,7 @@ import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
@@ -96,7 +97,8 @@ public abstract class AbstractRequestResponseEndpoint<T extends ServiceConfigPro
         Objects.requireNonNull(request);
         Objects.requireNonNull(result);
 
-        final Object correlationId = MessageHelper.getCorrelationId(request);
+        final Object correlationId = Optional.ofNullable(request.getCorrelationId())
+                .orElseGet(request::getMessageId);
 
         if (correlationId == null) {
             throw new IllegalArgumentException("request must contain correlation ID");
@@ -151,9 +153,11 @@ public abstract class AbstractRequestResponseEndpoint<T extends ServiceConfigPro
             throw new IllegalArgumentException("illegal status code");
         }
 
+        final var correlationId = Optional.ofNullable(requestMessage.getCorrelationId())
+                .orElseGet(requestMessage::getMessageId);
         final Message message = ProtonHelper.message();
         MessageHelper.addStatus(message, status);
-        message.setCorrelationId(MessageHelper.getCorrelationId(requestMessage));
+        message.setCorrelationId(correlationId);
         if (errorDescription != null) {
             MessageHelper.setPayload(message, MessageHelper.CONTENT_TYPE_TEXT_PLAIN, Buffer.buffer(errorDescription));
         }
@@ -530,7 +534,7 @@ public abstract class AbstractRequestResponseEndpoint<T extends ServiceConfigPro
         if (replyToAddress == null) {
             return false;
         } else {
-            return replyToAddress.getResourcePath().length >= 3;
+            return replyToAddress.length() >= 3;
         }
     }
 

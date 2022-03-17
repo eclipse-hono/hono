@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -10,37 +10,38 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
+package org.eclipse.hono.service.amqp;
 
-package org.eclipse.hono.service.commandrouter;
+import java.util.Optional;
 
 import org.apache.qpid.proton.message.Message;
-import org.eclipse.hono.service.BaseMessageFilter;
-import org.eclipse.hono.util.MessageHelper;
-import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A filter for verifying the format of <em>Command Router API</em> request messages.
+ * A generic filter for checking existence and correctness of mandatory request message properties.
+ *
  */
-public final class CommandRouterMessageFilter extends BaseMessageFilter {
+public class GenericRequestMessageFilter {
 
-    private static final Logger LOG = LoggerFactory.getLogger(CommandRouterMessageFilter.class);
+    private static final Logger LOG = LoggerFactory.getLogger(GenericRequestMessageFilter.class);
 
-    private CommandRouterMessageFilter() {
-        // prevent instantiation
+    /**
+     * Empty default constructor.
+     */
+    protected GenericRequestMessageFilter() {
     }
 
     /**
-     * Checks whether a given command router message contains all properties required by all operations.
+     * Checks if a given AMQP 1.0 request message contains properties required for responding to it.
      *
-     * @param linkTarget The resource path to check the message's properties against for consistency.
      * @param msg The AMQP 1.0 message to perform the checks on.
-     * @return {@code true} if the message passes all checks.
+     * @return {@code true} if the message's subject and reply-to properties have a non-empty value and the
+     *         message's correlation-id or message-id property has a non-empty value.
      */
-    public static boolean verify(final ResourceIdentifier linkTarget, final Message msg) {
+    public static boolean isValidRequestMessage(final Message msg) {
 
-        final Object correlationId = MessageHelper.getCorrelationId(msg);
+        final var correlationId = Optional.ofNullable(msg.getCorrelationId()).orElseGet(msg::getMessageId);
 
         if (correlationId == null) {
             LOG.trace("message has neither a message-id nor correlation-id");
@@ -55,5 +56,4 @@ public final class CommandRouterMessageFilter extends BaseMessageFilter {
             return true;
         }
     }
-
 }

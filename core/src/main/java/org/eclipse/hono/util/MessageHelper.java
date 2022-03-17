@@ -695,19 +695,6 @@ public final class MessageHelper {
     }
 
     /**
-     * Checks if a message's body consists of an AMQP <em>Data</em> section.
-     *
-     * @param message The message to check.
-     * @return {@code true} if the body consists of a Data section, {@code false} otherwise.
-     * @throws NullPointerException If message is {@code null}.
-     */
-    public static boolean hasDataBody(final Message message) {
-
-        Objects.requireNonNull(message);
-        return message.getBody() instanceof Data;
-    }
-
-    /**
      * Gets the identifier to use for correlating to a given message.
      *
      * @param message The message to correlate to.

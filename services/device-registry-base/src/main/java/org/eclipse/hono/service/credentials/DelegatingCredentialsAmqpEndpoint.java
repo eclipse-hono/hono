@@ -21,6 +21,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AbstractDelegatingRequestResponseEndpoint;
 import org.eclipse.hono.service.amqp.AbstractRequestResponseEndpoint;
+import org.eclipse.hono.service.amqp.GenericRequestMessageFilter;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -197,6 +198,6 @@ public class DelegatingCredentialsAmqpEndpoint<S extends CredentialsService> ext
 
     @Override
     protected boolean passesFormalVerification(final ResourceIdentifier linkTarget, final Message msg) {
-        return CredentialsMessageFilter.verify(linkTarget, msg);
+        return GenericRequestMessageFilter.isValidRequestMessage(msg);
     }
 }

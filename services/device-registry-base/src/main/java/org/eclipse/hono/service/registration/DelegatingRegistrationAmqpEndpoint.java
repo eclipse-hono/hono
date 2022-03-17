@@ -20,6 +20,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AbstractDelegatingRequestResponseEndpoint;
 import org.eclipse.hono.service.amqp.AbstractRequestResponseEndpoint;
+import org.eclipse.hono.service.amqp.GenericRequestMessageFilter;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
@@ -141,7 +142,7 @@ public class DelegatingRegistrationAmqpEndpoint<S extends RegistrationService> e
 
     @Override
     protected boolean passesFormalVerification(final ResourceIdentifier linkTarget, final Message msg) {
-        return RegistrationMessageFilter.verify(linkTarget, msg);
+        return GenericRequestMessageFilter.isValidRequestMessage(msg);
     }
 
 }
