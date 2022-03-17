@@ -13,8 +13,6 @@
 
 package org.eclipse.hono.client.device.amqp;
 
-import java.util.Map;
-
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
@@ -35,9 +33,6 @@ public interface TraceableEventSender extends EventSender {
      * @param contentType The content type of the payload (may be {@code null}).
      *            <p>
      *            This parameter will be used as the value for the message's <em>content-type</em> property.
-     * @param properties Optional application properties (may be {@code null}).
-     *            <p>
-     *            AMQP application properties that can be used for carrying data in the message other than the payload.
      * @param context The context to create the span in. If {@code null}, then the span is created without a parent.
      * @return A future indicating the outcome of the operation.
      *         <p>
@@ -49,12 +44,10 @@ public interface TraceableEventSender extends EventSender {
      *         {@link org.eclipse.hono.client.ClientErrorException} depending on the reason for the failure to
      *         process the message.
      * @throws NullPointerException if any of device-id or payload is {@code null}.
-     * @throws IllegalArgumentException if the properties contain a value of type list, map or array.
      */
     Future<ProtonDelivery> send(
             String deviceId,
             Buffer payload,
             String contentType,
-            Map<String, Object> properties,
             SpanContext context);
 }

@@ -54,7 +54,7 @@ public class EventSenderTest extends AmqpAdapterClientSenderTestBase {
 
         // WHEN sending a message using the API...
         final Future<ProtonDelivery> deliveryFuture = createEventSender()
-                .compose(sender -> sender.send(DEVICE_ID, PAYLOAD, CONTENT_TYPE, APPLICATION_PROPERTIES));
+                .compose(sender -> sender.send(DEVICE_ID, PAYLOAD, CONTENT_TYPE));
 
         // ...AND WHEN the disposition is updated by the peer
         updateDisposition();
@@ -77,8 +77,7 @@ public class EventSenderTest extends AmqpAdapterClientSenderTestBase {
         // WHEN sending a message using the API...
         final SpanContext spanContext = mock(SpanContext.class);
         final Future<ProtonDelivery> deliveryFuture = createEventSender()
-                .compose(sender -> sender.send(DEVICE_ID, PAYLOAD, CONTENT_TYPE,
-                APPLICATION_PROPERTIES, spanContext));
+                .compose(sender -> sender.send(DEVICE_ID, PAYLOAD, CONTENT_TYPE, spanContext));
 
         // ...AND WHEN the disposition is updated by the peer
         updateDisposition();
@@ -106,8 +105,7 @@ public class EventSenderTest extends AmqpAdapterClientSenderTestBase {
                 .compose(sender -> sender.send(
                         DEVICE_ID,
                         PAYLOAD,
-                        CONTENT_TYPE,
-                        APPLICATION_PROPERTIES));
+                        CONTENT_TYPE));
 
         // THEN the future waits for the disposition to be updated by the peer
         assertThat(deliveryFuture.isComplete()).isFalse();

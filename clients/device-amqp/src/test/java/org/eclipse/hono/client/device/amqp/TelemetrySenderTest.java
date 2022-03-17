@@ -28,7 +28,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import io.vertx.proton.ProtonDelivery;
@@ -46,8 +45,7 @@ public class TelemetrySenderTest extends AmqpAdapterClientSenderTestBase {
             DEVICE_ID);
 
     /**
-     * Verifies that the message created by {@link TelemetrySender#send(String, Buffer, String, java.util.Map)} conforms to the
-     * expectations of the AMQP adapter.
+     * Verifies that a message sent with QoS 0 conforms to the expectations of the AMQP adapter.
      *
      * @param ctx The test context to use for running asynchronous tests.
      */
@@ -56,7 +54,7 @@ public class TelemetrySenderTest extends AmqpAdapterClientSenderTestBase {
 
         // WHEN sending a message using the API
         createTelemetrySender()
-            .compose(sender -> sender.send(DEVICE_ID, PAYLOAD, CONTENT_TYPE, APPLICATION_PROPERTIES))
+            .compose(sender -> sender.send(DEVICE_ID, PAYLOAD, CONTENT_TYPE))
             .onComplete(ctx.succeeding(ok -> {
                 // THEN the AMQP message conforms to the expectations of the AMQP protocol adapter
                 ctx.verify(() -> assertMessageConformsAmqpAdapterSpec(ADDRESS.toString()));
@@ -65,8 +63,7 @@ public class TelemetrySenderTest extends AmqpAdapterClientSenderTestBase {
     }
 
     /**
-     * Verifies that the message created by {@link TelemetrySender#sendAndWaitForOutcome(String, Buffer, String, java.util.Map)}
-     * conforms to the expectations of the AMQP adapter.
+     * Verifies that a message sent with QoS 1 conforms to the expectations of the AMQP adapter.
      *
      * @param ctx The test context to use for running asynchronous tests.
      */
@@ -75,8 +72,7 @@ public class TelemetrySenderTest extends AmqpAdapterClientSenderTestBase {
 
         // WHEN sending a message using the API...
         final Future<ProtonDelivery> deliveryFuture = createTelemetrySender()
-                .compose(sender -> sender.sendAndWaitForOutcome(DEVICE_ID, PAYLOAD,
-                CONTENT_TYPE, APPLICATION_PROPERTIES));
+                .compose(sender -> sender.sendAndWaitForOutcome(DEVICE_ID, PAYLOAD, CONTENT_TYPE));
 
         // ...AND WHEN the disposition is updated by the peer
         updateDisposition();
@@ -89,7 +85,7 @@ public class TelemetrySenderTest extends AmqpAdapterClientSenderTestBase {
     }
 
     /**
-     * Verifies that the message created by {@link TelemetrySender#send(String, Buffer, String, java.util.Map)} conforms
+     * Verifies that the message sent with QoS 0 and a tracing context conforms
      * to the expectations of the AMQP adapter.
      *
      * @param ctx The test context to use for running asynchronous tests.
@@ -100,7 +96,7 @@ public class TelemetrySenderTest extends AmqpAdapterClientSenderTestBase {
         // WHEN sending a message using the API
         final SpanContext spanContext = mock(SpanContext.class);
         createTelemetrySender()
-            .compose(sender -> sender.send(DEVICE_ID, PAYLOAD, CONTENT_TYPE, APPLICATION_PROPERTIES, spanContext))
+            .compose(sender -> sender.send(DEVICE_ID, PAYLOAD, CONTENT_TYPE, spanContext))
             .onComplete(ctx.succeeding(ok -> {
                 ctx.verify(() -> {
                     // THEN the given SpanContext is used
@@ -113,8 +109,7 @@ public class TelemetrySenderTest extends AmqpAdapterClientSenderTestBase {
     }
 
     /**
-     * Verifies that {@link TraceableTelemetrySender#sendAndWaitForOutcome(String, Buffer, String, java.util.Map, SpanContext)}
-     * uses the given SpanContext.
+     * Verifies that the message sent with QoS 1 uses the given SpanContext.
      *
      * @param ctx The test context to use for running asynchronous tests.
      */
@@ -128,7 +123,6 @@ public class TelemetrySenderTest extends AmqpAdapterClientSenderTestBase {
                         DEVICE_ID,
                         PAYLOAD,
                         CONTENT_TYPE,
-                        APPLICATION_PROPERTIES,
                         spanContext));
 
         // ...AND WHEN the disposition is updated by the peer
@@ -154,7 +148,7 @@ public class TelemetrySenderTest extends AmqpAdapterClientSenderTestBase {
 
         // WHEN sending a message using the API
         final Future<ProtonDelivery> deliveryFuture = createTelemetrySender()
-                .compose(sender -> sender.sendAndWaitForOutcome(DEVICE_ID, PAYLOAD, CONTENT_TYPE, APPLICATION_PROPERTIES));
+                .compose(sender -> sender.sendAndWaitForOutcome(DEVICE_ID, PAYLOAD, CONTENT_TYPE));
 
         // THEN the future waits for the disposition to be updated by the peer
         assertThat(deliveryFuture.isComplete()).isFalse();

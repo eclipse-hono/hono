@@ -13,9 +13,6 @@
 
 package org.eclipse.hono.devices;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
@@ -61,7 +58,6 @@ public class AmqpExampleDevice {
 
     private final Vertx vertx = Vertx.vertx();
     private final ClientConfigProperties config = new ClientConfigProperties();
-    private final Map<String, Object> customApplicationProperties = new HashMap<>();
     private AmqpAdapterClientFactory factory;
 
     private AmqpExampleDevice() {
@@ -71,9 +67,6 @@ public class AmqpExampleDevice {
         config.setUsername(AUTH_ID + "@" + TENANT_ID);
         config.setPassword(PASSWORD);
         config.setReconnectAttempts(RECONNECT_ATTEMPTS);
-
-        customApplicationProperties.put("device_type", "amqp_example_device");
-
     }
 
     /**
@@ -120,8 +113,7 @@ public class AmqpExampleDevice {
             .compose(telemetrySender -> telemetrySender.send(
                     DEVICE_ID,
                     Buffer.buffer(payload),
-                    "text/plain",
-                    customApplicationProperties))
+                    "text/plain"))
             .onSuccess(delivery -> System.out.println("Telemetry message with QoS 'AT_MOST_ONCE' sent: " + payload))
             .onFailure(t -> System.err.println("Sending telemetry message with QoS 'AT_MOST_ONCE' failed: " + t));
     }
@@ -132,8 +124,7 @@ public class AmqpExampleDevice {
             .compose(telemetrySender -> telemetrySender.sendAndWaitForOutcome(
                     DEVICE_ID,
                     payload.toBuffer(),
-                    "application/json",
-                    customApplicationProperties))
+                    "application/json"))
             .onSuccess(delivery -> System.out.println("Telemetry message with QoS 'AT_LEAST_ONCE' sent: " + payload))
             .onFailure(t -> {
                 String hint = "";
@@ -150,8 +141,7 @@ public class AmqpExampleDevice {
             .compose(eventSender -> eventSender.send(
                     DEVICE_ID,
                     payload.toBuffer(),
-                    "application/json",
-                    customApplicationProperties))
+                    "application/json"))
             .onSuccess(delivery -> System.out.println("Event sent: " + payload))
             .onFailure(t -> System.err.println("Sending event failed: " + t));
     }
@@ -180,8 +170,7 @@ public class AmqpExampleDevice {
                     command.getCorrelationId().toString(),
                     200,
                     payload.toBuffer(),
-                    "application/json",
-                    customApplicationProperties))
+                    "application/json"))
             .onSuccess(delivery -> System.out.println("Command response sent: " + payload))
             .onFailure(t -> System.err.println("Sending command response failed: " + t));
     }

@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.client.device.amqp.impl;
 
-import java.util.Map;
 import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
@@ -96,9 +95,6 @@ public abstract class AbstractAmqpAdapterClientSender implements AmqpSenderLink 
      * @param contentType The content type of the payload (may be {@code null}).
      *            <p>
      *            This parameter will be used as the value for the message's <em>content-type</em> property.
-     * @param properties Optional application properties (may be {@code null}).
-     *            <p>
-     *            AMQP application properties that can be used for carrying data in the message other than the payload.
      * @param targetAddress The address to send the message to.
      * @return The message.
      */
@@ -106,12 +102,11 @@ public abstract class AbstractAmqpAdapterClientSender implements AmqpSenderLink 
             final String deviceId,
             final Buffer payload,
             final String contentType,
-            final Map<String, Object> properties,
             final String targetAddress) {
 
         final Message msg = ProtonHelper.message();
         msg.setAddress(targetAddress);
-        DownstreamAmqpMessageFactory.addDefaults(msg, properties);
+        DownstreamAmqpMessageFactory.addDefaults(msg, null);
         MessageHelper.setCreationTime(msg);
         MessageHelper.setPayload(msg, contentType, payload);
         MessageHelper.addTenantId(msg, tenantId);

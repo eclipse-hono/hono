@@ -58,7 +58,7 @@ public class CommandResponderTest extends AmqpAdapterClientSenderTestBase {
         // WHEN sending a message using the API...
         final Future<ProtonDelivery> deliveryFuture = createCommandResponder()
                 .compose(responder -> responder.sendCommandResponse(DEVICE_ID, ADDRESS, CORRELATION_ID, STATUS,
-                        PAYLOAD, CONTENT_TYPE, APPLICATION_PROPERTIES));
+                        PAYLOAD, CONTENT_TYPE));
 
         // ...AND WHEN the disposition is updated by the peer
         updateDisposition();
@@ -82,7 +82,7 @@ public class CommandResponderTest extends AmqpAdapterClientSenderTestBase {
         final SpanContext spanContext = mock(SpanContext.class);
         final Future<ProtonDelivery> deliveryFuture = createCommandResponder()
                 .compose(responder -> responder.sendCommandResponse(DEVICE_ID, ADDRESS, CORRELATION_ID, STATUS,
-                        PAYLOAD, CONTENT_TYPE, APPLICATION_PROPERTIES, spanContext));
+                        PAYLOAD, CONTENT_TYPE, spanContext));
 
         // ...AND WHEN the disposition is updated by the peer
         updateDisposition();
@@ -108,7 +108,7 @@ public class CommandResponderTest extends AmqpAdapterClientSenderTestBase {
         // WHEN sending a message using the API
         final Future<ProtonDelivery> deliveryFuture = createCommandResponder()
                 .compose(responder -> responder.sendCommandResponse(DEVICE_ID, ADDRESS,
-                CORRELATION_ID, STATUS, PAYLOAD, CONTENT_TYPE, APPLICATION_PROPERTIES));
+                CORRELATION_ID, STATUS, PAYLOAD, CONTENT_TYPE));
 
         // THEN the future waits for the disposition to be updated by the peer
         assertThat(deliveryFuture.isComplete()).isFalse();
