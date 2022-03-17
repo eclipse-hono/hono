@@ -1017,7 +1017,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         }).when(endpoint).close();
 
         // WHEN a notification is sent about the tenant/device having been deleted or disabled
-        NotificationEventBusSupport.sendNotification(vertx, notification);
+        NotificationEventBusSupport.getNotificationSender(vertx).handle(notification);
 
         // THEN the MQTT endpoint representing the device connection is closed
         endpointClosedPromise.future()
