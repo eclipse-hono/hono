@@ -57,11 +57,6 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
 
     private AuthTokenHelper tokenFactory;
 
-    @Override
-    public void setConfig(final FileBasedAuthenticationServiceConfigProperties configuration) {
-        setSpecificConfig(configuration);
-    }
-
     /**
      * Gets the supported SASL mechanisms from the service configuration. If no configuration is set, the
      * mechanisms EXTERNAL and PLAIN (in that order) are returned.

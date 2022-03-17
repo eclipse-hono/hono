@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -59,11 +59,6 @@ public class AbstractServiceBaseTest {
     private AbstractServiceBase<ServiceConfigProperties> createService(final ServiceConfigProperties config) {
 
         final AbstractServiceBase<ServiceConfigProperties> server = new AbstractServiceBase<>() {
-
-            @Override
-            public void setConfig(final ServiceConfigProperties configuration) {
-                setSpecificConfig(configuration);
-            }
 
             @Override
             public int getPortDefaultValue() {

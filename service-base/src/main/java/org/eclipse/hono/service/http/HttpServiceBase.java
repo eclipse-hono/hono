@@ -102,11 +102,6 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
         this.authHandler = authHandler;
     }
 
-    @Override
-    public final void setConfig(final T configuration) {
-        setSpecificConfig(configuration);
-    }
-
     /**
      * The default port.
      * <p>

@@ -76,11 +76,6 @@ public abstract class AmqpServiceBase<T extends ServiceConfigProperties> extends
      */
     protected abstract String getServiceName();
 
-    @Override
-    public void setConfig(final T configuration) {
-        setSpecificConfig(configuration);
-    }
-
     /**
      * Gets the default port number of the secure AMQP port.
      *

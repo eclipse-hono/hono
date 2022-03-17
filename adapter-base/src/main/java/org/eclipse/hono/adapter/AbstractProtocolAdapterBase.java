@@ -123,11 +123,6 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
         return ctx.get(KEY_MICROMETER_SAMPLE);
     }
 
-    @Override
-    public final void setConfig(final T configuration) {
-        setSpecificConfig(configuration);
-    }
-
     /**
      * Sets the client to use for accessing the Tenant service.
      *

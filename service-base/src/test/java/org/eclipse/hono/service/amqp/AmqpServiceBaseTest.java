@@ -75,11 +75,6 @@ public class AmqpServiceBaseTest {
             }
 
             @Override
-            public void setConfig(final ServiceConfigProperties configuration) {
-                setSpecificConfig(configuration);
-            }
-
-            @Override
             protected void publishConnectionClosedEvent(final ProtonConnection con) {
                 if (onClientDisconnect != null) {
                     onClientDisconnect.handle(con);

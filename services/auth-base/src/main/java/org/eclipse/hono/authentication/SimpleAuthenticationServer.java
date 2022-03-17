@@ -46,11 +46,6 @@ public final class SimpleAuthenticationServer extends AmqpServiceBase<ServiceCon
     private static final Logger LOG = LoggerFactory.getLogger(SimpleAuthenticationServer.class);
     private AuthenticationServerMetrics metrics = NoopAuthenticationServerMetrics.INSTANCE;
 
-    @Override
-    public void setConfig(final ServiceConfigProperties configuration) {
-        setSpecificConfig(configuration);
-    }
-
     /**
      * Sets the object to use for reporting metrics.
      *
