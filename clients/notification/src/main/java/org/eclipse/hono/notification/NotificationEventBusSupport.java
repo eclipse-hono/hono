@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.notification;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.WeakHashMap;
@@ -36,7 +37,8 @@ public class NotificationEventBusSupport {
 
     private static final String NOTIFICATION_EVENT_BUS_CONTAINER_LOCAL_CODEC = "NotificationEventBusContainerLocalCodec";
 
-    private static final Map<Vertx, Boolean> VERTX_INSTANCES_WITH_REGISTERED_CODEC_MAP = new WeakHashMap<>();
+    private static final Map<Vertx, Boolean> VERTX_INSTANCES_WITH_REGISTERED_CODEC_MAP = Collections
+            .synchronizedMap(new WeakHashMap<>());
 
     private NotificationEventBusSupport() {
         // prevent instantiation
@@ -70,20 +72,27 @@ public class NotificationEventBusSupport {
     }
 
     /**
-     * Sends the given notification via the vert.x event bus.
+     * Gets a handler that sends a given notification via the vert.x event bus.
+     * <p>
+     * Applying {@code null} on the returned handler will throw a {@link NullPointerException}.
      *
      * @param vertx The vert.x instance to use.
-     * @param notification  The notification to send.
-     * @param <T> The class of the given notification.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @param <T> The class of the notifications to send.
+     * @return A handler that sends a given notification.
+     * @throws NullPointerException if vertx is {@code null}.
      */
-    public static <T extends AbstractNotification> void sendNotification(final Vertx vertx, final T notification) {
+    public static <T extends AbstractNotification> Handler<T> getNotificationSender(final Vertx vertx) {
         Objects.requireNonNull(vertx);
-        Objects.requireNonNull(notification);
 
         if (VERTX_INSTANCES_WITH_REGISTERED_CODEC_MAP.putIfAbsent(vertx, true) == null) {
             vertx.eventBus().registerCodec(new NotificationEventBusContainerLocalCodec());
         }
+        return (notification) -> sendNotification(vertx, notification);
+    }
+
+    private static <T extends AbstractNotification> void sendNotification(final Vertx vertx, final T notification) {
+        Objects.requireNonNull(vertx);
+        Objects.requireNonNull(notification);
 
         final DeliveryOptions options = new DeliveryOptions();
         options.setCodecName(NOTIFICATION_EVENT_BUS_CONTAINER_LOCAL_CODEC);

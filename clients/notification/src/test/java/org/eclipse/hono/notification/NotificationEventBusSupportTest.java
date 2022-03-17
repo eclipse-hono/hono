@@ -58,7 +58,7 @@ public class NotificationEventBusSupportTest {
             });
         }
 
-        NotificationEventBusSupport.sendNotification(vertx, notification);
+        NotificationEventBusSupport.getNotificationSender(vertx).handle(notification);
     }
 
 }

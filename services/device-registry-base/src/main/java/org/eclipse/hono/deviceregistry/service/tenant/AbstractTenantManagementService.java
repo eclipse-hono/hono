@@ -40,6 +40,7 @@ import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 
@@ -52,6 +53,8 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
+    private final Handler<TenantChangeNotification> notificationSender;
+
     /**
      * Creates a new AbstractTenantManagementService.
      *
@@ -60,6 +63,7 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
      */
     protected AbstractTenantManagementService(final Vertx vertx) {
         this.vertx = Objects.requireNonNull(vertx);
+        this.notificationSender = NotificationEventBusSupport.getNotificationSender(vertx);
     }
 
     /**
@@ -219,9 +223,8 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
         final String tenantIdValue = tenantId.orElseGet(this::createId);
         return tenantCheck.future()
                 .compose(ok -> processCreateTenant(tenantIdValue, tenantObj, span))
-                .onSuccess(result -> NotificationEventBusSupport.sendNotification(vertx,
-                        new TenantChangeNotification(LifecycleChange.CREATE, tenantIdValue, Instant.now(),
-                                tenantObj.isEnabled())))
+                .onSuccess(result -> notificationSender.handle(new TenantChangeNotification(LifecycleChange.CREATE,
+                        tenantIdValue, Instant.now(), tenantObj.isEnabled())))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId.get()));
     }
 
@@ -261,9 +264,8 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
         }
         return tenantCheck.future()
                 .compose(ok -> processUpdateTenant(tenantId, tenantObj, resourceVersion, span))
-                .onSuccess(result -> NotificationEventBusSupport.sendNotification(vertx,
-                        new TenantChangeNotification(LifecycleChange.UPDATE, tenantId, Instant.now(),
-                                tenantObj.isEnabled())))
+                .onSuccess(result -> notificationSender.handle(new TenantChangeNotification(LifecycleChange.UPDATE,
+                        tenantId, Instant.now(), tenantObj.isEnabled())))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 
@@ -278,8 +280,8 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
         Objects.requireNonNull(span);
 
         return processDeleteTenant(tenantId, resourceVersion, span)
-                .onSuccess(result -> NotificationEventBusSupport.sendNotification(vertx,
-                        new TenantChangeNotification(LifecycleChange.DELETE, tenantId, Instant.now(), false)))
+                .onSuccess(result -> notificationSender
+                        .handle(new TenantChangeNotification(LifecycleChange.DELETE, tenantId, Instant.now(), false)))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 
