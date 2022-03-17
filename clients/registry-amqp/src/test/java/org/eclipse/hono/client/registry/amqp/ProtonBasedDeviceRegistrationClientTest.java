@@ -37,6 +37,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.amqp.config.RequestResponseClientConfigProperties;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
@@ -276,11 +277,7 @@ class ProtonBasedDeviceRegistrationClientTest {
         // THEN the message being sent contains the device ID and the gateway ID
         final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
         assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo("device");
-        assertThat(
-                MessageHelper.getApplicationProperty(
-                        sentMessage.getApplicationProperties(),
-                        MessageHelper.APP_PROPERTY_GATEWAY_ID,
-                        String.class))
+        assertThat(AmqpUtils.getApplicationProperty(sentMessage, MessageHelper.APP_PROPERTY_GATEWAY_ID, String.class))
                 .isEqualTo("gateway");
     }
 

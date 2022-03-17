@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,6 +22,7 @@ import java.util.StringJoiner;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.client.command.Commands;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -167,11 +168,9 @@ public final class ProtonBasedCommand implements Command {
      */
     public static ProtonBasedCommand fromRoutedCommandMessage(final Message message) {
         final ProtonBasedCommand command = from(message);
-        final String gatewayId = MessageHelper.getApplicationProperty(message.getApplicationProperties(),
-                MessageHelper.APP_PROPERTY_CMD_VIA, String.class);
-        if (!Strings.isNullOrEmpty(gatewayId)) {
-            command.setGatewayId(gatewayId);
-        }
+        Optional.ofNullable(AmqpUtils.getApplicationProperty(message, MessageHelper.APP_PROPERTY_CMD_VIA, String.class))
+            .filter(s -> !s.isEmpty())
+            .ifPresent(command::setGatewayId);
         return command;
     }
 

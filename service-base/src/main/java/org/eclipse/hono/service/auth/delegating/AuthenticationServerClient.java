@@ -24,6 +24,7 @@ import org.eclipse.hono.auth.HonoUserAdapter;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.ConnectionFactory;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -140,8 +141,8 @@ public final class AuthenticationServerClient {
         final Promise<HonoUser> result = Promise.promise();
         final ProtonMessageHandler messageHandler = (delivery, message) -> {
 
-            final String type = MessageHelper.getApplicationProperty(
-                    message.getApplicationProperties(),
+            final String type = AmqpUtils.getApplicationProperty(
+                    message,
                     AuthenticationConstants.APPLICATION_PROPERTY_TYPE,
                     String.class);
 

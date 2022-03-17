@@ -15,8 +15,10 @@ package org.eclipse.hono.client.amqp.connection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.apache.qpid.proton.amqp.Symbol;
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.engine.Record;
@@ -208,5 +210,28 @@ public final class AmqpUtils {
         final Rejected rejected = new Rejected();
         rejected.setError(error); // doesn't matter if null
         delivery.disposition(rejected, true);
+    }
+
+    /**
+     * Gets the value of one of a message's <em>application properties</em>.
+     *
+     * @param <T> The expected type of the property to retrieve the value of.
+     * @param message The message containing the application properties to retrieve the value from.
+     * @param name The property name.
+     * @param type The expected value type.
+     * @return The value or {@code null} if the message's application properties do not contain a value of the
+     *         expected type for the given name.
+     */
+    public static <T> T getApplicationProperty(
+            final Message message,
+            final String name,
+            final Class<T> type) {
+        return Optional.ofNullable(message)
+                .flatMap(msg -> Optional.ofNullable(msg.getApplicationProperties()))
+                .map(ApplicationProperties::getValue)
+                .map(props -> props.get(name))
+                .filter(type::isInstance)
+                .map(type::cast)
+                .orElse(null);
     }
 }

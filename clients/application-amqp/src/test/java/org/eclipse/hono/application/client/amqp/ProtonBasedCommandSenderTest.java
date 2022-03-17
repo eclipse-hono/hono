@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
@@ -127,8 +128,7 @@ public class ProtonBasedCommandSenderTest {
         final Message message = messageCaptor.getValue();
         assertThat(MessageHelper.getDeviceId(message)).isEqualTo(deviceId);
         assertThat(message.getSubject()).isEqualTo(subject);
-        assertThat(MessageHelper.getApplicationProperty(message.getApplicationProperties(), "appKey", String.class))
-                .isEqualTo("appValue");
+        assertThat(AmqpUtils.getApplicationProperty(message, "appKey", String.class)).isEqualTo("appValue");
         assertThat(sendCommandFuture.isComplete()).isTrue();
     }
 
@@ -168,8 +168,7 @@ public class ProtonBasedCommandSenderTest {
         assertThat(MessageHelper.getDeviceId(message)).isEqualTo(deviceId);
         assertThat(message.getSubject()).isEqualTo(subject);
         assertThat(MessageHelper.getCorrelationId(message)).isEqualTo(correlationId);
-        assertThat(MessageHelper.getApplicationProperty(message.getApplicationProperties(), "appKey", String.class))
-                .isEqualTo("appValue");
+        assertThat(AmqpUtils.getApplicationProperty(message, "appKey", String.class)).isEqualTo("appValue");
         assertThat(sendCommandFuture.isComplete()).isTrue();
     }
 

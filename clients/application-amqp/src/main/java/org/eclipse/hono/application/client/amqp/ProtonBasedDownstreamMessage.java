@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,6 +25,7 @@ import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageProperties;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -62,7 +63,7 @@ public final class ProtonBasedDownstreamMessage implements DownstreamMessage<Amq
 
             @Override
             public <T> T getProperty(final String name, final Class<T> type) {
-                return MessageHelper.getApplicationProperty(msg.getApplicationProperties(), name, type);
+                return AmqpUtils.getApplicationProperty(msg, name, type);
             }
         };
     }
@@ -134,9 +135,12 @@ public final class ProtonBasedDownstreamMessage implements DownstreamMessage<Amq
      */
     @Override
     public QoS getQos() {
-        return Optional.ofNullable(MessageHelper.getQoS(message))
-                .map(QoS::from)
-                .orElse(QoS.AT_MOST_ONCE);
+        return Optional.ofNullable(AmqpUtils.getApplicationProperty(
+                message,
+                MessageHelper.APP_PROPERTY_QOS,
+                Integer.class))
+            .map(QoS::from)
+            .orElse(QoS.AT_MOST_ONCE);
     }
 
     /**

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,6 +19,7 @@ import java.time.Instant;
 import java.util.Map;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -133,15 +134,8 @@ public class DownstreamAmqpMessageFactoryTest {
                 Map.of(),
                 false);
 
-        assertThat(MessageHelper.getApplicationProperty(
-                message.getApplicationProperties(),
-                "custom-tenant",
-                String.class))
-            .isEqualTo("foo");
-        assertThat(MessageHelper.getApplicationProperty(
-                message.getApplicationProperties(),
-                "custom-device",
-                Boolean.class))
+        assertThat(AmqpUtils.getApplicationProperty(message, "custom-tenant", String.class)).isEqualTo("foo");
+        assertThat(AmqpUtils.getApplicationProperty(message, "custom-device", Boolean.class))
             .isEqualTo(Boolean.TRUE);
         assertThat(message.getTtl()).isEqualTo(30000L);
     }

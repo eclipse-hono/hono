@@ -39,6 +39,7 @@ import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.config.RequestResponseClientConfigProperties;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
@@ -604,8 +605,7 @@ public class ProtonBasedCommandRouterClientTest {
         // THEN the message being sent contains the device ID in its properties
         final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
         assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo(deviceId);
-        assertThat(MessageHelper.getApplicationProperty(sentMessage.getApplicationProperties(),
-                MessageHelper.APP_PROPERTY_GATEWAY_ID, String.class))
+        assertThat(AmqpUtils.getApplicationProperty(sentMessage, MessageHelper.APP_PROPERTY_GATEWAY_ID, String.class))
                 .isEqualTo(gatewayId);
         assertThat(sentMessage.getMessageId()).isNotNull();
         assertThat(sentMessage.getSubject()).isEqualTo(CommandRouterAction.SET_LAST_KNOWN_GATEWAY.getSubject());
@@ -629,8 +629,7 @@ public class ProtonBasedCommandRouterClientTest {
         // THEN the message being sent contains the device IDs in its payload
         final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
         assertThat(MessageHelper.getDeviceId(sentMessage)).isNull();
-        assertThat(MessageHelper.getApplicationProperty(sentMessage.getApplicationProperties(),
-                MessageHelper.APP_PROPERTY_GATEWAY_ID, String.class))
+        assertThat(AmqpUtils.getApplicationProperty(sentMessage, MessageHelper.APP_PROPERTY_GATEWAY_ID, String.class))
                 .isNull();
         assertThat(sentMessage.getMessageId()).isNotNull();
         assertThat(sentMessage.getSubject()).isEqualTo(CommandRouterAction.SET_LAST_KNOWN_GATEWAY.getSubject());
@@ -655,13 +654,13 @@ public class ProtonBasedCommandRouterClientTest {
         // THEN the message being sent contains the device ID in its properties
         final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
         assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo(deviceId);
-        assertThat(MessageHelper.getApplicationProperty(
-                sentMessage.getApplicationProperties(),
+        assertThat(AmqpUtils.getApplicationProperty(
+                sentMessage,
                 CommandConstants.MSG_PROPERTY_ADAPTER_INSTANCE_ID,
                 String.class))
             .isEqualTo("adapterInstanceId");
-        assertThat(MessageHelper.getApplicationProperty(
-                sentMessage.getApplicationProperties(),
+        assertThat(AmqpUtils.getApplicationProperty(
+                sentMessage,
                 MessageHelper.APP_PROPERTY_LIFESPAN,
                 Integer.class))
             .isEqualTo(Integer.valueOf(-1));
@@ -687,13 +686,13 @@ public class ProtonBasedCommandRouterClientTest {
         // THEN the message being sent contains the device ID in its properties
         final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
         assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo(deviceId);
-        assertThat(MessageHelper.getApplicationProperty(
-                sentMessage.getApplicationProperties(),
+        assertThat(AmqpUtils.getApplicationProperty(
+                sentMessage,
                 CommandConstants.MSG_PROPERTY_ADAPTER_INSTANCE_ID,
                 String.class))
             .isEqualTo("adapterInstanceId");
-        assertThat(MessageHelper.getApplicationProperty(
-                sentMessage.getApplicationProperties(),
+        assertThat(AmqpUtils.getApplicationProperty(
+                sentMessage,
                 MessageHelper.APP_PROPERTY_LIFESPAN,
                 Integer.class))
             .isEqualTo(lifespanSeconds);
@@ -718,8 +717,8 @@ public class ProtonBasedCommandRouterClientTest {
         // THEN the message being sent contains the device ID in its properties
         final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
         assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo(deviceId);
-        assertThat(MessageHelper.getApplicationProperty(
-                sentMessage.getApplicationProperties(),
+        assertThat(AmqpUtils.getApplicationProperty(
+                sentMessage,
                 CommandConstants.MSG_PROPERTY_ADAPTER_INSTANCE_ID,
                 String.class))
             .isEqualTo(adapterInstanceId);

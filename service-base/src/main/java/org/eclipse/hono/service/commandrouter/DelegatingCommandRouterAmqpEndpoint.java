@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AbstractDelegatingRequestResponseEndpoint;
 import org.eclipse.hono.service.amqp.AbstractRequestResponseEndpoint;
@@ -181,12 +182,12 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
             final ResourceIdentifier targetAddress, final SpanContext spanContext) {
         final String tenantId = targetAddress.getTenantId();
         final String deviceId = MessageHelper.getDeviceId(request);
-        final String adapterInstanceId = MessageHelper.getApplicationProperty(
-                request.getApplicationProperties(),
+        final String adapterInstanceId = AmqpUtils.getApplicationProperty(
+                request,
                 CommandConstants.MSG_PROPERTY_ADAPTER_INSTANCE_ID,
                 String.class);
-        final Integer lifespanSecondsOrNull = MessageHelper.getApplicationProperty(
-                request.getApplicationProperties(),
+        final Integer lifespanSecondsOrNull = AmqpUtils.getApplicationProperty(
+                request,
                 MessageHelper.APP_PROPERTY_LIFESPAN,
                 Integer.class);
 
@@ -232,8 +233,8 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
             final ResourceIdentifier targetAddress, final SpanContext spanContext) {
         final String tenantId = targetAddress.getTenantId();
         final String deviceId = MessageHelper.getDeviceId(request);
-        final String adapterInstanceId = MessageHelper.getApplicationProperty(
-                request.getApplicationProperties(),
+        final String adapterInstanceId = AmqpUtils.getApplicationProperty(
+                request,
                 CommandConstants.MSG_PROPERTY_ADAPTER_INSTANCE_ID,
                 String.class);
 

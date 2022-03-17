@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -31,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
@@ -126,8 +127,7 @@ public class ProtonBasedRequestResponseCommandClientTest {
         final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
         assertThat(sentMessage.getSubject()).isEqualTo(subject);
         assertThat(sentMessage.getReplyTo()).endsWith(replyId);
-        assertThat(MessageHelper.getApplicationProperty(sentMessage.getApplicationProperties(), "appKey", String.class))
-                .isEqualTo("appValue");
+        assertThat(AmqpUtils.getApplicationProperty(sentMessage, "appKey", String.class)).isEqualTo("appValue");
 
         final Message response = ProtonHelper.message();
         response.setCorrelationId(sentMessage.getMessageId());
@@ -169,8 +169,7 @@ public class ProtonBasedRequestResponseCommandClientTest {
         final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
         assertThat(sentMessage.getSubject()).isEqualTo(subject);
         assertThat(sentMessage.getReplyTo()).endsWith(replyId);
-        assertThat(MessageHelper.getApplicationProperty(sentMessage.getApplicationProperties(), "appKey", String.class))
-                .isEqualTo("appValue");
+        assertThat(AmqpUtils.getApplicationProperty(sentMessage, "appKey", String.class)).isEqualTo("appValue");
 
         final Message response = ProtonHelper.message();
         response.setCorrelationId(sentMessage.getMessageId());

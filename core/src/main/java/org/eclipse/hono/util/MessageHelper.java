@@ -244,17 +244,6 @@ public final class MessageHelper {
     }
 
     /**
-     * Gets the value of a message's {@value #APP_PROPERTY_QOS} application property.
-     *
-     * @param msg The message.
-     * @return The property value or {@code null} if not set.
-     * @throws NullPointerException if message is {@code null}.
-     */
-    public static Integer getQoS(final Message msg) {
-        return getApplicationProperty(msg.getApplicationProperties(), APP_PROPERTY_QOS, Integer.class);
-    }
-
-    /**
      * Gets the value of a specific <em>application property</em>.
      *
      * @param <T> The expected type of the property to retrieve the value of.
@@ -265,7 +254,7 @@ public final class MessageHelper {
      *         name.
      */
     @SuppressWarnings("unchecked")
-    public static <T> T getApplicationProperty(final ApplicationProperties props, final String name,
+    private static <T> T getApplicationProperty(final ApplicationProperties props, final String name,
             final Class<T> type) {
         if (props == null) {
             return null;

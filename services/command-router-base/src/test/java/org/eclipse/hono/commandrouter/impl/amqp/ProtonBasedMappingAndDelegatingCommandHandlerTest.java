@@ -334,7 +334,7 @@ public class ProtonBasedMappingAndDelegatingCommandHandlerTest {
         assertThat(delegatedMessage).isNotNull();
         assertThat(delegatedMessage.getAddress()).isEqualTo(String.format("%s/%s/%s",
                 CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId));
-        final String viaProperty = MessageHelper.getApplicationProperty(delegatedMessage.getApplicationProperties(),
+        final String viaProperty = AmqpUtils.getApplicationProperty(delegatedMessage,
                 MessageHelper.APP_PROPERTY_CMD_VIA, String.class);
         assertThat(viaProperty).isEqualTo(gatewayId);
     }
