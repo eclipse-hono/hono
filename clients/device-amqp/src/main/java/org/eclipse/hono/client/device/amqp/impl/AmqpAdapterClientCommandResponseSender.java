@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.client.device.amqp.impl;
 
-import java.util.Map;
 import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
@@ -77,15 +76,14 @@ public final class AmqpAdapterClientCommandResponseSender extends AbstractAmqpAd
             final String correlationId,
             final int status,
             final Buffer payload,
-            final String contentType,
-            final Map<String, Object> properties) {
+            final String contentType) {
 
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(targetAddress);
         Objects.requireNonNull(correlationId);
 
         return sendCommandResponse(deviceId, targetAddress, correlationId, status, payload, contentType,
-                properties, NoopSpan.INSTANCE);
+                NoopSpan.INSTANCE);
     }
 
     @Override
@@ -96,7 +94,6 @@ public final class AmqpAdapterClientCommandResponseSender extends AbstractAmqpAd
             final int status,
             final Buffer payload,
             final String contentType,
-            final Map<String, Object> properties,
             final SpanContext context) {
 
         Objects.requireNonNull(deviceId);
@@ -105,8 +102,7 @@ public final class AmqpAdapterClientCommandResponseSender extends AbstractAmqpAd
 
         final Span span = createSpan(deviceId, "send command response", context);
         TracingHelper.TAG_CORRELATION_ID.set(span, correlationId);
-        return sendCommandResponse(deviceId, targetAddress, correlationId, status, payload, contentType,
-                properties, span);
+        return sendCommandResponse(deviceId, targetAddress, correlationId, status, payload, contentType, span);
     }
 
     private Future<ProtonDelivery> sendCommandResponse(
@@ -116,10 +112,9 @@ public final class AmqpAdapterClientCommandResponseSender extends AbstractAmqpAd
             final int status,
             final Buffer payload,
             final String contentType,
-            final Map<String, Object> properties,
             final Span span) {
 
-        final Message message = createMessage(deviceId, payload, contentType, properties, targetAddress);
+        final Message message = createMessage(deviceId, payload, contentType, targetAddress);
         message.setCorrelationId(correlationId);
         MessageHelper.addStatus(message, status);
         return sendAndWaitForOutcome(message, span);

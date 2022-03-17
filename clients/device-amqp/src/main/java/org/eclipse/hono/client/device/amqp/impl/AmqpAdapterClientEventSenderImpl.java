@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.client.device.amqp.impl;
 
-import java.util.Map;
 import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
@@ -74,13 +73,12 @@ public final class AmqpAdapterClientEventSenderImpl extends AbstractAmqpAdapterC
     public Future<ProtonDelivery> send(
             final String deviceId,
             final Buffer payload,
-            final String contentType,
-            final Map<String, Object> properties) {
+            final String contentType) {
 
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(payload);
 
-        return sendAndWaitForOutcome(deviceId, payload, contentType, properties, NoopSpan.INSTANCE);
+        return sendAndWaitForOutcome(deviceId, payload, contentType, NoopSpan.INSTANCE);
     }
 
     @Override
@@ -88,25 +86,23 @@ public final class AmqpAdapterClientEventSenderImpl extends AbstractAmqpAdapterC
             final String deviceId,
             final Buffer payload,
             final String contentType,
-            final Map<String, Object> properties,
             final SpanContext context) {
 
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(payload);
 
         final Span span = createSpan(deviceId, "send event message", context);
-        return sendAndWaitForOutcome(deviceId, payload, contentType, properties, span);
+        return sendAndWaitForOutcome(deviceId, payload, contentType, span);
     }
 
     private Future<ProtonDelivery> sendAndWaitForOutcome(
             final String deviceId,
             final Buffer payload,
             final String contentType,
-            final Map<String, Object> properties,
             final Span span) {
 
         final String targetAddress = AddressHelper.getTargetAddress(EventConstants.EVENT_ENDPOINT, tenantId, deviceId, null);
-        final Message msg = createMessage(deviceId, payload, contentType, properties, targetAddress);
+        final Message msg = createMessage(deviceId, payload, contentType, targetAddress);
         return sendAndWaitForOutcome(msg, span);
     }
 }

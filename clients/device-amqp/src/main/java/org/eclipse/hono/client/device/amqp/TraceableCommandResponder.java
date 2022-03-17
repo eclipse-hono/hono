@@ -13,8 +13,6 @@
 
 package org.eclipse.hono.client.device.amqp;
 
-import java.util.Map;
-
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
@@ -35,9 +33,6 @@ public interface TraceableCommandResponder extends CommandResponder {
      * @param status The HTTP status code indicating the outcome of the command.
      * @param payload The payload of the response. May be {@code null} since it is not required.
      * @param contentType The contentType of the response. May be {@code null} since it is not required.
-     * @param properties Optional application properties (may be {@code null}).
-     *            <p>
-     *            AMQP application properties that can be used for carrying data in the message other than the payload.
      * @param context The context to create the span in. If {@code null}, then the span is created without a parent.
      * @return A future indicating the outcome of the operation.
      *         <p>
@@ -55,7 +50,5 @@ public interface TraceableCommandResponder extends CommandResponder {
             int status,
             Buffer payload,
             String contentType,
-            Map<String, Object> properties,
             SpanContext context);
-
 }

@@ -61,6 +61,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 * Moved the code for injecting and extracting a tracing context to/from AMQP 1.0 messages to the amqp-connection
   client module.
 * Moved `org.eclipse.hono.util.TelemetryExecutionContext` to adapter-base module.
+* The *amqp-device* client module no longer supports including arbitrary properties in telemetry, event and command
+  response messages because it was undefined how these properties would be processed by the AMQP protocol adapter.
 
 ## 1.12.1
 

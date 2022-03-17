@@ -13,7 +13,6 @@
 
 package org.eclipse.hono.client.device.amqp.impl;
 
-import java.util.Map;
 import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
@@ -74,13 +73,12 @@ public final class AmqpAdapterClientTelemetrySenderImpl extends AbstractAmqpAdap
     public Future<ProtonDelivery> send(
             final String deviceId,
             final Buffer payload,
-            final String contentType,
-            final Map<String, Object> properties) {
+            final String contentType) {
 
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(payload);
 
-        final Message msg = createMessage(deviceId, payload, contentType, properties);
+        final Message msg = createMessage(deviceId, payload, contentType);
         return send(msg, NoopSpan.INSTANCE);
     }
 
@@ -89,14 +87,13 @@ public final class AmqpAdapterClientTelemetrySenderImpl extends AbstractAmqpAdap
             final String deviceId,
             final Buffer payload,
             final String contentType,
-            final Map<String, Object> properties,
             final SpanContext context) {
 
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(payload);
 
         final Span span = createSpan(deviceId, "send telemetry message", context);
-        final Message msg = createMessage(deviceId, payload, contentType, properties);
+        final Message msg = createMessage(deviceId, payload, contentType);
         return send(msg, span);
     }
 
@@ -104,10 +101,9 @@ public final class AmqpAdapterClientTelemetrySenderImpl extends AbstractAmqpAdap
     public Future<ProtonDelivery> sendAndWaitForOutcome(
             final String deviceId,
             final Buffer payload,
-            final String contentType,
-            final Map<String, Object> properties) {
+            final String contentType) {
 
-        final Message msg = createMessage(deviceId, payload, contentType, properties);
+        final Message msg = createMessage(deviceId, payload, contentType);
         return sendAndWaitForOutcome(msg, NoopSpan.INSTANCE);
     }
 
@@ -116,20 +112,18 @@ public final class AmqpAdapterClientTelemetrySenderImpl extends AbstractAmqpAdap
             final String deviceId,
             final Buffer payload,
             final String contentType,
-            final Map<String, Object> properties,
             final SpanContext context) {
 
         final Span span = createSpan(deviceId, "send telemetry message", context);
-        final Message msg = createMessage(deviceId, payload, contentType, properties);
+        final Message msg = createMessage(deviceId, payload, contentType);
         return sendAndWaitForOutcome(msg, span);
     }
 
     private Message createMessage(
             final String deviceId,
             final Buffer payload,
-            final String contentType,
-            final Map<String, Object> properties) {
+            final String contentType) {
         final String targetAddress = AddressHelper.getTargetAddress(TelemetryConstants.TELEMETRY_ENDPOINT, tenantId, deviceId, null);
-        return createMessage(deviceId, payload, contentType, properties, targetAddress);
+        return createMessage(deviceId, payload, contentType, targetAddress);
     }
 }

@@ -20,9 +20,6 @@ import static org.mockito.Mockito.when;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import java.util.Collections;
-import java.util.Map;
-
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
@@ -54,8 +51,6 @@ public abstract class AmqpAdapterClientSenderTestBase {
     protected static final Buffer PAYLOAD = Buffer.buffer("test-value");
     protected static final String TEST_PROPERTY_KEY = "test-key";
     protected static final String TEST_PROPERTY_VALUE = "test-value";
-    protected static final Map<String, Object> APPLICATION_PROPERTIES = Collections.singletonMap(TEST_PROPERTY_KEY,
-            TEST_PROPERTY_VALUE);
 
     protected ProtonSender sender;
     protected HonoConnection connection;
@@ -115,9 +110,6 @@ public abstract class AmqpAdapterClientSenderTestBase {
 
         assertThat(MessageHelper.getPayload(message)).isEqualTo(PAYLOAD);
         assertThat(message.getContentType()).isEqualTo(CONTENT_TYPE);
-
-        assertThat(MessageHelper.getApplicationProperty(message.getApplicationProperties(), TEST_PROPERTY_KEY,
-                String.class)).isEqualTo(TEST_PROPERTY_VALUE);
 
         return message;
     }

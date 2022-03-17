@@ -13,8 +13,6 @@
 
 package org.eclipse.hono.client.device.amqp;
 
-import java.util.Map;
-
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.proton.ProtonDelivery;
@@ -34,9 +32,6 @@ public interface CommandResponder extends AmqpSenderLink {
      * @param status The HTTP status code indicating the outcome of the command.
      * @param payload The payload of the response. May be {@code null} since it is not required.
      * @param contentType The contentType of the response (may be {@code null}).
-     * @param properties Optional application properties (may be {@code null}).
-     *            <p>
-     *            AMQP application properties that can be used for carrying data in the message other than the payload.
      * @return A future indicating the outcome of the operation.
      *         <p>
      *         The future will succeed if the message has been accepted (and settled) by the application.
@@ -52,7 +47,5 @@ public interface CommandResponder extends AmqpSenderLink {
             String correlationId,
             int status,
             Buffer payload,
-            String contentType,
-            Map<String, Object> properties);
-
+            String contentType);
 }

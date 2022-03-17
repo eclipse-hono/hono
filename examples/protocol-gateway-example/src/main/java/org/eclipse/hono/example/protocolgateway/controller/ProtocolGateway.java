@@ -125,14 +125,13 @@ public class ProtocolGateway {
         socket.closeHandler(remoteClose -> {
             LOG.debug("device closed connection");
             Optional.ofNullable((CommandConsumer) dict.get(KEY_COMMAND_CONSUMER))
-                .ifPresent(c -> {
-                    c.close(null)
-                            .onComplete(res -> LOG.debug("closed device's command consumer"));
-                });
+                .ifPresent(c -> c.close(null).onComplete(res -> LOG.debug("closed device's command consumer")));
             socket.close();
         });
 
-        socket.write(String.format("Welcome to the Protocol Gateway for devices of tenant [%s], please enter a command\n", tenant));
+        socket.write(String.format(
+                "Welcome to the Protocol Gateway for devices of tenant [%s], please enter a command\n",
+                tenant));
         LOG.debug("connection with client established");
     }
 
@@ -143,9 +142,7 @@ public class ProtocolGateway {
         // split up in command token [0] and args [1]
         final String[] command = data.split(" ", 2);
         executeCommand(command, socket, dictionary)
-            .onSuccess(c -> {
-                socket.write("OK\n");
-            })
+            .onSuccess(c -> socket.write("OK\n"))
             .onFailure(t -> {
                 LOG.debug("failed to process data provided by device");
                 socket.write("FAILED: " + t.getMessage() + "\n");
@@ -206,9 +203,9 @@ public class ProtocolGateway {
                             amqpAdapterClientFactory.getOrCreateTelemetrySender()
                                 .compose(sender -> {
                                     if ("0".equals(qos)) {
-                                        return sender.send(deviceId, payload, CONTENT_TYPE_BINARY_OPAQUE, null);
+                                        return sender.send(deviceId, payload, CONTENT_TYPE_BINARY_OPAQUE);
                                     } else {
-                                        return sender.sendAndWaitForOutcome(deviceId, payload, CONTENT_TYPE_BINARY_OPAQUE, null);
+                                        return sender.sendAndWaitForOutcome(deviceId, payload, CONTENT_TYPE_BINARY_OPAQUE);
                                     }
                                 })
                                 .map((Void) null)
@@ -234,7 +231,7 @@ public class ProtocolGateway {
                         } else {
                             final var payload = Buffer.buffer(args);
                             amqpAdapterClientFactory.getOrCreateEventSender()
-                                .compose(sender -> sender.send(deviceId, payload, CONTENT_TYPE_BINARY_OPAQUE, null))
+                                .compose(sender -> sender.send(deviceId, payload, CONTENT_TYPE_BINARY_OPAQUE))
                                 .map((Void) null)
                                 .onComplete(result);
                         }
@@ -299,13 +296,11 @@ public class ProtocolGateway {
             } else {
                 LOG.debug("received command [name: {}]: {}", m.getSubject(), commandPayload);
                 if ("tellTime".equals(m.getSubject())) {
-                    respondWithTime(m).onComplete(sendAttempt -> {
-                        if (sendAttempt.succeeded()) {
-                            LOG.debug("sent response to command [name: {}, outcome: {}]", m.getSubject(), sendAttempt.result().getRemoteState().getType());
-                        } else {
-                            LOG.info("failed to send response to command [name: {}]", m.getSubject(), sendAttempt.cause());
-                        }
-                    });
+                    respondWithTime(m)
+                        .onSuccess(delivery -> LOG.debug("sent response to command [name: {}, outcome: {}]",
+                                    m.getSubject(), delivery.getRemoteState().getType()))
+                        .onFailure(t -> LOG.info("failed to send response to command [name: {}]",
+                                    m.getSubject(), t));
                 }
             }
         };
@@ -326,7 +321,6 @@ public class ProtocolGateway {
                         (String) command.getCorrelationId(),
                         HttpURLConnection.HTTP_OK,
                         payload,
-                        "text/plain",
-                        null));
+                        "text/plain"));
     }
 }
