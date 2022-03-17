@@ -40,6 +40,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import io.opentracing.Span;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 
 /**
@@ -56,6 +57,7 @@ public abstract class AbstractCredentialsManagementService implements Credential
     private final HonoPasswordEncoder passwordEncoder;
     private final int maxBcryptCostFactor;
     private final Set<String> hashAlgorithmsWhitelist;
+    private final Handler<CredentialsChangeNotification> notificationSender;
 
     /**
      * Creates a service for the given Vertx and password encoder instances.
@@ -76,7 +78,7 @@ public abstract class AbstractCredentialsManagementService implements Credential
         this.passwordEncoder = Objects.requireNonNull(passwordEncoder);
         this.maxBcryptCostFactor = maxBcryptCostfactor;
         this.hashAlgorithmsWhitelist = hashAlgorithmsWhitelist != null ? hashAlgorithmsWhitelist : Collections.emptySet();
-
+        this.notificationSender = NotificationEventBusSupport.getNotificationSender(vertx);
     }
 
     /**
@@ -163,8 +165,8 @@ public abstract class AbstractCredentialsManagementService implements Credential
                         encodedCredentials,
                         resourceVersion,
                         span))
-                .onSuccess(result -> NotificationEventBusSupport
-                        .sendNotification(vertx, new CredentialsChangeNotification(tenantId, deviceId, Instant.now())))
+                .onSuccess(result -> notificationSender
+                        .handle(new CredentialsChangeNotification(tenantId, deviceId, Instant.now())))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 

@@ -787,10 +787,9 @@ public abstract class AbstractAdapterConfig extends AbstractMessagingClientConfi
             notificationConfig.setServerRole("Notification");
             notificationReceiver = new ProtonBasedNotificationReceiver(HonoConnection.newConnection(vertx(), notificationConfig, getTracer()));
         }
+        final var notificationSender = NotificationEventBusSupport.getNotificationSender(vertx);
         NotificationConstants.DEVICE_REGISTRY_NOTIFICATION_TYPES.forEach(notificationType -> {
-            notificationReceiver.registerConsumer(notificationType, notification -> {
-                NotificationEventBusSupport.sendNotification(vertx, notification);
-            });
+            notificationReceiver.registerConsumer(notificationType, notificationSender::handle);
         });
         return notificationReceiver;
     }

@@ -172,8 +172,8 @@ public class KafkaBasedEventSenderIT {
         });
 
         // WHEN sending a tenant-deleted notification for that tenant
-        NotificationEventBusSupport.sendNotification(vertx,
-                new TenantChangeNotification(LifecycleChange.DELETE, tenantId, Instant.now(), false));
+        NotificationEventBusSupport.getNotificationSender(vertx)
+                .handle(new TenantChangeNotification(LifecycleChange.DELETE, tenantId, Instant.now(), false));
 
         vertx.runOnContext(v -> {
             // THEN the metrics of the underlying producer don't contain any metrics regarding that topic

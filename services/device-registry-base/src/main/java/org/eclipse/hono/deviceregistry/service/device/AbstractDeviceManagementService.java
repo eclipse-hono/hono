@@ -25,6 +25,7 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.deviceregistry.service.tenant.NoopTenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.util.DeviceRegistryUtils;
+import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationEventBusSupport;
 import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
 import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
@@ -46,6 +47,7 @@ import io.opentracing.Span;
 import io.opentracing.log.Fields;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 
 /**
@@ -60,6 +62,8 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
     protected final Vertx vertx;
     protected TenantInformationService tenantInformationService = new NoopTenantInformationService();
 
+    private final Handler<AbstractNotification> notificationSender;
+
     /**
      * Creates a new AbstractDeviceManagementService.
      *
@@ -68,6 +72,7 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
      */
     protected AbstractDeviceManagementService(final Vertx vertx) {
         this.vertx = Objects.requireNonNull(vertx);
+        this.notificationSender = NotificationEventBusSupport.getNotificationSender(vertx);
     }
 
     /**
@@ -279,9 +284,8 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
                                 "tenant does not exist",
                                 null))
                         : processCreateDevice(DeviceKey.from(result.getPayload(), deviceIdValue), device, span))
-                .onSuccess(result -> NotificationEventBusSupport.sendNotification(vertx,
-                        new DeviceChangeNotification(LifecycleChange.CREATE, tenantId, deviceIdValue, Instant.now(),
-                                device.isEnabled())))
+                .onSuccess(result -> notificationSender.handle(new DeviceChangeNotification(LifecycleChange.CREATE,
+                        tenantId, deviceIdValue, Instant.now(), device.isEnabled())))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 
@@ -327,9 +331,8 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
                                 "tenant does not exist",
                                 null))
                         : processUpdateDevice(DeviceKey.from(result.getPayload(), deviceId), device, resourceVersion, span))
-                .onSuccess(result -> NotificationEventBusSupport.sendNotification(vertx,
-                        new DeviceChangeNotification(LifecycleChange.UPDATE, tenantId, deviceId, Instant.now(),
-                                device.isEnabled())))
+                .onSuccess(result -> notificationSender.handle(new DeviceChangeNotification(LifecycleChange.UPDATE,
+                        tenantId, deviceId, Instant.now(), device.isEnabled())))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 
@@ -366,7 +369,7 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
                     }
                     return processDeleteDevice(DeviceKey.from(tenantId, deviceId), resourceVersion, span);
                 })
-                .onSuccess(result -> NotificationEventBusSupport.sendNotification(vertx,
+                .onSuccess(result -> notificationSender.handle(
                         new DeviceChangeNotification(LifecycleChange.DELETE, tenantId, deviceId, Instant.now(), false)))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
@@ -397,8 +400,8 @@ public abstract class AbstractDeviceManagementService implements DeviceManagemen
                     }
                     return processDeleteDevicesOfTenant(tenantId, span);
                 })
-                .onSuccess(result -> NotificationEventBusSupport.sendNotification(vertx,
-                        new AllDevicesOfTenantDeletedNotification(tenantId, Instant.now())))
+                .onSuccess(result -> notificationSender
+                        .handle(new AllDevicesOfTenantDeletedNotification(tenantId, Instant.now())))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 
