@@ -153,8 +153,8 @@ provided, either in the common configuration or individually per client as shown
 
 ## Kafka client metrics configuration
 
-Protocol adapters and the Command Router component by default report a set of metrics concerning the Kafka clients used
-for sending and receiving messages.
+Protocol adapters, the Command Router component and the device registry components by default report a set of metrics
+concerning the Kafka clients used for sending and receiving messages.
 
 The metrics support can be configured using the following environment variables or corresponding system properties:
 
