@@ -20,6 +20,9 @@ description = "Information about changes in recent Hono releases. Includes new f
 * *HonoConnectionImpl* instances failed to release/close the underlying TCP/TLS connection when its *disconnect* or
   *shutdown* method had been invoked. This has been fixed.
 * The LoraWAN protocol adapter has been extended with support for *Live Objects* provider.
+* In the Quarkus variants of the MongoDB device registry and the Hono auth component, the provided metrics did not
+  contain the default set of tags, as used in the other Hono components (e.g. *host* or *component-name*). This has been
+  fixed.
 
 ### API Changes
 

@@ -47,6 +47,7 @@ public class MetricsFactory {
             final Vertx vertx,
             final MeterRegistry registry,
             final SigfoxProtocolAdapterProperties adapterProperties) {
+        // define tags before the first metric gets created in the MicrometerBasedHttpAdapterMetrics constructor
         registry.config().commonTags(MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_SIGFOX));
         final var metrics = new MicrometerBasedHttpAdapterMetrics(registry, vertx);
         metrics.setProtocolAdapterProperties(adapterProperties);

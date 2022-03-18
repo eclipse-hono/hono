@@ -34,6 +34,7 @@ public class MetricsFactory {
     MicrometerBasedCommandRouterMetrics metrics(
             final Vertx vertx,
             final MeterRegistry registry) {
+        // define tags before the first metric gets created in the MicrometerBasedCommandRouterMetrics constructor
         registry.config().commonTags(MetricsTags.forService(Constants.SERVICE_NAME_COMMAND_ROUTER));
         return new MicrometerBasedCommandRouterMetrics(registry, vertx);
     }
