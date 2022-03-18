@@ -23,6 +23,7 @@ import javax.inject.Named;
 import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
+import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
@@ -110,6 +111,9 @@ public class AmqpServerFactory {
     @Inject
     @Named("amqp-messaging-network")
     ClientConfigProperties downstreamSenderConfig;
+
+    @Inject
+    KafkaClientMetricsSupport kafkaClientMetricsSupport;
 
     private final ServiceConfigProperties amqpServerProperties;
     private final TenantService tenantService;
@@ -260,6 +264,7 @@ public class AmqpServerFactory {
 
         if (eventKafkaProducerConfig.isConfigured()) {
             final KafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory.sharedFactory(vertx);
+            factory.setMetricsSupport(kafkaClientMetricsSupport);
             result.setClient(new KafkaBasedEventSender(vertx, factory, eventKafkaProducerConfig, true, tracer));
         }
 
