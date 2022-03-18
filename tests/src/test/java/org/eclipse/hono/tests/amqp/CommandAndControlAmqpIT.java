@@ -363,10 +363,10 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                         tenantId,
                         commandTargetDeviceId,
                         "setValue",
-                        "text/plain",
-                        msg,
                         correlationId,
                         replyId,
+                        msg,
+                        "text/plain",
                         null)
                 .onComplete(sendAttempt -> {
                     if (sendAttempt.failed()) {
@@ -927,29 +927,37 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             context.runOnContext(go -> {
                 final String correlationId = String.valueOf(commandsSent.getAndIncrement());
                 final Buffer msg = Buffer.buffer("value: " + commandsSent.get());
-                helper.applicationClient.sendAsyncCommand(tenantId, commandTargetDeviceId, "setValue", "text/plain",
-                        msg, correlationId, replyId, null)
-                        .onComplete(sendAttempt -> {
-                            if (IntegrationTestSupport.isUsingAmqpMessaging()) {
-                                if (sendAttempt.succeeded()) {
-                                    log.info("sending command {} via AMQP succeeded unexpectedly", commandsSent.get());
+                helper.applicationClient.sendAsyncCommand(
+                        tenantId,
+                        commandTargetDeviceId,
+                        "setValue",
+                        correlationId,
+                        replyId,
+                        msg,
+                        "text/plain",
+                        null)
+                    .onComplete(sendAttempt -> {
+                        if (IntegrationTestSupport.isUsingAmqpMessaging()) {
+                            if (sendAttempt.succeeded()) {
+                                log.info("sending command {} via AMQP succeeded unexpectedly", commandsSent.get());
+                            } else {
+                                if (sendAttempt.cause() instanceof ClientErrorException
+                                        && ((ClientErrorException) sendAttempt.cause()).getErrorCode() == HttpURLConnection.HTTP_BAD_REQUEST
+                                        && REJECTED_COMMAND_ERROR_MESSAGE.equals(sendAttempt.cause().getMessage())) {
+                                    log.debug("sending command {} failed as expected: {}", commandsSent.get(),
+                                            sendAttempt.cause().toString());
+                                    failureNotificationReceivedHandler.handle(null);
                                 } else {
-                                    if (sendAttempt.cause() instanceof ClientErrorException
-                                            && ((ClientErrorException) sendAttempt.cause()).getErrorCode() == HttpURLConnection.HTTP_BAD_REQUEST
-                                            && REJECTED_COMMAND_ERROR_MESSAGE.equals(sendAttempt.cause().getMessage())) {
-                                        log.debug("sending command {} failed as expected: {}", commandsSent.get(),
-                                                sendAttempt.cause().toString());
-                                        failureNotificationReceivedHandler.handle(null);
-                                    } else {
-                                        log.info("sending command {} failed with an unexpected error", commandsSent.get(),
-                                                sendAttempt.cause());
-                                    }
+                                    log.info("sending command {} failed with an unexpected error", commandsSent.get(),
+                                            sendAttempt.cause());
                                 }
-                            } else if (sendAttempt.failed()) {
-                                log.debug("sending command {} via Kafka failed unexpectedly", commandsSent.get(), sendAttempt.cause());
                             }
-                            commandSent.countDown();
-                        });
+                        } else if (sendAttempt.failed()) {
+                            log.debug("sending command {} via Kafka failed unexpectedly",
+                                    commandsSent.get(), sendAttempt.cause());
+                        }
+                        commandSent.countDown();
+                    });
             });
 
             commandSent.await();
@@ -1035,29 +1043,37 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             context.runOnContext(go -> {
                 final String correlationId = String.valueOf(commandsSent.getAndIncrement());
                 final Buffer msg = Buffer.buffer("value: " + commandsSent.get());
-                helper.applicationClient.sendAsyncCommand(tenantId, commandTargetDeviceId, "setValue", "text/plain",
-                        msg, correlationId, replyId, null)
-                        .onComplete(sendAttempt -> {
-                            if (IntegrationTestSupport.isUsingAmqpMessaging()) {
-                                if (sendAttempt.succeeded()) {
-                                    log.debug("sending command {} succeeded unexpectedly", commandsSent.get());
+                helper.applicationClient.sendAsyncCommand(
+                        tenantId,
+                        commandTargetDeviceId,
+                        "setValue",
+                        correlationId,
+                        replyId,
+                        msg,
+                        "text/plain",
+                        null)
+                    .onComplete(sendAttempt -> {
+                        if (IntegrationTestSupport.isUsingAmqpMessaging()) {
+                            if (sendAttempt.succeeded()) {
+                                log.debug("sending command {} succeeded unexpectedly", commandsSent.get());
+                            } else {
+                                if (sendAttempt.cause() instanceof ServerErrorException
+                                        && ((ServerErrorException) sendAttempt.cause()).getErrorCode() == HttpURLConnection.HTTP_UNAVAILABLE
+                                        && !(sendAttempt.cause() instanceof SendMessageTimeoutException)) {
+                                    log.debug("sending command {} failed as expected: {}", commandsSent.get(),
+                                            sendAttempt.cause().toString());
+                                    failureNotificationReceivedHandler.handle(null);
                                 } else {
-                                    if (sendAttempt.cause() instanceof ServerErrorException
-                                            && ((ServerErrorException) sendAttempt.cause()).getErrorCode() == HttpURLConnection.HTTP_UNAVAILABLE
-                                            && !(sendAttempt.cause() instanceof SendMessageTimeoutException)) {
-                                        log.debug("sending command {} failed as expected: {}", commandsSent.get(),
-                                                sendAttempt.cause().toString());
-                                        failureNotificationReceivedHandler.handle(null);
-                                    } else {
-                                        log.debug("sending command {} failed with an unexpected error", commandsSent.get(),
-                                                sendAttempt.cause());
-                                    }
+                                    log.debug("sending command {} failed with an unexpected error", commandsSent.get(),
+                                            sendAttempt.cause());
                                 }
-                            } else if (sendAttempt.failed()) {
-                                log.debug("sending command {} via Kafka failed unexpectedly", commandsSent.get(), sendAttempt.cause());
                             }
-                            commandSent.countDown();
-                        });
+                        } else if (sendAttempt.failed()) {
+                            log.debug("sending command {} via Kafka failed unexpectedly",
+                                    commandsSent.get(), sendAttempt.cause());
+                        }
+                        commandSent.countDown();
+                    });
             });
 
             commandSent.await();

@@ -13,9 +13,12 @@
 package org.eclipse.hono.application.client.amqp;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.application.client.CommandSender;
 import org.eclipse.hono.application.client.DownstreamMessage;
@@ -24,7 +27,6 @@ import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.util.StatusCodeMapper;
 import org.eclipse.hono.util.CommandConstants;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.opentracing.Span;
@@ -58,61 +60,13 @@ public class ProtonBasedCommandSender extends SenderCachingServiceClient
         requestResponseClient = new ProtonBasedRequestResponseCommandClient(connection, samplerFactory);
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * @throws NullPointerException if tenantId, deviceId, command, correlationId or replyId is {@code null}.
-     */
-    @Override
-    public Future<Void> sendAsyncCommand(
-            final String tenantId,
-            final String deviceId,
-            final String command,
-            final String contentType,
-            final Buffer data,
-            final String correlationId,
-            final String replyId,
-            final SpanContext context) {
-
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(command);
-        Objects.requireNonNull(correlationId);
-        Objects.requireNonNull(replyId);
-
-        return sendCommand(tenantId, deviceId, command, contentType, data, correlationId, replyId,
-                newChildSpan(context, "send command"));
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Future<Void> sendOneWayCommand(
-            final String tenantId,
-            final String deviceId, 
-            final String command,
-            final String contentType,
-            final Buffer data,
-            final SpanContext context) {
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
-        Objects.requireNonNull(command);
-
-        return sendCommand(tenantId, deviceId, command, contentType, data, null, null,
-                newChildSpan(context, "send one-way command"));
-    }
-
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Future<DownstreamMessage<AmqpMessageContext>> sendCommand(
             final String tenantId,
             final String deviceId,
             final String command,
-            final String contentType,
             final Buffer data,
+            final String contentType,
             final String replyId,
             final Duration timeout,
             final SpanContext context) {
@@ -126,6 +80,43 @@ public class ProtonBasedCommandSender extends SenderCachingServiceClient
                 replyId,
                 timeout,
                 context);
+    }
+
+    @Override
+    public Future<Void> sendAsyncCommand(
+            final String tenantId,
+            final String deviceId,
+            final String command,
+            final String correlationId,
+            final String replyId,
+            final Buffer data,
+            final String contentType,
+            final SpanContext context) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(command);
+        Objects.requireNonNull(correlationId);
+        Objects.requireNonNull(replyId);
+
+        return sendCommand(tenantId, deviceId, command, contentType, data, correlationId, replyId,
+                newChildSpan(context, "send command"));
+    }
+
+    @Override
+    public Future<Void> sendOneWayCommand(
+            final String tenantId,
+            final String deviceId, 
+            final String command,
+            final Buffer data,
+            final String contentType,
+            final SpanContext context) {
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(command);
+
+        return sendCommand(tenantId, deviceId, command, contentType, data, null, null,
+                newChildSpan(context, "send one-way command"));
     }
 
     private Future<Void> sendCommand(
@@ -164,17 +155,22 @@ public class ProtonBasedCommandSender extends SenderCachingServiceClient
 
         final Message msg = ProtonHelper.message();
 
-        MessageHelper.setCreationTime(msg);
+        msg.setCreationTime(Instant.now().toEpochMilli());
         msg.setAddress(target.toString());
-        Optional.ofNullable(replyId)
-                .ifPresent(id -> msg.setReplyTo(String.format("%s/%s/%s",
-                        CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, tenantId, id)));
-        Optional.ofNullable(correlationId).ifPresent(msg::setCorrelationId);
         msg.setSubject(command);
-        MessageHelper.setPayload(msg, contentType, data);
-        MessageHelper.addTenantId(msg, tenantId);
-        MessageHelper.addDeviceId(msg, deviceId);
-
+        Optional.ofNullable(correlationId).ifPresent(msg::setCorrelationId);
+        Optional.ofNullable(replyId)
+                .ifPresent(id -> msg.setReplyTo(ResourceIdentifier.fromPath(
+                        CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT,
+                        tenantId,
+                        id)
+                    .toString()));
+        Optional.ofNullable(data)
+            .map(Buffer::getBytes)
+            .map(Binary::new)
+            .map(Data::new)
+            .ifPresent(msg::setBody);
+        Optional.ofNullable(contentType).ifPresent(msg::setContentType);
         return msg;
     }
 }

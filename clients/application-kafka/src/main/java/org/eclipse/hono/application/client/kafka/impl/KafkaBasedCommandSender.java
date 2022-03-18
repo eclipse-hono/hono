@@ -140,17 +140,18 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
             final String tenantId,
             final String deviceId,
             final String command,
-            final String contentType,
-            final Buffer data,
             final String correlationId,
             final String replyId,
+            final Buffer data,
+            final String contentType,
             final SpanContext context) {
+
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(command);
         Objects.requireNonNull(correlationId);
 
-        return sendCommand(tenantId, deviceId, command, contentType, data, correlationId, true,
+        return sendCommand(tenantId, deviceId, command, correlationId, true, data, contentType, 
                 "send command", context);
     }
 
@@ -159,14 +160,15 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
             final String tenantId,
             final String deviceId,
             final String command,
-            final String contentType,
             final Buffer data,
+            final String contentType,
             final SpanContext context) {
+
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(command);
 
-        return sendCommand(tenantId, deviceId, command, contentType, data, null, false,
+        return sendCommand(tenantId, deviceId, command, null, false, data, contentType,
                 "send one-way command", context);
     }
 
@@ -185,11 +187,12 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
             final String tenantId,
             final String deviceId,
             final String command,
-            final String contentType,
             final Buffer data,
+            final String contentType,
             final String replyId,
             final Duration timeout,
             final SpanContext context) {
+
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(command);
@@ -223,8 +226,8 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
                     // Store the correlation id and the expiring command promise
                     pendingCommandResponses.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>())
                             .put(correlationId, expiringCommandPromise);
-                    return sendCommand(tenantId, deviceId, command, contentType, data, correlationId,
-                            true, "send command", span.context())
+                    return sendCommand(tenantId, deviceId, command, correlationId, true, data, contentType,
+                            "send command", span.context())
                                     .onSuccess(sent -> {
                                         LOGGER.debug("sent command [correlation-id: {}], waiting for response", correlationId);
                                         span.log("sent command, waiting for response");
@@ -264,10 +267,10 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
             final String tenantId,
             final String deviceId,
             final String command,
-            final String contentType,
-            final Buffer data,
             final String correlationId,
             final boolean responseRequired,
+            final Buffer data,
+            final String contentType,
             final String spanOperationName,
             final SpanContext context) {
 
@@ -293,10 +296,8 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
 
         props.put(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
         props.put(MessageHelper.SYS_PROPERTY_SUBJECT, subject);
-        props.put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE,
-                Optional.ofNullable(contentType).orElse(MessageHelper.CONTENT_TYPE_OCTET_STREAM));
-        Optional.ofNullable(correlationId)
-                .ifPresent(id -> props.put(MessageHelper.SYS_PROPERTY_CORRELATION_ID, id));
+        Optional.ofNullable(contentType).ifPresent(ct -> props.put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, ct));
+        Optional.ofNullable(correlationId).ifPresent(id -> props.put(MessageHelper.SYS_PROPERTY_CORRELATION_ID, id));
         props.put(KafkaRecordHelper.HEADER_RESPONSE_REQUIRED, responseRequired);
 
         return props;
