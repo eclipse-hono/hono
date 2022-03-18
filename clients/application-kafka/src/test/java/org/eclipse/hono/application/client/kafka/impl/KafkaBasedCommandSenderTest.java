@@ -21,6 +21,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -41,6 +42,7 @@ import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
 import org.eclipse.hono.client.SendMessageTimeoutException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.kafka.HonoTopic;
+import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
@@ -145,10 +147,10 @@ public class KafkaBasedCommandSenderTest {
                 deviceId,
                 subject,
                 correlationId,
-                null, // no reply ID required
                 new JsonObject().put("value", 20).toBuffer(),
                 "application/json",
-                null)
+                Map.of("foo", "bar"),
+                NoopSpan.INSTANCE.context())
             .onComplete(ctx.succeeding(ok -> {
                 ctx.verify(() -> {
                     final ProducerRecord<String, Buffer> commandRecord = mockProducer.history().get(0);
@@ -170,6 +172,10 @@ public class KafkaBasedCommandSenderTest {
                             commandRecord.headers(),
                             MessageHelper.SYS_PROPERTY_CORRELATION_ID,
                             correlationId);
+                    KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                            commandRecord.headers(),
+                            KafkaRecordHelper.DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX + ".foo",
+                            "bar");
                     verify(span).finish();
                 });
                 ctx.completeNow();
@@ -231,7 +237,7 @@ public class KafkaBasedCommandSenderTest {
                     "testCommand",
                     Buffer.buffer("data"),
                     "text/plain",
-                    null, // no reply ID required
+                    (Map<String, Object>) null, // no failure header props
                     Duration.ofMillis(5),
                     null)
                 .onComplete(ctx.failing(error -> {
@@ -368,9 +374,9 @@ public class KafkaBasedCommandSenderTest {
         headers.add(new RecordHeader(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId.getBytes()));
         headers.add(new RecordHeader(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId.getBytes()));
         headers.add(new RecordHeader(MessageHelper.SYS_PROPERTY_CORRELATION_ID, correlationId.getBytes()));
-        if (status != null) {
-            headers.add(new RecordHeader(MessageHelper.APP_PROPERTY_STATUS, String.valueOf(status).getBytes()));
-        }
+        Optional.ofNullable(status).ifPresent(s -> headers.add(new RecordHeader(
+                MessageHelper.APP_PROPERTY_STATUS,
+                String.valueOf(s).getBytes())));
         return new ConsumerRecord<>(
                 new HonoTopic(HonoTopic.Type.COMMAND_RESPONSE, tenantId).toString(),
                 0,

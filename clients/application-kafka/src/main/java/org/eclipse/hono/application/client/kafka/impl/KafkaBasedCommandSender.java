@@ -27,8 +27,8 @@ import java.util.stream.Collectors;
 
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.eclipse.hono.application.client.CommandSender;
 import org.eclipse.hono.application.client.DownstreamMessage;
+import org.eclipse.hono.application.client.kafka.KafkaCommandSender;
 import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
 import org.eclipse.hono.client.SendMessageTimeoutException;
 import org.eclipse.hono.client.kafka.HonoTopic;
@@ -63,8 +63,7 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
  * @see <a href="https://www.eclipse.org/hono/docs/api/command-and-control-kafka/">
  *      Command &amp; Control API for Kafka Specification</a>
  */
-public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
-        implements CommandSender<KafkaMessageContext> {
+public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender implements KafkaCommandSender {
 
     /**
      * The default number of milliseconds to wait for the Kafka cluster to accept a command message.
@@ -78,12 +77,12 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
     /**
      * Key is the tenant identifier, value the corresponding consumer for receiving the command responses.
      */
-    private final ConcurrentHashMap<String, HonoKafkaConsumer> commandResponseConsumers = new ConcurrentHashMap<>();
+    private final Map<String, HonoKafkaConsumer> commandResponseConsumers = new ConcurrentHashMap<>();
     /**
      * Key is the tenant identifier, value is a map with correlation ids as keys and expiring command promises as values.
      * These correlation ids are used to correlate the response messages with the sent commands.
      */
-    private final ConcurrentHashMap<String, ConcurrentHashMap<String, ExpiringCommandPromise>> pendingCommandResponses = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, ExpiringCommandPromise>> pendingCommandResponses = new ConcurrentHashMap<>();
     private Supplier<Consumer<String, Buffer>> kafkaConsumerSupplier;
     private Supplier<String> correlationIdSupplier = () -> UUID.randomUUID().toString();
 
@@ -151,8 +150,31 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
         Objects.requireNonNull(command);
         Objects.requireNonNull(correlationId);
 
-        return sendCommand(tenantId, deviceId, command, correlationId, true, data, contentType, 
+        return sendCommand(tenantId, deviceId, command, correlationId, true, data, contentType, null,
                 "send command", context);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<Void> sendAsyncCommand(
+            final String tenantId,
+            final String deviceId,
+            final String command,
+            final String correlationId,
+            final Buffer data,
+            final String contentType,
+            final Map<String, Object> failureNotificationMetadata,
+            final SpanContext context) {
+
+        Objects.requireNonNull(tenantId);
+        Objects.requireNonNull(deviceId);
+        Objects.requireNonNull(command);
+        Objects.requireNonNull(correlationId);
+
+        return sendCommand(tenantId, deviceId, command, correlationId, true, data, contentType,
+                failureNotificationMetadata, "send command", context);
     }
 
     @Override
@@ -168,7 +190,7 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(command);
 
-        return sendCommand(tenantId, deviceId, command, null, false, data, contentType,
+        return sendCommand(tenantId, deviceId, command, null, false, data, contentType, null,
                 "send one-way command", context);
     }
 
@@ -190,6 +212,19 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
             final Buffer data,
             final String contentType,
             final String replyId,
+            final Duration timeout,
+            final SpanContext context) {
+        return sendCommand(tenantId, deviceId, command, data, contentType, (Map<String, Object>) null, timeout, context);
+    }
+
+    @Override
+    public Future<DownstreamMessage<KafkaMessageContext>> sendCommand(
+            final String tenantId,
+            final String deviceId,
+            final String command,
+            final Buffer data,
+            final String contentType,
+            final Map<String, Object> failureNotificationMetadata,
             final Duration timeout,
             final SpanContext context) {
 
@@ -227,7 +262,7 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
                     pendingCommandResponses.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>())
                             .put(correlationId, expiringCommandPromise);
                     return sendCommand(tenantId, deviceId, command, correlationId, true, data, contentType,
-                            "send command", span.context())
+                            failureNotificationMetadata, "send command", span.context())
                                     .onSuccess(sent -> {
                                         LOGGER.debug("sent command [correlation-id: {}], waiting for response", correlationId);
                                         span.log("sent command, waiting for response");
@@ -271,12 +306,18 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
             final boolean responseRequired,
             final Buffer data,
             final String contentType,
+            final Map<String, Object> failureNotificationMetadata,
             final String spanOperationName,
             final SpanContext context) {
 
         final HonoTopic topic = new HonoTopic(HonoTopic.Type.COMMAND, tenantId);
-        final Map<String, Object> headerProperties = getHeaderProperties(deviceId, command, contentType, correlationId,
-                responseRequired);
+        final Map<String, Object> headerProperties = getHeaderProperties(
+                deviceId,
+                command,
+                contentType,
+                correlationId,
+                responseRequired,
+                failureNotificationMetadata);
         final String topicName = topic.toString();
         final Span currentSpan = startChildSpan(spanOperationName, topicName, tenantId, deviceId, context);
         return sendAndWaitForOutcome(
@@ -289,8 +330,13 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
             .onComplete(ar -> currentSpan.finish());
     }
 
-    private Map<String, Object> getHeaderProperties(final String deviceId, final String subject,
-            final String contentType, final String correlationId, final boolean responseRequired) {
+    private Map<String, Object> getHeaderProperties(
+            final String deviceId,
+            final String subject,
+            final String contentType,
+            final String correlationId,
+            final boolean responseRequired,
+            final Map<String, Object> failureNotificationMetadata) {
 
         final Map<String, Object> props = new HashMap<>();
 
@@ -299,6 +345,12 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender
         Optional.ofNullable(contentType).ifPresent(ct -> props.put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, ct));
         Optional.ofNullable(correlationId).ifPresent(id -> props.put(MessageHelper.SYS_PROPERTY_CORRELATION_ID, id));
         props.put(KafkaRecordHelper.HEADER_RESPONSE_REQUIRED, responseRequired);
+
+        if (failureNotificationMetadata != null) {
+            failureNotificationMetadata.forEach((key, value) -> props.put(
+                    String.format("%s.%s", KafkaRecordHelper.DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX, key),
+                    value));
+        }
 
         return props;
     }
