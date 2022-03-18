@@ -29,7 +29,6 @@ import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.auth.HonoUserAdapter;
 import org.eclipse.hono.client.amqp.tracing.MessageAnnotationsExtractAdapter;
 import org.eclipse.hono.client.amqp.tracing.MessageAnnotationsInjectAdapter;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.opentracing.SpanContext;
@@ -117,7 +116,7 @@ public final class AmqpUtils {
      * Gets the principal representing an authenticated peer.
      *
      * @param record The attachments to retrieve the principal from.
-     * @return The principal representing the authenticated client or {@link Constants#PRINCIPAL_ANONYMOUS}
+     * @return The principal representing the authenticated client or {@link #PRINCIPAL_ANONYMOUS}
      *         if the client has not been authenticated or record is {@code null}.
      */
     private static HonoUser getClientPrincipal(final Record record) {
