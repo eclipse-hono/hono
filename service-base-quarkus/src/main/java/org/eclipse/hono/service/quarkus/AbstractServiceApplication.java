@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -94,6 +94,16 @@ public abstract class AbstractServiceApplication implements ComponentNameProvide
     }
 
     /**
+     * Sets common metrics tags.
+     * <p>
+     * This default implementation does nothing. Subclasses should override this method to set the metrics tags,
+     * if not already set elsewhere.
+     */
+    protected void setCommonMetricsTags() {
+        // nothing done by default
+    }
+
+    /**
      * Enables collection of JVM related metrics.
      * <p>
      * Enables collection of Memory, Thread, GC and Processor metrics.
@@ -112,6 +122,7 @@ public abstract class AbstractServiceApplication implements ComponentNameProvide
      * <p>
      * This implementation
      * <ol>
+     * <li>sets common metrics tags,</li>
      * <li>logs the VM details,</li>
      * <li>enables JVM metrics and</li>
      * <li>invokes {@link #doStart()}.</li>
@@ -121,6 +132,7 @@ public abstract class AbstractServiceApplication implements ComponentNameProvide
      */
     public void onStart(final @Observes StartupEvent ev) {
 
+        setCommonMetricsTags();
         logJvmDetails();
         enableJvmMetrics();
         doStart();

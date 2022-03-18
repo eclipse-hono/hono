@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -43,6 +43,7 @@ public class MetricsFactory {
             final Vertx vertx,
             final MeterRegistry registry,
             final CoapAdapterProperties adapterProperties) {
+        // define tags before the first metric gets created in the MicrometerBasedCoapAdapterMetrics constructor
         registry.config().commonTags(MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP));
         final var metrics = new MicrometerBasedCoapAdapterMetrics(registry, vertx);
         metrics.setProtocolAdapterProperties(adapterProperties);
