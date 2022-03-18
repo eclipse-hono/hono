@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,7 +13,6 @@
 package org.eclipse.hono.application.client;
 
 import java.time.Duration;
-import java.util.Map;
 
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.util.Lifecycle;
@@ -88,7 +87,6 @@ public interface CommandSender<T extends MessageContext> extends Lifecycle {
      * @param replyId An arbitrary string which will be used to create the reply-to address to be included in commands
      *            sent to devices of the tenant. If the messaging network specific Command &amp; Control implementation does
      *            not require a replyId, the specified value will be ignored.
-     * @param properties The headers to include in the command message.
      * @return A future indicating the result of the operation.
      *         <p>
      *         If the command was accepted, the future will succeed.
@@ -106,10 +104,8 @@ public interface CommandSender<T extends MessageContext> extends Lifecycle {
             final String contentType,
             final Buffer data,
             final String correlationId,
-            final String replyId,
-            final Map<String, Object> properties) {
-        return sendAsyncCommand(tenantId, deviceId, command, contentType, data, correlationId, replyId, properties,
-                null);
+            final String replyId) {
+        return sendAsyncCommand(tenantId, deviceId, command, contentType, data, correlationId, replyId, null);
     }
 
     /**
@@ -131,7 +127,6 @@ public interface CommandSender<T extends MessageContext> extends Lifecycle {
      * @param replyId An arbitrary string which will be used to create the reply-to address to be included in commands
      *            sent to devices of the tenant. If the messaging network specific Command &amp; Control implementation does
      *            not require a replyId, the specified value will be ignored.
-     * @param properties The headers to include in the command message.
      * @param context The currently active OpenTracing span context that is used to trace the execution of this
      *            operation or {@code null} if no span is currently active.
      * @return A future indicating the result of the operation.
@@ -152,7 +147,6 @@ public interface CommandSender<T extends MessageContext> extends Lifecycle {
             Buffer data,
             String correlationId,
             String replyId,
-            Map<String, Object> properties,
             SpanContext context);
 
     /**
@@ -179,7 +173,7 @@ public interface CommandSender<T extends MessageContext> extends Lifecycle {
             final String deviceId,
             final String command,
             final Buffer data) {
-        return sendOneWayCommand(tenantId, deviceId, command, null, data, null, null);
+        return sendOneWayCommand(tenantId, deviceId, command, null, data, null);
     }
 
     /**
@@ -194,7 +188,6 @@ public interface CommandSender<T extends MessageContext> extends Lifecycle {
      * @param command The name of the command.
      * @param contentType The type of the data submitted as part of the one-way command or {@code null} if unknown.
      * @param data The input data to the command or {@code null} if the command has no input data.
-     * @param properties The headers to include in the one-way command message.
      * @param context The currently active OpenTracing span context that is used to trace the execution of this
      *            operation or {@code null} if no span is currently active.
      * @return A future indicating the result of the operation:
@@ -211,7 +204,6 @@ public interface CommandSender<T extends MessageContext> extends Lifecycle {
             String command,
             String contentType,
             Buffer data,
-            Map<String, Object> properties,
             SpanContext context);
 
     /**
@@ -240,7 +232,7 @@ public interface CommandSender<T extends MessageContext> extends Lifecycle {
             final String deviceId,
             final String command,
             final Buffer data) {
-        return sendCommand(tenantId, deviceId, command, null, data, null);
+        return sendCommand(tenantId, deviceId, command, null, data);
     }
 
     /**
@@ -255,7 +247,6 @@ public interface CommandSender<T extends MessageContext> extends Lifecycle {
      * @param command The name of the command.
      * @param contentType The type of the data submitted as part of the command or {@code null} if unknown.
      * @param data The command data to send to the device or {@code null} if the command has no input data.
-     * @param properties The headers to include in the command message.
      * @return A future indicating the result of the operation.
      *         <p>
      *         The future will succeed if a response with status 2xx has been received from the device.
@@ -271,9 +262,8 @@ public interface CommandSender<T extends MessageContext> extends Lifecycle {
             final String deviceId,
             final String command,
             final String contentType,
-            final Buffer data,
-            final Map<String, Object> properties) {
-        return sendCommand(tenantId, deviceId, command, contentType, data, null, properties, null, null);
+            final Buffer data) {
+        return sendCommand(tenantId, deviceId, command, contentType, data, null, null, null);
     }
 
     /**
@@ -291,7 +281,6 @@ public interface CommandSender<T extends MessageContext> extends Lifecycle {
      * @param replyId An arbitrary string which will be used to create the reply-to address to be included in commands
      *                sent to devices of the tenant. If the messaging network specific Command &amp; Control 
      *                implementation does not require a replyId, the specified value will be ignored.
-     * @param properties The headers to include in the command message.
      * @param timeout The duration after which the send command request times out.
      *                If the timeout duration is set to 0 then the send command request never times out.
      * @param context The currently active OpenTracing span context that is used to trace the execution of this
@@ -314,7 +303,6 @@ public interface CommandSender<T extends MessageContext> extends Lifecycle {
             String contentType,
             Buffer data,
             String replyId,
-            Map<String, Object> properties,
             Duration timeout,
             SpanContext context);
 }

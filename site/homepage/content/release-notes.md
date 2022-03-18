@@ -66,6 +66,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 * Moved `org.eclipse.hono.util.TelemetryExecutionContext` to adapter-base module.
 * The *amqp-device* client module no longer supports including arbitrary properties in telemetry, event and command
   response messages because it was undefined how these properties would be processed by the AMQP protocol adapter.
+* The *application* client module no longer supports including arbitrary properties in command messages
+  because it was undefined how these properties would be processed by the Hono components.
 
 ## 1.12.1
 

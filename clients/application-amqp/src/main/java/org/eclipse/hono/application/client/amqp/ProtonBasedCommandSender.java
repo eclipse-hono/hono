@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,7 +13,6 @@
 package org.eclipse.hono.application.client.amqp;
 
 import java.time.Duration;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -21,12 +20,12 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.application.client.CommandSender;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.client.amqp.SenderCachingServiceClient;
-import org.eclipse.hono.client.amqp.config.AddressHelper;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.util.StatusCodeMapper;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
@@ -65,16 +64,23 @@ public class ProtonBasedCommandSender extends SenderCachingServiceClient
      * @throws NullPointerException if tenantId, deviceId, command, correlationId or replyId is {@code null}.
      */
     @Override
-    public Future<Void> sendAsyncCommand(final String tenantId, final String deviceId, final String command,
-            final String contentType, final Buffer data, final String correlationId, final String replyId,
-            final Map<String, Object> properties, final SpanContext context) {
+    public Future<Void> sendAsyncCommand(
+            final String tenantId,
+            final String deviceId,
+            final String command,
+            final String contentType,
+            final Buffer data,
+            final String correlationId,
+            final String replyId,
+            final SpanContext context) {
+
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(command);
         Objects.requireNonNull(correlationId);
         Objects.requireNonNull(replyId);
 
-        return sendCommand(tenantId, deviceId, command, contentType, data, correlationId, replyId, properties,
+        return sendCommand(tenantId, deviceId, command, contentType, data, correlationId, replyId,
                 newChildSpan(context, "send command"));
     }
 
@@ -88,13 +94,12 @@ public class ProtonBasedCommandSender extends SenderCachingServiceClient
             final String command,
             final String contentType,
             final Buffer data,
-            final Map<String, Object> properties,
             final SpanContext context) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(command);
 
-        return sendCommand(tenantId, deviceId, command, contentType, data, null, null, properties,
+        return sendCommand(tenantId, deviceId, command, contentType, data, null, null,
                 newChildSpan(context, "send one-way command"));
     }
 
@@ -109,43 +114,62 @@ public class ProtonBasedCommandSender extends SenderCachingServiceClient
             final String contentType,
             final Buffer data,
             final String replyId,
-            final Map<String, Object> properties,
             final Duration timeout,
             final SpanContext context) {
 
-        return requestResponseClient
-                .sendCommand(tenantId, deviceId, command, contentType, data, replyId, properties, timeout, context);
+        return requestResponseClient.sendCommand(
+                tenantId,
+                deviceId,
+                command,
+                contentType,
+                data,
+                replyId,
+                timeout,
+                context);
     }
 
-    private Future<Void> sendCommand(final String tenantId, final String deviceId, final String command,
-            final String contentType, final Buffer data, final String correlationId, final String replyId,
-            final Map<String, Object> properties, final Span span) {
+    private Future<Void> sendCommand(
+            final String tenantId,
+            final String deviceId,
+            final String command,
+            final String contentType,
+            final Buffer data,
+            final String correlationId,
+            final String replyId,
+            final Span span) {
 
         return getOrCreateSenderLink(CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, tenantId)
                 .recover(thr -> Future.failedFuture(StatusCodeMapper.toServerError(thr)))
                 .compose(sender -> {
-                    final String targetAddress = AddressHelper
-                            .getTargetAddress(CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, tenantId, deviceId,
-                                    connection.getConfig());
                     final Message msg = createMessage(tenantId, deviceId, command, contentType, data, correlationId,
-                            replyId, targetAddress, properties);
+                            replyId);
                     return sender.sendAndWaitForOutcome(msg, span);
                 })
                 .mapEmpty();
     }
 
-    private static Message createMessage(final String tenantId, final String deviceId, final String command,
-            final String contentType, final Buffer data, final String correlationId, final String replyId,
-            final String targetAddress, final Map<String, Object> properties) {
+    private static Message createMessage(
+            final String tenantId,
+            final String deviceId,
+            final String command,
+            final String contentType,
+            final Buffer data,
+            final String correlationId,
+            final String replyId) {
+
+        final var target = ResourceIdentifier.from(
+                CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT,
+                tenantId,
+                deviceId);
+
         final Message msg = ProtonHelper.message();
 
         MessageHelper.setCreationTime(msg);
-        msg.setAddress(targetAddress);
+        msg.setAddress(target.toString());
         Optional.ofNullable(replyId)
                 .ifPresent(id -> msg.setReplyTo(String.format("%s/%s/%s",
                         CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, tenantId, id)));
         Optional.ofNullable(correlationId).ifPresent(msg::setCorrelationId);
-        MessageHelper.setApplicationProperties(msg, properties);
         msg.setSubject(command);
         MessageHelper.setPayload(msg, contentType, data);
         MessageHelper.addTenantId(msg, tenantId);

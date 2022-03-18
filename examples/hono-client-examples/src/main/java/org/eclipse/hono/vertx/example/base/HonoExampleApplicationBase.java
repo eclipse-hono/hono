@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -412,7 +412,7 @@ public class HonoExampleApplicationBase {
             LOG.debug("Sending command [{}] to [{}].", command, ttdNotification.getTenantAndDeviceId());
         }
 
-        client.sendCommand(tenantId, deviceId, command, "application/json", commandBuffer, buildCommandProperties())
+        client.sendCommand(tenantId, deviceId, command, "application/json", commandBuffer)
             .onSuccess(result -> {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Successfully sent command payload: [{}].", commandBuffer.toString());
@@ -463,17 +463,6 @@ public class HonoExampleApplicationBase {
                     LOG.debug("Could not send one-way command : {}.", t.getMessage());
                 }
             });
-    }
-
-    /**
-     * Provides an application property that is suitable to be sent with the command upstream.
-     *
-     * @return Map The application property map.
-     */
-    private static Map<String, Object> buildCommandProperties() {
-        final Map<String, Object> applicationProperties = new HashMap<>(1);
-        applicationProperties.put("appId", "example#1");
-        return applicationProperties;
     }
 
     private static Buffer buildCommandPayload() {
