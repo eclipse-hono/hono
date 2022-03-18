@@ -83,8 +83,8 @@ public class Commander extends AbstractApplicationClient {
                     tenantId,
                     deviceId,
                     command.getName(),
-                    command.getContentType(),
                     Buffer.buffer(command.getPayload()),
+                    command.getContentType(),
                     null);
         } else {
             System.out.printf("Command sent to device... [waiting for response for max. %d seconds]", commandTimeOutInSeconds);
@@ -93,8 +93,8 @@ public class Commander extends AbstractApplicationClient {
                     tenantId,
                     deviceId,
                     command.getName(),
-                    command.getContentType(),
                     Buffer.buffer(command.getPayload()),
+                    command.getContentType(),
                     UUID.randomUUID().toString(),
                     Duration.ofSeconds(commandTimeOutInSeconds),
                     null)

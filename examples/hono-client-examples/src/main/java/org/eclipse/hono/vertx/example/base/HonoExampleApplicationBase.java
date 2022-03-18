@@ -412,7 +412,7 @@ public class HonoExampleApplicationBase {
             LOG.debug("Sending command [{}] to [{}].", command, ttdNotification.getTenantAndDeviceId());
         }
 
-        client.sendCommand(tenantId, deviceId, command, "application/json", commandBuffer)
+        client.sendCommand(tenantId, deviceId, command, commandBuffer, "application/json")
             .onSuccess(result -> {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Successfully sent command payload: [{}].", commandBuffer.toString());

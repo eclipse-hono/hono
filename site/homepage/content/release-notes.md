@@ -68,6 +68,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   response messages because it was undefined how these properties would be processed by the AMQP protocol adapter.
 * The *application* client module no longer supports including arbitrary properties in command messages
   because it was undefined how these properties would be processed by the Hono components.
+* The order of the method parameters of the `org.eclipse.hono.application.client.CommandSender` interface have been changed
+  so that mandatory parameters come first.
 
 ## 1.12.1
 

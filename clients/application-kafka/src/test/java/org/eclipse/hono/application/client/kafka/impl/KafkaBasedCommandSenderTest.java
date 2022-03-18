@@ -144,10 +144,10 @@ public class KafkaBasedCommandSenderTest {
                 tenantId,
                 deviceId,
                 subject,
-                "application/json",
-                new JsonObject().put("value", 20).toBuffer(),
                 correlationId,
-                null,
+                null, // no reply ID required
+                new JsonObject().put("value", 20).toBuffer(),
+                "application/json",
                 null)
             .onComplete(ctx.succeeding(ok -> {
                 ctx.verify(() -> {
@@ -189,8 +189,8 @@ public class KafkaBasedCommandSenderTest {
                 tenantId,
                 deviceId,
                 subject,
-                "application/json",
                 new JsonObject().put("value", 20).toBuffer(),
+                "application/json",
                 NoopSpan.INSTANCE.context())
             .onComplete(ctx.succeeding(ok -> {
                 ctx.verify(() -> {
@@ -229,9 +229,9 @@ public class KafkaBasedCommandSenderTest {
                     tenantId,
                     deviceId,
                     "testCommand",
-                    "text/plain",
                     Buffer.buffer("data"),
-                    null,
+                    "text/plain",
+                    null, // no reply ID required
                     Duration.ofMillis(5),
                     null)
                 .onComplete(ctx.failing(error -> {
@@ -335,7 +335,7 @@ public class KafkaBasedCommandSenderTest {
 
         context.runOnContext(v -> {
             // Send a command to the device
-            commandSender.sendCommand(tenantId, deviceId, command, "text/plain", Buffer.buffer("test"))
+            commandSender.sendCommand(tenantId, deviceId, command, Buffer.buffer("test"), "text/plain")
                     .onComplete(ar -> {
                         ctx.verify(() -> {
                             if (expectSuccess) {
@@ -371,9 +371,17 @@ public class KafkaBasedCommandSenderTest {
         if (status != null) {
             headers.add(new RecordHeader(MessageHelper.APP_PROPERTY_STATUS, String.valueOf(status).getBytes()));
         }
-        return new ConsumerRecord<>(new HonoTopic(HonoTopic.Type.COMMAND_RESPONSE, tenantId).toString(), 0, 0, -1L,
-                TimestampType.NO_TIMESTAMP_TYPE, -1L, -1, -1, deviceId,
-                payload, new RecordHeaders(headers.toArray(Header[]::new)));
+        return new ConsumerRecord<>(
+                new HonoTopic(HonoTopic.Type.COMMAND_RESPONSE, tenantId).toString(),
+                0,
+                0,
+                -1L,
+                TimestampType.NO_TIMESTAMP_TYPE,
+                -1L,
+                -1,
+                -1,
+                deviceId,
+                payload,
+                new RecordHeaders(headers.toArray(Header[]::new)));
     }
-
 }

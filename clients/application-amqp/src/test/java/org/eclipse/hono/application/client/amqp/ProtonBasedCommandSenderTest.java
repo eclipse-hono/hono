@@ -31,7 +31,7 @@ import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.test.VertxMockSupport;
-import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.CommandConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -108,7 +108,7 @@ public class ProtonBasedCommandSenderTest {
 
         // WHEN sending a one-way command with some application properties and payload
         final Future<Void> sendCommandFuture = commandSender
-                .sendOneWayCommand(tenantId, deviceId, subject, null, Buffer.buffer("{\"value\": 20}"),
+                .sendOneWayCommand(tenantId, deviceId, subject, Buffer.buffer("{\"value\": 20}"), null,
                         NoopSpan.INSTANCE.context())
                 .onComplete(ctx.succeedingThenComplete());
 
@@ -123,7 +123,6 @@ public class ProtonBasedCommandSenderTest {
 
         //VERIFY if the message properties are properly set
         final Message message = messageCaptor.getValue();
-        assertThat(MessageHelper.getDeviceId(message)).isEqualTo(deviceId);
         assertThat(message.getSubject()).isEqualTo(subject);
         assertThat(sendCommandFuture.isComplete()).isTrue();
     }
@@ -145,8 +144,8 @@ public class ProtonBasedCommandSenderTest {
 
         // WHEN sending a one-way command with some application properties and payload
         final Future<Void> sendCommandFuture = commandSender
-                .sendAsyncCommand(tenantId, deviceId, subject, null, Buffer.buffer("{\"value\": 20}"),
-                        correlationId, replyId, NoopSpan.INSTANCE.context())
+                .sendAsyncCommand(tenantId, deviceId, subject, correlationId, replyId, Buffer.buffer("{\"value\": 20}"),
+                        null, NoopSpan.INSTANCE.context())
                 .onComplete(ctx.succeedingThenComplete());
 
         // VERIFY that the command is being sent
@@ -160,10 +159,10 @@ public class ProtonBasedCommandSenderTest {
 
         //VERIFY if the message properties are properly set
         final Message message = messageCaptor.getValue();
-        assertThat(MessageHelper.getDeviceId(message)).isEqualTo(deviceId);
         assertThat(message.getSubject()).isEqualTo(subject);
         assertThat(message.getCorrelationId()).isEqualTo(correlationId);
+        assertThat(message.getReplyTo()).isEqualTo(String.format("%s/%s/%s",
+                CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT, tenantId, replyId));
         assertThat(sendCommandFuture.isComplete()).isTrue();
     }
-
 }
