@@ -34,6 +34,12 @@ import io.vertx.kafka.client.producer.KafkaHeader;
 public final class KafkaRecordHelper {
 
     /**
+     * Prefix to use for marking properties of command messages that should be included in response messages indicating
+     * failure to deliver the command.
+     */
+    public static final String DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX = "delivery-failure-notification-metadata";
+
+    /**
      * The name of the boolean Kafka record header that defines whether a response is required for the command.
      */
     public static final String HEADER_RESPONSE_REQUIRED = "response-required";

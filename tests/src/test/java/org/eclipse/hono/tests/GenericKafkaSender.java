@@ -64,7 +64,8 @@ public class GenericKafkaSender extends AbstractKafkaBasedMessageSender {
             final String topic,
             final String tenantId,
             final String deviceId,
-            final Buffer payload, final Map<String, Object> properties) {
+            final Buffer payload,
+            final Map<String, Object> properties) {
 
         return super.sendAndWaitForOutcome(topic, tenantId, deviceId, payload, properties, NoopSpan.INSTANCE);
     }
@@ -89,7 +90,8 @@ public class GenericKafkaSender extends AbstractKafkaBasedMessageSender {
             final String topic,
             final String tenantId,
             final String deviceId,
-            final Buffer payload, final List<KafkaHeader> headers) {
+            final Buffer payload,
+            final List<KafkaHeader> headers) {
 
         return super.sendAndWaitForOutcome(topic, tenantId, deviceId, payload, headers, NoopSpan.INSTANCE);
     }

@@ -42,11 +42,6 @@ import io.vertx.kafka.client.producer.KafkaHeader;
  */
 public final class KafkaBasedCommand implements Command {
 
-    /**
-     * Prefix of command record headers to be returned in {@link #getDeliveryFailureNotificationProperties()}.
-     */
-    static final String DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX = "delivery-failure-notification-metadata";
-
     private static final Logger LOG = LoggerFactory.getLogger(KafkaBasedCommand.class);
 
     /**
@@ -205,7 +200,8 @@ public final class KafkaBasedCommand implements Command {
      */
     public Map<String, String> getDeliveryFailureNotificationProperties() {
         return record.headers().stream()
-                .filter(header -> header.key().startsWith(DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX))
+                .filter(header -> header.key()
+                        .startsWith(KafkaRecordHelper.DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX))
                 .collect(Collectors.toMap(KafkaHeader::key, header -> header.value().toString(), (v1, v2) -> {
                     LOG.debug("ignoring duplicate delivery notification header with value [{}] for {}", v2, this);
                     return v1;

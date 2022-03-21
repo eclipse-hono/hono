@@ -624,6 +624,11 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 response -> {
                     ctx.verify(() -> {
                         DownstreamMessageAssertions.assertMessageContainsTimeToLive(response, TTL_COMMAND_RESPONSE);
+                        assertThat(response.getProperties().getProperty(
+                                KafkaRecordHelper.DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX + ".foo",
+                                String.class))
+                            .isEqualTo("bar");
+                        assertThat(response.getProperties().getPropertiesMap().containsKey("ignore-me")).isFalse();
                     });
                     expectedCommandResponses.countDown();
                 },
@@ -676,12 +681,14 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 MessageHelper.SYS_PROPERTY_CORRELATION_ID, correlationId,
                 MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId,
                 MessageHelper.SYS_PROPERTY_CONTENT_TYPE, MessageHelper.CONTENT_TYPE_OCTET_STREAM,
-                KafkaRecordHelper.HEADER_RESPONSE_REQUIRED, true
+                KafkaRecordHelper.HEADER_RESPONSE_REQUIRED, true,
+                "ignore-me", "please",
+                KafkaRecordHelper.DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX + ".foo", "bar"
         );
         kafkaSenderRef.get().sendAndWaitForOutcome(commandTopic, tenantId, deviceId, Buffer.buffer(), properties2)
                 .onComplete(ctx.succeeding(ok -> {}));
 
-        final long timeToWait = 2500;
+        final long timeToWait = IntegrationTestSupport.getTimeoutMultiplicator() * 2500;
         if (!expectedCommandResponses.await(timeToWait, TimeUnit.MILLISECONDS)) {
             log.info("Timeout of {} milliseconds reached, stop waiting for command response", timeToWait);
         }
