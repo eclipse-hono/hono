@@ -374,9 +374,10 @@ public class KafkaBasedCommandSenderTest {
         headers.add(new RecordHeader(MessageHelper.APP_PROPERTY_TENANT_ID, tenantId.getBytes()));
         headers.add(new RecordHeader(MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId.getBytes()));
         headers.add(new RecordHeader(MessageHelper.SYS_PROPERTY_CORRELATION_ID, correlationId.getBytes()));
-        Optional.ofNullable(status).ifPresent(s -> headers.add(new RecordHeader(
-                MessageHelper.APP_PROPERTY_STATUS,
-                String.valueOf(s).getBytes())));
+        Optional.ofNullable(status)
+            .ifPresent(s -> headers.add(new RecordHeader(
+                    MessageHelper.APP_PROPERTY_STATUS,
+                    String.valueOf(s).getBytes())));
         return new ConsumerRecord<>(
                 new HonoTopic(HonoTopic.Type.COMMAND_RESPONSE, tenantId).toString(),
                 0,

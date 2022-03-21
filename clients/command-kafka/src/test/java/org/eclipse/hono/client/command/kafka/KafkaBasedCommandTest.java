@@ -245,18 +245,18 @@ public class KafkaBasedCommandTest {
         final String subject = "doThis";
 
         final List<KafkaHeader> headers = new ArrayList<>(getHeaders(deviceId, subject, correlationId));
-        headers.add(KafkaHeader.header(KafkaBasedCommand.DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX, "v1"));
-        headers.add(KafkaHeader.header(KafkaBasedCommand.DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX, "toBeIgnored"));
-        headers.add(KafkaHeader.header(KafkaBasedCommand.DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX + "-title", "v2"));
+        headers.add(KafkaHeader.header(KafkaRecordHelper.DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX, "v1"));
+        headers.add(KafkaHeader.header(KafkaRecordHelper.DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX, "toBeIgnored"));
+        headers.add(KafkaHeader.header(KafkaRecordHelper.DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX + "-title", "v2"));
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(topic, deviceId,
                 headers);
         final KafkaBasedCommand cmd = KafkaBasedCommand.from(commandRecord);
         final Map<String, String> deliveryFailureNotificationProperties = cmd.getDeliveryFailureNotificationProperties();
         assertThat(deliveryFailureNotificationProperties.size()).isEqualTo(2);
         assertThat(deliveryFailureNotificationProperties
-                .get(KafkaBasedCommand.DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX)).isEqualTo("v1");
+                .get(KafkaRecordHelper.DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX)).isEqualTo("v1");
         assertThat(deliveryFailureNotificationProperties
-                .get(KafkaBasedCommand.DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX + "-title")).isEqualTo("v2");
+                .get(KafkaRecordHelper.DELIVERY_FAILURE_NOTIFICATION_METADATA_PREFIX + "-title")).isEqualTo("v2");
     }
 
     private List<KafkaHeader> getHeaders(final String deviceId, final String subject) {
