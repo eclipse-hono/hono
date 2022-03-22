@@ -56,6 +56,12 @@
     <logback.version>1.2.9</logback.version>
     <mongodb-image.name>mongo:4.4</mongodb-image.name>
     <native.image.name>quay.io/quarkus/quarkus-micro-image:1.0</native.image.name>
+    <!--
+      The value of this property should always be the Java 17 based variant of the image name defined
+      in the Qaurkus platform definition's POM file of the Quarkus version being used, e.g.
+      https://github.com/quarkusio/quarkus-platform/blob/2.7.3.Final/generated-platform-project/quarkus/properties/pom.xml
+    -->
+    <native.builder-image.name>quay.io/quarkus/ubi-quarkus-native-image:21.3-java17</native.builder-image.name>
     <netty.version>4.1.74.Final</netty.version>
     <postgresql-image.name>postgres:12-alpine</postgresql-image.name>
     <protoparser.version>4.0.3</protoparser.version>
