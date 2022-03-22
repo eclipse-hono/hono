@@ -3,7 +3,9 @@ title = "Building from Source"
 weight = 385
 +++
 
-Hono can be deployed using the pre-built Docker images available from our [Docker Hub repositories](https://hub.docker.com/u/eclipse/). However, customizing and/or extending Hono's functionality requires building the images from source code.
+Hono can be deployed using the pre-built Docker images available from our
+[Docker Hub repositories](https://hub.docker.com/u/eclipse/). However, customizing and/or extending Hono's
+functionality requires building the images from source code.
 
 This page provides step by step instructions for getting the source code and building the Hono's Docker images from it.
 
@@ -26,23 +28,26 @@ with `${host}` and `${port}` reflecting the name/IP address and port of the host
 
 #### Java
 
-Hono is written in Java and therefore requires a Java Development Kit (JDK) version 11 or higher installed on your computer. Please follow the JDK vendor's instructions for installing Java on your operating system.
+Hono is written in Java and therefore requires a Java Development Kit (JDK) version 17 or higher installed on your
+computer. Please follow the JDK vendor's instructions for installing Java on your operating system.
 
 #### Maven
 
-Hono's build process is based on [Apache Maven](https://maven.apache.org). You need at least Maven 3.5 in order to build Hono.
-Please follow the [installation instructions on the Maven home page](https://maven.apache.org/).
+Hono's build process is based on [Apache Maven](https://maven.apache.org). You need at least Maven 3.5 in order to
+build Hono. Please follow the [installation instructions on the Maven home page](https://maven.apache.org/).
 
 #### Git
 
-A Git client is required if you want to contribute changes/improvements to the Hono project. It is not necessary for simply building Hono locally.
-Please refer to the [Git Downloads page](https://git-scm.com/downloads) for installation instructions.
+A Git client is required if you want to contribute changes/improvements to the Hono project. It is not necessary for
+simply building Hono locally. Please refer to the [Git Downloads page](https://git-scm.com/downloads) for installation
+instructions.
 
 ## Getting the Hono Source Code
 
 Either
 
-* download the latest [release archive](https://github.com/eclipse/hono/releases) and extract the archive to a local folder or
+* download the latest [release archive](https://github.com/eclipse/hono/releases) and extract the archive to a local
+  folder or
 * clone the Hono source code repository from GitHub:
   ```sh
   git clone https://github.com/eclipse/hono.git
@@ -63,8 +68,8 @@ mvn clean install -Pbuild-docker-image,metrics-prometheus,jaeger
 This will build all libraries, Docker images and example code.
 
 {{% notice tip %}}
-The first build might take several minutes because Docker will need to download all the base images that Hono is relying on.
-However, most of these will be cached by Docker so that subsequent builds will be running much faster.
+The first build might take several minutes because Docker will need to download all the base images that Hono is
+relying on. However, most of these will be cached by Docker so that subsequent builds will be running much faster.
 {{% /notice %}}
 
 #### Gathering Code Coverage Information for Unit Tests
@@ -87,9 +92,9 @@ this data.
 The container images being created will have names based on the following pattern:
 `${docker.registry-name}/${docker.image.org-name}/${project.artifactId}:${project.version}`.
 
-The variables in the name are standard Maven properties. The default value for the *docker.registry-name* property is `index.docker.io`.
-The default value for *docker.image.org-name* is `eclipse`. The following build command creates Hono's images using the `quay.io` registry
-and the `custom` repository name:
+The variables in the name are standard Maven properties. The default value for the *docker.registry-name* property
+is `index.docker.io`. The default value for *docker.image.org-name* is `eclipse`. The following build command creates
+Hono's images using the `quay.io` registry and the `custom` repository name:
 
 ```sh
 mvn clean install -Pbuild-docker-image,metrics-prometheus,jaeger -Ddocker.registry-name=quay.io -Ddocker.image.org-name=custom
@@ -106,29 +111,33 @@ mvn clean install -Pbuild-native-image,metrics-prometheus,jaeger
 ```
 
 {{% notice info %}}
-Support for *native* images is an experimental feature. The `build-native-image` and the `build-docker-image` profiles are mutually exclusive.
-However, they can be built one after the other.
+Support for *native* images is an experimental feature. The `build-native-image` and the `build-docker-image` profiles are
+mutually exclusive. However, they can be built one after the other.
 {{% /notice %}}
 
 #### Pushing Images
 
-The container images that are created as part of the build process can be automatically pushed to a container registry using the `docker-push-image` Maven profile:
+The container images that are created as part of the build process can be automatically pushed to a container registry
+using the `docker-push-image` Maven profile:
 
 ```sh
 mvn clean install -Pbuild-docker-image,metrics-prometheus,jaeger,docker-push-image
 ```
 
-Note that the container registry might require authentication in order to push images. The build uses the Docker Maven Plugin for creating and pushing images.
-Please refer to the [plugin documentation](http://dmp.fabric8.io/#authentication) for details regarding how to configure credentials for the registry.
+Note that the container registry might require authentication in order to push images. The build uses the Docker Maven
+Plugin for creating and pushing images. Please refer to the [plugin documentation](http://dmp.fabric8.io/#authentication)
+for details regarding how to configure credentials for the registry.
 
 ## Running the Integration Tests
 
-The source code for Hono comes with a test suite for integration testing. To trigger these tests, change to the `tests` folder and execute:
+The source code for Hono comes with a test suite for integration testing. To trigger these tests, change to the `tests`
+folder and execute:
 
 ```
 # in the "hono/tests" folder containing the test suite
 mvn verify -Prun-tests
 ```
 
-The tests are executed against the Docker images of the Hono components. Because of that, it is necessary to build the respective images as
-described above before the execution of the tests. The respective `Readme.md` file in the folder `hono/tests` contains more information regarding the test suite.
+The tests are executed against the Docker images of the Hono components. Because of that, it is necessary to build the
+respective images as described above before the execution of the tests. The respective `Readme.md` file in the folder
+`hono/tests` contains more information regarding the test suite.

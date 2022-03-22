@@ -1,7 +1,5 @@
-#!/usr/bin/env groovy
-
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,162 +16,204 @@
  *
  */
 
-node {
-    properties([buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '3')), parameters([
-            string(defaultValue: '',
-                    description: "The branch to build and release from.\nExamples:\n refs/heads/master\nrefs/heads/1.4.x",
-                    name: 'BRANCH',
-                    trim: true),
-            string(defaultValue: '',
-                    description: "The version identifier (tag name) to use for the artifacts built and released by this job. \nExamples:\n1.0.0-M6\n1.3.0-RC1\n1.4.4",
-                    name: 'RELEASE_VERSION',
-                    trim: true),
-            string(defaultValue: '',
-                    description: "The version identifier to use during development of the next version.\nExamples:\n2.0.0-SNAPSHOT\n1.6.0-SNAPSHOT",
-                    name: 'NEXT_VERSION',
-                    trim: true),
-            booleanParam(defaultValue: true,
-                    description: "Deploy documentation for this release to web site.\nDisable for milestone release.",
-                    name: 'DEPLOY_DOCUMENTATION'),
-            booleanParam(defaultValue: true,
-                    description: "Set the documentation for this release as the new stable version.\nDisable for milestone release.",
-                    name: 'STABLE_DOCUMENTATION')])])
-
-    try {
-        checkOut()
-        def utils = load 'jenkins/Hono-PipelineUtils.groovy'
-        setReleaseVersionAndBuild(utils)
-        setVersionForDocumentation()
-        commitAndTag()
-        setNextVersion(utils)
-        commitAndPush()
-        copyArtifacts()
-        currentBuild.result = 'SUCCESS'
-    } catch (err) {
-        currentBuild.result = 'FAILURE'
-        echo "Error: ${err}"
-    } finally {
-        echo "Build status: ${currentBuild.result}"
+pipeline {
+  agent {
+    kubernetes {
+      label 'my-agent-pod'
+      yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: maven
+    image: "maven:3.8-eclipse-temurin-17"
+    tty: true
+    command:
+    - cat
+    volumeMounts:
+    - mountPath: /home/jenkins
+      name: "jenkins-home"
+    - mountPath: /home/jenkins/.ssh
+      name: "volume-known-hosts"
+    - name: "settings-xml"
+      mountPath: /home/jenkins/.m2/settings.xml
+      subPath: settings.xml
+      readOnly: true
+    - name: "settings-security-xml"
+      mountPath: /home/jenkins/.m2/settings-security.xml
+      subPath: settings-security.xml
+      readOnly: true
+    - name: "m2-repo"
+      mountPath: /home/jenkins/.m2/repository
+    - name: "toolchains-xml"
+      mountPath: /home/jenkins/.m2/toolchains.xml
+      subPath: toolchains.xml
+      readOnly: true
+    env:
+    - name: "HOME"
+      value: "/home/jenkins"
+    resources:
+      limits:
+        memory: "6Gi"
+        cpu: "2"
+      requests:
+        memory: "6Gi"
+        cpu: "2"
+  volumes:
+  - name: "jenkins-home"
+    emptyDir: {}
+  - name: "m2-repo"
+    emptyDir: {}
+  - configMap:
+      name: known-hosts
+    name: "volume-known-hosts"
+  - name: "settings-xml"
+    secret:
+      secretName: m2-secret-dir
+      items:
+      - key: settings.xml
+        path: settings.xml
+  - name: "settings-security-xml"
+    secret:
+      secretName: m2-secret-dir
+      items:
+      - key: settings-security.xml
+        path: settings-security.xml
+  - name: "toolchains-xml"
+    configMap:
+      name: m2-dir
+      items:
+      - key: toolchains.xml
+        path: toolchains.xml
+"""
     }
-}
+  }
 
-/**
- * Checks out the specified branch from git repo
- *
- */
-def checkOut() {
-    stage('Checkout') {
-        echo "Check out branch: ${params.BRANCH}"
+  options {
+    buildDiscarder(logRotator(numToKeepStr: '3'))
+    disableConcurrentBuilds()
+    timeout(time: 45, unit: 'MINUTES')
+  }
+
+  parameters {
+    string(
+      name: "BRANCH",
+      description: "The branch to build and release from.\nExamples:\n refs/heads/master\nrefs/heads/1.4.x",
+      defaultValue: "refs/heads/master",
+      trim: true)
+    string(
+      name: "RELEASE_VERSION",
+      description: "The version identifier (tag name) to use for the artifacts built and released by this job.\nExamples:\n1.0.0-M6\n1.3.0-RC1\n1.4.4",
+      defaultValue: "",
+      trim: true)
+    string(
+      name: "NEXT_VERSION",
+      description: "The version identifier to use during development of the next version.\nExamples:\n2.0.0-SNAPSHOT\n1.6.0-SNAPSHOT",
+      defaultValue: "",
+      trim: true)
+    booleanParam(
+      name: "DEPLOY_DOCUMENTATION",
+      description: "Deploy documentation for this release to web site.\nDisable for milestone release.",
+      defaultValue: true)
+    booleanParam(
+      name: "STABLE_DOCUMENTATION",
+      description: "Set the documentation for this release as the new stable version.\nDisable for milestone release.",
+      defaultValue: true)
+  }
+
+  stages {
+
+    stage("Check out") {
+      steps {
+        echo "Checking out branch: ${params.BRANCH}"
         checkout([$class                           : 'GitSCM',
                   branches                         : [[name: "${params.BRANCH}"]],
                   doGenerateSubmoduleConfigurations: false,
-                  extensions                       : [[$class: 'WipeWorkspace'],
-                                                      [$class: 'LocalBranch']],
                   userRemoteConfigs                : [[credentialsId: 'github-bot-ssh', url: 'ssh://git@github.com/eclipse/hono.git']]])
+      }
     }
-}
 
-/**
- * Set version to RELEASE_VERSION and build using maven
- *
- * @param utils An instance of the Hono-PipelineUtils containing utility methods to build pipelines.
- */
-def setReleaseVersionAndBuild(def utils) {
-    stage('Build') {
-        withMaven(maven: utils.getMavenVersion(), jdk: utils.getJDKVersion(), options: [artifactsPublisher(disabled: true)]) {
-            sh "mvn versions:set -DgenerateBackupPoms=false -DnewVersion=${RELEASE_VERSION}"
-            sh 'mvn clean install javadoc:aggregate -Dmaven.test.failure.ignore=false -DenableEclipseJarSigner=true -DsnapshotDependencyAllowed=false -Ddocker.skip.build=true -DnoDocker'
+    stage("Build") {
+      steps {
+        container("maven") {
+          sh "mvn versions:set -DgenerateBackupPoms=false -DnewVersion=${params.RELEASE_VERSION}"
+          sh "mvn clean install javadoc:aggregate \
+                  -Dmaven.test.failure.ignore=false \
+                  -DenableEclipseJarSigner=true \
+                  -DsnapshotDependencyAllowed=false \
+                  -Ddocker.skip.build=true \
+                  -DnoDocker"
         }
+      }
     }
-}
 
-/**
- * Store version as supported version, if enabled:
- * - Add to list of supported versions (used by the pipeline that builds the web site)
- * - Set as the new stable version, if enabled
- */
-def setVersionForDocumentation() {
     stage("Add version for documentation") {
+      steps {
         if (params.DEPLOY_DOCUMENTATION ==~ /(?i)(T|TRUE)/) {
-            echo "add to supported versions"
+          echo "add to supported versions"
+          sh ''' 
+             MAJOR="${params.RELEASE_VERSION%%.*}" # before first dot
+             rest="${params.RELEASE_VERSION#*.}" # after first dot
+             MINOR="${rest%%.*}"  # before first dot of rest
+             echo "${MAJOR};${MINOR};${params.RELEASE_VERSION}" >> site/documentation/versions_supported.csv
+             git add site/documentation/versions_supported.csv
+             '''
+          if (params.STABLE_DOCUMENTATION ==~ /(?i)(T|TRUE)/) {
+            echo "set as stable version"
             sh ''' 
-               MAJOR="${RELEASE_VERSION%%.*}" # before first dot
-               rest="${RELEASE_VERSION#*.}" # after first dot
-               MINOR="${rest%%.*}"  # before first dot of rest
-               echo "${MAJOR};${MINOR};${RELEASE_VERSION}" >> site/documentation/versions_supported.csv
-               git add site/documentation/versions_supported.csv
+               echo "${params.RELEASE_VERSION}" > site/documentation/tag_stable.txt
+               git add site/documentation/tag_stable.txt
                '''
-            if (params.STABLE_DOCUMENTATION ==~ /(?i)(T|TRUE)/) {
-                echo "set as stable version"
-                sh ''' 
-                   echo "${RELEASE_VERSION}" > site/documentation/tag_stable.txt
-                   git add site/documentation/tag_stable.txt
-                   '''
-            }
+          }
         } else {
-            echo "skip release of documentation"
+          echo "skip release of documentation"
         }
+      }
     }
-}
 
-/**
- * Commit and tag to RELEASE_VERSION
- *
- */
-def commitAndTag() {
     stage("Commit and tag release version") {
+      steps {
         sh '''
-            git config user.email "hono-bot@eclipse.org"
-            git config user.name "hono-bot"
-            git add pom.xml \\*/pom.xml
-            git commit -m "Release ${RELEASE_VERSION}"
-            git tag ${RELEASE_VERSION}
-           '''
-    }
-
-}
-
-/**
- * Set version to NEXT_VERSION using maven
- *
- * @param utils An instance of the Hono-PipelineUtils containing utility methods to build pipelines.
- */
-def setNextVersion(def utils) {
-    stage("Set next version") {
-        withMaven(maven: utils.getMavenVersion(), jdk: utils.getJDKVersion(), options: [artifactsPublisher(disabled: true)]) {
-            sh "mvn versions:set -DallowSnapshots=true -DgenerateBackupPoms=false -DnewVersion=${NEXT_VERSION}"
-        }
-    }
-}
-
-/**
- * Commit and push to the Hono repo
- *
- */
-def commitAndPush() {
-    stage("Commit and push") {
-      sshagent(credentials: [ 'github-bot-ssh' ]) {
-        sh ''' 
-            git add pom.xml \\*/pom.xml
-            git commit -m "Bump version to ${NEXT_VERSION}"
-            git push --all ssh://git@github.com/eclipse/hono.git && git push --tags ssh://git@github.com/eclipse/hono.git
-           '''
-        }
-    }
-}
-
-/**
- * Copy the artifacts so that the binaries are available for download
- *
- */
-def copyArtifacts() {
-    stage("Copy Artifacts") {
-      sshagent(credentials: [ 'projects-storage.eclipse.org-bot-ssh' ]) {
-        sh ''' 
-            chmod +r cli/target/hono-cli-${RELEASE_VERSION}-exec.jar
-            scp cli/target/hono-cli-${RELEASE_VERSION}-exec.jar genie.hono@projects-storage.eclipse.org:/home/data/httpd/download.eclipse.org/hono/
+           git config user.email "hono-bot@eclipse.org"
+           git config user.name "hono-bot"
+           git add pom.xml \\*/pom.xml
+           git commit -m "Release ${params.RELEASE_VERSION}"
+           git tag ${params.RELEASE_VERSION}
            '''
       }
     }
 
+    stage("Set next version") {
+      steps {
+        container("maven") {
+          sh "mvn versions:set -DallowSnapshots=true -DgenerateBackupPoms=false -DnewVersion=${params.NEXT_VERSION}"
+        }
+      }
+    }
+
+    stage("Commit and push") {
+      steps {
+        sshagent(credentials: [ "github-bot-ssh" ]) {
+          sh '''
+             git add pom.xml \\*/pom.xml
+             git commit -m "Bump version to ${params.NEXT_VERSION}"
+             git push --all ssh://git@github.com/eclipse/hono.git && git push --tags ssh://git@github.com/eclipse/hono.git
+             '''
+        }
+      }
+    }
+
+    stage("Copy Artifacts") {
+      steps {
+        sshagent(credentials: [ "projects-storage.eclipse.org-bot-ssh" ]) {
+          sh ''' 
+             chmod +r cli/target/hono-cli-${params.RELEASE_VERSION}-exec.jar
+             scp cli/target/hono-cli-${params.RELEASE_VERSION}-exec.jar \
+                 genie.hono@projects-storage.eclipse.org:/home/data/httpd/download.eclipse.org/hono/
+             '''
+        }
+      }
+    }
+
+  }
 }

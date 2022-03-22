@@ -203,6 +203,7 @@
       <properties>
         <!-- build native image inside of a container, doesn't require GraalVM SDK to be installed locally -->
         <quarkus.native.remote-container-build>true</quarkus.native.remote-container-build>
+        <quarkus.native.builder-image>${native.builder-image.name}</quarkus.native.builder-image>
         <quarkus.package.type>native</quarkus.package.type>
         <!--  include all JSSE related classes -->
         <quarkus.native.enable-all-security-services>true</quarkus.native.enable-all-security-services>

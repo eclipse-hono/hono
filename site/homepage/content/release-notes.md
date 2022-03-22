@@ -24,6 +24,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   contain the default set of tags, as used in the other Hono components (e.g. *host* or *component-name*). This has been
   fixed.
 * The device registry components now support the reporting of Kafka client metrics.
+* The Java source code level of the Hono code has been raised from 11 to 17. This also means that a JDK version 17 or
+  later is required for building and running Hono.
 
 ### API Changes
 
