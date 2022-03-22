@@ -31,10 +31,6 @@
       <artifactId>hono-core</artifactId>
       <exclusions>
         <exclusion>
-          <groupId>io.vertx</groupId>
-          <artifactId>vertx-proton</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>io.opentracing</groupId>
           <artifactId>opentracing-noop</artifactId>
         </exclusion>
