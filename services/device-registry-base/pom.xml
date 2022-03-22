@@ -37,11 +37,23 @@
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-service-base-quarkus</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client-notification-kafka</artifactId>
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client-notification-amqp</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-telemetry-amqp</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-client-telemetry-kafka</artifactId>
     </dependency>
     <dependency>
       <groupId>org.springframework.security</groupId>
@@ -75,13 +87,6 @@
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-core</artifactId>
-      <optional>true</optional>
-      <exclusions>
-        <exclusion>
-          <groupId>org.jboss.slf4j</groupId>
-          <artifactId>slf4j-jboss-logmanager</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.bol</groupId>
