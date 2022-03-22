@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.util;
+package org.eclipse.hono.client.amqp.connection;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -29,9 +29,9 @@ import io.vertx.core.json.DecodeException;
 import io.vertx.proton.ProtonHelper;
 
 /**
- * Verifies behavior of {@link MessageHelper}.
+ * Verifies behavior of {@link AmqpUtils}.
  */
-public class MessageHelperTest {
+public class AmqpUtilsTest {
 
     /**
      * Verifies that the helper returns {@code null} when retrieving an AmqpValue
@@ -47,7 +47,7 @@ public class MessageHelperTest {
         final int bytesWritten = message.encode(encodedMsg, 0, 2048);
         final Message decodedMessage = ProtonHelper.message();
         decodedMessage.decode(encodedMsg, 0, bytesWritten);
-        assertThat(MessageHelper.getPayload(decodedMessage)).isNull();
+        assertThat(AmqpUtils.getPayload(decodedMessage)).isNull();
     }
 
     /**
@@ -64,7 +64,7 @@ public class MessageHelperTest {
         final int bytesWritten = message.encode(encodedMsg, 0, 2048);
         final Message decodedMessage = ProtonHelper.message();
         decodedMessage.decode(encodedMsg, 0, bytesWritten);
-        assertThat(MessageHelper.getPayload(decodedMessage).getBytes()).isEqualTo(payload);
+        assertThat(AmqpUtils.getPayload(decodedMessage).getBytes()).isEqualTo(payload);
     }
 
     /**
@@ -75,7 +75,7 @@ public class MessageHelperTest {
 
         final Message msg = ProtonHelper.message();
         msg.setBody(new Data(new Binary(new byte[] { 0x01, 0x02, 0x03, 0x04 }))); // not JSON
-        assertThrows(DecodeException.class, () -> MessageHelper.getJsonPayload(msg));
+        assertThrows(DecodeException.class, () -> AmqpUtils.getJsonPayload(msg));
     }
 
     /**
@@ -87,10 +87,10 @@ public class MessageHelperTest {
 
         final Message msg = ProtonHelper.message();
         msg.setBody(new Data(new Binary(new byte[] { (byte) 0xc3, (byte) 0x28 })));
-        assertThat(MessageHelper.getPayloadAsString(msg)).isNotNull();
+        assertThat(AmqpUtils.getPayloadAsString(msg)).isNotNull();
 
         msg.setBody(new Data(new Binary(new byte[] { (byte) 0xf0, (byte) 0x28, (byte) 0x8c, (byte) 0xbc })));
-        assertThat(MessageHelper.getPayloadAsString(msg)).isNotNull();
+        assertThat(AmqpUtils.getPayloadAsString(msg)).isNotNull();
     }
 
     /**
@@ -102,14 +102,14 @@ public class MessageHelperTest {
         final Message msg = ProtonHelper.message();
         final String testString = "über";
         msg.setBody(new AmqpValue(testString));
-        assertThat(MessageHelper.getPayloadSize(msg)).isEqualTo(testString.getBytes(StandardCharsets.UTF_8).length);
+        assertThat(AmqpUtils.getPayloadSize(msg)).isEqualTo(testString.getBytes(StandardCharsets.UTF_8).length);
 
         final byte[] testBytes = { (byte) 0xc3, (byte) 0x28 };
         msg.setBody(new AmqpValue(testBytes));
-        assertThat(MessageHelper.getPayloadSize(msg)).isEqualTo(testBytes.length);
+        assertThat(AmqpUtils.getPayloadSize(msg)).isEqualTo(testBytes.length);
 
         msg.setBody(new Data(new Binary(testBytes)));
-        assertThat(MessageHelper.getPayloadSize(msg)).isEqualTo(testBytes.length);
+        assertThat(AmqpUtils.getPayloadSize(msg)).isEqualTo(testBytes.length);
     }
 
     /**
@@ -121,6 +121,6 @@ public class MessageHelperTest {
 
         final Message msg = ProtonHelper.message();
         msg.setBody(new Data(new Binary(new byte[0])));
-        assertThat(MessageHelper.getJsonPayload(msg)).isNull();
+        assertThat(AmqpUtils.getJsonPayload(msg)).isNull();
     }
 }

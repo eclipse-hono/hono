@@ -42,6 +42,7 @@ import javax.security.auth.x500.X500Principal;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.amqp.config.RequestResponseClientConfigProperties;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
@@ -181,10 +182,10 @@ class ProtonBasedTenantClientTest {
 
         final Message request = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
         final Message response = ProtonHelper.message();
-        MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
-        MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
+        AmqpUtils.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
+        AmqpUtils.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
         response.setCorrelationId(request.getMessageId());
-        MessageHelper.setPayload(response, MessageHelper.CONTENT_TYPE_APPLICATION_JSON, tenantResult.toBuffer());
+        AmqpUtils.setPayload(response, MessageHelper.CONTENT_TYPE_APPLICATION_JSON, tenantResult.toBuffer());
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         AmqpClientUnitTestHelper.assertReceiverLinkCreated(connection).handle(delivery, response);
     }
@@ -228,10 +229,10 @@ class ProtonBasedTenantClientTest {
 
         // WHEN the response to the first request is received from the Tenant service
         final Message responseOneMessage = ProtonHelper.message();
-        MessageHelper.addProperty(responseOneMessage, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
-        MessageHelper.addCacheDirective(responseOneMessage, CacheDirective.maxAgeDirective(60));
+        AmqpUtils.addProperty(responseOneMessage, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
+        AmqpUtils.addCacheDirective(responseOneMessage, CacheDirective.maxAgeDirective(60));
         responseOneMessage.setCorrelationId(requestOneMessage.getMessageId());
-        MessageHelper.setPayload(responseOneMessage, MessageHelper.CONTENT_TYPE_APPLICATION_JSON, payload.toBuffer());
+        AmqpUtils.setPayload(responseOneMessage, MessageHelper.CONTENT_TYPE_APPLICATION_JSON, payload.toBuffer());
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         AmqpClientUnitTestHelper.assertReceiverLinkCreated(connection).handle(delivery, responseOneMessage);
 
@@ -401,10 +402,10 @@ class ProtonBasedTenantClientTest {
 
         final Message requestMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
         final Message responseMessage = ProtonHelper.message();
-        MessageHelper.addProperty(responseMessage, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
-        MessageHelper.addCacheDirective(responseMessage, CacheDirective.maxAgeDirective(60));
+        AmqpUtils.addProperty(responseMessage, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
+        AmqpUtils.addCacheDirective(responseMessage, CacheDirective.maxAgeDirective(60));
         responseMessage.setCorrelationId(requestMessage.getMessageId());
-        MessageHelper.setPayload(responseMessage, MessageHelper.CONTENT_TYPE_APPLICATION_JSON, newTenantResult("tenant").toBuffer());
+        AmqpUtils.setPayload(responseMessage, MessageHelper.CONTENT_TYPE_APPLICATION_JSON, newTenantResult("tenant").toBuffer());
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         AmqpClientUnitTestHelper.assertReceiverLinkCreated(connection).handle(delivery, responseMessage);
 
@@ -430,7 +431,7 @@ class ProtonBasedTenantClientTest {
         // THEN the message being sent contains the subject DN in RFC 2253 format in the
         // payload
         final Message request = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
-        final JsonObject payload = MessageHelper.getJsonPayload(request);
+        final JsonObject payload = AmqpUtils.getJsonPayload(request);
         assertThat(payload.getString(TenantConstants.FIELD_PAYLOAD_SUBJECT_DN)).isEqualTo("CN=ca,OU=Hono,O=Eclipse");
     }
 
@@ -449,10 +450,10 @@ class ProtonBasedTenantClientTest {
 
         // THEN the message being sent contains the tenant ID as search criteria
         final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
-        assertThat(MessageHelper.getTenantId(sentMessage)).isNull();
+        assertThat(AmqpUtils.getTenantId(sentMessage)).isNull();
         assertThat(sentMessage.getMessageId()).isNotNull();
         assertThat(sentMessage.getSubject()).isEqualTo(TenantConstants.TenantAction.get.toString());
-        assertThat(MessageHelper.getJsonPayload(sentMessage).getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID)).isEqualTo("tenant");
+        assertThat(AmqpUtils.getJsonPayload(sentMessage).getString(TenantConstants.FIELD_PAYLOAD_TENANT_ID)).isEqualTo("tenant");
     }
 
     /**

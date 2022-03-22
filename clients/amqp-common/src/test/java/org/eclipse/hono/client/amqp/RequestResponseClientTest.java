@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -43,6 +43,7 @@ import org.eclipse.hono.client.ResourceLimitExceededException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.config.RequestResponseClientConfigProperties;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
@@ -220,7 +221,7 @@ public class RequestResponseClientTest  {
         assertThat(request).isNotNull();
         assertThat(request.getBody()).isNotNull();
         assertThat(request.getBody()).isInstanceOf(Data.class);
-        final Buffer body = MessageHelper.getPayload(request);
+        final Buffer body = AmqpUtils.getPayload(request);
         assertThat(body.getBytes()).isEqualTo(payload.toBuffer().getBytes());
         assertThat(request.getApplicationProperties()).isNotNull();
         assertThat(request.getApplicationProperties().getValue().get("test-key")).isEqualTo("test-value");
@@ -260,7 +261,7 @@ public class RequestResponseClientTest  {
         assertThat(request).isNotNull();
         assertThat(request.getBody()).isNotNull();
         assertThat(request.getBody()).isInstanceOf(Data.class);
-        final Buffer body = MessageHelper.getPayload(request);
+        final Buffer body = AmqpUtils.getPayload(request);
         assertThat(body.getBytes()).isEqualTo(payload.toBuffer().getBytes());
         // and no timer has been set to time out the request
         verify(vertx, never()).setTimer(anyLong(), VertxMockSupport.anyHandler());
@@ -380,7 +381,7 @@ public class RequestResponseClientTest  {
         final ProtonMessageHandler responseHandler = verifyResponseHandlerSet();
         final Message response = ProtonHelper.message("payload");
         response.setCorrelationId(request.getMessageId());
-        MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, 200);
+        AmqpUtils.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, 200);
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         responseHandler.handle(delivery, response);
     }

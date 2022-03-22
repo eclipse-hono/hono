@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,6 +22,7 @@ import java.util.Optional;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.util.DownstreamMessageProperties;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -114,9 +115,9 @@ public final class DownstreamAmqpMessageFactory {
         Objects.requireNonNull(target);
 
         final Message message = ProtonHelper.message();
-        MessageHelper.setCreationTime(message);
+        AmqpUtils.setCreationTime(message);
         message.setAddress(target.getBasePath());
-        MessageHelper.annotate(message, target);
+        AmqpUtils.annotate(message, target);
 
         Optional.ofNullable(payload)
             .map(Buffer::getBytes)
@@ -167,10 +168,10 @@ public final class DownstreamAmqpMessageFactory {
      */
     public static void addJmsVendorProperties(final Message msg) {
         if (!Strings.isNullOrEmpty(msg.getContentType())) {
-            MessageHelper.addProperty(msg, JMS_VENDOR_PROPERTY_CONTENT_TYPE, msg.getContentType());
+            AmqpUtils.addProperty(msg, JMS_VENDOR_PROPERTY_CONTENT_TYPE, msg.getContentType());
         }
         if (!Strings.isNullOrEmpty(msg.getContentEncoding())) {
-            MessageHelper.addProperty(msg, JMS_VENDOR_PROPERTY_CONTENT_ENCODING, msg.getContentEncoding());
+            AmqpUtils.addProperty(msg, JMS_VENDOR_PROPERTY_CONTENT_ENCODING, msg.getContentEncoding());
         }
     }
 
@@ -200,7 +201,7 @@ public final class DownstreamAmqpMessageFactory {
 
             switch (prop.getKey()) {
             case MessageHelper.ANNOTATION_X_OPT_RETAIN:
-                MessageHelper.addAnnotation(message, prop.getKey(), prop.getValue());
+                AmqpUtils.addAnnotation(message, prop.getKey(), prop.getValue());
                 break;
             case MessageHelper.SYS_HEADER_PROPERTY_TTL:
                 if (Number.class.isInstance(prop.getValue())) {
@@ -237,7 +238,7 @@ public final class DownstreamAmqpMessageFactory {
                 break;
             default:
                 // add all other defaults as application properties
-                MessageHelper.addProperty(message, prop.getKey(), prop.getValue());
+                AmqpUtils.addProperty(message, prop.getKey(), prop.getValue());
             }
         });
 

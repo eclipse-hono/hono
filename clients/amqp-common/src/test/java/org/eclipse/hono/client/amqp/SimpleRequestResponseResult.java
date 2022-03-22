@@ -18,8 +18,8 @@ import java.util.Optional;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.util.CacheDirective;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RequestResponseResult;
 
 import io.vertx.core.buffer.Buffer;
@@ -67,9 +67,9 @@ public final class SimpleRequestResponseResult extends RequestResponseResult<Buf
      */
     public static SimpleRequestResponseResult from(final Message message) {
         return from(
-                MessageHelper.getStatus(message),
-                MessageHelper.getPayload(message),
-                CacheDirective.from(MessageHelper.getCacheDirective(message)),
+                AmqpUtils.getStatus(message),
+                AmqpUtils.getPayload(message),
+                CacheDirective.from(AmqpUtils.getCacheDirective(message)),
                 Optional.ofNullable(message.getApplicationProperties())
                     .map(ApplicationProperties::getValue)
                     .orElse(null));

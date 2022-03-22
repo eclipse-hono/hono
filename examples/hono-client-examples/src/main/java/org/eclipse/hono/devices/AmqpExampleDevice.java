@@ -16,9 +16,9 @@ package org.eclipse.hono.devices;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.device.amqp.AmqpAdapterClientFactory;
-import org.eclipse.hono.util.MessageHelper;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -149,7 +149,7 @@ public class AmqpExampleDevice {
     private void handleCommand(final Message commandMessage) {
 
         final String subject = commandMessage.getSubject();
-        final String commandPayload = MessageHelper.getPayloadAsString(commandMessage);
+        final String commandPayload = AmqpUtils.getPayloadAsString(commandMessage);
 
         if (commandMessage.getReplyTo() == null || commandMessage.getCorrelationId() == null) {
             // one-way command

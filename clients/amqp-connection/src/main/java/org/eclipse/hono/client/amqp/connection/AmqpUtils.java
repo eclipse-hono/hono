@@ -12,13 +12,20 @@
  *******************************************************************************/
 package org.eclipse.hono.client.amqp.connection;
 
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.Symbol;
+import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
+import org.apache.qpid.proton.amqp.messaging.Data;
+import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.engine.Record;
@@ -29,12 +36,18 @@ import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.auth.HonoUserAdapter;
 import org.eclipse.hono.client.amqp.tracing.MessageAnnotationsExtractAdapter;
 import org.eclipse.hono.client.amqp.tracing.MessageAnnotationsInjectAdapter;
+import org.eclipse.hono.util.CacheDirective;
+import org.eclipse.hono.util.CommandConstants;
+import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopSpanContext;
 import io.opentracing.propagation.Format;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonObject;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
 
@@ -212,6 +225,31 @@ public final class AmqpUtils {
     }
 
     /**
+     * Adds a property to an AMQP 1.0 message.
+     * <p>
+     * The property is added to the message's <em>application-properties</em>.
+     *
+     * @param msg The message.
+     * @param key The property key.
+     * @param value The property value.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    public static void addProperty(final Message msg, final String key, final Object value) {
+
+        Objects.requireNonNull(msg);
+        Objects.requireNonNull(key);
+        Objects.requireNonNull(value);
+
+        final ApplicationProperties props = Optional.ofNullable(msg.getApplicationProperties())
+                .orElseGet(() -> {
+                    final ApplicationProperties result = new ApplicationProperties(new HashMap<>());
+                    msg.setApplicationProperties(result);
+                    return result;
+                });
+        props.getValue().put(key, value);
+    }
+
+    /**
      * Gets the value of one of a message's <em>application properties</em>.
      *
      * @param <T> The expected type of the property to retrieve the value of.
@@ -232,5 +270,419 @@ public final class AmqpUtils {
                 .filter(type::isInstance)
                 .map(type::cast)
                 .orElse(null);
+    }
+
+    /**
+     * Adds a caching directive to an AMQP 1.0 message.
+     * <p>
+     * The directive is put to the message's <em>application-properties</em> under key
+     * {@value MessageHelper#APP_PROPERTY_CACHE_CONTROL}.
+     *
+     * @param msg The message to add the directive to.
+     * @param cacheDirective The cache directive.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    public static void addCacheDirective(final Message msg, final CacheDirective cacheDirective) {
+        addProperty(msg, MessageHelper.APP_PROPERTY_CACHE_CONTROL, cacheDirective.toString());
+    }
+
+    /**
+     * Gets the value of a message's {@value MessageHelper#APP_PROPERTY_CACHE_CONTROL} application property.
+     *
+     * @param msg The message to get the property from.
+     * @return The property value or {@code null} if not set.
+     */
+    public static String getCacheDirective(final Message msg) {
+        return getApplicationProperty(msg, MessageHelper.APP_PROPERTY_CACHE_CONTROL, String.class);
+    }
+
+    /**
+     * Adds a tenant ID to a message's <em>application properties</em>.
+     * <p>
+     * The name of the application property is {@value MessageHelper#APP_PROPERTY_TENANT_ID}.
+     *
+     * @param msg The message.
+     * @param tenantId The tenant identifier to add.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    public static void addTenantId(final Message msg, final String tenantId) {
+        addProperty(msg, MessageHelper.APP_PROPERTY_TENANT_ID, tenantId);
+    }
+
+    /**
+     * Gets the value of a message's {@value MessageHelper#APP_PROPERTY_TENANT_ID} application property.
+     *
+     * @param msg The message.
+     * @return The property value or {@code null} if not set.
+     * @throws NullPointerException if message is {@code null}.
+     */
+    public static String getTenantId(final Message msg) {
+        Objects.requireNonNull(msg);
+        return getApplicationProperty(msg, MessageHelper.APP_PROPERTY_TENANT_ID, String.class);
+    }
+
+    /**
+     * Adds a device ID to a message's <em>application properties</em>.
+     * <p>
+     * The name of the application property is {@value MessageHelper#APP_PROPERTY_DEVICE_ID}.
+     *
+     * @param msg The message.
+     * @param deviceId The device identifier to add.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     *
+     */
+    public static void addDeviceId(final Message msg, final String deviceId) {
+        addProperty(msg, MessageHelper.APP_PROPERTY_DEVICE_ID, deviceId);
+    }
+
+    /**
+     * Gets the value of a message's {@value MessageHelper#APP_PROPERTY_DEVICE_ID} application property.
+     *
+     * @param msg The message.
+     * @return The property value or {@code null} if not set.
+     * @throws NullPointerException if message is {@code null}.
+     */
+    public static String getDeviceId(final Message msg) {
+        Objects.requireNonNull(msg);
+        return getApplicationProperty(msg, MessageHelper.APP_PROPERTY_DEVICE_ID, String.class);
+    }
+
+    /**
+     * Gets the value of a message's {@value MessageHelper#APP_PROPERTY_GATEWAY_ID} application property.
+     *
+     * @param msg The message.
+     * @return The property value or {@code null} if not set.
+     * @throws NullPointerException if message is {@code null}.
+     */
+    public static String getGatewayId(final Message msg) {
+        Objects.requireNonNull(msg);
+        return getApplicationProperty(msg, MessageHelper.APP_PROPERTY_GATEWAY_ID, String.class);
+    }
+
+    /**
+     * Gets the value of a message's {@value MessageHelper#APP_PROPERTY_STATUS} application property.
+     *
+     * @param msg The message to get the property from.
+     * @return The property value or {@code null} if not set.
+     */
+    public static Integer getStatus(final Message msg) {
+        return getApplicationProperty(msg, MessageHelper.APP_PROPERTY_STATUS, Integer.class);
+    }
+
+    /**
+     * Adds a property indicating the outcome of an operation to a (response) message.
+     * <p>
+     * The value will be stored in the message's  {@value MessageHelper#APP_PROPERTY_STATUS} application property.
+     *
+     * @param msg The message to add the status to.
+     * @param status The status to set.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    public static void addStatus(final Message msg, final int status) {
+        addProperty(msg, MessageHelper.APP_PROPERTY_STATUS, status);
+    }
+
+    /**
+     * Adds a property indicating a device's <em>time until disconnect</em> property to an AMQP 1.0 message.
+     * <p>
+     * The value is put to the message's <em>application-properties</em> under key
+     * {@value CommandConstants#MSG_PROPERTY_DEVICE_TTD}.
+     *
+     * @param msg The message to add the property to.
+     * @param timeUntilDisconnect The value of the property (number of seconds).
+     */
+    public static void addTimeUntilDisconnect(final Message msg, final int timeUntilDisconnect) {
+        addProperty(msg, CommandConstants.MSG_PROPERTY_DEVICE_TTD, timeUntilDisconnect);
+    }
+
+    /**
+     * Gets the value of a message's {@value CommandConstants#MSG_PROPERTY_DEVICE_TTD} application property.
+     *
+     * @param msg The message to get the property from.
+     * @return The property value or {@code null} if not set.
+     */
+    public static Integer getTimeUntilDisconnect(final Message msg) {
+        return getApplicationProperty(msg, CommandConstants.MSG_PROPERTY_DEVICE_TTD, Integer.class);
+    }
+
+    /**
+     * Sets the <em>creation-time</em> of an AMQP 1.0 message to the current point in time.
+     * <p>
+     * This method does nothing if the message already has a creation time (&gt; 0) set.
+     *
+     * @param msg The message to set the property on.
+     */
+    public static void setCreationTime(final Message msg) {
+        if (msg.getCreationTime() == 0) {
+            msg.setCreationTime(Instant.now().toEpochMilli());
+        }
+    }
+
+    /**
+     * Parses a message's body into a JSON object.
+     *
+     * @param msg The AMQP 1.0 message to parse the body of.
+     * @return The message body parsed into a JSON object or {@code null} if the message does not have a <em>Data</em>
+     *         nor an <em>AmqpValue</em> section or if the body section is empty.
+     * @throws NullPointerException if the message is {@code null}.
+     * @throws io.vertx.core.json.DecodeException if the payload cannot be parsed into a JSON object.
+     */
+    public static JsonObject getJsonPayload(final Message msg) {
+
+        return Optional.ofNullable(getPayload(msg))
+                .filter(b -> b.length() > 0)
+                .map(Buffer::toJsonObject)
+                .orElse(null);
+    }
+
+    /**
+     * Gets the payload data contained in a message's body.
+     * <p>
+     * The bytes in the returned buffer are determined as follows:
+     * <ul>
+     * <li>If the body is a Data section, the bytes contained in the
+     * Data section are returned.</li>
+     * <li>If the body is an AmqpValue section and contains a byte array,
+     * the bytes in the array are returned.</li>
+     * <li>If the body is an AmqpValue section and contains a String,
+     * the String's UTF-8 encoding is returned.</li>
+     * <li>In all other cases, {@code null} is returned.</li>
+     * </ul>
+     *
+     * @param msg The AMQP 1.0 message to parse the body of.
+     * @return The bytes representing the payload or {@code null} if the message
+     *         neither has a <em>Data</em> nor <em>AmqpValue</em> section or if
+     *         a contained <em>AmqpValue</em> section doesn't have a String or
+     *         byte array value.
+     * @throws NullPointerException if the message is {@code null}.
+     */
+    public static Buffer getPayload(final Message msg) {
+        Objects.requireNonNull(msg);
+        return Optional.ofNullable(getPayloadByteArray(msg)).map(Buffer::buffer).orElse(null);
+    }
+
+    /**
+     * Gets the payload data contained in a message's body as a String.
+     * <p>
+     * The String returned is created as follows:
+     * <ul>
+     * <li>If the body is a Data section, the String is created by
+     * interpreting the bytes as UTF-8 encoded characters.</li>
+     * <li>If the body is an AmqpValue section and contains a byte array,
+     * the String is created by interpreting the bytes as UTF-8 encoded characters.</li>
+     * <li>If the body is an AmqpValue section and contains a String,
+     * the String is returned as is.</li>
+     * <li>In all other cases, {@code null} is returned.</li>
+     * </ul>
+     *
+     * @param msg The AMQP 1.0 message to parse the body of.
+     * @return The String representation of the payload data or {@code null} if the
+     *         type or value type of the message body section isn't supported.
+     * @throws NullPointerException if the message is {@code null}.
+     */
+    public static String getPayloadAsString(final Message msg) {
+        Objects.requireNonNull(msg);
+        // In case of an AmqpValue containing a String,
+        // we prevent encoding/decoding of the String to/from its UTF-8 bytes.
+        if (msg.getBody() instanceof AmqpValue
+                && ((AmqpValue) msg.getBody()).getValue() instanceof String) {
+            return (String) ((AmqpValue) msg.getBody()).getValue();
+        }
+        return Optional.ofNullable(getPayload(msg)).map(Buffer::toString).orElse(null);
+    }
+
+    /**
+     * Gets the size of the payload data contained in a message's body.
+     * <p>
+     * If there is no body section or if its type is unsupported, {@code 0} is returned.
+     *
+     * @param msg The AMQP 1.0 message to parse the body of.
+     * @return The payload size in bytes, 0 if message body is {@code null} or unsupported.
+     * @throws NullPointerException if the message is {@code null}.
+     */
+    public static int getPayloadSize(final Message msg) {
+        Objects.requireNonNull(msg);
+        return Optional.ofNullable(getPayloadByteArray(msg)).map(bytes -> bytes.length).orElse(0);
+    }
+
+    private static byte[] getPayloadByteArray(final Message msg) {
+        Objects.requireNonNull(msg);
+        if (msg.getBody() == null) {
+            return null;
+        }
+
+        if (msg.getBody() instanceof Data) {
+            final Data body = (Data) msg.getBody();
+            return body.getValue().getArray();
+        } else if (msg.getBody() instanceof AmqpValue) {
+            final AmqpValue body = (AmqpValue) msg.getBody();
+            if (body.getValue() instanceof byte[]) {
+                return (byte[]) body.getValue();
+            } else if (body.getValue() instanceof String) {
+                return ((String) body.getValue()).getBytes(StandardCharsets.UTF_8);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Sets the payload of an AMQP message using a <em>Data</em> section.
+     * <p>
+     * The message's <em>content-type</em> will be set to {@value MessageHelper#CONTENT_TYPE_APPLICATION_JSON}.
+     * The message's Data section will contain the UTF-8 encoding of the given JSON object.
+     * </p>
+     *
+     * @param message The message.
+     * @param payload The payload or {@code null} if there is no payload to convey in the message body.
+     *
+     * @throws NullPointerException If message is {@code null}.
+     */
+    public static void setJsonPayload(final Message message, final JsonObject payload) {
+        Objects.requireNonNull(message);
+
+        setPayload(
+                message,
+                MessageHelper.CONTENT_TYPE_APPLICATION_JSON,
+                Optional.ofNullable(payload).map(JsonObject::toBuffer).orElse(null));
+    }
+
+    /**
+     * Sets the payload of an AMQP message using a <em>Data</em> section.
+     * <p>
+     * The message's <em>content-type</em> will be set to {@value MessageHelper#CONTENT_TYPE_APPLICATION_JSON}.
+     * The message's Data section will contain the UTF-8 encoding of the given payload.
+     * <b>Note:</b> No formal check is done if the payload actually is a JSON string.
+     * </p>
+     *
+     * @param message The message.
+     * @param payload The payload or {@code null} if there is no payload to convey in the message body.
+     *
+     * @throws NullPointerException If message is {@code null}.
+     */
+    public static void setJsonPayload(final Message message, final String payload) {
+        Objects.requireNonNull(message);
+
+        setPayload(
+                message,
+                MessageHelper.CONTENT_TYPE_APPLICATION_JSON,
+                Optional.ofNullable(payload).map(Buffer::buffer).orElse(null));
+    }
+
+    /**
+     * Sets the payload of an AMQP message using a <em>Data</em> section.
+     *
+     * @param message The message.
+     * @param contentType The type of the payload. A non-{@code null} type value will be used to set the
+     *                    <em>content-type</em> property of the message, if the payload is either not {@code null}
+     *                    or the {@linkplain EventConstants#CONTENT_TYPE_EMPTY_NOTIFICATION empty notification type} is
+     *                    given.
+     *                    If the given type is {@code null} and the payload is not {@code null}, the
+     *                    {@linkplain MessageHelper#CONTENT_TYPE_OCTET_STREAM default content type} will be used.
+     * @param payload The payload or {@code null} if there is no payload to convey in the message body.
+     *
+     * @throws NullPointerException If message is {@code null}.
+     */
+    public static void setPayload(final Message message, final String contentType, final Buffer payload) {
+        Objects.requireNonNull(message);
+
+        setPayload(
+                message,
+                contentType,
+                Optional.ofNullable(payload).map(Buffer::getBytes).orElse(null));
+    }
+
+    /**
+     * Sets the payload of an AMQP message using a <em>Data</em> section.
+     *
+     * @param message The message.
+     * @param contentType The type of the payload. A non-{@code null} type value will be used to set the
+     *                    <em>content-type</em> property of the message, if the payload is either not {@code null}
+     *                    or the {@linkplain EventConstants#CONTENT_TYPE_EMPTY_NOTIFICATION empty notification type} is
+     *                    given.
+     *                    If the given type is {@code null} and the payload is not {@code null}, the
+     *                    {@linkplain MessageHelper#CONTENT_TYPE_OCTET_STREAM default content type} will be used.
+     * @param payload The payload or {@code null} if there is no payload to convey in the message body.
+     *
+     * @throws NullPointerException If message is {@code null}.
+     */
+    public static void setPayload(final Message message, final String contentType, final byte[] payload) {
+        Objects.requireNonNull(message);
+
+        setPayload(message, contentType, payload, true);
+    }
+
+    /**
+     * Sets the payload of an AMQP message using a <em>Data</em> section.
+     *
+     * @param message The message.
+     * @param contentType The type of the payload. A non-{@code null} type value will be used to set the
+     *                    <em>content-type</em> property of the message, if the payload is either not {@code null}
+     *                    or the {@linkplain EventConstants#CONTENT_TYPE_EMPTY_NOTIFICATION empty notification type} is
+     *                    given.
+     * @param payload The payload or {@code null} if there is no payload to convey in the message body.
+     * @param useDefaultContentTypeAsFallback {@code true} if the {@linkplain MessageHelper#CONTENT_TYPE_OCTET_STREAM
+     *                                        default content type} should be set if content type is {@code null} and
+     *                                        the payload is not {@code null}.
+     * @throws NullPointerException If message is {@code null}.
+     */
+    public static void setPayload(
+            final Message message,
+            final String contentType,
+            final byte[] payload,
+            final boolean useDefaultContentTypeAsFallback) {
+
+        Objects.requireNonNull(message);
+
+        if (payload != null) {
+            message.setBody(new Data(new Binary(payload)));
+        }
+        if ((payload != null && contentType != null)
+                || EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION.equals(contentType)
+                || EventConstants.CONTENT_TYPE_DEVICE_PROVISIONING_NOTIFICATION.equals(contentType)) {
+            message.setContentType(contentType);
+        } else if (payload != null && useDefaultContentTypeAsFallback) {
+            message.setContentType(MessageHelper.CONTENT_TYPE_OCTET_STREAM);
+        }
+    }
+
+    /**
+     * Adds several AMQP 1.0 message <em>annotations</em> to the given message that are used to process/route the
+     * message.
+     * <p>
+     * In particular, the following annotations are added:
+     * <ul>
+     * <li>{@value MessageHelper#APP_PROPERTY_TENANT_ID} - the tenant ID segment of the resource identifier</li>
+     * <li>{@value MessageHelper#APP_PROPERTY_DEVICE_ID} - the resource ID segment of the resource identifier (if not
+     * {@code null}</li>
+     * <li>{@value MessageHelper#APP_PROPERTY_RESOURCE} - the full resource path including the endpoint, the tenant
+     * and the resource ID</li>
+     * </ul>
+     *
+     * @param msg the message to add the message annotations to.
+     * @param resourceIdentifier the resource identifier that will be added as annotation.
+     */
+    public static void annotate(final Message msg, final ResourceIdentifier resourceIdentifier) {
+        addAnnotation(msg, MessageHelper.APP_PROPERTY_TENANT_ID, resourceIdentifier.getTenantId());
+        if (resourceIdentifier.getResourceId() != null) {
+            addAnnotation(msg, MessageHelper.APP_PROPERTY_DEVICE_ID, resourceIdentifier.getResourceId());
+        }
+        addAnnotation(msg, MessageHelper.APP_PROPERTY_RESOURCE, resourceIdentifier.toString());
+    }
+
+    /**
+     * Adds a value for a symbol to an AMQP 1.0 message's <em>annotations</em>.
+     *
+     * @param msg the message to add the symbol to.
+     * @param key the name of the symbol to add a value for.
+     * @param value the value to add.
+     */
+    public static void addAnnotation(final Message msg, final String key, final Object value) {
+        MessageAnnotations annotations = msg.getMessageAnnotations();
+        if (annotations == null) {
+            annotations = new MessageAnnotations(new HashMap<>());
+            msg.setMessageAnnotations(annotations);
+        }
+        annotations.getValue().put(Symbol.getSymbol(key), value);
     }
 }

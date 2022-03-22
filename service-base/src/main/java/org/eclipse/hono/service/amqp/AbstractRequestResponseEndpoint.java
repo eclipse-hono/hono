@@ -104,7 +104,7 @@ public abstract class AbstractRequestResponseEndpoint<T extends ServiceConfigPro
             throw new IllegalArgumentException("request must contain correlation ID");
         }
 
-        final String deviceId = MessageHelper.getDeviceId(request);
+        final String deviceId = AmqpUtils.getDeviceId(request);
 
         final ResourceIdentifier address = ResourceIdentifier.from(endpoint, tenantId, deviceId);
 
@@ -126,7 +126,7 @@ public abstract class AbstractRequestResponseEndpoint<T extends ServiceConfigPro
         }
         message.setApplicationProperties(new ApplicationProperties(map));
 
-        MessageHelper.setJsonPayload(message, result.getPayload());
+        AmqpUtils.setJsonPayload(message, result.getPayload());
 
         return message;
     }
@@ -156,10 +156,10 @@ public abstract class AbstractRequestResponseEndpoint<T extends ServiceConfigPro
         final var correlationId = Optional.ofNullable(requestMessage.getCorrelationId())
                 .orElseGet(requestMessage::getMessageId);
         final Message message = ProtonHelper.message();
-        MessageHelper.addStatus(message, status);
+        AmqpUtils.addStatus(message, status);
         message.setCorrelationId(correlationId);
         if (errorDescription != null) {
-            MessageHelper.setPayload(message, MessageHelper.CONTENT_TYPE_TEXT_PLAIN, Buffer.buffer(errorDescription));
+            AmqpUtils.setPayload(message, MessageHelper.CONTENT_TYPE_TEXT_PLAIN, Buffer.buffer(errorDescription));
         }
         return message;
     }
@@ -336,7 +336,7 @@ public abstract class AbstractRequestResponseEndpoint<T extends ServiceConfigPro
                             return getErrorMessage(requestMessage, ex.getErrorCode(), ex.getMessage());
                         })
                         .map(amqpMessage -> {
-                            Tags.HTTP_STATUS.set(currentSpan, MessageHelper.getStatus(amqpMessage));
+                            Tags.HTTP_STATUS.set(currentSpan, AmqpUtils.getStatus(amqpMessage));
                             if (HonoProtonHelper.isLinkOpenAndConnected(sender)) {
                                 final ProtonDelivery responseDelivery = sender.send(amqpMessage);
                                 //TODO handle send exception
@@ -602,8 +602,8 @@ public abstract class AbstractRequestResponseEndpoint<T extends ServiceConfigPro
      */
     protected Future<Message> finishSpanOnFutureCompletion(final Span span, final Future<Message> resultFuture) {
         return resultFuture.compose(message -> {
-            final Integer status = MessageHelper.getStatus(message);
-            Tags.HTTP_STATUS.set(span, MessageHelper.getStatus(message));
+            final Integer status = AmqpUtils.getStatus(message);
+            Tags.HTTP_STATUS.set(span, AmqpUtils.getStatus(message));
             if (status != null && (status < 100 || status >= 600)) {
                 Tags.ERROR.set(span, true);
             }

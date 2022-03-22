@@ -39,6 +39,7 @@ import org.apache.qpid.proton.amqp.messaging.Rejected;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.amqp.config.RequestResponseClientConfigProperties;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
@@ -183,14 +184,14 @@ class ProtonBasedCredentialsClientTest {
 
         final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
         assertThat(sentMessage.getSubject()).isEqualTo(CredentialsConstants.CredentialsAction.get.toString());
-        assertThat(MessageHelper.getJsonPayload(sentMessage).getString(CredentialsConstants.FIELD_TYPE))
+        assertThat(AmqpUtils.getJsonPayload(sentMessage).getString(CredentialsConstants.FIELD_TYPE))
             .isEqualTo(credentialsType);
-        assertThat(MessageHelper.getJsonPayload(sentMessage).getString(CredentialsConstants.FIELD_AUTH_ID))
+        assertThat(AmqpUtils.getJsonPayload(sentMessage).getString(CredentialsConstants.FIELD_AUTH_ID))
             .isEqualTo(authId);
         final Message response = ProtonHelper.message();
-        MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
-        MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
-        MessageHelper.setPayload(response, MessageHelper.CONTENT_TYPE_APPLICATION_JSON, credentialsObject.toBuffer());
+        AmqpUtils.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
+        AmqpUtils.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
+        AmqpUtils.setPayload(response, MessageHelper.CONTENT_TYPE_APPLICATION_JSON, credentialsObject.toBuffer());
         response.setCorrelationId(sentMessage.getMessageId());
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         AmqpClientUnitTestHelper.assertReceiverLinkCreated(connection).handle(delivery, response);
@@ -234,9 +235,9 @@ class ProtonBasedCredentialsClientTest {
         final Message request = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
         final Message response = ProtonHelper.message();
         response.setCorrelationId(request.getMessageId());
-        MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
-        MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
-        MessageHelper.setPayload(response, MessageHelper.CONTENT_TYPE_APPLICATION_JSON, credentialsObject.toBuffer());
+        AmqpUtils.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
+        AmqpUtils.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
+        AmqpUtils.setPayload(response, MessageHelper.CONTENT_TYPE_APPLICATION_JSON, credentialsObject.toBuffer());
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         AmqpClientUnitTestHelper.assertReceiverLinkCreated(connection).handle(delivery, response);
     }

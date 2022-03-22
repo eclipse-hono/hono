@@ -43,7 +43,6 @@ import org.eclipse.hono.tests.DownstreamMessageAssertions;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.EventConstants;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.junit.jupiter.api.Assertions;
@@ -414,7 +413,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
         doUploadMessages(messageSending, receiver, payload -> {
 
             final Message msg = ProtonHelper.message();
-            MessageHelper.setPayload(msg, "opaque/binary", payload);
+            AmqpUtils.setPayload(msg, "opaque/binary", payload);
             msg.setAddress(getEndpointName());
             final Promise<Void> sendingComplete = Promise.promise();
             final Handler<ProtonSender> sendMsgHandler = replenishedSender -> {

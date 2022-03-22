@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,10 +25,10 @@ import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.client.amqp.connection.AmqpErrorException;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.DownstreamMessageAssertions;
 import org.eclipse.hono.tests.IntegrationTestSupport;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceLimits;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -106,7 +106,7 @@ public class EventAmqpIT extends AmqpUploadTestBase {
         }
 
         // WHEN a device that belongs to the tenant publishes an event
-        MessageHelper.setPayload(event, "text/plain", Buffer.buffer(messagePayload));
+        AmqpUtils.setPayload(event, "text/plain", Buffer.buffer(messagePayload));
         event.setAddress(getEndpointName());
         sender.send(event, delivery -> {
             if (delivery.getRemoteState() instanceof Accepted) {

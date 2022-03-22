@@ -39,7 +39,6 @@ import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.auth.AuthorizationService;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RequestResponseResult;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.jupiter.api.BeforeEach;
@@ -116,7 +115,7 @@ public class AbstractRequestResponseEndpointTest {
     }
 
     private boolean hasStatusCode(final Message msg, final int expectedStatus) {
-        return MessageHelper.getStatus(msg) == expectedStatus;
+        return AmqpUtils.getStatus(msg) == expectedStatus;
     }
 
     private AbstractRequestResponseEndpoint<ServiceConfigProperties> getEndpoint() {
@@ -406,6 +405,6 @@ public class AbstractRequestResponseEndpointTest {
                 response);
 
         // THEN the message contains the corresponding cache control property
-        assertThat(MessageHelper.getCacheDirective(reply)).isEqualTo(directive.toString());
+        assertThat(AmqpUtils.getCacheDirective(reply)).isEqualTo(directive.toString());
     }
 }

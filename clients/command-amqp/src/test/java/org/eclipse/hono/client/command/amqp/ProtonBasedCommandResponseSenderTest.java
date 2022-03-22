@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -30,6 +30,7 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
@@ -37,7 +38,6 @@ import org.eclipse.hono.client.command.CommandResponse;
 import org.eclipse.hono.client.command.Commands;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.ResourceLimits;
@@ -175,6 +175,6 @@ public class ProtonBasedCommandResponseSenderTest {
         // and a TTL
         assertThat(downstreamMessage.getValue().getTtl()).isEqualTo(10_000L);
         // and a 200 status code
-        assertThat(MessageHelper.getStatus(downstreamMessage.getValue())).isEqualTo(HttpURLConnection.HTTP_OK);
+        assertThat(AmqpUtils.getStatus(downstreamMessage.getValue())).isEqualTo(HttpURLConnection.HTTP_OK);
     }
 }

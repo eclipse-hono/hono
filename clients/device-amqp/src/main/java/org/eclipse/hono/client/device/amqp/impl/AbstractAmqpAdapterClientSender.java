@@ -22,10 +22,10 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.DownstreamAmqpMessageFactory;
 import org.eclipse.hono.client.amqp.GenericSenderLink;
 import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.device.amqp.AmqpSenderLink;
 import org.eclipse.hono.tracing.TracingHelper;
-import org.eclipse.hono.util.MessageHelper;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
@@ -107,10 +107,10 @@ public abstract class AbstractAmqpAdapterClientSender implements AmqpSenderLink 
         final Message msg = ProtonHelper.message();
         msg.setAddress(targetAddress);
         DownstreamAmqpMessageFactory.addDefaults(msg, null);
-        MessageHelper.setCreationTime(msg);
-        MessageHelper.setPayload(msg, contentType, payload);
-        MessageHelper.addTenantId(msg, tenantId);
-        MessageHelper.addDeviceId(msg, deviceId);
+        AmqpUtils.setCreationTime(msg);
+        AmqpUtils.setPayload(msg, contentType, payload);
+        AmqpUtils.addTenantId(msg, tenantId);
+        AmqpUtils.addDeviceId(msg, deviceId);
         return msg;
     }
 

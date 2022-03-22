@@ -14,16 +14,17 @@
 package org.eclipse.hono.client.amqp;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 import org.apache.qpid.proton.amqp.Symbol;
+import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.tracing.TracingHelper;
-import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -152,6 +153,25 @@ public abstract class AbstractHonoClient {
     protected static final void setApplicationProperties(final Message msg, final Map<String, ?> properties) {
         Objects.requireNonNull(msg);
 
-        MessageHelper.setApplicationProperties(msg, properties);
+        if (properties != null) {
+            final Map<String, Object> propsToAdd = new HashMap<>();
+            // check the three types not allowed by AMQP 1.0 spec for application properties (list, map and array)
+            for (final Map.Entry<String, ?> entry : properties.entrySet()) {
+                if (entry.getValue() != null) {
+                    if (entry.getValue() instanceof List) {
+                        throw new IllegalArgumentException(
+                                String.format("Application property %s can't be a List", entry.getKey()));
+                    } else if (entry.getValue() instanceof Map) {
+                        throw new IllegalArgumentException(
+                                String.format("Application property %s can't be a Map", entry.getKey()));
+                    } else if (entry.getValue().getClass().isArray()) {
+                        throw new IllegalArgumentException(
+                                String.format("Application property %s can't be an Array", entry.getKey()));
+                    }
+                }
+                propsToAdd.put(entry.getKey(), entry.getValue());
+            }
+            msg.setApplicationProperties(new ApplicationProperties(propsToAdd));
+        }
     }
 }

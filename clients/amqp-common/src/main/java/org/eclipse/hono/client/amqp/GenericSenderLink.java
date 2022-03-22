@@ -46,7 +46,6 @@ import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.HonoProtonHelper;
-import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -340,7 +339,7 @@ public class GenericSenderLink extends AbstractHonoClient {
         Tags.MESSAGE_BUS_DESTINATION.set(currentSpan, getMessageAddress(message));
         TracingHelper.TAG_QOS.set(currentSpan, sender.getQoS().toString());
         Tags.SPAN_KIND.set(currentSpan, Tags.SPAN_KIND_PRODUCER);
-        TracingHelper.setDeviceTags(currentSpan, tenantId, MessageHelper.getDeviceId(message));
+        TracingHelper.setDeviceTags(currentSpan, tenantId, AmqpUtils.getDeviceId(message));
         AmqpUtils.injectSpanContext(connection.getTracer(), currentSpan.context(), message);
 
         return connection.executeOnContext(result -> {

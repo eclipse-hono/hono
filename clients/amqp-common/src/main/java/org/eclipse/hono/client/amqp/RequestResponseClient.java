@@ -578,7 +578,7 @@ public class RequestResponseClient<R extends RequestResponseResult<?>> extends A
 
         if (isOpen()) {
             final Message request = createMessage(action, address, properties);
-            MessageHelper.setPayload(request, contentType, payload);
+            AmqpUtils.setPayload(request, contentType, payload);
             return sendRequest(request, responseMapper, currentSpan);
         } else {
             return Future.failedFuture(new ServerErrorException(
@@ -703,7 +703,7 @@ public class RequestResponseClient<R extends RequestResponseResult<?>> extends A
                     });
                 }
                 if (LOG.isDebugEnabled()) {
-                    final String deviceId = MessageHelper.getDeviceId(request);
+                    final String deviceId = AmqpUtils.getDeviceId(request);
                     if (deviceId == null) {
                         LOG.debug("sent request [target address: {}, subject: {}, correlation ID: {}] to service",
                                 requestTargetAddress, request.getSubject(), correlationId);

@@ -18,13 +18,13 @@ import java.util.Optional;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AbstractDelegatingRequestResponseEndpoint;
 import org.eclipse.hono.service.amqp.AbstractRequestResponseEndpoint;
 import org.eclipse.hono.service.amqp.GenericRequestMessageFilter;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CredentialsConstants;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.opentracing.Span;
@@ -100,7 +100,7 @@ public class DelegatingCredentialsAmqpEndpoint<S extends CredentialsService> ext
 
         final JsonObject payload;
         try {
-            payload = MessageHelper.getJsonPayload(request);
+            payload = AmqpUtils.getJsonPayload(request);
         } catch (final DecodeException e) {
             logger.debug("failed to decode AMQP request message", e);
             return finishSpanOnFutureCompletion(span, Future.failedFuture(

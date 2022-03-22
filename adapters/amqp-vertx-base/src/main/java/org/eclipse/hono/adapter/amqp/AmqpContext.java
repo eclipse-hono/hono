@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,8 +19,8 @@ import java.util.Optional;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.adapter.MapBasedTelemetryExecutionContext;
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.ResourceIdentifier;
 
@@ -72,7 +72,7 @@ public class AmqpContext extends MapBasedTelemetryExecutionContext {
         final AmqpContext ctx = new AmqpContext(span, authenticatedDevice);
         ctx.delivery = delivery;
         ctx.message = message;
-        ctx.payload = MessageHelper.getPayload(message);
+        ctx.payload = AmqpUtils.getPayload(message);
         if (ResourceIdentifier.isValid(message.getAddress())) {
             ctx.address = ResourceIdentifier.fromString(message.getAddress());
             ctx.endpoint = EndpointType.fromString(ctx.address.getEndpoint());

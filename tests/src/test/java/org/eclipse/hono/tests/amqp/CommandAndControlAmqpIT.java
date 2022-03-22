@@ -205,7 +205,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
             commandResponse.setAddress(msg.getReplyTo());
             commandResponse.setCorrelationId(correlationId);
             commandResponse.setContentType("text/plain");
-            MessageHelper.addProperty(commandResponse, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
+            AmqpUtils.addProperty(commandResponse, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
             log.debug("sending response [to: {}, correlation-id: {}]", commandResponse.getAddress(), commandResponse.getCorrelationId());
             cmdResponseSender.send(commandResponse, updatedDelivery -> {
                 if (!Accepted.class.isInstance(updatedDelivery.getRemoteState())) {

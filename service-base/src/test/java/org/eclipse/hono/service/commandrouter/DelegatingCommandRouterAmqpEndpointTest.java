@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,8 +28,8 @@ import java.util.List;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.util.CommandRouterConstants;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -76,7 +76,7 @@ class DelegatingCommandRouterAmqpEndpointTest {
             .onComplete(ctx.succeeding(response -> {
                 ctx.verify(() -> {
                     verify(service).enableCommandRouting(anyList(), any());
-                    assertThat(MessageHelper.getStatus(response)).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT);
+                    assertThat(AmqpUtils.getStatus(response)).isEqualTo(HttpURLConnection.HTTP_NO_CONTENT);
                 });
                 ctx.completeNow();
             }));

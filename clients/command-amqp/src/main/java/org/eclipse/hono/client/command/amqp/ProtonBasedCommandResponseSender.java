@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,6 +22,7 @@ import org.eclipse.hono.client.amqp.AbstractServiceClient;
 import org.eclipse.hono.client.amqp.DownstreamAmqpMessageFactory;
 import org.eclipse.hono.client.amqp.GenericSenderLink;
 import org.eclipse.hono.client.amqp.config.AddressHelper;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.command.CommandResponse;
@@ -29,7 +30,6 @@ import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.util.DownstreamMessageProperties;
 import org.eclipse.hono.client.util.StatusCodeMapper;
 import org.eclipse.hono.util.CommandConstants;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.TenantObject;
 
@@ -92,17 +92,17 @@ public class ProtonBasedCommandResponseSender extends AbstractServiceClient impl
 
         final Message msg = ProtonHelper.message();
         DownstreamAmqpMessageFactory.addDefaults(msg, props);
-        MessageHelper.setCreationTime(msg);
+        AmqpUtils.setCreationTime(msg);
         msg.setCorrelationId(response.getCorrelationId());
-        MessageHelper.setPayload(msg, response.getContentType(), response.getPayload());
-        MessageHelper.addStatus(msg, response.getStatus());
+        AmqpUtils.setPayload(msg, response.getContentType(), response.getPayload());
+        AmqpUtils.addStatus(msg, response.getStatus());
         msg.setAddress(AddressHelper.getTargetAddress(
                 CommandConstants.NORTHBOUND_COMMAND_RESPONSE_ENDPOINT,
                 response.getTenantId(),
                 response.getReplyToId(),
                 null));
-        MessageHelper.addTenantId(msg, response.getTenantId());
-        MessageHelper.addDeviceId(msg, response.getDeviceId());
+        AmqpUtils.addTenantId(msg, response.getTenantId());
+        AmqpUtils.addDeviceId(msg, response.getDeviceId());
         if (jmsVendorPropsEnabled) {
             DownstreamAmqpMessageFactory.addJmsVendorProperties(msg);
         }

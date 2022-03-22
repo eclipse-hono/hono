@@ -32,11 +32,11 @@ import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ResourceLimitExceededException;
 import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.test.VertxMockSupport;
-import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -88,7 +88,7 @@ public class GenericSenderLinkTest {
         final Span span = mock(Span.class);
         final Message message = ProtonHelper.message("some payload");
         message.setContentType("text/plain");
-        MessageHelper.addDeviceId(message, "device");
+        AmqpUtils.addDeviceId(message, "device");
         final Future<ProtonDelivery> result = messageSender.send(message, span);
 
         // which gets rejected by the peer
@@ -140,7 +140,7 @@ public class GenericSenderLinkTest {
         final Span span = mock(Span.class);
         final Message message = ProtonHelper.message("some payload");
         message.setContentType("text/plain");
-        MessageHelper.addDeviceId(message, "device");
+        AmqpUtils.addDeviceId(message, "device");
         final Future<ProtonDelivery> result = messageSender.sendAndWaitForOutcome(message, span);
 
         // THEN the message has been sent
@@ -198,7 +198,7 @@ public class GenericSenderLinkTest {
         final Span span = mock(Span.class);
         final Message message = ProtonHelper.message("some payload");
         message.setContentType("text/plain");
-        MessageHelper.addDeviceId(message, "device");
+        AmqpUtils.addDeviceId(message, "device");
         final Future<ProtonDelivery> result = messageSender.sendAndWaitForOutcome(message, span);
 
         // THEN the message has been sent
@@ -237,7 +237,7 @@ public class GenericSenderLinkTest {
         final Span span = mock(Span.class);
         final Message message = ProtonHelper.message("some payload");
         message.setContentType("text/plain");
-        MessageHelper.addDeviceId(message, "device");
+        AmqpUtils.addDeviceId(message, "device");
         final Future<ProtonDelivery> result = messageSender.sendAndWaitForRawOutcome(message, span);
 
         // THEN the message has been sent

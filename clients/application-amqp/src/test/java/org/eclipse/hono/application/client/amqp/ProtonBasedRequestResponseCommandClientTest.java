@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
@@ -126,10 +127,10 @@ public class ProtonBasedRequestResponseCommandClientTest {
 
         final Message response = ProtonHelper.message();
         response.setCorrelationId(sentMessage.getMessageId());
-        MessageHelper.addTenantId(response, tenantId);
-        MessageHelper.addDeviceId(response, deviceId);
-        MessageHelper.addStatus(response, commandStatus);
-        MessageHelper.setPayload(response, MessageHelper.CONTENT_TYPE_APPLICATION_JSON, Buffer.buffer(responsePayload));
+        AmqpUtils.addTenantId(response, tenantId);
+        AmqpUtils.addDeviceId(response, deviceId);
+        AmqpUtils.addStatus(response, commandStatus);
+        AmqpUtils.setPayload(response, MessageHelper.CONTENT_TYPE_APPLICATION_JSON, Buffer.buffer(responsePayload));
         AmqpClientUnitTestHelper.assertReceiverLinkCreated(connection).handle(protonDelivery, response);
     }
 
@@ -166,10 +167,10 @@ public class ProtonBasedRequestResponseCommandClientTest {
 
         final Message response = ProtonHelper.message();
         response.setCorrelationId(sentMessage.getMessageId());
-        MessageHelper.addTenantId(response, tenantId);
-        MessageHelper.addDeviceId(response, deviceId);
-        MessageHelper.addStatus(response, commandStatus);
-        MessageHelper.setPayload(response, MessageHelper.CONTENT_TYPE_TEXT_PLAIN, Buffer.buffer(responsePayload));
+        AmqpUtils.addTenantId(response, tenantId);
+        AmqpUtils.addDeviceId(response, deviceId);
+        AmqpUtils.addStatus(response, commandStatus);
+        AmqpUtils.setPayload(response, MessageHelper.CONTENT_TYPE_TEXT_PLAIN, Buffer.buffer(responsePayload));
         AmqpClientUnitTestHelper.assertReceiverLinkCreated(connection).handle(protonDelivery, response);
     }
 

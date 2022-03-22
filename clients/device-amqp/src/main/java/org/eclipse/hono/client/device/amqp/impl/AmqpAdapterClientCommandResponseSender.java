@@ -17,11 +17,11 @@ import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.amqp.GenericSenderLink;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.device.amqp.CommandResponder;
 import org.eclipse.hono.client.device.amqp.TraceableCommandResponder;
 import org.eclipse.hono.tracing.TracingHelper;
-import org.eclipse.hono.util.MessageHelper;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
@@ -116,7 +116,7 @@ public final class AmqpAdapterClientCommandResponseSender extends AbstractAmqpAd
 
         final Message message = createMessage(deviceId, payload, contentType, targetAddress);
         message.setCorrelationId(correlationId);
-        MessageHelper.addStatus(message, status);
+        AmqpUtils.addStatus(message, status);
         return sendAndWaitForOutcome(message, span);
     }
 }

@@ -17,11 +17,11 @@ import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.amqp.SenderCachingServiceClient;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationSender;
-import org.eclipse.hono.util.MessageHelper;
 
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
@@ -55,7 +55,7 @@ public class ProtonBasedNotificationSender extends SenderCachingServiceClient im
     private Message createMessage(final AbstractNotification notification) {
         final Message msg = ProtonHelper.message();
         final JsonObject value = JsonObject.mapFrom(notification);
-        MessageHelper.setJsonPayload(msg, value);
+        AmqpUtils.setJsonPayload(msg, value);
         msg.setAddress(NotificationAddressHelper.getAddress(notification.getType()));
         return msg;
     }

@@ -184,10 +184,10 @@ class ProtonBasedDeviceRegistrationClientTest {
 
         final Message request = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
         final Message response = ProtonHelper.message();
-        MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
-        MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
+        AmqpUtils.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
+        AmqpUtils.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
         response.setCorrelationId(request.getMessageId());
-        MessageHelper.setJsonPayload(response, registrationAssertion);
+        AmqpUtils.setJsonPayload(response, registrationAssertion);
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         AmqpClientUnitTestHelper.assertReceiverLinkCreated(connection).handle(delivery, response);
     }
@@ -222,9 +222,9 @@ class ProtonBasedDeviceRegistrationClientTest {
         final Message request = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
         final Message response = ProtonHelper.message();
         response.setCorrelationId(request.getMessageId());
-        MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
-        MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
-        MessageHelper.setPayload(response, MessageHelper.CONTENT_TYPE_APPLICATION_JSON, registrationAssertion.toBuffer());
+        AmqpUtils.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
+        AmqpUtils.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
+        AmqpUtils.setPayload(response, MessageHelper.CONTENT_TYPE_APPLICATION_JSON, registrationAssertion.toBuffer());
         final ProtonDelivery delivery = mock(ProtonDelivery.class);
         AmqpClientUnitTestHelper.assertReceiverLinkCreated(connection).handle(delivery, response);
     }
@@ -276,7 +276,7 @@ class ProtonBasedDeviceRegistrationClientTest {
 
         // THEN the message being sent contains the device ID and the gateway ID
         final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
-        assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo("device");
+        assertThat(AmqpUtils.getDeviceId(sentMessage)).isEqualTo("device");
         assertThat(AmqpUtils.getApplicationProperty(sentMessage, MessageHelper.APP_PROPERTY_GATEWAY_ID, String.class))
                 .isEqualTo("gateway");
     }

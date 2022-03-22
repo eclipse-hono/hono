@@ -22,6 +22,7 @@ import java.time.Instant;
 
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.Data;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.QoS;
@@ -54,10 +55,10 @@ class ProtonBasedDownstreamMessageTest {
         msg.setContentType("text/plain");
         msg.setBody(new Data(new Binary(Buffer.buffer("hello").getBytes())));
         msg.setCreationTime(now);
-        MessageHelper.addDeviceId(msg, "device");
-        MessageHelper.addTimeUntilDisconnect(msg, 22);
-        MessageHelper.addProperty(msg, MessageHelper.APP_PROPERTY_QOS, 1);
-        MessageHelper.addProperty(msg, "other", "property");
+        AmqpUtils.addDeviceId(msg, "device");
+        AmqpUtils.addTimeUntilDisconnect(msg, 22);
+        AmqpUtils.addProperty(msg, MessageHelper.APP_PROPERTY_QOS, 1);
+        AmqpUtils.addProperty(msg, "other", "property");
 
         final var downstreamMessage = ProtonBasedDownstreamMessage.from(msg, delivery);
 
@@ -84,7 +85,7 @@ class ProtonBasedDownstreamMessageTest {
 
         final var delivery = mock(ProtonDelivery.class);
         final var msg = ProtonHelper.message("telemetry/tenant", null);
-        MessageHelper.addDeviceId(msg, "device");
+        AmqpUtils.addDeviceId(msg, "device");
         msg.setContentType(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
 
         final var downstreamMessage = ProtonBasedDownstreamMessage.from(msg, delivery);

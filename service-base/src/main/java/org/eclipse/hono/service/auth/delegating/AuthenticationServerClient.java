@@ -27,7 +27,6 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.ConnectionFactory;
 import org.eclipse.hono.util.AuthenticationConstants;
-import org.eclipse.hono.util.MessageHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -148,7 +147,7 @@ public final class AuthenticationServerClient {
 
             if (AuthenticationConstants.TYPE_AMQP_JWT.equals(type)) {
 
-                final String payload = MessageHelper.getPayloadAsString(message);
+                final String payload = AmqpUtils.getPayloadAsString(message);
                 if (payload != null) {
                     final HonoUser user = new HonoUserAdapter() {
                         @Override

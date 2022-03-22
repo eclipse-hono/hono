@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,6 +19,7 @@ import javax.annotation.PostConstruct;
 
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.MessageHelper;
 import org.springframework.context.annotation.Profile;
@@ -61,7 +62,7 @@ public class CommandAndControlClient extends AmqpCliClient {
 
                 final Message commandResponse = ProtonHelper.message(m.getReplyTo(), "OK: " + m.getSubject());
                 commandResponse.setCorrelationId(m.getCorrelationId());
-                MessageHelper.addProperty(commandResponse, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
+                AmqpUtils.addProperty(commandResponse, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_OK);
                 commandResponse.setContentType(m.getContentType());
                 sender.send(commandResponse, delivery -> {
                     if (delivery.remotelySettled()) {

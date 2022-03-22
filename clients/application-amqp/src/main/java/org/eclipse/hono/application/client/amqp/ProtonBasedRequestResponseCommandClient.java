@@ -26,6 +26,7 @@ import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.AbstractRequestResponseServiceClient;
 import org.eclipse.hono.client.amqp.RequestResponseClient;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.util.CachingClientFactory;
@@ -33,7 +34,6 @@ import org.eclipse.hono.client.util.StatusCodeMapper;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.CommandConstants;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RequestResponseResult;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.slf4j.Logger;
@@ -179,9 +179,9 @@ public final class ProtonBasedRequestResponseCommandClient extends
 
         final DownstreamMessage<AmqpMessageContext> downStreamMessage = ProtonBasedDownstreamMessage.from(message, delivery);
 
-        return Optional.ofNullable(MessageHelper.getStatus(message))
+        return Optional.ofNullable(AmqpUtils.getStatus(message))
                 .map(status -> new RequestResponseResult<>(status, downStreamMessage,
-                        CacheDirective.from(MessageHelper.getCacheDirective(message)), null))
+                        CacheDirective.from(AmqpUtils.getCacheDirective(message)), null))
                 .orElseGet(() -> {
                     LOGGER.warn(
                             "response message has no status code application property [reply-to: {}, correlation ID: {}]",

@@ -22,13 +22,13 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.hono.client.amqp.AbstractServiceClient;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.util.CachingClientFactory;
 import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationReceiver;
 import org.eclipse.hono.notification.NotificationType;
-import org.eclipse.hono.util.MessageHelper;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -177,7 +177,7 @@ public class ProtonBasedNotificationReceiver extends AbstractServiceClient imple
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private ProtonMessageHandler getProtonMessageHandler(final String address) {
         return (delivery, message) -> {
-            final Buffer payload = MessageHelper.getPayload(message);
+            final Buffer payload = AmqpUtils.getPayload(message);
             if (payload != null) {
                 final JsonObject json = payload.toJsonObject();
                 if (log.isTraceEnabled()) {

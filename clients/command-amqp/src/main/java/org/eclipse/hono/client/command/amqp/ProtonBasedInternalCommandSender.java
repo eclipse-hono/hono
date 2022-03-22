@@ -26,6 +26,7 @@ import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.NoConsumerException;
 import org.eclipse.hono.client.amqp.SenderCachingServiceClient;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.command.Command;
@@ -76,7 +77,7 @@ public class ProtonBasedInternalCommandSender extends SenderCachingServiceClient
                     final Message message = adoptOrCreateMessage(command);
                     TracingHelper.setDeviceTags(span, command.getTenant(), command.getDeviceId());
                     if (command.isTargetedAtGateway()) {
-                        MessageHelper.addProperty(message, MessageHelper.APP_PROPERTY_CMD_VIA, command.getGatewayId());
+                        AmqpUtils.addProperty(message, MessageHelper.APP_PROPERTY_CMD_VIA, command.getGatewayId());
                         TracingHelper.TAG_GATEWAY_ID.set(span, command.getGatewayId());
                     }
                     return sender.sendAndWaitForRawOutcome(message, span);
@@ -151,7 +152,7 @@ public class ProtonBasedInternalCommandSender extends SenderCachingServiceClient
             // create new message and adopt command properties
             msg = ProtonHelper.message();
             final byte[] payloadBytesOrNull = command.getPayload() != null ? command.getPayload().getBytes() : null;
-            MessageHelper.setPayload(msg, command.getContentType(), payloadBytesOrNull);
+            AmqpUtils.setPayload(msg, command.getContentType(), payloadBytesOrNull);
             msg.setAddress(getCommandMessageAddress(command));
             msg.setSubject(command.getName());
             if (command.getContentType() != null) {

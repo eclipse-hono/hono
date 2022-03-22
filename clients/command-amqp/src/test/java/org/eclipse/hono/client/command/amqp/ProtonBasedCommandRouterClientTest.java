@@ -228,18 +228,18 @@ public class ProtonBasedCommandRouterClientTest {
         // first message for tenant3 - as single device request
         assertThat(sentMessages.get(0).getAddress())
                 .isEqualTo(String.format("%s/%s", CommandRouterConstants.COMMAND_ROUTER_ENDPOINT, tenantId3));
-        assertThat(MessageHelper.getDeviceId(sentMessages.get(0))).isEqualTo(deviceId1);
+        assertThat(AmqpUtils.getDeviceId(sentMessages.get(0))).isEqualTo(deviceId1);
 
         assertThat(sentMessages.get(1).getAddress())
                 .isEqualTo(String.format("%s/%s", CommandRouterConstants.COMMAND_ROUTER_ENDPOINT, tenantId1));
-        final JsonObject jsonPayloadSecondMsg = MessageHelper.getJsonPayload(sentMessages.get(1));
+        final JsonObject jsonPayloadSecondMsg = AmqpUtils.getJsonPayload(sentMessages.get(1));
         assertThat(jsonPayloadSecondMsg).isNotNull();
         assertThat(jsonPayloadSecondMsg.getString(deviceId1)).isEqualTo(gatewayId);
         assertThat(jsonPayloadSecondMsg.getString(deviceId2)).isEqualTo(gatewayId);
 
         assertThat(sentMessages.get(2).getAddress())
                 .isEqualTo(String.format("%s/%s", CommandRouterConstants.COMMAND_ROUTER_ENDPOINT, tenantId2));
-        final JsonObject jsonPayloadThirdMsg = MessageHelper.getJsonPayload(sentMessages.get(2));
+        final JsonObject jsonPayloadThirdMsg = AmqpUtils.getJsonPayload(sentMessages.get(2));
         assertThat(jsonPayloadThirdMsg).isNotNull();
         assertThat(jsonPayloadThirdMsg.getString(deviceId1)).isEqualTo(gatewayId);
         assertThat(jsonPayloadThirdMsg.getString(deviceId2)).isEqualTo(gatewayId);
@@ -278,7 +278,7 @@ public class ProtonBasedCommandRouterClientTest {
 
         assertThat(sentMessage.getAddress())
                 .isEqualTo(String.format("%s/%s", CommandRouterConstants.COMMAND_ROUTER_ENDPOINT, tenantId));
-        final JsonObject jsonPayloadFirstMsg = MessageHelper.getJsonPayload(sentMessage);
+        final JsonObject jsonPayloadFirstMsg = AmqpUtils.getJsonPayload(sentMessage);
         assertThat(jsonPayloadFirstMsg).isNotNull();
         assertThat(jsonPayloadFirstMsg.size()).isEqualTo(ProtonBasedCommandRouterClient.SET_LAST_KNOWN_GATEWAY_UPDATE_MAX_ENTRIES);
         IntStream.range(0, ProtonBasedCommandRouterClient.SET_LAST_KNOWN_GATEWAY_UPDATE_MAX_ENTRIES).forEach(idx -> {
@@ -296,7 +296,7 @@ public class ProtonBasedCommandRouterClientTest {
 
         assertThat(sentMessage2.getAddress())
                 .isEqualTo(String.format("%s/%s", CommandRouterConstants.COMMAND_ROUTER_ENDPOINT, tenantId));
-        assertThat(MessageHelper.getDeviceId(sentMessage2)).isEqualTo("device_100");
+        assertThat(AmqpUtils.getDeviceId(sentMessage2)).isEqualTo("device_100");
     }
 
     /**
@@ -329,7 +329,7 @@ public class ProtonBasedCommandRouterClientTest {
 
         assertThat(sentMessage.getAddress())
                 .isEqualTo(String.format("%s/%s", CommandRouterConstants.COMMAND_ROUTER_ENDPOINT, tenantId));
-        assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo("deviceId");
+        assertThat(AmqpUtils.getDeviceId(sentMessage)).isEqualTo("deviceId");
 
         // AND WHEN a gateway gets set for another device while the first request hasn't finished
         client.setLastKnownGatewayForDevice(tenantId, "deviceId2", gatewayId, span.context());
@@ -348,7 +348,7 @@ public class ProtonBasedCommandRouterClientTest {
 
         assertThat(sentMessage2.getAddress())
                 .isEqualTo(String.format("%s/%s", CommandRouterConstants.COMMAND_ROUTER_ENDPOINT, tenantId));
-        assertThat(MessageHelper.getDeviceId(sentMessage2)).isEqualTo("deviceId2");
+        assertThat(AmqpUtils.getDeviceId(sentMessage2)).isEqualTo("deviceId2");
     }
 
     /**
@@ -382,7 +382,7 @@ public class ProtonBasedCommandRouterClientTest {
 
         assertThat(sentMessage.getAddress())
                 .isEqualTo(String.format("%s/%s", CommandRouterConstants.COMMAND_ROUTER_ENDPOINT, tenantId));
-        assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo("deviceId");
+        assertThat(AmqpUtils.getDeviceId(sentMessage)).isEqualTo("deviceId");
 
         // AND WHEN a gateway gets set for another device while the first request hasn't finished
         client.setLastKnownGatewayForDevice(tenantId, "deviceId2", gatewayId, span.context());
@@ -409,7 +409,7 @@ public class ProtonBasedCommandRouterClientTest {
 
         assertThat(sentMessage2.getAddress())
                 .isEqualTo(String.format("%s/%s", CommandRouterConstants.COMMAND_ROUTER_ENDPOINT, tenantId));
-        assertThat(MessageHelper.getDeviceId(sentMessage2)).isEqualTo("deviceId2");
+        assertThat(AmqpUtils.getDeviceId(sentMessage2)).isEqualTo("deviceId2");
     }
 
     /**
@@ -484,8 +484,8 @@ public class ProtonBasedCommandRouterClientTest {
 
         final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
         final Message response = ProtonHelper.message();
-        MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_PRECON_FAILED);
-        MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
+        AmqpUtils.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_PRECON_FAILED);
+        AmqpUtils.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
         response.setCorrelationId(sentMessage.getMessageId());
         AmqpClientUnitTestHelper.assertReceiverLinkCreated(connection).handle(mock(ProtonDelivery.class), response);
     }
@@ -604,12 +604,12 @@ public class ProtonBasedCommandRouterClientTest {
 
         // THEN the message being sent contains the device ID in its properties
         final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
-        assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo(deviceId);
+        assertThat(AmqpUtils.getDeviceId(sentMessage)).isEqualTo(deviceId);
         assertThat(AmqpUtils.getApplicationProperty(sentMessage, MessageHelper.APP_PROPERTY_GATEWAY_ID, String.class))
                 .isEqualTo(gatewayId);
         assertThat(sentMessage.getMessageId()).isNotNull();
         assertThat(sentMessage.getSubject()).isEqualTo(CommandRouterAction.SET_LAST_KNOWN_GATEWAY.getSubject());
-        assertThat(MessageHelper.getJsonPayload(sentMessage)).isNull();
+        assertThat(AmqpUtils.getJsonPayload(sentMessage)).isNull();
     }
 
     /**
@@ -628,12 +628,12 @@ public class ProtonBasedCommandRouterClientTest {
 
         // THEN the message being sent contains the device IDs in its payload
         final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
-        assertThat(MessageHelper.getDeviceId(sentMessage)).isNull();
+        assertThat(AmqpUtils.getDeviceId(sentMessage)).isNull();
         assertThat(AmqpUtils.getApplicationProperty(sentMessage, MessageHelper.APP_PROPERTY_GATEWAY_ID, String.class))
                 .isNull();
         assertThat(sentMessage.getMessageId()).isNotNull();
         assertThat(sentMessage.getSubject()).isEqualTo(CommandRouterAction.SET_LAST_KNOWN_GATEWAY.getSubject());
-        final JsonObject jsonPayload = MessageHelper.getJsonPayload(sentMessage);
+        final JsonObject jsonPayload = AmqpUtils.getJsonPayload(sentMessage);
         assertThat(jsonPayload).isNotNull();
         assertThat(jsonPayload.getString(deviceId)).isEqualTo(gatewayId);
         assertThat(jsonPayload.getString(deviceId2)).isEqualTo(gatewayId);
@@ -653,7 +653,7 @@ public class ProtonBasedCommandRouterClientTest {
 
         // THEN the message being sent contains the device ID in its properties
         final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
-        assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo(deviceId);
+        assertThat(AmqpUtils.getDeviceId(sentMessage)).isEqualTo(deviceId);
         assertThat(AmqpUtils.getApplicationProperty(
                 sentMessage,
                 CommandConstants.MSG_PROPERTY_ADAPTER_INSTANCE_ID,
@@ -666,7 +666,7 @@ public class ProtonBasedCommandRouterClientTest {
             .isEqualTo(Integer.valueOf(-1));
         assertThat(sentMessage.getMessageId()).isNotNull();
         assertThat(sentMessage.getSubject()).isEqualTo(CommandRouterAction.REGISTER_COMMAND_CONSUMER.getSubject());
-        assertThat(MessageHelper.getJsonPayload(sentMessage)).isNull();
+        assertThat(AmqpUtils.getJsonPayload(sentMessage)).isNull();
     }
 
     /**
@@ -685,7 +685,7 @@ public class ProtonBasedCommandRouterClientTest {
 
         // THEN the message being sent contains the device ID in its properties
         final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
-        assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo(deviceId);
+        assertThat(AmqpUtils.getDeviceId(sentMessage)).isEqualTo(deviceId);
         assertThat(AmqpUtils.getApplicationProperty(
                 sentMessage,
                 CommandConstants.MSG_PROPERTY_ADAPTER_INSTANCE_ID,
@@ -698,7 +698,7 @@ public class ProtonBasedCommandRouterClientTest {
             .isEqualTo(lifespanSeconds);
         assertThat(sentMessage.getMessageId()).isNotNull();
         assertThat(sentMessage.getSubject()).isEqualTo(CommandRouterAction.REGISTER_COMMAND_CONSUMER.getSubject());
-        assertThat(MessageHelper.getJsonPayload(sentMessage)).isNull();
+        assertThat(AmqpUtils.getJsonPayload(sentMessage)).isNull();
     }
 
     /**
@@ -716,7 +716,7 @@ public class ProtonBasedCommandRouterClientTest {
 
         // THEN the message being sent contains the device ID in its properties
         final Message sentMessage = AmqpClientUnitTestHelper.assertMessageHasBeenSent(sender);
-        assertThat(MessageHelper.getDeviceId(sentMessage)).isEqualTo(deviceId);
+        assertThat(AmqpUtils.getDeviceId(sentMessage)).isEqualTo(deviceId);
         assertThat(AmqpUtils.getApplicationProperty(
                 sentMessage,
                 CommandConstants.MSG_PROPERTY_ADAPTER_INSTANCE_ID,
@@ -724,13 +724,13 @@ public class ProtonBasedCommandRouterClientTest {
             .isEqualTo(adapterInstanceId);
         assertThat(sentMessage.getMessageId()).isNotNull();
         assertThat(sentMessage.getSubject()).isEqualTo(CommandRouterAction.UNREGISTER_COMMAND_CONSUMER.getSubject());
-        assertThat(MessageHelper.getJsonPayload(sentMessage)).isNull();
+        assertThat(AmqpUtils.getJsonPayload(sentMessage)).isNull();
     }
 
     private Message createNoContentResponseMessage(final Object correlationId) {
         final Message response = ProtonHelper.message();
-        MessageHelper.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_NO_CONTENT);
-        MessageHelper.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
+        AmqpUtils.addProperty(response, MessageHelper.APP_PROPERTY_STATUS, HttpURLConnection.HTTP_NO_CONTENT);
+        AmqpUtils.addCacheDirective(response, CacheDirective.maxAgeDirective(60));
         response.setCorrelationId(correlationId);
         return response;
     }

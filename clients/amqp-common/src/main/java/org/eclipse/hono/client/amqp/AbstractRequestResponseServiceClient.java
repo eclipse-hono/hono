@@ -26,6 +26,7 @@ import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.config.RequestResponseClientConfigProperties;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.util.CachingClientFactory;
@@ -167,17 +168,17 @@ public abstract class AbstractRequestResponseServiceClient<T, R extends RequestR
      */
     protected final R getRequestResponseResult(final Message message) {
 
-        final Integer status = MessageHelper.getStatus(message);
+        final Integer status = AmqpUtils.getStatus(message);
         if (status == null) {
             log.debug("response message has no status code application property [reply-to: {}, correlation ID: {}]",
                     message.getReplyTo(), message.getCorrelationId());
             return null;
         } else {
-            final CacheDirective cacheDirective = CacheDirective.from(MessageHelper.getCacheDirective(message));
+            final CacheDirective cacheDirective = CacheDirective.from(AmqpUtils.getCacheDirective(message));
             return getResult(
                     status,
                     message.getContentType(),
-                    MessageHelper.getPayload(message),
+                    AmqpUtils.getPayload(message),
                     cacheDirective,
                     message.getApplicationProperties());
         }

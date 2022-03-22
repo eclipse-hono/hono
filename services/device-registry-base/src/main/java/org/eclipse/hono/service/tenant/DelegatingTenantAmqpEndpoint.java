@@ -20,12 +20,12 @@ import javax.security.auth.x500.X500Principal;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AbstractDelegatingRequestResponseEndpoint;
 import org.eclipse.hono.service.amqp.AbstractRequestResponseEndpoint;
 import org.eclipse.hono.service.amqp.GenericRequestMessageFilter;
 import org.eclipse.hono.tracing.TracingHelper;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.TenantConstants;
 
@@ -85,7 +85,7 @@ public class DelegatingTenantAmqpEndpoint<S extends TenantService>
 
     private Future<Message> processGetRequest(final Message request, final SpanContext spanContext) {
 
-        final String tenantId = MessageHelper.getTenantId(request);
+        final String tenantId = AmqpUtils.getTenantId(request);
 
         final Span span = TracingHelper.buildServerChildSpan(tracer,
                 spanContext,
@@ -95,7 +95,7 @@ public class DelegatingTenantAmqpEndpoint<S extends TenantService>
 
         final JsonObject payload;
         try {
-            payload = MessageHelper.getJsonPayload(request);
+            payload = AmqpUtils.getJsonPayload(request);
         } catch (final DecodeException e) {
             logger.debug("failed to decode AMQP request message", e);
             return finishSpanOnFutureCompletion(span, Future.failedFuture(
@@ -219,8 +219,8 @@ public class DelegatingTenantAmqpEndpoint<S extends TenantService>
         Objects.requireNonNull(clientPrincipal);
         Objects.requireNonNull(response);
 
-        final String tenantId = MessageHelper.getTenantId(response);
-        final JsonObject payload = MessageHelper.getJsonPayload(response);
+        final String tenantId = AmqpUtils.getTenantId(response);
+        final JsonObject payload = AmqpUtils.getJsonPayload(response);
 
         if (tenantId == null || payload == null) {
             return Future.succeededFuture(response);
@@ -285,7 +285,7 @@ public class DelegatingTenantAmqpEndpoint<S extends TenantService>
 
         Objects.requireNonNull(request);
 
-        final String tenantId = MessageHelper.getTenantId(request);
+        final String tenantId = AmqpUtils.getTenantId(request);
         if (tenantId == null) {
             // delegate authorization check to filterResource operation
             return Future.succeededFuture(Boolean.TRUE);

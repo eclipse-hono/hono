@@ -27,6 +27,7 @@ import java.time.Instant;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.notification.AbstractNotification;
@@ -34,7 +35,6 @@ import org.eclipse.hono.notification.NotificationConstants;
 import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
 import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 import org.eclipse.hono.test.VertxMockSupport;
-import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -124,7 +124,7 @@ public class ProtonBasedNotificationSenderTest {
         final Message message = messageCaptor.getValue();
         assertThat(message.getAddress()).isEqualTo(NotificationAddressHelper.getAddress(notification.getType()));
         assertThat(message.getContentType()).isEqualTo(NotificationConstants.CONTENT_TYPE);
-        final AbstractNotification decodedNotification = Json.decodeValue(MessageHelper.getPayload(message),
+        final AbstractNotification decodedNotification = Json.decodeValue(AmqpUtils.getPayload(message),
                 AbstractNotification.class);
         assertThat(decodedNotification.getClass()).isEqualTo(notification.getClass());
         assertThat(publishNotificationFuture.isComplete()).isTrue();

@@ -27,6 +27,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.device.amqp.AmqpAdapterClientFactory;
 import org.eclipse.hono.example.protocolgateway.TcpServer;
@@ -288,7 +289,7 @@ public class ProtocolGateway {
 
         final Consumer<Message> messageHandler = m -> {
 
-            final String commandPayload = MessageHelper.getPayloadAsString(m);
+            final String commandPayload = AmqpUtils.getPayloadAsString(m);
             final boolean isOneWay = m.getReplyTo() == null;
             if (isOneWay) {
                 LOG.debug("received one-way command [name: {}]: {}", m.getSubject(), commandPayload);
@@ -312,7 +313,7 @@ public class ProtocolGateway {
         final Buffer payload = Buffer.buffer(String.format(
                 "myCurrentTime: %s",
                 DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.now())));
-        final String deviceId = MessageHelper.getDeviceId(command);
+        final String deviceId = AmqpUtils.getDeviceId(command);
 
         return amqpAdapterClientFactory.getOrCreateCommandResponseSender()
             .compose(responder -> responder.sendCommandResponse(

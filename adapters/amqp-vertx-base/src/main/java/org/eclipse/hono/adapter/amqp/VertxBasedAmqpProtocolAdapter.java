@@ -1100,10 +1100,10 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     command.getDeviceId()));
             msg.setCorrelationId(command.getCorrelationId());
             msg.setSubject(command.getName());
-            MessageHelper.setPayload(msg, command.getContentType(), command.getPayload());
+            AmqpUtils.setPayload(msg, command.getContentType(), command.getPayload());
 
             if (command.isTargetedAtGateway()) {
-                MessageHelper.addDeviceId(msg, command.getDeviceId());
+                AmqpUtils.addDeviceId(msg, command.getDeviceId());
             }
             if (!command.isOneWay()) {
                 msg.setReplyTo(String.format("%s/%s/%s",
@@ -1341,9 +1341,9 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         return CommandResponse.fromAddressAndCorrelationId(
                 message.getAddress(),
                 message.getCorrelationId() instanceof String ? (String) message.getCorrelationId() : null,
-                MessageHelper.getPayload(message),
+                AmqpUtils.getPayload(message),
                 message.getContentType(),
-                MessageHelper.getStatus(message));
+                AmqpUtils.getStatus(message));
     }
 
     private Future<Void> doUploadCommandResponseMessage(
@@ -1357,7 +1357,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     TracingHelper.logError(currentSpan,
                             String.format("invalid message (correlationId: %s, address: %s, status: %s)",
                                     context.getMessage().getCorrelationId(), context.getMessage().getAddress(),
-                                    MessageHelper.getStatus(context.getMessage())));
+                                    AmqpUtils.getStatus(context.getMessage())));
                     return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
                             "malformed command response message"));
                 });

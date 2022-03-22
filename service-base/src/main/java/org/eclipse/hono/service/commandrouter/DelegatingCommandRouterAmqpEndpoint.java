@@ -102,8 +102,8 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
             final ResourceIdentifier targetAddress, final SpanContext spanContext) {
         final String tenantId = targetAddress.getTenantId();
 
-        final String deviceIdAppProperty = MessageHelper.getDeviceId(request);
-        final String gatewayIdAppProperty = MessageHelper.getGatewayId(request);
+        final String deviceIdAppProperty = AmqpUtils.getDeviceId(request);
+        final String gatewayIdAppProperty = AmqpUtils.getGatewayId(request);
 
         final Span span = TracingHelper.buildServerChildSpan(
                 tracer,
@@ -123,15 +123,15 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
                 TracingHelper.TAG_TENANT_ID.set(span, tenantId);
                 TracingHelper.TAG_DEVICE_ID.set(span, deviceIdAppProperty);
                 TracingHelper.TAG_GATEWAY_ID.set(span, gatewayIdAppProperty);
-                if (MessageHelper.getPayloadSize(request) != 0) {
+                if (AmqpUtils.getPayloadSize(request) != 0) {
                     logger.debug("ignoring payload in last known gateway request containing device/gateway properties");
                 }
                 resultFuture = getService().setLastKnownGatewayForDevice(tenantId, deviceIdAppProperty, gatewayIdAppProperty, span);
 
-            } else if (MessageHelper.getPayloadSize(request) != 0) {
+            } else if (AmqpUtils.getPayloadSize(request) != 0) {
                 TracingHelper.TAG_TENANT_ID.set(span, tenantId);
 
-                final Buffer payload = MessageHelper.getPayload(request);
+                final Buffer payload = AmqpUtils.getPayload(request);
                 resultFuture = parseSetLastKnownGatewayJson(payload)
                         .compose(deviceToGatewayMap -> {
                             logger.debug("setting {} last known gateway entries for tenant [{}]", deviceToGatewayMap.size(), tenantId);
@@ -181,7 +181,7 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
     protected Future<Message> processRegisterCommandConsumer(final Message request,
             final ResourceIdentifier targetAddress, final SpanContext spanContext) {
         final String tenantId = targetAddress.getTenantId();
-        final String deviceId = MessageHelper.getDeviceId(request);
+        final String deviceId = AmqpUtils.getDeviceId(request);
         final String adapterInstanceId = AmqpUtils.getApplicationProperty(
                 request,
                 CommandConstants.MSG_PROPERTY_ADAPTER_INSTANCE_ID,
@@ -232,7 +232,7 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
     protected Future<Message> processUnregisterCommandConsumer(final Message request,
             final ResourceIdentifier targetAddress, final SpanContext spanContext) {
         final String tenantId = targetAddress.getTenantId();
-        final String deviceId = MessageHelper.getDeviceId(request);
+        final String deviceId = AmqpUtils.getDeviceId(request);
         final String adapterInstanceId = AmqpUtils.getApplicationProperty(
                 request,
                 CommandConstants.MSG_PROPERTY_ADAPTER_INSTANCE_ID,
@@ -297,7 +297,7 @@ public class DelegatingCommandRouterAmqpEndpoint<S extends CommandRouterService>
     }
 
     private Future<List<String>> parseTenantIdentifiers(final Message request) {
-        final Buffer payload = MessageHelper.getPayload(request);
+        final Buffer payload = AmqpUtils.getPayload(request);
         if (payload == null) {
             return Future.succeededFuture(List.of());
         }

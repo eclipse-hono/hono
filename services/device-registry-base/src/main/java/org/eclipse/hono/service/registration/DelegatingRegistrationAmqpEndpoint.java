@@ -17,12 +17,12 @@ import java.util.Objects;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AbstractDelegatingRequestResponseEndpoint;
 import org.eclipse.hono.service.amqp.AbstractRequestResponseEndpoint;
 import org.eclipse.hono.service.amqp.GenericRequestMessageFilter;
 import org.eclipse.hono.tracing.TracingHelper;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.RegistrationConstants;
 import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.ResourceIdentifier;
@@ -85,8 +85,8 @@ public class DelegatingRegistrationAmqpEndpoint<S extends RegistrationService> e
             final SpanContext spanContext) {
 
         final String tenantId = targetAddress.getTenantId();
-        final String deviceId = MessageHelper.getDeviceId(request);
-        final String gatewayId = MessageHelper.getGatewayId(request);
+        final String deviceId = AmqpUtils.getDeviceId(request);
+        final String gatewayId = AmqpUtils.getGatewayId(request);
 
         final Span span = TracingHelper.buildServerChildSpan(tracer,
                 spanContext,

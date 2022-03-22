@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.amqp.config.RequestResponseClientConfigProperties;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
@@ -40,7 +41,6 @@ import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
 import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
-import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -106,7 +106,7 @@ public class ProtonBasedNotificationReceiverTest {
         final TenantChangeNotification notification = new TenantChangeNotification(LifecycleChange.CREATE,
                 tenantId, creationTime, false);
         final Message notificationMessage = ProtonHelper.message();
-        MessageHelper.setJsonPayload(notificationMessage, JsonObject.mapFrom(notification));
+        AmqpUtils.setJsonPayload(notificationMessage, JsonObject.mapFrom(notification));
 
         // GIVEN a client where a TenantChangeNotification consumer gets registered
         final AtomicReference<TenantChangeNotification> receivedNotificationRef = new AtomicReference<>();
@@ -143,22 +143,22 @@ public class ProtonBasedNotificationReceiverTest {
         final TenantChangeNotification tenantChangeNotification = new TenantChangeNotification(LifecycleChange.CREATE,
                 tenantId, creationTime, false);
         final Message tenantChangeNotificationMsg = ProtonHelper.message();
-        MessageHelper.setJsonPayload(tenantChangeNotificationMsg, JsonObject.mapFrom(tenantChangeNotification));
+        AmqpUtils.setJsonPayload(tenantChangeNotificationMsg, JsonObject.mapFrom(tenantChangeNotification));
 
         final DeviceChangeNotification deviceChangeNotification = new DeviceChangeNotification(LifecycleChange.CREATE,
                 tenantId, deviceId, creationTime, false);
         final Message deviceChangeNotificationMsg = ProtonHelper.message();
-        MessageHelper.setJsonPayload(deviceChangeNotificationMsg, JsonObject.mapFrom(deviceChangeNotification));
+        AmqpUtils.setJsonPayload(deviceChangeNotificationMsg, JsonObject.mapFrom(deviceChangeNotification));
 
         final CredentialsChangeNotification credentialsChangeNotification = new CredentialsChangeNotification(tenantId,
                 deviceId, creationTime);
         final Message credentialsChangeNotificationMsg = ProtonHelper.message();
-        MessageHelper.setJsonPayload(credentialsChangeNotificationMsg, JsonObject.mapFrom(credentialsChangeNotification));
+        AmqpUtils.setJsonPayload(credentialsChangeNotificationMsg, JsonObject.mapFrom(credentialsChangeNotification));
 
         final AllDevicesOfTenantDeletedNotification allDevicesOfTenantDeletedChangeNotification = new AllDevicesOfTenantDeletedNotification(
                 tenantId, creationTime);
         final Message allDevicesOfTenantDeletedChangeNotificationMsg = ProtonHelper.message();
-        MessageHelper.setJsonPayload(allDevicesOfTenantDeletedChangeNotificationMsg, JsonObject.mapFrom(allDevicesOfTenantDeletedChangeNotification));
+        AmqpUtils.setJsonPayload(allDevicesOfTenantDeletedChangeNotificationMsg, JsonObject.mapFrom(allDevicesOfTenantDeletedChangeNotification));
 
 
         final Checkpoint handlerInvokedCheckpoint = ctx.checkpoint(4);

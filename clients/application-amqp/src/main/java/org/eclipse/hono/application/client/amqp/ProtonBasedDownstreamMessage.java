@@ -97,7 +97,7 @@ public final class ProtonBasedDownstreamMessage implements DownstreamMessage<Amq
      */
     @Override
     public String getDeviceId() {
-        return MessageHelper.getDeviceId(message);
+        return AmqpUtils.getDeviceId(message);
     }
 
     /**
@@ -148,7 +148,7 @@ public final class ProtonBasedDownstreamMessage implements DownstreamMessage<Amq
      */
     @Override
     public Buffer getPayload() {
-        return MessageHelper.getPayload(message);
+        return AmqpUtils.getPayload(message);
     }
 
     /**
@@ -172,7 +172,7 @@ public final class ProtonBasedDownstreamMessage implements DownstreamMessage<Amq
      */
     @Override
     public Integer getTimeTillDisconnect() {
-        return MessageHelper.getTimeUntilDisconnect(message);
+        return AmqpUtils.getTimeUntilDisconnect(message);
     }
 
     /**
@@ -191,6 +191,6 @@ public final class ProtonBasedDownstreamMessage implements DownstreamMessage<Amq
      */
     @Override
     public Integer getStatus() {
-        return MessageHelper.getStatus(message);
+        return AmqpUtils.getStatus(message);
     }
 }

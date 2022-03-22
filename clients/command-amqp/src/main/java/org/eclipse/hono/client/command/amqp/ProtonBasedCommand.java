@@ -117,7 +117,7 @@ public final class ProtonBasedCommand implements Command {
         getUnsupportedPayloadReason(message).ifPresent(validationErrorJoiner::add);
 
         String correlationId = null;
-        final Object correlationIdObj = MessageHelper.getCorrelationId(message);
+        final Object correlationIdObj = Optional.ofNullable(message.getCorrelationId()).orElse(message.getMessageId());
         if (correlationIdObj != null) {
             if (correlationIdObj instanceof String) {
                 correlationId = (String) correlationIdObj;
@@ -263,12 +263,12 @@ public final class ProtonBasedCommand implements Command {
     @Override
     public Buffer getPayload() {
         requireValid();
-        return MessageHelper.getPayload(message);
+        return AmqpUtils.getPayload(message);
     }
 
     @Override
     public int getPayloadSize() {
-        return MessageHelper.getPayloadSize(message);
+        return AmqpUtils.getPayloadSize(message);
     }
 
     @Override

@@ -22,11 +22,11 @@ import static com.google.common.truth.Truth.assertThat;
 
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.message.Message;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.test.TracingMockSupport;
 import org.eclipse.hono.test.VertxMockSupport;
-import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.ArgumentCaptor;
 
@@ -108,7 +108,7 @@ public abstract class AmqpAdapterClientSenderTestBase {
 
         assertThat(message.getAddress()).isEqualTo(expectedAddress);
 
-        assertThat(MessageHelper.getPayload(message)).isEqualTo(PAYLOAD);
+        assertThat(AmqpUtils.getPayload(message)).isEqualTo(PAYLOAD);
         assertThat(message.getContentType()).isEqualTo(CONTENT_TYPE);
 
         return message;

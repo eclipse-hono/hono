@@ -19,7 +19,6 @@ import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.service.amqp.AbstractAmqpEndpoint;
 import org.eclipse.hono.util.AuthenticationConstants;
-import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 
 import io.vertx.core.Vertx;
@@ -58,7 +57,7 @@ public class AuthenticationEndpoint extends AbstractAmqpEndpoint<Object> {
             sender.setQoS(ProtonQoS.AT_LEAST_ONCE).open();
             logger.debug("transferring token to client...");
             final Message tokenMsg = ProtonHelper.message(user.getToken());
-            MessageHelper.addProperty(tokenMsg, AuthenticationConstants.APPLICATION_PROPERTY_TYPE, AuthenticationConstants.TYPE_AMQP_JWT);
+            AmqpUtils.addProperty(tokenMsg, AuthenticationConstants.APPLICATION_PROPERTY_TYPE, AuthenticationConstants.TYPE_AMQP_JWT);
             sender.send(tokenMsg, disposition -> {
                 if (disposition.remotelySettled()) {
                     logger.debug("successfully transferred auth token to client");
