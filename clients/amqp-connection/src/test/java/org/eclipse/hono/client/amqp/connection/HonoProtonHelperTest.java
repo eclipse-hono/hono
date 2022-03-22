@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.util;
+package org.eclipse.hono.client.amqp.connection;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -23,6 +23,7 @@ import static com.google.common.truth.Truth.assertThat;
 
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.hono.client.amqp.connection.HonoProtonHelper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 

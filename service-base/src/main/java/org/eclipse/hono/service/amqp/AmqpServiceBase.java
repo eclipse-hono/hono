@@ -28,12 +28,12 @@ import org.apache.qpid.proton.amqp.transport.Source;
 import org.eclipse.hono.auth.Activity;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.client.amqp.connection.AmqpUtils;
+import org.eclipse.hono.client.amqp.connection.HonoProtonHelper;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractServiceBase;
 import org.eclipse.hono.service.auth.AuthorizationService;
 import org.eclipse.hono.service.auth.ClaimsBasedAuthorizationService;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.HonoProtonHelper;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.Strings;
 

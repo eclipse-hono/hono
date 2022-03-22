@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.util;
+package org.eclipse.hono.client.amqp.connection;
 
 import java.util.Objects;
 

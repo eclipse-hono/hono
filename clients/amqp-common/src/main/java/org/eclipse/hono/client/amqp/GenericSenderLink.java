@@ -43,9 +43,9 @@ import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.ErrorConverter;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
+import org.eclipse.hono.client.amqp.connection.HonoProtonHelper;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.tracing.TracingHelper;
-import org.eclipse.hono.util.HonoProtonHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

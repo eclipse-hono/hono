@@ -42,8 +42,8 @@ import org.eclipse.hono.client.amqp.connection.ConnectionFactory;
 import org.eclipse.hono.client.amqp.connection.DisconnectListener;
 import org.eclipse.hono.client.amqp.connection.ErrorConverter;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
+import org.eclipse.hono.client.amqp.connection.HonoProtonHelper;
 import org.eclipse.hono.client.amqp.connection.ReconnectListener;
-import org.eclipse.hono.util.HonoProtonHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

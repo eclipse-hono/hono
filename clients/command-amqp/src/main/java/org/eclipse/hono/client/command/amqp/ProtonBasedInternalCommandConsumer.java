@@ -23,6 +23,7 @@ import org.eclipse.hono.client.NoConsumerException;
 import org.eclipse.hono.client.amqp.AbstractServiceClient;
 import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
+import org.eclipse.hono.client.amqp.connection.HonoProtonHelper;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandHandlerWrapper;
@@ -30,7 +31,6 @@ import org.eclipse.hono.client.command.CommandHandlers;
 import org.eclipse.hono.client.command.InternalCommandConsumer;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CommandConstants;
-import org.eclipse.hono.util.HonoProtonHelper;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
