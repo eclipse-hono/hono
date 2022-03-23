@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -40,7 +40,13 @@ import io.vertx.core.Promise;
 public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterProperties>
         extends AbstractProtocolAdapterBase<T> implements CoapProtocolAdapter {
 
+    /**
+     * The CoAP endpoint handling exchanges via DTLS.
+     */
     protected Endpoint secureEndpoint;
+    /**
+     * The CoAP endpoint handling exchanges via UDP.
+     */
     protected Endpoint insecureEndpoint;
 
     private final Set<Resource> resourcesToAdd = new HashSet<>();
@@ -183,20 +189,23 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         return endpointFactory.getCoapServerConfiguration()
                 .onFailure(t -> log.info("not creating coap server: {}", t.getMessage()))
                 .compose(config -> {
-                    final CoapServer newServer = new CoapServer(config);
+                    final CoapServer newServer = new CoapServer(config) {
+                        @Override
+                        protected Resource createRoot() {
+                            return new HonoRootResource(AbstractVertxBasedCoapAdapter.this::getContext);
+                        }
+                    };
                     final Future<Endpoint> secureEndpointFuture = endpointFactory.getSecureEndpoint()
                             .onFailure(t -> log.info("not creating secure endpoint: {}", t.getMessage()))
-                            .map(ep -> {
+                            .onSuccess(ep -> {
                                 newServer.addEndpoint(ep);
                                 this.secureEndpoint = ep;
-                                return ep;
                             });
                     final Future<Endpoint> insecureEndpointFuture = endpointFactory.getInsecureEndpoint()
                             .onFailure(t -> log.info("not creating insecure endpoint: {}", t.getMessage()))
-                            .map(ep -> {
+                            .onSuccess(ep -> {
                                 newServer.addEndpoint(ep);
                                 this.insecureEndpoint = ep;
-                                return ep;
                             });
 
                     return CompositeFuture.any(insecureEndpointFuture, secureEndpointFuture)
@@ -205,13 +214,12 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                                 return newServer;
                             });
                 });
-
     }
 
     private void addResources(final CoapServer startingServer) {
         resourcesToAdd.forEach(resource -> {
             log.info("adding resource to CoAP server [name: {}]", resource.getName());
-            startingServer.add(new VertxCoapResource(resource, context));
+            startingServer.add(resource);
         });
         resourcesToAdd.clear();
     }

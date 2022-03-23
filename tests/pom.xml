@@ -231,6 +231,12 @@
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-service-device-registry-base</artifactId>
       <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.jboss.slf4j</groupId>
+          <artifactId>slf4j-jboss-logmanager</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>

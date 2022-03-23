@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -149,12 +149,8 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         // WHEN starting the adapter
         final Promise<Void> startupTracker = Promise.promise();
         startupTracker.future().onComplete(ctx.succeeding(s -> {
-            // THEN the resources have been registered with the server
-            final ArgumentCaptor<VertxCoapResource> resourceCaptor = ArgumentCaptor.forClass(VertxCoapResource.class);
-            ctx.verify(() -> {
-                verify(server).add(resourceCaptor.capture());
-                assertThat(resourceCaptor.getValue().getWrappedResource()).isEqualTo(resource);
-            });
+            // THEN the resource has been registered with the server
+            ctx.verify(() -> verify(server).add(resource));
             ctx.completeNow();
         }));
         adapter.start(startupTracker);
@@ -196,7 +192,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
                 final Request request = new Request(Code.GET);
                 final Object identity = "dummy";
                 final Exchange getExchange = new Exchange(request, identity, Origin.REMOTE, mock(Executor.class));
-                final ArgumentCaptor<VertxCoapResource> resourceCaptor = ArgumentCaptor.forClass(VertxCoapResource.class);
+                final ArgumentCaptor<Resource> resourceCaptor = ArgumentCaptor.forClass(Resource.class);
                 verify(server).add(resourceCaptor.capture());
                 resourceCaptor.getValue().handleRequest(getExchange);
                 // THEN the resource's handler has been run on the adapter's vert.x event loop
