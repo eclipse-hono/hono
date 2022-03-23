@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,15 +12,21 @@
  */
 package org.eclipse.hono.adapter.coap;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
 import org.eclipse.californium.core.CoapServer;
 import org.eclipse.californium.core.coap.CoAP;
+import org.eclipse.californium.core.coap.CoAP.ResponseCode;
+import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.network.Endpoint;
+import org.eclipse.californium.core.network.Exchange;
 import org.eclipse.californium.core.network.config.NetworkConfig;
+import org.eclipse.californium.core.server.ServerMessageDeliverer;
 import org.eclipse.californium.core.server.resources.Resource;
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.util.Constants;
@@ -41,7 +47,13 @@ import io.vertx.core.Promise;
 public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterProperties>
         extends AbstractProtocolAdapterBase<T> implements CoapProtocolAdapter {
 
+    /**
+     * The CoAP endpoint handling exchanges via DTLS.
+     */
     protected Endpoint secureEndpoint;
+    /**
+     * The CoAP endpoint handling exchanges via UDP.
+     */
     protected Endpoint insecureEndpoint;
 
     private final Set<Resource> resourcesToAdd = new HashSet<>();
@@ -155,6 +167,23 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         Optional.ofNullable(server)
                 .map(Future::succeededFuture)
                 .orElseGet(this::createServer)
+                .onSuccess(serverToStart -> serverToStart.setMessageDeliverer(
+                        new ServerMessageDeliverer(serverToStart.getRoot()) {
+                            @Override
+                            protected boolean preDeliverRequest(final Exchange exchange) {
+                                final Resource resource = findResource(exchange);
+                                if (resource != null) {
+                                    runOnContext(s -> resource.handleRequest(exchange));
+                                } else {
+                                    if (log.isDebugEnabled()) {
+                                        final var request = exchange.getRequest();
+                                        log.debug("no such resource [/{}]", request.getOptions().getUriPathString());
+                                    }
+                                    exchange.sendResponse(new Response(ResponseCode.NOT_FOUND));
+                                }
+                                return true;
+                            }
+                        }))
                 .compose(serverToStart -> preStartup().map(serverToStart))
                 .onSuccess(this::addResources)
                 .compose(serverToStart -> Futures.executeBlocking(vertx, () -> {
@@ -181,24 +210,29 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
         }
 
         log.info("creating new CoAP server");
-        final CoapServer newServer = new CoapServer(NetworkConfig.createStandardWithoutFile());
+        final List<Endpoint> endpoints = new ArrayList<>();
         final Future<Endpoint> secureEndpointFuture = endpointFactory.getSecureEndpoint()
                 .onFailure(t -> log.info("not creating secure endpoint: {}", t.getMessage()))
-                .map(ep -> {
-                    newServer.addEndpoint(ep);
+                .onSuccess(ep -> {
+                    endpoints.add(ep);
                     this.secureEndpoint = ep;
-                    return ep;
                 });
         final Future<Endpoint> insecureEndpointFuture = endpointFactory.getInsecureEndpoint()
                 .onFailure(t -> log.info("not creating insecure endpoint: {}", t.getMessage()))
-                .map(ep -> {
-                    newServer.addEndpoint(ep);
+                .onSuccess(ep -> {
+                    endpoints.add(ep);
                     this.insecureEndpoint = ep;
-                    return ep;
                 });
 
         return CompositeFuture.any(insecureEndpointFuture, secureEndpointFuture)
-                .map(ok -> {
+                .map(ok -> new CoapServer(NetworkConfig.createStandardWithoutFile()) {
+                    @Override
+                    protected Resource createRoot() {
+                        return new HonoRootResource(endpoints);
+                    }
+                })
+                .map(newServer -> {
+                    endpoints.forEach(newServer::addEndpoint);
                     this.server = newServer;
                     return newServer;
                 });
@@ -207,7 +241,7 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
     private void addResources(final CoapServer startingServer) {
         resourcesToAdd.forEach(resource -> {
             log.info("adding resource to CoAP server [name: {}]", resource.getName());
-            startingServer.add(new VertxCoapResource(resource, context));
+            startingServer.add(resource);
         });
         resourcesToAdd.clear();
     }

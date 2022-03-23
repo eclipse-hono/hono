@@ -1143,7 +1143,10 @@ public abstract class CoapTestBase {
      * @param expectedStatusCode The status code that is expected in the response.
      * @return The handler.
      */
-    protected final CoapHandler getHandler(final Handler<AsyncResult<OptionSet>> responseHandler, final ResponseCode expectedStatusCode) {
+    protected final CoapHandler getHandler(
+            final Handler<AsyncResult<OptionSet>> responseHandler,
+            final ResponseCode expectedStatusCode) {
+
         return new CoapHandler() {
 
             @Override

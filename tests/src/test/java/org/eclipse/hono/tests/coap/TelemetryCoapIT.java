@@ -147,6 +147,30 @@ public class TelemetryCoapIT extends CoapTestBase {
     }
 
     /**
+     * Verifies that a CoAP GET request on the adapter's root resource fails with a 4.04.
+     *
+     * @param ctx The test context.
+     * @throws IOException if the CoAP request cannot be sent to the adapter.
+     * @throws ConnectorException  if the CoAP request cannot be sent to the adapter.
+     */
+    @Test
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testRootResourceDoesNotExposeAnyInfo(final VertxTestContext ctx) throws ConnectorException, IOException {
+
+        final Tenant tenant = new Tenant();
+
+        helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET)
+            .compose(ok -> {
+                final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
+                final Request request = createCoapsRequest(Code.GET, Type.CON, "/", null);
+                final Promise<OptionSet> result = Promise.promise();
+                client.advanced(getHandler(result, ResponseCode.NOT_FOUND), request);
+                return result.future();
+            })
+            .onComplete(ctx.succeedingThenComplete());
+    }
+
+    /**
      * Verifies that a number of messages uploaded to Hono's CoAP adapter using TLS_ECDSA based authentication can be
      * successfully consumed via the messaging infrastructure.
      * <p>

@@ -149,12 +149,8 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         // WHEN starting the adapter
         final Promise<Void> startupTracker = Promise.promise();
         startupTracker.future().onComplete(ctx.succeeding(s -> {
-            // THEN the resources have been registered with the server
-            final ArgumentCaptor<VertxCoapResource> resourceCaptor = ArgumentCaptor.forClass(VertxCoapResource.class);
-            ctx.verify(() -> {
-                verify(server).add(resourceCaptor.capture());
-                assertThat(resourceCaptor.getValue().getWrappedResource()).isEqualTo(resource);
-            });
+            // THEN the resource has been registered with the server
+            ctx.verify(() -> verify(server).add(resource));
             ctx.completeNow();
         }));
         adapter.start(startupTracker);
@@ -195,7 +191,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
                 // WHEN the resource receives a GET request
                 final Request request = new Request(Code.GET);
                 final Exchange getExchange = new Exchange(request, Origin.REMOTE, mock(Executor.class));
-                final ArgumentCaptor<VertxCoapResource> resourceCaptor = ArgumentCaptor.forClass(VertxCoapResource.class);
+                final ArgumentCaptor<Resource> resourceCaptor = ArgumentCaptor.forClass(Resource.class);
                 verify(server).add(resourceCaptor.capture());
                 resourceCaptor.getValue().handleRequest(getExchange);
                 // THEN the resource's handler has been run on the adapter's vert.x event loop
