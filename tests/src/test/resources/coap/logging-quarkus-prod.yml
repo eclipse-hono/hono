@@ -3,6 +3,8 @@ quarkus:
     category:
       "org.apache.kafka":
         level: WARN
+      "org.eclipse.californium.scandium.dtls.DTLSFlight":
+        level: WARN
       "org.eclipse.hono":
         level: INFO
       "org.eclipse.hono.client.impl.HonoConnectionImpl":

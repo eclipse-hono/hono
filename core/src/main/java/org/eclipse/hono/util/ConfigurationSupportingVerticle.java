@@ -16,6 +16,7 @@ package org.eclipse.hono.util;
 import java.util.Objects;
 
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.Context;
 
 
 /**
@@ -47,5 +48,14 @@ public abstract class ConfigurationSupportingVerticle<T> extends AbstractVerticl
      */
     public final T getConfig() {
         return this.config;
+    }
+
+    /**
+     * Gets the vert.x context that this verticle is associated with.
+     *
+     * @return The context or {@code null} if this verticle has not been deployed (yet).
+     */
+    protected final Context getContext() {
+        return context;
     }
 }
