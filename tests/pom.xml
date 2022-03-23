@@ -1646,6 +1646,9 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-failsafe-plugin</artifactId>
             <configuration>
+              <classpathDependencyExcludes>
+                <classpathDependencyExclude>org.jboss.slf4j:slf4j-jboss-logmanager</classpathDependencyExclude>
+              </classpathDependencyExcludes>
               <environmentVariables>
                 <PN_TRACE_FRM>${trace.frames}</PN_TRACE_FRM>
               </environmentVariables>
