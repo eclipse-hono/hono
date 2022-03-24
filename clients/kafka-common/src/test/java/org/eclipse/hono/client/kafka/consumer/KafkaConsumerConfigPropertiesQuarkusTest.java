@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,79 +13,42 @@
 
 package org.eclipse.hono.client.kafka.consumer;
 
-import static com.google.common.truth.Truth.assertThat;
+import static org.junit.jupiter.api.Assertions.assertAll;
 
-import javax.inject.Inject;
+import static com.google.common.truth.Truth.assertThat;
 
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.eclipse.hono.client.kafka.CommonKafkaClientOptions;
-import org.junit.jupiter.api.BeforeEach;
+import org.eclipse.hono.test.ConfigMappingSupport;
 import org.junit.jupiter.api.Test;
-
-import io.quarkus.test.junit.QuarkusTest;
-import io.smallrye.config.ConfigMapping;
 
 /**
  * Verifies the creation of {@link KafkaConsumerConfigProperties} from {@link KafkaConsumerOptions}.
  *
  */
-@QuarkusTest
-public class KafkaConsumerConfigPropertiesQuarkusTest {
+class KafkaConsumerConfigPropertiesQuarkusTest {
 
-    @Inject
-    @ConfigMapping(prefix = "hono.kafka")
-    CommonKafkaClientOptions commonOptions;
-
-    @Inject
-    @ConfigMapping(prefix = "hono.kafka.consumerTest")
-    KafkaConsumerOptions consumerOptions;
-
-    private KafkaConsumerConfigProperties config;
-
-    @BeforeEach
-    void setUp() {
-        config = new KafkaConsumerConfigProperties(StringDeserializer.class, StringDeserializer.class, commonOptions,
+    @Test
+    void testConsumerOptionsAreSet() {
+        final var commonOptions = ConfigMappingSupport.getConfigMapping(
+                CommonKafkaClientOptions.class,
+                this.getClass().getResource("/consumer-options.yaml"),
+                "hono.kafka");
+        final var consumerOptions = ConfigMappingSupport.getConfigMapping(
+                KafkaConsumerOptions.class,
+                this.getClass().getResource("/consumer-options.yaml"),
+                "hono.kafka.consumerTest");
+        final var config = new KafkaConsumerConfigProperties(
+                StringDeserializer.class,
+                StringDeserializer.class,
+                commonOptions,
                 consumerOptions);
-    }
 
-    /**
-     * Asserts that the poll timeout property is present.
-     */
-    @Test
-    public void testThatPollTimeoutIsSet() {
-        assertThat(config.getPollTimeout()).isEqualTo(999);
-    }
+        assertAll(() -> assertThat(config.getConsumerConfig("test").get("common.property")).isEqualTo("present"),
+                () -> assertThat(config.getConsumerConfig("test").get("number")).isEqualTo("123"),
+                () -> assertThat(config.getConsumerConfig("test").get("empty")).isEqualTo(""));
 
-    /**
-     * Asserts that common client properties are present.
-     */
-    @Test
-    public void testThatCommonConfigIsPresent() {
-        assertThat(config.getConsumerConfig("test").get("common.property")).isEqualTo("present");
+        assertAll(() -> assertThat(config.getPollTimeout()).isEqualTo(999),
+                () -> assertThat(config.getConsumerConfig("test").get("consumer.property")).isEqualTo("consumer"));
     }
-
-    /**
-     * Asserts that consumer properties are present.
-     */
-    @Test
-    public void testThatConsumerConfigIsPresent() {
-        assertThat(config.getConsumerConfig("test").get("consumer.property")).isEqualTo("consumer");
-    }
-
-    /**
-     * Asserts that properties with a numeric value added as strings.
-     */
-    @Test
-    public void testThatNumbersArePresentAsStrings() {
-        assertThat(config.getConsumerConfig("test").get("number")).isEqualTo("123");
-    }
-
-    /**
-     * Asserts that properties with an empty string as the value are added.
-     */
-    @Test
-    public void testThatEmptyValuesAreMaintained() {
-        assertThat(config.getConsumerConfig("test").get("empty")).isEqualTo("");
-    }
-
 }

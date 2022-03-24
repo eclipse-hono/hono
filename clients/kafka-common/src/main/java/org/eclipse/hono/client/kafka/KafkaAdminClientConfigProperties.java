@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,6 +14,7 @@
 package org.eclipse.hono.client.kafka;
 
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Configuration properties for Kafka admin clients.
@@ -40,9 +41,13 @@ public class KafkaAdminClientConfigProperties extends AbstractKafkaConfigPropert
      *
      * @param commonOptions The common Kafka client options to use.
      * @param options The producer options to use.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public KafkaAdminClientConfigProperties(final CommonKafkaClientOptions commonOptions,
             final KafkaAdminClientOptions options) {
+
+        Objects.requireNonNull(commonOptions);
+        Objects.requireNonNull(options);
 
         final CommonKafkaClientConfigProperties commonConfig = new CommonKafkaClientConfigProperties(commonOptions);
         setCommonClientConfig(commonConfig);

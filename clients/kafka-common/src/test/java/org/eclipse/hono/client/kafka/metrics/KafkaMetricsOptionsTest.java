@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,26 +15,23 @@ package org.eclipse.hono.client.kafka.metrics;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import javax.inject.Inject;
-
+import org.eclipse.hono.test.ConfigMappingSupport;
 import org.junit.jupiter.api.Test;
-
-import io.quarkus.test.junit.QuarkusTest;
 
 /**
  * Verifies that Quarkus binds properties from yaml files to configuration objects.
  */
-@QuarkusTest
 public class KafkaMetricsOptionsTest {
-
-    @Inject
-    KafkaMetricsOptions kafkaMetricsOptions;
 
     /**
      * Verifies that the metrics properties are bound correctly.
      */
     @Test
     public void testPropertyBinding() {
+        final var kafkaMetricsOptions = ConfigMappingSupport.getConfigMapping(
+                KafkaMetricsOptions.class,
+                this.getClass().getResource("/metrics-options.yaml"));
+
         assertThat(kafkaMetricsOptions).isNotNull();
         assertThat(kafkaMetricsOptions.enabled()).isFalse();
         assertThat(kafkaMetricsOptions.metricsPrefixes().isPresent()).isTrue();

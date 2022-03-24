@@ -61,6 +61,9 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
      * A logger to be shared with subclasses.
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
+    /**
+     * An OpenTracing tracer to be shared with subclasses.
+     */
     protected final Tracer tracer;
 
     private final MessagingKafkaProducerConfigProperties config;

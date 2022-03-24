@@ -33,6 +33,9 @@ public abstract class AbstractKafkaConfigProperties {
 
     private static final AtomicInteger ID_COUNTER = new AtomicInteger();
 
+    /**
+     * A logger to be shared with subclasses.
+     */
     protected final Logger log = LoggerFactory.getLogger(getClass());
 
     /**

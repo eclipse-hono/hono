@@ -1,0 +1,7 @@
+hono:
+  kafka:
+    metrics:
+      enabled: false
+      metricsPrefixes:
+      - "metrics.one"
+      - "metrics.two"

@@ -14,6 +14,7 @@
 package org.eclipse.hono.client.kafka.producer;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.kafka.clients.CommonClientConfigs;
@@ -42,8 +43,10 @@ public class KafkaProducerConfigProperties extends AbstractKafkaConfigProperties
      *            needs to be provided in the configuration at runtime.
      * @param valueSerializerClass The class to be used for serializing the record values, if {@code null} the
      *            serializer needs to be provided in the configuration at runtime.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    protected KafkaProducerConfigProperties(final Class<? extends Serializer<?>> keySerializerClass,
+    protected KafkaProducerConfigProperties(
+            final Class<? extends Serializer<?>> keySerializerClass,
             final Class<? extends Serializer<?>> valueSerializerClass) {
 
         this.keySerializerClass = keySerializerClass;
@@ -59,13 +62,17 @@ public class KafkaProducerConfigProperties extends AbstractKafkaConfigProperties
      *            serializer needs to be provided in the configuration at runtime.
      * @param commonOptions The common Kafka client options to use.
      * @param options The producer options to use.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    protected KafkaProducerConfigProperties(final Class<? extends Serializer<?>> keySerializerClass,
+    protected KafkaProducerConfigProperties(
+            final Class<? extends Serializer<?>> keySerializerClass,
             final Class<? extends Serializer<?>> valueSerializerClass,
             final CommonKafkaClientOptions commonOptions,
             final KafkaProducerOptions options) {
-        this.keySerializerClass = keySerializerClass;
-        this.valueSerializerClass = valueSerializerClass;
+
+        this(keySerializerClass, valueSerializerClass);
+        Objects.requireNonNull(commonOptions);
+        Objects.requireNonNull(options);
 
         final CommonKafkaClientConfigProperties commonConfig = new CommonKafkaClientConfigProperties(commonOptions);
         setCommonClientConfig(commonConfig);

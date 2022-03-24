@@ -13,19 +13,3 @@ hono:
         admin.property: "admin"
         number: 123
         empty: ""
-    consumerTest:
-      pollTimeout: 999
-      consumerConfig:
-        consumer.property: "consumer"
-        number: 123
-        empty: ""
-    producerTest:
-      producerConfig:
-        producer.property: "producer"
-        number: 123
-        empty: ""
-    metrics:
-      enabled: false
-      metricsPrefixes:
-      - "metrics.one"
-      - "metrics.two"

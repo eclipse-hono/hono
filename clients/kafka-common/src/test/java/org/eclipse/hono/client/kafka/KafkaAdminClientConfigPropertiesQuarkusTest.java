@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,68 +13,35 @@
 
 package org.eclipse.hono.client.kafka;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
+
 import static com.google.common.truth.Truth.assertThat;
 
-import javax.inject.Inject;
-
-import org.junit.jupiter.api.BeforeEach;
+import org.eclipse.hono.test.ConfigMappingSupport;
 import org.junit.jupiter.api.Test;
-
-import io.quarkus.test.junit.QuarkusTest;
-import io.smallrye.config.ConfigMapping;
 
 /**
  * Verifies the creation of {@link KafkaAdminClientConfigProperties} from {@link KafkaAdminClientOptions}.
  *
  */
-@QuarkusTest
-public class KafkaAdminClientConfigPropertiesQuarkusTest {
+class KafkaAdminClientConfigPropertiesQuarkusTest {
 
-    @Inject
-    @ConfigMapping(prefix = "hono.kafka")
-    CommonKafkaClientOptions commonOptions;
-
-    @Inject
-    @ConfigMapping(prefix = "hono.kafka.adminClientTest")
-    KafkaAdminClientOptions adminClientOptions;
-
-    private KafkaAdminClientConfigProperties config;
-
-    @BeforeEach
-    void setUp() {
-        config = new KafkaAdminClientConfigProperties(commonOptions, adminClientOptions);
-    }
-
-    /**
-     * Asserts that common client properties are present.
-     */
     @Test
-    public void testThatCommonConfigIsPresent() {
-        assertThat(config.getAdminClientConfig("test").get("common.property")).isEqualTo("present");
-    }
+    void testAdminClientOptionsAreSet() {
 
-    /**
-     * Asserts that admin client properties are present.
-     */
-    @Test
-    public void testThatAdminClientConfigIsPresent() {
-        assertThat(config.getAdminClientConfig("test").get("admin.property")).isEqualTo("admin");
-    }
+        final var commonOptions = ConfigMappingSupport.getConfigMapping(
+                CommonKafkaClientOptions.class,
+                this.getClass().getResource("/admin-options.yaml"),
+                "hono.kafka");
+        final var adminClientOptions = ConfigMappingSupport.getConfigMapping(
+                KafkaAdminClientOptions.class,
+                this.getClass().getResource("/admin-options.yaml"),
+                "hono.kafka.adminClientTest");
+        final var config = new KafkaAdminClientConfigProperties(commonOptions, adminClientOptions);
 
-    /**
-     * Asserts that properties with a numeric value added as strings.
-     */
-    @Test
-    public void testThatNumbersArePresentAsStrings() {
-        assertThat(config.getAdminClientConfig("test").get("number")).isEqualTo("123");
+        assertAll(() -> assertThat(config.getAdminClientConfig("test").get("common.property")).isEqualTo("present"),
+                () -> assertThat(config.getAdminClientConfig("test").get("admin.property")).isEqualTo("admin"),
+                () -> assertThat(config.getAdminClientConfig("test").get("number")).isEqualTo("123"),
+                () -> assertThat(config.getAdminClientConfig("test").get("empty")).isEqualTo(""));
     }
-
-    /**
-     * Asserts that properties with an empty string as the value are added.
-     */
-    @Test
-    public void testThatEmptyValuesAreMaintained() {
-        assertThat(config.getAdminClientConfig("test").get("empty")).isEqualTo("");
-    }
-
 }

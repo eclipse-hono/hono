@@ -14,6 +14,7 @@
 package org.eclipse.hono.client.kafka.consumer;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.kafka.clients.CommonClientConfigs;
@@ -49,12 +50,14 @@ public class KafkaConsumerConfigProperties extends AbstractKafkaConfigProperties
      *            deserializer needs to be provided in the configuration at runtime.
      * @param valueDeserializerClass The class to be used for deserializing the record values, if {@code null} the
      *            deserializer needs to be provided in the configuration at runtime.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    protected KafkaConsumerConfigProperties(final Class<? extends Deserializer<?>> keyDeserializerClass,
+    protected KafkaConsumerConfigProperties(
+            final Class<? extends Deserializer<?>> keyDeserializerClass,
             final Class<? extends Deserializer<?>> valueDeserializerClass) {
 
-        this.keyDeserializerClass = keyDeserializerClass;
-        this.valueDeserializerClass = valueDeserializerClass;
+        this.keyDeserializerClass = Objects.requireNonNull(keyDeserializerClass);
+        this.valueDeserializerClass = Objects.requireNonNull(valueDeserializerClass);
     }
 
     /**
@@ -66,13 +69,17 @@ public class KafkaConsumerConfigProperties extends AbstractKafkaConfigProperties
      *            deserializer needs to be provided in the configuration at runtime.
      * @param commonOptions The common Kafka client options to use.
      * @param options The consumer options to use.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    protected KafkaConsumerConfigProperties(final Class<? extends Deserializer<?>> keyDeserializerClass,
+    protected KafkaConsumerConfigProperties(
+            final Class<? extends Deserializer<?>> keyDeserializerClass,
             final Class<? extends Deserializer<?>> valueDeserializerClass,
             final CommonKafkaClientOptions commonOptions,
             final KafkaConsumerOptions options) {
-        this.keyDeserializerClass = keyDeserializerClass;
-        this.valueDeserializerClass = valueDeserializerClass;
+
+        this(keyDeserializerClass, valueDeserializerClass);
+        Objects.requireNonNull(commonOptions);
+        Objects.requireNonNull(options);
 
         final CommonKafkaClientConfigProperties commonConfig = new CommonKafkaClientConfigProperties(commonOptions);
         setCommonClientConfig(commonConfig);

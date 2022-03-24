@@ -1,0 +1,16 @@
+hono:
+  kafka:
+    commonClientConfig:
+      common.property: "present"
+      number: 123
+      empty: ""
+      sasl.client.callback.handler.class: Something.class
+      admin.property: "common"
+      consumer.property: "common"
+      producer.property: "common"
+    consumerTest:
+      pollTimeout: 999
+      consumerConfig:
+        consumer.property: "consumer"
+        number: 123
+        empty: ""

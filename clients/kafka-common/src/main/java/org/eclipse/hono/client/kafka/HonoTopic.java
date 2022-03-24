@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -139,19 +139,35 @@ public final class HonoTopic {
      */
     public enum Type {
 
+        /**
+         * The type of topic that is used for telemetry messages.
+         */
         TELEMETRY(TelemetryConstants.TELEMETRY_ENDPOINT),
+        /**
+         * The type of topic that is used for events.
+         */
         EVENT(EventConstants.EVENT_ENDPOINT),
+        /**
+         * The type of topic that is used for command messages.
+         */
         COMMAND(CommandConstants.COMMAND_ENDPOINT),
+        /**
+         * The type of topic that is used for command response messages.
+         */
         COMMAND_RESPONSE(CommandConstants.COMMAND_RESPONSE_ENDPOINT),
+        /**
+         * The type of topic that is used for routing command messages internally.
+         */
         COMMAND_INTERNAL(CommandConstants.INTERNAL_COMMAND_ENDPOINT),
+        /**
+         * The type of topic that is used for notifications.
+         */
         NOTIFICATION("notification");
 
         /**
          * A list of the types of topics that include a tenant identifier.
          */
         public static final List<Type> MESSAGING_API_TYPES = List.of(TELEMETRY, EVENT, COMMAND, COMMAND_RESPONSE);
-        public static final String SEPARATOR = ".";
-        private static final String NAMESPACE = "hono";
 
         /**
          * The name of the endpoint (e.g. "event").
@@ -164,14 +180,13 @@ public final class HonoTopic {
 
         Type(final String endpoint) {
             this.endpoint = endpoint;
-            this.prefix = NAMESPACE + SEPARATOR + endpoint + SEPARATOR;
+            this.prefix = String.format("hono.%s.", endpoint);
         }
 
         @Override
         public String toString() {
             return name().toLowerCase();
         }
-
     }
 
 }

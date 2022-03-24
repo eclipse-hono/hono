@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,6 +21,9 @@ import org.apache.kafka.clients.producer.Producer;
  */
 public class NoopKafkaClientMetricsSupport implements KafkaClientMetricsSupport {
 
+    /**
+     * The shared instance.
+     */
     public static final NoopKafkaClientMetricsSupport INSTANCE = new NoopKafkaClientMetricsSupport();
 
     private NoopKafkaClientMetricsSupport() {
