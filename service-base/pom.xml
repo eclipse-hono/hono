@@ -24,6 +24,10 @@
   <description>Base classes for implementing Hono services.</description>
   <url>https://www.eclipse.org/hono</url>
 
+  <properties>
+    <jaeger-reflection-config/>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
@@ -83,56 +87,28 @@
       <artifactId>opentracing-api</artifactId>
     </dependency>
     <dependency>
+      <groupId>io.opentracing</groupId>
+      <artifactId>opentracing-util</artifactId>
+    </dependency>
+    <dependency>
       <groupId>com.github.ben-manes.caffeine</groupId>
       <artifactId>caffeine</artifactId>
       <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-arc</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
       <artifactId>quarkus-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.jaegertracing</groupId>
+      <artifactId>jaeger-core</artifactId>
+      <scope>compile</scope>
       <optional>true</optional>
-      <exclusions>
-        <exclusion>
-          <groupId>org.jboss.logging</groupId>
-          <artifactId>jboss-logging</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.jboss.logmanager</groupId>
-          <artifactId>jboss-logmanager-embedded</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.jboss.logging</groupId>
-          <artifactId>jboss-logging-annotations</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.quarkus</groupId>
-          <artifactId>quarkus-development-mode-spi</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.quarkus</groupId>
-          <artifactId>quarkus-bootstrap-runner</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.jboss.slf4j</groupId>
-          <artifactId>slf4j-jboss-logmanager</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.jboss.threads</groupId>
-          <artifactId>jboss-threads</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.graalvm.sdk</groupId>
-          <artifactId>graal-sdk</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.quarkus</groupId>
-          <artifactId>quarkus-fs-util</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.wildfly.common</groupId>
-          <artifactId>wildfly-common</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>io.micrometer</groupId>
@@ -185,6 +161,12 @@
   </dependencies>
 
   <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -226,4 +208,13 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>jaeger</id>
+      <properties>
+        <jaeger-reflection-config>,${.}/reflection-config-jaeger.json,</jaeger-reflection-config>
+      </properties>
+    </profile>
+  </profiles>
 </project>

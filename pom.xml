@@ -235,7 +235,6 @@
     <module>examples</module>
     <module>legal</module>
     <module>service-base</module>
-    <module>service-base-quarkus</module>
     <module>services</module>
     <module>site</module>
     <module>test-utils</module>
