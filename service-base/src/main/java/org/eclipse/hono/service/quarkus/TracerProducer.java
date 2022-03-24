@@ -23,7 +23,7 @@ import io.opentracing.Tracer;
 import io.opentracing.util.GlobalTracer;
 
 /**
- * A producer for an OpenTracting Tracer.
+ * A producer for an OpenTracing Tracer.
  */
 @ApplicationScoped
 public class TracerProducer {
