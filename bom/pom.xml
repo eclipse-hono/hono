@@ -37,6 +37,7 @@
     <gson.version>2.9.0</gson.version>
     <infinispan-image.name>quay.io/infinispan/server-native:13.0</infinispan-image.name>
     <jaeger.image.name>jaegertracing/all-in-one:1.31</jaeger.image.name>
+    <jaeger.metrics.enabled>false</jaeger.metrics.enabled>
     <jaeger.version>1.8.0</jaeger.version>
     <!-- 
       We want to allow users to run containers in a rootless Docker environment.
@@ -77,10 +78,40 @@
     <vertx.version>4.2.5</vertx.version>
     <zookeeper.image.name>confluentinc/cp-zookeeper:6.2.2</zookeeper.image.name>
 
-    <!-- The port at which the Prometheus scraping endpoint is exposed -->
-    <prometheus.scraping.port>8088</prometheus.scraping.port>
     <!-- The port at which the health check server should expose its resources -->
-    <vertx.health.port>8088</vertx.health.port>
+    <health.check.port>8088</health.check.port>
+    <health.check.non-application-root-path>/</health.check.non-application-root-path>
+    <health.check.root-path>/</health.check.root-path>
+    <health.check.liveness-path>liveness</health.check.liveness-path>
+    <health.check.readiness-path>readiness</health.check.readiness-path>
+    <health.check.startup-path>started</health.check.startup-path>
+
+    <!-- 
+      These properties will be copied into the application.properties of all service components and
+      adapters.
+    -->
+    <quarkus.application.properties>
+quarkus.http.non-application-root-path=${health.check.non-application-root-path}
+quarkus.http.port=${health.check.port}
+# this needs to be configured at build time in order for native images to be able to log at TRACE level
+quarkus.log.min-level=TRACE
+quarkus.micrometer.binder-enabled-default= false
+quarkus.micrometer.binder.jvm=true
+# Kafka client metrics are being managed explicitly by MicrometerKafkaClientMetricsSupport
+quarkus.micrometer.binder.kafka.enabled=false
+quarkus.micrometer.binder.system=true
+quarkus.micrometer.binder.vertx.enabled=true
+quarkus.micrometer.export.prometheus.path=/prometheus
+quarkus.smallrye-health.root-path=${health.check.root-path}
+quarkus.smallrye-health.liveness-path=${health.check.liveness-path}
+quarkus.smallrye-health.readiness-path=${health.check.readiness-path}
+quarkus.smallrye-health.startup-path=${health.check.startup-path}
+quarkus.vertx.prefer-native-transport=true
+quarkus.vertx.resolver.cache-max-time-to-live=0
+    </quarkus.application.properties>
+
+    <!-- The port at which the Prometheus scraping endpoint is exposed -->
+    <prometheus.scraping.port>${health.check.port}</prometheus.scraping.port>
 
     <classifier.spring.boot.artifact>exec</classifier.spring.boot.artifact>
 

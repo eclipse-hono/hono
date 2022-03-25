@@ -98,7 +98,6 @@
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-arc</artifactId>
-      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
@@ -109,14 +108,12 @@
       <artifactId>quarkus-config-yaml</artifactId>
     </dependency>
     <dependency>
-      <groupId>io.jaegertracing</groupId>
-      <artifactId>jaeger-core</artifactId>
-      <scope>compile</scope>
-      <optional>true</optional>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-smallrye-health</artifactId>
     </dependency>
     <dependency>
-      <groupId>io.micrometer</groupId>
-      <artifactId>micrometer-registry-prometheus</artifactId>
+      <groupId>io.jaegertracing</groupId>
+      <artifactId>jaeger-core</artifactId>
       <scope>compile</scope>
       <optional>true</optional>
     </dependency>
@@ -160,6 +157,11 @@
     <dependency>
       <groupId>com.google.truth</groupId>
       <artifactId>truth</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-prometheus</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

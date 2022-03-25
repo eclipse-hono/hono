@@ -54,10 +54,13 @@ determining the component's readiness and liveness status.
 ## Health Check Server Configuration
 
 All of Hono's service components and protocol adapters contain a *Health Check* server which can be configured to
-expose several HTTP endpoints for determining the component's status.
-In particular, the server exposes a `/readiness`, a `/liveness` and an optional `/prometheus` URI endpoint.
+expose several HTTP endpoints for determining the component's status. Under the hood, Hono uses Quarkus' *SmallRye
+Health* extension to implement the health check server.
 
-The former two endpoints are supposed to be used by container orchestration platforms like Kubernetes to monitor the
+In particular, the server exposes a `/started`, a `/readiness`, a `/liveness` and an optional `/prometheus`
+URI endpoint.
+
+The former three endpoints are supposed to be used by container orchestration platforms like Kubernetes to monitor the
 runtime status of the containers that it manages. These endpoints are *always* exposed when the health check server is
 started.
 
@@ -65,24 +68,18 @@ The `/prometheus` endpoint can be used by a Prometheus server to retrieve collec
 It is *only* exposed if Prometheus has been configured as the metrics back end as described
 [above]({{< relref "#configuring-a-metrics-back-end" >}}).
 
-The health check server can be configured by means of the following environment variables:
+Please refer to the [Quarkus SmallRye Health extension](https://quarkus.io/guides/smallrye-health) documentation for
+details regarding configuration. The table below provides an overview of the configuration properties that have a Hono
+specific default value that differs from the Quarkus default:
 
-| OS Environment Variable<br>Java System Property | Default Value | Description  |
-| :---------------------------------------------- | :------------ | :------------|
-| `HONO_HEALTHCHECK_BINDADDRESS`<br>`hono.healthCheck.bindAddress` | `127.0.0.1` | The IP address of the network interface that the health check server's secure port should be bound to. The server will only be started if this property is set to some other than the default value and corresponding key material has been configured using the `HONO_HEALTHCHECK_KEYPATH` and `HONO_HEALTHCHECK_CERTPATH` variables. |
-| `HONO_HEALTHCHECK_CERTPATH`<br>`hono.healthCheck.certPath` | - | The absolute path to the PEM file containing the certificate that the secure server should use for authenticating to clients. This option must be used in conjunction with `HONO_HEALTHCHECK_KEYPATH`.<br>Alternatively, the `HONO_HEALTHCHECK_KEYSTOREPATH` option can be used to configure a key store containing both the key as well as the certificate. |
-| `HONO_HEALTHCHECK_INSECUREPORTBINDADDRESS`<br>`hono.healthCheck.insecurePortBindAddress` | `127.0.0.1` | The IP address of the network interface that the health check server's insecure port should be bound to. The server will only be started if this property is set to some other than the default value. |
-| `HONO_HEALTHCHECK_INSECUREPORT`<br>`hono.healthCheck.insecurePort` | `8088` | The port that the insecure server should listen on. |
-| `HONO_HEALTHCHECK_KEYPATH`<br>`hono.healthCheck.keyPath` | - | The absolute path to the (PKCS8) PEM file containing the private key that the secure server should use for authenticating to clients. This option must be used in conjunction with `HONO_HEALTHCHECK_CERTPATH`. Alternatively, the `HONO_HEALTHCHECK_KEYSTOREPATH` option can be used to configure a key store containing both the key as well as the certificate. |
-| `HONO_HEALTHCHECK_PORT`<br>`hono.healthCheck.port` | `8088` | The port that the secure server should listen on. |
-| `HONO_HEALTHCHECK_KEYSTOREPASSWORD`<br>`hono.healthCheck.keyStorePassword` | - | The password required to read the contents of the key store. |
-| `HONO_HEALTHCHECK_KEYSTOREPATH`<br>`hono.healthCheck.keyStorePath` | - | The absolute path to the Java key store containing the private key and certificate that the secure server should use for authenticating to clients. Either this option or the `HONO_HEALTHCHECK_KEYPATH` and `HONO_HEALTHCHECK_CERTPATH` options need to be set in order to enable TLS secured connections with clients. The key store format can be either `JKS` or `PKCS12` indicated by a `.jks` or `.p12` file suffix respectively. The `HONO_HEALTHCHECK_KEYSTOREPASSWORD` variable can be used to set the password required for reading the key store. |
-
-
-{{% notice warning %}}
-The component/service will fail to start if neither the secure not the insecure server have been configured properly.
-{{% /notice %}}
-
+| OS Environment Variable<br>Java System Property                          | Value      |
+| :----------------------------------------------------------------------- | :--------- |
+| `QUARKUS_HTTP_NON_APPLICATION_ROOT_PATH`<br>`quarkus.http.non-application-root-path` | `/`         |
+| `QUARKUS_HTTP_PORT`<br>`quarkus.http.port`                                     | `8088`      |
+| `QUARKUS_SMALLRYE_HEALTH_LIVENESS_PATH`<br>`quarkus.smallrye-health.liveness-path`   | `liveness`   |
+| `QUARKUS_SMALLRYE_HEALTH_READINESS_PATH`<br>`quarkus.smallrye-health.readiness-path` | `readiness`  |
+| `QUARKUS_SMALLRYE_HEALTH_ROOT_PATH`<br>`quarkus.smallrye-health.root-path`          | `/`         |
+ 
 ## Tracing
 
 In normal operation the vast majority of messages should be flowing through the system without any noteworthy delays
@@ -121,9 +118,19 @@ mvn clean install -Pbuild-docker-image,jaeger
 ## Enforcing the recording of traces for a tenant
 
 Typically, in production systems, the tracing components will be configured to not store *all* trace spans in the tracing
-backend, in order to reduce the performance impact. For debugging purposes it can however be beneficial to enforce the
+back end, in order to reduce the performance impact. For debugging purposes it can however be beneficial to enforce the
 recording of certain traces. Hono allows this by providing a configuration option in the Tenant information with which
 all traces concerning the processing of telemetry, event and command messages for that specific tenant will be recorded.
 Furthermore, this enforced trace sampling can be restricted to only apply to messages sent in the context of a specific
 authentication identifier. Please refer to the [description of the `tracing` object]({{< ref "/api/tenant#tracing-format" >}})
 in the Tenant Information for details.
+
+## Enabling Jaeger Client Metrics
+
+The Jaeger client contained in Hono components can be configured to report metrics via Micrometer. By default,
+reporting of these metrics is disabled. In order to enable it, Hono needs to be compiled setting the
+*jaeger.metrics.enabled* Maven property to `true`:
+
+```sh
+mvn clean install -Djaeger.metrics.enabled=true -Pmetrics-prometheus,jaeger,build-docker-image
+```

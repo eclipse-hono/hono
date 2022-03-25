@@ -33,7 +33,6 @@ import org.eclipse.hono.util.AuthenticationConstants;
 
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -119,15 +118,11 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
         } else {
             path = permissionsPath;
         }
-        final Promise<Boolean> fileExistsHandler = Promise.promise();
-        getVertx().fileSystem().exists(path, fileExistsHandler);
-        return fileExistsHandler.future()
+        return getVertx().fileSystem().exists(path)
                 .compose(fileExists -> {
                     if (fileExists) {
                         log.info("loading permissions from resource [{}]", path);
-                        final Promise<Buffer> contentHandler = Promise.promise();
-                        getVertx().fileSystem().readFile(path, contentHandler);
-                        return contentHandler.future();
+                        return getVertx().fileSystem().readFile(path);
                     } else {
                         return Future.failedFuture(new FileNotFoundException("no such file: " + path));
                     }

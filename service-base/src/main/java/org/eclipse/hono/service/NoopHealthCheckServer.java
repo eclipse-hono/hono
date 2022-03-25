@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,7 +20,11 @@ import io.vertx.core.Future;
 
 /**
  * A no-op implementation for the health check.
+ *
+ * @deprecated Consider implementing health checks according to the MicroProfile Health specification instead of
+ *             Vert.x Health and register them as CDI beans as described in https://quarkus.io/guides/smallrye-health
  */
+@Deprecated
 public class NoopHealthCheckServer implements HealthCheckServer {
 
     private static final Logger LOG = LoggerFactory.getLogger(NoopHealthCheckServer.class);
@@ -33,7 +37,7 @@ public class NoopHealthCheckServer implements HealthCheckServer {
     @Override
     public Future<Void> start() {
         LOG.warn("No health check configured. To get a health check, provide a bean of type '{}'.",
-                VertxBasedHealthCheckServer.class.getTypeName());
+                SmallRyeHealthCheckServer.class.getTypeName());
         return Future.succeededFuture();
     }
 

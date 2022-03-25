@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2018 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,7 +17,11 @@ import org.eclipse.hono.util.Lifecycle;
 
 /**
  * Provides a server for health checks.
+ *
+ * @deprecated Consider implementing health checks according to the MicroProfile Health specification instead of
+ *             Vert.x Health and register them as CDI beans as described in https://quarkus.io/guides/smallrye-health
  */
+@Deprecated
 public interface HealthCheckServer extends Lifecycle {
 
     /**

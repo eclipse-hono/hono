@@ -23,6 +23,7 @@ import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.config.MeterFilter;
 import io.vertx.core.Vertx;
 
 /**
@@ -37,14 +38,18 @@ public class MetricsFactory {
         return new AmqpAdapterProperties(adapterOptions);
     }
 
+    @Produces
+    @Singleton
+    MeterFilter commonTags() {
+        return MeterFilter.commonTags(MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_AMQP));
+    }
+
     @Singleton
     @Produces
     MicrometerBasedAmqpAdapterMetrics metrics(
             final Vertx vertx,
             final MeterRegistry registry,
             final AmqpAdapterProperties adapterProperties) {
-        // define tags before the first metric gets created in the MicrometerBasedAmqpAdapterMetrics constructor
-        registry.config().commonTags(MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_AMQP));
         final var metrics = new MicrometerBasedAmqpAdapterMetrics(registry, vertx);
         metrics.setProtocolAdapterProperties(adapterProperties);
         return metrics;

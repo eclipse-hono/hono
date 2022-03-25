@@ -3,9 +3,6 @@ hono:
     maxInstances: 1
   connectionEvents:
     producer: "none"
-  healthCheck:
-    insecurePortBindAddress: "0.0.0.0"
-    insecurePort: ${vertx.health.port}
   coap:
     authenticationRequired: false
     bindAddress: "0.0.0.0"

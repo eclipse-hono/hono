@@ -16,7 +16,6 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 
 import javax.inject.Inject;
@@ -118,15 +117,27 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractProtocolAdapterApplication.class);
 
+    /**
+     * The OpenTracing tracer to use.
+     */
     @Inject
     protected Tracer tracer;
 
+    /**
+     * The factory for creating samplers for tracking the sending of AMQP messages.
+     */
     @Inject
     protected SendMessageSampler.Factory messageSamplerFactory;
 
+    /**
+     * The adapter's configuration properties.
+     */
     @Inject
     protected C protocolAdapterProperties;
 
+    /**
+     * The configuration to use for Kafka client metrics.
+     */
     @Inject
     protected KafkaMetricsOptions kafkaMetricsOptions;
 
@@ -286,8 +297,6 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
         LOG.info("deploying {} {} instances ...", appConfig.getMaxInstances(), getComponentName());
 
-        final CompletableFuture<Void> startup = new CompletableFuture<>();
-
         final Future<String> adapterTracker = vertx.deployVerticle(
                 this::adapter,
                 new DeploymentOptions().setInstances(appConfig.getMaxInstances()));
@@ -296,11 +305,8 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                 new WrappedLifecycleComponentVerticle(notificationReceiver()));
 
         CompositeFuture.all(adapterTracker, notificationReceiverTracker)
-            .compose(s -> healthCheckServer.start())
-            .onSuccess(ok -> startup.complete(null))
-            .onFailure(startup::completeExceptionally);
-        startup.join();
-
+            .mapEmpty()
+            .onComplete(deploymentCheck);
     }
 
     /**

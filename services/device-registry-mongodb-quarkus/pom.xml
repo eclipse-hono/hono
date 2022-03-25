@@ -60,7 +60,7 @@
                     <port>5672</port>
                     <port>8080</port>
                     <port>8443</port>
-                    <port>${vertx.health.port}</port>
+                    <port>${health.check.port}</port>
                   </ports>
                 </build>
               </image>

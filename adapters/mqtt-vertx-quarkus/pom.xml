@@ -48,7 +48,7 @@
                   <ports>
                     <port>1883</port>
                     <port>8883</port>
-                    <port>${vertx.health.port}</port>
+                    <port>${health.check.port}</port>
                   </ports>
                 </build>
               </image>

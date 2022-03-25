@@ -23,6 +23,7 @@ import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.config.MeterFilter;
 import io.vertx.core.Vertx;
 
 /**
@@ -37,14 +38,18 @@ public class MetricsFactory {
         return new HttpProtocolAdapterProperties(adapterOptions);
     }
 
+    @Produces
+    @Singleton
+    MeterFilter commonTags() {
+        return MeterFilter.commonTags(MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP));
+    }
+
     @Singleton
     @Produces
     MicrometerBasedHttpAdapterMetrics metrics(
             final Vertx vertx,
             final MeterRegistry registry,
             final HttpProtocolAdapterProperties adapterProperties) {
-        // define tags before the first metric gets created in the MicrometerBasedHttpAdapterMetrics constructor
-        registry.config().commonTags(MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP));
         final var metrics = new MicrometerBasedHttpAdapterMetrics(registry, vertx);
         metrics.setProtocolAdapterProperties(adapterProperties);
         return metrics;

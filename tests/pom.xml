@@ -769,7 +769,7 @@
                   <run>
                     <ports>
                       <port>+auth.ip:auth.amqps.port:5671</port>
-                      <port>+auth.ip:auth.health.port:${vertx.health.port}</port>
+                      <port>+auth.ip:auth.health.port:${health.check.port}</port>
                     </ports>
                     <portPropertyFile>${project.build.directory}/docker/auth.port.properties</portPropertyFile>
                     <network>
@@ -808,7 +808,7 @@
                       <time>${service.startup.timeout}</time>
                       <http>
                         <method>GET</method>
-                        <url>http://${auth.ip}:${auth.health.port}/readiness</url>
+                        <url>http://${auth.ip}:${auth.health.port}${health.check.root-path}${health.check.readiness-path}</url>
                         <status>200..299</status>
                       </http>
                     </wait>
@@ -1105,7 +1105,7 @@
                     <ports>
                       <port>+deviceregistry.ip:deviceregistry.amqp.port:5672</port>
                       <port>+deviceregistry.ip:deviceregistry.http.port:8080</port>
-                      <port>+deviceregistry.ip:deviceregistry.health.port:${vertx.health.port}</port>
+                      <port>+deviceregistry.ip:deviceregistry.health.port:${health.check.port}</port>
                     </ports>
                     <portPropertyFile>${project.build.directory}/docker/deviceregistry.port.properties</portPropertyFile>
                     <network>
@@ -1135,7 +1135,7 @@
                       <time>${service.startup.timeout}</time>
                       <http>
                         <method>GET</method>
-                        <url>http://${deviceregistry.ip}:${deviceregistry.health.port}/readiness</url>
+                        <url>http://${deviceregistry.ip}:${deviceregistry.health.port}${health.check.root-path}${health.check.readiness-path}</url>
                         <status>200..299</status>
                       </http>
                     </wait>
@@ -1206,7 +1206,7 @@
                     <ports>
                       <port>+deviceregistry.ip:deviceregistry.amqp.port:5672</port>
                       <port>+deviceregistry.ip:deviceregistry.http.port:8080</port>
-                      <port>+deviceregistry.ip:deviceregistry.health.port:${vertx.health.port}</port>
+                      <port>+deviceregistry.ip:deviceregistry.health.port:${health.check.port}</port>
                     </ports>
                     <portPropertyFile>${project.build.directory}/docker/deviceregistry.port.properties</portPropertyFile>
                     <network>
@@ -1231,7 +1231,7 @@
                       <time>${service.startup.timeout}</time>
                       <http>
                         <method>GET</method>
-                        <url>http://${deviceregistry.ip}:${deviceregistry.health.port}/readiness</url>
+                        <url>http://${deviceregistry.ip}:${deviceregistry.health.port}${health.check.root-path}${health.check.readiness-path}</url>
                         <status>200..299</status>
                       </http>
                     </wait>
@@ -1279,7 +1279,7 @@
                   <run>
                     <ports>
                       <port>+commandrouter.ip:commandrouter.amqp.port:5672</port>
-                      <port>+commandrouter.ip:commandrouter.health.port:${vertx.health.port}</port>
+                      <port>+commandrouter.ip:commandrouter.health.port:${health.check.port}</port>
                     </ports>
                     <portPropertyFile>${project.build.directory}/docker/commandrouter.port.properties</portPropertyFile>
                     <network>
@@ -1309,7 +1309,7 @@
                       <time>${service.startup.timeout}</time>
                       <http>
                         <method>GET</method>
-                        <url>http://${commandrouter.ip}:${commandrouter.health.port}/readiness</url>
+                        <url>http://${commandrouter.ip}:${commandrouter.health.port}${health.check.root-path}${health.check.readiness-path}</url>
                         <status>200..299</status>
                       </http>
                     </wait>
@@ -1360,7 +1360,7 @@
                     <ports>
                       <port>+http.ip:http.port:8080</port>
                       <port>https.port:8443</port>
-                      <port>+http.ip:http.health.port:${vertx.health.port}</port>
+                      <port>+http.ip:http.health.port:${health.check.port}</port>
                     </ports>
                     <portPropertyFile>${project.build.directory}/docker/adapter.http.port.properties</portPropertyFile>
                     <network>
@@ -1390,7 +1390,7 @@
                       <time>${service.startup.timeout}</time>
                       <http>
                         <method>GET</method>
-                        <url>http://${http.ip}:${http.health.port}/readiness</url>
+                        <url>http://${http.ip}:${http.health.port}${health.check.root-path}${health.check.readiness-path}</url>
                         <status>200..299</status>
                       </http>
                     </wait>
@@ -1431,7 +1431,7 @@
                     <ports>
                       <port>+mqtt.ip:mqtt.port:1883</port>
                       <port>mqtts.port:8883</port>
-                      <port>+mqtt.ip:mqtt.health.port:${vertx.health.port}</port>
+                      <port>+mqtt.ip:mqtt.health.port:${health.check.port}</port>
                     </ports>
                     <portPropertyFile>${project.build.directory}/docker/adapter.mqtt.port.properties</portPropertyFile>
                     <network>
@@ -1461,7 +1461,7 @@
                       <time>${service.startup.timeout}</time>
                       <http>
                         <method>GET</method>
-                        <url>http://${mqtt.ip}:${mqtt.health.port}/readiness</url>
+                        <url>http://${mqtt.ip}:${mqtt.health.port}${health.check.root-path}${health.check.readiness-path}</url>
                         <status>200..299</status>
                       </http>
                     </wait>
@@ -1503,7 +1503,7 @@
                       <port>5005</port>
                       <port>+adapter.amqp.ip:adapter.amqp.port:5672</port>
                       <port>+adapter.amqps.ip:adapter.amqps.port:5671</port>
-                      <port>+adapter.amqp.ip:adapter.amqp.health.port:${vertx.health.port}</port>
+                      <port>+adapter.amqp.ip:adapter.amqp.health.port:${health.check.port}</port>
                     </ports>
                     <portPropertyFile>${project.build.directory}/docker/adapter.amqp.port.properties</portPropertyFile>
                     <network>
@@ -1533,7 +1533,7 @@
                       <time>${service.startup.timeout}</time>
                       <http>
                         <method>GET</method>
-                        <url>http://${adapter.amqp.ip}:${adapter.amqp.health.port}/readiness</url>
+                        <url>http://${adapter.amqp.ip}:${adapter.amqp.health.port}${health.check.root-path}${health.check.readiness-path}</url>
                         <status>200..299</status>
                       </http>
                     </wait>
@@ -1574,7 +1574,7 @@
                     <ports>
                       <port>+coap.ip:coap.port:5683/udp</port>
                       <port>coaps.port:5684/udp</port>
-                      <port>+coap.ip:coap.health.port:${vertx.health.port}</port>
+                      <port>+coap.ip:coap.health.port:${health.check.port}</port>
                     </ports>
                     <portPropertyFile>${project.build.directory}/docker/adapter.coap.port.properties</portPropertyFile>
                     <network>
@@ -1604,7 +1604,7 @@
                       <time>${service.startup.timeout}</time>
                       <http>
                         <method>GET</method>
-                        <url>http://${coap.ip}:${coap.health.port}/readiness</url>
+                        <url>http://${coap.ip}:${coap.health.port}${health.check.root-path}${health.check.readiness-path}</url>
                         <status>200..299</status>
                       </http>
                     </wait>

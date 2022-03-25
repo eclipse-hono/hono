@@ -50,7 +50,7 @@
                   <ports>
                     <port>5683/udp</port>
                     <port>5684/udp</port>
-                    <port>${vertx.health.port}</port>
+                    <port>${health.check.port}</port>
                   </ports>
                 </build>
               </image>
