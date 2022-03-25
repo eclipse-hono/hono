@@ -23,6 +23,7 @@ import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.config.MeterFilter;
 import io.vertx.core.Vertx;
 
 /**
@@ -37,14 +38,18 @@ public class MetricsFactory {
         return new MqttProtocolAdapterProperties(adapterOptions);
     }
 
+    @Produces
+    @Singleton
+    MeterFilter commonTags() {
+        return MeterFilter.commonTags(MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_MQTT));
+    }
+
     @Singleton
     @Produces
     MicrometerBasedMqttAdapterMetrics metrics(
             final Vertx vertx,
             final MeterRegistry registry,
             final MqttProtocolAdapterProperties adapterProperties) {
-        // define tags before the first metric gets created in the MicrometerBasedMqttAdapterMetrics constructor
-        registry.config().commonTags(MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_MQTT));
         final var metrics = new MicrometerBasedMqttAdapterMetrics(registry, vertx);
         metrics.setProtocolAdapterProperties(adapterProperties);
         return metrics;

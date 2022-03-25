@@ -4,9 +4,6 @@ hono:
   connectionEvents:
     producer: "logging"
     logLevel: "debug"
-  healthCheck:
-    insecurePortBindAddress: "0.0.0.0"
-    insecurePort: ${vertx.health.port}
   mqtt:
     bindAddress: "0.0.0.0"
     insecurePortBindAddress: "0.0.0.0"

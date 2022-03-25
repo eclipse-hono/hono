@@ -13,15 +13,11 @@
 
 package org.eclipse.hono.deviceregistry.quarkus;
 
-import java.util.concurrent.CompletableFuture;
-
 import javax.inject.Inject;
 
 import org.eclipse.hono.notification.NotificationSender;
 import org.eclipse.hono.service.auth.AuthenticationService;
-import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.quarkus.AbstractServiceApplication;
-import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.WrappedLifecycleComponentVerticle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,12 +47,6 @@ public abstract class AbstractDeviceRegistryApplication extends AbstractServiceA
     private final Logger log = LoggerFactory.getLogger(getClass());
 
     @Override
-    protected void setCommonMetricsTags() {
-        log.info("adding common tags to meter registry");
-        meterRegistry.config().commonTags(MetricsTags.forService(Constants.SERVICE_NAME_DEVICE_REGISTRY));
-    }
-
-    @Override
     protected void doStart() {
 
         if (!(authenticationService instanceof Verticle)) {
@@ -64,8 +54,6 @@ public abstract class AbstractDeviceRegistryApplication extends AbstractServiceA
         }
 
         log.info("deploying {} {} instances ...", appConfig.getMaxInstances(), getComponentName());
-
-        final CompletableFuture<Void> startup = new CompletableFuture<>();
 
         // deploy authentication service (once only)
         final Promise<String> authServiceDeploymentTracker = Promise.promise();
@@ -97,9 +85,7 @@ public abstract class AbstractDeviceRegistryApplication extends AbstractServiceA
                 amqpServerDeploymentTracker.future(),
                 httpServerDeploymentTracker.future())
             .onSuccess(ok -> registerHealthCheckProvider(authenticationService))
-            .compose(s -> healthCheckServer.start())
-            .onSuccess(ok -> startup.complete(null))
-            .onFailure(t -> startup.completeExceptionally(t));
-        startup.join();
+            .mapEmpty()
+            .onComplete(deploymentCheck);
     }
 }

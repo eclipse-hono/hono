@@ -65,6 +65,14 @@
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-micrometer</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-smallrye-health</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
       <artifactId>quarkus-jackson</artifactId>
     </dependency>
     <dependency>
@@ -82,12 +90,6 @@
     <dependency>
       <groupId>org.jboss.logging</groupId>
       <artifactId>commons-logging-jboss-logging</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.micrometer</groupId>
-      <artifactId>micrometer-registry-prometheus</artifactId>
-      <scope>compile</scope>
-      <optional>true</optional>
     </dependency>
 
     <!-- Testing -->
@@ -129,6 +131,12 @@
   </dependencies>
 
   <build>
+    <resources>
+      <resource>
+        <directory>${project.basedir}/src/main/resources</directory>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -170,12 +178,8 @@
             <configuration>
               <properties>
                 <property>
-                  <name>hono.metrics</name>
-                  <value>${hono.metrics}</value>
-                </property>
-                <property>
-                  <name>hono.tracing</name>
-                  <value>${hono.tracing}</value>
+                  <name>quarkus.jaeger.metrics.enabled</name>
+                  <value>${jaeger.metrics.enabled}</value>
                 </property>
               </properties>
             </configuration>
@@ -343,20 +347,17 @@
 
     <profile>
       <id>metrics-prometheus</id>
-      <dependencies>
-        <dependency>
-          <groupId>io.micrometer</groupId>
-          <artifactId>micrometer-registry-prometheus</artifactId>
-        </dependency>
-      </dependencies>
       <activation>
         <property>
           <name>metrics-prometheus</name>
         </property>
       </activation>
-      <properties>
-        <hono.metrics>prometheus</hono.metrics>
-      </properties>
+      <dependencies>
+        <dependency>
+          <groupId>io.quarkus</groupId>
+          <artifactId>quarkus-micrometer-registry-prometheus</artifactId>
+        </dependency>
+      </dependencies>
     </profile>
 
     <profile>
@@ -366,9 +367,6 @@
           <name>jaeger</name>
         </property>
       </activation>
-      <properties>
-        <hono.tracing>jaeger</hono.tracing>
-      </properties>
       <dependencies>
         <dependency>
           <groupId>io.quarkus</groupId>

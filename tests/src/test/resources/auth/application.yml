@@ -1,9 +1,6 @@
 hono:
   app:
     maxInstances: 1
-  healthCheck:
-    insecurePortBindAddress: "0.0.0.0"
-    insecurePort: ${vertx.health.port}
   auth:
     amqp:
       bindAddress: "0.0.0.0"

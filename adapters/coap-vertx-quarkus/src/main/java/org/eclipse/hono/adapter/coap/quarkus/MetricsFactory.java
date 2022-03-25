@@ -23,6 +23,7 @@ import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.config.MeterFilter;
 import io.vertx.core.Vertx;
 
 /**
@@ -37,14 +38,18 @@ public class MetricsFactory {
         return new CoapAdapterProperties(adapterOptions);
     }
 
+    @Produces
+    @Singleton
+    MeterFilter commonTags() {
+        return MeterFilter.commonTags(MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP));
+    }
+
     @Singleton
     @Produces
     MicrometerBasedCoapAdapterMetrics metrics(
             final Vertx vertx,
             final MeterRegistry registry,
             final CoapAdapterProperties adapterProperties) {
-        // define tags before the first metric gets created in the MicrometerBasedCoapAdapterMetrics constructor
-        registry.config().commonTags(MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP));
         final var metrics = new MicrometerBasedCoapAdapterMetrics(registry, vertx);
         metrics.setProtocolAdapterProperties(adapterProperties);
         return metrics;

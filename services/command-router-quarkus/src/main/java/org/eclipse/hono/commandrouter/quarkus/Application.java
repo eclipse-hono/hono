@@ -13,7 +13,6 @@
 package org.eclipse.hono.commandrouter.quarkus;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -257,9 +256,8 @@ public class Application extends AbstractServiceApplication {
             throw new IllegalStateException("Authentication service must be a vert.x Verticle");
         }
 
-        LOG.info("deploying {} {} instances ...", appConfig.getMaxInstances(), getComponentName());
-
-        final CompletableFuture<Void> startup = new CompletableFuture<>();
+        final var instancesToDeploy = appConfig.getMaxInstances();
+        LOG.info("deploying {} {} instances ...", instancesToDeploy, getComponentName());
 
         // deploy authentication service (once only)
         final Future<String> authServiceDeploymentTracker = vertx.deployVerticle((Verticle) authenticationService)
@@ -268,17 +266,15 @@ public class Application extends AbstractServiceApplication {
         // deploy AMQP 1.0 server
         final Future<String> amqpServerDeploymentTracker = vertx.deployVerticle(
                 this::amqpServer,
-                new DeploymentOptions().setInstances(appConfig.getMaxInstances()));
+                new DeploymentOptions().setInstances(instancesToDeploy));
 
         // deploy notification receiver
         final Future<String> notificationReceiverTracker = vertx.deployVerticle(
                 new WrappedLifecycleComponentVerticle(notificationReceiver()));
 
         CompositeFuture.all(authServiceDeploymentTracker, amqpServerDeploymentTracker, notificationReceiverTracker)
-            .compose(s -> healthCheckServer.start())
-            .onSuccess(ok -> startup.complete(null))
-            .onFailure(startup::completeExceptionally);
-        startup.join();
+            .mapEmpty()
+            .onComplete(deploymentCheck);
     }
 
     private CommandRouterAmqpServer amqpServer() {

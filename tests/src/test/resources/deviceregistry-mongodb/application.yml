@@ -1,9 +1,6 @@
 hono:
   app:
     maxInstances: 1
-  healthCheck:
-    insecurePortBindAddress: 0.0.0.0
-    insecurePort: ${vertx.health.port}
   messaging:
     name: "Hono Device Registry MongoDb"
     host: "${hono.amqp-network.host}"

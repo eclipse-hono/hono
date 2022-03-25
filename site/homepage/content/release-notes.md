@@ -76,6 +76,11 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The *hono-service-base-quarkus* module has been removed. Its content has been integrated in the *hono-service-base* module. 
 * The *hono-adapter-base-quarkus* module has been removed. Its content has been integrated in the *hono-adapter-base* module. 
 
+### Deprecations
+
+* Support for implementing readiness and liveness checks based on Vert.x Health Checks has been deprecated and will be
+  removed in a future version. New health checks should be implemented according to MicroProfile Health.
+
 ## 1.12.1
 
 ### Fixes & Enhancements

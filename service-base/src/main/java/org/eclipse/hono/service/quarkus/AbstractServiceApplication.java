@@ -15,7 +15,6 @@
 package org.eclipse.hono.service.quarkus;
 
 import java.util.Base64;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -23,19 +22,15 @@ import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 
 import org.eclipse.hono.config.ApplicationConfigProperties;
-import org.eclipse.hono.config.quarkus.ApplicationOptions;
 import org.eclipse.hono.service.ComponentNameProvider;
+import org.eclipse.hono.service.DeploymentHealthCheck;
 import org.eclipse.hono.service.HealthCheckProvider;
-import org.eclipse.hono.service.HealthCheckServer;
+import org.eclipse.hono.service.SmallRyeHealthCheckServer;
+import org.eclipse.microprofile.health.Readiness;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics;
-import io.micrometer.core.instrument.binder.jvm.JvmMemoryMetrics;
-import io.micrometer.core.instrument.binder.jvm.JvmThreadMetrics;
-import io.micrometer.core.instrument.binder.system.FileDescriptorMetrics;
-import io.micrometer.core.instrument.binder.system.ProcessorMetrics;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
 import io.vertx.core.Vertx;
@@ -50,31 +45,36 @@ public abstract class AbstractServiceApplication implements ComponentNameProvide
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractServiceApplication.class);
 
+    /**
+     * The vert.x instance managed by Quarkus.
+     */
     @Inject
     protected Vertx vertx;
 
+    /**
+     * The meter registry managed by Quarkus.
+     */
     @Inject
     protected MeterRegistry meterRegistry;
 
-    @Inject
-    protected HealthCheckServer healthCheckServer;
-
-    protected ApplicationConfigProperties appConfig;
-
-    private JvmGcMetrics jvmGcMetrics;
-
-
     /**
-     * Sets the application level configuration.
-     *
-     * @param options The configuration options.
-     * @throws NullPointerException if options is {@code null}.
+     * The server to register Vert.x Health Checks with.
      */
     @Inject
-    public final void setApplicationOptions(final ApplicationOptions options) {
-        Objects.requireNonNull(options);
-        this.appConfig = new ApplicationConfigProperties(options);
-    }
+    protected SmallRyeHealthCheckServer healthCheckServer;
+
+    /**
+     * The application configuration properties.
+     */
+    @Inject
+    protected ApplicationConfigProperties appConfig;
+
+    /**
+     * The startup check to track deployment of Verticles with.
+     */
+    @Inject
+    @Readiness
+    protected DeploymentHealthCheck deploymentCheck;
 
     /**
      * Logs information about the JVM.
@@ -84,7 +84,10 @@ public abstract class AbstractServiceApplication implements ComponentNameProvide
 
             final String base64Encoder = Base64.getEncoder() == JsonUtil.BASE64_ENCODER ? "legacy" : "URL safe";
 
-            LOG.info("running on Java VM [version: {}, name: {}, vendor: {}, max memory: {}MiB, processors: {}] with vert.x using {} Base64 encoder",
+            LOG.info("""
+                    running on Java VM [version: {}, name: {}, vendor: {}, max memory: {}MiB, processors: {}] \
+                    with vert.x using {} Base64 encoder
+                    """,
                     System.getProperty("java.version"),
                     System.getProperty("java.vm.name"),
                     System.getProperty("java.vm.vendor"),
@@ -95,37 +98,16 @@ public abstract class AbstractServiceApplication implements ComponentNameProvide
     }
 
     /**
-     * Sets common metrics tags.
-     * <p>
-     * This default implementation does nothing. Subclasses should override this method to set the metrics tags,
-     * if not already set elsewhere.
-     */
-    protected void setCommonMetricsTags() {
-        // nothing done by default
-    }
-
-    /**
-     * Enables collection of JVM related metrics.
-     * <p>
-     * Enables collection of Memory, Thread, GC and Processor metrics.
-     */
-    protected void enableJvmMetrics() {
-        new ProcessorMetrics().bindTo(meterRegistry);
-        new JvmMemoryMetrics().bindTo(meterRegistry);
-        new JvmThreadMetrics().bindTo(meterRegistry);
-        new FileDescriptorMetrics().bindTo(meterRegistry);
-        this.jvmGcMetrics = new JvmGcMetrics();
-        jvmGcMetrics.bindTo(meterRegistry);
-    }
-
-    /**
      * Registers additional health checks.
      *
      * @param provider The provider of the health checks to be registered (may be {@code null}).
+     * @deprecated Consider implementing health checks according to the MicroProfile Health specification instead of
+     *             Vert.x Health and register them as CDI beans as described in https://quarkus.io/guides/smallrye-health
      */
+    @Deprecated
     protected final void registerHealthchecks(final HealthCheckProvider provider) {
         Optional.ofNullable(provider).ifPresent(p -> {
-            LOG.debug("registering health checks [provider: {}]", p.getClass().getName());
+            LOG.debug("registering legacy health checks [provider: {}]", p.getClass().getName());
             healthCheckServer.registerHealthCheckResources(p);
         });
     }
@@ -137,7 +119,10 @@ public abstract class AbstractServiceApplication implements ComponentNameProvide
      * Otherwise, simply invokes {@link #registerHealthchecks(HealthCheckProvider)}.
      *
      * @param obj The provider of the health checks.
+     * @deprecated Consider implementing health checks according to the MicroProfile Health specification instead of
+     *             Vert.x Health and register them as CDI beans as described in https://quarkus.io/guides/smallrye-health
      */
+    @Deprecated
     protected final void registerHealthCheckProvider(final Object obj) {
         if (obj instanceof HealthCheckProvider) {
             registerHealthchecks((HealthCheckProvider) obj);
@@ -149,9 +134,7 @@ public abstract class AbstractServiceApplication implements ComponentNameProvide
      * <p>
      * This implementation
      * <ol>
-     * <li>sets common metrics tags,</li>
      * <li>logs the VM details,</li>
-     * <li>enables JVM metrics and</li>
      * <li>invokes {@link #doStart()}.</li>
      * </ol>
      *
@@ -159,9 +142,7 @@ public abstract class AbstractServiceApplication implements ComponentNameProvide
      */
     public void onStart(final @Observes StartupEvent ev) {
 
-        setCommonMetricsTags();
         logJvmDetails();
-        enableJvmMetrics();
         doStart();
     }
 
@@ -177,25 +158,19 @@ public abstract class AbstractServiceApplication implements ComponentNameProvide
 
     /**
      * Stops this component.
-     * <p>
-     * This implementation stops the health check server.
      *
      * @param ev The event indicating shutdown.
      */
     public void onStop(final @Observes ShutdownEvent ev) {
         LOG.info("shutting down {}", getComponentName());
-        Optional.ofNullable(jvmGcMetrics).ifPresent(JvmGcMetrics::close);
         final CompletableFuture<Void> shutdown = new CompletableFuture<>();
-        healthCheckServer.stop()
-            .onComplete(ok -> {
-                vertx.close(attempt -> {
-                    if (attempt.succeeded()) {
-                        shutdown.complete(null);
-                    } else {
-                        shutdown.completeExceptionally(attempt.cause());
-                    }
-                });
-            });
+        vertx.close(attempt -> {
+            if (attempt.succeeded()) {
+                shutdown.complete(null);
+            } else {
+                shutdown.completeExceptionally(attempt.cause());
+            }
+        });
         shutdown.join();
     }
 }

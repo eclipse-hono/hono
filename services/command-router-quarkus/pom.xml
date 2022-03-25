@@ -69,7 +69,7 @@
                   <ports>
                     <port>5671</port>
                     <port>5672</port>
-                    <port>${vertx.health.port}</port>
+                    <port>${health.check.port}</port>
                   </ports>
                 </build>
               </image>

@@ -12,8 +12,6 @@
  */
 package org.eclipse.hono.authentication.quarkus;
 
-import java.util.concurrent.CompletableFuture;
-
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
@@ -31,9 +29,7 @@ import org.eclipse.hono.service.auth.AuthTokenHelperImpl;
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.service.auth.EventBusAuthenticationService;
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
-import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.quarkus.AbstractServiceApplication;
-import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,11 +51,6 @@ public class Application extends AbstractServiceApplication {
     private ServiceConfigProperties amqpProps;
     private FileBasedAuthenticationServiceConfigProperties serviceConfig;
 
-    @Override
-    public String getComponentName() {
-        return COMPONENT_NAME;
-    }
-
     @Inject
     void setServiceOptions(
             @ConfigMapping(prefix = "hono.auth.amqp")
@@ -73,16 +64,14 @@ public class Application extends AbstractServiceApplication {
     }
 
     @Override
-    protected void setCommonMetricsTags() {
-        LOG.info("adding common tags to meter registry");
-        meterRegistry.config().commonTags(MetricsTags.forService(Constants.SERVICE_NAME_AUTH));
+    public String getComponentName() {
+        return COMPONENT_NAME;
     }
 
     @Override
     protected void doStart() {
 
         LOG.info("deploying {} ...", getComponentName());
-        final CompletableFuture<Void> startup = new CompletableFuture<>();
 
         // deploy authentication service (once only)
         final Promise<String> authServiceDeploymentTracker = Promise.promise();
@@ -97,10 +86,8 @@ public class Application extends AbstractServiceApplication {
                 amqpServerDeploymentTracker);
 
         CompositeFuture.all(authServiceDeploymentTracker.future(), amqpServerDeploymentTracker.future())
-            .compose(s -> healthCheckServer.start())
-            .onSuccess(ok -> startup.complete(null))
-            .onFailure(t -> startup.completeExceptionally(t));
-        startup.join();
+            .mapEmpty()
+            .onComplete(deploymentCheck);
     }
 
     AuthTokenHelper authTokenFactory() {
