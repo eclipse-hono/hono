@@ -106,6 +106,7 @@ public class AbstractCredentialsManagementServiceTest {
             super(vertx, passwordEncoder, maxBcryptCostfactor, hashAlgorithmsWhitelist);
         }
 
+        @Override
         protected Future<OperationResult<Void>> processUpdateCredentials(final DeviceKey key,
                 final List<CommonCredential> credentials, final Optional<String> resourceVersion, final Span span) {
 

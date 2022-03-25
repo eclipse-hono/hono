@@ -342,7 +342,7 @@ public final class ProtonBasedCommand implements Command {
      * @return An Optional with the error string or an empty Optional if the payload is supported or the
      *         message has no body section.
      * @throws NullPointerException if the message is {@code null}.
-     * @see MessageHelper#getPayload(Message)
+     * @see AmqpUtils#getPayload(Message)
      */
     private static Optional<String> getUnsupportedPayloadReason(final Message msg) {
         Objects.requireNonNull(msg);
