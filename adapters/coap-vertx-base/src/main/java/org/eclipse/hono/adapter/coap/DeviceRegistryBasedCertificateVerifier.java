@@ -223,7 +223,8 @@ public class DeviceRegistryBasedCertificateVerifier implements NewAdvancedCertif
             final InetSocketAddress remotePeer,
             final boolean clientUsage,
             final boolean verifySubject,
-            final boolean truncateCertificatePath, final CertificateMessage message) {
+            final boolean truncateCertificatePath,
+            final CertificateMessage message) {
 
         try {
             final CertPath certChain = message.getCertificateChain();
@@ -232,16 +233,16 @@ public class DeviceRegistryBasedCertificateVerifier implements NewAdvancedCertif
                         AlertDescription.BAD_CERTIFICATE);
                 throw new HandshakeException("RPK not supported", alert);
             }
-            final List<? extends Certificate> list = certChain.getCertificates();
-            final int pathSize = list.size();
-            if (pathSize < 1) {
-                final AlertMessage alert = new AlertMessage(AlertLevel.FATAL,
+            final var certificates = certChain.getCertificates();
+            if (certificates.isEmpty()) {
+                final AlertMessage alert = new AlertMessage(
+                        AlertLevel.FATAL,
                         AlertDescription.BAD_CERTIFICATE);
                 throw new HandshakeException("client certificate chain must not be empty", alert);
             }
-            final Certificate certificate = list.get(0);
-            if (certificate instanceof X509Certificate) {
-                if (!CertPathUtil.canBeUsedForAuthentication((X509Certificate) certificate, clientUsage)) {
+            final Certificate clientCertificate = certificates.get(0);
+            if (clientCertificate instanceof X509Certificate) {
+                if (!CertPathUtil.canBeUsedForAuthentication((X509Certificate) clientCertificate, clientUsage)) {
                     final AlertMessage alert = new AlertMessage(AlertLevel.FATAL,
                             AlertDescription.BAD_CERTIFICATE);
                     throw new HandshakeException("certificate cannot be used for client authentication", alert);
