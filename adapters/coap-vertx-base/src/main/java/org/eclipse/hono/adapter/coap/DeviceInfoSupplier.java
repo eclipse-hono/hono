@@ -18,7 +18,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.eclipse.californium.elements.auth.AdditionalInfo;
-import org.eclipse.californium.scandium.auth.AdvancedApplicationLevelInfoSupplier;
 import org.eclipse.californium.scandium.auth.ApplicationLevelInfoSupplier;
 import org.eclipse.hono.auth.Device;
 import org.slf4j.Logger;
@@ -29,7 +28,7 @@ import org.slf4j.LoggerFactory;
  *
  * Supports {@link AdditionalInfo} as custom argument for handshaker callback.
  */
-public class DeviceInfoSupplier implements ApplicationLevelInfoSupplier, AdvancedApplicationLevelInfoSupplier {
+public class DeviceInfoSupplier implements ApplicationLevelInfoSupplier {
 
     /**
      * Key in the extended info of the peer identity containing the auth-id used for authentication.
@@ -41,14 +40,6 @@ public class DeviceInfoSupplier implements ApplicationLevelInfoSupplier, Advance
     public static final String EXT_INFO_KEY_HONO_DEVICE = "hono-device";
 
     private static final Logger LOG = LoggerFactory.getLogger(DeviceInfoSupplier.class);
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public AdditionalInfo getInfo(final Principal clientIdentity) {
-        return getInfo(clientIdentity, null);
-    }
 
     /**
      * {@inheritDoc}

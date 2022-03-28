@@ -22,19 +22,24 @@ import java.security.PrivateKey;
 import java.security.cert.Certificate;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.eclipse.californium.core.coap.CoAP;
+import org.eclipse.californium.core.config.CoapConfig;
 import org.eclipse.californium.core.network.CoapEndpoint;
 import org.eclipse.californium.core.network.Endpoint;
-import org.eclipse.californium.core.network.config.NetworkConfig;
-import org.eclipse.californium.core.network.config.NetworkConfig.Keys;
 import org.eclipse.californium.core.observe.ObservationStore;
+import org.eclipse.californium.elements.config.CertificateAuthenticationMode;
+import org.eclipse.californium.elements.config.Configuration;
+import org.eclipse.californium.elements.config.UdpConfig;
 import org.eclipse.californium.scandium.DTLSConnector;
 import org.eclipse.californium.scandium.auth.ApplicationLevelInfoSupplier;
+import org.eclipse.californium.scandium.config.DtlsConfig;
 import org.eclipse.californium.scandium.config.DtlsConnectorConfig;
 import org.eclipse.californium.scandium.dtls.pskstore.AdvancedPskStore;
 import org.eclipse.californium.scandium.dtls.x509.NewAdvancedCertificateVerifier;
+import org.eclipse.californium.scandium.dtls.x509.SingleCertificateProvider;
 import org.eclipse.hono.adapter.coap.CoapAdapterProperties;
 import org.eclipse.hono.adapter.coap.CoapEndpointFactory;
 import org.eclipse.hono.adapter.coap.DeviceInfoSupplier;
@@ -55,6 +60,12 @@ import io.vertx.core.Vertx;
  *
  */
 public class ConfigBasedCoapEndpointFactory implements CoapEndpointFactory {
+
+    static {
+        CoapConfig.register();
+        DtlsConfig.register();
+        UdpConfig.register();
+    }
 
     /**
      * The minimum amount of memory that the adapter requires to run.
@@ -138,94 +149,100 @@ public class ConfigBasedCoapEndpointFactory implements CoapEndpointFactory {
         this.observationStore = Objects.requireNonNull(store);
     }
 
+    @Override
+    public Future<Configuration> getCoapServerConfiguration() {
+        final Configuration networkConfig = newDefaultConfiguration();
+        return loadConfiguration(config.getNetworkConfig(), networkConfig);
+    }
+
     private boolean isSecurePortEnabled() {
         return config.isSecurePortEnabled() || config.getPort() > Constants.PORT_UNCONFIGURED;
     }
 
-    private NetworkConfig newDefaultNetworkConfig() {
-        final NetworkConfig networkConfig = new NetworkConfig();
-        networkConfig.setInt(Keys.PROTOCOL_STAGE_THREAD_COUNT, config.getCoapThreads());
-        networkConfig.setInt(Keys.NETWORK_STAGE_RECEIVER_THREAD_COUNT, config.getConnectorThreads());
-        networkConfig.setInt(Keys.NETWORK_STAGE_SENDER_THREAD_COUNT, config.getConnectorThreads());
-        networkConfig.setInt(Keys.MAX_RESOURCE_BODY_SIZE, config.getMaxPayloadSize());
-        networkConfig.setInt(Keys.EXCHANGE_LIFETIME, config.getExchangeLifetime());
-        networkConfig.setBoolean(Keys.USE_MESSAGE_OFFLOADING, config.isMessageOffloadingEnabled());
-        networkConfig.setString(Keys.DEDUPLICATOR, Keys.DEDUPLICATOR_PEERS_MARK_AND_SWEEP);
+    private Configuration newDefaultConfiguration() {
+        final Configuration configuration = new Configuration();
+        configuration.set(CoapConfig.PROTOCOL_STAGE_THREAD_COUNT, config.getCoapThreads());
+        configuration.set(CoapConfig.MAX_RESOURCE_BODY_SIZE, config.getMaxPayloadSize());
+        configuration.set(CoapConfig.EXCHANGE_LIFETIME, config.getExchangeLifetime(), TimeUnit.MILLISECONDS);
+        configuration.set(CoapConfig.BLOCKWISE_STATUS_LIFETIME, config.getBlockwiseStatusLifetime(), TimeUnit.MILLISECONDS);
+        configuration.set(CoapConfig.USE_MESSAGE_OFFLOADING, config.isMessageOffloadingEnabled());
+        configuration.set(CoapConfig.DEDUPLICATOR, CoapConfig.DEDUPLICATOR_PEERS_MARK_AND_SWEEP);
         final int maxConnections = config.getMaxConnections();
         if (maxConnections == 0) {
             final MemoryBasedConnectionLimitStrategy limits = new MemoryBasedConnectionLimitStrategy(MINIMAL_MEMORY, MEMORY_PER_CONNECTION);
-            networkConfig.setInt(Keys.MAX_ACTIVE_PEERS, limits.getRecommendedLimit());
+            configuration.set(CoapConfig.MAX_ACTIVE_PEERS, limits.getRecommendedLimit());
         } else {
-            networkConfig.setInt(Keys.MAX_ACTIVE_PEERS, maxConnections);
+            configuration.set(CoapConfig.MAX_ACTIVE_PEERS, maxConnections);
         }
-        return networkConfig;
+        return configuration;
     }
 
     /**
      * Loads Californium configuration properties from a file.
      *
      * @param fileName The absolute path to the properties file.
-     * @param networkConfig The configuration to apply the properties to.
+     * @param config The configuration to apply the properties to.
      * @return The updated configuration.
      */
-    protected Future<NetworkConfig> loadNetworkConfig(final String fileName, final NetworkConfig networkConfig) {
-        final Promise<NetworkConfig> result = Promise.promise();
+    protected Future<Configuration> loadConfiguration(final String fileName, final Configuration config) {
+        final Promise<Configuration> result = Promise.promise();
         if (!Strings.isNullOrEmpty(fileName)) {
             vertx.fileSystem().readFile(fileName, readAttempt -> {
                 if (readAttempt.succeeded()) {
                     try (InputStream is = new ByteArrayInputStream(readAttempt.result().getBytes())) {
-                        networkConfig.load(is);
-                        result.complete(networkConfig);
+                        config.load(is);
+                        result.complete(config);
                     } catch (final IOException e) {
-                        LOG.warn("error malformed NetworkConfig properties [{}]", fileName);
+                        LOG.warn("error malformed Configuration properties [{}]", fileName);
                         result.fail(e);
                     }
                 } else {
-                    LOG.warn("error reading NetworkConfig file [{}]", fileName, readAttempt.cause());
+                    LOG.warn("error reading Configuration file [{}]", fileName, readAttempt.cause());
                     result.fail(readAttempt.cause());
                 }
             });
         } else {
-            result.complete(networkConfig);
+            result.complete(config);
         }
         return result.future();
     }
 
     /**
-     * Gets the CoAP network configuration for the secure endpoint.
+     * Gets the CoAP configuration for the secure endpoint.
      * <ol>
      * <li>Creates a default CoAP network configuration based on {@link CoapAdapterProperties}.</li>
      * <li>Merge in network configuration loaded from {@link CoapAdapterProperties#getNetworkConfig()}.</li>
      * <li>Merge in network configuration loaded from {@link CoapAdapterProperties#getSecureNetworkConfig()}.</li>
      * </ol>
      *
-     * @return The network configuration for the secure endpoint.
+     * @return The configuration for the secure endpoint.
      */
-    protected Future<NetworkConfig> getSecureNetworkConfig() {
+    protected Future<Configuration> getSecureConfiguration() {
 
-        final NetworkConfig networkConfig = newDefaultNetworkConfig();
-        networkConfig.setInt(Keys.BLOCKWISE_STATUS_LIFETIME, config.getBlockwiseStatusLifetime());
-        networkConfig.setInt(Keys.NETWORK_STAGE_SENDER_THREAD_COUNT, config.getDtlsThreads());
-        return loadNetworkConfig(config.getNetworkConfig(), networkConfig)
-                .compose(c -> loadNetworkConfig(config.getSecureNetworkConfig(), c));
+        final Configuration networkConfig = newDefaultConfiguration();
+        networkConfig.set(DtlsConfig.DTLS_RECEIVER_THREAD_COUNT, config.getConnectorThreads());
+        networkConfig.set(DtlsConfig.DTLS_CONNECTOR_THREAD_COUNT, config.getDtlsThreads());
+        return loadConfiguration(config.getNetworkConfig(), networkConfig)
+                .compose(c -> loadConfiguration(config.getSecureNetworkConfig(), c));
     }
 
     /**
-     * Gets the CoAP network configuration for the insecure endpoint.
+     * Gets the CoAP configuration for the insecure endpoint.
      * <ol>
      * <li>Creates a default CoAP network configuration based on {@link CoapAdapterProperties}.</li>
      * <li>Merge in network configuration loaded from {@link CoapAdapterProperties#getNetworkConfig()}.</li>
      * <li>Merge in network configuration loaded from {@link CoapAdapterProperties#getInsecureNetworkConfig()}.</li>
      * </ol>
      *
-     * @return The network configuration for the insecure endpoint.
+     * @return The configuration for the insecure endpoint.
      */
-    protected Future<NetworkConfig> getInsecureNetworkConfig() {
+    protected Future<Configuration> getInsecureConfiguration() {
 
-        final NetworkConfig networkConfig = newDefaultNetworkConfig();
-        networkConfig.setInt(Keys.BLOCKWISE_STATUS_LIFETIME, config.getBlockwiseStatusLifetime());
-        return loadNetworkConfig(config.getNetworkConfig(), networkConfig)
-                .compose(c -> loadNetworkConfig(config.getInsecureNetworkConfig(), c));
+        final Configuration configuration = newDefaultConfiguration();
+        configuration.set(UdpConfig.UDP_RECEIVER_THREAD_COUNT, config.getConnectorThreads());
+        configuration.set(UdpConfig.UDP_SENDER_THREAD_COUNT, config.getConnectorThreads());
+        return loadConfiguration(config.getNetworkConfig(), configuration)
+                .compose(c -> loadConfiguration(config.getInsecureNetworkConfig(), c));
     }
 
     /**
@@ -263,10 +280,10 @@ public class ConfigBasedCoapEndpointFactory implements CoapEndpointFactory {
 
         LOG.info("creating insecure endpoint");
 
-        return getInsecureNetworkConfig()
+        return getInsecureConfiguration()
                 .map(networkConfig -> {
-                    final CoapEndpoint.Builder builder = new CoapEndpoint.Builder();
-                    builder.setNetworkConfig(networkConfig);
+                    final CoapEndpoint.Builder builder = CoapEndpoint.builder();
+                    builder.setConfiguration(networkConfig);
                     builder.setInetSocketAddress(new InetSocketAddress(
                             config.getInsecurePortBindAddress(),
                             port));
@@ -289,7 +306,7 @@ public class ConfigBasedCoapEndpointFactory implements CoapEndpointFactory {
                 LOG.error("secure and insecure ports must be configured to bind to different port numbers");
                 result.fail("secure and insecure ports configured to bind to same port number");
             } else {
-                getSecureNetworkConfig()
+                getSecureConfiguration()
                     .compose(secureNetworkConfig -> createSecureEndpoint(securePort, secureNetworkConfig))
                     .onComplete(result);
             }
@@ -304,7 +321,7 @@ public class ConfigBasedCoapEndpointFactory implements CoapEndpointFactory {
 
     private Future<Endpoint> createSecureEndpoint(
             final int port,
-            final NetworkConfig networkConfig) {
+            final Configuration networkConfig) {
 
         if (deviceResolver == null) {
             return Future.failedFuture(new IllegalStateException("infoSupplier property must be set for secure endpoint"));
@@ -315,20 +332,19 @@ public class ConfigBasedCoapEndpointFactory implements CoapEndpointFactory {
 
         LOG.info("creating secure endpoint");
 
-        final DtlsConnectorConfig.Builder dtlsConfig = new DtlsConnectorConfig.Builder();
+        final DtlsConnectorConfig.Builder dtlsConfig = DtlsConnectorConfig.builder(networkConfig);
         // prevent session resumption
-        dtlsConfig.setNoServerSessionId(true);
-        dtlsConfig.setServerOnly(true);
-        dtlsConfig.setRecommendedCipherSuitesOnly(true);
-        dtlsConfig.setClientAuthenticationRequired(true);
+        dtlsConfig.set(DtlsConfig.DTLS_SERVER_USE_SESSION_ID, false);
+        dtlsConfig.set(DtlsConfig.DTLS_ROLE, DtlsConfig.DtlsRole.SERVER_ONLY);
+        dtlsConfig.set(DtlsConfig.DTLS_RECOMMENDED_CIPHER_SUITES_ONLY, true);
+        dtlsConfig.set(DtlsConfig.DTLS_CLIENT_AUTHENTICATION_MODE, CertificateAuthenticationMode.NEEDED);
+        dtlsConfig.set(DtlsConfig.DTLS_RETRANSMISSION_TIMEOUT, config.getDtlsRetransmissionTimeout(), TimeUnit.MILLISECONDS);
+        dtlsConfig.set(DtlsConfig.DTLS_MAX_CONNECTIONS, networkConfig.get(CoapConfig.MAX_ACTIVE_PEERS));
+        dtlsConfig.set(DtlsConfig.DTLS_USE_SERVER_NAME_INDICATION, true);
         dtlsConfig.setAddress(new InetSocketAddress(config.getBindAddress(), port));
         dtlsConfig.setApplicationLevelInfoSupplier(deviceResolver);
         dtlsConfig.setAdvancedPskStore(pskStore);
-        dtlsConfig.setRetransmissionTimeout(config.getDtlsRetransmissionTimeout());
-        dtlsConfig.setMaxConnections(networkConfig.getInt(Keys.MAX_ACTIVE_PEERS));
-        dtlsConfig.setSniEnabled(true);
         addIdentity(dtlsConfig);
-
         try {
             final DtlsConnectorConfig dtlsConnectorConfig = dtlsConfig.build();
             if (LOG.isInfoEnabled()) {
@@ -339,8 +355,8 @@ public class ConfigBasedCoapEndpointFactory implements CoapEndpointFactory {
                 LOG.info("creating secure endpoint supporting ciphers: {}", ciphers);
             }
             final DTLSConnector dtlsConnector = new DTLSConnector(dtlsConnectorConfig);
-            final CoapEndpoint.Builder builder = new CoapEndpoint.Builder();
-            builder.setNetworkConfig(networkConfig);
+            final CoapEndpoint.Builder builder = CoapEndpoint.builder();
+            builder.setConfiguration(networkConfig);
             builder.setConnector(dtlsConnector);
             builder.setObservationStore(observationStore);
             return Future.succeededFuture(builder.build());
@@ -365,11 +381,12 @@ public class ConfigBasedCoapEndpointFactory implements CoapEndpointFactory {
                 // Californium's cipher suites support ECC based keys only
                 LOG.info("using private key [{}] and certificate [{}] as server identity",
                         config.getKeyPath(), config.getCertPath());
-                dtlsConfig.setIdentity(pk, certChain);
+                dtlsConfig.setCertificateIdentityProvider(new SingleCertificateProvider(pk, certChain));
                 Optional.ofNullable(certificateVerifier).ifPresent(dtlsConfig::setAdvancedCertificateVerifier);
             } else {
                 LOG.warn("configured key is not ECC based, certificate based cipher suites will be disabled");
             }
         }
     }
+
 }

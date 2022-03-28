@@ -194,7 +194,8 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
             .compose(ok -> {
                 // WHEN the resource receives a GET request
                 final Request request = new Request(Code.GET);
-                final Exchange getExchange = new Exchange(request, Origin.REMOTE, mock(Executor.class));
+                final Object identity = "dummy";
+                final Exchange getExchange = new Exchange(request, identity, Origin.REMOTE, mock(Executor.class));
                 final ArgumentCaptor<VertxCoapResource> resourceCaptor = ArgumentCaptor.forClass(VertxCoapResource.class);
                 verify(server).add(resourceCaptor.capture());
                 resourceCaptor.getValue().handleRequest(getExchange);

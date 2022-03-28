@@ -15,6 +15,7 @@
 package org.eclipse.hono.adapter.coap;
 
 import org.eclipse.californium.core.network.Endpoint;
+import org.eclipse.californium.elements.config.Configuration;
 
 import io.vertx.core.Future;
 
@@ -23,6 +24,14 @@ import io.vertx.core.Future;
  *
  */
 public interface CoapEndpointFactory {
+
+    /**
+     * Creates a configuration for a coap server.
+     *
+     * @return A succeeded future containing the configuration or a failed future
+     *         indicating the reason why the configuration could not be created.
+     */
+    Future<Configuration> getCoapServerConfiguration();
 
     /**
      * Creates a CoAP endpoint that communicates over UDP.

@@ -29,15 +29,15 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
     /**
      * The default number of threads for the connector.
      */
-    public static final int DEFAULT_CONNECTOR_THREADS = 2;
+    public static final int DEFAULT_CONNECTOR_THREADS;
     /**
      * The default number of threads for the coap protocol stack.
      */
-    public static final int DEFAULT_COAP_THREADS = 2;
+    public static final int DEFAULT_COAP_THREADS;
     /**
      * The default number of threads for the dtls connector.
      */
-    public static final int DEFAULT_DTLS_THREADS = 32;
+    public static final int DEFAULT_DTLS_THREADS;
     /**
      * The default timeout in milliseconds for DTLS retransmissions.
      */
@@ -66,6 +66,18 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * that time, the status gets removed and a new request will fail.
      */
     public static final int DEFAULT_BLOCKWISE_STATUS_LIFETIME = 300000;
+
+    static {
+        DEFAULT_CONNECTOR_THREADS = 2;
+        final int cpu = Runtime.getRuntime().availableProcessors();
+        if (cpu < 4) {
+            DEFAULT_COAP_THREADS = 4;
+            DEFAULT_DTLS_THREADS = 4;
+        } else {
+            DEFAULT_COAP_THREADS = cpu;
+            DEFAULT_DTLS_THREADS = cpu;
+        }
+    }
 
     private String idSplitRegex = DEFAULT_ID_SPLIT_REGEX;
     private String networkConfig = null;
@@ -220,7 +232,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * The connector will start the given number of threads for each direction, outbound (sending)
      * as well as inbound (receiving).
      * <p>
-     * The default value of this property is {@value #DEFAULT_CONNECTOR_THREADS}.
+     * The default value of this property is {@link #DEFAULT_CONNECTOR_THREADS}.
      *
      * @return The number of threads.
      */
@@ -234,7 +246,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * The connector will start the given number of threads for each direction, outbound (sending)
      * as well as inbound (receiving).
      * <p>
-     * The default value of this property is {@value #DEFAULT_CONNECTOR_THREADS}.
+     * The default value of this property is {@link #DEFAULT_CONNECTOR_THREADS}.
      *
      * @param threads The number of threads.
      * @throws IllegalArgumentException if threads is &lt; 1.
@@ -250,7 +262,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * Gets the number of threads used for processing CoAP message exchanges at the
      * protocol layer.
      * <p>
-     * The default value of this property is {@value #DEFAULT_COAP_THREADS}.
+     * The default value of this property is {@link #DEFAULT_COAP_THREADS}.
      *
      * @return The number of threads.
      */
@@ -262,7 +274,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * Sets the number of threads to be used for processing CoAP message exchanges at the
      * protocol layer.
      * <p>
-     * The default value of this property is {@value #DEFAULT_COAP_THREADS}.
+     * The default value of this property is {@link #DEFAULT_COAP_THREADS}.
      *
      * @param threads The number of threads.
      * @throws IllegalArgumentException if threads is &lt; 1.
@@ -278,7 +290,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * Gets the number of threads used for processing DTLS message exchanges at the
      * connection layer.
      * <p>
-     * The default value of this property is {@value #DEFAULT_DTLS_THREADS}.
+     * The default value of this property is {@link #DEFAULT_DTLS_THREADS}.
      *
      * @return The number of threads.
      */
@@ -290,7 +302,7 @@ public class CoapAdapterProperties extends ProtocolAdapterProperties {
      * Sets the number of threads to be used for processing DTLS message exchanges at the
      * connection layer.
      * <p>
-     * The default value of this property is {@value #DEFAULT_DTLS_THREADS}.
+     * The default value of this property is {@link #DEFAULT_DTLS_THREADS}.
      *
      * @param threads The number of threads.
      * @throws IllegalArgumentException if threads is &lt; 1.
