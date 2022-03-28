@@ -28,12 +28,12 @@ with `${host}` and `${port}` reflecting the name/IP address and port of the host
 
 #### Java
 
-Hono is written in Java and therefore requires a Java Development Kit (JDK) version 17 or higher installed on your
+Hono is written in Java and therefore requires a Java Development Kit (JDK) version 17 or newer installed on your
 computer. Please follow the JDK vendor's instructions for installing Java on your operating system.
 
 #### Maven
 
-Hono's build process is based on [Apache Maven](https://maven.apache.org). You need at least Maven 3.5 in order to
+Hono's build process is based on [Apache Maven](https://maven.apache.org). You need Maven 3.8.1 or newer to
 build Hono. Please follow the [installation instructions on the Maven home page](https://maven.apache.org/).
 
 #### Git
