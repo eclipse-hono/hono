@@ -1,0 +1,37 @@
+#
+# Copyright (c) 2022 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Eclipse Public License 2.0 which is available at
+# http://www.eclipse.org/legal/epl-2.0
+#
+# SPDX-License-Identifier: EPL-2.0
+#
+quarkus:
+  log:
+    console:
+      color: true
+    level: INFO
+    min-level: TRACE
+    category:
+      "org.eclipse.hono":
+        level: INFO
+      "org.eclipse.hono.deviceregistry.jdbc":
+        level: INFO
+      "org.eclipse.hono.deviceregistry.jdbc.impl":
+        level: INFO
+      "org.eclipse.hono.deviceregistry.service.tenant":
+        level: INFO
+      "org.eclipse.hono.deviceregistry.util":
+        level: INFO
+      "org.eclipse.hono.service.base.jdbc":
+        level: INFO
+      "org.eclipse.hono.service.base.jdbc.store.device":
+        level: INFO
+      "org.eclipse.hono.service.base.jdbc.store.model":
+        level: INFO
+      "org.eclipse.hono.service.base.jdbc.store.tenant":
+        level: INFO
