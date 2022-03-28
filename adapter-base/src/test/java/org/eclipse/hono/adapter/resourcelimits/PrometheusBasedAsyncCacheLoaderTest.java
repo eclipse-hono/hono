@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -35,10 +35,10 @@ import io.vertx.core.Future;
 
 
 /**
- * Tests verifying behavior of {@link PrometheusBasedAsyncCacheLoader}.
+ * Tests verifying behavior of {@code PrometheusBasedAsyncCacheLoader}.
  *
  */
-public class PrometheusBasedAsyncCacheLoaderTest extends AsyncCacheLoaderTestBase {
+class PrometheusBasedAsyncCacheLoaderTest extends AsyncCacheLoaderTestBase {
 
     private PrometheusBasedAsyncCacheLoader<LimitedResourceKey, Long> loader;
     private CompletableFuture<Long> result;
@@ -47,8 +47,7 @@ public class PrometheusBasedAsyncCacheLoaderTest extends AsyncCacheLoaderTestBas
      */
     @BeforeEach
     void setUpLoader() {
-        result = new CompletableFuture<>();
-        result.complete(10L);
+        result = CompletableFuture.completedFuture(10L);
 
         loader = new PrometheusBasedAsyncCacheLoader<>(webClient, config, tracer) {
 
@@ -67,7 +66,7 @@ public class PrometheusBasedAsyncCacheLoaderTest extends AsyncCacheLoaderTestBas
      * configured.
      */
     @Test
-    public void testExecuteQuerySetsAuthHeader() {
+    void testExecuteQuerySetsAuthHeader() {
 
         config.setUsername("hono");
         config.setPassword("hono-secret");
@@ -87,7 +86,7 @@ public class PrometheusBasedAsyncCacheLoaderTest extends AsyncCacheLoaderTestBas
      *
      */
     @Test
-    public void verifyEffectiveResourceLimitCalculation() {
+    void verifyEffectiveResourceLimitCalculation() {
 
         final long configuredLimit = 9300;
 

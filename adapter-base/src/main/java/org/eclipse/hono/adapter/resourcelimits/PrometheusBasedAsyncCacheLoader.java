@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -53,7 +53,7 @@ import io.vertx.ext.web.codec.BodyCodec;
  * @param <K> The type of key being used in the cache.
  * @param <V> The type of value being used in the cache.
  */
-public abstract class PrometheusBasedAsyncCacheLoader<K, V> implements AsyncCacheLoader<K, V> {
+abstract class PrometheusBasedAsyncCacheLoader<K, V> implements AsyncCacheLoader<K, V> {
 
     private static final Logger LOG = LoggerFactory.getLogger(PrometheusBasedAsyncCacheLoader.class);
     private static final String QUERY_URI = "/api/v1/query";
