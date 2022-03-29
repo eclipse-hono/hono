@@ -208,7 +208,10 @@ public abstract class CoapTestBase {
      * @return The client.
      */
     protected CoapClient getCoapClient() {
-        return new CoapClient();
+        final var ep = CoapEndpoint.builder()
+                .setConfiguration(new Configuration())
+                .build();
+        return new CoapClient().setEndpoint(ep);
     }
 
     /**
