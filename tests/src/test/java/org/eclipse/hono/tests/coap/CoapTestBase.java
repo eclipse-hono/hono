@@ -16,6 +16,7 @@ package org.eclipse.hono.tests.coap;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.Inet4Address;
 import java.net.InetSocketAddress;
@@ -51,6 +52,7 @@ import org.eclipse.californium.core.coap.MediaTypeRegistry;
 import org.eclipse.californium.core.coap.OptionSet;
 import org.eclipse.californium.core.coap.Request;
 import org.eclipse.californium.core.network.CoapEndpoint;
+import org.eclipse.californium.core.network.EndpointManager;
 import org.eclipse.californium.elements.config.Configuration;
 import org.eclipse.californium.scandium.DTLSConnector;
 import org.eclipse.californium.scandium.config.DtlsConfig;
@@ -162,9 +164,10 @@ public abstract class CoapTestBase {
      * @param testInfo The test meta data.
      * @param ctx The vert.x test context.
      * @throws UnknownHostException if the CoAP adapter's host name cannot be resolved.
+     * @throws IOException if the client endpoint for the coap scheme could not be created.
      */
     @BeforeEach
-    public void setUp(final TestInfo testInfo, final VertxTestContext ctx) throws UnknownHostException {
+    public void setUp(final TestInfo testInfo, final VertxTestContext ctx) throws UnknownHostException, IOException {
 
         logger.info("running {}", testInfo.getDisplayName());
         helper = new IntegrationTestSupport(vertx);
@@ -172,7 +175,21 @@ public abstract class CoapTestBase {
                 IntegrationTestSupport.COAP_HOST,
                 IntegrationTestSupport.COAP_PORT,
                 IntegrationTestSupport.COAPS_PORT);
-        coapAdapterSecureAddress = new InetSocketAddress(Inet4Address.getByName(IntegrationTestSupport.COAP_HOST), IntegrationTestSupport.COAPS_PORT);
+        coapAdapterSecureAddress = new InetSocketAddress(
+                Inet4Address.getByName(IntegrationTestSupport.COAP_HOST),
+                IntegrationTestSupport.COAPS_PORT);
+
+        final var ep = CoapEndpoint.builder()
+                .setConfiguration(new Configuration())
+                .build();
+        try {
+            ep.start();
+            logger.debug("created client endpoint for coap scheme");
+            EndpointManager.getEndpointManager().setDefaultEndpoint(ep);
+        } catch (IOException e) {
+            logger.error("could not create client endpoint for coap scheme", e);
+            throw e;
+        }
 
         tenantId = helper.getRandomTenantId();
         deviceId = helper.getRandomDeviceId(tenantId);
@@ -208,10 +225,7 @@ public abstract class CoapTestBase {
      * @return The client.
      */
     protected CoapClient getCoapClient() {
-        final var ep = CoapEndpoint.builder()
-                .setConfiguration(new Configuration())
-                .build();
-        return new CoapClient().setEndpoint(ep);
+        return new CoapClient();
     }
 
     /**
@@ -225,8 +239,13 @@ public abstract class CoapTestBase {
         final Configuration configuration = new Configuration();
         final DtlsConnectorConfig.Builder dtlsConfig = DtlsConnectorConfig.builder(configuration);
         dtlsConfig.set(DtlsConfig.DTLS_USE_SERVER_NAME_INDICATION, true);
-        dtlsConfig.setCertificateIdentityProvider(new SingleCertificateProvider(keyLoader.getPrivateKey(), keyLoader.getCertificateChain(), CertificateType.X_509));
-        dtlsConfig.setAdvancedCertificateVerifier(StaticNewAdvancedCertificateVerifier.builder().setTrustAllCertificates().build());
+        dtlsConfig.setCertificateIdentityProvider(new SingleCertificateProvider(
+                keyLoader.getPrivateKey(),
+                keyLoader.getCertificateChain(),
+                CertificateType.X_509));
+        dtlsConfig.setAdvancedCertificateVerifier(StaticNewAdvancedCertificateVerifier.builder()
+                .setTrustAllCertificates()
+                .build());
         return getCoapsClient(dtlsConfig);
     }
 
