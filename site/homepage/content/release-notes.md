@@ -73,6 +73,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   because it was undefined how these properties would be processed by the Hono components.
 * The order of the method parameters of the `org.eclipse.hono.application.client.CommandSender` interface have been changed
   so that mandatory parameters come first.
+* The *hono-service-base-quarkus* module has been removed. Its content has been integrated in the *hono-service-base* module. 
+* The *hono-adapter-base-quarkus* module has been removed. Its content has been integrated in the *hono-adapter-base* module. 
 
 ## 1.12.1
 
