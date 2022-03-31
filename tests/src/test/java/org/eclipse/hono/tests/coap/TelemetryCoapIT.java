@@ -32,6 +32,7 @@ import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.config.KeyLoader;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.tests.EnabledIfDnsRebindingIsSupported;
 import org.eclipse.hono.tests.EnabledIfRegistrySupportsFeatures;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
@@ -180,6 +181,7 @@ public class TelemetryCoapIT extends CoapTestBase {
      * @throws InterruptedException if the test fails.
      */
     @Test
+    @EnabledIfDnsRebindingIsSupported
     @EnabledIfRegistrySupportsFeatures(trustAnchorGroups = true, tenantAlias = true)
     public void testUploadMessagesUsingClientCertificateWithAlias(final VertxTestContext ctx) throws InterruptedException {
 
@@ -212,11 +214,13 @@ public class TelemetryCoapIT extends CoapTestBase {
 
         final CoapClient client = getCoapsClient(clientCertLoader);
 
+        final var hostname = IntegrationTestSupport.getSniHostname(IntegrationTestSupport.COAP_HOST, "test-alias");
+
         testUploadMessages(ctx, tenantId,
                 () -> warmUp(client, createCoapsRequest(
                         Code.POST,
                         getMessageType(),
-                        "test-alias." + IntegrationTestSupport.COAP_HOST,
+                        hostname,
                         getPostResource(),
                         "hello 0".getBytes(StandardCharsets.UTF_8))),
                 count -> {
@@ -225,7 +229,7 @@ public class TelemetryCoapIT extends CoapTestBase {
                     final Request request = createCoapsRequest(
                             Code.POST,
                             getMessageType(),
-                            "test-alias." + IntegrationTestSupport.COAP_HOST,
+                            hostname,
                             getPostResource(),
                             payload.getBytes(StandardCharsets.UTF_8));
                     client.advanced(getHandler(result), request);

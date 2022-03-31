@@ -37,6 +37,7 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Queue;
 import java.util.Set;
+import java.util.StringJoiner;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -383,7 +384,7 @@ public final class IntegrationTestSupport {
     /**
      * The IP address of the CoAP protocol adapter.
      */
-    public static final String COAP_HOST = IntegrationTestSupport.getResolvableHostname(PROPERTY_COAP_HOST);
+    public static final String COAP_HOST = System.getProperty(PROPERTY_COAP_HOST, DEFAULT_HOST);
     /**
      * The  port number that the CoAP adapter listens on for requests.
      */
@@ -395,7 +396,7 @@ public final class IntegrationTestSupport {
     /**
      * The IP address of the HTTP protocol adapter.
      */
-    public static final String HTTP_HOST = IntegrationTestSupport.getResolvableHostname(PROPERTY_HTTP_HOST);
+    public static final String HTTP_HOST = System.getProperty(PROPERTY_HTTP_HOST, DEFAULT_HOST);
     /**
      * The  port number that the HTTP adapter listens on for requests.
      */
@@ -407,7 +408,7 @@ public final class IntegrationTestSupport {
     /**
      * The IP address of the MQTT protocol adapter.
      */
-    public static final String MQTT_HOST = IntegrationTestSupport.getResolvableHostname(PROPERTY_MQTT_HOST);
+    public static final String MQTT_HOST = System.getProperty(PROPERTY_MQTT_HOST, DEFAULT_HOST);
     /**
      * The  port number that the MQTT adapter listens on for connections.
      */
@@ -419,7 +420,7 @@ public final class IntegrationTestSupport {
     /**
      * The IP address of the AMQP protocol adapter.
      */
-    public static final String AMQP_HOST = IntegrationTestSupport.getResolvableHostname(PROPERTY_AMQP_HOST);
+    public static final String AMQP_HOST = System.getProperty(PROPERTY_AMQP_HOST, DEFAULT_HOST);
     /**
      * The  port number that the AMQP adapter listens on for connections.
      */
@@ -531,16 +532,20 @@ public final class IntegrationTestSupport {
     }
 
     /**
-     * Gets a host name/IP address that can be resolved via DNS from the value of a Java system property.
+     * Gets a host name in the {@code nip.io} domain for a given host name.
      *
-     * @param systemPropertyName The name of the property to read.
+     * @param hostname The host name.
+     * @param virtualHost The virtual host name to prepend.
      * @return The host name.
      */
-    private static String getResolvableHostname(final String systemPropertyName) {
-        return Optional.of(System.getProperty(systemPropertyName, DEFAULT_HOST))
-                .map(host -> "localhost".equals(host) ? DEFAULT_HOST : host)
-                .map(ipAddress -> ipAddress + ".nip.io")
-                .get();
+    public static String getSniHostname(final String hostname, final String virtualHost) {
+
+        Objects.requireNonNull(hostname);
+        final String literalIpAddress = "localhost".equals(hostname) ? DEFAULT_HOST : hostname;
+        final var b = new StringJoiner(".");
+        Optional.ofNullable(virtualHost).ifPresent(b::add);
+        b.add(literalIpAddress).add("nip.io");
+        return b.toString();
     }
 
     private static ClientConfigProperties getClientConfigProperties(

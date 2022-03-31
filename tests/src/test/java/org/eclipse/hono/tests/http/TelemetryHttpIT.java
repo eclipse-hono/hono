@@ -29,6 +29,7 @@ import org.eclipse.hono.client.SendMessageTimeoutException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.AssumeMessagingSystem;
+import org.eclipse.hono.tests.EnabledIfDnsRebindingIsSupported;
 import org.eclipse.hono.tests.EnabledIfRegistrySupportsFeatures;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
@@ -297,6 +298,7 @@ public class TelemetryHttpIT extends HttpTestBase {
      * @throws InterruptedException if the test fails.
      */
     @Test
+    @EnabledIfDnsRebindingIsSupported
     @EnabledIfRegistrySupportsFeatures(trustAnchorGroups = true, tenantAlias = true)
     public void testUploadMessagesUsingClientCertificateWithAlias(final VertxTestContext ctx) throws InterruptedException {
 
@@ -326,7 +328,7 @@ public class TelemetryHttpIT extends HttpTestBase {
         }
 
         final RequestOptions options = new RequestOptions()
-                .setHost("test-alias." + IntegrationTestSupport.HTTP_HOST)
+                .setHost(IntegrationTestSupport.getSniHostname(IntegrationTestSupport.HTTP_HOST, "test-alias"))
                 .setPort(IntegrationTestSupport.HTTPS_PORT)
                 .setURI(getEndpointUri())
                 .setHeaders(requestHeaders);
