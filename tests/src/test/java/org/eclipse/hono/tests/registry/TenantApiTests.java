@@ -13,8 +13,6 @@
 
 package org.eclipse.hono.tests.registry;
 
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
-
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
@@ -32,6 +30,7 @@ import javax.security.auth.x500.X500Principal;
 import org.assertj.core.api.Assertions;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.tests.EnabledIfRegistrySupportsFeatures;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Adapter;
@@ -196,10 +195,8 @@ abstract class TenantApiTests extends DeviceRegistryTestBase {
      * @param ctx The vert.x test context.
      */
     @Test
+    @EnabledIfRegistrySupportsFeatures(tenantAlias = true)
     public void testGetTenantByAlias(final VertxTestContext ctx) {
-
-        assumeTrue(IntegrationTestSupport.isTenantAliasSupported(),
-                "device registry does not support tenant aliases");
 
         final String tenantId = getHelper().getRandomTenantId();
 

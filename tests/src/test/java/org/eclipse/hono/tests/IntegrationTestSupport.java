@@ -165,11 +165,6 @@ public final class IntegrationTestSupport {
     public static final long DEFAULT_TEST_SETUP_TIMEOUT_SECONDS = 5;
 
     /**
-     * The device registry type using Mongo DB.
-     */
-    public static final String DEVICEREGISTRY_TYPE_MONGODB = "mongodb";
-
-    /**
      * The name of the system property to use for setting the time to wait for a response
      * to an AMQP 1.0 performative.
      */
@@ -227,10 +222,6 @@ public final class IntegrationTestSupport {
      * should listen on for HTTP connections.
      */
     public static final String PROPERTY_DEVICEREGISTRY_HTTP_PORT = "deviceregistry.http.port";
-    /**
-     * The name of the system property to use for indicating the type of Device Registry used.
-     */
-    public static final String PROPERTY_DEVICEREGISTRY_TYPE = "deviceregistry.type";
     /**
      * The name of the system property to use for setting the IP address of the AMQP Messaging Network.
      */
@@ -367,10 +358,6 @@ public final class IntegrationTestSupport {
      * The port number that the Device Registry listens on for HTTP requests.
      */
     public static final int HONO_DEVICEREGISTRY_HTTP_PORT = Integer.getInteger(PROPERTY_DEVICEREGISTRY_HTTP_PORT, DEFAULT_DEVICEREGISTRY_HTTP_PORT);
-    /**
-     * The type of Device Registry being used.
-     */
-    public static final String HONO_DEVICEREGISTRY_TYPE = System.getProperty(PROPERTY_DEVICEREGISTRY_TYPE, DEVICEREGISTRY_TYPE_MONGODB);
 
     /**
      * The IP address of the AMQP Messaging Network.
@@ -602,44 +589,6 @@ public final class IntegrationTestSupport {
      */
     public static boolean isUsingAmqpMessaging() {
         return getConfiguredMessagingType() == MessagingType.amqp;
-    }
-
-    /**
-     * Checks if the device registry being used supports searching for devices using
-     * arbitrary criteria.
-     *
-     * @return {@code true} if the registry supports searching.
-     */
-    public static boolean isSearchDevicesSupportedByRegistry() {
-        return HONO_DEVICEREGISTRY_TYPE.equals(DEVICEREGISTRY_TYPE_MONGODB);
-    }
-
-    /**
-     * Checks if the device registry being used supports searching for tenants using
-     * arbitrary criteria.
-     *
-     * @return {@code true} if the registry supports searching.
-     */
-    public static boolean isSearchTenantsSupportedByRegistry() {
-        return HONO_DEVICEREGISTRY_TYPE.equals(DEVICEREGISTRY_TYPE_MONGODB);
-    }
-
-    /**
-     * Checks if the Device Registry supports sharing of CAs across trust anchor groups.
-     *
-     * @return {@code true} if the registry supports sharing CAs.
-     */
-    public static boolean isTrustAnchorGroupsSupported() {
-        return HONO_DEVICEREGISTRY_TYPE.equals(DEVICEREGISTRY_TYPE_MONGODB);
-    }
-
-    /**
-     * Checks if the Device Registry supports specifying and using a tenant alias.
-     *
-     * @return {@code true} if the registry supports tenant aliases.
-     */
-    public static boolean isTenantAliasSupported() {
-        return HONO_DEVICEREGISTRY_TYPE.equals(DEVICEREGISTRY_TYPE_MONGODB);
     }
 
     /**

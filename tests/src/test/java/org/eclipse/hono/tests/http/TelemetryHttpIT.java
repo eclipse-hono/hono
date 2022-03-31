@@ -13,8 +13,6 @@
 
 package org.eclipse.hono.tests.http;
 
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
-
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
@@ -31,6 +29,7 @@ import org.eclipse.hono.client.SendMessageTimeoutException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.AssumeMessagingSystem;
+import org.eclipse.hono.tests.EnabledIfRegistrySupportsFeatures;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Constants;
@@ -298,12 +297,8 @@ public class TelemetryHttpIT extends HttpTestBase {
      * @throws InterruptedException if the test fails.
      */
     @Test
+    @EnabledIfRegistrySupportsFeatures(trustAnchorGroups = true, tenantAlias = true)
     public void testUploadMessagesUsingClientCertificateWithAlias(final VertxTestContext ctx) throws InterruptedException {
-
-        assumeTrue(IntegrationTestSupport.isTrustAnchorGroupsSupported(),
-                "device registry does not support trust anchor groups");
-        assumeTrue(IntegrationTestSupport.isTenantAliasSupported(),
-                "device registry does not support tenant aliases");
 
         final VertxTestContext setup = new VertxTestContext();
         final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()

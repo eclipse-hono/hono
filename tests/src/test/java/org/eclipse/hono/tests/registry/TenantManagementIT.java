@@ -16,7 +16,6 @@ package org.eclipse.hono.tests.registry;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -39,6 +38,7 @@ import org.eclipse.hono.service.management.tenant.RegistrationLimits;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TenantWithId;
 import org.eclipse.hono.service.management.tenant.TrustedCertificateAuthority;
+import org.eclipse.hono.tests.EnabledIfRegistrySupportsFeatures;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Adapter;
@@ -48,7 +48,6 @@ import org.eclipse.hono.util.ResourceLimits;
 import org.eclipse.hono.util.TenantConstants;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -175,10 +174,8 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
      * @param context The Vert.x test context.
      */
     @Test
+    @EnabledIfRegistrySupportsFeatures(trustAnchorGroups = true)
     public void testAddTenantSucceedsForCaSharedWithinTrustAnchorGroup(final VertxTestContext context) {
-
-        assumeTrue(IntegrationTestSupport.isTrustAnchorGroupsSupported(),
-                "device registry does not support trust anchor groups");
 
         final PublicKey publicKey = TenantApiTests.getRandomPublicKey();
         final TrustedCertificateAuthority trustAnchor = Tenants.createTrustAnchor(
@@ -250,10 +247,8 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
      * @param context The vert.x test context.
      */
     @Test
+    @EnabledIfRegistrySupportsFeatures(tenantAlias = true)
     public void testAddTenantFailsForDuplicateTenantAlias(final VertxTestContext context)  {
-
-        assumeTrue(IntegrationTestSupport.isTenantAliasSupported(),
-                "device registry does not support tenant aliases");
 
         final Tenant payload = new Tenant().setAlias("the-alias");
         final String tenantId = getHelper().getRandomTenantId();
@@ -520,10 +515,8 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
      * @param context The Vert.x test context.
      */
     @Test
+    @EnabledIfRegistrySupportsFeatures(trustAnchorGroups = true)
     public void testUpdateTenantSucceedsForCaSharedWithinTrustAnchorGroup(final VertxTestContext context) {
-
-        assumeTrue(IntegrationTestSupport.isTrustAnchorGroupsSupported(),
-                "device registry does not support trust anchor groups");
 
         final PublicKey publicKey = TenantApiTests.getRandomPublicKey();
         final TrustedCertificateAuthority trustAnchor = Tenants.createTrustAnchor(
@@ -666,10 +659,8 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
      * @param context The vert.x test context.
      */
     @Test
+    @EnabledIfRegistrySupportsFeatures(tenantAlias = true)
     public void testUpdateTenantFailsForDuplicateTenantAlias(final VertxTestContext context)  {
-
-        assumeTrue(IntegrationTestSupport.isTenantAliasSupported(),
-                "device registry does not support tenant aliases");
 
         final Tenant payload = new Tenant().setAlias("the-alias");
         final String tenantId = getHelper().getRandomTenantId();
@@ -806,9 +797,7 @@ public class TenantManagementIT extends DeviceRegistryTestBase {
      *      Device Registry Management API - Search Tenants</a>
      */
     @Nested
-    @EnabledIf(
-            value = "org.eclipse.hono.tests.IntegrationTestSupport#isSearchTenantsSupportedByRegistry",
-            disabledReason = "device registry does not support search Tenants operation")
+    @EnabledIfRegistrySupportsFeatures(searchTenants = true)
     class SearchTenantsIT {
 
         /**

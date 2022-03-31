@@ -13,8 +13,6 @@
 
 package org.eclipse.hono.tests.coap;
 
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
-
 import static com.google.common.truth.Truth.assertThat;
 
 import java.io.IOException;
@@ -34,6 +32,7 @@ import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.config.KeyLoader;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.tests.EnabledIfRegistrySupportsFeatures;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.QoS;
@@ -181,12 +180,8 @@ public class TelemetryCoapIT extends CoapTestBase {
      * @throws InterruptedException if the test fails.
      */
     @Test
+    @EnabledIfRegistrySupportsFeatures(trustAnchorGroups = true, tenantAlias = true)
     public void testUploadMessagesUsingClientCertificateWithAlias(final VertxTestContext ctx) throws InterruptedException {
-
-        assumeTrue(IntegrationTestSupport.isTrustAnchorGroupsSupported(),
-                "device registry does not support trust anchor groups");
-        assumeTrue(IntegrationTestSupport.isTenantAliasSupported(),
-                "device registry does not support tenant aliases");
 
         final var clientCertLoader = KeyLoader.fromFiles(vertx, PATH_DEVICE_KEY, PATH_DEVICE_CERT);
         final var clientCert = (X509Certificate) clientCertLoader.getCertificateChain()[0];

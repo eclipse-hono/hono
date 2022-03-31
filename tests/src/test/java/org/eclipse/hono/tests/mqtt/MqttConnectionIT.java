@@ -13,8 +13,6 @@
 
 package org.eclipse.hono.tests.mqtt;
 
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
-
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
@@ -31,6 +29,7 @@ import org.eclipse.hono.service.management.credentials.X509CertificateCredential
 import org.eclipse.hono.service.management.credentials.X509CertificateSecret;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.tests.EnabledIfRegistrySupportsFeatures;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Adapter;
@@ -127,10 +126,8 @@ public class MqttConnectionIT extends MqttTestBase {
      * @param ctx The test context
      */
     @Test
+    @EnabledIfRegistrySupportsFeatures(trustAnchorGroups = true)
     public void testConnectX509SucceedsUsingSni(final VertxTestContext ctx) {
-
-        assumeTrue(IntegrationTestSupport.isTrustAnchorGroupsSupported(),
-                "device registry does not support trust anchor groups");
 
         helper.getCertificate(deviceCert.certificatePath())
             .compose(cert -> {
@@ -158,12 +155,8 @@ public class MqttConnectionIT extends MqttTestBase {
      * @param ctx The test context
      */
     @Test
+    @EnabledIfRegistrySupportsFeatures(trustAnchorGroups = true, tenantAlias = true)
     public void testConnectX509SucceedsUsingSniWithTenantAlias(final VertxTestContext ctx) {
-
-        assumeTrue(IntegrationTestSupport.isTrustAnchorGroupsSupported(),
-                "device registry does not support trust anchor groups");
-        assumeTrue(IntegrationTestSupport.isTenantAliasSupported(),
-                "device registry does not support tenant aliases");
 
         helper.getCertificate(deviceCert.certificatePath())
             // GIVEN two tenants belonging to the same trust anchor group
@@ -196,12 +189,8 @@ public class MqttConnectionIT extends MqttTestBase {
      * @param ctx The test context
      */
     @Test
+    @EnabledIfRegistrySupportsFeatures(trustAnchorGroups = true, tenantAlias = true)
     public void testConnectX509FailsUsingSniWithNonExistingTenantAlias(final VertxTestContext ctx) {
-
-        assumeTrue(IntegrationTestSupport.isTrustAnchorGroupsSupported(),
-                "device registry does not support trust anchor groups");
-        assumeTrue(IntegrationTestSupport.isTenantAliasSupported(),
-                "device registry does not support tenant aliases");
 
         helper.getCertificate(deviceCert.certificatePath())
             // GIVEN two tenants belonging to the same trust anchor group
