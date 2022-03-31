@@ -29,6 +29,7 @@ import org.eclipse.hono.service.management.credentials.X509CertificateCredential
 import org.eclipse.hono.service.management.credentials.X509CertificateSecret;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.tests.EnabledIfDnsRebindingIsSupported;
 import org.eclipse.hono.tests.EnabledIfRegistrySupportsFeatures;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
@@ -126,6 +127,7 @@ public class MqttConnectionIT extends MqttTestBase {
      * @param ctx The test context
      */
     @Test
+    @EnabledIfDnsRebindingIsSupported
     @EnabledIfRegistrySupportsFeatures(trustAnchorGroups = true)
     public void testConnectX509SucceedsUsingSni(final VertxTestContext ctx) {
 
@@ -140,7 +142,9 @@ public class MqttConnectionIT extends MqttTestBase {
                         .compose(ok -> helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert));
             })
             // WHEN the device connects to the adapter including its tenant ID in the host name
-            .compose(ok -> connectToAdapter(deviceCert, tenantId + "." + IntegrationTestSupport.MQTT_HOST))
+            .compose(ok -> connectToAdapter(
+                    deviceCert,
+                    IntegrationTestSupport.getSniHostname(IntegrationTestSupport.MQTT_HOST, tenantId)))
             .onComplete(ctx.succeeding(conAckMsg -> {
                 // THEN the connection attempt succeeds
                 ctx.verify(() -> assertThat(conAckMsg.code()).isEqualTo(MqttConnectReturnCode.CONNECTION_ACCEPTED));
@@ -155,6 +159,7 @@ public class MqttConnectionIT extends MqttTestBase {
      * @param ctx The test context
      */
     @Test
+    @EnabledIfDnsRebindingIsSupported
     @EnabledIfRegistrySupportsFeatures(trustAnchorGroups = true, tenantAlias = true)
     public void testConnectX509SucceedsUsingSniWithTenantAlias(final VertxTestContext ctx) {
 
@@ -174,7 +179,9 @@ public class MqttConnectionIT extends MqttTestBase {
                     deviceId,
                     cert))
             // WHEN the device connects to the adapter including the tenant alias in the host name
-            .compose(ok -> connectToAdapter(deviceCert, "test-alias." + IntegrationTestSupport.MQTT_HOST))
+            .compose(ok -> connectToAdapter(
+                    deviceCert,
+                    IntegrationTestSupport.getSniHostname(IntegrationTestSupport.MQTT_HOST, "test-alias")))
             .onComplete(ctx.succeeding(conAckMsg -> {
                 // THEN the connection attempt succeeds
                 ctx.verify(() -> assertThat(conAckMsg.code()).isEqualTo(MqttConnectReturnCode.CONNECTION_ACCEPTED));
@@ -189,6 +196,7 @@ public class MqttConnectionIT extends MqttTestBase {
      * @param ctx The test context
      */
     @Test
+    @EnabledIfDnsRebindingIsSupported
     @EnabledIfRegistrySupportsFeatures(trustAnchorGroups = true, tenantAlias = true)
     public void testConnectX509FailsUsingSniWithNonExistingTenantAlias(final VertxTestContext ctx) {
 
@@ -208,7 +216,9 @@ public class MqttConnectionIT extends MqttTestBase {
                     deviceId,
                     cert))
             // WHEN the device connects to the adapter including a wrong tenant alias in the host name
-            .compose(ok -> connectToAdapter(deviceCert, "wrong-alias." + IntegrationTestSupport.MQTT_HOST))
+            .compose(ok -> connectToAdapter(
+                    deviceCert,
+                    IntegrationTestSupport.getSniHostname(IntegrationTestSupport.MQTT_HOST, "wrong-alias")))
             .onComplete(ctx.failing(t -> {
                 // THEN the connection is refused
                 ctx.verify(() -> {

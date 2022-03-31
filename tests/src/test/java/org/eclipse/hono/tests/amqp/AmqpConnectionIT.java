@@ -28,6 +28,7 @@ import javax.security.sasl.SaslException;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.tests.EnabledIfDnsRebindingIsSupported;
 import org.eclipse.hono.tests.EnabledIfRegistrySupportsFeatures;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
@@ -153,6 +154,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
      */
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @ValueSource(strings = { IntegrationTestSupport.TLS_VERSION_1_2, IntegrationTestSupport.TLS_VERSION_1_3 })
+    @EnabledIfDnsRebindingIsSupported
     @EnabledIfRegistrySupportsFeatures(trustAnchorGroups = true)
     public void testConnectX509SucceedsUsingSni(final String tlsVersion, final VertxTestContext ctx) {
 
@@ -171,7 +173,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
                     deviceId,
                     cert))
             .compose(ok -> connectToAdapter(
-                    tenantId + "." + IntegrationTestSupport.AMQP_HOST,
+                    IntegrationTestSupport.getSniHostname(IntegrationTestSupport.AMQP_HOST, tenantId),
                     deviceCert,
                     tlsVersion))
             .onComplete(ctx.succeeding(con -> {
@@ -189,6 +191,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
      */
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @ValueSource(strings = { IntegrationTestSupport.TLS_VERSION_1_2, IntegrationTestSupport.TLS_VERSION_1_3 })
+    @EnabledIfDnsRebindingIsSupported
     @EnabledIfRegistrySupportsFeatures(trustAnchorGroups = true, tenantAlias = true)
     public void testConnectX509SucceedsUsingSniWithTenantAlias(final String tlsVersion, final VertxTestContext ctx) {
 
@@ -209,7 +212,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
                     deviceId,
                     cert))
             .compose(ok -> connectToAdapter(
-                    "test-alias." + IntegrationTestSupport.AMQP_HOST,
+                    IntegrationTestSupport.getSniHostname(IntegrationTestSupport.AMQP_HOST, "test-alias"),
                     deviceCert,
                     tlsVersion))
             .onComplete(ctx.succeeding(con -> {
@@ -620,6 +623,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
      * @param ctx The test context
      */
     @Test
+    @EnabledIfDnsRebindingIsSupported
     @EnabledIfRegistrySupportsFeatures(trustAnchorGroups = true, tenantAlias = true)
     public void testConnectX509FailsUsingSniWithNonExistingTenantAlias(final VertxTestContext ctx) {
 
@@ -640,7 +644,7 @@ public class AmqpConnectionIT extends AmqpAdapterTestBase {
                     deviceId,
                     cert))
             .compose(ok -> connectToAdapter(
-                    "wrong-alias." + IntegrationTestSupport.AMQP_HOST,
+                    IntegrationTestSupport.getSniHostname(IntegrationTestSupport.AMQP_HOST, "wrong-alias"),
                     deviceCert,
                     IntegrationTestSupport.TLS_VERSION_1_2))
             .onComplete(ctx.failing(t -> {
