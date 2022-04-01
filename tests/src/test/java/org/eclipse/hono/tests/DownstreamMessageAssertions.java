@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,6 +12,8 @@
  */
 package org.eclipse.hono.tests;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
+
 import static com.google.common.truth.Truth.assertWithMessage;
 
 import java.time.Duration;
@@ -19,6 +21,11 @@ import java.time.Duration;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.application.client.amqp.AmqpMessageContext;
+import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
+import org.eclipse.hono.client.amqp.connection.AmqpUtils;
+import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
+
+import io.opentracing.SpanContext;
 
 
 /**
@@ -53,7 +60,7 @@ public final class DownstreamMessageAssertions {
     public static void assertMessageContainsTimeToLive(
             final DownstreamMessage<? extends MessageContext> msg,
             final Duration expectedTtl) {
-        assertWithMessage("message contains ttl").that(msg.getTimeToLive()).isNotNull();
+
         assertWithMessage("message contains expected ttl").that(msg.getTimeToLive()).isEqualTo(expectedTtl);
     }
 
@@ -79,12 +86,48 @@ public final class DownstreamMessageAssertions {
             final DownstreamMessage<? extends MessageContext> msg,
             final String expectedTenantId) {
 
-        assertWithMessage("message has expected tenant ID").that(msg.getTenantId()).isEqualTo(expectedTenantId);
-        assertWithMessage("message has device ID").that(msg.getDeviceId()).isNotNull();
-        final var ttdValue = msg.getTimeTillDisconnect();
-        if (ttdValue != null) {
-            assertWithMessage("ttd property value").that(ttdValue).isAtLeast(-1);
-            assertWithMessage("message creation time").that(msg.getCreationTime()).isNotNull();
+        assertAll(() -> assertWithMessage("message has expected tenant ID").that(msg.getTenantId())
+                .isEqualTo(expectedTenantId),
+                () -> assertWithMessage("message has device ID").that(msg.getDeviceId()).isNotNull(),
+                () -> {
+                    final var ttdValue = msg.getTimeTillDisconnect();
+                    if (ttdValue != null) {
+                        assertAll(() -> assertWithMessage("ttd property value").that(ttdValue).isAtLeast(-1),
+                                () -> assertWithMessage("message creation time").that(msg.getCreationTime()).isNotNull());
+                        ;
+                    }
+                },
+                () -> assertMessageContainsTracingContext(msg, null));
+
+    }
+
+    /**
+     * Asserts that a downstream message contains a tracing context.
+     *
+     * @param msg The message to check.
+     * @param expectedTraceId The trace ID that the tracing context is expected to have or {@code null} if the ID should
+     *                        not be checked.
+     * @throws AssertionError if the message does not contain a tracing context.
+     */
+    public static void assertMessageContainsTracingContext(
+            final DownstreamMessage<? extends MessageContext> msg,
+            final String expectedTraceId) {
+
+        final SpanContext spanContext;
+
+        if (msg.getMessageContext() instanceof AmqpMessageContext) {
+            final var ctx = (AmqpMessageContext) msg.getMessageContext();
+            spanContext = AmqpUtils.extractSpanContext(IntegrationTestSupport.CLIENT_TRACER, ctx.getRawMessage());
+        } else if (msg.getMessageContext() instanceof KafkaMessageContext) {
+            final var ctx = (KafkaMessageContext) msg.getMessageContext();
+            spanContext = KafkaTracingHelper.extractSpanContext(IntegrationTestSupport.CLIENT_TRACER, ctx.getRecord());
+        } else {
+            throw new AssertionError("unsupported DownstreamMessage type [%s]".formatted(msg.getClass().getName()));
+        }
+        assertWithMessage("message contains a tracing context").that(spanContext).isNotNull();
+        if (expectedTraceId != null) {
+            assertWithMessage("message contains a tracing context with trace ID").that(spanContext.toTraceId())
+                .isEqualTo(expectedTraceId);
         }
     }
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,13 +13,12 @@
 
 package org.eclipse.hono.tests.mqtt;
 
-import static com.google.common.truth.Truth.assertThat;
-
 import java.util.Map;
 
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
+import org.eclipse.hono.tests.DownstreamMessageAssertions;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -44,7 +43,7 @@ public class TelemetryMqttQoS0IT extends MqttPublishTestBase {
 
     @Override
     protected void assertAdditionalMessageProperties(final DownstreamMessage<? extends MessageContext> msg) {
-        assertThat(msg.getCreationTime()).isNotNull();
+        DownstreamMessageAssertions.assertMessageContainsCreationTime(msg);
     }
 
     @Override

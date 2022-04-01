@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -61,7 +61,7 @@ public class EventCoapIT extends CoapTestBase {
     @Override
     protected void assertAdditionalMessageProperties(final DownstreamMessage<? extends MessageContext> msg) {
         DownstreamMessageAssertions.assertMessageIsDurable(msg);
-        assertThat(msg.getCreationTime()).isNotNull();
+        DownstreamMessageAssertions.assertMessageContainsCreationTime(msg);
     }
 
     @Override

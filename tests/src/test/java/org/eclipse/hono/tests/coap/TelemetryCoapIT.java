@@ -32,6 +32,7 @@ import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.config.KeyLoader;
 import org.eclipse.hono.service.management.tenant.Tenant;
+import org.eclipse.hono.tests.DownstreamMessageAssertions;
 import org.eclipse.hono.tests.EnabledIfDnsRebindingIsSupported;
 import org.eclipse.hono.tests.EnabledIfRegistrySupportsFeatures;
 import org.eclipse.hono.tests.IntegrationTestSupport;
@@ -70,7 +71,7 @@ public class TelemetryCoapIT extends CoapTestBase {
 
     @Override
     protected void assertAdditionalMessageProperties(final DownstreamMessage<? extends MessageContext> msg) {
-        assertThat(msg.getCreationTime()).isNotNull();
+        DownstreamMessageAssertions.assertMessageContainsCreationTime(msg);
     }
 
     @Override

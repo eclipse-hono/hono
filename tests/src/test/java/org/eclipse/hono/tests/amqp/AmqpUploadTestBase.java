@@ -334,7 +334,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                 setup.completeNow();
             }));
 
-        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         assertWithMessage("adapter connection failure occurred")
                 .that(setup.failed())
                 .isFalse();

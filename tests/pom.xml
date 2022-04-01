@@ -183,6 +183,7 @@
     <jaeger.agent-host-port>${jaeger.host}:6831</jaeger.agent-host-port>
     <jaeger.sampler-manager-host-port>${jaeger.host}:5778</jaeger.sampler-manager-host-port>
     <jaeger.query.port>18080</jaeger.query.port>
+    <jaeger.propagation>jaeger</jaeger.propagation>
   </properties>
 
   <dependencies>
@@ -326,6 +327,11 @@
     <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-client-telemetry-kafka</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.jaegertracing</groupId>
+      <artifactId>jaeger-core</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -1657,6 +1663,8 @@
               </classpathDependencyExcludes>
               <environmentVariables>
                 <PN_TRACE_FRM>${trace.frames}</PN_TRACE_FRM>
+                <JAEGER_SERVICE_NAME>test</JAEGER_SERVICE_NAME>
+                <JAEGER_PROPAGATION>${jaeger.propagation}</JAEGER_PROPAGATION>
               </environmentVariables>
               <systemPropertyVariables>
                 <auth.host>${auth.ip}</auth.host>

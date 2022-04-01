@@ -85,6 +85,7 @@ hono:
 quarkus:
   jaeger:
     agent-host-port: "${jaeger.agent-host-port}"
+    propagation: "${jaeger.propagation}"
     sampler-manager-host-port: "${jaeger.sampler-manager-host-port}"
     service-name: "${hono.amqp-adapter.host}"
   log:

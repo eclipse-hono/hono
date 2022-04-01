@@ -86,6 +86,8 @@ import org.eclipse.hono.util.TenantConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.jaegertracing.Configuration;
+import io.opentracing.Tracer;
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -478,6 +480,14 @@ public final class IntegrationTestSupport {
      * The number of seconds to add to the default timeout when creating Kafka topics.
      */
     public static final int KAFKA_TOPIC_CREATION_ADD_TO_TIMEOUT = 2; // seconds to add
+
+    /**
+     * A Jaeger based OpenTracing tracer that can be used by devices and downstream clients to inject
+     * and/or extract a trace context into/from messages.
+     * <p>
+     * The tracer picks up its configuration from environment variables set by the Maven Failsafe plugin.
+     */
+    public static Tracer CLIENT_TRACER = Configuration.fromEnv().getTracer();
 
     private static final Logger LOGGER = LoggerFactory.getLogger(IntegrationTestSupport.class);
 
