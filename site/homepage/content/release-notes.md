@@ -81,6 +81,20 @@ description = "Information about changes in recent Hono releases. Includes new f
 * Support for implementing readiness and liveness checks based on Vert.x Health Checks has been deprecated and will be
   removed in a future version. New health checks should be implemented according to MicroProfile Health.
 
+## 1.12.2
+
+### Fixes & Enhancements
+
+* The Quarkus variant of the MongoDB device registry did not accept HTTP endpoint credentials that worked with the
+  Spring Boot based variant because password hashes were created in lower case instead of upper case. This has been fixed.
+* In some cases, invalid HTTP requests to the HTTP adapter or the Device Registry caused a response
+  with a 500 status code instead of the corresponding 4xx status code. This has been fixed.
+* *HonoConnectionImpl* instances failed to release/close the underlying TCP/TLS connection when its *disconnect* or
+  *shutdown* method had been invoked. This has been fixed.
+* In the Quarkus variants of the MongoDB device registry and the Hono auth component, the provided metrics did not
+  contain the default set of tags, as used in the other Hono components (e.g. *host* or *component-name*). This has been
+  fixed.
+
 ## 1.12.1
 
 ### Fixes & Enhancements
