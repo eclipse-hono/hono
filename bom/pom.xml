@@ -110,9 +110,6 @@ quarkus.vertx.prefer-native-transport=true
 quarkus.vertx.resolver.cache-max-time-to-live=0
     </quarkus.application.properties>
 
-    <!-- The port at which the Prometheus scraping endpoint is exposed -->
-    <prometheus.scraping.port>${health.check.port}</prometheus.scraping.port>
-
     <classifier.spring.boot.artifact>exec</classifier.spring.boot.artifact>
 
   </properties>
