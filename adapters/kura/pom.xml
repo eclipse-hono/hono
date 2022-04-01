@@ -18,7 +18,7 @@
     <groupId>org.eclipse.hono</groupId>
     <artifactId>hono-adapters-spring</artifactId>
     <relativePath>../base-spring</relativePath>
-    <version>1.12.2</version>
+    <version>1.12.3-SNAPSHOT</version>
   </parent>
   <artifactId>hono-adapter-kura</artifactId>
   <name>Hono Kura Adapter (Spring)</name>
