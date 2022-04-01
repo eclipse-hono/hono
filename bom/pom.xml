@@ -110,8 +110,6 @@ quarkus.vertx.prefer-native-transport=true
 quarkus.vertx.resolver.cache-max-time-to-live=0
     </quarkus.application.properties>
 
-    <classifier.spring.boot.artifact>exec</classifier.spring.boot.artifact>
-
   </properties>
 
   <dependencyManagement>
@@ -744,32 +742,6 @@ quarkus.vertx.resolver.cache-max-time-to-live=0
   <build>
     <pluginManagement>
       <plugins>
-        <plugin>
-          <groupId>org.springframework.boot</groupId>
-          <artifactId>spring-boot-maven-plugin</artifactId>
-          <version>${spring-boot.version}</version>
-          <executions>
-            <execution>
-              <goals>
-                <goal>repackage</goal>
-              </goals>
-              <configuration>
-                <attach>false</attach>
-                <classifier>${classifier.spring.boot.artifact}</classifier>
-                <excludes>
-                  <exclude>
-                    <groupId>${project.groupId}</groupId>
-                    <artifactId>hono-legal</artifactId>
-                  </exclude>
-                  <exclude>
-                    <groupId>${project.groupId}</groupId>
-                    <artifactId>hono-demo-certs</artifactId>
-                  </exclude>
-                </excludes>
-              </configuration>
-            </execution>
-          </executions>
-        </plugin>
         <plugin>
           <groupId>io.quarkus</groupId>
           <artifactId>quarkus-maven-plugin</artifactId>
