@@ -4,7 +4,7 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
-## 1.12.2 (not yet released)
+## 1.12.2
 
 ### Fixes & Enhancements
 
