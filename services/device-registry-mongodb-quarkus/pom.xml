@@ -16,8 +16,9 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <groupId>org.eclipse.hono</groupId>
-    <artifactId>hono-services</artifactId>
+    <artifactId>hono-services-quarkus</artifactId>
     <version>2.0.0-SNAPSHOT</version>
+    <relativePath>../base-quarkus</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
@@ -32,6 +33,10 @@
     <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-service-device-registry-mongodb-base</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-caffeine</artifactId>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
@@ -87,10 +92,6 @@
 
     <profile>
       <id>build-native-image</id>
-      <properties>
-        <!-- explicitly enable building of native executable -->
-        <quarkus.package.type>native</quarkus.package.type>
-      </properties>
       <build>
         <plugins>
           <plugin>
@@ -99,20 +100,6 @@
           </plugin>
         </plugins>
       </build>
-    </profile>
-
-    <profile>
-      <id>jaeger</id>
-      <dependencies>
-        <dependency>
-          <groupId>io.jaegertracing</groupId>
-          <artifactId>jaeger-client</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>io.jaegertracing</groupId>
-          <artifactId>jaeger-micrometer</artifactId>
-        </dependency>
-      </dependencies>
     </profile>
 
   </profiles>

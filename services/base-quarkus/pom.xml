@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+
+    See the NOTICE file(s) distributed with this work for additional
+    information regarding copyright ownership.
+
+    This program and the accompanying materials are made available under the
+    terms of the Eclipse Public License 2.0 which is available at
+    http://www.eclipse.org/legal/epl-2.0
+
+    SPDX-License-Identifier: EPL-2.0
+ -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <parent>
+    <artifactId>hono-services</artifactId>
+    <groupId>org.eclipse.hono</groupId>
+    <version>2.0.0-SNAPSHOT</version>
+  </parent>
+  <modelVersion>4.0.0</modelVersion>
+  <packaging>pom</packaging>
+  <artifactId>hono-services-quarkus</artifactId>
+
+  <name>Hono Services (Quarkus)</name>
+  <description>Defines common dependencies for Quarkus-based service implementations</description>
+
+  <properties>
+    <!-- delegate verification of credentials to Authentication server by default -->
+    <hono.auth>delegating</hono.auth>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-vertx</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-jackson</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-config-yaml</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-micrometer</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-smallrye-health</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.jboss.logmanager</groupId>
+      <artifactId>log4j2-jboss-logmanager</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.jboss.logging</groupId>
+      <artifactId>commons-logging-jboss-logging</artifactId>
+    </dependency>
+
+    <!-- testing -->
+
+  </dependencies>
+
+  <build>
+    <resources>
+      <resource>
+        <directory>${project.basedir}/src/main/resources</directory>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
+    <plugins>
+      <plugin>
+        <groupId>io.quarkus</groupId>
+        <artifactId>quarkus-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>properties-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>initialize</phase>
+            <goals>
+              <goal>set-system-properties</goal>
+            </goals>
+            <configuration>
+              <properties>
+                <property>
+                  <name>hono.auth</name>
+                  <value>${hono.auth}</value>
+                </property>
+                <property>
+                  <name>quarkus.jaeger.metrics.enabled</name>
+                  <value>${jaeger.metrics.enabled}</value>
+                </property>
+              </properties>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>build-docker-image</id>
+      <dependencies>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-transport-native-epoll</artifactId>
+          <classifier>linux-x86_64</classifier>
+        </dependency>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-transport-native-kqueue</artifactId>
+          <classifier>osx-x86_64</classifier>
+        </dependency>
+      </dependencies>
+      <build>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <groupId>io.fabric8</groupId>
+              <artifactId>docker-maven-plugin</artifactId>
+              <configuration>
+                <images>
+                  <image>
+                    <name>${docker.repository}/%a:%v</name>
+                    <build>
+                      <env>
+                        <JAVA_MAJOR_VERSION>${maven.compiler.release}</JAVA_MAJOR_VERSION>
+                        <JAVA_APP_NAME>${project.artifactId}</JAVA_APP_NAME>
+                        <JAVA_MAIN_CLASS>io.quarkus.bootstrap.runner.QuarkusEntryPoint</JAVA_MAIN_CLASS>
+                        <JAVA_LIB_DIR>app/*:quarkus/*:lib/boot/*:lib/main/*:extensions/*</JAVA_LIB_DIR>
+                        <!-- use Base64 encoder/decoder that is compatible with vert.x 3 -->
+                        <JAVA_OPTIONS>
+                          -Dvertx.json.base64=legacy
+                          -Djava.util.logging.manager=org.jboss.logmanager.LogManager
+                        </JAVA_OPTIONS>
+                      </env>
+                      <entryPoint>
+                        <arg>/opt/hono/run-java.sh</arg>
+                      </entryPoint>
+                      <assembly>
+                        <mode>dir</mode>
+                        <basedir>/</basedir>
+                        <inline>
+                          <fileSets>
+                            <fileSet>
+                              <directory>${project.build.directory}/docker-extra/run-java</directory>
+                              <outputDirectory>opt/hono</outputDirectory>
+                              <includes>
+                                <include>run-java.sh</include>
+                              </includes>
+                              <fileMode>755</fileMode>
+                            </fileSet>
+                            <fileSet>
+                              <directory>${project.build.directory}/quarkus-app</directory>
+                              <outputDirectory>opt/hono</outputDirectory>
+                              <includes>
+                                <include>**/*</include>
+                              </includes>
+                            </fileSet>
+                          </fileSets>
+                        </inline>
+                      </assembly>
+                    </build>
+                  </image>
+                </images>
+              </configuration>
+            </plugin>
+          </plugins>
+        </pluginManagement>
+      </build>
+    </profile>
+
+    <profile>
+      <id>build-native-image</id>
+      <properties>
+        <!-- build native image inside of a container, doesn't require GraalVM SDK to be installed locally -->
+        <quarkus.native.remote-container-build>true</quarkus.native.remote-container-build>
+        <quarkus.native.builder-image>${native.builder-image.name}</quarkus.native.builder-image>
+        <quarkus.package.type>native</quarkus.package.type>
+        <!--  include all JSSE related classes -->
+        <quarkus.native.enable-all-security-services>true</quarkus.native.enable-all-security-services>
+        <!-- allow incomplete class path in order to not require (optional) compression codec dependencies of Netty -->
+        <!-- use Base64 encoder/decoder that is compatible with vert.x 3 -->
+        <quarkus.native.additional-build-args>
+          --initialize-at-run-time=io.netty.internal.tcnative.SSL,
+          --allow-incomplete-classpath,
+          -Dvertx.json.base64=legacy
+        </quarkus.native.additional-build-args>
+      </properties>
+
+      <build>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <groupId>io.fabric8</groupId>
+              <artifactId>docker-maven-plugin</artifactId>
+              <configuration>
+                <images>
+                  <image>
+                    <name>${docker.repository}/%a-native:%v</name>
+                    <build>
+                      <maintainer>The Eclipse Hono project</maintainer>
+                      <labels>
+                        <project>Eclipse Hono</project>
+                      </labels>
+                      <tags>
+                        <tag>${docker.image.additional.tag}</tag>
+                      </tags>
+                      <imagePullPolicy>Always</imagePullPolicy>
+                      <from>${native.image.name}</from>
+                      <workdir>/opt/hono</workdir>
+                      <entryPoint>
+                        <arg>/opt/hono/${project.artifactId}-${project.version}-runner</arg>
+                        <arg>-Djava.util.logging.manager=org.jboss.logmanager.LogManager</arg>
+                      </entryPoint>
+                      <assembly>
+                        <mode>dir</mode>
+                        <basedir>/</basedir>
+                        <inline>
+                          <fileSets>
+                            <fileSet>
+                              <directory>${project.build.directory}</directory>
+                              <outputDirectory>opt/hono</outputDirectory>
+                              <includes>
+                                <include>${project.artifactId}-${project.version}-runner</include>
+                              </includes>
+                            </fileSet>
+                          </fileSets>
+                        </inline>
+                      </assembly>
+                    </build>
+                  </image>
+                </images>
+              </configuration>
+            </plugin>
+          </plugins>
+        </pluginManagement>
+      </build>
+    </profile>
+
+    <profile>
+      <id>metrics-prometheus</id>
+      <activation>
+        <property>
+          <name>metrics-prometheus</name>
+        </property>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>io.quarkus</groupId>
+          <artifactId>quarkus-micrometer-registry-prometheus</artifactId>
+        </dependency>
+      </dependencies>
+    </profile>
+
+    <profile>
+      <id>jaeger</id>
+      <activation>
+        <property>
+          <name>jaeger</name>
+        </property>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>io.jaegertracing</groupId>
+          <artifactId>jaeger-client</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>io.jaegertracing</groupId>
+          <artifactId>jaeger-micrometer</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>io.quarkus</groupId>
+          <artifactId>quarkus-jaeger</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>jakarta.activation</groupId>
+          <artifactId>jakarta.activation-api</artifactId>
+        </dependency>
+      </dependencies>
+    </profile>
+  </profiles>
+</project>
