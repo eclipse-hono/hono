@@ -42,6 +42,10 @@ jobs:
     name: "Use ${{ matrix.device-registry }} registry, ${{ matrix.messaging-type }} messaging with ${{ matrix.commandrouting-cache }} cache"
     steps:
     - uses: actions/checkout@v2
+    - name: Set up Maven
+      uses: stCarolas/setup-maven@v4.3
+      with:
+        maven-version: 3.8.4
     - name: Set up JDK
       uses: actions/setup-java@v2
       with:
@@ -50,7 +54,7 @@ jobs:
         cache: "maven"
     - name: Build all components (incl. unit tests) and run integration tests
       run: |
-        mvn clean install -B -e -DcreateJavadoc=true -DCI=$CI \
+        mvn clean verify -B -e -DcreateJavadoc=true -DCI=$CI \
         -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
         -Dhono.deviceregistry.type=${{ matrix.device-registry }} \
         -Dhono.messaging-infra.type=${{ matrix.messaging-type }} \
