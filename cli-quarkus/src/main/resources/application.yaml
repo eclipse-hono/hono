@@ -1,0 +1,21 @@
+quarkus:
+  banner:
+    enabled: false
+  log:
+    console:
+      color: true
+    level: ERROR
+    min-level: TRACE
+    category:
+      "io.quarkus.vertx.core.runtime":
+        level: WARN
+      "org.apache.kafka.clients.NetworkClient":
+        level: ERROR
+      "org.eclipse.hono.cli":
+        level: WARN
+      "org.eclipse.hono.client":
+        level: WARN
+  vertx:
+    prefer-native-transport: true
+    resolver:
+      cache-max-time-to-live: 0
