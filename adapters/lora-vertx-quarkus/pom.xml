@@ -16,8 +16,9 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.eclipse.hono</groupId>
-    <artifactId>hono-adapters</artifactId>
+    <artifactId>hono-adapters-quarkus</artifactId>
     <version>2.0.0-SNAPSHOT</version>
+    <relativePath>../base-quarkus</relativePath>
   </parent>
   <artifactId>hono-adapter-lora-vertx-quarkus</artifactId>
   <name>Hono Lora Adapter (Quarkus)</name>
@@ -72,10 +73,6 @@
     </profile>
     <profile>
       <id>build-native-image</id>
-      <properties>
-        <!-- explicitly enable building of native executable -->
-        <quarkus.package.type>native</quarkus.package.type>
-      </properties>
       <build>
         <plugins>
           <plugin>
