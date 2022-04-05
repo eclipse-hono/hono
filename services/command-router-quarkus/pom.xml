@@ -95,6 +95,10 @@
 
     <profile>
       <id>build-native-image</id>
+      <properties>
+        <!-- explicitly enable building of native executable -->
+        <quarkus.package.type>native</quarkus.package.type>
+      </properties>
       <build>
         <plugins>
           <plugin>

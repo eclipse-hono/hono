@@ -79,6 +79,10 @@
       <artifactId>quarkus-smallrye-health</artifactId>
     </dependency>
     <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-caffeine</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.jboss.logmanager</groupId>
       <artifactId>log4j2-jboss-logmanager</artifactId>
     </dependency>
@@ -267,7 +271,6 @@
         <!-- build native image inside of a container, doesn't require GraalVM SDK to be installed locally -->
         <quarkus.native.remote-container-build>true</quarkus.native.remote-container-build>
         <quarkus.native.builder-image>${native.builder-image.name}</quarkus.native.builder-image>
-        <quarkus.package.type>native</quarkus.package.type>
         <!--  include all JSSE related classes -->
         <quarkus.native.enable-all-security-services>true</quarkus.native.enable-all-security-services>
         <!-- allow incomplete class path in order to not require (optional) compression codec dependencies of Netty -->
@@ -279,12 +282,6 @@
         </quarkus.native.additional-build-args>
       </properties>
 
-      <dependencies>
-        <dependency>
-          <groupId>io.quarkus</groupId>
-          <artifactId>quarkus-caffeine</artifactId>
-        </dependency>
-      </dependencies>
       <build>
         <pluginManagement>
           <plugins>

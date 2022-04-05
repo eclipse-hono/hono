@@ -172,13 +172,16 @@
       </build>
     </profile>
 
-<!--
-   Currently we do not support compiling a native executable because it does not work with
-   H2 in embedded mode. We can either drop support for H2 in embedded mode in the native image
-   or always use the JVM based version.
+    <!--
+       Currently we do not support compiling a native executable because it does not work with
+       H2 in embedded mode. We can either drop support for H2 in embedded mode in the native image
+       or always use the JVM based version.
 
     <profile>
       <id>build-native-image</id>
+      <properties>
+        <quarkus.package.type>native</quarkus.package.type>
+      </properties>
       <build>
         <plugins>
           <plugin>
@@ -188,7 +191,8 @@
         </plugins>
       </build>
     </profile>
--->
+    -->
+
     <profile>
       <id>jaeger</id>
       <dependencies>
