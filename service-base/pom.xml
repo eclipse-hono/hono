@@ -226,12 +226,4 @@
     </plugins>
   </build>
 
-  <profiles>
-    <profile>
-      <id>jaeger</id>
-      <properties>
-        <jaeger-reflection-config>,${.}/reflection-config-jaeger.json,</jaeger-reflection-config>
-      </properties>
-    </profile>
-  </profiles>
 </project>
