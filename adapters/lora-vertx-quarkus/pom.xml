@@ -18,7 +18,7 @@
     <groupId>org.eclipse.hono</groupId>
     <artifactId>hono-adapters-quarkus</artifactId>
     <relativePath>../base-quarkus</relativePath>
-    <version>1.11.3-SNAPSHOT</version>
+    <version>1.11.3</version>
   </parent>
   <artifactId>hono-adapter-lora-vertx-quarkus</artifactId>
   <name>Hono Lora Adapter (Quarkus)</name>
