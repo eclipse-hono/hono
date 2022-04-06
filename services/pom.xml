@@ -33,7 +33,6 @@
     <module>command-router-quarkus</module>
     <module>device-registry-base</module>
     <module>device-registry-jdbc-quarkus</module>
-    <module>device-registry-mongodb-base</module>
     <module>device-registry-mongodb-quarkus</module>
   </modules>
 
