@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -31,11 +31,13 @@ import org.eclipse.hono.util.RegistryManagementConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.bol.config.CryptVaultAutoConfiguration;
 import com.mongodb.ErrorCategory;
 import com.mongodb.MongoException;
 
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
+import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -49,6 +51,10 @@ import io.vertx.ext.mongo.MongoClient;
  * A base class for implementing data access objects that persist data into MongoDB collections.
  *
  */
+@RegisterForReflection(targets = {
+                        CryptVaultAutoConfiguration.CryptVaultConfigurationProperties.class,
+                        CryptVaultAutoConfiguration.Key.class
+                        })
 public abstract class MongoDbBasedDao {
 
     private static final Logger LOG = LoggerFactory.getLogger(MongoDbBasedDao.class);
