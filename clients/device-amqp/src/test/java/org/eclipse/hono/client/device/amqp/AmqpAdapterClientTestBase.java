@@ -13,7 +13,9 @@
 
 package org.eclipse.hono.client.device.amqp;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -32,6 +34,7 @@ import org.mockito.ArgumentCaptor;
 
 import io.opentracing.Span;
 import io.opentracing.Tracer;
+import io.opentracing.Tracer.SpanBuilder;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -43,7 +46,7 @@ import io.vertx.proton.ProtonSender;
  * Base class for tests of the downstream senders of the AMQP Adapter client.
  *
  */
-public abstract class AmqpAdapterClientSenderTestBase {
+public abstract class AmqpAdapterClientTestBase {
 
     protected static final String TENANT_ID = "test-tenant";
     protected static final String DEVICE_ID = "test-device";
@@ -52,10 +55,22 @@ public abstract class AmqpAdapterClientSenderTestBase {
     protected static final String TEST_PROPERTY_KEY = "test-key";
     protected static final String TEST_PROPERTY_VALUE = "test-value";
 
-    protected ProtonSender sender;
+    /**
+     * The connection to the adapter.
+     */
     protected HonoConnection connection;
+    /**
+     * The anonymous sender link.
+     */
+    protected ProtonSender sender;
+    /**
+     * The disposition update for the current transfer.
+     */
     protected ProtonDelivery protonDelivery;
-    protected Tracer.SpanBuilder spanBuilder;
+    /**
+     * The builder for creating new spans.
+     */
+    protected SpanBuilder spanBuilder;
 
     /**
      * Sets up fixture.
@@ -66,8 +81,7 @@ public abstract class AmqpAdapterClientSenderTestBase {
 
         protonDelivery = mock(ProtonDelivery.class);
         when(protonDelivery.remotelySettled()).thenReturn(true);
-        final Accepted deliveryState = new Accepted();
-        when(protonDelivery.getRemoteState()).thenReturn(deliveryState);
+        when(protonDelivery.getRemoteState()).thenReturn(new Accepted());
 
         when(sender.send(any(Message.class), VertxMockSupport.anyHandler())).thenReturn(protonDelivery);
 
@@ -79,15 +93,14 @@ public abstract class AmqpAdapterClientSenderTestBase {
 
         when(connection.getTracer()).thenReturn(tracer);
         when(connection.createSender(any(), any(), any())).thenReturn(Future.succeededFuture(sender));
-
+        when(connection.isConnected(anyLong())).thenReturn(Future.succeededFuture());
     }
 
     /**
      * Updates the disposition for the {@link ProtonSender#send(Message, Handler)} operation.
      */
-    @SuppressWarnings("unchecked")
     protected void updateDisposition() {
-        final ArgumentCaptor<Handler<ProtonDelivery>> dispositionHandlerCaptor = ArgumentCaptor.forClass(Handler.class);
+        final ArgumentCaptor<Handler<ProtonDelivery>> dispositionHandlerCaptor = VertxMockSupport.argumentCaptorHandler();
         verify(sender).send(any(Message.class), dispositionHandlerCaptor.capture());
         dispositionHandlerCaptor.getValue().handle(protonDelivery);
     }
@@ -102,16 +115,14 @@ public abstract class AmqpAdapterClientSenderTestBase {
     protected Message assertMessageConformsAmqpAdapterSpec(final String expectedAddress) {
 
         final ArgumentCaptor<Message> messageArgumentCaptor = ArgumentCaptor.forClass(Message.class);
-        verify(sender).send(messageArgumentCaptor.capture(), any());
 
+        verify(sender).send(messageArgumentCaptor.capture(), any());
         final Message message = messageArgumentCaptor.getValue();
 
-        assertThat(message.getAddress()).isEqualTo(expectedAddress);
-
-        assertThat(AmqpUtils.getPayload(message)).isEqualTo(PAYLOAD);
-        assertThat(message.getContentType()).isEqualTo(CONTENT_TYPE);
+        assertAll(() -> assertThat(message.getAddress()).isEqualTo(expectedAddress),
+                () -> assertThat(AmqpUtils.getPayload(message)).isEqualTo(PAYLOAD),
+                () -> assertThat(message.getContentType()).isEqualTo(CONTENT_TYPE));
 
         return message;
     }
-
 }

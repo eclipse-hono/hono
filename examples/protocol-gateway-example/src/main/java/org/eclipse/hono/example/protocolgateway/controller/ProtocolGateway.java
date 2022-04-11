@@ -24,15 +24,15 @@ import java.util.function.Consumer;
 import javax.enterprise.context.Dependent;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
-import javax.inject.Named;
 
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.command.CommandConsumer;
-import org.eclipse.hono.client.device.amqp.AmqpAdapterClientFactory;
+import org.eclipse.hono.client.device.amqp.AmqpAdapterClient;
 import org.eclipse.hono.example.protocolgateway.TcpServer;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
+import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.slf4j.Logger;
@@ -66,26 +66,21 @@ public class ProtocolGateway {
 
     private static final String MSG_DEVICE_NOT_LOGGED_IN = "device not logged in";
 
-    private final AmqpAdapterClientFactory amqpAdapterClientFactory;
-    private final String tenant;
+    private final AmqpAdapterClient amqpAdapterClient;
     private final TcpServer server;
 
     /**
      * Creates a new service for a client factory.
      *
-     * @param factory The factory for creating clients for Hono's AMQP adapter.
+     * @param client The factory for creating clients for Hono's AMQP adapter.
      * @param server The TCP server that devices connect to.
-     * @param tenant The tenant that this gateway can accept device connections for.
      */
     @Inject
     public ProtocolGateway(
-            final AmqpAdapterClientFactory factory,
-            final TcpServer server,
-            @Named("TENANT_ID")
-            final String tenant) {
-        this.amqpAdapterClientFactory = factory;
+            final AmqpAdapterClient client,
+            final TcpServer server) {
+        this.amqpAdapterClient = client;
         this.server = server;
-        this.tenant = tenant;
     }
 
     /**
@@ -96,11 +91,11 @@ public class ProtocolGateway {
     public void onStart(@Observes final StartupEvent ev) {
 
         server.setConnectHandler(this::handleConnect);
-        amqpAdapterClientFactory.connect()
+        amqpAdapterClient.connect()
                 .onSuccess(ok -> LOG.info("successfully connected to Hono's AMQP adapter"))
                 .onFailure(t -> LOG.error("failed to connect to Hono's AMQP adapter"))
                 .compose(ok -> server.start())
-                .onSuccess(s -> LOG.info("successfully started example protocol gateway [tenant: {}]", tenant))
+                .onSuccess(s -> LOG.info("successfully started example protocol gateway"))
                 .onFailure(t -> LOG.error("failed to start protocol gateway", t));
     }
 
@@ -110,7 +105,7 @@ public class ProtocolGateway {
      * @param ev The event indicating shutdown.
      */
     public void onStop(final @Observes ShutdownEvent ev) {
-        server.stop().onComplete(r -> amqpAdapterClientFactory.disconnect());
+        server.stop().onComplete(r -> amqpAdapterClient.disconnect());
     }
 
     void handleConnect(final NetSocket socket) {
@@ -130,9 +125,7 @@ public class ProtocolGateway {
             socket.close();
         });
 
-        socket.write(String.format(
-                "Welcome to the Protocol Gateway for devices of tenant [%s], please enter a command\n",
-                tenant));
+        socket.write("Welcome to the example Protocol Gateway for devices, please enter a command\n");
         LOG.debug("connection with client established");
     }
 
@@ -199,16 +192,9 @@ public class ProtocolGateway {
                             result.fail("missing params qos and payload");
                         } else {
                             final String[] params = args.split(" ", 2);
-                            final String qos = params[0];
+                            final QoS qos = "0".equals(params[0]) ? QoS.AT_MOST_ONCE : QoS.AT_LEAST_ONCE;
                             final var payload = Optional.ofNullable(params[1]).map(p -> Buffer.buffer(p)).orElse(null);
-                            amqpAdapterClientFactory.getOrCreateTelemetrySender()
-                                .compose(sender -> {
-                                    if ("0".equals(qos)) {
-                                        return sender.send(deviceId, payload, CONTENT_TYPE_BINARY_OPAQUE);
-                                    } else {
-                                        return sender.sendAndWaitForOutcome(deviceId, payload, CONTENT_TYPE_BINARY_OPAQUE);
-                                    }
-                                })
+                            amqpAdapterClient.sendTelemetry(qos, payload, CONTENT_TYPE_BINARY_OPAQUE, null, deviceId, null)
                                 .map((Void) null)
                                 .onComplete(result);
                         }
@@ -231,8 +217,7 @@ public class ProtocolGateway {
                             result.fail("missing payload");
                         } else {
                             final var payload = Buffer.buffer(args);
-                            amqpAdapterClientFactory.getOrCreateEventSender()
-                                .compose(sender -> sender.send(deviceId, payload, CONTENT_TYPE_BINARY_OPAQUE))
+                            amqpAdapterClient.sendEvent(payload, CONTENT_TYPE_BINARY_OPAQUE, null, deviceId, null)
                                 .map((Void) null)
                                 .onComplete(result);
                         }
@@ -305,7 +290,7 @@ public class ProtocolGateway {
                 }
             }
         };
-        return amqpAdapterClientFactory.createDeviceSpecificCommandConsumer(deviceId, messageHandler);
+        return amqpAdapterClient.createDeviceSpecificCommandConsumer(null, deviceId, messageHandler);
     }
 
     private Future<ProtonDelivery> respondWithTime(final Message command) {
@@ -313,15 +298,13 @@ public class ProtocolGateway {
         final Buffer payload = Buffer.buffer(String.format(
                 "myCurrentTime: %s",
                 DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(LocalDateTime.now())));
-        final String deviceId = AmqpUtils.getDeviceId(command);
 
-        return amqpAdapterClientFactory.getOrCreateCommandResponseSender()
-            .compose(responder -> responder.sendCommandResponse(
-                        deviceId,
+        return amqpAdapterClient.sendCommandResponse(
                         command.getReplyTo(),
                         (String) command.getCorrelationId(),
                         HttpURLConnection.HTTP_OK,
                         payload,
-                        "text/plain"));
+                        "text/plain",
+                        null);
     }
 }
