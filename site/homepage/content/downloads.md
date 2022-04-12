@@ -41,6 +41,7 @@ For a list of the changes in this release, take a look at the [release notes]({{
 
 * [Eclipse Hono 1.12.1 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.12.1-exec.jar)
 * [Eclipse Hono 1.12.0 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.12.0-exec.jar)
+* [Eclipse Hono 1.11.3 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.11.3-exec.jar)
 * [Eclipse Hono 1.11.2 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.11.2-exec.jar)
 * [Eclipse Hono 1.11.1 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.11.1-exec.jar)
 * [Eclipse Hono 1.11.0 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.11.0-exec.jar)
