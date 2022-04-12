@@ -45,6 +45,11 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
      * The query parameter which is used to indicate an empty notification.
      */
     public static final String PARAM_EMPTY_CONTENT = "empty";
+    /**
+     * The query parameter which is used to indicate, that a piggypacked response is supported by the device.
+     * (Legacy support for device with firmware versions not supporting  piggypacked response.)
+     */
+    static final String PARAM_PIGGYBACKED = "piggy";
 
     private final CoapExchange exchange;
     private final Device originDevice;
@@ -190,7 +195,15 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
                 .map(config -> {
                     final Object value = config.getExtensions().get(CoapConstants.TIMEOUT_TO_ACK);
                     if (value instanceof Number) {
-                        return ((Number) value).longValue();
+                        long tenantTimeoutMillis = ((Number) value).longValue();
+                        if (timeoutMillis > 0 && tenantTimeoutMillis == 0 && isSupportingPiggyBacked()) {
+                            // legacy support for tenants with devices where old versions fails to
+                            // process piggybacked responses. Enable piggybacked responses, if device
+                            // indicates a newer version succeeding to process piggybacked responses
+                            // using the URI-query-parameter "piggy"
+                            tenantTimeoutMillis = timeoutMillis;
+                        }
+                        return tenantTimeoutMillis;
                     } else {
                         return timeoutMillis;
                     }
@@ -206,9 +219,7 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
                 accept();
             } else if (!acceptFlag.get()) {
                 vertx.setTimer(ackTimeout, id -> {
-                    if (!acceptFlag.get()) {
-                        accept();
-                    }
+                    accept();
                 });
             }
         }
@@ -318,6 +329,18 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
      */
     public Integer getCommandResponseStatus() {
         return getIntegerQueryParameter(Constants.HEADER_COMMAND_RESPONSE_STATUS);
+    }
+
+    /**
+     * Check, if request is sent from a device, which version supports piggybacked response.
+     *
+     * Overwrite a tenant specific disabled {@link CoapConstants#TIMEOUT_TO_ACK}.
+     *
+     * @return {@code true}, if device version supports piggybacked responses, {@code false}, for devices with "legacy
+     *         version", which doesn't support that.
+     */
+    private boolean isSupportingPiggyBacked() {
+        return exchange.getQueryParameter(PARAM_PIGGYBACKED) != null;
     }
 
     /**
