@@ -19,6 +19,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.hono.auth.Device;
@@ -84,6 +85,23 @@ public class CoapContextTest {
         final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711", span);
         ctx.startAcceptTimer(vertx, tenant, 500);
         verify(vertx).setTimer(eq(200L), VertxMockSupport.anyHandler());
+    }
+
+    /**
+     * Verifies that the tenant specific value of 0 is overwritten by the global
+     * adapter configuration (larger 0), if a device uses the URI-query-parameter "piggy".
+     */
+    @Test
+    void testStartAckTimerDeviceOverwrittesTheTenantSpecificTimeout() {
+        final CoapExchange exchange = mock(CoapExchange.class);
+        when(exchange.getQueryParameter(eq(CoapContext.PARAM_PIGGYBACKED))).thenReturn("true");
+        final Adapter coapConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP);
+        coapConfig.putExtension(CoapConstants.TIMEOUT_TO_ACK, 0);
+        final TenantObject tenant = TenantObject.from("tenant", true).addAdapter(coapConfig);
+        final Device authenticatedDevice = new Device(tenant.getTenantId(), "device-id");
+        final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711", span);
+        ctx.startAcceptTimer(vertx, tenant, 500);
+        verify(vertx).setTimer(eq(500L), VertxMockSupport.anyHandler());
     }
 
     /**
