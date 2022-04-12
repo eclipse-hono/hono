@@ -28,14 +28,29 @@
 
   <dependencies>
     <dependency>
-      <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-adapter-coap-vertx-base</artifactId>
-      <version>${project.version}</version>
+      <groupId>org.eclipse.californium</groupId>
+      <artifactId>californium-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.californium</groupId>
+      <artifactId>element-connector</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.californium</groupId>
+      <artifactId>scandium</artifactId>
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-core</artifactId>
     </dependency>
+
+    <!-- testing -->
+    <dependency>
+      <groupId>io.jaegertracing</groupId>
+      <artifactId>jaeger-client</artifactId>
+      <scope>test</scope>
+    </dependency>
+
   </dependencies>
 
   <build>
@@ -60,6 +75,20 @@
         </plugin>
       </plugins>
     </pluginManagement>
+
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <properties>
+            <configurationParameters>
+              junit.jupiter.execution.parallel.enabled = false
+            </configurationParameters>
+          </properties>
+        </configuration>
+      </plugin>
+    </plugins>
   </build>
 
   <profiles>

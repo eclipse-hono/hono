@@ -196,11 +196,8 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
                     final Object value = config.getExtensions().get(CoapConstants.TIMEOUT_TO_ACK);
                     if (value instanceof Number) {
                         long tenantTimeoutMillis = ((Number) value).longValue();
-                        if (timeoutMillis > 0 && tenantTimeoutMillis == 0 && isSupportingPiggyBacked()) {
-                            // legacy support for tenants with devices where old versions fails to
-                            // process piggybacked responses. Enable piggybacked responses, if device
-                            // indicates a newer version succeeding to process piggybacked responses
-                            // using the URI-query-parameter "piggy"
+                        if (timeoutMillis > 0 && tenantTimeoutMillis == 0 && isPiggyBackedResponseSupportedByDevice()) {
+                            // allow devices to explicitly indicate that they support piggy-backed responses
                             tenantTimeoutMillis = timeoutMillis;
                         }
                         return tenantTimeoutMillis;
@@ -212,7 +209,7 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
 
         if (acceptTimerFlag.compareAndSet(false, true)) {
             if (ackTimeout < 0) {
-                // always use piggybacked response, never send separate ACK
+                // always use piggy-backed response, never send separate ACK
                 return;
             } else if (ackTimeout == 0) {
                 // always send separate ACK and separate response
@@ -332,14 +329,12 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
     }
 
     /**
-     * Check, if request is sent from a device, which version supports piggybacked response.
+     * Checks if the device has explicitly indicated that it supports receiving
+     * a CoAP response in an ACK message.
      *
-     * Overwrite a tenant specific disabled {@link CoapConstants#TIMEOUT_TO_ACK}.
-     *
-     * @return {@code true}, if device version supports piggybacked responses, {@code false}, for devices with "legacy
-     *         version", which doesn't support that.
+     * @return {@code true} if the request URI contains a {@value #PARAM_PIGGYBACKED} query parameter.
      */
-    private boolean isSupportingPiggyBacked() {
+    private boolean isPiggyBackedResponseSupportedByDevice() {
         return exchange.getQueryParameter(PARAM_PIGGYBACKED) != null;
     }
 
