@@ -916,36 +916,45 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             final Span span,
             final OptionalInt traceSamplingPriority) {
 
-        return createCommandConsumer(sender, address, authenticatedDevice, span).map(consumer -> {
+        return createCommandConsumer(sender, address, authenticatedDevice, span)
+                .map(consumer -> {
 
-            final String tenantId = address.getTenantId();
-            final String deviceId = address.getResourceId();
-            sender.setSource(sender.getRemoteSource());
-            sender.setTarget(sender.getRemoteTarget());
+                    final String tenantId = address.getTenantId();
+                    final String deviceId = address.getResourceId();
+                    sender.setSource(sender.getRemoteSource());
+                    sender.setTarget(sender.getRemoteTarget());
 
-            sender.setQoS(ProtonQoS.AT_LEAST_ONCE);
-            final Handler<AsyncResult<ProtonSender>> detachHandler = link -> {
-                final Span detachHandlerSpan = newSpan("detach device command receiver link",
-                        authenticatedDevice, traceSamplingPriority);
-                removeCommandSubscription(connection, address.toString());
-                onLinkDetach(sender);
-                closeCommandConsumer(consumer, address, authenticatedDevice, true, detachHandlerSpan)
-                        .onComplete(v -> detachHandlerSpan.finish());
-            };
-            HonoProtonHelper.setCloseHandler(sender, detachHandler);
-            HonoProtonHelper.setDetachHandler(sender, detachHandler);
-            sender.open();
+                    sender.setQoS(ProtonQoS.AT_LEAST_ONCE);
+                    final Handler<AsyncResult<ProtonSender>> detachHandler = link -> {
+                        final Span detachHandlerSpan = newSpan("detach device command receiver link",
+                                authenticatedDevice, traceSamplingPriority);
+                        removeCommandSubscription(connection, address.toString());
+                        onLinkDetach(sender);
+                        closeCommandConsumer(consumer, address, authenticatedDevice, true, detachHandlerSpan)
+                                .onComplete(v -> detachHandlerSpan.finish());
+                    };
+                    HonoProtonHelper.setCloseHandler(sender, detachHandler);
+                    HonoProtonHelper.setDetachHandler(sender, detachHandler);
+                    sender.open();
 
-            // At this point, the remote peer's receiver link is successfully opened and is ready to receive
-            // commands. Send "device ready for command" notification downstream.
-            log.debug("established link [address: {}] for sending commands to device", address);
+                    log.debug("established link [address: {}] for sending commands to device", address);
 
-            sendConnectedTtdEvent(tenantId, deviceId, authenticatedDevice, span.context());
+                    // At this point, the remote peer's receiver link is successfully opened and is ready to receive
+                    // commands. Send "device ready for command" notification downstream.
+                    sendConnectedTtdEvent(tenantId, deviceId, authenticatedDevice, span.context());
 
-            registerCommandSubscription(connection, new CommandSubscription(consumer, address));
-            return consumer;
-        }).recover(t -> Future.failedFuture(
-                new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "cannot create command consumer")));
+                    registerCommandSubscription(connection, new CommandSubscription(consumer, address));
+                    return consumer;
+                }).recover(t -> {
+                    if (t instanceof ServiceInvocationException) {
+                        return Future.failedFuture(t);
+                    } else {
+                        return Future.failedFuture(new ServerErrorException(
+                                address.getTenantId(),
+                                HttpURLConnection.HTTP_UNAVAILABLE,
+                                "cannot create command consumer"));
+                    }
+                });
     }
 
     private Future<Void> closeCommandConsumer(
@@ -1502,6 +1511,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 return ProtonHelper.condition(AmqpUtils.AMQP_BAD_REQUEST, errorMessage);
             case HttpURLConnection.HTTP_FORBIDDEN:
                 return ProtonHelper.condition(AmqpError.UNAUTHORIZED_ACCESS, errorMessage);
+            case HttpURLConnection.HTTP_NOT_FOUND:
+                return ProtonHelper.condition(AmqpError.NOT_FOUND, errorMessage);
             case HttpUtils.HTTP_TOO_MANY_REQUESTS:
                 return ProtonHelper.condition(AmqpError.RESOURCE_LIMIT_EXCEEDED, errorMessage);
             default:

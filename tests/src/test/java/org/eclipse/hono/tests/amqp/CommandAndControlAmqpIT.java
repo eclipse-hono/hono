@@ -1140,8 +1140,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                         recv.closeHandler(closeResult -> {
                             ctx.verify(() -> {
                                 assertThat(recv.getRemoteCondition()).isNotNull();
-                                assertThat(recv.getRemoteCondition().getCondition().toString())
-                                        .isEqualTo(AmqpError.PRECONDITION_FAILED.toString());
+                                assertThat(recv.getRemoteCondition().getCondition())
+                                        .isEqualTo(AmqpError.UNAUTHORIZED_ACCESS);
                             });
                             result.tryComplete();
                         });

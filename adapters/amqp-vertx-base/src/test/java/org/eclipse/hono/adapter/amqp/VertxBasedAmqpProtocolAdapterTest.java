@@ -38,6 +38,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Data;
@@ -92,6 +93,8 @@ import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 
@@ -489,6 +492,48 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
         // AND sends an empty notification downstream (with a TTD of -1)
         assertEmptyNotificationHasBeenSentDownstream(TEST_TENANT_ID, TEST_DEVICE, -1);
+    }
+
+    /**
+     * Verifies that if a client device opens a receiver link to receive commands for another device, then the
+     * AMQP adapter closes the link if the registration status cannot be asserted.
+     *
+     * @param registrationAssertionOutcome The (error) status code representing the outcome of asserting the
+     *                  registration status.
+     * @param expectedErrorCondition The AMQP 1.0 error condition expected in the adapter's <em>detach</em> frame.
+     */
+    @ParameterizedTest
+    @CsvSource(value = { "400,hono:bad-request", "403,amqp:unauthorized-access", "404,amqp:not-found"})
+    public void testAdapterClosesSenderWithError(
+            final int registrationAssertionOutcome,
+            final String expectedErrorCondition) {
+
+        // GIVEN an AMQP adapter and a device
+        givenAnAdapter(properties);
+        givenAnEventSenderForAnyTenant();
+        final Device device = new Device(TEST_TENANT_ID, TEST_DEVICE);
+
+        // for which the request to get a registration assertion as a gateway fails
+        when(registrationClient.assertRegistration(eq(TEST_TENANT_ID), anyString(), eq(TEST_DEVICE), (SpanContext) any()))
+            .thenReturn(Future.failedFuture(new ClientErrorException(registrationAssertionOutcome)));
+
+        // WHEN an authenticated device opens a receiver link with a source address for another device
+        final ProtonConnection deviceConnection = getConnection(device);
+        final String sourceAddress = String.format("%s/%s/%s", getCommandEndpoint(), TEST_TENANT_ID, "other-device");
+        final ProtonSender sender = getSender(sourceAddress);
+
+        adapter.handleRemoteSenderOpenForCommands(deviceConnection, sender);
+
+        // THEN the adapter does not open the link
+        verify(sender, never()).open();
+        // but closes it immediately
+        final ArgumentCaptor<ErrorCondition> errorCondition = ArgumentCaptor.forClass(ErrorCondition.class);
+        verify(sender).close();
+        // with an amqp:unauthorized-access error
+        verify(sender).setCondition(errorCondition.capture());
+        assertThat(errorCondition.getValue().getCondition()).isEqualTo(Symbol.getSymbol(expectedErrorCondition));
+        // AND does not send an empty notification downstream
+        assertNoEventHasBeenSentDownstream();
     }
 
     /**

@@ -13,7 +13,7 @@
 quarkus:
   log:
     console:
-      color: true
+      color: false
     level: INFO
     min-level: TRACE
     category:
