@@ -165,7 +165,7 @@ maven/mavencentral/org.apache.commons/commons-collections4/4.2, Apache-2.0, appr
 maven/mavencentral/org.apache.commons/commons-compress/1.21, Apache-2.0 AND BSD-3-Clause AND bzip2-1.0.6 AND LicenseRef-Public-Domain, approved, CQ23710
 maven/mavencentral/org.apache.kafka/kafka-clients/2.8.1, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.apache.logging.log4j/log4j-api/2.17.1, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.apache.logging.log4j/log4j-to-slf4j/2.17.2, Apache-2.0, restricted, clearlydefined
+maven/mavencentral/org.apache.logging.log4j/log4j-to-slf4j/2.17.2, Apache-2.0, approved, #2163
 maven/mavencentral/org.apache.qpid/proton-j/0.33.10, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.apache.sshd/sshd-common/2.7.0, Apache-1.1 AND Apache-2.0 AND ISC, approved, #960
 maven/mavencentral/org.apache.thrift/libthrift/0.14.1, Apache-2.0, approved, #1923
@@ -195,7 +195,7 @@ maven/mavencentral/org.postgresql/postgresql/42.3.3, BSD-2-Clause, approved, cle
 maven/mavencentral/org.reactivestreams/reactive-streams/1.0.3, CC0-1.0, approved, CQ16332
 maven/mavencentral/org.slf4j/jul-to-slf4j/1.7.33, MIT, approved, CQ12842
 maven/mavencentral/org.slf4j/slf4j-api/1.7.33, MIT, approved, CQ13368
-maven/mavencentral/org.springframework.boot/spring-boot/2.5.12, , restricted, clearlydefined
+maven/mavencentral/org.springframework.boot/spring-boot/2.5.12, Apache-2.0, approved, #2169
 maven/mavencentral/org.springframework.boot/spring-boot-autoconfigure/2.5.12, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.springframework.boot/spring-boot-starter-logging/2.5.12, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.springframework.security/spring-security-crypto/5.5.5, Apache-2.0, approved, clearlydefined
