@@ -14,7 +14,6 @@
 package org.eclipse.hono.client.amqp.connection;
 
 import java.util.Objects;
-import java.util.Optional;
 
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
@@ -41,8 +40,7 @@ public final class AmqpErrorException extends RuntimeException {
      * @throws NullPointerException if error is {@code null}.
      */
     public AmqpErrorException(final Symbol error, final String description) {
-        super(description);
-        this.error = Objects.requireNonNull(error).toString();
+        this(error.toString(), description);
     }
 
     /**
@@ -63,16 +61,22 @@ public final class AmqpErrorException extends RuntimeException {
      * @param deliveryState The delivery state.
      * @return The exception.
      * @throws NullPointerException if delivery state is {@code null}.
+     * @throws IllegalArgumentException if delivery state is <em>accepted</em>.
      */
     public static AmqpErrorException from(final DeliveryState deliveryState) {
         switch (deliveryState.getType()) {
+        case Accepted:
+            throw new IllegalArgumentException("cannot create exception from accepted delivery state");
         case Rejected:
             final Rejected rejected = (Rejected) deliveryState;
-            return Optional.ofNullable(rejected.getError())
-                    .map(ec -> new AmqpErrorException(ec.getCondition(), ec.getDescription()))
-                    .orElseGet(() -> new AmqpErrorException(deliveryState.getType().toString(), null));
+            if (rejected.getError() != null) {
+                return new AmqpErrorException(rejected.getError().getCondition(), rejected.getError().getDescription());
+            }
+            // else fall through
         default:
-            return new AmqpErrorException(deliveryState.getType().toString(), null);
+            return new AmqpErrorException(
+                    deliveryState.getType().toString(),
+                    "peer did not accept message: %s".formatted(deliveryState.getType().toString()));
         }
     }
 
