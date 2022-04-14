@@ -19,9 +19,9 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.californium.core.CoapClient;
+import org.eclipse.californium.core.CoapResponse;
 import org.eclipse.californium.core.coap.CoAP;
 import org.eclipse.californium.core.coap.CoAP.Type;
-import org.eclipse.californium.core.coap.OptionSet;
 import org.eclipse.californium.core.coap.Request;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
@@ -101,7 +101,7 @@ public class EventCoapIT extends CoapTestBase {
         }
 
         // WHEN a device that belongs to the tenant publishes an event
-        final Promise<OptionSet> sendEvent = Promise.promise();
+        final Promise<CoapResponse> sendEvent = Promise.promise();
         final CoapClient client = getCoapClient();
         final Request eventRequest = createCoapRequest(CoAP.Code.PUT, Type.CON, getPutResource(tenantId, deviceId),
                 messagePayload.getBytes());

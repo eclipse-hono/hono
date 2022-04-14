@@ -193,17 +193,23 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
 
         final long ackTimeout = Optional.ofNullable(tenant.getAdapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP))
                 .map(config -> {
+                    long effectiveTimeoutMillis = timeoutMillis;
                     final Object value = config.getExtensions().get(CoapConstants.TIMEOUT_TO_ACK);
                     if (value instanceof Number) {
-                        long tenantTimeoutMillis = ((Number) value).longValue();
-                        if (timeoutMillis > 0 && tenantTimeoutMillis == 0 && isPiggyBackedResponseSupportedByDevice()) {
+                        effectiveTimeoutMillis = ((Number) value).longValue();
+                        if (timeoutMillis > 0 && effectiveTimeoutMillis == 0 && isPiggyBackedResponseSupportedByDevice()) {
                             // allow devices to explicitly indicate that they support piggy-backed responses
-                            tenantTimeoutMillis = timeoutMillis;
+                            final Object deviceTriggeredValue = config.getExtensions().get(CoapConstants.DEVICE_TRIGGERED_TIMEOUT_TO_ACK);
+                            if (deviceTriggeredValue instanceof Number) {
+                                // tenant device triggered timeout
+                                effectiveTimeoutMillis = ((Number) deviceTriggeredValue).longValue();
+                            } else {
+                                // general timeout
+                                effectiveTimeoutMillis = timeoutMillis;
+                            }
                         }
-                        return tenantTimeoutMillis;
-                    } else {
-                        return timeoutMillis;
                     }
+                    return effectiveTimeoutMillis;
                 })
                 .orElse(timeoutMillis);
 

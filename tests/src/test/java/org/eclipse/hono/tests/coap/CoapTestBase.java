@@ -416,7 +416,7 @@ public abstract class CoapTestBase {
         testUploadMessages(ctx, tenantId,
                 () -> warmUp(client, createCoapRequest(Code.PUT, getPutResource(tenantId, deviceId), 0)),
                 count -> {
-                    final Promise<OptionSet> result = Promise.promise();
+                    final Promise<CoapResponse> result = Promise.promise();
                     final Request request = createCoapRequest(Code.PUT, getPutResource(tenantId, deviceId), count);
                     client.advanced(getHandler(result), request);
                     return result.future();
@@ -456,7 +456,7 @@ public abstract class CoapTestBase {
         testUploadMessages(ctx, tenantId,
                 () -> warmUp(client, createCoapsRequest(Code.POST, getPostResource(), 0)),
                 count -> {
-                    final Promise<OptionSet> result = Promise.promise();
+                    final Promise<CoapResponse> result = Promise.promise();
                     final Request request = createCoapsRequest(Code.POST, getPostResource(), count);
                     client.advanced(getHandler(result), request);
                     return result.future();
@@ -485,7 +485,7 @@ public abstract class CoapTestBase {
         testUploadMessages(ctx, tenantId,
                 () -> warmUp(client, createCoapsRequest(Code.POST, getPostResource(), 0)),
                 count -> {
-                    final Promise<OptionSet> result = Promise.promise();
+                    final Promise<CoapResponse> result = Promise.promise();
                     final Request request = createCoapsRequest(Code.POST, getPostResource(), count);
                     client.advanced(getHandler(result), request);
                     return result.future();
@@ -523,7 +523,7 @@ public abstract class CoapTestBase {
                 () -> warmUp(gatewayOne, createCoapsRequest(Code.PUT, getPutResource(tenantId, deviceId), 0)),
                 count -> {
                     final CoapClient client = (count.intValue() & 1) == 0 ? gatewayOne : gatewayTwo;
-                    final Promise<OptionSet> result = Promise.promise();
+                    final Promise<CoapResponse> result = Promise.promise();
                     final Request request = createCoapsRequest(Code.PUT, getPutResource(tenantId, deviceId), count);
                     client.advanced(getHandler(result), request);
                     return result.future();
@@ -551,7 +551,7 @@ public abstract class CoapTestBase {
         helper.createAutoProvisioningMessageConsumers(ctx, provisioningNotificationReceived, tenantId, edgeDeviceId)
                 .compose(ok -> helper.registry.addPskDeviceForTenant(tenantId, tenant, gatewayId, gateway, SECRET))
                 .compose(ok -> {
-                    final Promise<OptionSet> result = Promise.promise();
+                    final Promise<CoapResponse> result = Promise.promise();
                     final Request request = createCoapsRequest(Code.PUT, getPutResource(tenantId, edgeDeviceId), 0);
 
                     final CoapClient client = getCoapsClient(gatewayId, tenantId, SECRET);
@@ -588,7 +588,7 @@ public abstract class CoapTestBase {
             final VertxTestContext ctx,
             final String tenantId,
             final Supplier<Future<Void>> warmUp,
-            final Function<Integer, Future<OptionSet>> requestSender) throws InterruptedException {
+            final Function<Integer, Future<CoapResponse>> requestSender) throws InterruptedException {
         testUploadMessages(ctx, tenantId, warmUp, null, requestSender);
     }
 
@@ -610,7 +610,7 @@ public abstract class CoapTestBase {
             final String tenantId,
             final Supplier<Future<Void>> warmUp,
             final Consumer<DownstreamMessage<? extends MessageContext>> messageConsumer,
-            final Function<Integer, Future<OptionSet>> requestSender) throws InterruptedException {
+            final Function<Integer, Future<CoapResponse>> requestSender) throws InterruptedException {
         testUploadMessages(ctx, tenantId, warmUp, messageConsumer, requestSender, MESSAGES_TO_SEND, null);
     }
 
@@ -632,7 +632,7 @@ public abstract class CoapTestBase {
             final String tenantId,
             final Supplier<Future<Void>> warmUp,
             final Consumer<DownstreamMessage<? extends MessageContext>> messageConsumer,
-            final Function<Integer, Future<OptionSet>> requestSender,
+            final Function<Integer, Future<CoapResponse>> requestSender,
             final int numberOfMessages,
             final QoS expectedQos) throws InterruptedException {
 
@@ -725,7 +725,7 @@ public abstract class CoapTestBase {
             .compose(ok -> {
 
                 final CoapClient client = getCoapsClient(keyLoader);
-                final Promise<OptionSet> result = Promise.promise();
+                final Promise<CoapResponse> result = Promise.promise();
                 client.advanced(getHandler(result), createCoapsRequest(Code.POST, getPostResource(), 0));
                 return result.future();
             })
@@ -754,7 +754,7 @@ public abstract class CoapTestBase {
             // WHEN a device tries to upload data and authenticate using the PSK
             // identity for which the server has a different shared secret on record
             final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
-            final Promise<OptionSet> result = Promise.promise();
+            final Promise<CoapResponse> result = Promise.promise();
             client.advanced(getHandler(result), createCoapsRequest(Code.POST, getPostResource(), 0));
             return result.future();
         })
@@ -784,7 +784,7 @@ public abstract class CoapTestBase {
 
             // WHEN a device that belongs to the tenant uploads a message
             final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
-            final Promise<OptionSet> result = Promise.promise();
+            final Promise<CoapResponse> result = Promise.promise();
             // THEN a FORBIDDEN response code is returned
             client.advanced(getHandler(result, ResponseCode.FORBIDDEN), createCoapsRequest(Code.POST, getPostResource(), 0));
             return result.future();
@@ -811,7 +811,7 @@ public abstract class CoapTestBase {
 
             // WHEN the device tries to upload a message
             final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
-            final Promise<OptionSet> result = Promise.promise();
+            final Promise<CoapResponse> result = Promise.promise();
             // THEN a NOT_FOUND response code is returned
             client.advanced(getHandler(result, ResponseCode.NOT_FOUND), createCoapsRequest(Code.POST, getPostResource(), 0));
             return result.future();
@@ -842,7 +842,7 @@ public abstract class CoapTestBase {
         .compose(ok -> {
 
             // WHEN the gateway tries to upload a message for the device
-            final Promise<OptionSet> result = Promise.promise();
+            final Promise<CoapResponse> result = Promise.promise();
             final CoapClient client = getCoapsClient(gatewayId, tenantId, SECRET);
             // THEN a FORBIDDEN response code is returned
             client.advanced(getHandler(result, ResponseCode.FORBIDDEN), createCoapsRequest(Code.PUT, getPutResource(tenantId, deviceId), 0));
@@ -872,7 +872,7 @@ public abstract class CoapTestBase {
         .compose(ok -> {
 
             // WHEN another gateway tries to upload a message for the device
-            final Promise<OptionSet> result = Promise.promise();
+            final Promise<CoapResponse> result = Promise.promise();
             final CoapClient client = getCoapsClient(gatewayId, tenantId, SECRET);
             // THEN a FORBIDDEN response code is returned
             client.advanced(getHandler(result, ResponseCode.FORBIDDEN),
@@ -956,21 +956,21 @@ public abstract class CoapTestBase {
                         });
                 },
                 count -> {
-                    final Promise<OptionSet> result = Promise.promise();
+                    final Promise<CoapResponse> result = Promise.promise();
                     final Request request = createCoapsOrCoapRequest(endpointConfig, commandTargetDeviceId, count);
                     request.getOptions().addUriQuery(String.format("%s=%d", Constants.HEADER_TIME_TILL_DISCONNECT, 5));
                     client.advanced(getHandler(result, ResponseCode.CHANGED), request);
                     return result.future()
-                            .map(responseOptions -> {
+                            .map(response -> {
                                 ctx.verify(() -> {
                                     assertResponseContainsCommand(
                                             endpointConfig,
-                                            responseOptions,
+                                            response.getOptions(),
                                             expectedCommand,
                                             tenantId,
                                             commandTargetDeviceId);
                                 });
-                                final List<String> locationPath = responseOptions.getLocationPath();
+                                final List<String> locationPath = response.getOptions().getLocationPath();
                                 return locationPath.get(locationPath.size() - 1);
                             })
                             .compose(receivedCommandRequestId -> {
@@ -979,7 +979,7 @@ public abstract class CoapTestBase {
                                 logger.debug("sending response to command [uri: {}]", responseUri);
 
                                 final Buffer body = Buffer.buffer("ok");
-                                final Promise<OptionSet> commandResponseResult = Promise.promise();
+                                final Promise<CoapResponse> commandResponseResult = Promise.promise();
                                 final Request commandResponseRequest = createCoapsOrCoapRequest(endpointConfig,
                                         responseUri, body.getBytes());
                                 commandResponseRequest.getOptions()
@@ -1082,22 +1082,186 @@ public abstract class CoapTestBase {
                     });
                 },
                 count -> {
-                    final Promise<OptionSet> result = Promise.promise();
+                    final Promise<CoapResponse> result = Promise.promise();
                     final Request request = createCoapsOrCoapRequest(endpointConfig, commandTargetDeviceId, count);
                     request.getOptions().addUriQuery(String.format("%s=%d", Constants.HEADER_TIME_TILL_DISCONNECT, 4));
                     logger.debug("south-bound send {}", request);
                     client.advanced(getHandler(result, ResponseCode.CHANGED), request);
                     return result.future()
-                            .map(responseOptions -> {
+                            .map(response -> {
                                 ctx.verify(() -> {
                                     assertResponseContainsOneWayCommand(
                                             endpointConfig,
-                                            responseOptions,
+                                            response.getOptions(),
                                             expectedCommand,
                                             tenantId,
                                             commandTargetDeviceId);
                                 });
-                                return responseOptions;
+                                return response;
+                            });
+                });
+    }
+
+    /**
+     * Verifies that the CoAP adapter delivers a one-way command to a device.
+     *
+     * @param endpointConfig The endpoints to use for sending/receiving commands.
+     * @param ctx The test context
+     * @throws InterruptedException if the test fails.
+     */
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
+    @MethodSource("commandAndControlVariants")
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadMessagesWithTtdThatReplyWithOneWayCommandInSeparateResponse(
+            final CoapCommandEndpointConfiguration endpointConfig,
+            final VertxTestContext ctx) throws InterruptedException {
+
+        final Tenant tenant = new Tenant();
+        tenant.addAdapterConfig(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP)
+                .setEnabled(true)
+                .putExtension("timeoutToAck", 0)
+                .putExtension("deviceTriggeredTimeoutToAck", 30000));
+        final String expectedCommand = String.format("%s=%s", Constants.HEADER_COMMAND, COMMAND_TO_SEND);
+
+        final VertxTestContext setup = new VertxTestContext();
+        if (endpointConfig.isSubscribeAsUnauthenticatedDevice()) {
+            helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, SECRET).onComplete(setup.succeedingThenComplete());
+        } else {
+            helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET).onComplete(setup.succeedingThenComplete());
+        }
+        ctx.verify(() -> assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue());
+
+        final CoapClient client = endpointConfig.isSubscribeAsUnauthenticatedDevice() ? getCoapClient()
+                : getCoapsClient(deviceId, tenantId, SECRET);
+
+        final String commandTargetDeviceId = endpointConfig.isSubscribeAsGateway()
+                ? helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5)
+                : deviceId;
+        final String subscribingDeviceId = endpointConfig.isSubscribeAsGatewayForSingleDevice() ? commandTargetDeviceId
+                : deviceId;
+
+        testUploadMessages(ctx, tenantId,
+                () -> warmUp(client, createCoapsRequest(Code.POST, getPostResource(), 0)),
+                msg -> {
+                    final Integer ttd = msg.getTimeTillDisconnect();
+                    logger.debug("north-bound message received {}, ttd: {}", msg, ttd);
+                    msg.getTimeUntilDisconnectNotification().ifPresent(notification -> {
+                        ctx.verify(() -> {
+                            assertThat(notification.getTenantId()).isEqualTo(tenantId);
+                            assertThat(notification.getDeviceId()).isEqualTo(subscribingDeviceId);
+                        });
+                        logger.debug("send one-way-command");
+                        final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
+                        helper.sendOneWayCommand(
+                                tenantId,
+                                commandTargetDeviceId,
+                                COMMAND_TO_SEND,
+                                "application/json",
+                                inputData.toBuffer(),
+                                notification.getMillisecondsUntilExpiry() / 2);
+                    });
+                },
+                count -> {
+                    final Promise<CoapResponse> result = Promise.promise();
+                    final Request request = createCoapsOrCoapRequest(endpointConfig, commandTargetDeviceId, count);
+                    request.getOptions().addUriQuery(String.format("%s=%d", Constants.HEADER_TIME_TILL_DISCONNECT, 4));
+                    logger.debug("south-bound send {}", request);
+                    client.advanced(getHandler(result, ResponseCode.CHANGED), request);
+                    return result.future()
+                            .map(response -> {
+                                ctx.verify(() -> {
+                                    assertResponseContainsOneWayCommand(
+                                            endpointConfig,
+                                            response.getOptions(),
+                                            expectedCommand,
+                                            tenantId,
+                                            commandTargetDeviceId);
+                                    assertThat(response.advanced().getType()).isEqualTo(request.getType());
+                                });
+                                return response;
+                            });
+                });
+    }
+
+    /**
+     * Verifies that the CoAP adapter delivers a one-way command to a device.
+     *
+     * @param endpointConfig The endpoints to use for sending/receiving commands.
+     * @param ctx The test context
+     * @throws InterruptedException if the test fails.
+     */
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
+    @MethodSource("commandAndControlVariants")
+    @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
+    public void testUploadMessagesWithTtdAndPiggyThatReplyWithOneWayCommandInPiggyBackedResponse(
+            final CoapCommandEndpointConfiguration endpointConfig,
+            final VertxTestContext ctx) throws InterruptedException {
+
+        final Tenant tenant = new Tenant();
+        tenant.addAdapterConfig(new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP)
+                .setEnabled(true)
+                .putExtension("timeoutToAck", 0)
+                .putExtension("deviceTriggeredTimeoutToAck", 30000));
+        final String expectedCommand = String.format("%s=%s", Constants.HEADER_COMMAND, COMMAND_TO_SEND);
+
+        final VertxTestContext setup = new VertxTestContext();
+        if (endpointConfig.isSubscribeAsUnauthenticatedDevice()) {
+            helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, SECRET).onComplete(setup.succeedingThenComplete());
+        } else {
+            helper.registry.addPskDeviceForTenant(tenantId, tenant, deviceId, SECRET).onComplete(setup.succeedingThenComplete());
+        }
+        ctx.verify(() -> assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue());
+
+        final CoapClient client = endpointConfig.isSubscribeAsUnauthenticatedDevice() ? getCoapClient()
+                : getCoapsClient(deviceId, tenantId, SECRET);
+
+        final String commandTargetDeviceId = endpointConfig.isSubscribeAsGateway()
+                ? helper.setupGatewayDeviceBlocking(tenantId, deviceId, 5)
+                : deviceId;
+        final String subscribingDeviceId = endpointConfig.isSubscribeAsGatewayForSingleDevice() ? commandTargetDeviceId
+                : deviceId;
+
+        testUploadMessages(ctx, tenantId,
+                () -> warmUp(client, createCoapsRequest(Code.POST, getPostResource(), 0)),
+                msg -> {
+                    final Integer ttd = msg.getTimeTillDisconnect();
+                    logger.debug("north-bound message received {}, ttd: {}", msg, ttd);
+                    msg.getTimeUntilDisconnectNotification().ifPresent(notification -> {
+                        ctx.verify(() -> {
+                            assertThat(notification.getTenantId()).isEqualTo(tenantId);
+                            assertThat(notification.getDeviceId()).isEqualTo(subscribingDeviceId);
+                        });
+                        logger.debug("send one-way-command");
+                        final JsonObject inputData = new JsonObject().put(COMMAND_JSON_KEY, (int) (Math.random() * 100));
+                        helper.sendOneWayCommand(
+                                tenantId,
+                                commandTargetDeviceId,
+                                COMMAND_TO_SEND,
+                                "application/json",
+                                inputData.toBuffer(),
+                                notification.getMillisecondsUntilExpiry() / 2);
+                    });
+                },
+                count -> {
+                    final Promise<CoapResponse> result = Promise.promise();
+                    final Request request = createCoapsOrCoapRequest(endpointConfig, commandTargetDeviceId, count);
+                    request.getOptions().addUriQuery(String.format("%s=%d", Constants.HEADER_TIME_TILL_DISCONNECT, 4));
+                    request.getOptions().addUriQuery("piggy");
+                    logger.debug("south-bound send {}", request);
+                    client.advanced(getHandler(result, ResponseCode.CHANGED), request);
+                    return result.future()
+                            .map(response -> {
+                                ctx.verify(() -> {
+                                    assertResponseContainsOneWayCommand(
+                                            endpointConfig,
+                                            response.getOptions(),
+                                            expectedCommand,
+                                            tenantId,
+                                            commandTargetDeviceId);
+                                    final Type expectedResponseType = request.getType() == Type.NON ? Type.NON : Type.ACK;
+                                    assertThat(response.advanced().getType()).isEqualTo(expectedResponseType);
+                                });
+                                return response;
                             });
                 });
     }
@@ -1141,10 +1305,10 @@ public abstract class CoapTestBase {
      * This default implementation always returns a succeeded future.
      * Subclasses should override this method to implement reasonable checks.
      *
-     * @param responseOptions The CoAP options from the response.
+     * @param response The CoAP response.
      * @return A future indicating the outcome of the checks.
      */
-    protected Future<Void> assertCoapResponse(final OptionSet responseOptions) {
+    protected Future<Void> assertCoapResponse(final CoapResponse response) {
         return Future.succeededFuture();
     }
 
@@ -1156,7 +1320,7 @@ public abstract class CoapTestBase {
      *            result that is failed with a {@link CoapResultException}.
      * @return The handler.
      */
-    protected final CoapHandler getHandler(final Handler<AsyncResult<OptionSet>> responseHandler) {
+    protected final CoapHandler getHandler(final Handler<AsyncResult<CoapResponse>> responseHandler) {
         return getHandler(responseHandler, ResponseCode.CHANGED);
     }
 
@@ -1170,7 +1334,7 @@ public abstract class CoapTestBase {
      * @return The handler.
      */
     protected final CoapHandler getHandler(
-            final Handler<AsyncResult<OptionSet>> responseHandler,
+            final Handler<AsyncResult<CoapResponse>> responseHandler,
             final ResponseCode expectedStatusCode) {
 
         return new CoapHandler() {
@@ -1179,7 +1343,7 @@ public abstract class CoapTestBase {
             public void onLoad(final CoapResponse response) {
                 if (response.getCode() == expectedStatusCode) {
                     logger.debug("=> received {}", Utils.prettyPrint(response));
-                    responseHandler.handle(Future.succeededFuture(response.getOptions()));
+                    responseHandler.handle(Future.succeededFuture(response));
                 } else {
                     logger.warn("expected {} => received {}", expectedStatusCode, Utils.prettyPrint(response));
                     responseHandler.handle(Future.failedFuture(
