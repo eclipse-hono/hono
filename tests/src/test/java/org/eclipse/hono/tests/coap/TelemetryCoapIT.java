@@ -21,10 +21,10 @@ import java.security.cert.X509Certificate;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.californium.core.CoapClient;
+import org.eclipse.californium.core.CoapResponse;
 import org.eclipse.californium.core.coap.CoAP.Code;
 import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.coap.CoAP.Type;
-import org.eclipse.californium.core.coap.OptionSet;
 import org.eclipse.californium.core.coap.Request;
 import org.eclipse.californium.elements.exception.ConnectorException;
 import org.eclipse.hono.application.client.DownstreamMessage;
@@ -112,7 +112,7 @@ public class TelemetryCoapIT extends CoapTestBase {
                 () -> warmUp(client, createCoapsRequest(Code.POST, Type.CON, getPostResource(), 0)),
                 null,
                 count -> {
-                    final Promise<OptionSet> result = Promise.promise();
+                    final Promise<CoapResponse> result = Promise.promise();
                     final Request request = createCoapsRequest(Code.POST, Type.CON, getPostResource(), count);
                     client.advanced(getHandler(result), request);
                     return result.future();
@@ -140,7 +140,7 @@ public class TelemetryCoapIT extends CoapTestBase {
         .compose(ok -> {
             final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
             final Request request = createCoapsRequest(Code.POST, Type.CON, getPostResource(), IntegrationTestSupport.getPayload(4096));
-            final Promise<OptionSet> result = Promise.promise();
+            final Promise<CoapResponse> result = Promise.promise();
             client.advanced(getHandler(result, ResponseCode.REQUEST_ENTITY_TOO_LARGE), request);
             return result.future();
         })
@@ -164,7 +164,7 @@ public class TelemetryCoapIT extends CoapTestBase {
             .compose(ok -> {
                 final CoapClient client = getCoapsClient(deviceId, tenantId, SECRET);
                 final Request request = createCoapsRequest(Code.GET, Type.CON, "/", null);
-                final Promise<OptionSet> result = Promise.promise();
+                final Promise<CoapResponse> result = Promise.promise();
                 client.advanced(getHandler(result, ResponseCode.NOT_FOUND), request);
                 return result.future();
             })
@@ -225,7 +225,7 @@ public class TelemetryCoapIT extends CoapTestBase {
                         getPostResource(),
                         "hello 0".getBytes(StandardCharsets.UTF_8))),
                 count -> {
-                    final Promise<OptionSet> result = Promise.promise();
+                    final Promise<CoapResponse> result = Promise.promise();
                     final String payload = "hello " + count;
                     final Request request = createCoapsRequest(
                             Code.POST,

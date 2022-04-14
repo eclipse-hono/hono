@@ -39,6 +39,14 @@ public abstract class CoapConstants {
      */
     public static final String TIMEOUT_TO_ACK = "timeoutToAck";
 
+    /**
+     * The name of the property that contains the maximum number of milliseconds to wait for an upstream command before
+     * responding with an empty ACK message to a client's request using the uri-query parameter "piggy".
+     *
+     * @see CoapAdapterProperties#setTimeoutToAck(int)
+     */
+    public static final String DEVICE_TRIGGERED_TIMEOUT_TO_ACK = "deviceTriggeredTimeoutToAck";
+
     private CoapConstants() {
         // prevent instantiation
     }

@@ -107,8 +107,31 @@ public class CoapContextTest {
         final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711", span);
         ctx.startAcceptTimer(vertx, tenant, 500);
 
-        // THEN the adapter sends the response (piggy-backed) in the ACK if a command is received immediately
+        // THEN the adapter sends the response (piggy-backed) in the ACK if a command is received within the general timeout to ACK
         verify(vertx).setTimer(eq(500L), VertxMockSupport.anyHandler());
+    }
+
+    /**
+     * Verifies that the tenant specific value larger than 0 is not overwritten by the global
+     * adapter configuration, even if a device uses the URI-query-parameter "piggy".
+     */
+    @Test
+    void testStartAckTimerIgnoresDeviceProvidedPiggyQueryParam() {
+
+        // GIVEN a tenant that is configured to use a timeout to ACK larger than 0
+        final Adapter coapConfig = new Adapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP);
+        coapConfig.putExtension(CoapConstants.TIMEOUT_TO_ACK, 100);
+        final TenantObject tenant = TenantObject.from("tenant", true).addAdapter(coapConfig);
+
+        // WHEN a device sends a request that contains a "piggy" query parameter
+        final Device authenticatedDevice = new Device(tenant.getTenantId(), "device-id");
+        final CoapExchange exchange = mock(CoapExchange.class);
+        when(exchange.getQueryParameter(eq(CoapContext.PARAM_PIGGYBACKED))).thenReturn("true");
+        final CoapContext ctx = CoapContext.fromRequest(exchange, authenticatedDevice, authenticatedDevice, "4711", span);
+        ctx.startAcceptTimer(vertx, tenant, 500);
+
+        // THEN the adapter sends the response (piggy-backed) in the ACK if a command is received within the tenant's timeout
+        verify(vertx).setTimer(eq(100L), VertxMockSupport.anyHandler());
     }
 
     /**
