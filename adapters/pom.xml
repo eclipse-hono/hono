@@ -26,7 +26,6 @@
   <packaging>pom</packaging>
 
   <modules>
-    <module>amqp-vertx-base</module>
     <module>amqp-vertx-quarkus</module>
     <module>base-quarkus</module>
     <module>coap-vertx-quarkus</module>
