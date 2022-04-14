@@ -32,10 +32,12 @@ import org.eclipse.californium.core.CoapResource;
 import org.eclipse.californium.core.CoapServer;
 import org.eclipse.californium.core.coap.CoAP.Code;
 import org.eclipse.californium.core.coap.Request;
+import org.eclipse.californium.core.network.Endpoint;
 import org.eclipse.californium.core.network.Exchange;
 import org.eclipse.californium.core.network.Exchange.Origin;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.californium.core.server.resources.Resource;
+import org.eclipse.californium.elements.config.Configuration;
 import org.eclipse.hono.adapter.resourcelimits.ResourceLimitChecks;
 import org.eclipse.hono.adapter.test.ProtocolAdapterTestSupport;
 import org.eclipse.hono.client.command.CommandConsumer;
@@ -45,7 +47,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -144,6 +145,7 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
         givenAnAdapter(properties);
         // and a set of resources
         final Resource resource = mock(Resource.class);
+        when(resource.getName()).thenReturn("test");
         adapter.addResources(Set.of(resource));
 
         // WHEN starting the adapter
@@ -168,7 +170,30 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
 
         // GIVEN an adapter
         final Context context = vertx.getOrCreateContext();
-        givenAnAdapter(properties);
+        final var props = new CoapAdapterProperties();
+        final CoapEndpointFactory endpointFactory = mock(CoapEndpointFactory.class);
+        when(endpointFactory.getCoapServerConfiguration()).thenReturn(Future.succeededFuture(new Configuration()));
+        when(endpointFactory.getInsecureEndpoint()).thenReturn(Future.failedFuture("not implemented"));
+        when(endpointFactory.getSecureEndpoint()).thenReturn(Future.succeededFuture(mock(Endpoint.class)));
+        adapter = new AbstractVertxBasedCoapAdapter<CoapAdapterProperties>() {
+
+            @Override
+            public String getTypeName() {
+                return "test";
+            }
+        };
+        adapter.setConfig(props);
+        adapter.setCoapEndpointFactory(endpointFactory);
+        adapter.setMetrics(metrics);
+        adapter.setResourceLimitChecks(resourceLimitChecks);
+
+        adapter.setTenantClient(tenantClient);
+        adapter.setMessagingClientProviders(createMessagingClientProviders());
+        adapter.setRegistrationClient(registrationClient);
+        adapter.setCredentialsClient(credentialsClient);
+        adapter.setCommandConsumerFactory(commandConsumerFactory);
+        adapter.setCommandRouterClient(commandRouterClient);
+
         // with a resource
         final Promise<Void> resourceInvocation = Promise.promise();
         final Resource resource = new CoapResource("test") {
@@ -192,10 +217,8 @@ public class AbstractVertxBasedCoapAdapterTest extends ProtocolAdapterTestSuppor
                 final Request request = new Request(Code.GET);
                 final Object identity = "dummy";
                 final Exchange getExchange = new Exchange(request, identity, Origin.REMOTE, mock(Executor.class));
-                final ArgumentCaptor<Resource> resourceCaptor = ArgumentCaptor.forClass(Resource.class);
-                verify(server).add(resourceCaptor.capture());
-                resourceCaptor.getValue().handleRequest(getExchange);
-                // THEN the resource's handler has been run on the adapter's vert.x event loop
+                resource.handleRequest(getExchange);
+                // THEN the resource's handler runs on the adapter's vert.x event loop
                 return resourceInvocation.future();
             })
             .onComplete(ctx.succeedingThenComplete());
