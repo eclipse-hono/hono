@@ -843,32 +843,32 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
         final Span span = newSpan("attach device command receiver link", authenticatedDevice, traceSamplingPriority);
 
         getResourceIdentifier(sender.getRemoteSource())
-        .compose(address -> validateAddress(address, authenticatedDevice))
-        .compose(validAddress -> {
-            // validAddress ALWAYS contains the tenant and device ID
-            if (CommandConstants.isCommandEndpoint(validAddress.getEndpoint())) {
-                return openCommandSenderLink(connection, sender, validAddress, authenticatedDevice, span, traceSamplingPriority);
-            } else {
-                return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "no such node"));
-            }
-        })
-        .map(consumer -> {
-            span.log("link established");
-            return consumer;
-        })
-        .recover(t -> {
-            if (t instanceof ServiceInvocationException) {
-                closeLinkWithError(sender, t, span);
-            } else {
-                closeLinkWithError(sender,
-                        new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "Invalid source address"),
-                        span);
-            }
-            return Future.failedFuture(t);
-        })
-        .onComplete(s -> {
-            span.finish();
-        });
+            .compose(address -> validateAddress(address, authenticatedDevice))
+            .compose(validAddress -> {
+                // validAddress ALWAYS contains the tenant and device ID
+                if (CommandConstants.isCommandEndpoint(validAddress.getEndpoint())) {
+                    return openCommandSenderLink(connection, sender, validAddress, authenticatedDevice, span, traceSamplingPriority);
+                } else {
+                    return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, "no such node"));
+                }
+            })
+            .map(consumer -> {
+                span.log("link established");
+                return consumer;
+            })
+            .recover(t -> {
+                if (t instanceof ServiceInvocationException) {
+                    closeLinkWithError(sender, t, span);
+                } else {
+                    closeLinkWithError(sender,
+                            new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "Invalid source address"),
+                            span);
+                }
+                return Future.failedFuture(t);
+            })
+            .onComplete(s -> {
+                span.finish();
+            });
     }
 
     private void closeConnectionOnTerminalError(final Throwable error, final ProtonConnection conn,
