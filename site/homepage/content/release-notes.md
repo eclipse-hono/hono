@@ -75,6 +75,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   so that mandatory parameters come first.
 * The *hono-service-base-quarkus* module has been removed. Its content has been integrated in the *hono-service-base* module. 
 * The *hono-adapter-base-quarkus* module has been removed. Its content has been integrated in the *hono-adapter-base* module. 
+* The *amqp-device* client no longer requires supplying a tenant ID when creating a client or invoking any of its
+  methods.
 
 ### Deprecations
 

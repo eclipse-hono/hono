@@ -86,11 +86,13 @@ public class TcpServer {
         return result.future()
                 .map(s -> {
                     server = s;
-                    LOG.info("successfully started TCP server [address: {}, port: {}]", config.getInsecurePortBindAddress(), s.actualPort());
+                    LOG.info("successfully started TCP server [address: {}, port: {}]",
+                            config.getInsecurePortBindAddress(), s.actualPort());
                     return s;
                 })
                 .recover(t -> {
-                    LOG.error("failed to start TCP server [address: {}, port: {}]", config.getInsecurePortBindAddress(), config.getInsecurePort(6666), t);
+                    LOG.error("failed to start TCP server [address: {}, port: {}]",
+                            config.getInsecurePortBindAddress(), config.getInsecurePort(6666), t);
                     return Future.failedFuture(t);
                 });
     }

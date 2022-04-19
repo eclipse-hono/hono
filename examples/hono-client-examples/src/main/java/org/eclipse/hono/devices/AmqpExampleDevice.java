@@ -18,7 +18,8 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
-import org.eclipse.hono.client.device.amqp.AmqpAdapterClientFactory;
+import org.eclipse.hono.client.device.amqp.AmqpAdapterClient;
+import org.eclipse.hono.util.QoS;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -40,7 +41,7 @@ import io.vertx.core.json.JsonObject;
  * <b>The used tenant, device and credentials need to be registered and enabled.</b> For details on how to do this,
  * refer to the <a href="https://www.eclipse.org/hono/getting-started/">Getting Started Guide</a>.
  *
- * @see AmqpAdapterClientFactory
+ * @see AmqpAdapterClient
  * @see <a href="https://www.eclipse.org/hono/docs/dev-guide/amqp_adapter_client/">The AMQP Adapter Client
  *      documentation</a>
  */
@@ -52,13 +53,13 @@ public class AmqpExampleDevice {
     private static final int RECONNECT_ATTEMPTS = 1;
 
     private static final String TENANT_ID = "DEFAULT_TENANT";
-    private static final String DEVICE_ID = "4711";
+//    private static final String DEVICE_ID = "4711";
     private static final String AUTH_ID = "sensor1";
     private static final String PASSWORD = "hono-secret";
 
     private final Vertx vertx = Vertx.vertx();
     private final ClientConfigProperties config = new ClientConfigProperties();
-    private AmqpAdapterClientFactory factory;
+    private AmqpAdapterClient client;
 
     private AmqpExampleDevice() {
         config.setHost(HOST);
@@ -91,7 +92,7 @@ public class AmqpExampleDevice {
     }
 
     private void startDevice(final HonoConnection connection) {
-        factory = AmqpAdapterClientFactory.create(connection, TENANT_ID);
+        client = AmqpAdapterClient.create(connection);
 
         sendTelemetryMessageWithQos0();
 
@@ -101,7 +102,7 @@ public class AmqpExampleDevice {
 
         vertx.setTimer(3000, l -> {
             System.out.println("Waiting for commands... (Press Ctrl+C to stop)");
-            factory.createCommandConsumer(this::handleCommand);
+            client.createCommandConsumer(this::handleCommand);
         });
     }
 
@@ -109,22 +110,14 @@ public class AmqpExampleDevice {
         System.out.println();
 
         final var payload = "42";
-        factory.getOrCreateTelemetrySender()
-            .compose(telemetrySender -> telemetrySender.send(
-                    DEVICE_ID,
-                    Buffer.buffer(payload),
-                    "text/plain"))
+        client.sendTelemetry(QoS.AT_MOST_ONCE, Buffer.buffer(payload), "text/plain", null, null, null)
             .onSuccess(delivery -> System.out.println("Telemetry message with QoS 'AT_MOST_ONCE' sent: " + payload))
             .onFailure(t -> System.err.println("Sending telemetry message with QoS 'AT_MOST_ONCE' failed: " + t));
     }
 
     private void sendTelemetryMessageWithQos1() {
         final var payload = new JsonObject().put("weather", "cloudy");
-        factory.getOrCreateTelemetrySender()
-            .compose(telemetrySender -> telemetrySender.sendAndWaitForOutcome(
-                    DEVICE_ID,
-                    payload.toBuffer(),
-                    "application/json"))
+        client.sendTelemetry(QoS.AT_LEAST_ONCE, payload.toBuffer(), "application/json", null, null, null)
             .onSuccess(delivery -> System.out.println("Telemetry message with QoS 'AT_LEAST_ONCE' sent: " + payload))
             .onFailure(t -> {
                 String hint = "";
@@ -137,11 +130,7 @@ public class AmqpExampleDevice {
 
     private void sendEvent() {
         final var payload = new JsonObject().put("threshold", "exceeded");
-        factory.getOrCreateEventSender()
-            .compose(eventSender -> eventSender.send(
-                    DEVICE_ID,
-                    payload.toBuffer(),
-                    "application/json"))
+        client.sendEvent(payload.toBuffer(), "application/json", null, null, null)
             .onSuccess(delivery -> System.out.println("Event sent: " + payload))
             .onFailure(t -> System.err.println("Sending event failed: " + t));
     }
@@ -163,14 +152,13 @@ public class AmqpExampleDevice {
 
     private void sendCommandResponse(final Message command) {
         final JsonObject payload = new JsonObject().put("outcome", "success");
-        factory.getOrCreateCommandResponseSender()
-            .compose(commandResponder -> commandResponder.sendCommandResponse(
-                    DEVICE_ID,
+        client.sendCommandResponse(
                     command.getReplyTo(),
                     command.getCorrelationId().toString(),
                     200,
                     payload.toBuffer(),
-                    "application/json"))
+                    "application/json",
+                    null)
             .onSuccess(delivery -> System.out.println("Command response sent: " + payload))
             .onFailure(t -> System.err.println("Sending command response failed: " + t));
     }

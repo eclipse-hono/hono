@@ -24,7 +24,7 @@ import javax.inject.Singleton;
 import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.client.amqp.config.ClientOptions;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
-import org.eclipse.hono.client.device.amqp.AmqpAdapterClientFactory;
+import org.eclipse.hono.client.device.amqp.AmqpAdapterClient;
 import org.eclipse.hono.config.quarkus.ServerOptions;
 import org.eclipse.hono.util.Constants;
 
@@ -66,13 +66,9 @@ public class ConfigurationProducer {
 
     @Produces
     @Dependent
-    AmqpAdapterClientFactory amqpAdapterClientFactory(
-            @Named(value = "TENANT_ID")
-            final String tenantId,
+    AmqpAdapterClient amqpAdapterClientFactory(
             final HonoConnection amqpAdapterConnection) {
 
-        return AmqpAdapterClientFactory.create(
-                amqpAdapterConnection,
-                tenantId);
+        return AmqpAdapterClient.create(amqpAdapterConnection);
     }
 }

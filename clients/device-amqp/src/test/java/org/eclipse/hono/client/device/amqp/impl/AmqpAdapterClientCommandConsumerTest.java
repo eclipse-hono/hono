@@ -26,13 +26,13 @@ import static com.google.common.truth.Truth.assertThat;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiConsumer;
 
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.ReconnectListener;
 import org.eclipse.hono.client.amqp.test.AmqpClientUnitTestHelper;
 import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.test.VertxMockSupport;
+import org.eclipse.hono.util.CommandConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,6 +41,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import io.vertx.proton.ProtonMessageHandler;
 import io.vertx.proton.ProtonQoS;
 import io.vertx.proton.ProtonReceiver;
@@ -69,38 +70,52 @@ public class AmqpAdapterClientCommandConsumerTest {
 
     /**
      * Verifies that the creation of the command consumer succeeds.
+     *
+     * @param ctx The vert.x test context.
      */
     @Test
-    @SuppressWarnings("unchecked")
-    public void testCreateSucceeds() {
+    public void testCreateSucceeds(final VertxTestContext ctx) {
 
-        final Future<CommandConsumer> consumerFuture = AmqpAdapterClientCommandConsumer.create(connection,
-                mock(BiConsumer.class));
-
-        verify(connection).createReceiver(eq("command"), eq(ProtonQoS.AT_LEAST_ONCE), any(),
-                VertxMockSupport.anyHandler());
-
-        assertThat(consumerFuture.succeeded()).isTrue();
-        assertThat(consumerFuture.result()).isNotNull();
+        AmqpAdapterClientCommandConsumer.create(connection, (delivery, msg) -> {})
+            .onComplete(ctx.succeeding(consumer -> {
+                ctx.verify(() -> {
+                    assertThat(consumer).isNotNull();
+                    verify(connection).createReceiver(
+                            eq(CommandConstants.COMMAND_ENDPOINT),
+                            eq(ProtonQoS.AT_LEAST_ONCE),
+                            any(),
+                            VertxMockSupport.anyHandler());
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
      * Verifies that the creation of the device-specific command consumer succeeds.
+     *
+     * @param ctx The vert.x test context.
      */
     @Test
-    @SuppressWarnings("unchecked")
-    public void testDeviceSpecificCreateSucceeds() {
+    public void testDeviceSpecificCreateSucceeds(final VertxTestContext ctx) {
 
         final String tenantId = "testTenantId";
         final String deviceId = "testDeviceId";
-        final Future<CommandConsumer> consumerFuture = AmqpAdapterClientCommandConsumer.create(connection, tenantId,
-                deviceId, mock(BiConsumer.class));
-
-        verify(connection).createReceiver(eq("command/" + tenantId + "/" + deviceId), eq(ProtonQoS.AT_LEAST_ONCE),
-                any(), VertxMockSupport.anyHandler());
-
-        assertThat(consumerFuture.succeeded()).isTrue();
-        assertThat(consumerFuture.result()).isNotNull();
+        AmqpAdapterClientCommandConsumer.create(
+                connection,
+                tenantId,
+                deviceId,
+                (delivery, msg) -> {})
+            .onComplete(ctx.succeeding(consumer -> {
+                ctx.verify(() -> {
+                    assertThat(consumer).isNotNull();
+                    verify(connection).createReceiver(
+                            eq("%s/%s/%s".formatted(CommandConstants.COMMAND_ENDPOINT, tenantId, deviceId)),
+                            eq(ProtonQoS.AT_LEAST_ONCE),
+                            any(),
+                            VertxMockSupport.anyHandler());
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -116,9 +131,8 @@ public class AmqpAdapterClientCommandConsumerTest {
         }).when(connection).addReconnectListener(any());
 
         // GIVEN a connected command consumer
-        @SuppressWarnings("unchecked")
         final Future<CommandConsumer> consumerFuture = AmqpAdapterClientCommandConsumer.create(connection,
-                mock(BiConsumer.class));
+                (delivery, msg) -> {});
 
         final AmqpAdapterClientCommandConsumer commandConsumer = (AmqpAdapterClientCommandConsumer) consumerFuture
                 .result();
@@ -130,7 +144,7 @@ public class AmqpAdapterClientCommandConsumerTest {
 
         // THEN the receiver is recreated
         verify(connection, times(2)).createReceiver(
-                eq("command"),
+                eq(CommandConstants.COMMAND_ENDPOINT),
                 eq(ProtonQoS.AT_LEAST_ONCE),
                 any(ProtonMessageHandler.class),
                 VertxMockSupport.anyHandler());

@@ -58,11 +58,12 @@ public class AmqpAdapterClientCommandConsumer extends AbstractHonoClient impleme
      * the connection's default pre-fetch size.
      *
      * @param con The connection to the server.
-     * @param tenantId The tenant to consume commands from.
+     * @param tenantId The tenant that the device belongs to, or {@code null} to determine the tenant from 
+     *                 the device that has authenticated to the AMQP adapter.
      * @param deviceId The device for which the commands should be consumed.
      * @param messageHandler The handler to invoke with every message received.
      * @return A future indicating the outcome of the creation attempt.
-     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @throws NullPointerException if any of the parameters except tenant ID are {@code null}.
      */
     public static Future<CommandConsumer> create(
             final HonoConnection con,
@@ -71,12 +72,11 @@ public class AmqpAdapterClientCommandConsumer extends AbstractHonoClient impleme
             final BiConsumer<ProtonDelivery, Message> messageHandler) {
 
         Objects.requireNonNull(con);
-        Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(messageHandler);
 
         final ResourceIdentifier address = ResourceIdentifier
-                .from(CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, tenantId, deviceId);
+                .fromPath(CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, tenantId, deviceId);
         return createCommandConsumer(con, messageHandler, address);
     }
 
@@ -99,12 +99,14 @@ public class AmqpAdapterClientCommandConsumer extends AbstractHonoClient impleme
         Objects.requireNonNull(messageHandler);
 
         final ResourceIdentifier address = ResourceIdentifier
-                .from(CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT, null, null);
+                .fromPath(CommandConstants.NORTHBOUND_COMMAND_REQUEST_ENDPOINT);
         return createCommandConsumer(con, messageHandler, address);
     }
 
-    private static Future<CommandConsumer> createCommandConsumer(final HonoConnection con,
-            final BiConsumer<ProtonDelivery, Message> messageHandler, final ResourceIdentifier address) {
+    private static Future<CommandConsumer> createCommandConsumer(
+            final HonoConnection con,
+            final BiConsumer<ProtonDelivery, Message> messageHandler,
+            final ResourceIdentifier address) {
 
         return con.isConnected(con.getConfig().getLinkEstablishmentTimeout())
                 .compose(v -> createReceiver(con, messageHandler, address))
