@@ -42,15 +42,17 @@ public interface AmqpAdapterClient extends ConnectionLifecycle<HonoConnection>, 
     }
 
     /**
-     * Creates a client for consuming commands from Hono's AMQP protocol adapter for an authenticated device or on a
-     * (protocol) gateway for all devices on whose behalf it acts.
+     * Creates a client for consuming commands from Hono's AMQP protocol adapter for an authenticated device.
+     * <p>
+     * In case the authenticated device is a (protocol) gateway, the consumer will receive commands targeted at
+     * any of the devices that that gateway is authorized to act on behalf of.
      * <p>
      * The command passed in to the command consumer will be settled automatically.
      *
      * @param messageHandler The handler to invoke with every command received.
      * @return A future that will complete with the consumer once the link has been established. The future will fail if
      *         the link cannot be established, e.g. because this factory is not connected.
-     * @throws NullPointerException if any of the message handler is {@code null}.
+     * @throws NullPointerException if message handler is {@code null}.
      */
     Future<CommandConsumer> createCommandConsumer(Consumer<Message> messageHandler);
 
@@ -65,12 +67,10 @@ public interface AmqpAdapterClient extends ConnectionLifecycle<HonoConnection>, 
      *                 the device that has authenticated to the AMQP adapter.
      *                 Unauthenticated clients must provide a non-{@code null} value to indicate the tenant of the
      *                 device to consume commands for.
-     * @param deviceId The identifier of the device to consume commands for, or {@code null} to consume commands
-     *                 for the device that has authenticated to the AMQP adapter.
+     * @param deviceId The identifier of the device to consume commands for.
      *                 Authenticated gateway devices can use this parameter to consume commands for another device
      *                 that the gateway is authorized to act on behalf of.
-     *                 Unauthenticated clients must provide a non-{@code null} value to indicate the device to
-     *                 consume commands for.
+     *                 Unauthenticated clients use this property to indicate the device to consume commands for.
      * @param messageHandler The handler to invoke with every command received.
      * @return A future that will complete with the consumer once the link has been established. The future will fail if
      *         the link cannot be established, e.g. because this factory is not connected.

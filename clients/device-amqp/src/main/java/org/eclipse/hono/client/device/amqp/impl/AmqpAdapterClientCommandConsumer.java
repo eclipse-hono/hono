@@ -58,11 +58,12 @@ public class AmqpAdapterClientCommandConsumer extends AbstractHonoClient impleme
      * the connection's default pre-fetch size.
      *
      * @param con The connection to the server.
-     * @param tenantId The tenant that the device belongs to.
+     * @param tenantId The tenant that the device belongs to, or {@code null} to determine the tenant from 
+     *                 the device that has authenticated to the AMQP adapter.
      * @param deviceId The device for which the commands should be consumed.
      * @param messageHandler The handler to invoke with every message received.
      * @return A future indicating the outcome of the creation attempt.
-     * @throws NullPointerException if any of the parameters are {@code null}.
+     * @throws NullPointerException if any of the parameters except tenant ID are {@code null}.
      */
     public static Future<CommandConsumer> create(
             final HonoConnection con,
