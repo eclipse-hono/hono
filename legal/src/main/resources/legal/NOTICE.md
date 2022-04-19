@@ -58,7 +58,7 @@ The source code is available from [GitHub](https://github.com/apache/commons-com
 
 This product includes software developed by the [Apache Software Foundation](http://www.apache.org/).
 
-Your use of *Apache Commons Logging* is subject to the terms and conditions of the Apache Software License 2.0.
+Your use of *Apache Commons Collections* is subject to the terms and conditions of the Apache Software License 2.0.
 A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
@@ -108,7 +108,7 @@ The source code is available from [GitHub](https://github.com/apache/thrift).
 
 This product includes software developed by Anders Moeller.
 
-Your use of *Apache Thrift* is subject to the terms and conditions defined in
+Your use of *Automaton* is subject to the terms and conditions defined in
 [COPYING](dk.brics.automaton/COPYING).
 
 The source code is available from [GitHub](https://github.com/cs-au-dk/dk.brics.automaton).
@@ -167,7 +167,7 @@ The source code is available from [GitHub](https://github.com/bolcom/cryptvault)
 
 This product includes software developed by the [Generex project](https://github.com/mifmif/Generex).
 
-Your use of *Cryptvault* is subject to the terms and conditions of the Apache Software License 2.0.
+Your use of *Generex* is subject to the terms and conditions of the Apache Software License 2.0.
 A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
@@ -743,7 +743,7 @@ The source code is available from [GitHub](https://github.com/wildfly-security/w
 
 This product includes software developed by the [fabric8 project](https://fabric8.io/).
 
-Your use of *Kubernetes Client* is subject to the terms and conditions of the Apache Software License 2.0.
+Your use of *zjsonpatch* is subject to the terms and conditions of the Apache Software License 2.0.
 A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
