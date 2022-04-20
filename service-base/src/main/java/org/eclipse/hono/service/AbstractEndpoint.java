@@ -66,7 +66,6 @@ public abstract class AbstractEndpoint implements Endpoint {
      * @param opentracingTracer The tracer.
      */
     public final void setTracer(final Tracer opentracingTracer) {
-        logger.info("using OpenTracing Tracer implementation [{}]", opentracingTracer.getClass().getName());
         this.tracer = Objects.requireNonNull(opentracingTracer);
     }
 

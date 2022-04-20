@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,7 +20,11 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-import io.jaegertracing.Configuration;
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.context.propagation.ContextPropagators;
+import io.opentelemetry.extension.trace.propagation.JaegerPropagator;
+import io.opentelemetry.opentracingshim.OpenTracingShim;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
@@ -45,9 +49,7 @@ public class JsonObjectInjectExtractAdapterTest {
 
         final JsonObject jsonObject = new JsonObject();
         final JsonObjectInjectAdapter injectAdapter = new JsonObjectInjectAdapter(jsonObject);
-        testEntries.forEach((key, value) -> {
-            injectAdapter.put(key, value);
-        });
+        testEntries.forEach(injectAdapter::put);
 
         final JsonObjectExtractAdapter extractAdapter = new JsonObjectExtractAdapter(jsonObject);
         extractAdapter.iterator().forEachRemaining(extractedEntry -> {
@@ -66,13 +68,15 @@ public class JsonObjectInjectExtractAdapterTest {
     }
 
     /**
-     * Verifies that the Jaeger tracer implementation can successfully use the adapter to inject and extract
+     * Verifies that the OpenTelemetry Tracer shim can successfully use the adapter to inject and extract
      * a SpanContext.
      */
     @Test
-    public void testJaegerTracerCanUseAdapter() {
-        final Configuration config = new Configuration("test");
-        final Tracer tracer = config.getTracer();
+    public void testTracerShimCanUseAdapter() {
+        final OpenTelemetry openTelemetry = OpenTelemetrySdk.builder()
+                .setPropagators(ContextPropagators.create(JaegerPropagator.getInstance()))
+                .build();
+        final Tracer tracer = OpenTracingShim.createTracerShim(openTelemetry);
         final Span span = tracer.buildSpan("do").start();
 
         final JsonObject jsonObject = new JsonObject();

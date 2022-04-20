@@ -16,11 +16,9 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.opentracingshim.OpenTracingShim;
 import io.opentracing.Tracer;
-import io.opentracing.util.GlobalTracer;
 
 /**
  * A producer for an OpenTracing Tracer.
@@ -28,13 +26,9 @@ import io.opentracing.util.GlobalTracer;
 @ApplicationScoped
 public class TracerProducer {
 
-    private static final Logger LOG = LoggerFactory.getLogger(TracerProducer.class);
-
     @Singleton
     @Produces
-    Tracer jaegerTracer() {
-        final var tracer = GlobalTracer.get();
-        LOG.info("using tracer instance: {}", tracer.toString());
-        return tracer;
+    Tracer tracer(final OpenTelemetry openTelemetry) {
+        return OpenTracingShim.createTracerShim(openTelemetry);
     }
 }

@@ -94,16 +94,6 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/apache/mina-sshd).
 
-### Apache Thrift
-
-This product includes software developed by the [Apache Software Foundation](https://thirft.apache.org).
-
-Your use of *Apache Thrift* is subject to the terms and conditions of the Apache Software License 2.0.
-A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
-http://www.apache.org/licenses/LICENSE-2.0.html.
-
-The source code is available from [GitHub](https://github.com/apache/thrift).
-
 ### Automaton
 
 This product includes software developed by Anders Moeller.
@@ -112,6 +102,16 @@ Your use of *Automaton* is subject to the terms and conditions defined in
 [COPYING](dk.brics.automaton/COPYING).
 
 The source code is available from [GitHub](https://github.com/cs-au-dk/dk.brics.automaton).
+
+### Google Common Protos
+
+This product includes software developed by the [Google Common Protos project](https://github.com/googleapis/java-common-protos).
+
+Your use of *Common Protos* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/googleapis/java-common-protos).
 
 ### Google Guava
 
@@ -182,6 +182,16 @@ A copy of the license is contained in the file [LICENSE.Graal-SDK.md](LICENSE.Gr
 
 The source code is available from [GitHub](https://github.com/oracle/graal).
 
+### gRPC
+
+This product includes software developed by the [gRPC project](https://grpc.io/).
+
+Your use of *gRPC* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/grpc/grpc-java).
+
 ### H2 Database
 
 This product includes software developed by the [H2 Database project](https://h2database.com).
@@ -211,16 +221,6 @@ A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/FasterXML).
-
-### Jaeger Client Java
-
-This product includes software developed by the [Jaeger project](https://jaegertracing.io).
-
-Your use of *Jaeger Client Java* is subject to the terms and conditions of the Apache Software License 2.0.
-A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
-http://www.apache.org/licenses/LICENSE-2.0.html.
-
-The source code is available from [GitHub](https://github.com/jaegertracing/jaeger-client-java).
 
 ### JBoss Logging
 
@@ -388,6 +388,16 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 The source code is available from [GitHub](https://github.com/square/okhttp) and
 [GitHub](https://github.com/square/okio).
 
+### OpenTelemetry
+
+This product includes software developed by the [OpenTelemetry project](https://opentelemetry.io/).
+
+Your use of *OpenTelemetry* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/open-telemetry/opentelemetry-java).
+
 ### OpenTracing for Java
 
 This product includes software developed by the [OpenTracing project](http://opentracing.io/).
@@ -398,16 +408,6 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/opentracing/opentracing-java).
 
-### OpenTracing Java Tracer Resolver
-
-This product includes software developed by the [OpenTracing Java Tracer Resolver project](https://github.com/opentracing-contrib/java-tracerresolver).
-
-Your use of *OpenTracing Java Tracer Resolver* is subject to the terms and conditions of the Apache Software License 2.0.
-A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
-is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
-
-The source code is available from [GitHub](https://github.com/opentracing-contrib/java-tracerresolver).
-
 ### OpenTracing Vert.x Web Instrumentation 0.1.0
 
 This product includes software developed by the [OpenTracing Vert.x Web Instrumentation project](https://github.com/opentracing-contrib/java-vertx-web).
@@ -417,6 +417,16 @@ A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/opentracing-contrib/java-vertx-web/tree/0.1.0).
+
+### PerfMark
+
+This product includes software developed by the [PerfMark project](https://github.com/perfmark/perfmark).
+
+Your use of *PerfMark* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/perfmark/perfmark).
 
 ### PostgreSQL JDBC Driver
 
@@ -626,6 +636,16 @@ A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/vert-x3/vertx-bridge-common).
+
+### vert.x gRPC ${vertx.version}
+
+This product includes software developed by the [vert.x project](http://vertx.io).
+
+Your use of *vert.x gRPC* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
+is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/vert-x3/vertx-grpc).
 
 ### vert.x Health Check ${vertx.version}
 

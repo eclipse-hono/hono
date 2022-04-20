@@ -98,22 +98,33 @@ individual entries in the log with each other and thus *trace* the processing of
 However, this is usually a very tedious (and error prone) process and the relevant information is often only logged at
 a level (e.g. *DEBUG*) that is not used in production (often *INFO* or above).
 
-In order to address this problem, Hono's service components are instrumented using [OpenTracing](https://opentracing.io/).
-OpenTracing provides *Vendor-neutral APIs and instrumentation for distributed tracing*. The Hono container images all
-include the [Jaeger Java client](https://www.jaegertracing.io/docs/1.32/client-libraries/) and can be configured to
-send tracing information to a [Jaeger collector](https://www.jaegertracing.io/docs/1.32/architecture/).
+In order to address this problem, Hono's service components are instrumented to produce tracing data via
+[OpenTelemetry](https://opentelemetry.io/) (with the instrumentation in the code using [OpenTracing](https://opentracing.io/)
+as described [below]({{< relref "#opentracing-instrumentation" >}})). OpenTelemetry provides an end-to-end implementation
+to generate, emit, collect, process and export tracing data.
+The Hono container images all can be configured to send tracing data to an
+[OpenTelemetry collector](https://opentelemetry.io/docs/collector/) from which data can be exported to a back-end like
+Jaeger. The decision, whether a trace should be sampled and exported, controlling the amount of tracing data to be
+collected, is configured by means of a sampler configuration.
+
+The table below provides an overview of the configuration properties regarding the sampler and the trace exporter, for
+exporting to an OpenTelemetry collector.
+
+| OS Environment Variable<br>Java System Property | Type          | Default Value | Description  |
+| :---------------------------------------------- | :------------ | :------------ | :------------|
+| `QUARKUS_OPENTELEMETRY_TRACER_SAMPLER`<br>`quarkus.opentelemetry.tracer.sampler` | *string* | `on` | The sampler to use for tracing. Valid values are `off` to export no traces at all, `on` to export *all* traces and `ratio` to define a ratio of traces to be exported. |
+| `QUARKUS_OPENTELEMETRY_TRACER_SAMPLER_RATIO`<br>`quarkus.opentelemetry.tracer.sampler.ratio` | *double* | | The ratio of traces to be exported. To be used if the sampler is set to `ratio`. Must be within `[0.0, 1.0]`. |
+| `QUARKUS_OPENTELEMETRY_TRACER_EXPORTER_OTLP_ENDPOINT`<br>`quarkus.opentelemetry.tracer.exporter.otlp.endpoint` | *string* | | The OTLP endpoint of the OpenTelemetry Collector to connect to. The endpoint must start with either `http://` or `https://`. |
+
 Please refer to the
-[Jaeger client documentation](https://github.com/jaegertracing/jaeger-client-java/blob/master/jaeger-core/README.md)
-for details regarding configuration.
+[Quarkus OpenTelemetry documentation](https://quarkus.io/guides/opentelemetry#quarkus-opentelemetry-exporter-otlp_configuration)
+for further configuration trace exporter options.
 
-## Configuring usage of Jaeger tracing (included in Docker images)
+## OpenTracing instrumentation
 
-The Maven based Hono build process does not include the Jaeger client libraries by default. In order to include them,
-the `jaeger` Maven profile needs to be activated:
-
-~~~sh
-mvn clean install -Pbuild-docker-image,jaeger
-~~~
+[OpenTracing](https://opentracing.io/) is a predecessor to [OpenTelemetry](https://opentelemetry.io/). Hono components
+still use OpenTracing APIs, but use the *OpenTracing shim* from the OpenTelemetry SDK as OpenTracing implementation,
+letting traces be exported in the OpenTelemetry format.
 
 ## Enforcing the recording of traces for a tenant
 
@@ -124,13 +135,3 @@ all traces concerning the processing of telemetry, event and command messages fo
 Furthermore, this enforced trace sampling can be restricted to only apply to messages sent in the context of a specific
 authentication identifier. Please refer to the [description of the `tracing` object]({{< ref "/api/tenant#tracing-format" >}})
 in the Tenant Information for details.
-
-## Enabling Jaeger Client Metrics
-
-The Jaeger client contained in Hono components can be configured to report metrics via Micrometer. By default,
-reporting of these metrics is disabled. In order to enable it, Hono needs to be compiled setting the
-*jaeger.metrics.enabled* Maven property to `true`:
-
-```sh
-mvn clean install -Djaeger.metrics.enabled=true -Pmetrics-prometheus,jaeger,build-docker-image
-```

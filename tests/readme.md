@@ -97,20 +97,10 @@ mvn verify -Prun-tests -Dhono.deviceregistry.type=file
 
 ### Running the Tests with the Jaeger tracing component
 
-The tests can be run in such a way, that the OpenTracing trace spans created in the Hono components
-as part of a test run can be inspected later on. The OpenTracing component used for this is Jaeger.
+The tests can be run in such a way, that the OpenTelemetry trace spans created in the Hono components
+as part of a test run can be inspected later on. The tracing component used for this is Jaeger.
 
-To include the Jaeger client, build the Hono Docker images using the `jaeger` Maven profile:
-
-```sh
-# in the "hono" folder containing the source code
-mvn clean install -Pbuild-docker-image,metrics-prometheus,jaeger
-```
-
-(Add a `-Ddocker.host` property definition if needed, as described in the
-[Developer Guide](https://www.eclipse.org/hono/docs/dev-guide/building_hono/).)
-
-Then run the tests using the `jaeger` Maven profile:
+Run the tests using the `jaeger` Maven profile:
 
 ```sh
 # in directory: hono/tests/

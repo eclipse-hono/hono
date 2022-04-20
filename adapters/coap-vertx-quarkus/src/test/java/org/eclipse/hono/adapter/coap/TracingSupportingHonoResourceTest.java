@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,7 +22,6 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.RETURNS_SELF;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -31,7 +30,6 @@ import java.util.stream.Stream;
 
 import org.eclipse.californium.core.coap.CoAP;
 import org.eclipse.californium.core.coap.CoAP.Code;
-import org.eclipse.californium.core.coap.Option;
 import org.eclipse.californium.core.coap.Request;
 import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.network.Endpoint;
@@ -53,8 +51,6 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.Tracer.SpanBuilder;
-import io.opentracing.propagation.Binary;
-import io.opentracing.propagation.Format;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 
@@ -141,43 +137,6 @@ public class TracingSupportingHonoResourceTest {
     }
 
     /**
-     * Verifies that the resource uses the SpanContext extracted from a CoAP request
-     * as the parent of the newly created Span.
-     */
-    @Test
-    public void testHandleRequestExtractsParentTraceContext() {
-
-        final SpanContext extractedContext = mock(SpanContext.class);
-        when(tracer.extract(eq(Format.Builtin.BINARY), any(Binary.class))).thenReturn(extractedContext);
-
-        final Request request = new Request(Code.POST);
-        request.getOptions().addOption(new Option(CoapOptionInjectExtractAdapter.OPTION_TRACE_CONTEXT));
-        final Exchange exchange = newExchange(request);
-        resource.handleRequest(exchange);
-
-        verify(tracer).buildSpan(eq(Code.POST.toString()));
-        verify(spanBuilder).withTag(eq(Tags.SPAN_KIND.getKey()), eq(Tags.SPAN_KIND_SERVER.toString()));
-        verify(spanBuilder).addReference(eq(References.CHILD_OF), eq(extractedContext));
-    }
-
-    /**
-     * Verifies that the resource does not set a parent on the newly created Span if the CoAP request
-     * does not contain a trace context option.
-     */
-    @Test
-    public void testExtractFromEmptyOptionSet() {
-
-        final Request request = new Request(Code.POST);
-        final Exchange exchange = newExchange(request);
-        resource.handleRequest(exchange);
-
-        verify(tracer, never()).extract(eq(Format.Builtin.BINARY), any(Binary.class));
-        verify(tracer).buildSpan(eq(Code.POST.toString()));
-        verify(spanBuilder).withTag(eq(Tags.SPAN_KIND.getKey()), eq(Tags.SPAN_KIND_SERVER.toString()));
-        verify(spanBuilder).addReference(eq(References.CHILD_OF), isNull());
-    }
-
-    /**
      * Verifies that the resource sets the trace sampling priority on the newly created Span if the CoAP request
      * belongs to a tenant for which a specific sampling priority is configured.
      */
@@ -195,7 +154,7 @@ public class TracingSupportingHonoResourceTest {
         resource.handleRequest(exchange);
 
         verify(tracer).buildSpan(eq(Code.POST.toString()));
-        verify(spanBuilder).withTag(eq(Tags.SPAN_KIND.getKey()), eq(Tags.SPAN_KIND_SERVER.toString()));
+        verify(spanBuilder).withTag(eq(Tags.SPAN_KIND.getKey()), eq(Tags.SPAN_KIND_SERVER));
         verify(spanBuilder).addReference(eq(References.CHILD_OF), isNull());
         // verify sampling prio has been set to 0 (corresponding to TracingSamplingMode.NONE)
         verify(span).setTag(eq(Tags.SAMPLING_PRIORITY.getKey()), eq(0));
@@ -220,7 +179,7 @@ public class TracingSupportingHonoResourceTest {
         resource.handleRequest(exchange);
 
         verify(tracer).buildSpan(eq(Code.POST.toString()));
-        verify(spanBuilder).withTag(eq(Tags.SPAN_KIND.getKey()), eq(Tags.SPAN_KIND_SERVER.toString()));
+        verify(spanBuilder).withTag(eq(Tags.SPAN_KIND.getKey()), eq(Tags.SPAN_KIND_SERVER));
         verify(spanBuilder).addReference(eq(References.CHILD_OF), isNull());
         // verify sampling prio has been set to 1 (corresponding to TracingSamplingMode.ALL)
         verify(span).setTag(eq(Tags.SAMPLING_PRIORITY.getKey()), eq(1));

@@ -65,19 +65,19 @@ hono:
       bootstrap.servers: "${hono.kafka.bootstrap.servers}"
 
 quarkus:
-  jaeger:
-    agent-host-port: "${jaeger.agent-host-port}"
-    propagation: "${jaeger.propagation}"
-    sampler-manager-host-port: "${jaeger.sampler-manager-host-port}"
-    service-name: "${hono.registration.host}"
+  application:
+    name: "${hono.registration.host}"
+  opentelemetry:
+    tracer:
+      exporter:
+        otlp:
+          endpoint: "${otel-collector.endpoint}"
   log:
     console:
       color: true
     level: INFO
     min-level: TRACE
     category:
-      "io.quarkus.jaeger":
-        level: DEBUG
       "io.quarkus.vertx.core.runtime":
         level: DEBUG
   vertx:
