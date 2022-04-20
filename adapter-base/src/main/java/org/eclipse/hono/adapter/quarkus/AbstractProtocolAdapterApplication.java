@@ -78,11 +78,13 @@ import org.eclipse.hono.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.client.telemetry.kafka.KafkaBasedEventSender;
 import org.eclipse.hono.client.telemetry.kafka.KafkaBasedTelemetrySender;
 import org.eclipse.hono.client.util.MessagingClientProvider;
+import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.notification.NotificationConstants;
 import org.eclipse.hono.notification.NotificationEventBusSupport;
 import org.eclipse.hono.notification.NotificationReceiver;
 import org.eclipse.hono.service.cache.Caches;
 import org.eclipse.hono.service.quarkus.AbstractServiceApplication;
+import org.eclipse.hono.service.util.ServiceClientAdapter;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.MessagingType;
@@ -322,10 +324,10 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
 
         final DeviceRegistrationClient registrationClient = registrationClient();
 
-        final MessagingClientProvider<TelemetrySender> telemetrySenderProvider = new MessagingClientProvider<>();
-        final MessagingClientProvider<EventSender> eventSenderProvider = new MessagingClientProvider<>();
-        final MessagingClientProvider<CommandResponseSender> commandResponseSenderProvider = new MessagingClientProvider<>();
-        final KafkaClientMetricsSupport kafkaClientMetricsSupport = kafkaClientMetricsSupport(kafkaMetricsOptions);
+        final var telemetrySenderProvider = new MessagingClientProvider<TelemetrySender>();
+        final var eventSenderProvider = new MessagingClientProvider<EventSender>();
+        final var commandResponseSenderProvider = new MessagingClientProvider<CommandResponseSender>();
+        final var kafkaClientMetricsSupport = kafkaClientMetricsSupport(kafkaMetricsOptions);
         final var tenantClient = tenantClient();
 
         if (kafkaEventConfig.isConfigured()) {
@@ -334,10 +336,18 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             final KafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory.sharedFactory(vertx);
             factory.setMetricsSupport(kafkaClientMetricsSupport);
 
-            telemetrySenderProvider.setClient(new KafkaBasedTelemetrySender(vertx, factory, kafkaTelemetryConfig,
-                    protocolAdapterProperties.isDefaultsEnabled(), tracer));
-            eventSenderProvider.setClient(new KafkaBasedEventSender(vertx, factory, kafkaEventConfig,
-                    protocolAdapterProperties.isDefaultsEnabled(), tracer));
+            telemetrySenderProvider.setClient(new KafkaBasedTelemetrySender(
+                    vertx,
+                    factory,
+                    kafkaTelemetryConfig,
+                    protocolAdapterProperties.isDefaultsEnabled(),
+                    tracer));
+            eventSenderProvider.setClient(new KafkaBasedEventSender(
+                    vertx,
+                    factory,
+                    kafkaEventConfig,
+                    protocolAdapterProperties.isDefaultsEnabled(),
+                    tracer));
             commandResponseSenderProvider.setClient(new KafkaBasedCommandResponseSender(
                     vertx,
                     factory,
@@ -354,8 +364,10 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                             protocolAdapterProperties.isJmsVendorPropsEnabled()));
         }
 
-        final MessagingClientProviders messagingClientProviders = new MessagingClientProviders(telemetrySenderProvider,
-                eventSenderProvider, commandResponseSenderProvider);
+        final MessagingClientProviders messagingClientProviders = new MessagingClientProviders(
+                telemetrySenderProvider,
+                eventSenderProvider,
+                commandResponseSenderProvider);
 
         if (commandRouterConfig.isHostConfigured()) {
             final CommandRouterClient commandRouterClient = commandRouterClient();
@@ -608,6 +620,9 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             final ClientConfigProperties notificationConfig = new ClientConfigProperties(downstreamSenderConfig);
             notificationConfig.setServerRole("Notification");
             notificationReceiver = new ProtonBasedNotificationReceiver(HonoConnection.newConnection(vertx, notificationConfig, tracer));
+        }
+        if (notificationReceiver instanceof ServiceClient serviceClient) {
+            healthCheckServer.registerHealthCheckResources(ServiceClientAdapter.forClient(serviceClient));
         }
         final var notificationSender = NotificationEventBusSupport.getNotificationSender(vertx);
         NotificationConstants.DEVICE_REGISTRY_NOTIFICATION_TYPES.forEach(notificationType ->

@@ -36,6 +36,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Checkpoint;
@@ -80,19 +81,22 @@ public class KafkaBasedNotificationReceiverTest {
     @Test
     public void testCreateConsumer(final VertxTestContext ctx) {
 
+        final Promise<Void> readyTracker = Promise.promise();
         final var receiver = createReceiver();
-
         receiver.registerConsumer(TenantChangeNotification.TYPE, notification -> {});
-
+        receiver.addOnKafkaConsumerReadyHandler(readyTracker);
         receiver.start()
-                .onComplete(ctx.succeeding(v -> ctx.verify(() -> {
+            .compose(ok -> readyTracker.future())
+            .onComplete(ctx.succeeding(v -> {
+                ctx.verify(() -> {
                     final Set<String> subscription = mockConsumer.subscription();
                     assertThat(subscription).isNotNull();
                     assertThat(subscription)
                             .contains(NotificationTopicHelper.getTopicName(TenantChangeNotification.TYPE));
                     assertThat(mockConsumer.closed()).isFalse();
-                    ctx.completeNow();
-                })));
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -103,16 +107,17 @@ public class KafkaBasedNotificationReceiverTest {
     @Test
     public void testStopClosesConsumer(final VertxTestContext ctx) {
 
+        final Promise<Void> readyTracker = Promise.promise();
         final var receiver = createReceiver();
-
         receiver.registerConsumer(TenantChangeNotification.TYPE, notification -> {});
-
+        receiver.addOnKafkaConsumerReadyHandler(readyTracker);
         receiver.start()
-                .compose(v -> receiver.stop())
-                .onComplete(ctx.succeeding(v -> ctx.verify(() -> {
-                    assertThat(mockConsumer.closed()).isTrue();
-                    ctx.completeNow();
-                })));
+            .compose(ok -> readyTracker.future())
+            .compose(v -> receiver.stop())
+            .onComplete(ctx.succeeding(v -> ctx.verify(() -> {
+                assertThat(mockConsumer.closed()).isTrue();
+                ctx.completeNow();
+            })));
     }
 
     /**
@@ -192,6 +197,7 @@ public class KafkaBasedNotificationReceiverTest {
     private ConsumerRecord<String, JsonObject> createKafkaRecord(
             final AbstractNotification notification,
             final long offset) {
+
         final var json = JsonObject.mapFrom(notification);
         final String topicName = NotificationTopicHelper.getTopicName(notification.getType());
         return new ConsumerRecord<>(topicName, 0, offset, null, json);

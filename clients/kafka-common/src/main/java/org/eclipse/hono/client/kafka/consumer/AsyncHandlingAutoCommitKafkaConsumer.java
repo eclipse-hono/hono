@@ -327,9 +327,10 @@ public class AsyncHandlingAutoCommitKafkaConsumer<V> extends HonoKafkaConsumer<V
 
     @Override
     public Future<Void> start() {
-        return super.start().onComplete(v -> {
+        addOnKafkaConsumerReadyHandler(ready -> {
             periodicCommitTimerId = vertx.setPeriodic(commitIntervalMillis, tid -> doPeriodicCommit());
         });
+        return super.start();
     }
 
     @Override

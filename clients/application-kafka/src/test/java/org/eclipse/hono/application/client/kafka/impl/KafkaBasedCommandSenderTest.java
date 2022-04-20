@@ -82,6 +82,7 @@ public class KafkaBasedCommandSenderTest {
     private static final Logger LOG = LoggerFactory.getLogger(KafkaBasedCommandSenderTest.class);
 
     private KafkaBasedCommandSender commandSender;
+    private Promise<Void> commandSenderReadyTracker;
     private MessagingKafkaConsumerConfigProperties consumerConfig;
     private MessagingKafkaProducerConfigProperties producerConfig;
     private MockProducer<String, Buffer> mockProducer;
@@ -112,12 +113,14 @@ public class KafkaBasedCommandSenderTest {
         mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         final var producerFactory = CachingKafkaProducerFactory
                 .testFactory(vertx, (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+        commandSenderReadyTracker = Promise.promise();
         commandSender = new KafkaBasedCommandSender(
                 vertx,
                 consumerConfig,
                 producerFactory,
                 producerConfig,
                 tracer);
+        commandSender.addOnKafkaProducerReadyHandler(commandSenderReadyTracker);
         tenantId = UUID.randomUUID().toString();
         deviceId = UUID.randomUUID().toString();
     }
@@ -142,15 +145,17 @@ public class KafkaBasedCommandSenderTest {
         final String correlationId = UUID.randomUUID().toString();
         final String subject = "setVolume";
 
-        commandSender.sendAsyncCommand(
-                tenantId,
-                deviceId,
-                subject,
-                correlationId,
-                new JsonObject().put("value", 20).toBuffer(),
-                "application/json",
-                Map.of("foo", "bar"),
-                NoopSpan.INSTANCE.context())
+        commandSender.start()
+            .compose(ok -> commandSenderReadyTracker.future())
+            .compose(ok -> commandSender.sendAsyncCommand(
+                    tenantId,
+                    deviceId,
+                    subject,
+                    correlationId,
+                    new JsonObject().put("value", 20).toBuffer(),
+                    "application/json",
+                    Map.of("foo", "bar"),
+                    NoopSpan.INSTANCE.context()))
             .onComplete(ctx.succeeding(ok -> {
                 ctx.verify(() -> {
                     final ProducerRecord<String, Buffer> commandRecord = mockProducer.history().get(0);
@@ -191,13 +196,15 @@ public class KafkaBasedCommandSenderTest {
     public void testSendOneWayCommandSucceeds(final VertxTestContext ctx) {
         final String subject = "setVolume";
 
-        commandSender.sendOneWayCommand(
-                tenantId,
-                deviceId,
-                subject,
-                new JsonObject().put("value", 20).toBuffer(),
-                "application/json",
-                NoopSpan.INSTANCE.context())
+        commandSender.start()
+            .compose(ok -> commandSenderReadyTracker.future())
+            .compose(ok -> commandSender.sendOneWayCommand(
+                    tenantId,
+                    deviceId,
+                    subject,
+                    new JsonObject().put("value", 20).toBuffer(),
+                    "application/json",
+                    NoopSpan.INSTANCE.context()))
             .onComplete(ctx.succeeding(ok -> {
                 ctx.verify(() -> {
                     final ProducerRecord<String, Buffer> commandRecord = mockProducer.history().get(0);
@@ -231,15 +238,17 @@ public class KafkaBasedCommandSenderTest {
         final Context context = vertx.getOrCreateContext();
         commandSender.setKafkaConsumerSupplier(() -> mockConsumer);
         context.runOnContext(v -> {
-            commandSender.sendCommand(
-                    tenantId,
-                    deviceId,
-                    "testCommand",
-                    Buffer.buffer("data"),
-                    "text/plain",
-                    (Map<String, Object>) null, // no failure header props
-                    Duration.ofMillis(5),
-                    null)
+            commandSender.start()
+                .compose(ok -> commandSenderReadyTracker.future())
+                .compose(ok -> commandSender.sendCommand(
+                        tenantId,
+                        deviceId,
+                        "testCommand",
+                        Buffer.buffer("data"),
+                        "text/plain",
+                        (Map<String, Object>) null, // no failure header props
+                        Duration.ofMillis(5),
+                        null))
                 .onComplete(ctx.failing(error -> {
                     ctx.verify(() -> {
                         // VERIFY that the error is caused due to time out.
@@ -311,14 +320,16 @@ public class KafkaBasedCommandSenderTest {
                 });
             }
         };
-        final var producerFactory = CachingKafkaProducerFactory
-                .testFactory(vertx, (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+        final var producerFactory = CachingKafkaProducerFactory.testFactory(
+                vertx,
+                (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
         commandSender = new KafkaBasedCommandSender(
                 vertx,
                 consumerConfig,
                 producerFactory,
                 producerConfig,
                 NoopTracerFactory.create());
+        commandSender.addOnKafkaProducerReadyHandler(commandSenderReadyTracker);
 
         final String command = "setVolume";
         final ConsumerRecord<String, Buffer> commandResponseRecord = commandResponseRecord(tenantId,
@@ -341,29 +352,29 @@ public class KafkaBasedCommandSenderTest {
 
         context.runOnContext(v -> {
             // Send a command to the device
-            commandSender.sendCommand(tenantId, deviceId, command, Buffer.buffer("test"), "text/plain")
-                    .onComplete(ar -> {
-                        ctx.verify(() -> {
-                            if (expectSuccess) {
-                                assertThat(ar.succeeded()).isTrue(); // assert that send operation succeeded
+            commandSender.start()
+                .compose(ok -> commandSenderReadyTracker.future())
+                .compose(ok -> commandSender.sendCommand(tenantId, deviceId, command, Buffer.buffer("test"), "text/plain"))
+                .onComplete(ar -> {
+                    ctx.verify(() -> {
+                        if (expectSuccess) {
+                            assertThat(ar.succeeded()).isTrue(); // assert that send operation succeeded
 
-                                // Verify the command response that has been received
-                                final DownstreamMessage<KafkaMessageContext> response = ar.result();
-                                assertThat(response.getDeviceId()).isEqualTo(deviceId);
-                                assertThat(response.getStatus()).isEqualTo(responseStatus);
-                                assertThat(response.getPayload().toString()).isEqualTo(responsePayload);
-                            } else {
-                                assertThat(ar.succeeded()).isFalse(); // assert that send operation failed
-                                assertThat(ar.cause()).isInstanceOf(ServiceInvocationException.class);
-                                assertThat(((ServiceInvocationException) ar.cause()).getErrorCode())
-                                        .isEqualTo(expectedStatusCode);
-                                assertThat(ar.cause().getMessage()).isEqualTo(responsePayload);
-                            }
-                        });
-                        ctx.completeNow();
-                        mockConsumer.close();
-                        commandSender.stop();
+                            // Verify the command response that has been received
+                            final DownstreamMessage<KafkaMessageContext> response = ar.result();
+                            assertThat(response.getDeviceId()).isEqualTo(deviceId);
+                            assertThat(response.getStatus()).isEqualTo(responseStatus);
+                            assertThat(response.getPayload().toString()).isEqualTo(responsePayload);
+                        } else {
+                            assertThat(ar.succeeded()).isFalse(); // assert that send operation failed
+                            assertThat(ar.cause()).isInstanceOf(ServiceInvocationException.class);
+                            assertThat(((ServiceInvocationException) ar.cause()).getErrorCode())
+                                    .isEqualTo(expectedStatusCode);
+                            assertThat(ar.cause().getMessage()).isEqualTo(responsePayload);
+                        }
                     });
+                    ctx.completeNow();
+                });
         });
     }
 

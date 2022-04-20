@@ -112,17 +112,16 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender<Buf
     @SuppressWarnings("rawtypes")
     @Override
     public Future<Void> stop() {
-        // assemble futures for closing the command response consumers
-        final List<Future> stopKafkaClientsTracker = commandResponseConsumers.values().stream()
-                .map(HonoKafkaConsumer::stop)
-                .collect(Collectors.toList());
-        commandResponseConsumers.clear();
 
-        // add future for closing command producer
-        stopKafkaClientsTracker.add(super.stop());
-
-        return CompositeFuture.join(stopKafkaClientsTracker)
-                .mapEmpty();
+        return super.stop()
+                .compose(ok -> {
+                    // assemble futures for closing the command response consumers
+                    final List<Future> stopKafkaClientsTracker = commandResponseConsumers.values().stream()
+                            .map(HonoKafkaConsumer::stop)
+                            .collect(Collectors.toList());
+                    commandResponseConsumers.clear();
+                    return CompositeFuture.join(stopKafkaClientsTracker).mapEmpty();
+                });
     }
 
     /**
@@ -424,11 +423,14 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender<Buf
             getCommandResponseHandler(tenantId)
                     .handle(new KafkaDownstreamMessage(record));
         };
+        final Promise<Void> readyTracker = Promise.promise();
         final HonoKafkaConsumer<Buffer> consumer = new HonoKafkaConsumer<>(vertx, Set.of(topic), recordHandler, consumerConfig);
         consumer.setPollTimeout(Duration.ofMillis(this.consumerConfig.getPollTimeout()));
         Optional.ofNullable(kafkaConsumerSupplier)
                 .ifPresent(consumer::setKafkaConsumerSupplier);
+        consumer.addOnKafkaConsumerReadyHandler(readyTracker);
         return consumer.start()
+                .compose(ok -> readyTracker.future())
                 .recover(error -> {
                     LOGGER.debug("error creating command response consumer for tenant [{}]", tenantId, error);
                     TracingHelper.logError(span, "error creating command response consumer", error);

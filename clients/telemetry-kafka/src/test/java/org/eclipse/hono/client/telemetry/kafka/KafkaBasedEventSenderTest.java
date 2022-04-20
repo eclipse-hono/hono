@@ -38,6 +38,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
@@ -95,37 +96,41 @@ public class KafkaBasedEventSenderTest {
 
         final var mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         final var factory = newProducerFactory(mockProducer);
+        final Promise<Void> readyTracker = Promise.promise();
         final var sender = new KafkaBasedEventSender(vertxMock, factory, kafkaProducerConfig, true, tracer);
+        sender.addOnKafkaProducerReadyHandler(readyTracker);
 
         // WHEN sending a message
-        sender.sendEvent(tenant, device, contentType, Buffer.buffer(payload), properties, null)
-                .onComplete(ctx.succeeding(t -> {
-                    ctx.verify(() -> {
-                        // THEN the producer record is created from the given values...
-                        final var producerRecord = mockProducer.history().get(0);
+        sender.start()
+            .compose(ok -> readyTracker.future())
+            .compose(ok -> sender.sendEvent(tenant, device, contentType, Buffer.buffer(payload), properties, null))
+            .onComplete(ctx.succeeding(t -> {
+                ctx.verify(() -> {
+                    // THEN the producer record is created from the given values...
+                    final var producerRecord = mockProducer.history().get(0);
 
-                        assertThat(producerRecord.key()).isEqualTo(device.getDeviceId());
-                        assertThat(producerRecord.topic())
-                                .isEqualTo(new HonoTopic(HonoTopic.Type.EVENT, tenant.getTenantId()).toString());
-                        assertThat(producerRecord.value().toString()).isEqualTo(payload);
+                    assertThat(producerRecord.key()).isEqualTo(device.getDeviceId());
+                    assertThat(producerRecord.topic())
+                            .isEqualTo(new HonoTopic(HonoTopic.Type.EVENT, tenant.getTenantId()).toString());
+                    assertThat(producerRecord.value().toString()).isEqualTo(payload);
 
-                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(producerRecord.headers(), "foo", "bar");
-                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
-                                producerRecord.headers(),
-                                MessageHelper.SYS_HEADER_PROPERTY_TTL,
-                                5000L);
+                    KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(producerRecord.headers(), "foo", "bar");
+                    KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                            producerRecord.headers(),
+                            MessageHelper.SYS_HEADER_PROPERTY_TTL,
+                            5000L);
 
-                        // ...AND contains the standard headers
-                        KafkaClientUnitTestHelper.assertStandardHeaders(
-                                producerRecord,
-                                device.getDeviceId(),
-                                contentType,
-                                QoS.AT_LEAST_ONCE.ordinal());
+                    // ...AND contains the standard headers
+                    KafkaClientUnitTestHelper.assertStandardHeaders(
+                            producerRecord,
+                            device.getDeviceId(),
+                            contentType,
+                            QoS.AT_LEAST_ONCE.ordinal());
 
-                        verify(span).finish();
-                    });
-                    ctx.completeNow();
-                }));
+                    verify(span).finish();
+                });
+                ctx.completeNow();
+            }));
 
     }
 

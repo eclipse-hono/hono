@@ -15,6 +15,7 @@ package org.eclipse.hono.client.kafka.producer;
 
 import java.time.Duration;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
@@ -82,12 +83,18 @@ public interface KafkaProducerFactory<K, V> {
      *
      * @param producerName The name to identify the producer.
      * @param config The Kafka configuration with which the producer is to be created.
+     * @param keepTrying A guard condition that controls whether another attempt to create the producer should be
+     *                     started. Client code can set this to {@code false} in order to prevent any further attempts.
      * @param retriesTimeout The maximum time for which retries are done. Using a negative duration or {@code null}
      *                       here is interpreted as an unlimited timeout value.
      * @return A future with an existing or new producer.
+     * @throws NullPointerException if any of the parameters except retries timeout are {@code null}.
      */
-    Future<KafkaProducer<K, V>> getOrCreateProducerWithRetries(String producerName,
-            KafkaProducerConfigProperties config, Duration retriesTimeout);
+    Future<KafkaProducer<K, V>> getOrCreateProducerWithRetries(
+            String producerName,
+            KafkaProducerConfigProperties config,
+            Supplier<Boolean> keepTrying,
+            Duration retriesTimeout);
 
     /**
      * Closes the producer with the given producer name if it exists.

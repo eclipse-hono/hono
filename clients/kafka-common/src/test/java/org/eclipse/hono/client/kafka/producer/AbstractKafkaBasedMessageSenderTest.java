@@ -14,12 +14,19 @@
 
 package org.eclipse.hono.client.kafka.producer;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import java.net.HttpURLConnection;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import org.apache.kafka.clients.producer.MockProducer;
 import org.apache.kafka.common.errors.AuthorizationException;
@@ -35,10 +42,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopSpan;
 import io.opentracing.noop.NoopTracerFactory;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import io.vertx.kafka.client.producer.KafkaProducer;
 
 
 /**
@@ -46,6 +56,7 @@ import io.vertx.junit5.VertxTestContext;
  *
  */
 @ExtendWith(VertxExtension.class)
+@Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class AbstractKafkaBasedMessageSenderTest {
 
     private static final String PRODUCER_NAME = "test-producer";
@@ -65,12 +76,9 @@ public class AbstractKafkaBasedMessageSenderTest {
 
     private CachingKafkaProducerFactory<String, Buffer> newProducerFactory(
             final MockProducer<String, Buffer> mockProducer) {
-        return CachingKafkaProducerFactory
-                .testFactory(vertxMock, (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
-    }
-
-    private AbstractKafkaBasedMessageSender<Buffer> newSender(final MockProducer<String, Buffer> mockProducer) {
-        return newSender(newProducerFactory(mockProducer));
+        return CachingKafkaProducerFactory.testFactory(
+                vertxMock,
+                (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
     }
 
     private AbstractKafkaBasedMessageSender<Buffer> newSender(final KafkaProducerFactory<String, Buffer> factory) {
@@ -80,100 +88,103 @@ public class AbstractKafkaBasedMessageSenderTest {
 
     /**
      * Verifies that on start up a producer is created which is closed on shut down.
+     *
+     * @param ctx The vert.x test context.
      */
     @Test
-    public void testLifecycle() {
+    public void testLifecycle(final VertxTestContext ctx) {
+
         final var mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         final var factory = newProducerFactory(mockProducer);
         final var sender = newSender(factory);
+        final Promise<Void> readyTracker = Promise.promise();
+        sender.addOnKafkaProducerReadyHandler(readyTracker);
 
         assertThat(factory.getProducer(PRODUCER_NAME).isEmpty()).isTrue();
-        sender.start();
-        assertThat(factory.getProducer(PRODUCER_NAME).isPresent()).isTrue();
-        sender.stop();
-        assertThat(factory.getProducer(PRODUCER_NAME).isEmpty()).isTrue();
+        sender.start()
+            .compose(ok -> readyTracker.future())
+            .compose(ok -> {
+                ctx.verify(() -> assertThat(factory.getProducer(PRODUCER_NAME).isPresent())
+                        .isTrue());
+                return sender.stop();
+            })
+            .onComplete(ctx.succeeding(ok -> {
+                ctx.verify(() -> assertThat(factory.getProducer(PRODUCER_NAME).isPresent()).isFalse());
+                ctx.completeNow();
+            }));
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void testStartSucceedsEvenIfProducerIsNotReadyYet(final VertxTestContext ctx) {
+
+        final Promise<KafkaProducer<String, Buffer>> producer = Promise.promise();
+        final KafkaProducerFactory<String, Buffer> factory = mock(KafkaProducerFactory.class);
+        when(factory.getOrCreateProducerWithRetries(
+                anyString(),
+                any(KafkaProducerConfigProperties.class),
+                any(Supplier.class),
+                any(Duration.class)))
+            .thenReturn(producer.future());
+        final var sender = newSender(factory);
+        final Promise<Void> readyTracker = Promise.promise();
+        sender.addOnKafkaProducerReadyHandler(readyTracker);
+
+        sender.start()
+            .compose(ok -> {
+                ctx.verify(() -> assertThat(readyTracker.future().isComplete()).isFalse());
+                // WHEN the creation of the producer finally succeeds
+                producer.complete(mock(KafkaProducer.class));
+                return readyTracker.future();
+            })
+            .onComplete(ctx.succeedingThenComplete());
+
+    }
+
+    private void testSendFails(
+            final RuntimeException sendError,
+            final int expectedErrorCode,
+            final boolean expectProducerToBeClosed) {
+
+        final VertxTestContext ctx = new VertxTestContext();
+        // GIVEN a sender
+        final var mockProducer = KafkaClientUnitTestHelper.newMockProducer(false);
+        final var factory = newProducerFactory(mockProducer);
+        final var sender = newSender(factory);
+
+        // WHEN sending a message fails
+        final var result = sender.sendAndWaitForOutcome("topic", "tenant", "device", null, Map.of(), NoopSpan.INSTANCE);
+        mockProducer.errorNext(sendError);
+
+        result.onComplete(ctx.failing(t -> {
+            ctx.verify(() -> {
+                // THEN client sees the expected error
+                assertThat(t).isInstanceOf(ServerErrorException.class);
+                assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(expectedErrorCode);
+                assertThat(t.getCause()).isEqualTo(sendError);
+                assertThat(factory.getProducer(PRODUCER_NAME).isEmpty()).isEqualTo(expectProducerToBeClosed);
+                assertThat(mockProducer.closed()).isEqualTo(expectProducerToBeClosed);
+            });
+            ctx.completeNow();
+        }));
     }
 
     /**
      * Verifies that the send method returns the underlying error wrapped in a {@link ServerErrorException}.
-     *
-     * @param ctx The vert.x test context.
      */
     @Test
-    public void testSendFailsWithTheExpectedError(final VertxTestContext ctx) {
+    public void testSendFailsWithTheExpectedError() {
 
-        // GIVEN a sender sending a message
-        final RuntimeException expectedError = new RuntimeException("boom");
-        final var mockProducer = KafkaClientUnitTestHelper.newMockProducer(false);
-        final var sender = newSender(mockProducer);
-
-        sender.sendAndWaitForOutcome("topic", "tenant", "device", null, Map.of(), NoopSpan.INSTANCE)
-                .onComplete(ctx.failing(t -> {
-                    ctx.verify(() -> {
-                        // THEN it fails with the expected error
-                        assertThat(t).isInstanceOf(ServerErrorException.class);
-                        assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(503);
-                        assertThat(t.getCause()).isEqualTo(expectedError);
-                    });
-                    ctx.completeNow();
-                }));
-
-        // WHEN the send operation fails
-        mockProducer.errorNext(expectedError);
+        testSendFails(new RuntimeException("boom"), HttpURLConnection.HTTP_UNAVAILABLE, false);
     }
 
     /**
      * Verifies that the producer is closed when sending of a message fails with a fatal error.
-     *
-     * @param ctx The vert.x test context.
      */
     @Test
-    public void testProducerIsClosedOnFatalError(final VertxTestContext ctx) {
+    public void testProducerIsClosedOnFatalError() {
 
-        final AuthorizationException expectedError = new AuthorizationException("go away");
-
-        // GIVEN a sender sending a message
-        final var mockProducer = KafkaClientUnitTestHelper.newMockProducer(false);
-        final var factory = newProducerFactory(mockProducer);
-        newSender(factory).sendAndWaitForOutcome("topic", "tenant", "device", null, Map.of(), NoopSpan.INSTANCE)
-                .onComplete(ctx.failing(t -> {
-                    ctx.verify(() -> {
-                        // THEN the producer is removed and closed
-                        assertThat(factory.getProducer(PRODUCER_NAME).isEmpty()).isTrue();
-                        assertThat(mockProducer.closed()).isTrue();
-                    });
-                    ctx.completeNow();
-                }));
-
-        // WHEN the send operation fails
-        mockProducer.errorNext(expectedError);
-    }
-
-    /**
-     * Verifies that the producer is not closed when sending of a message fails with a non-fatal error.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @Test
-    public void testProducerIsNotClosedOnNonFatalError(final VertxTestContext ctx) {
-
-        final RuntimeException expectedError = new RuntimeException("foo");
-
-        // GIVEN a sender sending a message
-        final var mockProducer = KafkaClientUnitTestHelper.newMockProducer(false);
-        final var factory = newProducerFactory(mockProducer);
-        newSender(factory).sendAndWaitForOutcome("topic", "tenant", "device", null, Map.of(), NoopSpan.INSTANCE)
-                .onComplete(ctx.failing(t -> {
-                    ctx.verify(() -> {
-                        // THEN the producer is present and still open
-                        assertThat(factory.getProducer(PRODUCER_NAME).isPresent()).isTrue();
-                        assertThat(mockProducer.closed()).isFalse();
-                    });
-                    ctx.completeNow();
-                }));
-
-        // WHEN the send operation fails
-        mockProducer.errorNext(expectedError);
+        testSendFails(new AuthorizationException("go away"), HttpURLConnection.HTTP_UNAVAILABLE, true);
     }
 
     /**
@@ -187,8 +198,12 @@ public class AbstractKafkaBasedMessageSenderTest {
         // WHEN sending a message with no properties
         final var mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         final var factory = newProducerFactory(mockProducer);
-
-        newSender(factory).sendAndWaitForOutcome("topic", "tenant", "device", null, Map.of(), NoopSpan.INSTANCE)
+        final Promise<Void> readyTracker = Promise.promise();
+        final var sender = newSender(factory);
+        sender.addOnKafkaProducerReadyHandler(readyTracker);
+        sender.start()
+            .compose(ok -> readyTracker.future())
+            .compose(ok -> sender.sendAndWaitForOutcome("topic", "tenant", "device", null, Map.of(), NoopSpan.INSTANCE))
             .onComplete(ctx.succeeding(t -> {
                 ctx.verify(() -> {
                     final Headers headers = mockProducer.history().get(0).headers();
@@ -216,8 +231,12 @@ public class AbstractKafkaBasedMessageSenderTest {
         // WHEN sending the message
         final var mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         final var factory = newProducerFactory(mockProducer);
-
-        newSender(factory).sendAndWaitForOutcome("topic", "tenant", "device", null, properties, NoopSpan.INSTANCE)
+        final Promise<Void> readyTracker = Promise.promise();
+        final var sender = newSender(factory);
+        sender.addOnKafkaProducerReadyHandler(readyTracker);
+        sender.start()
+            .compose(ok -> readyTracker.future())
+            .compose(ok -> sender.sendAndWaitForOutcome("topic", "tenant", "device", null, properties, NoopSpan.INSTANCE))
             .onComplete(ctx.succeeding(t -> {
                 ctx.verify(() -> {
                     // THEN the creation time is preserved

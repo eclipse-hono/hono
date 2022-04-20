@@ -21,6 +21,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
@@ -62,11 +63,11 @@ public class KafkaClientFactoryTest {
             return client;
         };
         kafkaClientFactory.createClientWithRetries(clientSupplier, bootstrapServers, Duration.ofSeconds(20))
-                .onComplete(ar -> {
-                    assertThat(ar.succeeded()).isTrue();
-                    assertThat(ar.result()).isEqualTo(client);
-                    assertThat(creationAttempts.get()).isEqualTo(expectedCreationAttempts);
-                });
+            .onComplete(ar -> {
+                assertThat(ar.succeeded()).isTrue();
+                assertThat(ar.result()).isEqualTo(client);
+                assertThat(creationAttempts.get()).isEqualTo(expectedCreationAttempts);
+            });
     }
 
     /**
@@ -79,7 +80,7 @@ public class KafkaClientFactoryTest {
 
         // contains entry with missing port
         final String invalidBootstrapServers = "some.hostname.that.is.invalid, some.hostname.that.is.invalid:9094";
-        final Map<String, String> clientConfig = Map.of(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, invalidBootstrapServers);
+        final var clientConfig = Map.of(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, invalidBootstrapServers);
 
         final AtomicInteger creationAttempts = new AtomicInteger();
         final Supplier<Object> clientSupplier = () -> {
@@ -126,6 +127,40 @@ public class KafkaClientFactoryTest {
                     // only the number of retries before changing the clock should have been done here
                     assertThat(creationAttempts.get()).isEqualTo(expectedCreationAttempts);
                 });
+    }
+
+    /**
+     * Verifies that trying to create a client fails after client code has canceled further attempts.
+     */
+    @Test
+    public void testClientCreationFailsAfterCanceling() {
+        VertxMockSupport.runTimersImmediately(vertx);
+        final KafkaClientFactory kafkaClientFactory = new KafkaClientFactory(vertx);
+
+        final String bootstrapServers = "some.hostname.that.is.invalid:9094";
+        final var clientConfig = Map.of(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+
+        final var keepTrying = new AtomicBoolean(true);
+        final var creationAttempts = new AtomicInteger();
+        final int expectedCreationAttempts = 3;
+        final Supplier<Object> clientSupplier = () -> {
+            if (creationAttempts.incrementAndGet() == expectedCreationAttempts) {
+                // let following retries be skipped by canceling further attempts
+                keepTrying.set(false);
+            }
+            Admin.create(new HashMap<>(clientConfig));
+            throw new AssertionError("admin client creation should have thrown exception");
+        };
+        kafkaClientFactory.createClientWithRetries(
+                clientSupplier,
+                keepTrying::get,
+                bootstrapServers,
+                KafkaClientFactory.UNLIMITED_RETRIES_DURATION)
+            .onComplete(ar -> {
+                assertThat(ar.succeeded()).isFalse();
+                // only the number of retries before changing the clock should have been done here
+                assertThat(creationAttempts.get()).isEqualTo(expectedCreationAttempts);
+            });
     }
 
     /**

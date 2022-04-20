@@ -44,6 +44,7 @@ import org.eclipse.hono.client.kafka.metrics.NoopKafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.registry.TenantClient;
+import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterMetrics;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.commandrouter.impl.kafka.KafkaBasedCommandConsumerFactoryImpl;
@@ -123,43 +124,6 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
     }
 
     /**
-     * Cleans up fixture.
-     *
-     * @param ctx The vert.x test context.
-     */
-    @AfterAll
-    public static void shutDown(final VertxTestContext ctx) {
-
-        final Promise<Void> topicsDeletedPromise = Promise.promise();
-        // delete topics with a delay - overall test run might include command router tests,
-        // in which case the command router kafka consumer will try to commit offsets for these topics once,
-        // and the topic must still exist then, otherwise there will be errors and delays. So wait until the commits have happened.
-        vertx.setTimer(AsyncHandlingAutoCommitKafkaConsumer.DEFAULT_COMMIT_INTERVAL.toMillis(), tid -> {
-            final Set<String> topicsToDelete = new HashSet<>(topicsToDeleteAfterTest);
-            topicsToDeleteAfterTest.clear();
-            final Promise<Void> resultPromise = Promise.promise();
-            adminClient.deleteTopics(new ArrayList<>(topicsToDelete), resultPromise);
-            resultPromise.future()
-                    .onFailure(thr -> LOG.info("error deleting test topics", thr))
-                    .onSuccess(v -> LOG.debug("done deleting test topics (with {}s delay)",
-                            AsyncHandlingAutoCommitKafkaConsumer.DEFAULT_COMMIT_INTERVAL.toSeconds()))
-                    .onComplete(topicsDeletedPromise);
-        });
-
-        final Promise<Void> producerClosePromise = Promise.promise();
-        kafkaProducer.close(producerClosePromise);
-        CompositeFuture.all(producerClosePromise.future(), topicsDeletedPromise.future())
-                .onComplete(ar -> {
-                    adminClient.close();
-                    adminClient = null;
-                    kafkaProducer = null;
-                    vertx.close();
-                    vertx = null;
-                })
-                .onComplete(ctx.succeedingThenComplete());
-    }
-
-    /**
      * Logs the current test's display name.
      *
      * @param testInfo The test meta data.
@@ -177,11 +141,43 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
     @AfterEach
     void cleanupAfterTest(final VertxTestContext ctx) {
         @SuppressWarnings("rawtypes")
-        final List<Future> stopFutures = new ArrayList<>();
-        componentsToStopAfterTest.forEach(component -> stopFutures.add(component.stop()));
+        final List<Future> stopFutures = componentsToStopAfterTest.stream()
+            .map(component -> component.stop()
+                    .onSuccess(ok -> LOG.info("stopped component of type {}", component.getClass().getName()))
+                    .onFailure(t -> LOG.info("failed to stop component of type {}", component.getClass().getName(), t)))
+            .collect(Collectors.toList());
         componentsToStopAfterTest.clear();
         CompositeFuture.all(stopFutures)
                 .onComplete(ctx.succeedingThenComplete());
+    }
+
+    /**
+     * Cleans up fixture.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @AfterAll
+    public static void shutDown(final VertxTestContext ctx) {
+
+        final Promise<Void> topicsDeletedPromise = Promise.promise();
+        // delete topics with a delay - overall test run might include command router tests,
+        // in which case the command router kafka consumer will try to commit offsets for these topics once,
+        // and the topic must still exist then, otherwise there will be errors and delays. So wait until the
+        // commits have happened.
+        vertx.setTimer(AsyncHandlingAutoCommitKafkaConsumer.DEFAULT_COMMIT_INTERVAL.toMillis(), tid -> {
+            final Set<String> topicsToDelete = new HashSet<>(topicsToDeleteAfterTest);
+            topicsToDeleteAfterTest.clear();
+            adminClient.deleteTopics(new ArrayList<>(topicsToDelete))
+                .onFailure(thr -> LOG.info("error deleting test topics", thr))
+                .onSuccess(v -> LOG.debug("done deleting test topics (with {}s delay)",
+                        AsyncHandlingAutoCommitKafkaConsumer.DEFAULT_COMMIT_INTERVAL.toSeconds()))
+                .onComplete(topicsDeletedPromise);
+        });
+
+        topicsDeletedPromise.future()
+            .compose(ok -> CompositeFuture.all(adminClient.close(), kafkaProducer.close()))
+            .compose(ok -> vertx.close())
+            .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -226,12 +222,18 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
 
         final Context vertxContext = vertx.getOrCreateContext();
         vertxContext.runOnContext(v0 -> {
-            final HonoKafkaConsumer internalConsumer = getInternalCommandConsumer(recordHandler);
-            final KafkaBasedCommandConsumerFactoryImpl consumerFactory = getKafkaBasedCommandConsumerFactory(
+            final Promise<Void> consumerTracker = Promise.promise();
+            final var internalConsumer = getInternalCommandConsumer(recordHandler);
+            internalConsumer.addOnKafkaConsumerReadyHandler(consumerTracker);
+            final Promise<Void> factoryTracker = Promise.promise();
+            final var consumerFactory = getKafkaBasedCommandConsumerFactory(
                     targetAdapterInstanceGetterCompletionFutureSupplier, tenantId);
-            CompositeFuture.join(internalConsumer.start(), consumerFactory.start())
-                    .compose(f -> createCommandConsumer(tenantId, consumerFactory))
-                    .onComplete(setup.succeedingThenComplete());
+            consumerFactory.addOnFactoryReadyHandler(factoryTracker);
+            CompositeFuture.all(
+                    internalConsumer.start().compose(ok -> consumerTracker.future()),
+                    consumerFactory.start().compose(ok -> factoryTracker.future()))
+                .compose(f -> createCommandConsumer(tenantId, consumerFactory))
+                .onComplete(setup.succeedingThenComplete());
         });
 
         assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
@@ -312,7 +314,7 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
             }
         };
         final Promise<Void> firstConsumerAllGetAdapterInstanceInvocationsDone = Promise.promise();
-        final LinkedList<Promise<Void>> firstConsumerGetAdapterInstancePromisesQueue = new LinkedList<>();
+        final Deque<Promise<Void>> firstConsumerGetAdapterInstancePromisesQueue = new LinkedList<>();
         // don't let getting the target adapter instance finish immediately
         final Supplier<Future<Void>> firstConsumerGetAdapterInstanceSupplier = () -> {
             final Promise<Void> resultPromise = Promise.promise();
@@ -330,13 +332,19 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
         final AtomicReference<KafkaBasedCommandConsumerFactoryImpl> consumerFactory1Ref = new AtomicReference<>();
         final Context vertxContext = vertx.getOrCreateContext();
         vertxContext.runOnContext(v0 -> {
-            final HonoKafkaConsumer internalConsumer = getInternalCommandConsumer(recordHandler);
-            final KafkaBasedCommandConsumerFactoryImpl consumerFactory1 = getKafkaBasedCommandConsumerFactory(
+            final Promise<Void> consumerTracker = Promise.promise();
+            final var internalConsumer = getInternalCommandConsumer(recordHandler);
+            internalConsumer.addOnKafkaConsumerReadyHandler(consumerTracker);
+            final Promise<Void> factoryTracker = Promise.promise();
+            final var consumerFactory1 = getKafkaBasedCommandConsumerFactory(
                     firstConsumerGetAdapterInstanceSupplier, tenantId);
+            consumerFactory1.addOnFactoryReadyHandler(factoryTracker);
             consumerFactory1Ref.set(consumerFactory1);
-            CompositeFuture.join(internalConsumer.start(), consumerFactory1.start())
-                    .compose(f -> createCommandConsumer(tenantId, consumerFactory1))
-                    .onComplete(setup.succeedingThenComplete());
+            CompositeFuture.all(
+                    internalConsumer.start().compose(ok -> consumerTracker.future()),
+                    consumerFactory1.start().compose(ok -> factoryTracker.future()))
+                .compose(f -> createCommandConsumer(tenantId, consumerFactory1))
+                .onComplete(setup.succeedingThenComplete());
         });
 
         assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
@@ -355,34 +363,40 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
 
         final AtomicInteger secondConsumerGetAdapterInstanceInvocations = new AtomicInteger();
         // wait for first record on internal topic to have been received ...
-        CompositeFuture.join(firstConsumerAllGetAdapterInstanceInvocationsDone.future(), firstRecordReceivedPromise.future())
+        CompositeFuture.join(
+                firstConsumerAllGetAdapterInstanceInvocationsDone.future(),
+                firstRecordReceivedPromise.future())
             .compose(v -> {
                 // ... and wait some more, making sure that the offset of the first record has been committed
                 final Promise<Void> delayPromise = Promise.promise();
                 vertx.setTimer(500, tid -> delayPromise.complete());
                 return delayPromise.future();
             })
-            .onComplete(v -> {
+            .compose(v -> {
                 LOG.info("stopping first consumer factory");
-                consumerFactory1Ref.get().stop()
-                    .onComplete(ctx.succeeding(ar -> {
-                        LOG.info("factory stopped");
-                        // no delay on getting the target adapter instance added here
-                        final KafkaBasedCommandConsumerFactoryImpl consumerFactory2 = getKafkaBasedCommandConsumerFactory(() -> {
-                            secondConsumerGetAdapterInstanceInvocations.incrementAndGet();
-                            return Future.succeededFuture();
-                        }, tenantId);
-                        consumerFactory2.start()
-                            .onComplete(ctx.succeeding(ar2 -> {
-                                LOG.info("creating command consumer in new consumer factory");
-                                createCommandConsumer(tenantId, consumerFactory2)
-                                        .onComplete(ctx.succeeding(ar3 -> {
-                                            LOG.debug("consumer created");
-                                            firstConsumerGetAdapterInstancePromisesQueue.forEach(Promise::tryComplete);
-                                        }));
-                            }));
-                    }));
-            });
+                return consumerFactory1Ref.get().stop();
+            })
+            .compose(stopped -> {
+                LOG.info("factory stopped");
+                // no delay on getting the target adapter instance added here
+                final Promise<Void> readyTracker = Promise.promise();
+                final var consumerFactory2 = getKafkaBasedCommandConsumerFactory(() -> {
+                    secondConsumerGetAdapterInstanceInvocations.incrementAndGet();
+                    return Future.succeededFuture();
+                }, tenantId);
+                consumerFactory2.addOnFactoryReadyHandler(readyTracker);
+                return consumerFactory2.start()
+                        .compose(started -> readyTracker.future())
+                        .map(consumerFactory2);
+            })
+            .compose(consumerFactory2 -> {
+                LOG.info("creating command consumer in new consumer factory");
+                return createCommandConsumer(tenantId, consumerFactory2);
+            })
+            .onComplete(ctx.succeeding(ok -> {
+                LOG.debug("consumer created");
+                firstConsumerGetAdapterInstancePromisesQueue.forEach(Promise::tryComplete);
+            }));
 
         final long timerId = vertx.setTimer(8000, tid -> {
             LOG.info("received records:\n{}",
@@ -397,39 +411,46 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
                 // all but the first command should have been processed by the second consumer
                 assertThat(secondConsumerGetAdapterInstanceInvocations.get()).isEqualTo(numTestCommands - 1);
             });
+            LOG.info("all records received");
             ctx.completeNow();
         }));
     }
 
-    private Future<Void> createCommandConsumer(final String tenantId,
-            final KafkaBasedCommandConsumerFactoryImpl consumerFactory) {
+    private Future<Void> createCommandConsumer(
+            final String tenantId,
+            final CommandConsumerFactory consumerFactory) {
+
         topicsToDeleteAfterTest.add(new HonoTopic(HonoTopic.Type.COMMAND, tenantId).toString());
         return consumerFactory.createCommandConsumer(tenantId, null);
     }
 
-    private HonoKafkaConsumer getInternalCommandConsumer(final Handler<KafkaConsumerRecord<String, Buffer>> recordHandler) {
+    private HonoKafkaConsumer<Buffer> getInternalCommandConsumer(
+            final Handler<KafkaConsumerRecord<String, Buffer>> recordHandler) {
+
         final Map<String, String> consumerConfig = IntegrationTestSupport.getKafkaConsumerConfig()
                 .getConsumerConfig("internal_cmd_consumer_test");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
 
         final String topic = new HonoTopic(HonoTopic.Type.COMMAND_INTERNAL, adapterInstanceId).toString();
-        final HonoKafkaConsumer honoKafkaConsumer = new HonoKafkaConsumer(vertx, Set.of(topic), recordHandler,
-                consumerConfig);
-        componentsToStopAfterTest.add(honoKafkaConsumer);
+        final var consumer = new HonoKafkaConsumer<Buffer>(vertx, Set.of(topic), recordHandler, consumerConfig);
+        componentsToStopAfterTest.add(consumer);
         topicsToDeleteAfterTest.add(topic);
-        return honoKafkaConsumer;
+        return consumer;
     }
 
     private KafkaBasedCommandConsumerFactoryImpl getKafkaBasedCommandConsumerFactory(
             final Supplier<Future<Void>> targetAdapterInstanceGetterCompletionFutureSupplier,
             final String tenantToHandleCommandsFor) {
+
         final KafkaProducerFactory<String, Buffer> producerFactory = CachingKafkaProducerFactory.sharedFactory(vertx);
         final TenantClient tenantClient = getTenantClient();
         final CommandTargetMapper commandTargetMapper = new CommandTargetMapper() {
             @Override
-            public Future<JsonObject> getTargetGatewayAndAdapterInstance(final String tenantId,
+            public Future<JsonObject> getTargetGatewayAndAdapterInstance(
+                    final String tenantId,
                     final String deviceId,
                     final SpanContext context) {
+
                 final JsonObject jsonObject = new JsonObject();
                 jsonObject.put(DeviceConnectionConstants.FIELD_ADAPTER_INSTANCE_ID, adapterInstanceId);
                 jsonObject.put(DeviceConnectionConstants.FIELD_PAYLOAD_DEVICE_ID, deviceId);
@@ -445,7 +466,7 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
         final Span span = TracingMockSupport.mockSpan();
         final Tracer tracer = TracingMockSupport.mockTracer(span);
 
-        final MessagingKafkaConsumerConfigProperties kafkaConsumerConfig = new MessagingKafkaConsumerConfigProperties();
+        final var kafkaConsumerConfig = new MessagingKafkaConsumerConfigProperties();
         kafkaConsumerConfig.setConsumerConfig(Map.of(
                 ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS));
         final CommandRouterMetrics metrics = mock(CommandRouterMetrics.class);

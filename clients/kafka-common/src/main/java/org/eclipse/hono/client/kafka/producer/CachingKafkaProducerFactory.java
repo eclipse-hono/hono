@@ -15,10 +15,12 @@ package org.eclipse.hono.client.kafka.producer;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
+import java.util.function.Supplier;
 
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.errors.AuthorizationException;
@@ -183,24 +185,34 @@ public class CachingKafkaProducerFactory<K, V> implements KafkaProducerFactory<K
     public Future<KafkaProducer<K, V>> getOrCreateProducerWithRetries(
             final String producerName,
             final KafkaProducerConfigProperties config,
+            final Supplier<Boolean> keepTrying,
             final Duration retriesTimeout) {
+
+        Objects.requireNonNull(producerName);
+        Objects.requireNonNull(config);
+        Objects.requireNonNull(keepTrying);
 
         final String bootstrapServersConfig = config.getBootstrapServers();
         return kafkaClientFactory.createClientWithRetries(
                 () -> getOrCreateProducer(producerName, config),
+                keepTrying,
                 bootstrapServersConfig,
                 retriesTimeout);
     }
 
-    private Handler<Throwable> getExceptionHandler(final String producerName, final KafkaProducer<K, V> producer, final String clientId) {
+    private Handler<Throwable> getExceptionHandler(
+            final String producerName,
+            final KafkaProducer<K, V> producer,
+            final String clientId) {
+
         return t -> {
             // this is executed asynchronously after the send operation has finished
             if (isFatalError(t)) {
                 LOG.error("fatal producer error occurred, closing producer [clientId: {}]", clientId, t);
                 activeProducers.remove(producerName);
                 producer.close()
-                        .onComplete(ar -> Optional.ofNullable(metricsSupport)
-                                .ifPresent(ms -> ms.unregisterKafkaProducer(producer.unwrap())));
+                    .onComplete(ar -> Optional.ofNullable(metricsSupport)
+                            .ifPresent(ms -> ms.unregisterKafkaProducer(producer.unwrap())));
             } else {
                 LOG.error("producer error occurred [clientId: {}]", clientId, t);
             }

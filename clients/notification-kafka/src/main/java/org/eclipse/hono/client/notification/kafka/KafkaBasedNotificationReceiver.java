@@ -72,8 +72,8 @@ public class KafkaBasedNotificationReceiver extends HonoKafkaConsumer<JsonObject
             final NotificationType<T> notificationType,
             final Handler<T> consumer) {
 
-        if (isStarted()) {
-            throw new IllegalStateException("consumers cannot be added when receiver is already started.");
+        if (!lifecycleStatus.isStopped()) {
+            throw new IllegalStateException("consumers cannot be added when receiver is already started");
         }
 
         addTopic(NotificationTopicHelper.getTopicName(notificationType));

@@ -49,6 +49,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopSpan;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
@@ -99,75 +100,79 @@ public class KafkaBasedCommandResponseSenderTest {
                 status);
         commandResponse.setAdditionalProperties(additionalProperties);
 
+        final TenantObject tenant = TenantObject.from(tenantId);
+        tenant.setResourceLimits(new ResourceLimits().setMaxTtlCommandResponse(10L));
         final Span span = TracingMockSupport.mockSpan();
         final Tracer tracer = TracingMockSupport.mockTracer(span);
         final var mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         final var factory = CachingKafkaProducerFactory
                 .testFactory(vertx, (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+        final Promise<Void> readyTracker = Promise.promise();
         final var sender = new KafkaBasedCommandResponseSender(vertx, factory, kafkaProducerConfig, tracer);
-        final TenantObject tenant = TenantObject.from(tenantId);
-        tenant.setResourceLimits(new ResourceLimits().setMaxTtlCommandResponse(10L));
+        sender.addOnKafkaProducerReadyHandler(readyTracker);
 
         // WHEN sending a command response
-        sender.sendCommandResponse(
+        sender.start()
+            .compose(ok -> readyTracker.future())
+            .compose(ok -> sender.sendCommandResponse(
                 tenant,
                 new RegistrationAssertion(deviceId),
-                commandResponse, NoopSpan.INSTANCE.context())
-                .onComplete(ctx.succeeding(t -> {
-                    ctx.verify(() -> {
-                        // THEN the producer record is created from the given values...
-                        final ProducerRecord<String, Buffer> record = mockProducer.history().get(0);
+                commandResponse, NoopSpan.INSTANCE.context()))
+            .onComplete(ctx.succeeding(t -> {
+                ctx.verify(() -> {
+                    // THEN the producer record is created from the given values...
+                    final ProducerRecord<String, Buffer> record = mockProducer.history().get(0);
 
-                        assertThat(record.key()).isEqualTo(deviceId);
-                        assertThat(record.topic())
-                                .isEqualTo(new HonoTopic(HonoTopic.Type.COMMAND_RESPONSE, tenantId).toString());
-                        assertThat(record.value().toString()).isEqualTo(payload);
+                    assertThat(record.key()).isEqualTo(deviceId);
+                    assertThat(record.topic())
+                            .isEqualTo(new HonoTopic(HonoTopic.Type.COMMAND_RESPONSE, tenantId).toString());
+                    assertThat(record.value().toString()).isEqualTo(payload);
 
-                        //Verify if the record contains the necessary headers.
-                        final Headers headers = record.headers();
-                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
-                                headers,
-                                MessageHelper.APP_PROPERTY_TENANT_ID,
-                                tenantId);
-                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
-                                headers,
-                                MessageHelper.APP_PROPERTY_DEVICE_ID,
-                                deviceId);
-                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
-                                headers,
-                                MessageHelper.SYS_PROPERTY_CORRELATION_ID,
-                                correlationId);
-                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
-                                headers,
-                                MessageHelper.APP_PROPERTY_STATUS,
-                                status);
-                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
-                                headers,
-                                MessageHelper.SYS_PROPERTY_CONTENT_TYPE,
-                                contentType);
+                    //Verify if the record contains the necessary headers.
+                    final Headers headers = record.headers();
+                    KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                            headers,
+                            MessageHelper.APP_PROPERTY_TENANT_ID,
+                            tenantId);
+                    KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                            headers,
+                            MessageHelper.APP_PROPERTY_DEVICE_ID,
+                            deviceId);
+                    KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                            headers,
+                            MessageHelper.SYS_PROPERTY_CORRELATION_ID,
+                            correlationId);
+                    KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                            headers,
+                            MessageHelper.APP_PROPERTY_STATUS,
+                            status);
+                    KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                            headers,
+                            MessageHelper.SYS_PROPERTY_CONTENT_TYPE,
+                            contentType);
 
-                        final var creationTimeHeader = headers.headers(MessageHelper.SYS_PROPERTY_CREATION_TIME);
-                        assertThat(creationTimeHeader).hasSize(1);
-                        final Long creationTimeMillis = Json.decodeValue(
-                                Buffer.buffer(creationTimeHeader.iterator().next().value()),
-                                Long.class);
-                        assertThat(creationTimeMillis).isGreaterThan(0L);
-                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
-                                headers,
-                                MessageHelper.SYS_HEADER_PROPERTY_TTL,
-                                10000L);
-                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
-                                headers,
-                                additionalHeader1Name,
-                                additionalHeader1Value);
-                        KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
-                                headers,
-                                additionalHeader2Name,
-                                additionalHeader2Value);
-                        verify(span).finish();
-                    });
-                    ctx.completeNow();
-                }));
+                    final var creationTimeHeader = headers.headers(MessageHelper.SYS_PROPERTY_CREATION_TIME);
+                    assertThat(creationTimeHeader).hasSize(1);
+                    final Long creationTimeMillis = Json.decodeValue(
+                            Buffer.buffer(creationTimeHeader.iterator().next().value()),
+                            Long.class);
+                    assertThat(creationTimeMillis).isGreaterThan(0L);
+                    KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                            headers,
+                            MessageHelper.SYS_HEADER_PROPERTY_TTL,
+                            10000L);
+                    KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                            headers,
+                            additionalHeader1Name,
+                            additionalHeader1Value);
+                    KafkaClientUnitTestHelper.assertUniqueHeaderWithExpectedValue(
+                            headers,
+                            additionalHeader2Name,
+                            additionalHeader2Value);
+                    verify(span).finish();
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**

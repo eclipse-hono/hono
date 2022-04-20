@@ -56,9 +56,9 @@ public class KafkaBasedNotificationSender extends AbstractKafkaBasedMessageSende
 
         Objects.requireNonNull(notification);
 
-        if (isStopped()) {
+        if (!lifecycleStatus.isStarted()) {
             return Future.failedFuture(
-                    new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "sender already stopped"));
+                    new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "sender not started"));
         }
 
         return createProducerRecord(notification)
