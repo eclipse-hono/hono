@@ -6,25 +6,28 @@ weight = 390
 Eclipse Hono&trade; comes with a Java client for the AMQP adapter. It is intended for the implementation of 
 (prototype) devices, (protocol) gateways or (end-to-end) tests. The client is based on Eclipse Vert.x.
 
-The starting point is the class `AmqpAdapterClientFactory`.
+The client is represented by the [AmqpAdapterClient](https://github.com/eclipse/hono/blob/master/clients/device-amqp/src/main/java/org/eclipse/hono/client/device/amqp/AmqpAdapterClient.java)
+class in the *hono-client-device-amqp* module.
+Instances can be created using the `create(HonoConnection)` factory method.
 
-The factory provides methods to get a receiver for receiving commands and a sender for each of the following actions:
+The client provides methods for each of the following operations:
 
- * send a telemetry message
- * send an event message
- * send a response to a previously received command
- 
+ * Getting a receiver for receiving command & control messages
+   <br>(via the [AmqpAdapterClient](https://github.com/eclipse/hono/blob/master/clients/device-amqp/src/main/java/org/eclipse/hono/client/device/amqp/AmqpAdapterClient.java)
+   `createCommandConsumer` / `createDeviceSpecificCommandConsumer` methods)
+ * Sending a telemetry message
+   <br>(via the inherited [TelemetrySender](https://github.com/eclipse/hono/blob/master/clients/device-amqp/src/main/java/org/eclipse/hono/client/device/amqp/TelemetrySender.java)
+   `sendTelemetry` method)
+ * Sending an event message
+   <br>(via the inherited [EventSender](https://github.com/eclipse/hono/blob/master/clients/device-amqp/src/main/java/org/eclipse/hono/client/device/amqp/EventSender.java)
+  `sendEvent` method)
+ * Sending a response to a previously received command
+   <br>(via the inherited [CommandResponder](https://github.com/eclipse/hono/blob/master/clients/device-amqp/src/main/java/org/eclipse/hono/client/device/amqp/CommandResponder.java)
+   `sendCommandResponse` method)
 
-{{% notice tip %}}
-The senders manage the underlying AMQP sender links, which are restored after temporary interruption of the connection
-(`HonoConnection` manages the automatic reconnection). To achieve this, a caching mechanism is used, so that
-defective links are replaced by new ones. The sender must be always retrieved from the factory when sending
-because otherwise the link might no longer exist.
-So, do not hold references to sender objects and re-use them for subsequent send operations!
-{{% /notice %}}
+Please refer to the javadoc of the classes for details.
 
-
-For examples of how to use the client, see the example implementation in the `AmqpExampleDevice` class.
+For examples of how to use the client, see the example implementation in the [AmqpExampleDevice](https://github.com/eclipse/hono/blob/master/examples/hono-client-examples/src/main/java/org/eclipse/hono/devices/AmqpExampleDevice.java) class.
 
 ## Usage in a Gateway
 
@@ -40,10 +43,3 @@ Subscribing for all devices does not work if multiple instances of the gateway a
 because a command is only sent to one receiver, and this may be an instance that has no connection to the device. 
 On the other hand, subscribing for a specific device once it connects to the gateway instance 
 (and closing the subscription once it disconnects) may not work for device-oriented protocols that are not connection-based.
-
-## Tracing 
-
-The AMQP Adapter Client supports tracing of the messages with [OpenTracing](https://opentracing.io/). To use tracing, each of the
-senders returned by the factory can be cast to an interface with the same name and the prefix "Traceable" 
-(e.g. cast `TelemetrySender` to `TraceableTelemetrySender`).
-The traceable interfaces provide *send* methods with an additional `SpanContext` parameter. 
