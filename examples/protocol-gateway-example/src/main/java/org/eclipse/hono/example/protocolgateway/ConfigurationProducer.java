@@ -66,7 +66,7 @@ public class ConfigurationProducer {
 
     @Produces
     @Dependent
-    AmqpAdapterClient amqpAdapterClientFactory(
+    AmqpAdapterClient amqpAdapterClient(
             final HonoConnection amqpAdapterConnection) {
 
         return AmqpAdapterClient.create(amqpAdapterConnection);
