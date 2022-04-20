@@ -41,8 +41,9 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The Spring Boot based variant of the MQTT protocol adapter has been removed.
 * Usage and implementations of the Device Connection API have been removed.
 * The Spring Boot based variant of the Command Router has been removed.
-* The `org.eclipse.hono.client.device.amqp.AmqpAdapterClientFactory` class has been moved from the *hono-client* module
-  to the new *hono-client-device-amqp* module.
+* The *amqp-device* client has been moved from the *client* module to the new *client-device-amqp* module. The
+  `org.eclipse.hono.client.device.amqp.AmqpAdapterClientFactory` class is superseded by the new
+  `org.eclipse.hono.client.device.amqp.AmqpAdapterClient` class.
 * Removed deprecated *startServiceClient*, *stopServiceClient* and *updateLastGateway* methods of class
   *org.eclipse.hono.adapter.AbstractProtocolAdapterBase*.
 * Removed deprecated *org.eclipse.hono.util.BufferResult* class.
