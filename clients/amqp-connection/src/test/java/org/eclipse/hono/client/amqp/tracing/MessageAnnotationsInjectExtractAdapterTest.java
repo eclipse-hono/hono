@@ -22,7 +22,11 @@ import org.apache.qpid.proton.codec.WritableBuffer;
 import org.apache.qpid.proton.message.Message;
 import org.junit.jupiter.api.Test;
 
-import io.jaegertracing.Configuration;
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.context.propagation.ContextPropagators;
+import io.opentelemetry.extension.trace.propagation.JaegerPropagator;
+import io.opentelemetry.opentracingshim.OpenTracingShim;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
@@ -51,9 +55,7 @@ public class MessageAnnotationsInjectExtractAdapterTest {
         final Message message = ProtonHelper.message();
         // inject the properties
         final MessageAnnotationsInjectAdapter injectAdapter = new MessageAnnotationsInjectAdapter(message, propertiesMapName);
-        testEntries.forEach((key, value) -> {
-            injectAdapter.put(key, value);
-        });
+        testEntries.forEach(injectAdapter::put);
 
         // encode the message
         final WritableBuffer.ByteBufferWrapper buffer = WritableBuffer.ByteBufferWrapper.allocate(100);
@@ -71,13 +73,15 @@ public class MessageAnnotationsInjectExtractAdapterTest {
 
 
     /**
-     * Verifies that the Jaeger tracer implementation can successfully use the adapter to inject and extract
+     * Verifies that the OpenTelemetry Tracer shim can successfully use the adapter to inject and extract
      * a SpanContext.
      */
     @Test
-    public void testJaegerTracerCanUseAdapter() {
-        final Configuration config = new Configuration("test");
-        final Tracer tracer = config.getTracer();
+    public void testTracerShimCanUseAdapter() {
+        final OpenTelemetry openTelemetry = OpenTelemetrySdk.builder()
+                .setPropagators(ContextPropagators.create(JaegerPropagator.getInstance()))
+                .build();
+        final Tracer tracer = OpenTracingShim.createTracerShim(openTelemetry);
         final Span span = tracer.buildSpan("do").start();
 
         final Message message = ProtonHelper.message();

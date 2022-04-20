@@ -63,7 +63,6 @@ public abstract class AbstractServiceBase<T extends ServiceConfigProperties> ext
      * @param opentracingTracer The tracer.
      */
     public final void setTracer(final Tracer opentracingTracer) {
-        log.info("using OpenTracing Tracer implementation [{}]", opentracingTracer.getClass().getName());
         this.tracer = Objects.requireNonNull(opentracingTracer);
     }
 

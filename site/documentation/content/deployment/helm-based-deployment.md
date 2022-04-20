@@ -17,7 +17,7 @@ instructions regarding installation and configuration.
 ## Deploying custom Container Images
 
 The chart by default installs Hono's pre-built container images. In some cases it might be desirable to build Hono
-from source, e.g. in order to use a different metrics back end or to [use Jaeger tracing]({{< relref "#using-jaeger-tracing" >}}).
+from source, e.g. in order to use a different metrics back end.
 
 The container images created as part of the build process need to be made available to the Kubernetes cluster that
 Hono should be installed to. This usually requires the images to be pushed to a (private) container registry that
@@ -31,7 +31,7 @@ for details. Once the source code has been retrieved, the build process can be s
 
 ~~~sh
 # in base directory of Hono working tree:
-mvn clean install -Pbuild-docker-image,metrics-prometheus,jaeger
+mvn clean install -Pbuild-docker-image,metrics-prometheus
 ~~~
 
 After the build process has finished, the custom container images need to be pushed to the registry so that the
@@ -90,7 +90,7 @@ In any case the build process can be started using the following command:
 
 ~~~sh
 # in base directory of Hono working tree:
-mvn clean install -Pbuild-docker-image,metrics-prometheus,jaeger
+mvn clean install -Pbuild-docker-image,metrics-prometheus
 ~~~
 
 To obtain the used Hono version and write it in a variable, use:
@@ -103,45 +103,6 @@ The newly built images can then be deployed using Helm:
 
 ~~~sh
 helm install --dependency-update -n hono --set honoImagesTag=$HONO_VERSION eclipse-hono eclipse-iot/hono
-~~~
-
-
-### Using Jaeger Tracing
-
-Hono's components are instrumented using OpenTracing to allow tracking of the distributed processing of messages
-flowing through the system. The Hono chart can be configured to report tracing information to the
-[Jaeger tracing system](https://www.jaegertracing.io/). The *Spans* reported by the components can then be viewed in a
-web browser.
-
-In order for Hono's components to use the Jaeger client for reporting tracing information, the container images need
-to be built with the `jaeger` Maven profile. Please refer to
-[Monitoring & Tracing]({{< relref "/admin-guide/monitoring-tracing-config#configuring-usage-of-jaeger-tracing-included-in-docker-images" >}})
-for details. The newly built images also need to be made available to the target Kubernetes cluster as described in the
-two previous sections.
-
-The chart can be configured to deploy and use an example Jaeger back end by means of setting the
-*jaegerBackendExample.enabled* property to `true` when running Helm:
-
-~~~sh
-helm install --dependency-update -n hono --set jaegerBackendExample.enabled=true eclipse-hono eclipse-iot/hono
-~~~
-
-This will create a Jaeger back end instance suitable for testing purposes and will configure all deployed Hono
-components to use the Jaeger back end.
-
-The following command can then be used to return the IP address with which the Jaeger UI can be accessed in a
-browser (ensure `minikube tunnel` is running when using minikube):
-
-~~~sh
-kubectl get service eclipse-hono-jaeger-query --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono
-~~~
-
-If no example Jaeger back end should be deployed but instead an existing Jaeger installation should be used,
-the chart's *jaegerAgentConf* property can be set to environment variables which are passed in to
-the Jaeger Agent that is deployed with each of Hono's components.
-
-~~~sh
-helm install --dependency-update -n hono --set jaegerAgentConf.REPORTER_TYPE=tchannel --set jaegerAgentConf.REPORTER_TCHANNEL_HOST_PORT=my-jaeger-collector:14267 eclipse-hono eclipse-iot/hono
 ~~~
 
 ### Deploying to Azure Kubernetes Service (AKS)

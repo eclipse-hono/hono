@@ -178,12 +178,13 @@
     <hono.auth-server.nativeTlsRequired>true</hono.auth-server.nativeTlsRequired>
 
     <trace.frames>0</trace.frames>
+
     <jaeger.disabled>true</jaeger.disabled>
     <jaeger.host>hono-jaeger</jaeger.host>
-    <jaeger.agent-host-port>${jaeger.host}:6831</jaeger.agent-host-port>
-    <jaeger.sampler-manager-host-port>${jaeger.host}:5778</jaeger.sampler-manager-host-port>
     <jaeger.query.port>18080</jaeger.query.port>
-    <jaeger.propagation>jaeger</jaeger.propagation>
+
+    <otel-collector.host>hono-otel-collector</otel-collector.host>
+    <otel-collector.endpoint></otel-collector.endpoint>
   </properties>
 
   <dependencies>
@@ -330,8 +331,18 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>io.jaegertracing</groupId>
-      <artifactId>jaeger-core</artifactId>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-opentracing-shim</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-sdk</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-extension-trace-propagators</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -385,6 +396,7 @@
       <id>jaeger</id>
       <properties>
         <jaeger.disabled>false</jaeger.disabled>
+        <otel-collector.endpoint>http://${otel-collector.host}:4317</otel-collector.endpoint>
       </properties>
     </profile>
 
@@ -728,6 +740,73 @@
                       <http>
                         <method>GET</method>
                         <url>http://${jaeger.ip}:${jaeger.health.port}/health</url>
+                        <status>200..299</status>
+                      </http>
+                    </wait>
+                  </run>
+                </image>
+                <!-- ##### OpenTelemetry collector component, serving as agent, forwarding traces to the jaeger collector ##### -->
+                <image>
+                  <name>${docker.repository}/hono-opentelemetry-collector-test:${project.version}</name>
+                  <build>
+                    <skip>${jaeger.disabled}</skip>
+                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
+                    <from>${opentelemetry-collector.image.name}</from>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/</basedir>
+                      <inline>
+                        <id>config</id>
+                        <fileSet>
+                          <directory>${project.build.directory}/resources/otel-collector</directory>
+                          <outputDirectory>etc/hono</outputDirectory>
+                          <includes>
+                            <include>*</include>
+                          </includes>
+                        </fileSet>
+                      </inline>
+                    </assembly>
+                  </build>
+                  <run>
+                    <skip>${jaeger.disabled}</skip>
+                    <ports>
+                      <port>+otel-collector.ip:otel-collector.health.port:13133</port><!-- health_check extension -->
+                      <port>+otel-collector.ip:otel-collector.otlp.port:4317</port><!-- OTLP gRPC receiver -->
+                    </ports>
+                    <portPropertyFile>${project.build.directory}/docker/otel-collector.port.properties</portPropertyFile>
+                    <network>
+                      <mode>custom</mode>
+                      <name>${custom.network.name}</name>
+                      <alias>${otel-collector.host}</alias>
+                    </network>
+                    <!--
+                      Setting the swap property to the same value as the memory property effectively
+                      prevents the container from swapping at all.
+                      This way we can force the same behavior for running the integration
+                      tests on both a local machine (which usually has swap space available) as
+                      well as on Travis where there is no swap space available on the build job VMs.
+                      We can thus detect OOM problems when running locally as opposed to only
+                      later on Travis.
+                     -->
+                    <memorySwap>83886080</memorySwap>
+                    <memory>83886080</memory>
+                    <cmd>
+                      <exec>
+                        <arg>/otelcol</arg>
+                        <arg>--config=/etc/hono/otel-collector-config.yaml</arg>
+                      </exec>
+                    </cmd>
+                    <env>
+                    </env>
+                    <log>
+                      <prefix>OTEL</prefix>
+                      <color>${log.color.extra-services}</color>
+                    </log>
+                    <wait>
+                      <time>${service.startup.timeout}</time>
+                      <http>
+                        <method>GET</method>
+                        <url>http://${otel-collector.ip}:${otel-collector.health.port}</url>
                         <status>200..299</status>
                       </http>
                     </wait>
@@ -1663,8 +1742,6 @@
               </classpathDependencyExcludes>
               <environmentVariables>
                 <PN_TRACE_FRM>${trace.frames}</PN_TRACE_FRM>
-                <JAEGER_SERVICE_NAME>test</JAEGER_SERVICE_NAME>
-                <JAEGER_PROPAGATION>${jaeger.propagation}</JAEGER_PROPAGATION>
               </environmentVariables>
               <systemPropertyVariables>
                 <auth.host>${auth.ip}</auth.host>
@@ -1739,6 +1816,7 @@
                   <quiet>true</quiet>
                   <files>
                     <file>${project.build.directory}/docker/jaeger.port.properties</file>
+                    <file>${project.build.directory}/docker/otel-collector.port.properties</file>
                     <file>${project.build.directory}/docker/jdbc-db.port.properties</file>
                     <file>${project.build.directory}/docker/mongodb.port.properties</file>
                     <file>${project.build.directory}/docker/auth.port.properties</file>

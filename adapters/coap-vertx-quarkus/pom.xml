@@ -44,13 +44,6 @@
       <artifactId>vertx-core</artifactId>
     </dependency>
 
-    <!-- testing -->
-    <dependency>
-      <groupId>io.jaegertracing</groupId>
-      <artifactId>jaeger-client</artifactId>
-      <scope>test</scope>
-    </dependency>
-
   </dependencies>
 
   <build>

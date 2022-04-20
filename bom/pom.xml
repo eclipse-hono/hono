@@ -34,12 +34,10 @@
     <cryptvault.version>1.0.2</cryptvault.version>
     <dispatch-router.image.name>quay.io/interconnectedcloud/qdrouterd:1.17.1</dispatch-router.image.name>
     <guava.version>30.1-jre</guava.version>
-    <gson.version>2.9.0</gson.version>
     <infinispan-image.name>quay.io/infinispan/server-native:13.0</infinispan-image.name>
     <jaeger.image.name>jaegertracing/all-in-one:1.31</jaeger.image.name>
-    <jaeger.metrics.enabled>false</jaeger.metrics.enabled>
-    <jaeger.version>1.8.0</jaeger.version>
-    <!-- 
+    <jakarta.jaxrs-api.version>2.1.6</jakarta.jaxrs-api.version>
+    <!--
       We want to allow users to run containers in a rootless Docker environment.
       For that purpose, the JVM needs to support cgroups v2 based resource limits
       specified on the containers. OpenJDK supports this starting with version 15:
@@ -59,11 +57,12 @@
     <native.image.name>quay.io/quarkus/quarkus-micro-image:1.0</native.image.name>
     <!--
       The value of this property should always be the Java 17 based variant of the image name defined
-      in the Qaurkus platform definition's POM file of the Quarkus version being used, e.g.
+      in the Quarkus platform definition's POM file of the Quarkus version being used, e.g.
       https://github.com/quarkusio/quarkus-platform/blob/2.7.3.Final/generated-platform-project/quarkus/properties/pom.xml
     -->
     <native.builder-image.name>quay.io/quarkus/ubi-quarkus-native-image:21.3-java17</native.builder-image.name>
     <netty.version>4.1.74.Final</netty.version>
+    <opentelemetry-collector.image.name>otel/opentelemetry-collector:0.48.0</opentelemetry-collector.image.name>
     <postgresql-image.name>postgres:12-alpine</postgresql-image.name>
     <protoparser.version>4.0.3</protoparser.version>
     <protostream.version>4.4.1.Final</protostream.version>
@@ -95,13 +94,14 @@ quarkus.http.non-application-root-path=${health.check.non-application-root-path}
 quarkus.http.port=${health.check.port}
 # this needs to be configured at build time in order for native images to be able to log at TRACE level
 quarkus.log.min-level=TRACE
-quarkus.micrometer.binder-enabled-default= false
+quarkus.micrometer.binder-enabled-default=false
 quarkus.micrometer.binder.jvm=true
 # Kafka client metrics are being managed explicitly by MicrometerKafkaClientMetricsSupport
 quarkus.micrometer.binder.kafka.enabled=false
 quarkus.micrometer.binder.system=true
 quarkus.micrometer.binder.vertx.enabled=true
 quarkus.micrometer.export.prometheus.path=/prometheus
+quarkus.opentelemetry.propagators=tracecontext,baggage,jaeger
 quarkus.smallrye-health.root-path=${health.check.root-path}
 quarkus.smallrye-health.liveness-path=${health.check.liveness-path}
 quarkus.smallrye-health.readiness-path=${health.check.readiness-path}
@@ -148,21 +148,6 @@ quarkus.vertx.resolver.cache-max-time-to-live=0
           <exclusion>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-ide-launcher</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>io.quarkus</groupId>
-        <artifactId>quarkus-jaeger</artifactId>
-        <version>${quarkus.platform.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-ide-launcher</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>com.sun.activation</groupId>
-            <artifactId>jakarta.activation</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -567,53 +552,6 @@ quarkus.vertx.resolver.cache-max-time-to-live=0
         <scope>runtime</scope>
       </dependency>
 
-      <!-- Tracing -->
-      <dependency>
-        <groupId>io.jaegertracing</groupId>
-        <artifactId>jaeger-client</artifactId>
-        <version>${jaeger.version}</version>
-        <scope>runtime</scope>
-      </dependency>
-      <dependency>
-        <groupId>io.jaegertracing</groupId>
-        <artifactId>jaeger-core</artifactId>
-        <version>${jaeger.version}</version>
-        <scope>runtime</scope>
-      </dependency>
-      <dependency>
-        <groupId>io.jaegertracing</groupId>
-        <artifactId>jaeger-thrift</artifactId>
-        <version>${jaeger.version}</version>
-        <scope>runtime</scope>
-        <exclusions>
-          <!-- libthrift 0.14.1 used by jaeger-thrift 1.6.0 unnecessarily includes tomcat-embed-core dependency - see THRIFT-5375;
-               TODO remove exclusion after updating jaeger to version with newer libthrift  -->
-          <exclusion>
-            <groupId>org.apache.tomcat.embed</groupId>
-            <artifactId>tomcat-embed-core</artifactId>
-          </exclusion>
-          <!--
-            Use jakarta.annotations instead.
-          -->
-          <exclusion>
-            <groupId>javax.annotation</groupId>
-            <artifactId>javax.annotation-api</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>io.jaegertracing</groupId>
-        <artifactId>jaeger-micrometer</artifactId>
-        <version>${jaeger.version}</version>
-        <scope>runtime</scope>
-      </dependency>
-      <dependency>
-        <groupId>com.google.code.gson</groupId>
-        <artifactId>gson</artifactId>
-        <version>${gson.version}</version>
-        <scope>runtime</scope>
-      </dependency>
-
       <!-- Other -->
       <dependency>
         <groupId>com.github.ben-manes.caffeine</groupId>
@@ -652,10 +590,6 @@ quarkus.vertx.resolver.cache-max-time-to-live=0
         <exclusions>
           <exclusion>
             <groupId>com.google.guava</groupId>
-            <artifactId>failureaccess</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>com.google.guava</groupId>
             <artifactId>listenablefuture</artifactId>
           </exclusion>
           <exclusion>
@@ -684,6 +618,11 @@ quarkus.vertx.resolver.cache-max-time-to-live=0
         <groupId>com.bol</groupId>
         <artifactId>cryptvault</artifactId>
         <version>${cryptvault.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>jakarta.ws.rs</groupId>
+        <artifactId>jakarta.ws.rs-api</artifactId>
+        <version>${jakarta.jaxrs-api.version}</version>
       </dependency>
 
       <!-- Testing -->

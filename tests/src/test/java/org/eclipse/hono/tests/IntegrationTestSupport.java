@@ -86,7 +86,11 @@ import org.eclipse.hono.util.TenantConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.jaegertracing.Configuration;
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.context.propagation.ContextPropagators;
+import io.opentelemetry.extension.trace.propagation.JaegerPropagator;
+import io.opentelemetry.opentracingshim.OpenTracingShim;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopSpan;
 import io.vertx.core.CompositeFuture;
@@ -482,12 +486,18 @@ public final class IntegrationTestSupport {
     public static final int KAFKA_TOPIC_CREATION_ADD_TO_TIMEOUT = 2; // seconds to add
 
     /**
-     * A Jaeger based OpenTracing tracer that can be used by devices and downstream clients to inject
-     * and/or extract a trace context into/from messages.
-     * <p>
-     * The tracer picks up its configuration from environment variables set by the Maven Failsafe plugin.
+     * {@code true} if the tests are run with the Jaeger tracing component.
      */
-    public static Tracer CLIENT_TRACER = Configuration.fromEnv().getTracer();
+    public static final boolean JAEGER_ENABLED = !Boolean.getBoolean("jaeger.disabled");
+
+    private static final OpenTelemetry OPENTELEMETRY = OpenTelemetrySdk.builder()
+            .setPropagators(ContextPropagators.create(JaegerPropagator.getInstance()))
+            .build();
+    /**
+     * An OpenTracing tracer that can be used by devices and downstream clients to inject
+     * and/or extract a trace context into/from messages.
+     */
+    public static Tracer CLIENT_TRACER = OpenTracingShim.createTracerShim(OPENTELEMETRY);
 
     private static final Logger LOGGER = LoggerFactory.getLogger(IntegrationTestSupport.class);
 

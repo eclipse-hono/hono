@@ -174,9 +174,7 @@ public final class HonoConnectionImpl implements HonoConnection {
      * @throws NullPointerException if tracer is {@code null}.
      */
     public void setTracer(final Tracer opentracingTracer) {
-        Objects.requireNonNull(opentracingTracer);
-        LOG.info("using OpenTracing implementation [{}]", opentracingTracer.getClass().getName());
-        this.tracer = opentracingTracer;
+        this.tracer = Objects.requireNonNull(opentracingTracer);
     }
 
     /**

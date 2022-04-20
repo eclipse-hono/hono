@@ -400,8 +400,21 @@ public final class TracingHelper {
 
         Objects.requireNonNull(tracer);
         Objects.requireNonNull(headers);
-
-        return tracer.extract(Format.Builtin.TEXT_MAP, new MultiMapExtractAdapter(headers));
+        if (headers.isEmpty()) {
+            return null;
+        }
+        final SpanContext spanContext = tracer.extract(Format.Builtin.TEXT_MAP, new MultiMapExtractAdapter(headers));
+        if (spanContext != null) {
+            // TracerShim returns current context instead of null if headers contain no context
+            // see https://github.com/open-telemetry/opentelemetry-java/issues/4344
+            final io.opentelemetry.api.trace.Span currentOpenTelemetrySpan = io.opentelemetry.api.trace.Span.current();
+            if (currentOpenTelemetrySpan != null
+                    && spanContext.toTraceId().equals(currentOpenTelemetrySpan.getSpanContext().getTraceId())
+                    && spanContext.toSpanId().equals(currentOpenTelemetrySpan.getSpanContext().getSpanId())) {
+                return null;
+            }
+        }
+        return spanContext;
     }
 
     /**

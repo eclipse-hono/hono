@@ -62,7 +62,7 @@ Run the following from the source folder:
 ```sh
 export DOCKER_HOST
 # in the "hono" folder containing the source code
-mvn clean install -Pbuild-docker-image,metrics-prometheus,jaeger
+mvn clean install -Pbuild-docker-image,metrics-prometheus
 ```
 
 This will build all libraries, Docker images and example code.
@@ -79,7 +79,7 @@ The plugin is disabled by default and can be enabled by setting the *jacoco.skip
 
 ```sh
 # in the "hono" folder containing the source code
-mvn clean install -Djacoco.skip=false -Pbuild-docker-image,metrics-prometheus,jaeger
+mvn clean install -Djacoco.skip=false -Pbuild-docker-image,metrics-prometheus
 ```
 
 The plugin will produce a `target/jacoco.exec` file in each module which contains the (binary) coverage data.
@@ -97,7 +97,7 @@ is `index.docker.io`. The default value for *docker.image.org-name* is `eclipse`
 Hono's images using the `quay.io` registry and the `custom` repository name:
 
 ```sh
-mvn clean install -Pbuild-docker-image,metrics-prometheus,jaeger -Ddocker.registry-name=quay.io -Ddocker.image.org-name=custom
+mvn clean install -Pbuild-docker-image,metrics-prometheus -Ddocker.registry-name=quay.io -Ddocker.image.org-name=custom
 ```
 
 #### Building native Images
@@ -107,7 +107,7 @@ In order to do so, the `build-native-image` Maven profile needs to be activated:
 
 ```sh
 # in the "hono" folder containing the source code
-mvn clean install -Pbuild-native-image,metrics-prometheus,jaeger
+mvn clean install -Pbuild-native-image,metrics-prometheus
 ```
 
 {{% notice info %}}
@@ -121,7 +121,7 @@ The container images that are created as part of the build process can be automa
 using the `docker-push-image` Maven profile:
 
 ```sh
-mvn clean install -Pbuild-docker-image,metrics-prometheus,jaeger,docker-push-image
+mvn clean install -Pbuild-docker-image,metrics-prometheus,docker-push-image
 ```
 
 Note that the container registry might require authentication in order to push images. The build uses the Docker Maven

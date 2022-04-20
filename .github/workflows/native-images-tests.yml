@@ -42,14 +42,14 @@ jobs:
       run: |
         mvn install -B -e -DskipTests -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
         -Dquarkus.native.remote-container-build=false -Dquarkus.native.container-build=true \
-        -Pjaeger,build-native-image -am \
+        -Pbuild-native-image -am \
         -pl :hono-service-auth-quarkus,:hono-service-command-router-quarkus,:hono-service-device-registry-mongodb-quarkus,\
         :hono-adapter-mqtt-vertx-quarkus,:hono-adapter-amqp-vertx-quarkus,:hono-adapter-coap-vertx-quarkus,:hono-adapter-http-vertx-quarkus,\
         :hono-tests
     - name: "Build JDBC registry image"
       run: |
         mvn install -B -e -DskipTests -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
-        -Pjaeger,build-docker-image -am -pl :hono-service-device-registry-jdbc-quarkus
+        -Pbuild-docker-image -am -pl :hono-service-device-registry-jdbc-quarkus
     - name: "Run integration tests with Mongo DB and Kafka"
       run: |
         mvn verify -pl :hono-tests -B -e -DCI=$CI \

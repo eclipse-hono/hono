@@ -1,6 +1,6 @@
 #!/bin/bash
 #*******************************************************************************
-# Copyright (c) 2021 Contributors to the Eclipse Foundation
+# Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -26,7 +26,7 @@ fi
 HONO_MAVEN_DEPS="legal/src/main/resources/legal/hono-maven.deps"
 DEPENDENCIES="legal/src/main/resources/legal/DEPENDENCIES"
 
-mvn dependency:list -DexcludeGroupIds=org.eclipse,org.junit -Pjaeger,metrics-prometheus,metrics-graphite,build-docker-image,build-native-image | grep -Poh "\S+:(runtime|compile|provided)" | sed -e 's/^\(.*\)\:.*$/\1/' | sort | uniq > $HONO_MAVEN_DEPS
+mvn dependency:list -DexcludeGroupIds=org.eclipse,org.junit -Pmetrics-prometheus,build-docker-image,build-native-image | grep -Poh "\S+:(runtime|compile|provided)" | sed -e 's/^\(.*\)\:.*$/\1/' | sort | uniq > $HONO_MAVEN_DEPS
 
 java -Dorg.eclipse.dash.timeout=60 -jar $DASH_LICENSE_JAR -batch 90 -summary $DEPENDENCIES $HONO_MAVEN_DEPS
 sort -o $DEPENDENCIES $DEPENDENCIES

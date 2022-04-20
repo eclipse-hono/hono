@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,7 +21,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.californium.core.CoapResource;
 import org.eclipse.californium.core.coap.CoAP.ResponseCode;
-import org.eclipse.californium.core.coap.OptionSet;
 import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.network.Exchange;
 import org.eclipse.californium.core.server.resources.CoapExchange;
@@ -36,9 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
-import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
-import io.opentracing.propagation.Format;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -149,16 +146,10 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
         return extPrincipal.getExtendedInfo().get(DeviceInfoSupplier.EXT_INFO_KEY_HONO_AUTH_ID, String.class);
     }
 
-    private SpanContext extractSpanContextFromRequest(final OptionSet requestOptions) {
-        return CoapOptionInjectExtractAdapter.forExtraction(requestOptions)
-                .map(carrier -> tracer.extract(Format.Builtin.BINARY, carrier))
-                .orElse(null);
-    }
-
     private Span newSpan(final Exchange exchange) {
         return TracingHelper.buildServerChildSpan(
                 tracer,
-                extractSpanContextFromRequest(exchange.getRequest().getOptions()),
+                null,
                 exchange.getRequest().getCode().toString(),
                 adapter.getTypeName())
             .withTag(Tags.HTTP_METHOD, exchange.getRequest().getCode().name())
@@ -177,11 +168,6 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      * associated with the {@link CoapContext} that is created by the <em>createCoapContextForXXX</em>
      * method matching the request code. The {@link CoapContext} is then passed in to the corresponding
      * <em>handleXXXX</em> method.
-     * <p>
-     * If the request contains the {@link CoapOptionInjectExtractAdapter#OPTION_TRACE_CONTEXT} option, its value
-     * is expected to be a binary encoded trace context and the {@link CoapOptionInjectExtractAdapter}
-     * is used to extract a {@code SpanContext} which is then used as the parent of the newly created
-     * {@code Span}.
      */
     @Override
     public void handleRequest(final Exchange exchange) {
