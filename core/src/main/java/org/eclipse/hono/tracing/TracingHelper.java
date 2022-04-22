@@ -219,7 +219,10 @@ public final class TracingHelper {
         if (error instanceof NullPointerException
             || error instanceof IllegalArgumentException
             || error instanceof IllegalStateException) {
-            LOG.warn("An unexpected error occurred! [logged on span [{}]]", span, error);
+            Optional.ofNullable(span).ifPresentOrElse(
+                    s -> LOG.warn("An unexpected error occurred! [logged on trace {}, span {}]",
+                            s.context().toTraceId(), s.context().toSpanId(), error),
+                    () -> LOG.warn("An unexpected error occurred!", error));
         }
     }
 
