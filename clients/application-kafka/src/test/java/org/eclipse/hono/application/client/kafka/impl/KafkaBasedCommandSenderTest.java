@@ -85,7 +85,7 @@ public class KafkaBasedCommandSenderTest {
     private MessagingKafkaConsumerConfigProperties consumerConfig;
     private MessagingKafkaProducerConfigProperties producerConfig;
     private MockProducer<String, Buffer> mockProducer;
-    private KafkaMockConsumer mockConsumer;
+    private KafkaMockConsumer<String, Buffer> mockConsumer;
     private String tenantId;
     private String deviceId;
     private Vertx vertx;
@@ -102,7 +102,7 @@ public class KafkaBasedCommandSenderTest {
     void setUp(final Vertx vertx) {
         this.vertx = vertx;
         consumerConfig = new MessagingKafkaConsumerConfigProperties();
-        mockConsumer = new KafkaMockConsumer(OffsetResetStrategy.LATEST);
+        mockConsumer = new KafkaMockConsumer<>(OffsetResetStrategy.LATEST);
         producerConfig = new MessagingKafkaProducerConfigProperties();
         producerConfig.setProducerConfig(Map.of("client.id", "application-test-sender"));
 

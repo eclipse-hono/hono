@@ -33,7 +33,7 @@ import io.vertx.kafka.client.producer.KafkaProducerRecord;
  */
 public class KafkaBasedNotificationSender implements NotificationSender {
 
-    public static final String PRODUCER_NAME = "notification";
+    static final String PRODUCER_NAME = "notification";
 
     private static final Logger LOG = LoggerFactory.getLogger(KafkaBasedNotificationSender.class);
 

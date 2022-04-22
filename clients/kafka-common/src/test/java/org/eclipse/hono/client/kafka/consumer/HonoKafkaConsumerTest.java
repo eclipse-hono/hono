@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -37,6 +37,7 @@ import org.eclipse.hono.kafka.test.KafkaMockConsumer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,7 +55,7 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 /**
  * Verifies the behavior of {@link HonoKafkaConsumerTest}.
  */
-@Timeout(value = 20, timeUnit = TimeUnit.SECONDS)
+@Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 @ExtendWith(VertxExtension.class)
 public class HonoKafkaConsumerTest {
 
@@ -63,7 +64,7 @@ public class HonoKafkaConsumerTest {
     private static final String TOPIC = "test.topic";
     private static final String TOPIC2 = "test.topic2";
     private static final String TOPIC3 = "test.topic3";
-    private static final Pattern TOPIC_PATTERN = Pattern.compile(Pattern.quote("test.") + ".*");
+    private static final Pattern TOPIC_PATTERN = Pattern.compile("test\\..*");
     private static final int PARTITION = 0;
     private static final TopicPartition topicPartition = new TopicPartition(TOPIC, PARTITION);
     private static final TopicPartition topic2Partition = new TopicPartition(TOPIC2, PARTITION);
@@ -71,19 +72,20 @@ public class HonoKafkaConsumerTest {
 
     private MessagingKafkaConsumerConfigProperties consumerConfigProperties;
     private Vertx vertx;
-    private HonoKafkaConsumer consumer;
-    private KafkaMockConsumer mockConsumer;
+    private HonoKafkaConsumer<Buffer> consumer;
+    private KafkaMockConsumer<String, Buffer> mockConsumer;
 
     /**
      * Sets up fixture.
      *
      * @param vertx The vert.x instance.
+     * @param testInfo Test case meta data.
      */
     @BeforeEach
-    public void setUp(final Vertx vertx) {
+    public void setUp(final Vertx vertx, final TestInfo testInfo) {
+        LOG.info("running {}", testInfo.getDisplayName());
         this.vertx = vertx;
-
-        mockConsumer = new KafkaMockConsumer(OffsetResetStrategy.LATEST);
+        mockConsumer = new KafkaMockConsumer<>(OffsetResetStrategy.LATEST);
 
         consumerConfigProperties = new MessagingKafkaConsumerConfigProperties();
         consumerConfigProperties.setConsumerConfig(Map.of(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "servers"));
@@ -110,7 +112,7 @@ public class HonoKafkaConsumerTest {
         consumerConfig.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
 
         assertThrows(IllegalArgumentException.class,
-                () -> new HonoKafkaConsumer(vertx, Set.of("test"), handler, consumerConfig));
+                () -> new HonoKafkaConsumer<>(vertx, Set.of("test"), handler, consumerConfig));
     }
 
     /**
@@ -124,11 +126,11 @@ public class HonoKafkaConsumerTest {
         final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig("test");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
 
-        consumer = new HonoKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
-        consumer.setKafkaConsumerSupplier(() -> mockConsumer);
         mockConsumer.updateBeginningOffsets(Map.of(topicPartition, 0L));
         mockConsumer.updateEndOffsets(Map.of(topicPartition, 0L));
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(topicPartition));
+        consumer = new HonoKafkaConsumer<>(vertx, Set.of(TOPIC), handler, consumerConfig);
+        consumer.setKafkaConsumerSupplier(() -> mockConsumer);
         consumer.start().onComplete(ctx.succeedingThenComplete());
     }
 
@@ -143,13 +145,13 @@ public class HonoKafkaConsumerTest {
         final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig("test");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
 
-        consumer = new HonoKafkaConsumer(vertx, TOPIC_PATTERN, handler, consumerConfig);
-        consumer.setKafkaConsumerSupplier(() -> mockConsumer);
         mockConsumer.updateBeginningOffsets(Map.of(topicPartition, 0L, topic2Partition, 0L));
         mockConsumer.updateEndOffsets(Map.of(topicPartition, 0L, topic2Partition, 0L));
         mockConsumer.updatePartitions(topicPartition, KafkaMockConsumer.DEFAULT_NODE);
         mockConsumer.updatePartitions(topic2Partition, KafkaMockConsumer.DEFAULT_NODE);
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(topicPartition, topic2Partition));
+        consumer = new HonoKafkaConsumer<>(vertx, TOPIC_PATTERN, handler, consumerConfig);
+        consumer.setKafkaConsumerSupplier(() -> mockConsumer);
         consumer.start().onComplete(ctx.succeeding(v2 -> {
             ctx.verify(() -> {
                 assertThat(consumer.getSubscribedTopicPatternTopics()).isEqualTo(Set.of(TOPIC, TOPIC2));
@@ -174,13 +176,13 @@ public class HonoKafkaConsumerTest {
         final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig("test");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
 
-        consumer = new HonoKafkaConsumer(vertx, TOPIC_PATTERN, handler, consumerConfig);
-        consumer.setKafkaConsumerSupplier(() -> mockConsumer);
         mockConsumer.updateBeginningOffsets(Map.of(topicPartition, 0L, topic2Partition, 0L));
         mockConsumer.updateEndOffsets(Map.of(topicPartition, 0L, topic2Partition, 0L));
         mockConsumer.updatePartitions(topicPartition, KafkaMockConsumer.DEFAULT_NODE);
         mockConsumer.updatePartitions(topic2Partition, KafkaMockConsumer.DEFAULT_NODE);
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(topicPartition, topic2Partition));
+        consumer = new HonoKafkaConsumer<>(vertx, TOPIC_PATTERN, handler, consumerConfig);
+        consumer.setKafkaConsumerSupplier(() -> mockConsumer);
         consumer.start().onComplete(ctx.succeeding(v2 -> {
             ctx.verify(() -> {
                 assertThat(consumer.getSubscribedTopicPatternTopics()).isEqualTo(Set.of(TOPIC, TOPIC2));
@@ -215,11 +217,11 @@ public class HonoKafkaConsumerTest {
         final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig("test");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
 
-        consumer = new HonoKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig);
-        consumer.setKafkaConsumerSupplier(() -> mockConsumer);
         mockConsumer.updateBeginningOffsets(Map.of(topicPartition, 0L));
         mockConsumer.updateEndOffsets(Map.of(topicPartition, 0L));
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(topicPartition));
+        consumer = new HonoKafkaConsumer<>(vertx, Set.of(TOPIC), handler, consumerConfig);
+        consumer.setKafkaConsumerSupplier(() -> mockConsumer);
         consumer.start().onComplete(ctx.succeeding(v2 -> {
             mockConsumer.schedulePollTask(() -> {
                 IntStream.range(0, numTestRecords).forEach(offset -> {
@@ -245,16 +247,16 @@ public class HonoKafkaConsumerTest {
         final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig("test");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
 
-        consumer = new HonoKafkaConsumer(vertx, Set.of(TOPIC), handler, consumerConfig) {
+        mockConsumer.updateBeginningOffsets(Map.of(topicPartition, 0L));
+        mockConsumer.updateEndOffsets(Map.of(topicPartition, 0L));
+        mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(topicPartition));
+        consumer = new HonoKafkaConsumer<>(vertx, Set.of(TOPIC), handler, consumerConfig) {
             @Override
             protected void onRecordHandlerSkippedForExpiredRecord(final KafkaConsumerRecord<String, Buffer> record) {
                 expiredRecordCheckpoint.flag();
             }
         };
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
-        mockConsumer.updateBeginningOffsets(Map.of(topicPartition, 0L));
-        mockConsumer.updateEndOffsets(Map.of(topicPartition, 0L));
-        mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(topicPartition));
         consumer.start().onComplete(ctx.succeeding(v2 -> {
             mockConsumer.schedulePollTask(() -> {
                 // add record with elapsed ttl

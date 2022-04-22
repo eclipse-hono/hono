@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -34,21 +34,27 @@ import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
 
 import io.vertx.core.Handler;
-import io.vertx.core.buffer.Buffer;
 
 /**
- * A {@link MockConsumer} with additional support, e.g. invoking {@code ConsumerRebalanceListener} handlers.
+ * A {@code MockConsumer} with additional support, e.g. invoking {@code ConsumerRebalanceListener} handlers.
+ *
+ * @param <K> The type of the record key.
+ * @param <V> The type of the record value.
  */
-public class KafkaMockConsumer extends MockConsumer<String, Buffer> {
+public class KafkaMockConsumer<K, V> extends MockConsumer<K, V> {
 
+    /**
+     * The Kafka broker node name to use by default.
+     */
     public static final Node DEFAULT_NODE = new Node(1, "broker1", 9092);
+
+    private final AtomicBoolean skipSettingClosedFlagOnNextClose = new AtomicBoolean();
+    private final List<Handler<Map<TopicPartition, OffsetAndMetadata>>> commitListeners = new ArrayList<>();
 
     private boolean revokeAllOnRebalance = true;
     private Collection<TopicPartition> nextPollRebalancePartitionAssignment;
     private Collection<TopicPartition> onSubscribeRebalancePartitionAssignment;
     private ConsumerRebalanceListener rebalanceListener;
-    private final AtomicBoolean skipSettingClosedFlagOnNextClose = new AtomicBoolean();
-    private final List<Handler<Map<TopicPartition, OffsetAndMetadata>>> commitListeners = new ArrayList<>();
 
     /**
      * Creates a new KafkaMockConsumer.
@@ -130,7 +136,7 @@ public class KafkaMockConsumer extends MockConsumer<String, Buffer> {
     }
 
     @Override
-    public synchronized ConsumerRecords<String, Buffer> poll(final Duration timeout) {
+    public synchronized ConsumerRecords<K, V> poll(final Duration timeout) {
         Optional.ofNullable(nextPollRebalancePartitionAssignment)
                 .ifPresent(newAssignment -> {
                     nextPollRebalancePartitionAssignment = null;
@@ -172,7 +178,10 @@ public class KafkaMockConsumer extends MockConsumer<String, Buffer> {
     }
 
     @Override
-    public synchronized void commitAsync(final Map<TopicPartition, OffsetAndMetadata> offsets, final OffsetCommitCallback callback) {
+    public synchronized void commitAsync(
+            final Map<TopicPartition, OffsetAndMetadata> offsets,
+            final OffsetCommitCallback callback) {
+
         commitListeners.forEach(l -> l.handle(offsets));
         super.commitAsync(offsets, callback);
     }

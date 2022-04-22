@@ -34,7 +34,6 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 
@@ -51,8 +50,8 @@ public class KafkaBasedNotificationReceiver implements NotificationReceiver {
     private final Map<Class<? extends AbstractNotification>, Handler<? extends AbstractNotification>> handlerPerType = new HashMap<>();
     private final Set<String> topics = new HashSet<>();
 
-    private Supplier<Consumer<String, Buffer>> kafkaConsumerSupplier;
-    private HonoKafkaConsumer honoKafkaConsumer;
+    private Supplier<Consumer<String, JsonObject>> kafkaConsumerSupplier;
+    private HonoKafkaConsumer<JsonObject> honoKafkaConsumer;
     private boolean started = false;
 
     /**
@@ -81,13 +80,13 @@ public class KafkaBasedNotificationReceiver implements NotificationReceiver {
     }
 
     // visible for testing
-    void setKafkaConsumerFactory(final Supplier<Consumer<String, Buffer>> kafkaConsumerSupplier) {
+    void setKafkaConsumerFactory(final Supplier<Consumer<String, JsonObject>> kafkaConsumerSupplier) {
         this.kafkaConsumerSupplier = Objects.requireNonNull(kafkaConsumerSupplier);
     }
 
     @Override
     public Future<Void> start() {
-        honoKafkaConsumer = new HonoKafkaConsumer(vertx, topics, getRecordHandler(), consumerConfig.getConsumerConfig(NAME));
+        honoKafkaConsumer = new HonoKafkaConsumer<>(vertx, topics, getRecordHandler(), consumerConfig.getConsumerConfig(NAME));
         honoKafkaConsumer.setPollTimeout(Duration.ofMillis(consumerConfig.getPollTimeout()));
         honoKafkaConsumer.setConsumerCreationRetriesTimeout(KafkaClientFactory.UNLIMITED_RETRIES_DURATION);
         Optional.ofNullable(kafkaConsumerSupplier).ifPresent(honoKafkaConsumer::setKafkaConsumerSupplier);
@@ -109,9 +108,9 @@ public class KafkaBasedNotificationReceiver implements NotificationReceiver {
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    private Handler<KafkaConsumerRecord<String, Buffer>> getRecordHandler() {
+    private Handler<KafkaConsumerRecord<String, JsonObject>> getRecordHandler() {
         return record -> {
-            final JsonObject json = record.value().toJsonObject();
+            final JsonObject json = record.value();
             if (LOG.isTraceEnabled()) {
                 LOG.trace("received notification:{}{}", System.lineSeparator(), json.encodePrettily());
             }

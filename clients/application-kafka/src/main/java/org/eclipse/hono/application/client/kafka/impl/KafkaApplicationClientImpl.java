@@ -165,7 +165,7 @@ public class KafkaApplicationClientImpl extends KafkaBasedCommandSender implemen
         final Handler<KafkaConsumerRecord<String, Buffer>> recordHandler = record -> {
             messageHandler.handle(new KafkaDownstreamMessage(record));
         };
-        final HonoKafkaConsumer consumer = new HonoKafkaConsumer(vertx, Set.of(topic), recordHandler,
+        final HonoKafkaConsumer<Buffer> consumer = new HonoKafkaConsumer<>(vertx, Set.of(topic), recordHandler,
                 consumerConfig.getConsumerConfig(type.toString()));
         consumer.setPollTimeout(Duration.ofMillis(consumerConfig.getPollTimeout()));
         Optional.ofNullable(kafkaConsumerSupplier)

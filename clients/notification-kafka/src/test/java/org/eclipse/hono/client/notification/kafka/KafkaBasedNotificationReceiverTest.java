@@ -37,7 +37,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.Vertx;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.Timeout;
@@ -54,7 +53,7 @@ public class KafkaBasedNotificationReceiverTest {
     private NotificationKafkaConsumerConfigProperties consumerConfig;
 
     private Vertx vertx;
-    private KafkaMockConsumer mockConsumer;
+    private KafkaMockConsumer<String, JsonObject> mockConsumer;
 
     /**
      *
@@ -66,7 +65,7 @@ public class KafkaBasedNotificationReceiverTest {
     void setUp(final Vertx vertx) {
         this.vertx = vertx;
 
-        mockConsumer = new KafkaMockConsumer(OffsetResetStrategy.EARLIEST);
+        mockConsumer = new KafkaMockConsumer<>(OffsetResetStrategy.EARLIEST);
 
         consumerConfig = new NotificationKafkaConsumerConfigProperties();
         consumerConfig.setConsumerConfig(Map.of(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, "dummy"));
@@ -192,9 +191,9 @@ public class KafkaBasedNotificationReceiverTest {
         return client;
     }
 
-    private ConsumerRecord<String, Buffer> createKafkaRecord(final AbstractNotification notification,
+    private ConsumerRecord<String, JsonObject> createKafkaRecord(final AbstractNotification notification,
             final long offset) {
-        final Buffer json = JsonObject.mapFrom(notification).toBuffer();
+        final var json = JsonObject.mapFrom(notification);
         final String topicName = NotificationTopicHelper.getTopicName(notification.getType());
         return new ConsumerRecord<>(topicName, 0, offset, null, json);
     }

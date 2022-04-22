@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -87,7 +87,7 @@ public class HonoKafkaConsumerIT {
     private static KafkaProducer<String, Buffer> kafkaProducer;
     private static List<String> topicsToDeleteAfterTests;
 
-    private HonoKafkaConsumer kafkaConsumer;
+    private HonoKafkaConsumer<Buffer> kafkaConsumer;
 
     private static Stream<String> partitionAssignmentStrategies() {
         return Stream.of(null, CooperativeStickyAssignor.class.getName());
@@ -198,7 +198,7 @@ public class HonoKafkaConsumerIT {
             ctx.verify(() -> assertThat(record.key()).isEqualTo(publishedAfterStartRecordKey));
             ctx.completeNow();
         };
-        kafkaConsumer = new HonoKafkaConsumer(vertx, topics, recordHandler, consumerConfig);
+        kafkaConsumer = new HonoKafkaConsumer<>(vertx, topics, recordHandler, consumerConfig);
         // start consumer
         kafkaConsumer.start().onComplete(ctx.succeeding(v -> {
             LOG.debug("consumer started, publish record to be received by the consumer");
@@ -272,7 +272,7 @@ public class HonoKafkaConsumerIT {
             }
         };
 
-        kafkaConsumer = new HonoKafkaConsumer(vertx, topics, recordHandler, consumerConfig);
+        kafkaConsumer = new HonoKafkaConsumer<>(vertx, topics, recordHandler, consumerConfig);
         // first start of consumer, letting it commit offsets
         kafkaConsumer.start().onComplete(ctx.succeeding(v -> {
             LOG.trace("consumer started, publish first round of records to be received by the consumer (so that it has offsets to commit)");
@@ -306,7 +306,7 @@ public class HonoKafkaConsumerIT {
         publishRecords(numTestRecordsPerTopicPerRound, "round3_", topics)
                 .onFailure(ctx::failNow)
                 .onSuccess(v -> {
-                    kafkaConsumer = new HonoKafkaConsumer(vertx, topics, recordHandler2, consumerConfig);
+                    kafkaConsumer = new HonoKafkaConsumer<>(vertx, topics, recordHandler2, consumerConfig);
                     kafkaConsumer.start().onComplete(ctx.succeeding(v2 -> {
                         LOG.debug("consumer started, publish another record to be received by the consumer");
                         publish(publishTestTopic, lastRecordKey, Buffer.buffer("testPayload"));
@@ -320,32 +320,48 @@ public class HonoKafkaConsumerIT {
         }
     }
 
-    private Future<Void> waitForLogDeletion(final TopicPartition topicPartition, final long beginningOffsetToWaitFor, final Duration maxWaitingTime) {
+    private Future<Void> waitForLogDeletion(
+            final TopicPartition topicPartition,
+            final long beginningOffsetToWaitFor,
+            final Duration maxWaitingTime) {
+
         final Instant deadline = Instant.now().plus(maxWaitingTime);
         final KafkaConsumer<String, Buffer> deletionCheckKafkaConsumer = KafkaConsumer.create(
                 vertx, IntegrationTestSupport.getKafkaConsumerConfig().getConsumerConfig("deletionCheck"));
         final Promise<Void> resultPromise = Promise.promise();
-        doRepeatedBeginningOffsetCheck(deletionCheckKafkaConsumer, topicPartition, beginningOffsetToWaitFor, deadline, resultPromise);
+        doRepeatedBeginningOffsetCheck(deletionCheckKafkaConsumer, topicPartition, beginningOffsetToWaitFor,
+                deadline, resultPromise);
         return resultPromise.future()
                 .onComplete(ignore -> deletionCheckKafkaConsumer.close());
     }
 
-    private void doRepeatedBeginningOffsetCheck(final KafkaConsumer<String, Buffer> kafkaConsumer,
-            final TopicPartition topicPartition, final long beginningOffsetToWaitFor, final Instant deadline, final Promise<Void> resultPromise) {
+    private void doRepeatedBeginningOffsetCheck(
+            final KafkaConsumer<String, Buffer> kafkaConsumer,
+            final TopicPartition topicPartition,
+            final long beginningOffsetToWaitFor,
+            final Instant deadline,
+            final Promise<Void> resultPromise) {
+
         kafkaConsumer.beginningOffsets(topicPartition)
                 .onFailure(resultPromise::tryFail)
                 .onSuccess(beginningOffset -> {
                     final int nextCheckDelayMillis = 300;
                     if (beginningOffset >= beginningOffsetToWaitFor) {
-                        LOG.debug("done waiting for log deletion; beginningOffset of [{}] is now {}", topicPartition, beginningOffset);
+                        LOG.debug("done waiting for log deletion; beginningOffset of [{}] is now {}",
+                                topicPartition, beginningOffset);
                         resultPromise.complete();
                     } else if (Instant.now().minus(Duration.ofMillis(nextCheckDelayMillis)).isAfter(deadline)) {
-                        resultPromise.tryFail("timeout checking for any deleted records; make sure the topic log retention "
-                                + "and the broker 'log.retention.check.interval.ms' is configured according to the test requirements");
+                        resultPromise.tryFail("""
+                                timeout checking for any deleted records; make sure the topic log retention \
+                                and the broker 'log.retention.check.interval.ms' is configured according to the \
+                                test requirements
+                                """);
                     } else {
                         vertx.setTimer(nextCheckDelayMillis, tid -> {
-                            LOG.debug("continue waiting for log deletion; beginning offset ({}) hasn't reached {} yet", beginningOffset, beginningOffsetToWaitFor);
-                            doRepeatedBeginningOffsetCheck(kafkaConsumer, topicPartition, beginningOffsetToWaitFor, deadline, resultPromise);
+                            LOG.debug("continue waiting for log deletion; beginning offset ({}) hasn't reached {} yet",
+                                    beginningOffset, beginningOffsetToWaitFor);
+                            doRepeatedBeginningOffsetCheck(kafkaConsumer, topicPartition, beginningOffsetToWaitFor,
+                                    deadline, resultPromise);
                         });
                     }
                 });
@@ -402,7 +418,7 @@ public class HonoKafkaConsumerIT {
             Optional.ofNullable(nextRecordReceivedPromiseRef.get())
                     .ifPresent(Promise::complete);
         };
-        kafkaConsumer = new HonoKafkaConsumer(vertx, topicPattern, recordHandler, consumerConfig);
+        kafkaConsumer = new HonoKafkaConsumer<>(vertx, topicPattern, recordHandler, consumerConfig);
         // start consumer
         kafkaConsumer.start().onComplete(ctx.succeeding(v -> {
             ctx.verify(() -> {
@@ -462,7 +478,7 @@ public class HonoKafkaConsumerIT {
             }
         };
 
-        kafkaConsumer = new HonoKafkaConsumer(vertx, topicPattern, recordHandler, consumerConfig);
+        kafkaConsumer = new HonoKafkaConsumer<>(vertx, topicPattern, recordHandler, consumerConfig);
         // start consumer
         kafkaConsumer.start().onComplete(ctx.succeeding(v -> {
             ctx.verify(() -> {
@@ -536,7 +552,7 @@ public class HonoKafkaConsumerIT {
                 allRecordsReceivedPromise.complete();
             }
         };
-        kafkaConsumer = new HonoKafkaConsumer(vertx, topics, recordHandler, consumerConfig);
+        kafkaConsumer = new HonoKafkaConsumer<>(vertx, topics, recordHandler, consumerConfig);
         // start consumer
         kafkaConsumer.start().onComplete(ctx.succeeding(v -> {
             ctx.verify(() -> {
@@ -579,7 +595,7 @@ public class HonoKafkaConsumerIT {
         };
         final String topic = "test_" + UUID.randomUUID();
         topicsToDeleteAfterTests.add(topic);
-        kafkaConsumer = new HonoKafkaConsumer(vertx, Set.of(topic), recordHandler, consumerConfig);
+        kafkaConsumer = new HonoKafkaConsumer<>(vertx, Set.of(topic), recordHandler, consumerConfig);
         // start consumer
         kafkaConsumer.start().onComplete(ctx.succeeding(v -> {
             ctx.verify(() -> {

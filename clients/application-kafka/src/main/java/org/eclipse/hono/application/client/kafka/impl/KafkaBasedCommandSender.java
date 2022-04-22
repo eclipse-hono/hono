@@ -77,7 +77,7 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender imp
     /**
      * Key is the tenant identifier, value the corresponding consumer for receiving the command responses.
      */
-    private final Map<String, HonoKafkaConsumer> commandResponseConsumers = new ConcurrentHashMap<>();
+    private final Map<String, HonoKafkaConsumer<Buffer>> commandResponseConsumers = new ConcurrentHashMap<>();
     /**
      * Key is the tenant identifier, value is a map with correlation ids as keys and expiring command promises as values.
      * These correlation ids are used to correlate the response messages with the sent commands.
@@ -424,7 +424,7 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender imp
             getCommandResponseHandler(tenantId)
                     .handle(new KafkaDownstreamMessage(record));
         };
-        final HonoKafkaConsumer consumer = new HonoKafkaConsumer(vertx, Set.of(topic), recordHandler, consumerConfig);
+        final HonoKafkaConsumer<Buffer> consumer = new HonoKafkaConsumer<>(vertx, Set.of(topic), recordHandler, consumerConfig);
         consumer.setPollTimeout(Duration.ofMillis(this.consumerConfig.getPollTimeout()));
         Optional.ofNullable(kafkaConsumerSupplier)
                 .ifPresent(consumer::setKafkaConsumerSupplier);

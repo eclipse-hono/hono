@@ -124,8 +124,6 @@ public class KafkaClientFactory {
      * <em>retriesTimeout</em> has elapsed.
      *
      * @param consumerConfig The consumer configuration properties.
-     * @param keyType The class type for the key deserialization.
-     * @param valueType The class type for the value deserialization.
      * @param retriesTimeout The maximum time for which retries are done. Using a negative duration or {@code null}
      *                       here is interpreted as an unlimited timeout value.
      * @param <K> The class type for the key deserialization.
@@ -135,16 +133,12 @@ public class KafkaClientFactory {
      */
     public <K, V> Future<KafkaConsumer<K, V>> createKafkaConsumerWithRetries(
             final Map<String, String> consumerConfig,
-            final Class<K> keyType,
-            final Class<V> valueType,
             final Duration retriesTimeout) {
         Objects.requireNonNull(consumerConfig);
-        Objects.requireNonNull(keyType);
-        Objects.requireNonNull(valueType);
 
         final Promise<KafkaConsumer<K, V>> resultPromise = Promise.promise();
         createClientWithRetries(
-                () -> KafkaConsumer.create(vertx, consumerConfig, keyType, valueType),
+                () -> KafkaConsumer.create(vertx, consumerConfig),
                 getRetriesTimeLimit(retriesTimeout),
                 () -> containsValidServerEntries(consumerConfig.get(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG)),
                 resultPromise);

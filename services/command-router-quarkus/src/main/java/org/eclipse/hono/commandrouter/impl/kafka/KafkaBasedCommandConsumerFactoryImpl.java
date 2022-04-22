@@ -79,7 +79,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
 
     private String groupId = DEFAULT_GROUP_ID;
     private KafkaBasedMappingAndDelegatingCommandHandler commandHandler;
-    private AsyncHandlingAutoCommitKafkaConsumer kafkaConsumer;
+    private AsyncHandlingAutoCommitKafkaConsumer<Buffer> kafkaConsumer;
 
     /**
      * Creates a new factory to process commands via the Kafka cluster.
@@ -173,7 +173,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
         consumerConfig.putIfAbsent(ConsumerConfig.PARTITION_ASSIGNMENT_STRATEGY_CONFIG, CooperativeStickyAssignor.class.getName());
         consumerConfig.putIfAbsent(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        kafkaConsumer = new AsyncHandlingAutoCommitKafkaConsumer(vertx, COMMANDS_TOPIC_PATTERN,
+        kafkaConsumer = new AsyncHandlingAutoCommitKafkaConsumer<>(vertx, COMMANDS_TOPIC_PATTERN,
                 commandHandler::mapAndDelegateIncomingCommandMessage, consumerConfig);
         kafkaConsumer.setPollTimeout(Duration.ofMillis(kafkaConsumerConfig.getPollTimeout()));
         kafkaConsumer.setConsumerCreationRetriesTimeout(KafkaClientFactory.UNLIMITED_RETRIES_DURATION);

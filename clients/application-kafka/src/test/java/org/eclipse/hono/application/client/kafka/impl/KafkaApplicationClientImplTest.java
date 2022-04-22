@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -58,7 +58,7 @@ public class KafkaApplicationClientImplTest {
 
     private static final String PARAMETERIZED_TEST_NAME_PATTERN = "{displayName} [{index}]; parameters: {argumentsWithNames}";
     private KafkaApplicationClientImpl client;
-    private KafkaMockConsumer mockConsumer;
+    private KafkaMockConsumer<String, Buffer> mockConsumer;
     private String tenantId;
 
     static Stream<Type> messageTypes() {
@@ -82,7 +82,7 @@ public class KafkaApplicationClientImplTest {
 
         tenantId = UUID.randomUUID().toString();
 
-        mockConsumer = new KafkaMockConsumer(OffsetResetStrategy.EARLIEST);
+        mockConsumer = new KafkaMockConsumer<>(OffsetResetStrategy.EARLIEST);
 
         final CommonKafkaClientConfigProperties commonConfig = new CommonKafkaClientConfigProperties();
         commonConfig.setCommonClientConfig(Map.of(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, "kafka"));

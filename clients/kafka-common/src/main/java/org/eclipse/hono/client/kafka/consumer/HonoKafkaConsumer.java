@@ -55,7 +55,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.kafka.client.common.TopicPartition;
 import io.vertx.kafka.client.common.impl.Helper;
 import io.vertx.kafka.client.consumer.KafkaConsumer;
@@ -64,16 +63,15 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecords;
 import io.vertx.kafka.client.consumer.impl.KafkaReadStreamImpl;
 
 /**
- * A consumer receiving records from a Kafka cluster.
+ * A consumer for receiving records from a Kafka broker.
  * <p>
- * Wraps a vert.x Kafka consumer while implementing the Hono {@link Lifecycle} interface,
- * letting records be consumed by a given handler after the {@link #start()} method has been
- * called.
- * <p>
+ * Wraps a vert.x Kafka consumer that is created during startup.
  * Includes adapted partition assignment handling concerning partition position resets.
+ *
+ * @param <V> The type of record payload this consumer supports.
  */
 @RegisterForReflection(targets = io.vertx.kafka.client.consumer.impl.KafkaReadStreamImpl.class)
-public class HonoKafkaConsumer implements Lifecycle {
+public class HonoKafkaConsumer<V> implements Lifecycle {
 
     /**
      * The default timeout to use when polling the broker for messages.
@@ -86,20 +84,33 @@ public class HonoKafkaConsumer implements Lifecycle {
     private static final long WAIT_FOR_REBALANCE_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(30);
     private static final long OBSOLETE_METRICS_REMOVAL_DELAY_MILLIS = TimeUnit.SECONDS.toMillis(30);
     private static final String MSG_CONSUMER_NOT_INITIALIZED_STARTED = "consumer not initialized/started";
+    private static final Logger LOG = LoggerFactory.getLogger(HonoKafkaConsumer.class);
 
-    protected final Logger log = LoggerFactory.getLogger(getClass());
+    /**
+     * The Vert.x instance used by this consumer.
+     */
     protected final Vertx vertx;
-    protected final AtomicBoolean stopCalled = new AtomicBoolean();
+    /**
+     * The Kafka configuration properties of this consumer.
+     */
     protected final Map<String, String> consumerConfig;
+    /**
+     * The topics that this consumer subscribes to.
+     */
     protected final Set<String> topics;
+    /**
+     * The pattern of topic names that this consumer subscribes to.
+     */
     protected final Pattern topicPattern;
 
     private final AtomicReference<Pair<Promise<Void>, Promise<Void>>> subscriptionUpdatedAndPartitionsAssignedPromiseRef = new AtomicReference<>();
-    private final Handler<KafkaConsumerRecord<String, Buffer>> recordHandler;
     private final AtomicBoolean pollingPaused = new AtomicBoolean();
     private final AtomicBoolean recordFetchingPaused = new AtomicBoolean();
+    private final AtomicBoolean stopCalled = new AtomicBoolean();
 
-    private KafkaConsumer<String, Buffer> kafkaConsumer;
+    private Handler<KafkaConsumerRecord<String, V>> recordHandler;
+    private KafkaConsumer<String, V> kafkaConsumer;
+
     /**
      * The vert.x context used by the KafkaConsumer.
      */
@@ -120,7 +131,7 @@ public class HonoKafkaConsumer implements Lifecycle {
     private Handler<Set<TopicPartition>> onPartitionsLostHandler;
     private boolean respectTtl = true;
     private Duration pollTimeout = Duration.ofMillis(DEFAULT_POLL_TIMEOUT_MILLIS);
-    private Supplier<Consumer<String, Buffer>> kafkaConsumerSupplier;
+    private Supplier<Consumer<String, V>> kafkaConsumerSupplier;
     private KafkaClientMetricsSupport metricsSupport;
     private Long pollPauseTimeoutTimerId;
     private Duration consumerCreationRetriesTimeout = Duration.ZERO; // consumer creation retries disabled by default
@@ -140,9 +151,10 @@ public class HonoKafkaConsumer implements Lifecycle {
     public HonoKafkaConsumer(
             final Vertx vertx,
             final Set<String> topics,
-            final Handler<KafkaConsumerRecord<String, Buffer>> recordHandler,
+            final Handler<KafkaConsumerRecord<String, V>> recordHandler,
             final Map<String, String> consumerConfig) {
-        this(vertx, Objects.requireNonNull(topics), null, recordHandler, consumerConfig);
+        this(vertx, Objects.requireNonNull(topics), (Pattern) null, consumerConfig);
+        setRecordHandler(recordHandler);
     }
 
     /**
@@ -160,9 +172,10 @@ public class HonoKafkaConsumer implements Lifecycle {
     public HonoKafkaConsumer(
             final Vertx vertx,
             final Pattern topicPattern,
-            final Handler<KafkaConsumerRecord<String, Buffer>> recordHandler,
+            final Handler<KafkaConsumerRecord<String, V>> recordHandler,
             final Map<String, String> consumerConfig) {
-        this(vertx, null, Objects.requireNonNull(topicPattern), recordHandler, consumerConfig);
+        this(vertx, null, Objects.requireNonNull(topicPattern), consumerConfig);
+        setRecordHandler(recordHandler);
     }
 
     /**
@@ -171,7 +184,6 @@ public class HonoKafkaConsumer implements Lifecycle {
      * @param vertx The Vert.x instance to use.
      * @param topics The Kafka topic to consume records from ({@code null} if topicPattern is set).
      * @param topicPattern The pattern of Kafka topic names to consume records from ({@code null} if topics is set).
-     * @param recordHandler The handler to be invoked for each received record.
      * @param consumerConfig The Kafka consumer configuration.
      * @throws NullPointerException if vertx, recordHandler, consumerConfig or either topics or topicPattern is
      *                              {@code null}.
@@ -183,26 +195,40 @@ public class HonoKafkaConsumer implements Lifecycle {
             final Vertx vertx,
             final Set<String> topics,
             final Pattern topicPattern,
-            final Handler<KafkaConsumerRecord<String, Buffer>> recordHandler,
             final Map<String, String> consumerConfig) {
 
         this.vertx = Objects.requireNonNull(vertx);
-        this.topics = topics;
+        if ((topics == null) == (topicPattern == null)) {
+            throw new NullPointerException("exactly one of topics or topicPattern has to be set");
+        }
         this.topicPattern = topicPattern;
-        this.recordHandler = Objects.requireNonNull(recordHandler);
+        this.topics = Optional.ofNullable(topics).map(HashSet::new).orElse(null);
         this.consumerConfig = Objects.requireNonNull(consumerConfig);
 
-        if ((topics == null) == (topicPattern == null)) {
-            throw new NullPointerException("either topics or topicPattern has to be set");
-        }
         if (!consumerConfig.containsKey(ConsumerConfig.GROUP_ID_CONFIG)) {
             if ("true".equals(consumerConfig.get(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG))) {
-                throw new IllegalArgumentException(ConsumerConfig.GROUP_ID_CONFIG + " config entry has to be set if auto-commit is enabled");
+                throw new IllegalArgumentException("%s config entry has to be set if auto-commit is enabled"
+                        .formatted(ConsumerConfig.GROUP_ID_CONFIG));
             }
-            log.trace("no group.id set, using a random UUID as default and disabling auto-commit");
+            LOG.trace("no group.id set, using a random UUID as default and disabling auto-commit");
             consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
             consumerConfig.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
         }
+    }
+
+    /**
+     * Sets the handler to invoke for each record that is received from the broker.
+     *
+     * @param handler The handler.
+     * @throws NullPointerException if handler is {@code null}.
+     * @throws IllegalStateException if this consumer is already started.
+     */
+    public void setRecordHandler(final Handler<KafkaConsumerRecord<String, V>> handler) {
+        Objects.requireNonNull(handler);
+        if (isStarted()) {
+            throw new IllegalStateException("Record handler can only be set if consumer has not been started yet");
+        }
+        this.recordHandler = handler;
     }
 
     /**
@@ -307,9 +333,10 @@ public class HonoKafkaConsumer implements Lifecycle {
 
     /**
      * Only to be used for unit tests.
+     *
      * @param supplier Supplier creating the internal Kafka consumer.
      */
-    public void setKafkaConsumerSupplier(final Supplier<Consumer<String, Buffer>> supplier) {
+    public void setKafkaConsumerSupplier(final Supplier<Consumer<String, V>> supplier) {
         kafkaConsumerSupplier = supplier;
     }
 
@@ -377,7 +404,7 @@ public class HonoKafkaConsumer implements Lifecycle {
         pollPauseTimeoutTimerId = vertx.setTimer(timeout.toMillis(), tid -> {
             pollPauseTimeoutTimerId = null;
             if (resumeRecordHandlingAndPolling()) {
-                log.debug("resumed consumer record polling - timeout of {}ms was reached [client-id: {}]", timeout.toMillis(), getClientId());
+                LOG.debug("resumed consumer record polling - timeout of {}ms was reached [client-id: {}]", timeout.toMillis(), getClientId());
             }
         });
         getKafkaConsumer().pause();
@@ -416,7 +443,7 @@ public class HonoKafkaConsumer implements Lifecycle {
      * @return The Kafka consumer.
      * @throws IllegalStateException if invoked before the KafkaConsumer is set via the {@link #start()} method.
      */
-    protected final KafkaConsumer<String, Buffer> getKafkaConsumer() {
+    protected final KafkaConsumer<String, V> getKafkaConsumer() {
         if (kafkaConsumer == null) {
             throw new IllegalStateException(MSG_CONSUMER_NOT_INITIALIZED_STARTED);
         }
@@ -431,7 +458,7 @@ public class HonoKafkaConsumer implements Lifecycle {
      * @return The Kafka Consumer.
      * @throws IllegalStateException if invoked before the KafkaConsumer is set via the {@link #start()} method.
      */
-    protected final Consumer<String, Buffer> getUnderlyingConsumer() {
+    protected final Consumer<String, V> getUnderlyingConsumer() {
         if (kafkaConsumer == null) {
             throw new IllegalStateException(MSG_CONSUMER_NOT_INITIALIZED_STARTED);
         }
@@ -447,6 +474,15 @@ public class HonoKafkaConsumer implements Lifecycle {
         return consumerConfig.get(ConsumerConfig.CLIENT_ID_CONFIG);
     }
 
+    /**
+     * Checks if this consumer has been started already.
+     *
+     * @return {@code true} if this consumer's start method has been invoked already.
+     */
+    protected final boolean isStarted() {
+        return context != null;
+    }
+
     @Override
     public Future<Void> start() {
         context = vertx.getOrCreateContext();
@@ -457,11 +493,11 @@ public class HonoKafkaConsumer implements Lifecycle {
                     .map(supplier -> Future.succeededFuture(KafkaConsumer.create(vertx, supplier.get())))
                     .orElseGet(() -> {
                         final KafkaClientFactory kafkaClientFactory = new KafkaClientFactory(vertx);
-                        return kafkaClientFactory.createKafkaConsumerWithRetries(consumerConfig, String.class,
-                                Buffer.class, consumerCreationRetriesTimeout);
+                        return kafkaClientFactory.createKafkaConsumerWithRetries(consumerConfig,
+                                consumerCreationRetriesTimeout);
                     })
                     .onFailure(thr -> {
-                        log.error("error creating consumer [client-id: {}]", getClientId(), thr);
+                        LOG.error("error creating consumer [client-id: {}]", getClientId(), thr);
                         startPromise.fail(thr);
                     })
                     .onSuccess(consumer -> {
@@ -469,7 +505,7 @@ public class HonoKafkaConsumer implements Lifecycle {
                         Optional.ofNullable(metricsSupport).ifPresent(ms -> ms.registerKafkaConsumer(kafkaConsumer.unwrap()));
                         kafkaConsumer.handler(record -> {
                             if (!startPromise.future().isComplete()) {
-                                log.debug("postponing record handling until start() is completed [topic: {}, partition: {}, offset: {}]",
+                                LOG.debug("postponing record handling until start() is completed [topic: {}, partition: {}, offset: {}]",
                                         record.topic(), record.partition(), record.offset());
                             }
                             startPromise.future().onSuccess(v2 -> {
@@ -479,14 +515,14 @@ public class HonoKafkaConsumer implements Lifecycle {
                                     try {
                                         recordHandler.handle(record);
                                     } catch (final Exception e) {
-                                        log.warn("error handling record [topic: {}, partition: {}, offset: {}, headers: {}]",
+                                        LOG.warn("error handling record [topic: {}, partition: {}, offset: {}, headers: {}]",
                                                 record.topic(), record.partition(), record.offset(), record.headers(), e);
                                     }
                                 }
                             });
                         });
                         kafkaConsumer.batchHandler(this::onBatchOfRecordsReceived);
-                        kafkaConsumer.exceptionHandler(error -> log.error("consumer error occurred [client-id: {}]",
+                        kafkaConsumer.exceptionHandler(error -> LOG.error("consumer error occurred [client-id: {}]",
                                 getClientId(), error));
                         installRebalanceListeners();
                         // subscribe and wait for rebalance to make sure that when start() completes,
@@ -506,14 +542,14 @@ public class HonoKafkaConsumer implements Lifecycle {
     private void logSubscribedTopicsOnStartComplete() {
         if (topicPattern != null) {
             if (subscribedTopicPatternTopics.size() <= 5) {
-                log.debug("consumer started, subscribed to topic pattern [{}], matching topics: {}", topicPattern,
+                LOG.debug("consumer started, subscribed to topic pattern [{}], matching topics: {}", topicPattern,
                         subscribedTopicPatternTopics);
             } else {
-                log.debug("consumer started, subscribed to topic pattern [{}], matching {} topics", topicPattern,
+                LOG.debug("consumer started, subscribed to topic pattern [{}], matching {} topics", topicPattern,
                         subscribedTopicPatternTopics.size());
             }
         } else {
-            log.debug("consumer started, subscribed to topics {}", topics);
+            LOG.debug("consumer started, subscribed to topics {}", topics);
         }
     }
 
@@ -527,7 +563,7 @@ public class HonoKafkaConsumer implements Lifecycle {
      *
      * @param records The fetched records.
      */
-    protected void onBatchOfRecordsReceived(final KafkaConsumerRecords<String, Buffer> records) {
+    protected void onBatchOfRecordsReceived(final KafkaConsumerRecords<String, V> records) {
         // do nothing by default
     }
 
@@ -539,19 +575,20 @@ public class HonoKafkaConsumer implements Lifecycle {
      *
      * @param record The received record which has expired.
      */
-    protected void onRecordHandlerSkippedForExpiredRecord(final KafkaConsumerRecord<String, Buffer> record) {
+    protected void onRecordHandlerSkippedForExpiredRecord(final KafkaConsumerRecord<String, V> record) {
         // do nothing by default
     }
 
     private void installRebalanceListeners() {
+
         // apply workaround to set listeners working on the kafka polling thread
         replaceRebalanceListener(kafkaConsumer, new ConsumerRebalanceListener() {
             @Override
             public void onPartitionsAssigned(final Collection<org.apache.kafka.common.TopicPartition> partitions) {
                 // invoked on the Kafka polling thread, not the event loop thread!
                 final Set<TopicPartition> partitionsSet = Helper.from(partitions);
-                if (log.isDebugEnabled()) {
-                    log.debug("partitions assigned: [{}]", HonoKafkaConsumerHelper.getPartitionsDebugString(partitions));
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("partitions assigned: [{}]", HonoKafkaConsumerHelper.getPartitionsDebugString(partitions));
                 }
                 ensurePositionsHaveBeenSetIfNeeded(partitionsSet);
                 updateSubscribedTopicPatternTopicsAndRemoveMetrics();
@@ -573,8 +610,8 @@ public class HonoKafkaConsumer implements Lifecycle {
             public void onPartitionsRevoked(final Collection<org.apache.kafka.common.TopicPartition> partitions) {
                 // invoked on the Kafka polling thread, not the event loop thread!
                 final Set<TopicPartition> partitionsSet = Helper.from(partitions);
-                if (log.isDebugEnabled()) {
-                    log.debug("partitions revoked: [{}]", HonoKafkaConsumerHelper.getPartitionsDebugString(partitions));
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("partitions revoked: [{}]", HonoKafkaConsumerHelper.getPartitionsDebugString(partitions));
                 }
                 onPartitionsRevokedBlocking(partitionsSet);
                 context.runOnContext(v -> HonoKafkaConsumer.this.onPartitionsRevoked(partitionsSet));
@@ -584,8 +621,8 @@ public class HonoKafkaConsumer implements Lifecycle {
             public void onPartitionsLost(final Collection<org.apache.kafka.common.TopicPartition> partitions) {
                 // invoked on the Kafka polling thread, not the event loop thread!
                 final Set<TopicPartition> partitionsSet = Helper.from(partitions);
-                if (log.isInfoEnabled()) {
-                    log.info("partitions lost: [{}] [client-id: {}]",
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("partitions lost: [{}] [client-id: {}]",
                             HonoKafkaConsumerHelper.getPartitionsDebugString(partitions), getClientId());
                 }
                 onPartitionsLostBlocking(partitionsSet);
@@ -611,7 +648,7 @@ public class HonoKafkaConsumer implements Lifecycle {
     private void ensurePositionsHaveBeenSetIfNeeded(final Set<TopicPartition> assignedPartitions) {
         // not needed if offset reset config set to "earliest", no need to wait for the retrieval of fetch positions in that case since consumer will receive all records anyway
         if (!assignedPartitions.isEmpty() && isAutoOffsetResetConfigLatest()) {
-            log.trace("checking positions for {} newly assigned partitions...", assignedPartitions.size());
+            LOG.trace("checking positions for {} newly assigned partitions...", assignedPartitions.size());
             final var partitions = Helper.to(assignedPartitions);
             // handle an exception across all position() invocations - the underlying server fetch that may trigger an exception is done for multiple partitions anyway
             try {
@@ -623,22 +660,24 @@ public class HonoKafkaConsumer implements Lifecycle {
                     // check if position is valid
                     // (a check if position is larger than endOffset isn't done here, skipping the extra endOffset() invocation for this uncommon scenario and letting the KafkaConsumer consumer itself apply the latest offset later on)
                     if (beginningOffset != null && position < beginningOffset) {
-                        log.debug("committed offset {} for [{}] is smaller than beginning offset, resetting it to the beginning offset {}",
+                        LOG.debug("committed offset {} for [{}] is smaller than beginning offset, resetting it to the beginning offset {}",
                                 position, partition, beginningOffset);
                         getUnderlyingConsumer().seek(partition, beginningOffset);
                         outOfRangeOffsetPartitions.add(partition);
                     }
                 });
                 if (!outOfRangeOffsetPartitions.isEmpty()) {
-                    log.info("found out-of-range committed offsets, corresponding records having already been deleted; "
-                                    + "positions were reset to beginning offsets; partitions: [{}] [client-id: {}]",
+                    LOG.info("""
+                            found out-of-range committed offsets, corresponding records having already been deleted; \
+                            positions were reset to beginning offsets; partitions: [{}] [client-id: {}]
+                            """,
                             HonoKafkaConsumerHelper.getPartitionsDebugString(outOfRangeOffsetPartitions), getClientId());
                 }
             } catch (final Exception e) {
-                log.error("error checking positions for {} newly assigned partitions [client-id: {}]",
+                LOG.error("error checking positions for {} newly assigned partitions [client-id: {}]",
                         assignedPartitions.size(), getClientId(), e);
             }
-            log.trace("done checking positions for {} newly assigned partitions", assignedPartitions.size());
+            LOG.trace("done checking positions for {} newly assigned partitions", assignedPartitions.size());
         }
     }
 
@@ -674,7 +713,7 @@ public class HonoKafkaConsumer implements Lifecycle {
             try {
                 subscribedTopicPatternTopics = new HashSet<>(getUnderlyingConsumer().subscription());
             } catch (final Exception e) {
-                log.warn("error getting subscription", e);
+                LOG.warn("error getting subscription", e);
             }
             // check for deleted topics in order to remove corresponding metrics
             final Set<String> deletedTopics = oldSubscribedTopicPatternTopics.stream()
@@ -704,7 +743,7 @@ public class HonoKafkaConsumer implements Lifecycle {
         final var promisePair = subscriptionUpdatedAndPartitionsAssignedPromiseRef
                 .updateAndGet(promise -> promise == null ? newPromisePair : promise);
         if (!promisePair.equals(newPromisePair)) {
-            log.debug("subscribeAndWaitForRebalance: will wait for ongoing invocation to complete");
+            LOG.debug("subscribeAndWaitForRebalance: will wait for ongoing invocation to complete");
             return CompositeFuture.all(promisePair.one().future(), promisePair.two().future()).mapEmpty();
         }
         if (topicPattern != null) {
@@ -717,7 +756,7 @@ public class HonoKafkaConsumer implements Lifecycle {
             topics.forEach(topic -> HonoKafkaConsumerHelper.partitionsFor(kafkaConsumer, topic)
                     .onSuccess(partitions -> {
                         if (partitions.isEmpty()) {
-                            log.info("subscription topic doesn't exist and didn't get auto-created: {} [client-id: {}]",
+                            LOG.info("subscription topic doesn't exist and didn't get auto-created: {} [client-id: {}]",
                                     topic, getClientId());
                         }
                     }));
@@ -731,7 +770,7 @@ public class HonoKafkaConsumer implements Lifecycle {
             if (!partitionAssignmentDone.future().isComplete()) {
                 subscriptionUpdatedAndPartitionsAssignedPromiseRef.compareAndSet(promisePair, null);
                 final String errorMsg = "timed out waiting for rebalance and update of subscribed topics";
-                log.warn(errorMsg);
+                LOG.warn(errorMsg);
                 partitionAssignmentDone.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, errorMsg));
             }
         });
@@ -818,12 +857,10 @@ public class HonoKafkaConsumer implements Lifecycle {
         if (kafkaConsumer == null) {
             return Future.failedFuture("not started");
         } else if (!stopCalled.compareAndSet(false, true)) {
-            log.trace("stop already called");
+            LOG.trace("stop already called");
             return Future.succeededFuture();
         }
-        final Promise<Void> consumerClosePromise = Promise.promise();
-        kafkaConsumer.close(consumerClosePromise);
-        return consumerClosePromise.future()
+        return kafkaConsumer.close()
                 .onComplete(ar -> Optional.ofNullable(metricsSupport)
                         .ifPresent(ms -> ms.unregisterKafkaConsumer(kafkaConsumer.unwrap())));
     }
@@ -864,7 +901,7 @@ public class HonoKafkaConsumer implements Lifecycle {
                     try {
                         handler.handle(null);
                     } catch (final Exception ex) {
-                        log.error("error running task on Kafka worker thread [client-id: {}]", getClientId(), ex);
+                        LOG.error("error running task on Kafka worker thread [client-id: {}]", getClientId(), ex);
                     }
                 }
             });
@@ -947,7 +984,7 @@ public class HonoKafkaConsumer implements Lifecycle {
         // check whether topic exists and its existence has been applied to the wildcard subscription yet;
         // use previously updated topics list (less costly than invoking kafkaConsumer.subscription() here)
         if (subscribedTopicPatternTopics.contains(topic)) {
-            log.debug("ensureTopicIsAmongSubscribedTopics: topic is already subscribed [{}]", topic);
+            LOG.debug("ensureTopicIsAmongSubscribedTopics: topic is already subscribed [{}]", topic);
             return Future.succeededFuture();
         }
         final Set<String> subscribedTopicPatternTopicsBefore = new HashSet<>(subscribedTopicPatternTopics);
@@ -955,10 +992,10 @@ public class HonoKafkaConsumer implements Lifecycle {
         // (partitionsFor() will create the topic if it doesn't exist, provided "auto.create.topics.enable" is true)
         final Promise<Void> resultPromise = Promise.promise();
         final Future<Void> topicCheckFuture = HonoKafkaConsumerHelper.partitionsFor(kafkaConsumer, topic)
-                .onFailure(thr -> log.warn("ensureTopicIsAmongSubscribedTopics: error getting partitions for topic [{}]", topic, thr))
+                .onFailure(thr -> LOG.warn("ensureTopicIsAmongSubscribedTopics: error getting partitions for topic [{}]", topic, thr))
                 .compose(partitions -> {
                     if (partitions.isEmpty()) {
-                        log.warn("ensureTopicIsAmongSubscribedTopics: topic doesn't exist and didn't get auto-created: {}", topic);
+                        LOG.warn("ensureTopicIsAmongSubscribedTopics: topic doesn't exist and didn't get auto-created: {}", topic);
                         return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
                                 "command topic doesn't exist and didn't get auto-created"));
                     }
@@ -968,7 +1005,7 @@ public class HonoKafkaConsumer implements Lifecycle {
                 .mapEmpty();
         // the topic list of a wildcard subscription only gets refreshed periodically by default (interval is defined by "metadata.max.age.ms");
         // therefore enforce a refresh here by again subscribing to the topic pattern
-        log.debug("ensureTopicIsAmongSubscribedTopics: wait for subscription update and rebalance [{}]", topic);
+        LOG.debug("ensureTopicIsAmongSubscribedTopics: wait for subscription update and rebalance [{}]", topic);
         // not composed with the topicCheckFuture outcome in order for both operations to be invoked directly after one another, with no poll() in between
         subscribeAndWaitForRebalance()
                 .compose(v -> {
@@ -976,7 +1013,7 @@ public class HonoKafkaConsumer implements Lifecycle {
                     if (!subscribedTopicPatternTopics.contains(topic)) {
                         // first metadata refresh could have failed with a LEADER_NOT_AVAILABLE error for the new topic;
                         // seems to happen when some other topics have just been deleted for example
-                        log.debug("ensureTopicIsAmongSubscribedTopics: subscription not updated with topic after rebalance; try again [topic: {}]", topic);
+                        LOG.debug("ensureTopicIsAmongSubscribedTopics: subscription not updated with topic after rebalance; try again [topic: {}]", topic);
                         return subscribeAndWaitForRebalance();
                     } else if (isCooperativeRebalancingConfigured() && someTopicDeleted && isAutoOffsetResetConfigLatest()) {
                         // subscribedTopicPatternTopics has the new topic here, but in rare cases (observed only with cooperative rebalancing) we should wait for
@@ -986,7 +1023,7 @@ public class HonoKafkaConsumer implements Lifecycle {
                             if (partitions.stream().anyMatch(p -> p.getTopic().equals(topic))) {
                                 return Future.succeededFuture(v);
                             } else {
-                                log.debug("ensureTopicIsAmongSubscribedTopics: wait for another rebalance before considering update of topic subscription [{}] as done", topic);
+                                LOG.debug("ensureTopicIsAmongSubscribedTopics: wait for another rebalance before considering update of topic subscription [{}] as done", topic);
                                 final Promise<Void> rebalanceResultPromise = Promise.promise();
                                 runOnKafkaWorkerThread(v2 -> {
                                     getUnderlyingConsumer().enforceRebalance();
@@ -1000,11 +1037,11 @@ public class HonoKafkaConsumer implements Lifecycle {
                 })
                 .compose(v -> {
                     if (!subscribedTopicPatternTopics.contains(topic)) {
-                        log.warn("ensureTopicIsAmongSubscribedTopics: subscription not updated with topic after rebalance [topic: {}]", topic);
+                        LOG.warn("ensureTopicIsAmongSubscribedTopics: subscription not updated with topic after rebalance [topic: {}]", topic);
                         return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
                                 "subscription not updated with topic after rebalance"));
                     }
-                    log.debug("ensureTopicIsAmongSubscribedTopics: done updating topic subscription [{}]", topic);
+                    LOG.debug("ensureTopicIsAmongSubscribedTopics: done updating topic subscription [{}]", topic);
                     return Future.succeededFuture(v);
                 })
                 .onComplete(ar -> Futures.tryHandleResult(resultPromise, ar));
@@ -1027,14 +1064,14 @@ public class HonoKafkaConsumer implements Lifecycle {
         }
     }
 
-    private Metrics getInternalMetricsObject(final Consumer<String, Buffer> consumer) {
+    private Metrics getInternalMetricsObject(final Consumer<String, V> consumer) {
         if (consumer instanceof org.apache.kafka.clients.consumer.KafkaConsumer) {
             try {
                 final Field field = org.apache.kafka.clients.consumer.KafkaConsumer.class.getDeclaredField("metrics");
                 field.setAccessible(true);
                 return (Metrics) field.get(consumer);
             } catch (final Exception e) {
-                log.warn("failed to get metrics object", e);
+                LOG.warn("failed to get metrics object", e);
             }
         }
         return null;
@@ -1052,8 +1089,10 @@ public class HonoKafkaConsumer implements Lifecycle {
      * @param consumer The consumer to replace the rebalance listener in.
      * @param listener The rebalance listener to set.
      */
-    private static void replaceRebalanceListener(final KafkaConsumer<String, Buffer> consumer,
+    private void replaceRebalanceListener(
+            final KafkaConsumer<String, V> consumer,
             final ConsumerRebalanceListener listener) {
+
         try {
             final Field field = KafkaReadStreamImpl.class.getDeclaredField("rebalanceListener");
             field.setAccessible(true);
@@ -1073,7 +1112,7 @@ public class HonoKafkaConsumer implements Lifecycle {
      * @throws IllegalStateException if the corresponding executor service isn't available because no subscription
      *                               has been set yet on the Kafka consumer.
      */
-    private static ExecutorService getKafkaConsumerWorker(final KafkaConsumer<String, Buffer> consumer) {
+    private ExecutorService getKafkaConsumerWorker(final KafkaConsumer<String, V> consumer) {
         final ExecutorService worker;
         try {
             final Field field = KafkaReadStreamImpl.class.getDeclaredField("worker");
