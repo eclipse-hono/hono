@@ -340,10 +340,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                     // request and the CommandConsumer from the current request has not been closed yet
                     return Optional.ofNullable(commandConsumerTracker.result())
                             .map(consumer -> consumer.close(currentSpan.context())
-                                    .otherwise(thr -> {
-                                        TracingHelper.logError(currentSpan, thr);
-                                        return (Void) null;
-                                    }))
+                                    .otherwise(thr -> null))
                             .orElseGet(Future::succeededFuture);
 
                 }).map(proceed -> {
@@ -384,7 +381,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                             tenantId, deviceId, endpoint.getCanonicalName(), t);
                     final Future<Void> commandConsumerClosedTracker = Optional.ofNullable(commandConsumerTracker.result())
                             .map(consumer -> consumer.close(currentSpan.context())
-                                    .onFailure(thr -> TracingHelper.logError(currentSpan, thr)))
+                                    .otherwise(thr -> null))
                             .orElseGet(Future::succeededFuture);
                     final CommandContext commandContext = context.get(CommandContext.KEY_COMMAND_CONTEXT);
                     if (commandContext != null) {
@@ -507,9 +504,8 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                 .buildChildSpan(getTracer(), uploadMessageSpan.context(),
                         "create consumer and wait for command", getAdapter().getTypeName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
-                .withTag(TracingHelper.TAG_TENANT_ID, tenantObject.getTenantId())
-                .withTag(TracingHelper.TAG_DEVICE_ID, deviceId)
                 .start();
+        TracingHelper.setDeviceTags(waitForCommandSpan, tenantObject.getTenantId(), deviceId);
 
         final Handler<CommandContext> commandHandler = commandContext -> {
 
@@ -517,11 +513,10 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                     .buildFollowsFromSpan(getTracer(), waitForCommandSpan.context(), "process received command")
                     .withTag(Tags.COMPONENT.getKey(), getAdapter().getTypeName())
                     .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
-                    .withTag(TracingHelper.TAG_TENANT_ID, tenantObject.getTenantId())
-                    .withTag(TracingHelper.TAG_DEVICE_ID, deviceId)
                     // add reference to the trace started in the command router when the command was first received
                     .addReference(References.FOLLOWS_FROM, commandContext.getTracingContext())
                     .start();
+            TracingHelper.setDeviceTags(processCommandSpan, tenantObject.getTenantId(), deviceId);
 
             Tags.COMPONENT.set(commandContext.getTracingSpan(), getAdapter().getTypeName());
             commandContext.logCommandToSpan(processCommandSpan);
@@ -612,18 +607,16 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                         addCommandReceptionTimer(context, requestProcessed, responseReady, ttdSecs, waitForCommandSpan);
                         context.startAcceptTimer(vertx, tenantObject, getAdapter().getConfig().getTimeoutToAck());
                     }
-                    // wrap the consumer so that when it is closed, a separate FOLLOWS_FROM span is created
-                    // for unregistering the command consumer (which is something the parent request span doesn't wait for)
+                    // wrap the consumer to be able to create a separate span on closing the consumer (errors should just be logged on that span, not the parent)
                     return new CommandConsumer() {
                         @Override
-                        public Future<Void> close(final SpanContext ignored) {
+                        public Future<Void> close(final SpanContext spanContext) {
                             final Span closeConsumerSpan = TracingHelper
-                                    .buildFollowsFromSpan(getTracer(), waitForCommandSpan.context(), "close consumer")
-                                    .withTag(Tags.COMPONENT.getKey(), getAdapter().getTypeName())
+                                    .buildChildSpan(getTracer(), spanContext, "close command consumer",
+                                            getAdapter().getTypeName())
                                     .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
-                                    .withTag(TracingHelper.TAG_TENANT_ID, tenantObject.getTenantId())
-                                    .withTag(TracingHelper.TAG_DEVICE_ID, deviceId)
                                     .start();
+                            TracingHelper.setDeviceTags(closeConsumerSpan, tenantObject.getTenantId(), deviceId);
                             return consumer.close(closeConsumerSpan.context())
                                     .onFailure(thr -> TracingHelper.logError(closeConsumerSpan, thr))
                                     .onComplete(ar -> closeConsumerSpan.finish());
