@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -69,12 +69,12 @@ public class AbstractKafkaBasedMessageSenderTest {
                 .testFactory(vertxMock, (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
     }
 
-    private AbstractKafkaBasedMessageSender newSender(final MockProducer<String, Buffer> mockProducer) {
+    private AbstractKafkaBasedMessageSender<Buffer> newSender(final MockProducer<String, Buffer> mockProducer) {
         return newSender(newProducerFactory(mockProducer));
     }
 
-    private AbstractKafkaBasedMessageSender newSender(final KafkaProducerFactory<String, Buffer> factory) {
-        return new AbstractKafkaBasedMessageSender(factory, PRODUCER_NAME, config, tracer) {
+    private AbstractKafkaBasedMessageSender<Buffer> newSender(final KafkaProducerFactory<String, Buffer> factory) {
+        return new AbstractKafkaBasedMessageSender<>(factory, PRODUCER_NAME, config, tracer) {
         };
     }
 

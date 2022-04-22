@@ -41,7 +41,6 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.EncodeException;
 import io.vertx.core.json.Json;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
@@ -53,8 +52,10 @@ import io.vertx.kafka.client.producer.RecordMetadata;
 
 /**
  * A client for publishing messages to a Kafka cluster.
+ *
+ * @param <V> The type of payload supported by this sender.
  */
-public abstract class AbstractKafkaBasedMessageSender implements MessagingClient, ServiceClient, Lifecycle {
+public abstract class AbstractKafkaBasedMessageSender<V> implements MessagingClient, ServiceClient, Lifecycle {
 
     private static final String DEFAULT_SPAN_NAME = "send message";
     /**
@@ -67,7 +68,7 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
     protected final Tracer tracer;
 
     private final MessagingKafkaProducerConfigProperties config;
-    private final KafkaProducerFactory<String, Buffer> producerFactory;
+    private final KafkaProducerFactory<String, V> producerFactory;
     private final String producerName;
 
     private boolean stopped = false;
@@ -83,7 +84,7 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public AbstractKafkaBasedMessageSender(
-            final KafkaProducerFactory<String, Buffer> producerFactory,
+            final KafkaProducerFactory<String, V> producerFactory,
             final String producerName,
             final MessagingKafkaProducerConfigProperties config,
             final Tracer tracer) {
@@ -142,7 +143,7 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
      * Sends a message to a Kafka broker and waits for the outcome.
      * <p>
      * This method encodes the given properties and then delegates to
-     * {@link #sendAndWaitForOutcome(String, String, String, Buffer, List, Span)}.
+     * {@link #sendAndWaitForOutcome(String, String, String, Object, List, Span)}.
      *
      * @param topic The topic to send the message to.
      * @param tenantId The tenant that the device belongs to.
@@ -163,7 +164,7 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
             final String topic,
             final String tenantId,
             final String deviceId,
-            final Buffer payload,
+            final V payload,
             final Map<String, Object> properties,
             final Span currentSpan) {
 
@@ -199,7 +200,7 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
             final String topic,
             final String tenantId,
             final String deviceId,
-            final Buffer payload,
+            final V payload,
             final List<KafkaHeader> headers,
             final Span currentSpan) {
 
@@ -212,7 +213,7 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
         if (stopped) {
             return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "sender already stopped"));
         }
-        final KafkaProducerRecord<String, Buffer> record = KafkaProducerRecord.create(topic, deviceId, payload);
+        final KafkaProducerRecord<String, V> record = KafkaProducerRecord.create(topic, deviceId, payload);
 
         log.trace("sending message to Kafka [topic: {}, tenantId: {}, deviceId: {}]", topic, tenantId, deviceId);
         record.addHeaders(headers);
@@ -228,11 +229,11 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
                 .mapEmpty();
     }
 
-    private KafkaProducer<String, Buffer> getOrCreateProducer() {
+    private KafkaProducer<String, V> getOrCreateProducer() {
         return producerFactory.getOrCreateProducer(producerName, config);
     }
 
-    private Future<KafkaProducer<String, Buffer>> getOrCreateProducerWithRetries() {
+    private Future<KafkaProducer<String, V>> getOrCreateProducerWithRetries() {
         return producerFactory.getOrCreateProducerWithRetries(producerName, config,
                 KafkaClientFactory.UNLIMITED_RETRIES_DURATION);
     }
@@ -323,7 +324,7 @@ public abstract class AbstractKafkaBasedMessageSender implements MessagingClient
                 .setTag(TracingHelper.TAG_DEVICE_ID.getKey(), deviceId);
     }
 
-    private void logProducerRecord(final Span span, final KafkaProducerRecord<String, Buffer> record) {
+    private void logProducerRecord(final Span span, final KafkaProducerRecord<String, V> record) {
         final String headersAsString = record.headers()
                 .stream()
                 .map(header -> header.key() + "=" + header.value())

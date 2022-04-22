@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -45,7 +45,7 @@ import io.vertx.kafka.client.producer.KafkaProducer;
  *
  * @see "https://www.eclipse.org/hono/docs/api/command-and-control-kafka/"
  */
-public class KafkaBasedCommandResponseSender extends AbstractKafkaBasedMessageSender implements CommandResponseSender {
+public class KafkaBasedCommandResponseSender extends AbstractKafkaBasedMessageSender<Buffer> implements CommandResponseSender {
 
     /**
      * Creates a new Kafka-based command response sender.

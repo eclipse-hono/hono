@@ -24,7 +24,6 @@ import io.opentracing.noop.NoopSpanContext;
 import io.opentracing.propagation.Format;
 import io.opentracing.tag.IntTag;
 import io.opentracing.tag.Tags;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaProducerRecord;
 import io.vertx.kafka.client.producer.RecordMetadata;
@@ -139,12 +138,13 @@ public final class KafkaTracingHelper {
      * <p>
      * The span context will be written to the record headers.
      *
+     * @param <V> The type of the record's value.
      * @param tracer The Tracer to use for injecting the context.
      * @param record The Kafka record to inject the context into.
      * @param spanContext The context to inject or {@code null} if no context is available.
      * @throws NullPointerException if tracer or record is {@code null}.
      */
-    public static void injectSpanContext(final Tracer tracer, final KafkaProducerRecord<String, Buffer> record,
+    public static <V> void injectSpanContext(final Tracer tracer, final KafkaProducerRecord<String, V> record,
             final SpanContext spanContext) {
 
         Objects.requireNonNull(tracer);
@@ -160,12 +160,13 @@ public final class KafkaTracingHelper {
      * <p>
      * The span context will be read from the record headers.
      *
+     * @param <V> The type of the record's value.
      * @param tracer The Tracer to use for extracting the context.
      * @param record The Kafka record to extract the context from.
      * @return The context or {@code null} if the given Kafka record does not contain a context.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public static SpanContext extractSpanContext(final Tracer tracer, final KafkaConsumerRecord<String, Buffer> record) {
+    public static <V> SpanContext extractSpanContext(final Tracer tracer, final KafkaConsumerRecord<String, V> record) {
 
         Objects.requireNonNull(tracer);
         Objects.requireNonNull(record);

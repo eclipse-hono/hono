@@ -63,7 +63,7 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
  * @see <a href="https://www.eclipse.org/hono/docs/api/command-and-control-kafka/">
  *      Command &amp; Control API for Kafka Specification</a>
  */
-public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender implements KafkaCommandSender {
+public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender<Buffer> implements KafkaCommandSender {
 
     /**
      * The default number of milliseconds to wait for the Kafka cluster to accept a command message.

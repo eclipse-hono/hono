@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -39,7 +39,7 @@ import io.vertx.kafka.client.producer.KafkaHeader;
  * (<em>hono.command_internal.${adapterInstanceId}</em>).
  * Protocol adapters consume commands by subscribing to this topic.
  */
-public class KafkaBasedInternalCommandSender extends AbstractKafkaBasedMessageSender implements InternalCommandSender {
+public class KafkaBasedInternalCommandSender extends AbstractKafkaBasedMessageSender<Buffer> implements InternalCommandSender {
 
     /**
      * Creates a new Kafka based internal command sender.

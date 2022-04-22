@@ -41,7 +41,7 @@ import io.vertx.kafka.client.producer.KafkaProducer;
 /**
  * A client for publishing downstream messages to a Kafka cluster.
  */
-public abstract class AbstractKafkaBasedDownstreamSender extends AbstractKafkaBasedMessageSender {
+public abstract class AbstractKafkaBasedDownstreamSender extends AbstractKafkaBasedMessageSender<Buffer> {
 
     private final boolean isDefaultsEnabled;
 
