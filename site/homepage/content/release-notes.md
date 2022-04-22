@@ -78,6 +78,11 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The *hono-adapter-base-quarkus* module has been removed. Its content has been integrated in the *hono-adapter-base* module. 
 * The *amqp-device* client no longer requires supplying a tenant ID when creating a client or invoking any of its
   methods.
+* The Hono components now export tracing data using the OpenTelemetry Protocol (OTLP). See the
+  [Monitoring & Tracing guide]({{% doclink "/admin-guide/monitoring-tracing-config/#tracing" %}}) for details on how to
+  configure the trace sampling and the OpenTelemetry Collector endpoint to send the traces to. The `jaeger` Maven build
+  profile used for including the Jaeger client in the Hono images has been removed. In order to forward Hono traces to a
+  Jaeger back-end, the OpenTelemetry Collector should be configured accordingly.
 
 ### Deprecations
 
