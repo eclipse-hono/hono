@@ -159,6 +159,12 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
         return MessagingType.kafka;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return The combined outcome of starting the Kafka consumer, the command handler and the internal Kafka
+     * topic cleanup service.
+     */
     @Override
     public Future<Void> start() {
         final Context context = Vertx.currentContext();
@@ -184,18 +190,24 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
                 partitions -> commandQueue.setRevokedPartitions(Helper.to(partitions)));
 
         final Future<Void> cleanupServiceStartFuture = Optional.ofNullable(internalKafkaTopicCleanupService)
-                .map(InternalKafkaTopicCleanupService::start).orElseGet(Future::succeededFuture);
+                .map(InternalKafkaTopicCleanupService::start)
+                .orElseGet(Future::succeededFuture);
         return CompositeFuture.all(commandHandler.start(), kafkaConsumer.start(), cleanupServiceStartFuture)
                 .mapEmpty();
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return The combined outcome of stopping the Kafka consumer, the command handler and the internal Kafka
+     * topic cleanup service.
+     */
     @Override
     public Future<Void> stop() {
         final Future<Void> cleanupServiceStopFuture = Optional.ofNullable(internalKafkaTopicCleanupService)
-                .map(InternalKafkaTopicCleanupService::stop).orElseGet(Future::succeededFuture);
-        return CompositeFuture
-                .join(kafkaConsumer.stop(), commandHandler.stop(), internalCommandSender.stop(),
-                        kafkaBasedCommandResponseSender.stop(), cleanupServiceStopFuture)
+                .map(InternalKafkaTopicCleanupService::stop)
+                .orElseGet(Future::succeededFuture);
+        return CompositeFuture.join(kafkaConsumer.stop(), commandHandler.stop(), cleanupServiceStopFuture)
                 .mapEmpty();
     }
 

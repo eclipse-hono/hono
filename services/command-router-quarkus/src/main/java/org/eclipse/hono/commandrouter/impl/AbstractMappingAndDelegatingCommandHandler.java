@@ -48,8 +48,8 @@ import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 /**
- * Handler for mapping received commands to the corresponding target protocol adapter instance
- * and forwarding them using the {@link org.eclipse.hono.client.command.InternalCommandSender}.
+ * A handler for mapping received commands to the corresponding target protocol adapter instance
+ * and forwarding them using an {@link org.eclipse.hono.client.command.InternalCommandSender}.
  */
 public abstract class AbstractMappingAndDelegatingCommandHandler implements Lifecycle {
 
@@ -57,7 +57,13 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
      * A logger to be shared with subclasses.
      */
     protected final Logger log = LoggerFactory.getLogger(getClass());
+    /**
+     * A client for accessing Hono's <em>Tenant</em> service.
+     */
     protected final TenantClient tenantClient;
+    /**
+     * A tracer to use for tracking the processing of commands.
+     */
     protected final Tracer tracer;
 
     private final CommandTargetMapper commandTargetMapper;
@@ -88,11 +94,21 @@ public abstract class AbstractMappingAndDelegatingCommandHandler implements Life
         this.tracer = Objects.requireNonNull(tracer);
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return The outcome of starting the internal command sender.
+     */
     @Override
     public Future<Void> start() {
         return internalCommandSender.start();
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return The outcome of stopping the internal command sender.
+     */
     @Override
     public Future<Void> stop() {
         return internalCommandSender.stop();

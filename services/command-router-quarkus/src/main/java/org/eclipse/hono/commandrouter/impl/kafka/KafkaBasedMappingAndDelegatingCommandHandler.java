@@ -37,6 +37,7 @@ import io.micrometer.core.instrument.Timer;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -44,7 +45,7 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 
 /**
- * Handler for commands received at the tenant-specific topic.
+ * A Handler for commands received at the tenant-specific topic.
  */
 public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappingAndDelegatingCommandHandler {
 
@@ -73,7 +74,7 @@ public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappin
      * @param kafkaBasedCommandResponseSender The sender used to send command responses.
      * @param metrics The component to use for reporting metrics.
      * @param tracer The tracer instance.
-     * @throws NullPointerException if any of the parameters is {@code null}.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public KafkaBasedMappingAndDelegatingCommandHandler(
             final Vertx vertx,
@@ -95,10 +96,27 @@ public class KafkaBasedMappingAndDelegatingCommandHandler extends AbstractMappin
         return MessagingType.kafka;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return The outcome of starting the command response sender and invoking
+     * {@link AbstractMappingAndDelegatingCommandHandler#start()}.
+     */
+    @Override
+    public Future<Void> start() {
+        return CompositeFuture.all(super.start(), kafkaBasedCommandResponseSender.start()).mapEmpty();
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @return The outcome of stopping the command response sender and invoking
+     * {@link AbstractMappingAndDelegatingCommandHandler#stop()}.
+     */
     @Override
     public Future<Void> stop() {
         commandQueue.setCurrentlyHandledPartitions(List.of());
-        return super.stop();
+        return CompositeFuture.join(super.stop(), kafkaBasedCommandResponseSender.stop()).mapEmpty();
     }
 
     /**
