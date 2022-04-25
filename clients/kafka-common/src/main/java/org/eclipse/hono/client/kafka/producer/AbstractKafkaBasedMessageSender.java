@@ -21,6 +21,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.apache.kafka.common.KafkaException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.kafka.KafkaClientFactory;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
@@ -67,7 +68,7 @@ public abstract class AbstractKafkaBasedMessageSender<V> implements MessagingCli
      */
     protected final Tracer tracer;
 
-    private final MessagingKafkaProducerConfigProperties config;
+    private final KafkaProducerConfigProperties config;
     private final KafkaProducerFactory<String, V> producerFactory;
     private final String producerName;
 
@@ -86,7 +87,7 @@ public abstract class AbstractKafkaBasedMessageSender<V> implements MessagingCli
     public AbstractKafkaBasedMessageSender(
             final KafkaProducerFactory<String, V> producerFactory,
             final String producerName,
-            final MessagingKafkaProducerConfigProperties config,
+            final KafkaProducerConfigProperties config,
             final Tracer tracer) {
         Objects.requireNonNull(producerFactory);
         Objects.requireNonNull(producerName);
@@ -137,6 +138,15 @@ public abstract class AbstractKafkaBasedMessageSender<V> implements MessagingCli
     public Future<Void> stop() {
         stopped = true;
         return producerFactory.closeProducer(producerName);
+    }
+
+    /**
+     * Checks if this sender has been stopped.
+     *
+     * @return {@code true} if this sender's {@link #stop()} method has been called already.
+     */
+    protected final boolean isStopped() {
+        return stopped;
     }
 
     /**
@@ -210,7 +220,7 @@ public abstract class AbstractKafkaBasedMessageSender<V> implements MessagingCli
         Objects.requireNonNull(headers);
         Objects.requireNonNull(currentSpan);
 
-        if (stopped) {
+        if (isStopped()) {
             return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "sender already stopped"));
         }
         final KafkaProducerRecord<String, V> record = KafkaProducerRecord.create(topic, deviceId, payload);
@@ -229,7 +239,13 @@ public abstract class AbstractKafkaBasedMessageSender<V> implements MessagingCli
                 .mapEmpty();
     }
 
-    private KafkaProducer<String, V> getOrCreateProducer() {
+    /**
+     * Gets the producer used for sending records to the Kafka broker.
+     *
+     * @return The producer.
+     * @throws KafkaException if the producer cannot be created.
+     */
+    protected final KafkaProducer<String, V> getOrCreateProducer() {
         return producerFactory.getOrCreateProducer(producerName, config);
     }
 

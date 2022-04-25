@@ -17,29 +17,26 @@ import java.net.HttpURLConnection;
 import java.util.Objects;
 
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.kafka.KafkaClientFactory;
+import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationSender;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 import io.vertx.kafka.client.producer.KafkaProducerRecord;
 
 /**
- * A client for publishing notifications with Kafka.
+ * A client for publishing notifications to a Kafka broker.
  */
-public class KafkaBasedNotificationSender implements NotificationSender {
+public class KafkaBasedNotificationSender extends AbstractKafkaBasedMessageSender<JsonObject> implements NotificationSender {
 
     static final String PRODUCER_NAME = "notification";
 
     private static final Logger LOG = LoggerFactory.getLogger(KafkaBasedNotificationSender.class);
-
-    private final NotificationKafkaProducerConfigProperties config;
-    private final KafkaProducerFactory<String, JsonObject> producerFactory;
-    private boolean stopped = false;
 
     /**
      * Creates an instance.
@@ -48,10 +45,10 @@ public class KafkaBasedNotificationSender implements NotificationSender {
      * @param config The Kafka producer configuration properties to use.
      * @throws NullPointerException if any of the parameters are {@code null}.
      */
-    public KafkaBasedNotificationSender(final KafkaProducerFactory<String, JsonObject> producerFactory,
+    public KafkaBasedNotificationSender(
+            final KafkaProducerFactory<String, JsonObject> producerFactory,
             final NotificationKafkaProducerConfigProperties config) {
-        this.producerFactory = Objects.requireNonNull(producerFactory);
-        this.config = Objects.requireNonNull(config);
+        super(producerFactory, PRODUCER_NAME, config, NoopTracerFactory.create());
     }
 
     @Override
@@ -59,20 +56,18 @@ public class KafkaBasedNotificationSender implements NotificationSender {
 
         Objects.requireNonNull(notification);
 
-        if (stopped) {
+        if (isStopped()) {
             return Future.failedFuture(
                     new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "sender already stopped"));
         }
 
         return createProducerRecord(notification)
-                .compose(record -> {
-                    final var producer = producerFactory.getOrCreateProducer(PRODUCER_NAME, config);
-                    return producer.send(record)
-                            .recover(t -> {
-                                LOG.debug("error publishing notification [{}]", notification, t);
-                                return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, t));
-                            });
-                }).mapEmpty();
+                .compose(record -> getOrCreateProducer().send(record)
+                        .recover(t -> {
+                            LOG.debug("error publishing notification [{}]", notification, t);
+                            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, t));
+                        }))
+                .mapEmpty();
     }
 
     private Future<KafkaProducerRecord<String, JsonObject>> createProducerRecord(final AbstractNotification notification) {
@@ -87,29 +82,4 @@ public class KafkaBasedNotificationSender implements NotificationSender {
             return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, ex));
         }
     }
-
-    /**
-     * {@inheritDoc}
-     * <p>
-     * Starts the producer.
-     */
-    @Override
-    public Future<Void> start() {
-        stopped = false;
-        return producerFactory
-                .getOrCreateProducerWithRetries(PRODUCER_NAME, config, KafkaClientFactory.UNLIMITED_RETRIES_DURATION)
-                .mapEmpty();
-    }
-
-    /**
-     * {@inheritDoc}
-     * <p>
-     * Closes the producer.
-     */
-    @Override
-    public Future<Void> stop() {
-        stopped = true;
-        return producerFactory.closeProducer(PRODUCER_NAME);
-    }
-
 }

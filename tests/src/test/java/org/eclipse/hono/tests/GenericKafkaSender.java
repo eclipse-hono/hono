@@ -28,7 +28,7 @@ import io.vertx.kafka.client.producer.KafkaHeader;
 /**
  * A generic Kafka sender.
  */
-public class GenericKafkaSender extends AbstractKafkaBasedMessageSender {
+public class GenericKafkaSender extends AbstractKafkaBasedMessageSender<Buffer> {
 
     /**
      * Creates a new generic Kafka sender.

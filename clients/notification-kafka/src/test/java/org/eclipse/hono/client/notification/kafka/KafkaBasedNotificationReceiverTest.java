@@ -82,8 +82,7 @@ public class KafkaBasedNotificationReceiverTest {
 
         final var receiver = createReceiver();
 
-        receiver.registerConsumer(TenantChangeNotification.TYPE, notification -> {
-                });
+        receiver.registerConsumer(TenantChangeNotification.TYPE, notification -> {});
 
         receiver.start()
                 .onComplete(ctx.succeeding(v -> ctx.verify(() -> {
@@ -106,8 +105,7 @@ public class KafkaBasedNotificationReceiverTest {
 
         final var receiver = createReceiver();
 
-        receiver.registerConsumer(TenantChangeNotification.TYPE, notification -> {
-        });
+        receiver.registerConsumer(TenantChangeNotification.TYPE, notification -> {});
 
         receiver.start()
                 .compose(v -> receiver.stop())
@@ -186,12 +184,13 @@ public class KafkaBasedNotificationReceiverTest {
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(tenantTopicPartition, deviceTopicPartition));
 
         final KafkaBasedNotificationReceiver client = new KafkaBasedNotificationReceiver(vertx, consumerConfig);
-        client.setKafkaConsumerFactory(() -> mockConsumer);
+        client.setKafkaConsumerSupplier(() -> mockConsumer);
 
         return client;
     }
 
-    private ConsumerRecord<String, JsonObject> createKafkaRecord(final AbstractNotification notification,
+    private ConsumerRecord<String, JsonObject> createKafkaRecord(
+            final AbstractNotification notification,
             final long offset) {
         final var json = JsonObject.mapFrom(notification);
         final String topicName = NotificationTopicHelper.getTopicName(notification.getType());

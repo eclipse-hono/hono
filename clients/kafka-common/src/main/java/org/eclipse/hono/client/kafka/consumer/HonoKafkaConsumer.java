@@ -79,7 +79,7 @@ public class HonoKafkaConsumer<V> implements Lifecycle {
     public static final long DEFAULT_POLL_TIMEOUT_MILLIS = 250;
 
     /**
-     * Timeout used waiting for a rebalance after a subscription was updated.
+     * Timeout used waiting for a re-balance after a subscription was updated.
      */
     private static final long WAIT_FOR_REBALANCE_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(30);
     private static final long OBSOLETE_METRICS_REMOVAL_DELAY_MILLIS = TimeUnit.SECONDS.toMillis(30);
@@ -154,7 +154,7 @@ public class HonoKafkaConsumer<V> implements Lifecycle {
             final Handler<KafkaConsumerRecord<String, V>> recordHandler,
             final Map<String, String> consumerConfig) {
         this(vertx, Objects.requireNonNull(topics), (Pattern) null, consumerConfig);
-        setRecordHandler(recordHandler);
+        setRecordHandler(Objects.requireNonNull(recordHandler));
     }
 
     /**
@@ -175,7 +175,7 @@ public class HonoKafkaConsumer<V> implements Lifecycle {
             final Handler<KafkaConsumerRecord<String, V>> recordHandler,
             final Map<String, String> consumerConfig) {
         this(vertx, null, Objects.requireNonNull(topicPattern), consumerConfig);
-        setRecordHandler(recordHandler);
+        setRecordHandler(Objects.requireNonNull(recordHandler));
     }
 
     /**
@@ -223,12 +223,29 @@ public class HonoKafkaConsumer<V> implements Lifecycle {
      * @throws NullPointerException if handler is {@code null}.
      * @throws IllegalStateException if this consumer is already started.
      */
-    public void setRecordHandler(final Handler<KafkaConsumerRecord<String, V>> handler) {
+    public final void setRecordHandler(final Handler<KafkaConsumerRecord<String, V>> handler) {
         Objects.requireNonNull(handler);
         if (isStarted()) {
             throw new IllegalStateException("Record handler can only be set if consumer has not been started yet");
         }
         this.recordHandler = handler;
+    }
+
+    /**
+     * Adds a topic to consume records from.
+     *
+     * @param topicName The name of the topic.
+     * @throws NullPointerException if topicName is {@code null}.
+     * @throws IllegalStateException if this consumer is already started.
+     */
+    protected final void addTopic(final String topicName) {
+        Objects.requireNonNull(topics);
+        if (isStarted()) {
+            throw new IllegalStateException("Topics can only be set if consumer has not been started yet");
+        } else if (topics == null) {
+            throw new IllegalStateException("Cannot add topic on consumer which has been created with a topic pattern");
+        }
+        this.topics.add(topicName);
     }
 
     /**
@@ -485,6 +502,9 @@ public class HonoKafkaConsumer<V> implements Lifecycle {
 
     @Override
     public Future<Void> start() {
+        if (recordHandler == null) {
+            throw new IllegalStateException("Record handler must be set");
+        }
         context = vertx.getOrCreateContext();
         final Promise<Void> startPromise = Promise.promise();
         runOnContext(v -> {

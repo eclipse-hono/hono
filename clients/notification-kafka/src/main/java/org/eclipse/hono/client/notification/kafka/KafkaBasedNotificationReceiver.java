@@ -15,14 +15,10 @@ package org.eclipse.hono.client.notification.kafka;
 
 import java.time.Duration;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
-import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
-import org.apache.kafka.clients.consumer.Consumer;
 import org.eclipse.hono.client.kafka.KafkaClientFactory;
 import org.eclipse.hono.client.kafka.consumer.HonoKafkaConsumer;
 import org.eclipse.hono.notification.AbstractNotification;
@@ -40,19 +36,12 @@ import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 /**
  * A client for receiving notifications with Kafka.
  */
-public class KafkaBasedNotificationReceiver implements NotificationReceiver {
+public class KafkaBasedNotificationReceiver extends HonoKafkaConsumer<JsonObject> implements NotificationReceiver {
 
     private static final Logger LOG = LoggerFactory.getLogger(KafkaBasedNotificationReceiver.class);
     private static final String NAME = "notification";
 
-    private final Vertx vertx;
-    private final NotificationKafkaConsumerConfigProperties consumerConfig;
     private final Map<Class<? extends AbstractNotification>, Handler<? extends AbstractNotification>> handlerPerType = new HashMap<>();
-    private final Set<String> topics = new HashSet<>();
-
-    private Supplier<Consumer<String, JsonObject>> kafkaConsumerSupplier;
-    private HonoKafkaConsumer<JsonObject> honoKafkaConsumer;
-    private boolean started = false;
 
     /**
      * Creates a client for consuming notifications.
@@ -64,80 +53,51 @@ public class KafkaBasedNotificationReceiver implements NotificationReceiver {
      * @throws IllegalArgumentException if consumerConfig does not contain a valid configuration (at least a bootstrap
      *             server).
      */
-    public KafkaBasedNotificationReceiver(final Vertx vertx,
+    public KafkaBasedNotificationReceiver(
+            final Vertx vertx,
             final NotificationKafkaConsumerConfigProperties consumerConfig) {
 
-        Objects.requireNonNull(vertx);
-        Objects.requireNonNull(consumerConfig);
+        super(vertx, Set.of(), (Pattern) null, consumerConfig.getConsumerConfig(NAME));
 
         if (!consumerConfig.isConfigured()) {
             throw new IllegalArgumentException("No Kafka configuration found!");
         }
-
-        this.vertx = vertx;
-        this.consumerConfig = consumerConfig;
-
-    }
-
-    // visible for testing
-    void setKafkaConsumerFactory(final Supplier<Consumer<String, JsonObject>> kafkaConsumerSupplier) {
-        this.kafkaConsumerSupplier = Objects.requireNonNull(kafkaConsumerSupplier);
+        setPollTimeout(Duration.ofMillis(consumerConfig.getPollTimeout()));
+        setConsumerCreationRetriesTimeout(KafkaClientFactory.UNLIMITED_RETRIES_DURATION);
+        setRecordHandler(this::handleRecord);
     }
 
     @Override
-    public Future<Void> start() {
-        honoKafkaConsumer = new HonoKafkaConsumer<>(vertx, topics, getRecordHandler(), consumerConfig.getConsumerConfig(NAME));
-        honoKafkaConsumer.setPollTimeout(Duration.ofMillis(consumerConfig.getPollTimeout()));
-        honoKafkaConsumer.setConsumerCreationRetriesTimeout(KafkaClientFactory.UNLIMITED_RETRIES_DURATION);
-        Optional.ofNullable(kafkaConsumerSupplier).ifPresent(honoKafkaConsumer::setKafkaConsumerSupplier);
-        return honoKafkaConsumer
-                .start()
-                .onSuccess(ok -> started = true);
-    }
-
-    @Override
-    public <T extends AbstractNotification> void registerConsumer(final NotificationType<T> notificationType,
+    public <T extends AbstractNotification> void registerConsumer(
+            final NotificationType<T> notificationType,
             final Handler<T> consumer) {
 
-        if (started) {
+        if (isStarted()) {
             throw new IllegalStateException("consumers cannot be added when receiver is already started.");
         }
 
-        topics.add(NotificationTopicHelper.getTopicName(notificationType));
+        addTopic(NotificationTopicHelper.getTopicName(notificationType));
         handlerPerType.put(notificationType.getClazz(), consumer);
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    private Handler<KafkaConsumerRecord<String, JsonObject>> getRecordHandler() {
-        return record -> {
-            final JsonObject json = record.value();
-            if (LOG.isTraceEnabled()) {
-                LOG.trace("received notification:{}{}", System.lineSeparator(), json.encodePrettily());
-            }
+    private void handleRecord(final KafkaConsumerRecord<String, JsonObject> record) {
+        final JsonObject json = record.value();
+        if (LOG.isTraceEnabled()) {
+            LOG.trace("received notification:{}{}", System.lineSeparator(), json.encodePrettily());
+        }
 
-            final AbstractNotification notification = json.mapTo(AbstractNotification.class);
-            final Handler handler = handlerPerType.get(notification.getClass());
-            if (handler != null) {
-                handler.handle(notification);
-            }
-        };
+        final AbstractNotification notification = json.mapTo(AbstractNotification.class);
+        final Handler handler = handlerPerType.get(notification.getClass());
+        if (handler != null) {
+            handler.handle(notification);
+        }
     }
 
     @Override
     public Future<Void> stop() {
-        return stopKafkaConsumer()
-                .onComplete(v -> topics.clear())
+        return super.stop()
                 .onComplete(v -> handlerPerType.clear())
-                .onComplete(v -> started = false)
                 .mapEmpty();
     }
-
-    private Future<Void> stopKafkaConsumer() {
-        if (honoKafkaConsumer != null) {
-            return honoKafkaConsumer.stop();
-        } else {
-            return Future.succeededFuture();
-        }
-    }
-
 }
