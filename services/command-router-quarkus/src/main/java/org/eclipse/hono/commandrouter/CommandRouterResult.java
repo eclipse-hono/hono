@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.service.commandrouter;
+package org.eclipse.hono.commandrouter;
 
 import java.util.Map;
 

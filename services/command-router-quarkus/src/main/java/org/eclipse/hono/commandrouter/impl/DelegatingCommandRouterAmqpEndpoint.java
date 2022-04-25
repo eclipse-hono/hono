@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.service.commandrouter;
+package org.eclipse.hono.commandrouter.impl;
 
 import java.net.HttpURLConnection;
 import java.time.Duration;
@@ -23,6 +23,8 @@ import java.util.stream.Collectors;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.amqp.connection.AmqpUtils;
+import org.eclipse.hono.commandrouter.CommandRouterResult;
+import org.eclipse.hono.commandrouter.CommandRouterService;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.amqp.AbstractDelegatingRequestResponseEndpoint;
 import org.eclipse.hono.service.amqp.AbstractRequestResponseEndpoint;

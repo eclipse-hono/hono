@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.service.commandrouter;
+package org.eclipse.hono.commandrouter.impl;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -29,6 +29,9 @@ import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.Message;
 import org.eclipse.hono.client.amqp.connection.AmqpUtils;
+import org.eclipse.hono.commandrouter.CommandRouterResult;
+import org.eclipse.hono.commandrouter.CommandRouterService;
+import org.eclipse.hono.commandrouter.impl.DelegatingCommandRouterAmqpEndpoint;
 import org.eclipse.hono.util.CommandRouterConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.jupiter.api.BeforeEach;
