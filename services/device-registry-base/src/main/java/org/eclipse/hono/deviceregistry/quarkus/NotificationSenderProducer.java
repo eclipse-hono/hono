@@ -27,11 +27,11 @@ import org.eclipse.hono.client.notification.amqp.ProtonBasedNotificationSender;
 import org.eclipse.hono.client.notification.kafka.KafkaBasedNotificationSender;
 import org.eclipse.hono.client.notification.kafka.NotificationKafkaProducerConfigProperties;
 import org.eclipse.hono.client.util.ServiceClient;
-import org.eclipse.hono.deviceregistry.util.ServiceClientAdapter;
 import org.eclipse.hono.notification.NotificationConstants;
 import org.eclipse.hono.notification.NotificationEventBusSupport;
 import org.eclipse.hono.notification.NotificationSender;
 import org.eclipse.hono.service.HealthCheckServer;
+import org.eclipse.hono.service.util.ServiceClientAdapter;
 
 import io.opentracing.Tracer;
 import io.vertx.core.Vertx;

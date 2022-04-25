@@ -35,7 +35,6 @@ import org.eclipse.hono.deviceregistry.service.device.AbstractRegistrationServic
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 import org.eclipse.hono.deviceregistry.service.device.EdgeDeviceAutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
-import org.eclipse.hono.deviceregistry.util.ServiceClientAdapter;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.service.credentials.DelegatingCredentialsAmqpEndpoint;
@@ -45,6 +44,7 @@ import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.registration.DelegatingRegistrationAmqpEndpoint;
 import org.eclipse.hono.service.tenant.DelegatingTenantAmqpEndpoint;
 import org.eclipse.hono.service.tenant.TenantService;
+import org.eclipse.hono.service.util.ServiceClientAdapter;
 
 import io.opentracing.Tracer;
 import io.smallrye.config.ConfigMapping;

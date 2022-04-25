@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.deviceregistry.util;
+package org.eclipse.hono.service.util;
 
 import java.util.Objects;
 
@@ -26,7 +26,7 @@ import io.vertx.ext.healthchecks.HealthCheckHandler;
  * Adapts a {@link org.eclipse.hono.client.util.ServiceClient} to the {@link HealthCheckProvider} interface.
  *
  */
-public class ServiceClientAdapter implements HealthCheckProvider {
+public final class ServiceClientAdapter implements HealthCheckProvider {
 
     private final ServiceClient serviceClient;
 
