@@ -184,7 +184,7 @@ or rejected (unsettled).
   * (optional) *content-type*: The type of payload contained in the message body. The given content type will be used
     in the AMQP message being forwarded downstream if not empty. Otherwise, the content type of the downstream
     message will be set to `application/octet-stream` if the payload is not empty and no default content type has been
-    defined for the origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}}).
+    defined for the origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
 * Message Body:
   * (optional) Arbitrary payload contained in either a single AMQP *Data* or *AmqpValue* section. Note that the adapter
     only supports values of type *string* or *array* of *byte*s in the *AmqpValue* section. Values of other types will
@@ -229,7 +229,7 @@ java -jar hono-cli-*-exec.jar --spring.profiles.active=amqp-send --hono.client.p
   * (optional) *content-type*: The type of payload contained in the message body. The given content type will be used
     in the AMQP message being forwarded downstream if not empty. Otherwise, the content type of the downstream
     message will be set to `application/octet-stream` if the payload is not empty and no default content type has been
-    defined for the origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}}).
+    defined for the origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
 * Message Body:
   * (optional) Arbitrary payload contained in either a single AMQP *Data* or *AmqpValue* section. Note that the adapter
     only supports values of type *string* or *array* of *byte*s in the *AmqpValue* section. Values of other types will
@@ -295,7 +295,7 @@ All other combinations are not supported by the adapter and result in the messag
   * (optional) *content-type*: The type of payload contained in the message body. The given content type will be used
     in the AMQP message being forwarded downstream if not empty. Otherwise, the content type of the downstream
     message will be set to `application/octet-stream` if the payload is not empty and no default content type has been
-    defined for the origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}}).
+    defined for the origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
 * Message Body:
   * (optional) Arbitrary payload contained in either a single AMQP *Data* or *AmqpValue* section. Note that the adapter
     only supports values of type *string* or *array* of *byte*s in the *AmqpValue* section. Values of other types will
@@ -333,7 +333,7 @@ java -jar hono-cli-*-exec.jar --spring.profiles.active=amqp-send --hono.client.u
   * (optional) *content-type*: The type of payload contained in the message body. The given content type will be used
     in the AMQP message being forwarded downstream if not empty. Otherwise, the content type of the downstream
     message will be set to `application/octet-stream` if the payload is not empty and no default content type has been
-    defined for the origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}}).
+    defined for the origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
 * Message Body:
   * (optional) Arbitrary payload contained in either a single AMQP *Data* or *AmqpValue* section. Note that the adapter
     only supports values of type *string* or *array* of *byte*s in the *AmqpValue* section. Values of other types will
