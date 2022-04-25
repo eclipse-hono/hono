@@ -109,10 +109,11 @@ public class NorthBoundApis {
 
     Future<KafkaApplicationClientImpl> createKafkaClient() {
         final var commonProps = new HashMap<String, String>();
+        final String bootstrapServers;
+
         if (connectionOptions.useSandbox) {
-            commonProps.put(
-                    CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG,
-                    "%1$s:9092,%1$s:9094".formatted(ConnectionOptions.SANDBOX_HOST_NAME));
+            bootstrapServers = "%1$s:9092,%1$s:9094".formatted(ConnectionOptions.SANDBOX_HOST_NAME);
+            commonProps.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
             commonProps.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SecurityProtocol.SASL_PLAINTEXT.name);
             commonProps.put(SaslConfigs.SASL_MECHANISM, ScramMechanism.SCRAM_SHA_512.mechanismName());
             Optional.ofNullable(connectionOptions.credentials)
@@ -125,9 +126,8 @@ public class NorthBoundApis {
                                 scramJaasConfig(SANDBOX_KAFKA_USER, SANDBOX_KAFKA_PWD)));
         } else {
             validateConnectionOptions();
-            commonProps.put(
-                    CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG,
-                    "%s:%d".formatted(connectionOptions.hostname.get(), connectionOptions.portNumber.get()));
+            bootstrapServers = "%s:%d".formatted(connectionOptions.hostname.get(), connectionOptions.portNumber.get());
+            commonProps.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
 
             connectionOptions.trustStorePath
                 .ifPresent(path -> {
@@ -161,6 +161,7 @@ public class NorthBoundApis {
         final var producerProps = new MessagingKafkaProducerConfigProperties();
         producerProps.setCommonClientConfig(commonClientConfig);
 
+        System.err.printf("Connecting to Kafka based messaging infrastructure [%s]%n", bootstrapServers);
         final var kafkaClient = new KafkaApplicationClientImpl(
                 vertx,
                 consumerProps,
@@ -196,6 +197,8 @@ public class NorthBoundApis {
         }
 
         final var amqpClient = new ProtonBasedApplicationClient(HonoConnection.newConnection(vertx, clientConfig));
+        System.err.printf("Connecting to AMQP 1.0 based messaging infrastructure [%s:%d]%n",
+                clientConfig.getHost(), clientConfig.getPort());
         return amqpClient.connect()
                 .onSuccess(con -> {
                     this.client = amqpClient;

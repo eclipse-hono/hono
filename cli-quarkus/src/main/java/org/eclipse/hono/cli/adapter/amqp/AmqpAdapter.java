@@ -78,7 +78,8 @@ import picocli.shell.jline3.PicocliCommands.PicocliCommandsFactory;
  */
 @Singleton
 @CommandLine.Command(
-        name = "amqp",
+        name = "amqp-device",
+        aliases = { "amqp" },
         description = { "A client for interacting with Hono's AMQP adapter." },
         mixinStandardHelpOptions = true,
         versionProvider = PropertiesVersionProvider.class,
@@ -275,7 +276,7 @@ public class AmqpAdapter implements Callable<Integer> {
                 builtins.setLineReader(reader);
                 factory.setTerminal(terminal);
 
-                final String prompt = "hono-cli/amqp> ";
+                final String prompt = "hono-cli/amqp-device> ";
                 final String rightPrompt = null;
 
                 // start the shell and process input until the user quits
@@ -409,7 +410,6 @@ public class AmqpAdapter implements Callable<Integer> {
             name = "sub",
             description = {"Start receiving commands for a device."},
             mixinStandardHelpOptions = true,
-            subcommands = CommandLine.HelpCommand.class,
             versionProvider = PropertiesVersionProvider.class,
             sortOptions = false)
     void subscribe(
@@ -501,7 +501,6 @@ public class AmqpAdapter implements Callable<Integer> {
             name = "unsub",
             description = {"Stop receiving commands for a device."},
             mixinStandardHelpOptions = true,
-            subcommands = CommandLine.HelpCommand.class,
             versionProvider = PropertiesVersionProvider.class,
             sortOptions = false)
     void unsubscribe(
@@ -555,7 +554,6 @@ public class AmqpAdapter implements Callable<Integer> {
             name = "telemetry",
             description = {"Send a telemetry message."},
             mixinStandardHelpOptions = true,
-            subcommands = CommandLine.HelpCommand.class,
             versionProvider = PropertiesVersionProvider.class,
             sortOptions = false)
     void sendTelemetry(
@@ -586,7 +584,6 @@ public class AmqpAdapter implements Callable<Integer> {
             name = "event",
             description = {"Send an event message."},
             mixinStandardHelpOptions = true,
-            subcommands = CommandLine.HelpCommand.class,
             versionProvider = PropertiesVersionProvider.class,
             sortOptions = false)
     void sendEvent(

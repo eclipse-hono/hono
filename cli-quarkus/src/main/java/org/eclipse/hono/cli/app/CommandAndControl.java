@@ -192,7 +192,7 @@ public class CommandAndControl implements Callable<Integer> {
                 builtins.setLineReader(reader);
                 factory.setTerminal(terminal);
 
-                final String prompt = "hono-cli/command> ";
+                final String prompt = "hono-cli/app/command> ";
                 final String rightPrompt = null;
 
                 // start the shell and process input until the user quits with Ctrl-D
@@ -269,7 +269,6 @@ public class CommandAndControl implements Callable<Integer> {
             name = "ow",
             description = {"Send a one-way command to a device."},
             mixinStandardHelpOptions = true,
-            subcommands = CommandLine.HelpCommand.class,
             versionProvider = PropertiesVersionProvider.class,
             sortOptions = false)
     int sendOneWay(
@@ -305,7 +304,6 @@ public class CommandAndControl implements Callable<Integer> {
             name = "req",
             description = {"Send a request-response command to a device."},
             mixinStandardHelpOptions = true,
-            subcommands = CommandLine.HelpCommand.class,
             versionProvider = PropertiesVersionProvider.class,
             sortOptions = false)
     int sendRequestResponse(
