@@ -188,9 +188,12 @@ public class KafkaClientFactory {
             final Supplier<Boolean> serverEntriesValid,
             final Promise<T> resultPromise) {
         try {
-            resultPromise.complete(clientSupplier.get());
+            final var client = clientSupplier.get();
+            LOG.debug("successully created client [type: {}]", client.getClass().getName());
+            resultPromise.complete(client);
         } catch (final Exception e) {
-            // perform retry in case bootstrap URLs are not resolvable ("No resolvable bootstrap urls given in bootstrap.servers")
+            // perform retry in case bootstrap URLs are not resolvable ("No resolvable bootstrap urls given in
+            // bootstrap.servers")
             // (see org.apache.kafka.clients.ClientUtils#parseAndValidateAddresses)
             if (!retriesTimeLimit.equals(Instant.MIN) && e instanceof KafkaException
                     && isBootstrapServersConfigException(e.getCause()) && serverEntriesValid.get()) {
@@ -202,11 +205,15 @@ public class KafkaClientFactory {
                     });
                 } else {
                     // retries time limit reached
-                    LOG.warn("error creating Kafka client (no further attempts will be done, timeout for retries reached): {}",
+                    LOG.warn("""
+                            error creating Kafka client (no further attempts will be done, timeout for \
+                            retries reached): {}
+                            """,
                             e.getCause().getMessage());
                     resultPromise.fail(e);
                 }
             } else {
+                LOG.warn("failed to create client due to terminal error (won't retry)", e);
                 resultPromise.fail(e);
             }
         }

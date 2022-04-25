@@ -146,7 +146,9 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
         // use "earliest" "auto.offset.reset" setting to include records published before/during consumer start
         consumerConfig.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         this.clientId = consumerConfig.get(ConsumerConfig.CLIENT_ID_CONFIG);
-        consumerCreator = () -> kafkaClientFactory.createKafkaConsumerWithRetries(consumerConfig,
+        consumerCreator = () -> kafkaClientFactory.createClientWithRetries(
+                () -> KafkaConsumer.create(vertx, consumerConfig),
+                consumerConfig.get(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG),
                 KafkaClientFactory.UNLIMITED_RETRIES_DURATION);
     }
 

@@ -33,7 +33,6 @@ import org.eclipse.hono.client.kafka.metrics.KafkaMetricsOptions;
 import org.eclipse.hono.client.kafka.metrics.MicrometerKafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.metrics.NoopKafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
-import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerOptions;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.client.notification.amqp.ProtonBasedNotificationReceiver;
@@ -94,7 +93,8 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
 @ApplicationScoped
 public class Application extends AbstractServiceApplication {
 
-    // workaround so that the Quarkus KubernetesClientProcessor finds a Pod watcher and registers corresponding model classes
+    // workaround so that the Quarkus KubernetesClientProcessor finds a Pod watcher and registers corresponding
+    // model classes
     static {
         new Watcher<Pod>() {
 
@@ -316,7 +316,7 @@ public class Application extends AbstractServiceApplication {
         final DeviceRegistrationClient registrationClient = registrationClient();
         final TenantClient tenantClient = tenantClient();
 
-        final CommandTargetMapper commandTargetMapper = CommandTargetMapper.create(registrationClient, deviceConnectionInfo, tracer);
+        final var commandTargetMapper = CommandTargetMapper.create(registrationClient, deviceConnectionInfo, tracer);
         return new CommandRouterServiceImpl(
                 amqpServerProperties,
                 registrationClient,
@@ -331,15 +331,19 @@ public class Application extends AbstractServiceApplication {
             final TenantClient tenantClient,
             final CommandTargetMapper commandTargetMapper) {
 
-        final MessagingClientProvider<CommandConsumerFactory> commandConsumerFactoryProvider = new MessagingClientProvider<>();
+        final var commandConsumerFactoryProvider = new MessagingClientProvider<CommandConsumerFactory>();
         if (kafkaConsumerConfig.isConfigured() && commandResponseKafkaProducerConfig.isConfigured()
                 && commandInternalKafkaProducerConfig.isConfigured()) {
-            final KafkaProducerFactory<String, Buffer> kafkaProducerFactory = CachingKafkaProducerFactory.sharedFactory(vertx);
+
+            final var kafkaProducerFactory = CachingKafkaProducerFactory.<String, Buffer>sharedFactory(vertx);
             kafkaProducerFactory.setMetricsSupport(kafkaClientMetricsSupport);
             if (internalKafkaTopicCleanupService == null && commandInternalKafkaProducerConfig.isConfigured()
                     && kafkaConsumerConfig.isConfigured() && kafkaAdminClientConfig.isConfigured()
                     && !(adapterInstanceStatusService instanceof AdapterInstanceStatusService.UnknownStatusProvidingService)) {
-                internalKafkaTopicCleanupService = new InternalKafkaTopicCleanupService(vertx, adapterInstanceStatusService, kafkaAdminClientConfig);
+                internalKafkaTopicCleanupService = new InternalKafkaTopicCleanupService(
+                        vertx,
+                        adapterInstanceStatusService,
+                        kafkaAdminClientConfig);
             }
             commandConsumerFactoryProvider.setClient(new KafkaBasedCommandConsumerFactoryImpl(
                     vertx,
@@ -413,9 +417,10 @@ public class Application extends AbstractServiceApplication {
         if (kafkaNotificationConfig.isConfigured()) {
             notificationReceiver = new KafkaBasedNotificationReceiver(vertx, kafkaNotificationConfig);
         } else {
-            final ClientConfigProperties notificationConfig = new ClientConfigProperties(commandConsumerConnectionConfig);
+            final var notificationConfig = new ClientConfigProperties(commandConsumerConnectionConfig);
             notificationConfig.setServerRole("Notification");
-            notificationReceiver = new ProtonBasedNotificationReceiver(HonoConnection.newConnection(vertx, notificationConfig, tracer));
+            notificationReceiver = new ProtonBasedNotificationReceiver(
+                    HonoConnection.newConnection(vertx, notificationConfig, tracer));
         }
         final var notificationSender = NotificationEventBusSupport.getNotificationSender(vertx);
         NotificationConstants.DEVICE_REGISTRY_NOTIFICATION_TYPES.forEach(notificationType -> {

@@ -49,8 +49,10 @@ public class KafkaBasedInternalCommandSender extends AbstractKafkaBasedMessageSe
      * @param tracer The tracer instance.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public KafkaBasedInternalCommandSender(final KafkaProducerFactory<String, Buffer> producerFactory,
-            final MessagingKafkaProducerConfigProperties producerConfig, final Tracer tracer) {
+    public KafkaBasedInternalCommandSender(
+            final KafkaProducerFactory<String, Buffer> producerFactory,
+            final MessagingKafkaProducerConfigProperties producerConfig,
+            final Tracer tracer) {
         super(producerFactory, "internal-cmd-sender", producerConfig, tracer);
     }
 
