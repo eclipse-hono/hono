@@ -31,7 +31,7 @@ public final class CommandUtils {
      * Property description explaining the support for OS variable references.
      */
     public static final String DESCRIPTION_ENV_VARS = """
-            This property supports references to OS environment variables like ${MY_VARIABLE}, with
+            This property supports references to OS environment variables like $${MY_VARIABLE}, with \
             MY_VARIABLE being the name of the OS environment variable that contains the value to use.
             """;
 
@@ -45,10 +45,9 @@ public final class CommandUtils {
      * @param t Th error to print.
      */
     public static void printError(final Throwable t) {
-        if (t instanceof ServiceInvocationException) {
-            final var cause = (ServiceInvocationException) t;
-            System.err.println("Error: %d %s".formatted(cause.getErrorCode(),
-                    ServiceInvocationException.getErrorMessageForExternalClient(cause)));
+        if (t instanceof ServiceInvocationException cause) {
+            System.err.printf("Error: %d %s%n", cause.getErrorCode(),
+                    ServiceInvocationException.getErrorMessageForExternalClient(cause));
         } else {
             System.err.println("Error: %s".formatted(t.getMessage()));
         }

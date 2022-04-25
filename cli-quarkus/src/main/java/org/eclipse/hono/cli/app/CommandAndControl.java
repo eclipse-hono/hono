@@ -137,7 +137,7 @@ public class CommandAndControl implements Callable<Integer> {
                     """,
                     "See https://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.7",
                     """
-                    Not all protocol adapters will support this property as not all transport protocols provide means
+                    Not all protocol adapters will support this property as not all transport protocols provide means \
                     to convey this information, e.g. MQTT 3.1.1 has no notion of message headers.
                     """,
                     CommandUtils.DESCRIPTION_ENV_VARS
@@ -174,7 +174,7 @@ public class CommandAndControl implements Callable<Integer> {
                 @Override
                 public String name() {
                     return "hono-cli";
-                };
+                }
             };
 
             final Parser parser = new DefaultParser();
@@ -255,7 +255,7 @@ public class CommandAndControl implements Callable<Integer> {
             if (sie.getErrorCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
                 System.err.println("Cannot send command to device");
                 System.err.println("""
-                        Check if device is connected to a protocol adapter and has subscribed
+                        Check if device is connected to a protocol adapter and has subscribed \
                         for commands as described in the protocol adapter user guides.
                         https://www.eclipse.org/hono/docs/user-guide/
                         """);

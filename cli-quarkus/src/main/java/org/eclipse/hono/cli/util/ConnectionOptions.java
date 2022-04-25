@@ -59,7 +59,7 @@ public class ConnectionOptions {
     @CommandLine.Option(
             names = { "--ca-file" },
             description = {
-                "Absoulte path to a file containing trusted CA certificates to enable encrypted communication.",
+                "Absolute path to a file containing trusted CA certificates to enable encrypted communication.",
                 "If not set explicitly, the platform's default trust store will be used."
                 },
             order = 4)

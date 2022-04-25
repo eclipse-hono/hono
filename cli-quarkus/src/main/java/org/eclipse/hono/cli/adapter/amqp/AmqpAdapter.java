@@ -43,6 +43,7 @@ import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.device.amqp.AmqpAdapterClient;
+import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.QoS;
 import org.fusesource.jansi.AnsiConsole;
 import org.jline.console.SystemRegistry;
@@ -145,8 +146,7 @@ public class AmqpAdapter implements Callable<Integer> {
                         """,
                         """
                         This option can be used by authenticated gateway devices to send a message on behalf of \
-                        another device.
-                        It can also be used by unauthenticated clients to indicate the device that \
+                        another device. It can also be used by unauthenticated clients to indicate the device that \
                         the message originates from.
                         """,
                         CommandUtils.DESCRIPTION_ENV_VARS
@@ -257,7 +257,7 @@ public class AmqpAdapter implements Callable<Integer> {
                 @Override
                 public String name() {
                     return "hono-cli";
-                };
+                }
             };
 
             final Parser parser = new DefaultParser();
@@ -567,7 +567,9 @@ public class AmqpAdapter implements Callable<Integer> {
             .compose(client -> client.sendTelemetry(
                     QoS.AT_MOST_ONCE,
                     Optional.ofNullable(options.payload).map(Buffer::buffer).orElse(null),
-                    options.contentType,
+                    Optional.ofNullable(options.contentType).orElseGet(() -> Optional.ofNullable(options.payload)
+                            .map(p -> (String) null)
+                            .orElse(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION)),
                     options.tenantId,
                     options.deviceId,
                     null))
@@ -595,7 +597,9 @@ public class AmqpAdapter implements Callable<Integer> {
         getClient()
             .compose(f -> f.sendEvent(
                     Optional.ofNullable(options.payload).map(Buffer::buffer).orElse(null),
-                    options.contentType,
+                    Optional.ofNullable(options.contentType).orElseGet(() -> Optional.ofNullable(options.payload)
+                            .map(p -> (String) null)
+                            .orElse(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION)),
                     options.tenantId,
                     options.deviceId,
                     null))

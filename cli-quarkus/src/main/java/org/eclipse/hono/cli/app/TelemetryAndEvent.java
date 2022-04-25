@@ -62,7 +62,7 @@ public class TelemetryAndEvent implements Callable<Integer> {
 
     @CommandLine.Option(
             names = {"-t", "--tenant"},
-            description = { "The tenant to consume messages for (default: ${DEFAULT-VALUE})" },
+            description = { "The tenant to consume messages for (default: ${DEFAULT-VALUE})." },
             defaultValue = Constants.DEFAULT_TENANT,
             order = 15,
             scope = ScopeType.INHERIT)
@@ -71,8 +71,8 @@ public class TelemetryAndEvent implements Callable<Integer> {
     @CommandLine.Option(
             names = { "--telemetry" },
             description = {
-                    "Consume telemetry messages",
-                    "If not specified, both telemetry and event messages will be consumed",
+                    "Consume telemetry messages.",
+                    "If not specified, both telemetry and event messages will be consumed.",
                     "Messages are printed to standard out one message per line using the following format:",
                     "t 4711 text/plain This is the message payload {key1=value1,key2=value2,...}"
             },
@@ -82,8 +82,8 @@ public class TelemetryAndEvent implements Callable<Integer> {
     @CommandLine.Option(
             names = { "--event" },
             description = {
-                    "Consume event messages",
-                    "If not specified, both telemetry and event messages will be consumed",
+                    "Consume event messages.",
+                    "If not specified, both telemetry and event messages will be consumed.",
                     "Messages are printed to standard out one message per line using the following format:",
                     "e 4711 text/plain This is the message payload {key1=value1,key2=value2,...}"
             },
@@ -93,7 +93,7 @@ public class TelemetryAndEvent implements Callable<Integer> {
     @Inject
     Vertx vertx;
 
-    private Set<String> supportedMessageTypes = new HashSet<>();
+    private final Set<String> supportedMessageTypes = new HashSet<>();
 
     private Future<Void> createConsumers(final ApplicationClient<? extends MessageContext> client) {
 
