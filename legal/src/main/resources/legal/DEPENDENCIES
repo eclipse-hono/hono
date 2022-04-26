@@ -23,6 +23,8 @@ maven/mavencentral/com.squareup.okhttp3/logging-interceptor/3.14.9, Apache-2.0, 
 maven/mavencentral/com.squareup.okhttp3/okhttp/3.14.9, Apache-2.0, approved, clearlydefined
 maven/mavencentral/com.squareup.okio/okio/1.17.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/dk.brics.automaton/automaton/1.11-8, BSD-2-Clause, approved, clearlydefined
+maven/mavencentral/info.picocli/picocli/4.6.3, Apache-2.0, approved, clearlydefined
+maven/mavencentral/info.picocli/picocli-shell-jline3/4.6.3, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.fabric8/kubernetes-client/5.12.1, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.fabric8/kubernetes-model-admissionregistration/5.12.1, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.fabric8/kubernetes-model-apiextensions/5.12.1, Apache-2.0, approved, clearlydefined
@@ -122,6 +124,7 @@ maven/mavencentral/io.quarkus/quarkus-mutiny/2.7.3.Final, Apache-2.0, approved, 
 maven/mavencentral/io.quarkus/quarkus-netty/2.7.3.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.quarkus/quarkus-opentelemetry/2.7.3.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.quarkus/quarkus-opentelemetry-exporter-otlp/2.7.3.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.quarkus/quarkus-picocli/2.7.3.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.quarkus/quarkus-security-runtime-spi/2.7.3.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.quarkus/quarkus-smallrye-context-propagation/2.7.3.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.quarkus/quarkus-smallrye-health/2.7.3.Final, Apache-2.0, approved, clearlydefined
@@ -191,6 +194,7 @@ maven/mavencentral/org.apache.logging.log4j/log4j-api/2.17.1, Apache-2.0, approv
 maven/mavencentral/org.apache.logging.log4j/log4j-to-slf4j/2.17.2, Apache-2.0, approved, #2163
 maven/mavencentral/org.apache.qpid/proton-j/0.33.10, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.apache.sshd/sshd-common/2.7.0, Apache-1.1 AND Apache-2.0 AND ISC, approved, #960
+maven/mavencentral/org.fusesource.jansi/jansi/1.18, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.glassfish/jakarta.json/1.1.6, EPL-2.0 OR GPL-2.0-only with Classpath-exception-2.0, approved, ee4j.jsonp
 maven/mavencentral/org.graalvm.sdk/graal-sdk/21.3.1, UPL-1.0, approved, clearlydefined
 maven/mavencentral/org.hdrhistogram/HdrHistogram/2.1.12, , approved, CQ13192
@@ -208,6 +212,7 @@ maven/mavencentral/org.jboss.logmanager/log4j2-jboss-logmanager/1.1.1.Final, Apa
 maven/mavencentral/org.jboss.slf4j/slf4j-jboss-logmanager/1.1.0.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.jboss.threads/jboss-threads/3.4.2.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.jgroups/jgroups/4.2.18.Final, Apache-2.0 AND CC-BY-2.5 AND LicenseRef-Public-Domain, approved, CQ23049
+maven/mavencentral/org.jline/jline/3.19.0, BSD-3-Clause, approved, clearlydefined
 maven/mavencentral/org.latencyutils/LatencyUtils/2.0.3, BSD-2-Clause, approved, CQ17408
 maven/mavencentral/org.lz4/lz4-java/1.7.1, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.mongodb/bson/4.3.4, Apache-2.0, approved, clearlydefined

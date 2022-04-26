@@ -23,6 +23,8 @@ com.squareup.okhttp3:logging-interceptor:jar:3.14.9
 com.squareup.okhttp3:okhttp:jar:3.14.9
 com.squareup.okio:okio:jar:1.17.2
 dk.brics.automaton:automaton:jar:1.11-8
+info.picocli:picocli:jar:4.6.3
+info.picocli:picocli-shell-jline3:jar:4.6.3
 io.fabric8:kubernetes-client:jar:5.12.1
 io.fabric8:kubernetes-model-admissionregistration:jar:5.12.1
 io.fabric8:kubernetes-model-apiextensions:jar:5.12.1
@@ -122,6 +124,7 @@ io.quarkus:quarkus-mutiny:jar:2.7.3.Final
 io.quarkus:quarkus-netty:jar:2.7.3.Final
 io.quarkus:quarkus-opentelemetry-exporter-otlp:jar:2.7.3.Final
 io.quarkus:quarkus-opentelemetry:jar:2.7.3.Final
+io.quarkus:quarkus-picocli:jar:2.7.3.Final
 io.quarkus:quarkus-security-runtime-spi:jar:2.7.3.Final
 io.quarkus:quarkus-smallrye-context-propagation:jar:2.7.3.Final
 io.quarkus:quarkus-smallrye-health:jar:2.7.3.Final
@@ -191,6 +194,7 @@ org.apache.logging.log4j:log4j-api:jar:2.17.1
 org.apache.logging.log4j:log4j-to-slf4j:jar:2.17.2
 org.apache.qpid:proton-j:jar:0.33.10
 org.apache.sshd:sshd-common:jar:2.7.0
+org.fusesource.jansi:jansi:jar:1.18
 org.glassfish:jakarta.json:jar:1.1.6
 org.graalvm.sdk:graal-sdk:jar:21.3.1
 org.hdrhistogram:HdrHistogram:jar:2.1.12
@@ -208,6 +212,7 @@ org.jboss.logmanager:log4j2-jboss-logmanager:jar:1.1.1.Final
 org.jboss.slf4j:slf4j-jboss-logmanager:jar:1.1.0.Final
 org.jboss.threads:jboss-threads:jar:3.4.2.Final
 org.jgroups:jgroups:jar:4.2.18.Final
+org.jline:jline:jar:3.19.0
 org.latencyutils:LatencyUtils:jar:2.0.3
 org.lz4:lz4-java:jar:1.7.1
 org.mongodb:bson:jar:4.3.4
