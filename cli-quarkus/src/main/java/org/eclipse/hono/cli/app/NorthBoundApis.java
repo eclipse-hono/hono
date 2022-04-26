@@ -39,6 +39,7 @@ import org.eclipse.hono.client.kafka.CommonKafkaClientConfigProperties;
 import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
+import org.eclipse.hono.config.FileFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -134,6 +135,11 @@ public class NorthBoundApis {
                     commonProps.put(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, path);
                     connectionOptions.trustStorePassword
                         .ifPresent(pwd -> commonProps.put(SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, pwd));
+                    final var trustStoreType = FileFormat.detect(path);
+                    commonProps.put(SslConfigs.SSL_TRUSTSTORE_TYPE_CONFIG, trustStoreType.name());
+                    if (connectionOptions.disableHostnameVerification) {
+                        commonProps.put(SslConfigs.SSL_ENDPOINT_IDENTIFICATION_ALGORITHM_CONFIG, "");
+                    }
                 });
 
             if (connectionOptions.credentials == null) {
@@ -189,6 +195,8 @@ public class NorthBoundApis {
             connectionOptions.hostname.ifPresent(clientConfig::setHost);
             connectionOptions.portNumber.ifPresent(clientConfig::setPort);
             connectionOptions.trustStorePath.ifPresent(clientConfig::setTrustStorePath);
+            connectionOptions.trustStorePassword.ifPresent(clientConfig::setTrustStorePassword);
+            clientConfig.setHostnameVerificationRequired(!connectionOptions.disableHostnameVerification);
             Optional.ofNullable(connectionOptions.credentials)
                 .ifPresent(creds -> {
                     clientConfig.setUsername(creds.username);

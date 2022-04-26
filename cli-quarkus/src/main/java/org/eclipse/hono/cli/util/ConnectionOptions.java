@@ -64,6 +64,7 @@ public class ConnectionOptions {
                 },
             order = 4)
     public Optional<String> trustStorePath;
+
     @CommandLine.Option(
             names = { "--ca-file-password" },
             description = {
@@ -71,6 +72,19 @@ public class ConnectionOptions {
                 },
             order = 5)
     public Optional<String> trustStorePassword;
+
+    @CommandLine.Option(
+            names = { "--disable-hostname-verification" },
+            defaultValue = "false",
+            description = {
+                """
+                Disables verification of the server certificate matching the value provided in the \
+                '-H=<hostName>' option.
+                """,
+                "This option might be needed if the host name used to connect to the server is a literal IP address"
+                },
+            order = 6)
+    public boolean disableHostnameVerification;
 
     @CommandLine.ArgGroup(exclusive = false)
     public Credentials credentials;
@@ -83,14 +97,14 @@ public class ConnectionOptions {
                 names = { "-u", "--username" },
                 description = { "The user name to use for authenticating to the endpoint." },
                 required = true,
-                order = 6)
+                order = 7)
         public String username;
 
         @CommandLine.Option(
                 names = { "-p", "--password" },
                         description = { "The password to use for authenticating to the endpoint." },
                 required = true,
-                order = 7)
+                order = 8)
         public String password;
     }
 }
