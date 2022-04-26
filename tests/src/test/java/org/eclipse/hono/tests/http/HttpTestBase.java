@@ -563,7 +563,7 @@ import io.vertx.junit5.VertxTestContext;
             });
             Optional.ofNullable(messageConsumer)
                 .map(consumer -> consumer.apply(msg))
-                .orElseGet(() -> Future.succeededFuture())
+                .orElseGet(Future::succeededFuture)
                 .onComplete(attempt -> {
                     if (attempt.succeeded()) {
                         receivedMessageCount.incrementAndGet();
@@ -608,10 +608,14 @@ import io.vertx.junit5.VertxTestContext;
                         sending.countDown();
                     }
                 });
-            sending.await();
-            if (currentMessage % 20 == 0) {
+            if (!sending.await(TEST_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
+                ctx.failNow("timeout waiting for message %s to be sent".formatted(currentMessage));
+            } else if (currentMessage % 20 == 0) {
                 logger.info("messages sent: " + currentMessage);
             }
+        }
+        if (ctx.failed()) {
+            return;
         }
 
         final long timeToWait = Math.max(TEST_TIMEOUT_MILLIS - 50 - (System.currentTimeMillis() - testStartTimeMillis),

@@ -654,7 +654,7 @@ public abstract class CoapTestBase {
                 logger.info("messages received: {}", numberOfMessages - received.getCount());
             }
         })
-        .compose(ok -> Optional.ofNullable(warmUp).map(w -> w.get()).orElseGet(() -> Future.succeededFuture()))
+        .compose(ok -> Optional.ofNullable(warmUp).map(Supplier::get).orElseGet(Future::succeededFuture))
         .onComplete(setup.succeedingThenComplete());
         ctx.verify(() -> assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue());
 
@@ -676,10 +676,11 @@ public abstract class CoapTestBase {
                         sending.countDown();
                     });
 
-            if (messageCount.get() % 20 == 0) {
+            if (!sending.await(TEST_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
+                ctx.failNow("timeout waiting for message %s to be sent".formatted(messageCount.get()));
+            } else if (messageCount.get() % 20 == 0) {
                 logger.info("messages sent: {}", messageCount.get());
             }
-            sending.await();
         }
         if (ctx.failed()) {
             return;
