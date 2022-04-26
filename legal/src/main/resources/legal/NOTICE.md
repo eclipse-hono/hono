@@ -222,6 +222,16 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/FasterXML).
 
+### Jansi
+
+This product includes software developed by the [Jansi project](http://fusesource.github.io/jansi/).
+
+Your use of *Jansi* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/fusesource/jansi).
+
 ### JBoss Logging
 
 This product includes software developed by the [JBoss Logging project](https://github.com/jboss-logging).
@@ -261,6 +271,15 @@ A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/belaban/JGroups/).
+
+### JLine
+
+This product includes software developed by the [JLine project](https://github.com/jline/jline3).
+
+Your use of *JLine* is subject to the terms and conditions defined in the file
+[LICENSE.jline.txt](LICENSE.jline.txt).
+
+The source code is available from [GitHub](https://github.com/jline/jline3).
 
 ### JUL-to-SLF4J
 
@@ -427,6 +446,17 @@ A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/perfmark/perfmark).
+
+### picocli
+
+This product includes software developed by the [picocli project](https://picocli.info/).
+
+Your use of *picocli* is subject to the terms and conditions of the Apache Software License 2.0.
+A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
+http://www.apache.org/licenses/LICENSE-2.0.html.
+
+The source code is available from [GitHub](https://github.com/remkop/picocli).
+
 
 ### PostgreSQL JDBC Driver
 
