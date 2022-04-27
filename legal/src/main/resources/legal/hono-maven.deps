@@ -192,7 +192,6 @@ org.apache.commons:commons-collections4:jar:4.2
 org.apache.commons:commons-compress:jar:1.21
 org.apache.kafka:kafka-clients:jar:2.8.1
 org.apache.logging.log4j:log4j-api:jar:2.17.1
-org.apache.logging.log4j:log4j-to-slf4j:jar:2.17.2
 org.apache.qpid:proton-j:jar:0.33.10
 org.apache.sshd:sshd-common:jar:2.7.0
 org.fusesource.jansi:jansi:jar:1.18
@@ -221,18 +220,8 @@ org.mongodb:mongodb-driver-core:jar:4.3.4
 org.mongodb:mongodb-driver-reactivestreams:jar:4.3.4
 org.postgresql:postgresql:jar:42.3.3
 org.reactivestreams:reactive-streams:jar:1.0.3
-org.slf4j:jul-to-slf4j:jar:1.7.33
 org.slf4j:slf4j-api:jar:1.7.33
-org.springframework.boot:spring-boot-autoconfigure:jar:2.5.12
-org.springframework.boot:spring-boot:jar:2.5.12
-org.springframework.boot:spring-boot-starter-logging:jar:2.5.12
 org.springframework.security:spring-security-crypto:jar:5.5.5
-org.springframework:spring-aop:jar:5.3.18
-org.springframework:spring-beans:jar:5.3.18
-org.springframework:spring-context:jar:5.3.18
-org.springframework:spring-core:jar:5.3.18
-org.springframework:spring-expression:jar:5.3.18
-org.springframework:spring-jcl:jar:5.3.18
 org.wildfly.common:wildfly-common:jar:1.5.4.Final-format-001
 org.wildfly.security:wildfly-elytron-asn1:jar:1.18.3.Final
 org.wildfly.security:wildfly-elytron-auth:jar:1.18.3.Final

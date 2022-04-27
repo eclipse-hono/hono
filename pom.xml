@@ -228,7 +228,6 @@
     <module>adapters</module>
     <module>bom</module>
     <module>core</module>
-    <module>cli</module>
     <module>cli-quarkus</module>
     <module>client-device-connection-infinispan</module>
     <module>clients</module>

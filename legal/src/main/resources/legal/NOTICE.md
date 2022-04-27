@@ -320,16 +320,6 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/fabric8io/kubernetes-client).
 
-### LOG4J-over-SLF4J
-
-This product includes software developed by the [Apache Software Foundation](http://www.apache.org/).
-
-Your use of *LOG4J-over-SLF4J* is subject to the terms and conditions of the Apache Software License 2.0.
-A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
-http://www.apache.org/licenses/LICENSE-2.0.html.
-
-The source code is available from [GitHub](https://github.com/qos-ch/slf4j).
-
 ### Logback
 
 This product includes software developed by [Quality Open Software](http://www.qos.ch/).
@@ -607,27 +597,7 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/xerial/snappy-java).
 
-### Spring Framework ${spring.version}
-
-This product includes software developed by the [Spring project](http://spring.io) and others.
-
-Your use of the *Spring Framework* is subject to the terms and conditions of the Apache Software License 2.0
-and others as indicated by [notice.txt](spring/notice.txt).
-A copy of the licenses is contained in the file [license.txt](spring/license.txt).
-
-The source code is available from [GitHub](https://github.com/spring-projects/spring-framework).
-
-### Spring Boot ${spring-boot.version}
-
-This product includes software developed by the [Spring project](http://spring.io).
-
-Your use of *Spring Boot* is subject to the terms and conditions of the Apache Software License 2.0.
-A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
-is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
-
-The source code is available from [GitHub](https://github.com/spring-projects/spring-boot).
-
-### Spring Security Crypto ${spring-security-crypto.version}
+### Spring Security Crypto
 
 This product includes software developed by the [Spring project](http://spring.io) and others.
 
