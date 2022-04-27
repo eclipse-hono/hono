@@ -553,7 +553,7 @@
         <hono.amqp-adapter.max-mem>67108864</hono.amqp-adapter.max-mem>
 
         <hono.coap-adapter.image>hono-adapter-coap-vertx-quarkus-native</hono.coap-adapter.image>
-        <hono.coap-adapter.max-mem>67108864</hono.coap-adapter.max-mem>
+        <hono.coap-adapter.max-mem>75497472</hono.coap-adapter.max-mem>
 
         <hono.http-adapter.image>hono-adapter-http-vertx-quarkus-native</hono.http-adapter.image>
         <hono.http-adapter.max-mem>67108864</hono.http-adapter.max-mem>
