@@ -44,8 +44,7 @@ public class DropHttpRequestSpansSampler implements Sampler {
             final Attributes attributes, final List<LinkData> parentLinks) {
         if (spanKind.equals(SpanKind.SERVER)) {
             final String httpTargetPath = getHttpTargetPath(attributes.get(SemanticAttributes.HTTP_TARGET));
-            // span names don't include the leading slash
-            if (httpTargetPath != null && !httpTargetPath.isBlank() && httpTargetPath.substring(1).equals(spanName)) {
+            if (httpTargetPath != null && !httpTargetPath.isBlank() && httpTargetPath.equals(spanName)) {
                 return SamplingResult.drop();
             }
         }
