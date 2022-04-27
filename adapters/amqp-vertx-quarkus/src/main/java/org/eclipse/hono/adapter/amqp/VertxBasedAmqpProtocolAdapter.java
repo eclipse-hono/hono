@@ -1261,7 +1261,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                 contentTypeCheck.complete();
             } else {
                 contentTypeCheck.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                        "empty notifications must not contain payload"));
+                        "content type [%s] does not match payload".formatted(context.getMessageContentType())));
             }
             return contentTypeCheck.future()
                     .compose(ok -> doUploadMessage(context, resource, currentSpan));
