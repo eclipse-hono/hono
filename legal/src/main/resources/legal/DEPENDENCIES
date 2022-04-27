@@ -192,16 +192,15 @@ maven/mavencentral/org.apache.commons/commons-collections4/4.2, Apache-2.0, appr
 maven/mavencentral/org.apache.commons/commons-compress/1.21, Apache-2.0 AND BSD-3-Clause AND bzip2-1.0.6 AND LicenseRef-Public-Domain, approved, CQ23710
 maven/mavencentral/org.apache.kafka/kafka-clients/2.8.1, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.apache.logging.log4j/log4j-api/2.17.1, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.apache.logging.log4j/log4j-to-slf4j/2.17.2, Apache-2.0, approved, #2163
 maven/mavencentral/org.apache.qpid/proton-j/0.33.10, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.apache.sshd/sshd-common/2.7.0, Apache-1.1 AND Apache-2.0 AND ISC, approved, #960
 maven/mavencentral/org.fusesource.jansi/jansi/1.18, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.glassfish/jakarta.json/1.1.6, EPL-2.0 OR GPL-2.0-only with Classpath-exception-2.0, approved, ee4j.jsonp
 maven/mavencentral/org.graalvm.sdk/graal-sdk/21.3.1, UPL-1.0, approved, clearlydefined
 maven/mavencentral/org.hdrhistogram/HdrHistogram/2.1.12, , approved, CQ13192
-maven/mavencentral/org.infinispan/infinispan-client-hotrod/13.0.5.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.infinispan/infinispan-client-hotrod/13.0.5.Final, Apache-2.0, approved, #2485
 maven/mavencentral/org.infinispan/infinispan-commons/13.0.5.Final, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.infinispan/infinispan-core/13.0.5.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.infinispan/infinispan-core/13.0.5.Final, Apache-2.0, approved, #2486
 maven/mavencentral/org.infinispan/infinispan-query-dsl/13.0.5.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.infinispan.protostream/protostream/4.4.1.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.infinispan.protostream/protostream-types/4.4.1.Final, Apache-2.0, approved, clearlydefined
@@ -219,20 +218,10 @@ maven/mavencentral/org.lz4/lz4-java/1.7.1, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.mongodb/bson/4.3.4, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.mongodb/mongodb-driver-core/4.3.4, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.mongodb/mongodb-driver-reactivestreams/4.3.4, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.postgresql/postgresql/42.3.3, BSD-2-Clause, approved, clearlydefined
+maven/mavencentral/org.postgresql/postgresql/42.3.3, BSD-2-Clause, approved, #2487
 maven/mavencentral/org.reactivestreams/reactive-streams/1.0.3, CC0-1.0, approved, CQ16332
-maven/mavencentral/org.slf4j/jul-to-slf4j/1.7.33, MIT, approved, CQ12842
 maven/mavencentral/org.slf4j/slf4j-api/1.7.33, MIT, approved, CQ13368
-maven/mavencentral/org.springframework.boot/spring-boot/2.5.12, Apache-2.0, approved, #2169
-maven/mavencentral/org.springframework.boot/spring-boot-autoconfigure/2.5.12, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.springframework.boot/spring-boot-starter-logging/2.5.12, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.springframework.security/spring-security-crypto/5.5.5, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.springframework/spring-aop/5.3.18, Apache-2.0, approved, CQ24024
-maven/mavencentral/org.springframework/spring-beans/5.3.18, Apache-2.0, approved, CQ24025
-maven/mavencentral/org.springframework/spring-context/5.3.18, Apache-2.0, approved, CQ24027
-maven/mavencentral/org.springframework/spring-core/5.3.18, Apache-2.0 AND BSD-3-Clause, approved, CQ24026
-maven/mavencentral/org.springframework/spring-expression/5.3.18, Apache-2.0, approved, CQ23155
-maven/mavencentral/org.springframework/spring-jcl/5.3.18, Apache-2.0, approved, CQ23156
 maven/mavencentral/org.wildfly.common/wildfly-common/1.5.4.Final-format-001, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.wildfly.security/wildfly-elytron-asn1/1.18.3.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.wildfly.security/wildfly-elytron-auth/1.18.3.Final, Apache-2.0, approved, clearlydefined
