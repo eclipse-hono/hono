@@ -269,8 +269,8 @@ java -jar hono-cli-*-exec.jar amqp --sandbox telemetry --tenant DEFAULT_TENANT -
 ~~~
 
 {{% notice info %}}
-The `--tenant` and `--device` options are required in this case because the AMQP adapter cannot determine the tenant and
-device ID from the authenticated device.
+The `--tenant` and `--device` options are required in this case because the command does not specify any credentials that
+the AMQP adapter could determine the tenant and device ID from.
 {{% /notice %}}
 
 ## Publish Telemetry Data (authenticated Gateway)
@@ -382,8 +382,8 @@ java -jar hono-cli-*-exec.jar amqp --sandbox event --tenant DEFAULT_TENANT --dev
 ~~~
 
 {{% notice info %}}
-The `--tenant` and `--device` options are required in this case because the AMQP adapter cannot determine the tenant and
-device ID from the authenticated device.
+The `--tenant` and `--device` options are required in this case because the command does not specify any credentials that
+the AMQP adapter could determine the tenant and device ID from.
 {{% /notice %}}
 
 ## Publish an Event (authenticated Gateway)
@@ -546,7 +546,7 @@ The `sub` command also accepts a `-d` option. This can be used by gateway device
 one of the devices that it may act on behalf of.
 {{% /notice %}}
 
-When a command is received, the client will print a line to *System.out* consisting of:
+When a command is received, the client will print a line to the console's *standard output* consisting of:
 
 1. the type of command received (`ow` for a one-way and `req` for a request/response command)
 1. the identifier of the device that the command is targeted at (with `-` representing the authenticated device)
