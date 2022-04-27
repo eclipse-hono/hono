@@ -195,15 +195,18 @@ public abstract class AbstractVertxBasedCoapAdapter<T extends CoapAdapterPropert
                             return new HonoRootResource(AbstractVertxBasedCoapAdapter.this::getContext);
                         }
                     };
+                    final InternalErrorTracer internalErrorTracer = new InternalErrorTracer(getTypeName(), tracer);
                     final Future<Endpoint> secureEndpointFuture = endpointFactory.getSecureEndpoint()
                             .onFailure(t -> log.info("not creating secure endpoint: {}", t.getMessage()))
                             .onSuccess(ep -> {
+                                ep.addInterceptor(internalErrorTracer);
                                 newServer.addEndpoint(ep);
                                 this.secureEndpoint = ep;
                             });
                     final Future<Endpoint> insecureEndpointFuture = endpointFactory.getInsecureEndpoint()
                             .onFailure(t -> log.info("not creating insecure endpoint: {}", t.getMessage()))
                             .onSuccess(ep -> {
+                                ep.addInterceptor(internalErrorTracer);
                                 newServer.addEndpoint(ep);
                                 this.insecureEndpoint = ep;
                             });
