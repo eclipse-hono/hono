@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -50,6 +50,9 @@ import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -266,28 +269,65 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
      * if the request contains a Basic <em>Authorization</em> header with valid
      * credentials.
      *
+     * @param uri The request URI.
      * @param ctx The vert.x test context.
      */
-    @Test
-    public void testPutTelemetrySucceedsForValidCredentials(final VertxTestContext ctx) {
+    @ParameterizedTest
+    @ValueSource(strings = { "/telemetry/DEFAULT_TENANT/device_1", "/telemetry//device_1" })
+    public void testPutTelemetrySucceedsForValidCredentials(
+            final String uri,
+            final VertxTestContext ctx) {
 
         givenATelemetrySenderForAnyTenant();
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
-        httpClient.put("/telemetry/DEFAULT_TENANT/device_1")
+        httpClient.put(uri)
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
                 .expect(ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED))
                 .expect(this::assertCorsHeaders)
                 .sendJsonObject(new JsonObject(), ctx.succeeding(b -> {
-                    ctx.verify(() -> {
-                        assertTelemetryMessageHasBeenSentDownstream(
-                                QoS.AT_MOST_ONCE,
-                                "DEFAULT_TENANT",
-                                "device_1",
-                                "application/json");
-                    });
+                    ctx.verify(() -> assertTelemetryMessageHasBeenSentDownstream(
+                            QoS.AT_MOST_ONCE,
+                            "DEFAULT_TENANT",
+                            "device_1",
+                            "application/json"));
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
+     * Verifies that a request to upload telemetry data using PUT fails
+     * if the request contains a malformed URI.
+     *
+     * @param uri The request URI.
+     * @param expectedErrorCode The HTTP status code expected in the HTTP response.
+     * @param ctx The vert.x test context.
+     */
+    @ParameterizedTest
+    @CsvSource(value = {
+                "/telemetry,404",
+                "/telemetry/DEFAULT_TENANT,404",
+                "/telemetry/DEFAULT_TENANT/,404",
+                "/telemetry/NON_MATCHING_TENANT/device_1,403"
+                })
+    public void testPutTelemetryFailsForMalformedUri(
+            final String uri,
+            final int expectedErrorCode,
+            final VertxTestContext ctx) {
+
+        givenATelemetrySenderForAnyTenant();
+        mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
+
+        httpClient.put(uri)
+                .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
+                .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
+                .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
+                .expect(ResponsePredicate.status(expectedErrorCode))
+                .expect(this::assertCorsHeaders)
+                .sendJsonObject(new JsonObject(), ctx.succeeding(b -> {
+                    ctx.verify(() -> assertNoTelemetryMessageHasBeenSentDownstream());
                     ctx.completeNow();
                 }));
     }
@@ -343,15 +383,19 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
      * if the request contains a Basic <em>Authorization</em> header with valid
      * credentials.
      *
+     * @param uri The request URI.
      * @param ctx The vert.x test context.
      */
-    @Test
-    public void testPutEventSucceedsForValidCredentials(final VertxTestContext ctx) {
+    @ParameterizedTest
+    @ValueSource(strings = { "/event/DEFAULT_TENANT/device_1", "/event//device_1" })
+    public void testPutEventSucceedsForValidCredentials(
+            final String uri,
+            final VertxTestContext ctx) {
 
         givenAnEventSenderForAnyTenant();
         mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
 
-        httpClient.put("/event/DEFAULT_TENANT/device_1")
+        httpClient.put(uri)
                 .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
                 .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
                 .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
@@ -361,6 +405,40 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                     ctx.verify(() -> {
                         assertEventHasBeenSentDownstream("DEFAULT_TENANT", "device_1", "application/json");
                     });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
+     * Verifies that a request to upload eventsusing PUT fails if the request contains a malformed URI.
+     *
+     * @param uri The request URI.
+     * @param expectedErrorCode The HTTP status code expected in the HTTP response.
+     * @param ctx The vert.x test context.
+     */
+    @ParameterizedTest
+    @CsvSource(value = {
+                "/event,404",
+                "/event/DEFAULT_TENANT,404",
+                "/event/DEFAULT_TENANT/,404",
+                "/event/NON_MATCHING_TENANT/device_1,403"
+                })
+    public void testPutEventFailsForMalformedUri(
+            final String uri,
+            final int expectedErrorCode,
+            final VertxTestContext ctx) {
+
+        givenATelemetrySenderForAnyTenant();
+        mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
+
+        httpClient.put(uri)
+                .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
+                .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
+                .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
+                .expect(ResponsePredicate.status(expectedErrorCode))
+                .expect(this::assertCorsHeaders)
+                .sendJsonObject(new JsonObject(), ctx.succeeding(b -> {
+                    ctx.verify(() -> assertNoEventHasBeenSentDownstream());
                     ctx.completeNow();
                 }));
     }
@@ -467,6 +545,68 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     }
 
     /**
+     * Verifies that a request to upload a command response using PUT succeeds
+     * if the request contains a Basic <em>Authorization</em> header with valid
+     * credentials.
+     *
+     * @param uri The request URI.
+     * @param ctx The vert.x test context.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "/command/res/DEFAULT_TENANT/device_1/" + CMD_REQ_ID,
+            "/command/res//device_1/" + CMD_REQ_ID })
+    public void testPutCmdResponseSucceedsForAuthenticatedGateway(
+            final String uri,
+            final VertxTestContext ctx) {
+
+        givenACommandResponseSenderForAnyTenant();
+        mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
+
+        httpClient.put(uri)
+                .putHeader(Constants.HEADER_COMMAND_RESPONSE_STATUS, "200")
+                .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
+                .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
+                .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
+                .expect(ResponsePredicate.SC_ACCEPTED)
+                .sendJsonObject(new JsonObject(), ctx.succeedingThenComplete());
+    }
+
+    /**
+     * Verifies that a request to upload a command response using PUT fails
+     * if the request contains a malformed URI.
+     *
+     * @param uri The request URI.
+     * @param expectedErrorCode The HTTP status code expected in the HTTP response.
+     * @param ctx The vert.x test context.
+     */
+    @ParameterizedTest
+    @CsvSource(value = {
+                "/command/res/DEFAULT_TENANT/device_1,404",
+                "/command/res/DEFAULT_TENANT,404",
+                "/command/res/DEFAULT_TENANT/,404",
+                "/command/res/NON_MATCHING_TENANT/device_1/req-id,403"
+                })
+    public void testPutCmdResponseFailsForMalformedUri(
+            final String uri,
+            final int expectedErrorCode,
+            final VertxTestContext ctx) {
+
+        mockSuccessfulAuthentication("DEFAULT_TENANT", "device_1");
+
+        httpClient.put(uri)
+                .putHeader(Constants.HEADER_COMMAND_RESPONSE_STATUS, "200")
+                .putHeader(HttpHeaders.CONTENT_TYPE.toString(), HttpUtils.CONTENT_TYPE_JSON)
+                .basicAuthentication("testuser@DEFAULT_TENANT", "password123")
+                .putHeader(HttpHeaders.ORIGIN.toString(), ORIGIN_HEADER_VALUE)
+                .expect(ResponsePredicate.status(expectedErrorCode))
+                .sendJsonObject(new JsonObject(), ctx.succeeding(b -> {
+                    ctx.verify(() -> assertNoCommandResponseHasBeenSentDownstream());
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
      * Verifies that a POST request to the command reply URI with a malformed command-request-id results in a
      * {@link HttpURLConnection#HTTP_BAD_REQUEST}.
      *
@@ -549,8 +689,8 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     }
 
     /**
-     * Verifies that a POST request to the command reply URI for that the delivery to the associated link is being remotely settled
-     * results in a {@link HttpURLConnection#HTTP_ACCEPTED}.
+     * Verifies that a POST request to the command reply URI for that the delivery to the associated link is being
+     * remotely settled results in a {@link HttpURLConnection#HTTP_ACCEPTED}.
 
      * @param ctx The vert.x test context.
      */

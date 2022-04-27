@@ -159,20 +159,21 @@ public final class SigfoxProtocolAdapter
         LOG.debug("{} handler - deviceTenant: {}, requestTenant: {}, deviceId: {}, data: {}",
                 ctx.request().method(), deviceTenant, requestTenant, deviceId, strData);
 
-        if ( requestTenant == null ) {
-            ctx.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+        if (requestTenant == null) {
+            ctx.fail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
                     "missing the tenant information in the request URL"));
             return;
         }
 
         if (!requestTenant.equals(deviceTenant)) {
-            ctx.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+            ctx.fail(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
                     "tenant information mismatch"));
             return;
         }
 
-        final String contentType = (data != null) ? CONTENT_TYPE_OCTET_STREAM
-                : EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION;
+        final String contentType = Optional.ofNullable(data)
+                .map(d -> CONTENT_TYPE_OCTET_STREAM)
+                .orElse(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
 
         uploadHandler.upload(ctx, deviceTenant, deviceId, data, contentType);
     }

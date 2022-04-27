@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -357,7 +357,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
 
     private void handleCommand(final CommandContext commandContext) {
         Tags.COMPONENT.set(commandContext.getTracingSpan(), getTypeName());
-        final Sample timer = metrics.startTimer();
+        final Sample timer = getMetrics().startTimer();
         final Command command = commandContext.getCommand();
 
         if (command.getGatewayId() == null) {
@@ -395,7 +395,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                 .onSuccess(aVoid -> {
                     addMicrometerSample(commandContext, timer);
                     commandContext.accept();
-                    metrics.reportCommand(
+                    getMetrics().reportCommand(
                             command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                             tenant,
                             tenantTracker.result(),
@@ -406,7 +406,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                 .onFailure(t -> {
                     LOG.debug("error sending command", t);
                     commandContext.release(t);
-                    metrics.reportCommand(
+                    getMetrics().reportCommand(
                             command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
                             tenant,
                             tenantTracker.result(),

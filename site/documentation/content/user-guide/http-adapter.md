@@ -251,7 +251,7 @@ content-length: 23
 
 ## Publish Telemetry Data (authenticated Gateway)
 
-* URI: `/telemetry/${tenantId}/${deviceId}`
+* URI: `/telemetry/${tenantId}/${deviceId}` or `/telemetry//${deviceId}`
 * Method: `PUT`
 * Request Headers:
   * (optional) *authorization*: The gateway's *auth-id* and plain text password encoded according to the
@@ -318,28 +318,29 @@ retrieving a *registration assertion* for the device from the configured
 
 **Examples**
 
-Publish some JSON data for device `4712`:
+Publish some JSON data on behalf of device `4712`:
 
 ~~~sh
-curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4712
+curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry//4712
 
 HTTP/1.1 202 Accepted
 content-length: 0
 ~~~
 
-Publish some JSON data for device `4712` using *at least once* QoS:
+Publish some JSON data on behalf of device `4712` using *at least once* QoS:
 
 ~~~sh
-curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' -H 'qos-level: 1' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4712
+curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' -H 'qos-level: 1' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry//4712
 
 HTTP/1.1 202 Accepted
 content-length: 0
 ~~~
 
-Publish some JSON data for device `4712`, indicating that the gateway will wait for 10 seconds to receive the response:
+Publish some JSON data on behalf of device `4712`, indicating that the gateway will wait for 10 seconds to receive the
+response:
 
 ~~~sh
-curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' -H 'hono-ttd: 10' --data-binary '{"temp": 5}' http://localhost:8080/telemetry/DEFAULT_TENANT/4712
+curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' -H 'hono-ttd: 10' --data-binary '{"temp": 5}' http://localhost:8080/telemetry//4712
 
 HTTP/1.1 200 OK
 hono-command: set
@@ -351,8 +352,10 @@ content-length: 23
 }
 ~~~
 
-**NB** The example above assumes that a gateway device has been registered with `hashed-password` credentials with
+{{% notice info %}}
+The example above assumes that a gateway device has been registered with `hashed-password` credentials with
 *auth-id* `gw` and password `gw-secret` which is authorized to publish data *on behalf of* device `4712`.
+{{% /notice %}}
 
 ## Publish an Event (authenticated Device)
 
@@ -469,7 +472,7 @@ content-length: 0
 
 ## Publish an Event (authenticated Gateway)
 
-* URI: `/event/${tenantId}/${deviceId}`
+* URI: `/event/${tenantId}/${deviceId}` or `/event//${deviceId}`
 * Method: `PUT`
 * Request Headers:
   * (optional) *authorization*: The gateway's *auth-id* and plain text password encoded according to the
@@ -527,17 +530,19 @@ retrieving a *registration assertion* for the device from the configured
 
 **Examples**
 
-Publish some JSON data for device `4712`:
+Publish some JSON data on behalf of device `4712`:
 
 ~~~sh
-curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' --data-binary '{"temp": 5}' http://127.0.0.1:8080/event/DEFAULT_TENANT/4712
+curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' --data-binary '{"temp": 5}' http://127.0.0.1:8080/event//4712
 
 HTTP/1.1 202 Accepted
 content-length: 0
 ~~~
 
-**NB** The example above assumes that a gateway device has been registered with `hashed-password` credentials with
+{{% notice info %}}
+The example above assumes that a gateway device has been registered with `hashed-password` credentials with
 *auth-id* `gw` and password `gw-secret` which is authorized to publish data *on behalf of* device `4712`.
+{{% /notice %}}
 
 ## Command & Control
 
@@ -711,7 +716,8 @@ content-length: 0
 ### Sending a Response to a Command (authenticated Gateway)
 
 * URI: `/command/res/${tenantId}/${deviceId}/${commandRequestId}` or
-  `/command/res/${tenantId}/${deviceId}/${commandRequestId}?hono-cmd-status=${status}`
+  `/command/res/${tenantId}/${deviceId}/${commandRequestId}?hono-cmd-status=${status}` or
+  `/command/res//${deviceId}/${commandRequestId}` or `/command/res//${deviceId}/${commandRequestId}?hono-cmd-status=${status}`
 * Method: `PUT`
 * Request Headers:
   * (optional) *authorization*: The gateway's *auth-id* and plain text password encoded according to the
@@ -758,17 +764,19 @@ by means of retrieving a *registration assertion* for the device from the config
 
 **Examples**
 
-Send a response to a previously received command with the command-request-id `req-id-uuid` for device `4712`:
+Send a response to a previously received command with the command-request-id `req-id-uuid` on behalf of device `4712`:
 
 ~~~sh
-curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' --data-binary '{"brightness-changed": true}' http://127.0.0.1:8080/command/res/DEFAULT_TENANT/4712/req-id-uuid?hono-cmd-status=200
+curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' --data-binary '{"brightness-changed": true}' http://127.0.0.1:8080/command/res//4712/req-id-uuid?hono-cmd-status=200
 
 HTTP/1.1 202 Accepted
 content-length: 0
 ~~~
 
-**NB** The example above assumes that a gateway device has been registered with `hashed-password` credentials with
+{{% notice info %}}
+The example above assumes that a gateway device has been registered with `hashed-password` credentials with
 *auth-id* `gw` and password `gw-secret` which is authorized to publish data *on behalf of* device `4712`.
+{{% /notice %}}
 
 ## Downstream Meta Data
 

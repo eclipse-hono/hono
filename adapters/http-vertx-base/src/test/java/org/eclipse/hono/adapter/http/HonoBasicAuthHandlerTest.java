@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -38,6 +38,8 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.auth.DeviceUser;
 import org.eclipse.hono.test.VertxMockSupport;
+import org.eclipse.hono.util.TelemetryConstants;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -57,6 +59,20 @@ import io.vertx.ext.web.handler.HttpException;
  *
  */
 public class HonoBasicAuthHandlerTest {
+
+    private RoutingContext ctx;
+    private HttpServerRequest req;
+    private HttpServerResponse resp;
+
+    @BeforeEach
+    void setUp() {
+        req = mock(HttpServerRequest.class);
+        when(req.uri()).thenReturn("/" + TelemetryConstants.TELEMETRY_ENDPOINT);
+        resp = mock(HttpServerResponse.class);
+        ctx = mock(RoutingContext.class);
+        when(ctx.request()).thenReturn(req);
+        when(ctx.response()).thenReturn(resp);
+    }
 
     /**
      * Verifies that the handler returns the status code conveyed in a
@@ -84,12 +100,7 @@ public class HonoBasicAuthHandlerTest {
                 + Base64.getEncoder().encodeToString("user:password".getBytes(StandardCharsets.UTF_8));
         final MultiMap headers = MultiMap.caseInsensitiveMultiMap();
         headers.add(HttpHeaders.AUTHORIZATION, authorization);
-        final HttpServerRequest req = mock(HttpServerRequest.class);
         when(req.headers()).thenReturn(headers);
-        final HttpServerResponse resp = mock(HttpServerResponse.class);
-        final RoutingContext ctx = mock(RoutingContext.class);
-        when(ctx.request()).thenReturn(req);
-        when(ctx.response()).thenReturn(resp);
         authHandler.handle(ctx);
 
         // THEN the request context is failed with the 503 error code
@@ -109,12 +120,7 @@ public class HonoBasicAuthHandlerTest {
         final String authorization = "BASIC test test";
         final MultiMap headers = mock(MultiMap.class);
         when(headers.get(eq(HttpHeaders.AUTHORIZATION))).thenReturn(authorization);
-        final HttpServerRequest req = mock(HttpServerRequest.class);
         when(req.headers()).thenReturn(headers);
-        final HttpServerResponse resp = mock(HttpServerResponse.class);
-        final RoutingContext ctx = mock(RoutingContext.class);
-        when(ctx.request()).thenReturn(req);
-        when(ctx.response()).thenReturn(resp);
         when(ctx.currentRoute()).thenReturn(mock(Route.class));
 
         authHandler.handle(ctx);
@@ -159,23 +165,18 @@ public class HonoBasicAuthHandlerTest {
                 + Base64.getEncoder().encodeToString("user:password".getBytes(StandardCharsets.UTF_8));
         final MultiMap headers = mock(MultiMap.class);
         when(headers.get(eq(HttpHeaders.AUTHORIZATION))).thenReturn(authorization);
-        final HttpServerRequest req = mock(HttpServerRequest.class);
         when(req.headers()).thenReturn(headers);
-        final HttpServerResponse resp = mock(HttpServerResponse.class);
-        final RoutingContext routingContext = mock(RoutingContext.class);
         final Map<String, Object> routingContextMap = new HashMap<>();
-        when(routingContext.put(any(), any())).thenAnswer(invocation -> {
+        when(ctx.put(any(), any())).thenAnswer(invocation -> {
             routingContextMap.put(invocation.getArgument(0), invocation.getArgument(1));
-            return routingContext;
+            return ctx;
         });
-        when(routingContext.get(any())).thenAnswer(invocation -> routingContextMap.get(invocation.getArgument(0)));
-        when(routingContext.request()).thenReturn(req);
-        when(routingContext.response()).thenReturn(resp);
-        when(routingContext.currentRoute()).thenReturn(mock(Route.class));
-        authHandler.handle(routingContext);
+        when(ctx.get(any())).thenAnswer(invocation -> routingContextMap.get(invocation.getArgument(0)));
+        when(ctx.currentRoute()).thenReturn(mock(Route.class));
+        authHandler.handle(ctx);
 
         // THEN authentication succeeds and the PreCredentialsValidationHandler has been invoked
-        verify(routingContext).setUser(eq(deviceUser));
+        verify(ctx).setUser(eq(deviceUser));
         verify(preCredValidationHandler).handle(eq(deviceCredentials), any(HttpContext.class));
     }
 

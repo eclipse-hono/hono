@@ -89,6 +89,20 @@ public final class HttpUtils {
     }
 
     /**
+     * Fails a routing context with HTTP status code 404 (Not Found) and an optional message.
+     *
+     * @param ctx The vert.x routing context to fail.
+     * @param msg The message to write to the response's body (may be {@code null}).
+     * @throws NullPointerException if routing context is {@code null}.
+     */
+    public static void notFound(final RoutingContext ctx, final String msg) {
+        failWithHeaders(
+                ctx,
+                new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND, msg),
+                null);
+    }
+
+    /**
      * Fails a routing context with HTTP status code 500 (Internal Error) and an optional message.
      *
      * @param ctx The vert.x routing context to fail.

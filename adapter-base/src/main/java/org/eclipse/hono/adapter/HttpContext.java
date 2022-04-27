@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,6 +24,7 @@ import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.QoS;
+import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.Strings;
 
 import io.opentracing.Span;
@@ -38,18 +39,18 @@ import io.vertx.ext.web.RoutingContext;
  */
 public final class HttpContext implements TelemetryExecutionContext {
 
-    private static final String URI_PREFIX_EVENT = "/" + EventConstants.EVENT_ENDPOINT;
-    private static final String URI_PREFIX_EVENT_SHORT = "/" + EventConstants.EVENT_ENDPOINT_SHORT;
-
     private final RoutingContext routingContext;
     private final boolean eventEndpoint;
     private final QoS requestedQos;
+    private final ResourceIdentifier requestedResource;
 
     private HttpContext(final RoutingContext routingContext) {
         this.routingContext = Objects.requireNonNull(routingContext);
-        this.eventEndpoint = Optional.ofNullable(routingContext.request().uri())
-                .map(uri -> uri.startsWith(URI_PREFIX_EVENT) || uri.startsWith(URI_PREFIX_EVENT_SHORT))
-                .orElse(false);
+        this.requestedResource = Optional.ofNullable(routingContext.request().uri())
+                .map(uri -> ResourceIdentifier.fromString(uri.substring(1)))
+                .orElseThrow(() -> new IllegalArgumentException("HTTP request contains no URI"));
+
+        this.eventEndpoint = EventConstants.isEventEndpoint(requestedResource.getEndpoint());
         this.requestedQos = determineRequestedQos(routingContext);
     }
 
@@ -88,6 +89,7 @@ public final class HttpContext implements TelemetryExecutionContext {
      *
      * @return The created HttpContext.
      * @throws NullPointerException if routingContext is {@code null}.
+     * @throws IllegalArgumentException if the HTTP request has no URI.
      */
     public static HttpContext from(final RoutingContext routingContext) {
         return new HttpContext(routingContext);
@@ -187,8 +189,22 @@ public final class HttpContext implements TelemetryExecutionContext {
         return Strings.isNullOrEmpty(contentType) ? null : contentType;
     }
 
-    private boolean isEventEndpoint() {
+    /**
+     * Checks if this request is for uploading an event.
+     *
+     * @return {@code true} if the request URI starts with the event endpoint.
+     */
+    public boolean isEventEndpoint() {
         return eventEndpoint;
+    }
+
+    /**
+     * Gets the resource corresponding to this request's URI.
+     *
+     * @return The resource identifier.
+     */
+    public ResourceIdentifier getRequestedResource() {
+        return requestedResource;
     }
 
     /**
@@ -210,12 +226,10 @@ public final class HttpContext implements TelemetryExecutionContext {
 
         try {
             final Duration ttl = Optional.ofNullable(routingContext.request().getHeader(Constants.HEADER_TIME_TO_LIVE))
+                    .or(() -> Optional.ofNullable(routingContext.request().getParam(Constants.HEADER_TIME_TO_LIVE)))
                     .map(Long::parseLong)
                     .map(Duration::ofSeconds)
-                    .orElseGet(() -> Optional.ofNullable(routingContext.request().getParam(Constants.HEADER_TIME_TO_LIVE))
-                            .map(Long::parseLong)
-                            .map(Duration::ofSeconds)
-                            .orElse(null));
+                    .orElse(null);
             return Optional.ofNullable(ttl);
         } catch (final NumberFormatException e) {
             return Optional.empty();
@@ -241,28 +255,25 @@ public final class HttpContext implements TelemetryExecutionContext {
      * Gets the value of the {@link org.eclipse.hono.util.Constants#HEADER_TIME_TILL_DISCONNECT} HTTP header for a request.
      * If no such header can be found, the query is searched for containing a query parameter with the same key.
      *
-     * @return The time til disconnect or {@code null} if
-     * <ul>
-     *     <li>the request doesn't contain a {@link org.eclipse.hono.util.Constants#HEADER_TIME_TILL_DISCONNECT} header or query parameter.</li>
-     *     <li>the contained value cannot be parsed as an Integer</li>
-     * </ul>
+     * @return The time until disconnect or {@code null} if
+     *         <ul>
+     *           <li>the request doesn't contain a {@value org.eclipse.hono.util.Constants#HEADER_TIME_TILL_DISCONNECT}
+     *           header or query parameter, or</li>
+     *           <li>the contained value cannot be parsed as an integer.</li>
+     *         </ul>
      */
     public Integer getTimeTillDisconnect() {
 
-        try {
-            Optional<String> timeTilDisconnectHeader = Optional.ofNullable(request().getHeader(Constants.HEADER_TIME_TILL_DISCONNECT));
-
-            if (timeTilDisconnectHeader.isEmpty()) {
-                timeTilDisconnectHeader = Optional.ofNullable(request().getParam(Constants.HEADER_TIME_TILL_DISCONNECT));
-            }
-
-            if (timeTilDisconnectHeader.isPresent()) {
-                return Integer.parseInt(timeTilDisconnectHeader.get());
-            }
-        } catch (final NumberFormatException e) {
-        }
-
-        return null;
+        return Optional.ofNullable(request().getHeader(Constants.HEADER_TIME_TILL_DISCONNECT))
+                .or(() -> Optional.ofNullable(request().getParam(Constants.HEADER_TIME_TILL_DISCONNECT)))
+                .map(ttd -> {
+                    try {
+                        return Integer.parseInt(ttd);
+                    } catch (final NumberFormatException e) {
+                        return null;
+                    }
+                })
+                .orElse(null);
     }
 
     /**

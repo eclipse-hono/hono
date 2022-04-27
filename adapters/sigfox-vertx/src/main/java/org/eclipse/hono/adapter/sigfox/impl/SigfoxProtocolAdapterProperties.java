@@ -43,7 +43,7 @@ public class SigfoxProtocolAdapterProperties extends HttpProtocolAdapterProperti
     }
 
     /**
-     * Set a custom TTD value which is being used when an ack is required.
+     * Sets a custom TTD value which is being used when an ack is required.
      * <p>
      * This defaults to the Sigfox default of 20 seconds. Only change this when you know what you are doing.
      *
@@ -58,6 +58,13 @@ public class SigfoxProtocolAdapterProperties extends HttpProtocolAdapterProperti
         this.ttdWhenAckRequired = ttdWhenAckRequired;
     }
 
+    /**
+     * Gets the TTD value which is being used when an ack is required.
+     * <p>
+     * This defaults to the Sigfox default of 20 seconds. Only change this when you know what you are doing.
+     *
+     * @return The custom value to set the TTD to.
+     */
     public int getTtdWhenAckRequired() {
         return ttdWhenAckRequired;
     }
