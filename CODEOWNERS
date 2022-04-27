@@ -1,19 +1,15 @@
 *                                     @sophokles73
 
 /adapter-base/                        @dejanb @sophokles73
-/adapter-base-quarkus/                @dejanb @sophokles73
 
 /adapters/                            @calohmn @kaniyan
-/adapters/amqp-vertx-base/            @calohmn
 /adapters/amqp-vertx-quarkus/         @calohmn
 
-/adapters/coap-vertx-base/            @sophokles73
 /adapters/coap-vertx-quarkus/         @sophokles73
 
 /adapters/http-vertx-base/            @ctron @calohmn
 /adapters/http-vertx-quarkus/         @ctron @calohmn
 
-/adapters/lora-vertx-base/            @calohmn
 /adapters/lora-vertx-quarkus/         @calohmn
 
 /adapters/mqtt-vertx-base/            @ctron @kaniyan
@@ -34,11 +30,9 @@
 /examples/                            @kaniyan
 
 /service-base/                        @dejanb @sophokles73
-/service-base-quarkus/                @dejanb @sophokles73
 
 /services/                                  @dejanb @kaniyan
 /services/base-jdbc/                        @ctron
-/services/command-router-base/              @calohmn
 /services/command-router-quarkus/           @calohmn
 /services/device-registry-base/             @kaniyan
 /services/device-registry-jdbc-quarkus/     @ctron
