@@ -13,7 +13,7 @@ and how to interpret actual values.
 ## Reported Metrics
 
 Hono uses [Micrometer](https://micrometer.io/) for collecting metrics. Those metrics can be exported to different
-back ends. Please refer to [Configuring Metrics]({{< relref "/admin-guide/monitoring-tracing-config#configuring-a-metrics-back-end" >}})
+back ends. Please refer to [Configuring Metrics]({{< relref "/admin-guide/monitoring-tracing-config#enabling-collection-of-metrics" >}})
 for details.
 
 The container images published on Docker Hub have been compiled with support for [Prometheus](https://prometheus.io/)

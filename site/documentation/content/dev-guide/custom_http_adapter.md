@@ -18,7 +18,7 @@ You should be familiar with the setup and start of Hono. Refer to the
 
 Hono's HTTP Adapter supports telemetry and event data processing. Please refer to the [HTTP Adapter User Guide]({{< relref "/user-guide/http-adapter.md" >}}) and [HTTP Adapter Admin Guide]({{< relref "/admin-guide/http-adapter-config.md" >}}) for details regarding the usage and configuration of the HTTP Adapter.
 
-You can find the source of the HTTP Adapter at <https://github.com/eclipse/hono/tree/master/adapters/http-vertx>.
+You can find the source of the HTTP Adapter at <https://github.com/eclipse/hono/tree/master/adapters/http-vertx-quarkus>.
 
 ## Anatomy of the standard HTTP Adapter
  

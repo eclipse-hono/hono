@@ -66,7 +66,7 @@ started.
 
 The `/prometheus` endpoint can be used by a Prometheus server to retrieve collected meter data from the component.
 It is *only* exposed if Prometheus has been configured as the metrics back end as described
-[above]({{< relref "#configuring-a-metrics-back-end" >}}).
+[above]({{< relref "#enabling-collection-of-metrics" >}}).
 
 Please refer to the [Quarkus SmallRye Health extension](https://quarkus.io/guides/smallrye-health) documentation for
 details regarding configuration. The table below provides an overview of the configuration properties that have a Hono
