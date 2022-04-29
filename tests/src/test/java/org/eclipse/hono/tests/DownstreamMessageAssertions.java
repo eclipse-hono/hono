@@ -44,8 +44,7 @@ public final class DownstreamMessageAssertions {
      * @throws AssertionError if the given message is an AMQP message but is not durable.
      */
     public static void assertMessageIsDurable(final DownstreamMessage<? extends MessageContext> msg) {
-        if (msg.getMessageContext() instanceof AmqpMessageContext) {
-            final AmqpMessageContext amqpMessageContext = (AmqpMessageContext) msg.getMessageContext();
+        if (msg.getMessageContext() instanceof AmqpMessageContext amqpMessageContext) {
             assertWithMessage("message is durable").that(amqpMessageContext.getRawMessage().isDurable()).isTrue();
         }
     }
@@ -102,8 +101,7 @@ public final class DownstreamMessageAssertions {
     }
 
     /**
-     * Asserts that a downstream message contains a tracing context (if tracing support is enabled for the
-     * integration tests).
+     * Asserts that a downstream message contains a tracing context.
      *
      * @param msg The message to check.
      * @param expectedTraceId The trace ID that the tracing context is expected to have or {@code null} if the ID should
@@ -114,20 +112,18 @@ public final class DownstreamMessageAssertions {
             final DownstreamMessage<? extends MessageContext> msg,
             final String expectedTraceId) {
 
-        if (IntegrationTestSupport.JAEGER_ENABLED) {
-            final SpanContext spanContext;
-            if (msg.getMessageContext() instanceof final AmqpMessageContext ctx) {
-                spanContext = AmqpUtils.extractSpanContext(IntegrationTestSupport.CLIENT_TRACER, ctx.getRawMessage());
-            } else if (msg.getMessageContext() instanceof final KafkaMessageContext ctx) {
-                spanContext = KafkaTracingHelper.extractSpanContext(IntegrationTestSupport.CLIENT_TRACER, ctx.getRecord());
-            } else {
-                throw new AssertionError("unsupported DownstreamMessage type [%s]".formatted(msg.getClass().getName()));
-            }
-            assertWithMessage("message contains a tracing context").that(spanContext).isNotNull();
-            if (expectedTraceId != null) {
-                assertWithMessage("message contains a tracing context with trace ID").that(spanContext.toTraceId())
-                        .isEqualTo(expectedTraceId);
-            }
+        final SpanContext spanContext;
+        if (msg.getMessageContext() instanceof AmqpMessageContext ctx) {
+            spanContext = AmqpUtils.extractSpanContext(IntegrationTestSupport.CLIENT_TRACER, ctx.getRawMessage());
+        } else if (msg.getMessageContext() instanceof KafkaMessageContext ctx) {
+            spanContext = KafkaTracingHelper.extractSpanContext(IntegrationTestSupport.CLIENT_TRACER, ctx.getRecord());
+        } else {
+            throw new AssertionError("unsupported DownstreamMessage type [%s]".formatted(msg.getClass().getName()));
+        }
+        assertWithMessage("message contains a tracing context").that(spanContext).isNotNull();
+        if (expectedTraceId != null) {
+            assertWithMessage("message contains a tracing context with trace ID").that(spanContext.toTraceId())
+                    .isEqualTo(expectedTraceId);
         }
     }
 }

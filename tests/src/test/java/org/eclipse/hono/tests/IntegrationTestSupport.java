@@ -485,11 +485,6 @@ public final class IntegrationTestSupport {
      */
     public static final int KAFKA_TOPIC_CREATION_ADD_TO_TIMEOUT = 2; // seconds to add
 
-    /**
-     * {@code true} if the tests are run with the Jaeger tracing component.
-     */
-    public static final boolean JAEGER_ENABLED = !Boolean.getBoolean("jaeger.disabled");
-
     private static final OpenTelemetry OPENTELEMETRY = OpenTelemetrySdk.builder()
             .setPropagators(ContextPropagators.create(JaegerPropagator.getInstance()))
             .build();
