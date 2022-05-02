@@ -1,3 +1,4 @@
+maven/mavencentral/biz.paluch.logging/logstash-gelf/1.14.1, MIT, approved, clearlydefined
 maven/mavencentral/ch.qos.logback/logback-classic/1.2.9, EPL-1.0, approved, CQ13636
 maven/mavencentral/ch.qos.logback/logback-core/1.2.9, EPL-1.0, approved, CQ13635
 maven/mavencentral/com.bol/cryptvault/1.0.2, Apache-2.0, approved, clearlydefined
@@ -118,6 +119,7 @@ maven/mavencentral/io.quarkus/quarkus-jsonp/2.7.3.Final, Apache-2.0, approved, c
 maven/mavencentral/io.quarkus/quarkus-kafka-client/2.7.3.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.quarkus/quarkus-kubernetes-client/2.7.3.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.quarkus/quarkus-kubernetes-client-internal/2.7.3.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.quarkus/quarkus-logging-gelf/2.7.3.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.quarkus/quarkus-micrometer/2.7.3.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.quarkus/quarkus-micrometer-registry-prometheus/2.7.3.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.quarkus/quarkus-mutiny/2.7.3.Final, Apache-2.0, approved, clearlydefined
@@ -226,10 +228,10 @@ maven/mavencentral/org.springframework.boot/spring-boot/2.5.12, Apache-2.0, appr
 maven/mavencentral/org.springframework.boot/spring-boot-autoconfigure/2.5.12, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.springframework.boot/spring-boot-starter-logging/2.5.12, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.springframework.security/spring-security-crypto/5.5.5, Apache-2.0, approved, clearlydefined
-maven/mavencentral/org.springframework/spring-aop/5.3.18, Apache-2.0, approved, CQ23152
-maven/mavencentral/org.springframework/spring-beans/5.3.18, Apache-2.0, approved, CQ23153
-maven/mavencentral/org.springframework/spring-context/5.3.18, Apache-2.0, approved, CQ23051
-maven/mavencentral/org.springframework/spring-core/5.3.18, Apache-2.0 AND BSD-3-Clause, approved, CQ23154
+maven/mavencentral/org.springframework/spring-aop/5.3.18, Apache-2.0, approved, CQ24024
+maven/mavencentral/org.springframework/spring-beans/5.3.18, Apache-2.0, approved, CQ24025
+maven/mavencentral/org.springframework/spring-context/5.3.18, Apache-2.0, approved, CQ24027
+maven/mavencentral/org.springframework/spring-core/5.3.18, Apache-2.0 AND BSD-3-Clause, approved, CQ24026
 maven/mavencentral/org.springframework/spring-expression/5.3.18, Apache-2.0, approved, CQ23155
 maven/mavencentral/org.springframework/spring-jcl/5.3.18, Apache-2.0, approved, CQ23156
 maven/mavencentral/org.wildfly.common/wildfly-common/1.5.4.Final-format-001, Apache-2.0, approved, clearlydefined
