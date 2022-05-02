@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,7 +13,8 @@
 
 package org.eclipse.hono.adapter.amqp;
 
-import org.eclipse.hono.service.metric.MicrometerBasedMetrics;
+import org.eclipse.hono.adapter.MicrometerBasedProtocolAdapterMetrics;
+import org.eclipse.hono.adapter.ProtocolAdapterProperties;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.vertx.core.Vertx;
@@ -21,17 +22,20 @@ import io.vertx.core.Vertx;
 /**
  * Micrometer based metrics for the AMQP adapter.
  */
-public class MicrometerBasedAmqpAdapterMetrics extends MicrometerBasedMetrics implements AmqpAdapterMetrics {
+public class MicrometerBasedAmqpAdapterMetrics extends MicrometerBasedProtocolAdapterMetrics implements AmqpAdapterMetrics {
 
     /**
      * Create a new metrics instance for the AMQP adapter.
      *
      * @param registry The meter registry to use.
      * @param vertx The Vert.x instance to use.
-     *
-     * @throws NullPointerException if either parameter is {@code null}.
+     * @param config The adapter properties.
+     * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public MicrometerBasedAmqpAdapterMetrics(final MeterRegistry registry, final Vertx vertx) {
-        super(registry, vertx);
+    public MicrometerBasedAmqpAdapterMetrics(
+            final MeterRegistry registry,
+            final Vertx vertx,
+            final ProtocolAdapterProperties config) {
+        super(registry, vertx, config);
     }
 }

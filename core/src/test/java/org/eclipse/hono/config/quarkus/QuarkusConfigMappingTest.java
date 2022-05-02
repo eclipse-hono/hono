@@ -18,9 +18,6 @@ import static com.google.common.truth.Truth.assertThat;
 
 import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.FileFormat;
-import org.eclipse.hono.config.MapperEndpoint;
-import org.eclipse.hono.config.ProtocolAdapterOptions;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.test.ConfigMappingSupport;
@@ -88,23 +85,5 @@ class QuarkusConfigMappingTest {
         assertThat(props.getTenantIdPattern().pattern()).isEqualTo("[A-Z]+");
         assertThat(props.isNetworkDebugLoggingEnabled()).isTrue();
         assertThat(props.isWaitForDownstreamConnectionEnabled()).isTrue();
-    }
-
-    /**
-     * Verifies that Quarkus correctly binds properties from a yaml file to a
-     * {@link ProtocolAdapterOptions} instance.
-     */
-    @Test
-    public void testProtocolAdapterOptionsBinding() {
-
-        final ProtocolAdapterProperties props = new ProtocolAdapterProperties(
-                ConfigMappingSupport.getConfigMapping(
-                        ProtocolAdapterOptions.class,
-                        this.getClass().getResource("/protocol-adapter-options.yaml")));
-
-        final MapperEndpoint telemetryMapper = props.getMapperEndpoint("telemetry");
-        assertThat(telemetryMapper).isNotNull();
-        assertThat(telemetryMapper.getUri()).isEqualTo("https://mapper.eclipseprojects.io/telemetry");
-        assertThat(telemetryMapper.isTlsEnabled()).isTrue();
     }
 }

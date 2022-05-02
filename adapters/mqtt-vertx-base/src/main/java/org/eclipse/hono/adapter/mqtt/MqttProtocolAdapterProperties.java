@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.adapter.mqtt;
 
-import org.eclipse.hono.config.ProtocolAdapterProperties;
+import org.eclipse.hono.adapter.ProtocolAdapterProperties;
 
 /**
  * Properties for configuring an MQTT based protocol adapter.

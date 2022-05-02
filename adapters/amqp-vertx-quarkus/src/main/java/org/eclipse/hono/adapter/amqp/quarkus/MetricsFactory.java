@@ -50,8 +50,6 @@ public class MetricsFactory {
             final Vertx vertx,
             final MeterRegistry registry,
             final AmqpAdapterProperties adapterProperties) {
-        final var metrics = new MicrometerBasedAmqpAdapterMetrics(registry, vertx);
-        metrics.setProtocolAdapterProperties(adapterProperties);
-        return metrics;
+        return new MicrometerBasedAmqpAdapterMetrics(registry, vertx, adapterProperties);
     }
 }

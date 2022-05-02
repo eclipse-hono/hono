@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -51,7 +51,6 @@ import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.TelemetrySender;
 import org.eclipse.hono.client.util.MessagingClientProvider;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Constants;

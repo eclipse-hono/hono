@@ -54,8 +54,6 @@ public class MetricsFactory {
             final Vertx vertx,
             final MeterRegistry registry,
             final SigfoxProtocolAdapterProperties adapterProperties) {
-        final var metrics = new MicrometerBasedHttpAdapterMetrics(registry, vertx);
-        metrics.setProtocolAdapterProperties(adapterProperties);
-        return metrics;
+        return new MicrometerBasedHttpAdapterMetrics(registry, vertx, adapterProperties);
     }
 }

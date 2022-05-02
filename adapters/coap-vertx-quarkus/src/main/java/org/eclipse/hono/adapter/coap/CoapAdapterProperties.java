@@ -15,7 +15,7 @@ package org.eclipse.hono.adapter.coap;
 
 import java.util.Objects;
 
-import org.eclipse.hono.config.ProtocolAdapterProperties;
+import org.eclipse.hono.adapter.ProtocolAdapterProperties;
 
 /**
  * Properties for configuring the CoAP protocol adapter.

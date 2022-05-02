@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,7 +15,7 @@ package org.eclipse.hono.adapter.limiting;
 import java.util.Objects;
 import java.util.function.Supplier;
 
-import org.eclipse.hono.config.ProtocolAdapterProperties;
+import org.eclipse.hono.adapter.ProtocolAdapterProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
