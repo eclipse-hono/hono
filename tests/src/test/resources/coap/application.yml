@@ -80,6 +80,7 @@ hono:
   kafka:
     commonClientConfig:
       bootstrap.servers: "${hono.kafka.bootstrap.servers}"
+      max.block.ms: 1000
 
 quarkus:
   application:

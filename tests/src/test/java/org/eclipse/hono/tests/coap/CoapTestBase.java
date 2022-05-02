@@ -518,13 +518,23 @@ public abstract class CoapTestBase {
 
         final CoapClient gatewayOne = getCoapsClient(gatewayOneId, tenantId, SECRET);
         final CoapClient gatewayTwo = getCoapsClient(gatewayTwoId, tenantId, SECRET);
+        final String resourceOne = getPutResource(tenantId, deviceId);
+        final String resourceTwo = getPutResource("", deviceId);
 
         testUploadMessages(ctx, tenantId,
-                () -> warmUp(gatewayOne, createCoapsRequest(Code.PUT, getPutResource(tenantId, deviceId), 0)),
+                () -> warmUp(gatewayOne, createCoapsRequest(Code.PUT, resourceOne, 0)),
                 count -> {
-                    final CoapClient client = (count.intValue() & 1) == 0 ? gatewayOne : gatewayTwo;
+                    final CoapClient client;
+                    final String resource;
+                    if ((count.intValue() & 1) == 0) {
+                        client = gatewayOne;
+                        resource = resourceOne;
+                    } else {
+                        client = gatewayTwo;
+                        resource = resourceTwo;
+                    }
                     final Promise<CoapResponse> result = Promise.promise();
-                    final Request request = createCoapsRequest(Code.PUT, getPutResource(tenantId, deviceId), count);
+                    final Request request = createCoapsRequest(Code.PUT, resource, count);
                     client.advanced(getHandler(result), request);
                     return result.future();
                 });
@@ -976,7 +986,16 @@ public abstract class CoapTestBase {
                             })
                             .compose(receivedCommandRequestId -> {
                                 // send a response to the command now
-                                final String responseUri = endpointConfig.getCommandResponseUri(tenantId, commandTargetDeviceId, receivedCommandRequestId);
+                                final String tenantIdToUseInResponseUri;
+                                if (count % 2 == 0 && endpointConfig.isSubscribeAsGateway()) {
+                                    tenantIdToUseInResponseUri = "";
+                                } else {
+                                    tenantIdToUseInResponseUri = tenantId;
+                                }
+                                final String responseUri = endpointConfig.getCommandResponseUri(
+                                        tenantIdToUseInResponseUri,
+                                        commandTargetDeviceId,
+                                        receivedCommandRequestId);
                                 logger.debug("sending response to command [uri: {}]", responseUri);
 
                                 final Buffer body = Buffer.buffer("ok");

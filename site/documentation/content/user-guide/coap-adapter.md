@@ -232,7 +232,7 @@ coap-client -m PUT coap://hono.eclipseprojects.io/telemetry/DEFAULT_TENANT/4711?
 
 ## Publish Telemetry Data (authenticated Gateway)
 
-* URI: `/telemetry/${tenantId}/${deviceId}`
+* URI: `/telemetry/${tenantId}/${deviceId}` or `/telemetry//${deviceId}`
 * Method: `PUT`
 * Type:
   * `CON`: *at least once* delivery semantics
@@ -298,30 +298,32 @@ retrieving a *registration assertion* for the device from the configured
 
 **Examples**
 
-Publish some JSON data for device `4712` using default message type `CON` (*at least once*):
+Publish some JSON data on behalf of device `4712` using default message type `CON` (*at least once*):
 
 ~~~sh
-coap-client -u gw@DEFAULT_TENANT -k gw-secret -m PUT coaps://hono.eclipseprojects.io/telemetry/DEFAULT_TENANT/4712 -t application/json -e '{"temp": 5}'
+coap-client -u gw@DEFAULT_TENANT -k gw-secret -m PUT coaps://hono.eclipseprojects.io/telemetry//4712 -t application/json -e '{"temp": 5}'
 ~~~
 
-Publish some JSON data for device `4712` using message type `NON` (*at most once*):
+Publish some JSON data on behalf of device `4712` using message type `NON` (*at most once*):
 
 ~~~sh
-coap-client -u gw@DEFAULT_TENANT -k gw-secret -N -m PUT coaps://hono.eclipseprojects.io/telemetry/DEFAULT_TENANT/4712 -t application/json -e '{"temp": 5}'
+coap-client -u gw@DEFAULT_TENANT -k gw-secret -N -m PUT coaps://hono.eclipseprojects.io/telemetry//4712 -t application/json -e '{"temp": 5}'
 ~~~
 
-Publish some JSON data for device `4712`, indicating that the gateway will wait for 10 seconds to receive the response:
+Publish some JSON data on behalf of device `4712`, indicating that the gateway will wait for 10 seconds to receive the response:
 
 ~~~sh
-coap-client -u gw@DEFAULT_TENANT -k gw-secret -m PUT coaps://hono.eclipseprojects.io/telemetry/DEFAULT_TENANT/4712?hono-ttd=10 -t application/json -e '{"temp": 5}'
+coap-client -u gw@DEFAULT_TENANT -k gw-secret -m PUT coaps://hono.eclipseprojects.io/telemetry//4712?hono-ttd=10 -t application/json -e '{"temp": 5}'
 
 {
   "brightness": 87
 }
 ~~~
 
-**NB** The examples above assume that a gateway device has been registered with `psk` credentials with *auth-id* `gw` and
-secret `gw-secret` which is authorized to publish data *on behalf of* device `4712`.
+{{% notice info %}}
+The example above assumes that a gateway device has been registered with `psk` credentials with
+*auth-id* `gw` and secret `gw-secret` which is authorized to publish data *on behalf of* device `4712`.
+{{% /notice %}}
 
 ## Publish an Event (authenticated Device)
 
@@ -473,7 +475,7 @@ coap-client -m PUT coap://hono.eclipseprojects.io/event/DEFAULT_TENANT/4711?hono
 
 ## Publish an Event (authenticated Gateway)
 
-* URI: `/event/${tenantId}/${deviceId}`
+* URI: `/event/${tenantId}/${deviceId}` or `/event//${deviceId}`
 * Method: `PUT`
 * Type:`CON`
 * Request Options:
@@ -533,24 +535,26 @@ retrieving a *registration assertion* for the device from the configured
 
 **Examples**
 
-Publish some JSON data for device `4712` using default message type `CON` (*at least once*):
+Publish some JSON data on behalf of device `4712` using default message type `CON` (*at least once*):
 
 ~~~sh
-coap-client -u gw@DEFAULT_TENANT -k gw-secret -m PUT coaps://hono.eclipseprojects.io/event/DEFAULT_TENANT/4712 -t application/json -e '{"temp": 5}'
+coap-client -u gw@DEFAULT_TENANT -k gw-secret -m PUT coaps://hono.eclipseprojects.io/event//4712 -t application/json -e '{"temp": 5}'
 ~~~
 
-Publish some JSON data for device `4712`, indicating that the gateway will wait for 10 seconds to receive the response:
+Publish some JSON data on behalf of device `4712`, indicating that the gateway will wait for 10 seconds to receive the response:
 
 ~~~sh
-coap-client -u gw@DEFAULT_TENANT -k gw-secret -m PUT coaps://hono.eclipseprojects.io/event/DEFAULT_TENANT/4712?hono-ttd=10 -t application/json -e '{"temp": 5}'
+coap-client -u gw@DEFAULT_TENANT -k gw-secret -m PUT coaps://hono.eclipseprojects.io/event//4712?hono-ttd=10 -t application/json -e '{"temp": 5}'
 
 {
   "brightness": 87
 }
 ~~~
 
-**NB** The examples above assume that a gateway device has been registered with `psk` credentials with *auth-id* `gw` and
-secret `gw-secret` which is authorized to publish data *on behalf of* device `4712`.
+{{% notice info %}}
+The example above assumes that a gateway device has been registered with `psk` credentials with
+*auth-id* `gw` and secret `gw-secret` which is authorized to publish data *on behalf of* device `4712`.
+{{% /notice %}}
 
 ## Command & Control
 
@@ -675,7 +679,7 @@ coap-client -u sensor1@DEFAULT_TENANT -k hono-secret coaps://hono.eclipseproject
 
 ### Sending a Response to a Command (authenticated Gateway)
 
-* URI: `/command_response/${tenantId}/${deviceId}/${commandRequestId}`
+* URI: `/command_response/${tenantId}/${deviceId}/${commandRequestId}` or `/command_response//${deviceId}/${commandRequestId}`
 * Method: `PUT`
 * Type: `CON`
 * Request Options:
@@ -717,15 +721,16 @@ by means of retrieving a *registration assertion* for the device from the config
 
 **Examples**
 
-Send a response to a previously received command with the command-request-id `req-id-uuid` for device `4712`:
+Send a response to a previously received command with the command-request-id `req-id-uuid` on behalf of device `4712`:
 
 ~~~sh
-coap-client -u gw@DEFAULT_TENANT -k gw-secret coaps://hono.eclipseprojects.io/command_response/DEFAULT_TENANT/4712/req-id-uuid?hono-cmd-status=200 -e '{"brightness-changed": true}'
+coap-client -u gw@DEFAULT_TENANT -k gw-secret coaps://hono.eclipseprojects.io/command_response//4712/req-id-uuid?hono-cmd-status=200 -e '{"brightness-changed": true}'
 ~~~
 
-**NB** The example above assumes that a gateway device has been registered with `psk` credentials with *auth-id* `gw` and
-secret `gw-secret` which is authorized to publish data *on behalf of* device `4712`.
-
+{{% notice info %}}
+The example above assumes that a gateway device has been registered with `psk` credentials with
+*auth-id* `gw` and secret `gw-secret` which is authorized to publish data *on behalf of* device `4712`.
+{{% /notice %}}
 
 ## Downstream Meta Data
 

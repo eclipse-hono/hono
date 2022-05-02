@@ -17,6 +17,7 @@ package org.eclipse.hono.adapter.coap;
 import java.net.HttpURLConnection;
 import java.security.Principal;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.californium.core.CoapResource;
@@ -25,6 +26,7 @@ import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.network.Exchange;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.californium.core.server.resources.Resource;
+import org.eclipse.californium.elements.EndpointContext;
 import org.eclipse.californium.elements.auth.ExtensiblePrincipal;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
@@ -38,7 +40,6 @@ import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
 import io.vertx.core.Future;
-import io.vertx.core.Promise;
 
 
 /**
@@ -103,32 +104,17 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
      * Gets an authenticated device's identity for a CoAP request.
      *
      * @param exchange The CoAP exchange with the authenticated device's principal.
-     * @return A future indicating the outcome of the operation.
-     *         The future will be succeeded if the authenticated device can be determined from the CoAP exchange,
-     *         otherwise the future will be failed with a {@link ClientErrorException}.
+     * @return The authenticated device or {@code null} if the request has not been authenticated.
      */
-    public static Future<Device> getAuthenticatedDevice(final CoapExchange exchange) {
+    protected static Device getAuthenticatedDevice(final CoapExchange exchange) {
 
-        final Promise<Device> result = Promise.promise();
-        final Principal peerIdentity = exchange.advanced().getRequest().getSourceContext().getPeerIdentity();
-        if (peerIdentity instanceof ExtensiblePrincipal) {
-            final ExtensiblePrincipal<?> extPrincipal = (ExtensiblePrincipal<?>) peerIdentity;
-            final Device authenticatedDevice = extPrincipal.getExtendedInfo()
-                    .get(DeviceInfoSupplier.EXT_INFO_KEY_HONO_DEVICE, Device.class);
-            if (authenticatedDevice != null) {
-                result.complete(authenticatedDevice);
-            } else {
-                result.fail(new ClientErrorException(
-                        HttpURLConnection.HTTP_UNAUTHORIZED,
-                        "DTLS session does not contain authenticated Device"));
-            }
-        } else {
-            result.fail(new ClientErrorException(
-                    HttpURLConnection.HTTP_UNAUTHORIZED,
-                    "DTLS session does not contain ExtensiblePrincipal"));
-
-        }
-        return result.future();
+        return Optional.ofNullable(exchange.advanced().getRequest().getSourceContext())
+                .map(EndpointContext::getPeerIdentity)
+                .filter(ExtensiblePrincipal.class::isInstance)
+                .map(ExtensiblePrincipal.class::cast)
+                .map(ExtensiblePrincipal::getExtendedInfo)
+                .map(info -> info.get(DeviceInfoSupplier.EXT_INFO_KEY_HONO_DEVICE, Device.class))
+                .orElse(null);
     }
 
     /**
