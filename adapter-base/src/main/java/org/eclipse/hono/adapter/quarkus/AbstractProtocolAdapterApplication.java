@@ -22,6 +22,7 @@ import javax.inject.Inject;
 
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.adapter.MessagingClientProviders;
+import org.eclipse.hono.adapter.ProtocolAdapterProperties;
 import org.eclipse.hono.adapter.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.adapter.monitoring.ConnectionEventProducerConfig;
 import org.eclipse.hono.adapter.monitoring.ConnectionEventProducerOptions;
@@ -77,7 +78,6 @@ import org.eclipse.hono.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.client.telemetry.kafka.KafkaBasedEventSender;
 import org.eclipse.hono.client.telemetry.kafka.KafkaBasedTelemetrySender;
 import org.eclipse.hono.client.util.MessagingClientProvider;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.notification.NotificationConstants;
 import org.eclipse.hono.notification.NotificationEventBusSupport;
 import org.eclipse.hono.notification.NotificationReceiver;

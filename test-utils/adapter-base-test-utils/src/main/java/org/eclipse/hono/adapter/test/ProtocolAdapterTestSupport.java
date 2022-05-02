@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,11 +16,11 @@ package org.eclipse.hono.adapter.test;
 
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.adapter.MessagingClientProviders;
+import org.eclipse.hono.adapter.ProtocolAdapterProperties;
 import org.eclipse.hono.client.command.CommandResponseSender;
 import org.eclipse.hono.client.telemetry.EventSender;
 import org.eclipse.hono.client.telemetry.TelemetrySender;
 import org.eclipse.hono.client.util.MessagingClientProvider;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 
 /**
  * A base class for implementing tests for protocol adapters that extend

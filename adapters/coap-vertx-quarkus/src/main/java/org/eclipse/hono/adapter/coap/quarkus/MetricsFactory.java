@@ -50,8 +50,6 @@ public class MetricsFactory {
             final Vertx vertx,
             final MeterRegistry registry,
             final CoapAdapterProperties adapterProperties) {
-        final var metrics = new MicrometerBasedCoapAdapterMetrics(registry, vertx);
-        metrics.setProtocolAdapterProperties(adapterProperties);
-        return metrics;
+        return new MicrometerBasedCoapAdapterMetrics(registry, vertx, adapterProperties);
     }
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,7 +15,7 @@ package org.eclipse.hono.adapter.coap;
 
 import java.util.Optional;
 
-import org.eclipse.hono.config.ProtocolAdapterOptions;
+import org.eclipse.hono.adapter.quarkus.ProtocolAdapterOptions;
 
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.ConfigMapping.NamingStrategy;

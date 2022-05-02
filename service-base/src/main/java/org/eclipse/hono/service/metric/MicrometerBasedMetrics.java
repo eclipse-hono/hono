@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.service.metric;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -23,7 +24,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.service.util.ServiceBaseUtils;
@@ -44,11 +44,11 @@ import io.vertx.core.Vertx;
 /**
  * Micrometer based metrics implementation.
  * <p>
- * This implementation monitors the {@code TenantIdleTimeout}, if configured to a non zero duration
- * ({@link ProtocolAdapterProperties#setTenantIdleTimeout(java.time.Duration)}). If the tenant had not interacted with
- * the protocol adapter instance for the configured period, it stops reporting metrics for that tenant and publishes an
- * event on the event bus. The event bus address is {@link Constants#EVENT_BUS_ADDRESS_TENANT_TIMED_OUT} and the body of
- * the message is the tenantId.
+ * This implementation monitors the {@code TenantIdleTimeout}, if configured to a non-zero duration.
+ * If the tenant has not interacted with the Hono component for the configured time period (i.e. there were no changes
+ * in the connection, telemetry and command metrics values related to that tenant), the metrics meters for that tenant
+ * will be removed and an event will be published on the Vert.x event bus. The event bus address is
+ * {@value Constants#EVENT_BUS_ADDRESS_TENANT_TIMED_OUT} and the body of the message consists of the tenant identifier.
  */
 public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Factory {
 
@@ -97,8 +97,7 @@ public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Facto
      */
     public static final String METER_DOWNSTREAM_TIMEOUT = "hono.downstream.timeout";
 
-    private static final long DEFAULT_TENANT_IDLE_TIMEOUT = ProtocolAdapterProperties.DEFAULT_TENANT_IDLE_TIMEOUT
-            .toMillis();
+    private static final long DEFAULT_TENANT_IDLE_TIMEOUT = Duration.ZERO.toMillis();
     private static final long DEVICE_CONNECTION_DURATION_RECORDING_INTERVAL_IN_MS = TimeUnit.SECONDS.toMillis(10);
 
     protected final Logger log = LoggerFactory.getLogger(getClass());
@@ -142,14 +141,18 @@ public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Facto
     }
 
     /**
-     * Sets the protocol adapter configuration.
+     * Sets the tenant idle timeout.
      *
-     * @param config The protocol adapter configuration.
-     * @throws NullPointerException if config is {@code null}.
+     * @param tenantIdleTimeout The timeout in milliseconds
+     * @throws NullPointerException If tenantIdleTimeout is {@code null}.
+     * @throws IllegalArgumentException If tenantIdleTimeout is negative.
      */
-    public void setProtocolAdapterProperties(final ProtocolAdapterProperties config) {
-        Objects.requireNonNull(config);
-        this.tenantIdleTimeout = config.getTenantIdleTimeout().toMillis();
+    public void setTenantIdleTimeout(final Duration tenantIdleTimeout) {
+        Objects.requireNonNull(tenantIdleTimeout);
+        if (tenantIdleTimeout.isNegative()) {
+            throw new IllegalArgumentException("timeout must not be negative");
+        }
+        this.tenantIdleTimeout = tenantIdleTimeout.toMillis();
     }
 
     @Override

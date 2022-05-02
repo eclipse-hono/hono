@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,12 +11,15 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.config;
+package org.eclipse.hono.adapter;
 
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+
+import org.eclipse.hono.adapter.quarkus.ProtocolAdapterOptions;
+import org.eclipse.hono.config.ServiceConfigProperties;
 
 /**
  * Common configuration properties for protocol adapters of Hono.

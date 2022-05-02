@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -31,7 +31,6 @@ import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
-import org.eclipse.hono.config.ProtocolAdapterProperties;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
 import org.eclipse.hono.service.metric.MetricsTags.QoS;
 import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
@@ -234,13 +233,7 @@ public class MicrometerBasedMetricsTest {
         reportTelemetry(metrics);
         assertTrue(metrics.getLastSeenTimestampPerTenant().isEmpty());
 
-        metrics.setProtocolAdapterProperties(new ProtocolAdapterProperties());
-        reportTelemetry(metrics);
-        assertTrue(metrics.getLastSeenTimestampPerTenant().isEmpty());
-
-        final ProtocolAdapterProperties config = new ProtocolAdapterProperties();
-        config.setTenantIdleTimeout(Duration.ZERO);
-        metrics.setProtocolAdapterProperties(config);
+        metrics.setTenantIdleTimeout(Duration.ZERO);
         reportTelemetry(metrics);
         assertTrue(metrics.getLastSeenTimestampPerTenant().isEmpty());
     }
@@ -262,7 +255,7 @@ public class MicrometerBasedMetricsTest {
 
         // ... with tenantIdleTimeout configured
         final long timeoutMillis = 10L;
-        metrics.setProtocolAdapterProperties(configWithTenantIdleTimeout(timeoutMillis));
+        metrics.setTenantIdleTimeout(Duration.ofMillis(timeoutMillis));
 
         // WHEN sending a message
         reportTelemetry(metrics);
@@ -297,7 +290,7 @@ public class MicrometerBasedMetricsTest {
 
         // GIVEN a metrics instance with tenantIdleTimeout configured ...
         final MicrometerBasedMetrics metrics = new MicrometerBasedMetrics(registry, vertx);
-        metrics.setProtocolAdapterProperties(configWithTenantIdleTimeout(1L));
+        metrics.setTenantIdleTimeout(Duration.ofMillis(1L));
 
         // ... with a device connected and a telemetry message and a command recorded
         metrics.incrementConnections(tenant);
@@ -336,7 +329,7 @@ public class MicrometerBasedMetricsTest {
 
         // GIVEN a metrics instance with tenantIdleTimeout configured...
         final MicrometerBasedMetrics metrics = new MicrometerBasedMetrics(registry, mock(Vertx.class));
-        metrics.setProtocolAdapterProperties(configWithTenantIdleTimeout(10L));
+        metrics.setTenantIdleTimeout(Duration.ofMillis(10L));
         // ..and last seen timestamp is initialized with low value
         final long timestampBefore = 0L;
         metrics.getLastSeenTimestampPerTenant().put(tenant, timestampBefore);
@@ -360,7 +353,7 @@ public class MicrometerBasedMetricsTest {
 
         // GIVEN a metrics instance with tenantIdleTimeout configured...
         final MicrometerBasedMetrics metrics = new MicrometerBasedMetrics(registry, mock(Vertx.class));
-        metrics.setProtocolAdapterProperties(configWithTenantIdleTimeout(10L));
+        metrics.setTenantIdleTimeout(Duration.ofMillis(10L));
         // ..and last seen timestamp is initialized with low value
         final long timestampBefore = 0L;
         metrics.getLastSeenTimestampPerTenant().put(tenant, timestampBefore);
@@ -384,7 +377,7 @@ public class MicrometerBasedMetricsTest {
 
         // GIVEN a metrics instance with tenantIdleTimeout configured...
         final MicrometerBasedMetrics metrics = new MicrometerBasedMetrics(registry, mock(Vertx.class));
-        metrics.setProtocolAdapterProperties(configWithTenantIdleTimeout(10L));
+        metrics.setTenantIdleTimeout(Duration.ofMillis(10L));
         // ..and last seen timestamp is initialized with low value
         final long timestampBefore = 0L;
         metrics.getLastSeenTimestampPerTenant().put(tenant, timestampBefore);
@@ -395,12 +388,6 @@ public class MicrometerBasedMetricsTest {
         // THEN the timestamp for the tenant has been updated
         assertEquals(1, metrics.getLastSeenTimestampPerTenant().size());
         assertNotEquals(timestampBefore, metrics.getLastSeenTimestampPerTenant().get(tenant));
-    }
-
-    private ProtocolAdapterProperties configWithTenantIdleTimeout(final long timeoutMillis) {
-        final ProtocolAdapterProperties config = new ProtocolAdapterProperties();
-        config.setTenantIdleTimeout(Duration.ofMillis(timeoutMillis));
-        return config;
     }
 
     private void reportTelemetry(final MicrometerBasedMetrics metrics) {
