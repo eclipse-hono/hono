@@ -80,6 +80,14 @@ specific default value that differs from the Quarkus default:
 | `QUARKUS_SMALLRYE_HEALTH_READINESS_PATH`<br>`quarkus.smallrye-health.readiness-path` | `readiness`  |
 | `QUARKUS_SMALLRYE_HEALTH_ROOT_PATH`<br>`quarkus.smallrye-health.root-path`          | `/`         |
  
+## Logging
+
+The Hono components contain support for sending log messages to a centralized log management system like Graylog,
+Logstash or Fluentd. This is done by means of the [*quarkus-logging-gelf* extension](https://quarkus.io/guides/centralized-log-management),
+using TCP or UDP to send logs in the Graylog Extended Log Format (GELF). The logging configuration can be done using
+environment variables with the `QUARKUS_LOG_HANDLER_GELF_` prefix or using corresponding system properties. See the
+[configuration reference](https://quarkus.io/guides/centralized-log-management#configuration-reference) for details.
+
 ## Tracing
 
 In normal operation the vast majority of messages should be flowing through the system without any noteworthy delays

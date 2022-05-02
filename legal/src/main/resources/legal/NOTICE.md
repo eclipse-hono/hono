@@ -340,6 +340,16 @@ https://eclipse.org/legal/epl-v10.html.
 
 The source code is available from [GitHub](https://github.com/qos-ch/logback).
 
+### logstash-gelf
+
+This product includes software developed by the [logstash-gelf project](https://logging.paluch.biz/).
+
+Your use of *logstash-gelf* is subject to the terms and conditions of the MIT License.
+A copy of the license is contained in the file [LICENSE.logstash-gelf.txt](LICENSE.logstash-gelf.txt)
+and is also available at https://github.com/mp911de/logstash-gelf/blob/main/LICENSE.
+
+The source code is available from [GitHub](https://github.com/mp911de/logstash-gelf).
+
 ### lz4-java
 
 This product includes software developed by the [lz4-java project](https://github.com/lz4/lz4-java).
