@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,7 +19,7 @@ import org.eclipse.hono.auth.Device;
 /**
  * Contains device and authentication related information pertaining to a CoAP request message.
  */
-public class RequestDeviceAndAuth {
+public final class RequestDeviceAndAuth {
 
     /**
      * Request message's origin device.
@@ -55,7 +55,7 @@ public class RequestDeviceAndAuth {
      *
      * @return The device.
      */
-    public final Device getOriginDevice() {
+    public Device getOriginDevice() {
         return originDevice;
     }
 
@@ -66,7 +66,7 @@ public class RequestDeviceAndAuth {
      *
      * @return The authentication identifier or {@code null}.
      */
-    public final String getAuthId() {
+    public String getAuthId() {
         return authId;
     }
 
@@ -80,7 +80,7 @@ public class RequestDeviceAndAuth {
      *
      * @return The authenticated device or {@code null}.
      */
-    public final Device getAuthenticatedDevice() {
+    public Device getAuthenticatedDevice() {
         return authenticatedDevice;
     }
 

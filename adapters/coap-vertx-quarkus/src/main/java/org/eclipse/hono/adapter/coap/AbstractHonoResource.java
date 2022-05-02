@@ -15,7 +15,6 @@
 package org.eclipse.hono.adapter.coap;
 
 import java.net.HttpURLConnection;
-import java.security.Principal;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +43,7 @@ import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.RegistrationAssertion;
 import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.Strings;
 import org.eclipse.hono.util.TenantObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -101,12 +101,17 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
      *         The future will be succeeded if the device can be determined from the CoAP exchange,
      *         otherwise the future will be failed with a {@link ClientErrorException}.
      */
-    public Future<RequestDeviceAndAuth> getPostRequestDeviceAndAuth(final CoapExchange exchange) {
-        return TracingSupportingHonoResource.getAuthenticatedDevice(exchange)
+    protected Future<RequestDeviceAndAuth> getPostRequestDeviceAndAuth(final CoapExchange exchange) {
+
+        return Optional.ofNullable(TracingSupportingHonoResource.getAuthenticatedDevice(exchange))
                 .map(authenticatedDevice -> new RequestDeviceAndAuth(
                         authenticatedDevice,
                         TracingSupportingHonoResource.getAuthId(exchange),
-                        authenticatedDevice));
+                        authenticatedDevice))
+                .map(Future::succeededFuture)
+                .orElseGet(() -> Future.failedFuture(new ClientErrorException(
+                        HttpURLConnection.HTTP_UNAUTHORIZED,
+                        "DTLS session does not contain authenticated Device")));
     }
 
     /**
@@ -117,39 +122,48 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
      *         The future will be succeeded if the device can be determined from the CoAP exchange,
      *         otherwise the future will be failed with a {@link ClientErrorException}.
      */
-    public Future<RequestDeviceAndAuth> getPutRequestDeviceAndAuth(final CoapExchange exchange) {
+    protected Future<RequestDeviceAndAuth> getPutRequestDeviceAndAuth(final CoapExchange exchange) {
 
         final List<String> pathList = exchange.getRequestOptions().getUriPath();
         if (pathList.isEmpty()) {
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                    "missing request URI"));
-        } else if (pathList.size() == 1) {
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                    "missing tenant and device ID in URI"));
-        } else if (pathList.size() == 2) {
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                    "missing device ID in URI"));
+            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
+                    "request URI must not be empty"));
         }
 
-        try {
-            final String[] path = pathList.toArray(new String[pathList.size()]);
-            final ResourceIdentifier identifier = ResourceIdentifier.fromPath(path);
-            final Device device = new Device(identifier.getTenantId(), identifier.getResourceId());
-            final Principal peer = exchange.advanced().getRequest().getSourceContext().getPeerIdentity();
-            if (peer == null) {
-                // unauthenticated device request
-                return Future.succeededFuture(new RequestDeviceAndAuth(device, null, null));
-            } else {
-                return TracingSupportingHonoResource.getAuthenticatedDevice(exchange)
-                        .map(authenticatedDevice -> new RequestDeviceAndAuth(
-                                device,
-                                TracingSupportingHonoResource.getAuthId(exchange),
-                                authenticatedDevice));
-            }
-        } catch (final IllegalArgumentException cause) {
-            return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
-                    "invalid request URI"));
-        }
+        final String[] path = pathList.toArray(new String[pathList.size()]);
+        final var requestedResource = ResourceIdentifier.fromPath(path);
+
+        final Promise<RequestDeviceAndAuth> result = Promise.promise();
+        Optional.ofNullable(TracingSupportingHonoResource.getAuthenticatedDevice(exchange))
+            .ifPresentOrElse(
+                    authenticatedDevice -> {
+                        final String tenantFromUri = Optional.ofNullable(requestedResource.getTenantId())
+                                .orElse(authenticatedDevice.getTenantId());
+                        if (authenticatedDevice.getTenantId().equals(tenantFromUri)) {
+                            result.complete(new RequestDeviceAndAuth(
+                                    new Device(tenantFromUri, requestedResource.getResourceId()),
+                                    TracingSupportingHonoResource.getAuthId(exchange),
+                                    authenticatedDevice));
+                        } else {
+                            result.fail(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,
+                                    "tenant ID in request URI must match provided credentials"));
+                        }
+                    },
+                    () -> {
+                        // unauthenticated device request
+                        // URI must contain tenant and device IDs and tenant must match authenticated peer's tenant
+                        if (Strings.isNullOrEmpty(requestedResource.getTenantId())
+                                || Strings.isNullOrEmpty(requestedResource.getResourceId())) {
+                            result.fail(new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND,
+                                    "request URI must contain tenant and device ID"));
+                        } else {
+                            result.complete(new RequestDeviceAndAuth(
+                                    new Device(requestedResource.getTenantId(), requestedResource.getResourceId()),
+                                    null,
+                                    null));
+                        }
+                    });
+        return result.future();
     }
 
     /**

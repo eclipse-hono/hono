@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -59,11 +59,16 @@ abstract class ResourceTestBase extends CoapProtocolAdapterMockSupport<CoapProto
     }
 
     static CoapExchange newCoapExchange(final Buffer payload, final Type requestType, final OptionSet options) {
-
         final Request request = mock(Request.class);
         when(request.getType()).thenReturn(requestType);
         when(request.isConfirmable()).thenReturn(requestType == Type.CON);
         when(request.getOptions()).thenReturn(options);
+        return newCoapExchange(payload, request);
+    }
+
+    static CoapExchange newCoapExchange(final Buffer payload, final Request request) {
+
+        final OptionSet options = request.getOptions();
         final Object identity = "dummy";
         final Exchange exchange = new Exchange(request, identity, Origin.REMOTE, mock(Executor.class));
         final CoapExchange coapExchange = mock(CoapExchange.class);

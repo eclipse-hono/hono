@@ -10,6 +10,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 * The HTTP protocol adapter now allows authenticated gateway devices to omit the tenant ID from the URI of requests
   used to upload telemetry, event or command response messages.
+* The CoAP protocol adapter now allows authenticated gateway devices to omit the tenant ID from the URI of requests
+  used to upload telemetry, event or command response messages.
 * The AMQP protocol adapter now allows authenticated gateway devices to omit the tenant ID from the address of
   messages used to upload telemetry or event messages.
 
