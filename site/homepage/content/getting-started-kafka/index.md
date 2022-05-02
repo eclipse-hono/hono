@@ -260,13 +260,13 @@ export MY_TENANT=my-tenant
 java -jar hono-cli-*-exec.jar --spring.profiles.active=receiver,kafka,sandbox --tenant.id=$MY_TENANT
 ~~~
 
-Otherwise, if you are using a local Minikube cluster, first save the truststore file of the Kafka broker to your file
-system with the following command (adapt the environment variable `KAFKA_TRUSTSTORE_PATH` to change where the truststore
-will be stored):
+Otherwise, if you are using a local Minikube cluster, first save the trust store file of the Kafka broker to your file
+system with the following command (adapt the value of environment variable `KAFKA_TRUSTSTORE_PATH` to the location that
+the trust store should be saved to):
 
 ~~~sh
-export KAFKA_TRUSTSTORE_PATH=/tmp/truststore.jks
-kubectl get secrets eclipse-hono-kafka-jks --template="{{index .data \"kafka.truststore.jks\" | base64decode}}" -n hono > $KAFKA_TRUSTSTORE_PATH
+export KAFKA_TRUSTSTORE_PATH=/tmp/truststore.pem
+kubectl get secrets eclipse-hono-kafka-certs --template="{{index .data \"ca.crt\" | base64decode}}" -n hono > $KAFKA_TRUSTSTORE_PATH
 ~~~
 
 Then set the following environment variables and start the client (make sure to replace `my-tenant` with your tenant
@@ -277,7 +277,7 @@ identifier):
 export MY_TENANT=my-tenant
 export KAFKA_IP=$(kubectl get service eclipse-hono-kafka-0-external --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)
 export KAFKA_PORT=$(kubectl get service eclipse-hono-kafka-0-external --output="jsonpath={.spec.ports[?(@.name=='tcp-kafka')].port}" -n hono)
-java -jar hono-cli-*-exec.jar --hono.kafka.commonClientConfig.bootstrap.servers=$KAFKA_IP:$KAFKA_PORT --hono.kafka.commonClientConfig.ssl.truststore.location=$KAFKA_TRUSTSTORE_PATH --spring.profiles.active=receiver,kafka,local --tenant.id=$MY_TENANT
+java -jar hono-cli-*-exec.jar --hono.kafka.commonClientConfig.bootstrap.servers=$KAFKA_IP:$KAFKA_PORT --hono.kafka.commonClientConfig.ssl.truststore.location=$KAFKA_TRUSTSTORE_PATH --hono.kafka.commonClientConfig.ssl.truststore.type=PEM --spring.profiles.active=receiver,kafka,local --tenant.id=$MY_TENANT
 ~~~
 
 
