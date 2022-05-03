@@ -177,7 +177,7 @@ mosquitto_pub -t telemetry/DEFAULT_TENANT/4711 -m '{"temp": 5}'
 
 ## Publish Telemetry Data (authenticated Gateway)
 
-* Topic: `telemetry/${tenant-id}/${device-id}` or `t/${tenant-id}/${device-id}`
+* Topic: `telemetry/${tenant-id}/${device-id}` or `t/${tenant-id}/${device-id}` or `telemetry//${device-id}` or `t//${device-id}`
 * Authentication: required
 * Payload:
   * (required) Arbitrary payload
@@ -285,7 +285,7 @@ mosquitto_pub -t event/DEFAULT_TENANT/4711/?hono-ttl=15 -q 1 -m '{"alarm": 1}'
 
 ## Publish an Event (authenticated Gateway)
 
-* Topic: `event/${tenant-id}/${device-id}` or `e/${tenant-id}/${device-id}`
+* Topic: `event/${tenant-id}/${device-id}` or `e/${tenant-id}/${device-id}` or `event//${device-id}` or `e//${device-id}`
 * Authentication: required
 * Payload:
   * (required) Arbitrary payload

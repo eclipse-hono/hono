@@ -14,6 +14,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   used to upload telemetry, event or command response messages.
 * The AMQP protocol adapter now allows authenticated gateway devices to omit the tenant ID from the address of
   messages used to upload telemetry or event messages.
+* The MQTT protocol adapter now allows authenticated gateway devices to omit the tenant ID from the topic of
+  messages used to upload telemetry or event messages.
 
 ### Fixes & Enhancements
 
