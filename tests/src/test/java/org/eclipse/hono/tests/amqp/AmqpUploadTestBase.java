@@ -17,10 +17,12 @@ import static com.google.common.truth.Truth.assertWithMessage;
 
 import java.net.HttpURLConnection;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.Symbol;
@@ -339,7 +341,7 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                 .that(setup.failed())
                 .isFalse();
 
-        testUploadMessages(tenantId, senderQos);
+        testUploadMessages(tenantId, senderQos, this::getEndpointName);
     }
 
     /**
@@ -384,14 +386,57 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                 .that(setup.failed())
                 .isFalse();
 
-        testUploadMessages(tenantId, senderQos);
+        testUploadMessages(tenantId, senderQos, this::getEndpointName);
+    }
+
+    /**
+     * Verifies that a number of messages uploaded to the AMQP adapter via an authenticated gateway can be
+     * successfully consumed via the messaging infrastructure.
+     *
+     * @param senderQos The delivery semantics to use for the device.
+     * @throws InterruptedException if the fixture cannot be created.
+     */
+    @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
+    @MethodSource("senderQoSTypes")
+    public void testUploadMessagesViaGateway(final ProtonQoS senderQos) throws InterruptedException {
+
+        final String tenantId = helper.getRandomTenantId();
+        final Tenant tenantConfig = new Tenant();
+        prepareTenantConfig(tenantConfig);
+        final String gatewayId = helper.getRandomDeviceId(tenantId);
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final Device device = new Device().setVia(List.of(gatewayId));
+
+        final String gwUsername = IntegrationTestSupport.getUsername(gatewayId, tenantId);
+        final String gwPassword = "secret";
+
+        final VertxTestContext setup = new VertxTestContext();
+        helper.registry.addDeviceForTenant(tenantId, tenantConfig, gatewayId, gwPassword)
+            .compose(ok -> helper.registry.registerDevice(tenantId, deviceId, device))
+            .compose(ok -> connectToAdapter(gwUsername, gwPassword))
+            .compose(con -> createProducer(null, senderQos))
+            .onSuccess(s -> sender = s)
+            .onComplete(setup.succeedingThenComplete());
+
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
+        assertWithMessage("adapter connection failure occurred")
+                .that(setup.failed())
+                .isFalse();
+
+        final AtomicInteger count = new AtomicInteger(0);
+        final String[] addresses = new String[] {
+                "%s/%s/%s".formatted(getEndpointName(), tenantId, deviceId),
+                "%s//%s".formatted(getEndpointName(), deviceId)
+                };
+        testUploadMessages(tenantId, senderQos, () -> addresses[count.getAndIncrement() % 2]);
     }
 
     //------------------------------------------< private methods >---
 
     private void testUploadMessages(
             final String tenantId,
-            final ProtonQoS senderQoS) throws InterruptedException {
+            final ProtonQoS senderQoS,
+            final Supplier<String> messageAddress) throws InterruptedException {
 
         final VertxTestContext messageSending = new VertxTestContext();
 
@@ -410,15 +455,24 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
             }).mapEmpty();
         };
 
-        doUploadMessages(messageSending, receiver, payload -> {
+        doUploadMessages(messageSending, receiver, senderQoS, messageAddress);
+    }
+
+    private void doUploadMessages(
+            final VertxTestContext messageSending,
+            final Function<Handler<Void>, Future<Void>> receiverFactory,
+            final ProtonQoS senderQos,
+            final Supplier<String> messageAddress) throws InterruptedException {
+
+        doUploadMessages(messageSending, receiverFactory, payload -> {
 
             final Message msg = ProtonHelper.message();
             AmqpUtils.setPayload(msg, "opaque/binary", payload);
-            msg.setAddress(getEndpointName());
+            msg.setAddress(messageAddress.get());
             final Promise<Void> sendingComplete = Promise.promise();
             final Handler<ProtonSender> sendMsgHandler = replenishedSender -> {
                 replenishedSender.sendQueueDrainHandler(null);
-                switch (senderQoS) {
+                switch (senderQos) {
                 case AT_LEAST_ONCE:
                     replenishedSender.send(msg, delivery -> {
                         if (Accepted.class.isInstance(delivery.getRemoteState())) {
@@ -444,8 +498,8 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
             });
             return sendingComplete.future();
         });
-    }
 
+    }
     /**
      * Upload a number of messages to Hono's Telemetry/Event APIs.
      *

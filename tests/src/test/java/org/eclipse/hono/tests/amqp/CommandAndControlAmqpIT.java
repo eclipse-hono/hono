@@ -133,17 +133,16 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
         final Promise<ProtonReceiver> result = Promise.promise();
         context.runOnContext(go -> {
-            final ProtonReceiver recv = connection.createReceiver(endpointConfig.getSubscriptionAddress(tenantId, commandTargetDeviceId));
+            final ProtonReceiver recv = connection.createReceiver(endpointConfig.getSubscriptionAddress(
+                    tenantId, commandTargetDeviceId));
             recv.setAutoAccept(false);
             recv.setPrefetch(0);
             recv.setQoS(ProtonQoS.AT_LEAST_ONCE);
             recv.openHandler(result);
             recv.open();
         });
-        return result.future().map(commandConsumer -> {
-            log.debug("created command consumer [{}]", commandConsumer.getSource().getAddress());
-            return commandConsumer;
-        });
+        return result.future()
+                .onSuccess(consumer -> log.debug("created command consumer [{}]", consumer.getSource().getAddress()));
     }
 
     private void connectAndSubscribe(
@@ -170,11 +169,10 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         // use anonymous sender
         .compose(con -> createProducer(null, ProtonQoS.AT_LEAST_ONCE))
         .compose(sender -> subscribeToCommands(endpointConfig, tenantId, commandTargetDeviceId)
-            .map(recv -> {
+            .onSuccess(recv -> {
                 recv.handler(commandConsumerFactory.apply(recv, sender));
                 // make sure that there are always enough credits, even if commands are sent faster than answered
                 recv.flow(expectedNoOfCommands);
-                return null;
             }))
         .onComplete(setup.succeeding(v -> setupDone.flag()));
 
@@ -186,7 +184,9 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
         }
     }
 
-    private ProtonMessageHandler createCommandConsumer(final VertxTestContext ctx, final ProtonReceiver cmdReceiver,
+    private ProtonMessageHandler createCommandConsumer(
+            final VertxTestContext ctx,
+            final ProtonReceiver cmdReceiver,
             final ProtonSender cmdResponseSender) {
 
         return (delivery, msg) -> {
@@ -744,7 +744,9 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                         preconditions.flag();
                     }
                 }))
-            .compose(con -> subscribeToCommands(endpointConfig, tenantId, commandTargetDeviceId))
+            // omit tenant ID to test establishment of receiver link using tenant of authenticated device
+            .compose(con -> subscribeToCommands(endpointConfig, "", commandTargetDeviceId))
+            .onFailure(setup::failNow)
             .onSuccess(recv -> {
                 recv.handler((delivery, msg) -> {
                     log.info("received command [name: {}, reply-to: {}, correlation-id: {}]",
@@ -834,11 +836,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                 .compose(v -> helper.registry.addDeviceToTenant(tenantId, deviceId, password))
                 // subscribe using otherDeviceId so that the Command Router creates the tenant-specific consumer
                 .compose(con -> subscribeToCommands(endpointConfig, tenantId, otherDeviceId)
-                        .map(recv -> {
-                            recv.handler((delivery, msg) -> ctx
-                                    .failNow(new IllegalStateException("should not have received command")));
-                            return null;
-                        }))
+                        .onSuccess(recv -> recv.handler((delivery, msg) -> ctx.failNow(
+                                new IllegalStateException("should not have received command")))))
                 .onComplete(setup.succeedingThenComplete());
 
         assertWithMessage("setup of adapter finished within %s seconds", IntegrationTestSupport.getTestSetupTimeout())
