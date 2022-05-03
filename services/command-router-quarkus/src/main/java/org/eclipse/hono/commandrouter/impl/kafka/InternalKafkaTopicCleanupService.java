@@ -20,8 +20,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -33,20 +31,22 @@ import org.eclipse.hono.client.kafka.HonoTopic.Type;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaClientFactory;
 import org.eclipse.hono.commandrouter.AdapterInstanceStatusService;
-import org.eclipse.hono.util.Futures;
-import org.eclipse.hono.util.Lifecycle;
+import org.eclipse.hono.util.LifecycleStatus;
+import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.AbstractVerticle;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
 import io.vertx.kafka.admin.KafkaAdminClient;
 
 /**
  * A service to delete obsolete {@link Type#COMMAND_INTERNAL} topics.
  */
-public class InternalKafkaTopicCleanupService implements Lifecycle {
+public class InternalKafkaTopicCleanupService extends AbstractVerticle {
 
     private static final Logger LOG = LoggerFactory.getLogger(InternalKafkaTopicCleanupService.class);
 
@@ -56,12 +56,10 @@ public class InternalKafkaTopicCleanupService implements Lifecycle {
     private static final Pattern INTERNAL_COMMAND_TOPIC_PATTERN = Pattern
             .compile(Pattern.quote(HonoTopic.Type.COMMAND_INTERNAL.prefix) + "(.+)");
 
-    private final Vertx vertx;
     private final AdapterInstanceStatusService adapterInstanceStatusService;
     private final Supplier<Future<KafkaAdminClient>> kafkaAdminClientCreator;
     private final Set<String> topicsToDelete = new HashSet<>();
-    private final AtomicReference<Promise<Void>> startResultPromiseRef = new AtomicReference<>();
-    private final AtomicBoolean stopCalled = new AtomicBoolean();
+    private final LifecycleStatus lifecycleStatus = new LifecycleStatus();
 
     private KafkaAdminClient adminClient;
     private long timerId;
@@ -69,22 +67,21 @@ public class InternalKafkaTopicCleanupService implements Lifecycle {
     /**
      * Creates an InternalKafkaTopicCleanupService.
      *
-     * @param vertx The Vert.x instance to use.
      * @param adapterInstanceStatusService The service providing info about the status of adapter instances.
      * @param adminClientConfigProperties The Kafka admin client config properties.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     public InternalKafkaTopicCleanupService(
-            final Vertx vertx,
             final AdapterInstanceStatusService adapterInstanceStatusService,
             final KafkaAdminClientConfigProperties adminClientConfigProperties) {
-        this.vertx = Objects.requireNonNull(vertx);
         this.adapterInstanceStatusService = Objects.requireNonNull(adapterInstanceStatusService);
         Objects.requireNonNull(adminClientConfigProperties);
 
-        final Map<String, String> adminClientConfig = adminClientConfigProperties.getAdminClientConfig(CLIENT_NAME);
-        final KafkaClientFactory kafkaClientFactory = new KafkaClientFactory(vertx);
-        this.kafkaAdminClientCreator = () -> kafkaClientFactory.createKafkaAdminClientWithRetries(adminClientConfig,
+        final var adminClientConfig = adminClientConfigProperties.getAdminClientConfig(CLIENT_NAME);
+        final var kafkaClientFactory = new KafkaClientFactory(vertx);
+        this.kafkaAdminClientCreator = () -> kafkaClientFactory.createKafkaAdminClientWithRetries(
+                adminClientConfig,
+                lifecycleStatus::isStarting,
                 KafkaClientFactory.UNLIMITED_RETRIES_DURATION);
     }
 
@@ -93,79 +90,104 @@ public class InternalKafkaTopicCleanupService implements Lifecycle {
      * <p>
      * To be used for unit tests.
      *
-     * @param vertx The Vert.x instance to use.
      * @param adapterInstanceStatusService The service providing info about the status of adapter instances.
      * @param kafkaAdminClient The Kafka admin client to use.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
     InternalKafkaTopicCleanupService(
-            final Vertx vertx,
             final AdapterInstanceStatusService adapterInstanceStatusService,
             final KafkaAdminClient kafkaAdminClient) {
-        this.vertx = Objects.requireNonNull(vertx);
         this.adapterInstanceStatusService = Objects.requireNonNull(adapterInstanceStatusService);
         Objects.requireNonNull(kafkaAdminClient);
         this.kafkaAdminClientCreator = () -> Future.succeededFuture(kafkaAdminClient);
     }
 
+    /**
+     * Adds a handler to be invoked with a succeeded future once this service is ready to be used.
+     *
+     * @param handler The handler to invoke. The handler will never be invoked with a failed future.
+     */
+    public final void addOnServiceReadyHandler(final Handler<AsyncResult<Void>> handler) {
+        if (handler != null) {
+            lifecycleStatus.addOnStartedHandler(handler);
+        }
+    }
+
+    /**
+     * Checks if this service is ready to be used.
+     *
+     * @return The result of the check.
+     */
+    public HealthCheckResponse checkReadiness() {
+        return HealthCheckResponse.builder()
+                .name("Kafka-topic-cleanup-service")
+                .status(lifecycleStatus.isStarted())
+                .build();
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * This methods triggers the creation of a Kafka admin client in the background. A new attempt to create the
+     * client is made periodically until creation succeeds or the {@link #stop(Promise)} method has been
+     * invoked.
+     * <p>
+     * Client code may {@linkplain #addOnServiceReadyHandler(Handler) register a dedicated handler}
+     * to be notified once the service is up and running.
+     * @throws IllegalStateException if this component is already started or is currently stopping.
+     */
     @Override
-    public Future<Void> start() {
-        final Promise<Void> startPromise = Promise.promise();
-        // there is usually just *one* InternalKafkaTopicCleanupService instance, but this instance may be used from different verticles;
-        // let the admin client creation here be done only on the first start() invocation; subsequent start() invocations
-        // will be completed along with the completion of the first invocation;
-        // it is made sure that each completion is done on the vert.x context of the corresponding start() invocation
-        if (!startResultPromiseRef.compareAndSet(null, startPromise)) {
-            startResultPromiseRef.get().future().onComplete(Futures.onCurrentContextCompletionHandler(startPromise));
-            LOG.trace("start already called");
-            return startPromise.future();
+    public void start() {
+        if (lifecycleStatus.isStarting()) {
+            return;
+        } else if (!lifecycleStatus.setStarting()) {
+            throw new IllegalStateException("client is already started/stopping");
         }
         kafkaAdminClientCreator.get()
                 .onSuccess(client -> {
                     adminClient = client;
                     timerId = vertx.setPeriodic(CHECK_INTERVAL_MILLIS, tid -> performCleanup());
                     LOG.info("started InternalKafkaTopicCleanupService");
-                })
-                .map((Void) null)
-                .onComplete(startPromise);
-        return startPromise.future();
+                    lifecycleStatus.setStarted();
+                });
     }
 
     /**
      * Determine topics to be deleted and delete the set of such topics determined in a previous invocation.
      */
     protected final void performCleanup() {
-        if (!topicsToDelete.isEmpty()) {
-            adminClient.listTopics()
-                    .onFailure(thr -> LOG.warn("error listing topics", thr))
-                    .onSuccess(allTopics -> {
-                        final List<String> existingTopicsToDelete = topicsToDelete.stream().filter(allTopics::contains)
-                                .collect(Collectors.toList());
-                        if (existingTopicsToDelete.isEmpty()) {
-                            topicsToDelete.clear();
-                            determineToBeDeletedTopics(allTopics);
-                        } else {
-                            adminClient.deleteTopics(existingTopicsToDelete)
-                                    .onSuccess(v -> LOG.info("triggered deletion of {} topics ({})",
-                                            existingTopicsToDelete.size(), existingTopicsToDelete))
-                                    .onFailure(thr -> {
-                                        if (thr instanceof UnknownTopicOrPartitionException) {
-                                            LOG.info("triggered deletion of {} topics, some had already been deleted ({})",
-                                                    existingTopicsToDelete.size(), existingTopicsToDelete);
-                                        } else {
-                                            LOG.warn("error deleting topics {}", existingTopicsToDelete, thr);
-                                        }
-                                    })
-                                    .onComplete(ar -> {
-                                        topicsToDelete.clear();
-                                        determineToBeDeletedTopics();
-                                    });
-                        }
-                    });
-        } else {
+        if (topicsToDelete.isEmpty()) {
             // just determine topics to be deleted here, let them be deleted in the next cleanup invocation
             // so that we don't delete topics too early (while producers may still publish messages to them)
             determineToBeDeletedTopics();
+        } else {
+            adminClient.listTopics()
+                .onFailure(thr -> LOG.warn("error listing topics", thr))
+                .onSuccess(allTopics -> {
+                    final List<String> existingTopicsToDelete = topicsToDelete.stream()
+                            .filter(allTopics::contains)
+                            .collect(Collectors.toList());
+                    if (existingTopicsToDelete.isEmpty()) {
+                        topicsToDelete.clear();
+                        determineToBeDeletedTopics(allTopics);
+                    } else {
+                        adminClient.deleteTopics(existingTopicsToDelete)
+                                .onSuccess(v -> LOG.info("triggered deletion of {} topics ({})",
+                                        existingTopicsToDelete.size(), existingTopicsToDelete))
+                                .onFailure(thr -> {
+                                    if (thr instanceof UnknownTopicOrPartitionException) {
+                                        LOG.info("triggered deletion of {} topics, some had already been deleted ({})",
+                                                existingTopicsToDelete.size(), existingTopicsToDelete);
+                                    } else {
+                                        LOG.warn("error deleting topics {}", existingTopicsToDelete, thr);
+                                    }
+                                })
+                                .onComplete(ar -> {
+                                    topicsToDelete.clear();
+                                    determineToBeDeletedTopics();
+                                });
+                    }
+                });
         }
     }
 
@@ -196,18 +218,32 @@ public class InternalKafkaTopicCleanupService implements Lifecycle {
                 });
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Closes the Kafka admin client.
+     *
+     * @param stopResult The handler to invoke with the outcome of the operation.
+     *                   The result will be succeeded once this component is stopped.
+     */
+
     @Override
-    public Future<Void> stop() {
-        if (!stopCalled.compareAndSet(false, true) || adminClient == null) {
-            return Future.succeededFuture();
+    public void stop(final Promise<Void> stopResult) {
+
+        if (lifecycleStatus.isStopped()) {
+            return;
         }
+
+        lifecycleStatus.addOnStoppedHandler(stopResult);
+
+        if (lifecycleStatus.isStopping()) {
+            return;
+        }
+
+        lifecycleStatus.setStopping();
         vertx.cancelTimer(timerId);
-        final Promise<Void> adminClientClosedPromise = Promise.promise();
-        adminClient.close(adminClientClosedPromise);
-        return adminClientClosedPromise.future()
-                .recover(thr -> {
-                    LOG.warn("error closing admin client", thr);
-                    return Future.succeededFuture();
-                });
+        adminClient.close()
+            .onFailure(thr -> LOG.warn("error closing admin client", thr))
+            .onSuccess(ok -> lifecycleStatus.setStopped());
     }
 }

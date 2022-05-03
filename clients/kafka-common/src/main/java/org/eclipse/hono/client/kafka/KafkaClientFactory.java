@@ -108,7 +108,9 @@ public class KafkaClientFactory {
         Objects.requireNonNull(clientSupplier);
 
         final Promise<T> resultPromise = Promise.promise();
-        createClientWithRetries(clientSupplier,
+        createClientWithRetries(
+                clientSupplier,
+                () -> true,
                 getRetriesTimeLimit(retriesTimeout),
                 () -> containsValidServerEntries(bootstrapServersConfig),
                 resultPromise);
@@ -139,6 +141,7 @@ public class KafkaClientFactory {
         final Promise<KafkaConsumer<K, V>> resultPromise = Promise.promise();
         createClientWithRetries(
                 () -> KafkaConsumer.create(vertx, consumerConfig),
+                () -> true,
                 getRetriesTimeLimit(retriesTimeout),
                 () -> containsValidServerEntries(consumerConfig.get(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG)),
                 resultPromise);
@@ -156,17 +159,22 @@ public class KafkaClientFactory {
      * @param clientConfig The admin client configuration properties.
      * @param retriesTimeout The maximum time for which retries are done. Using a negative duration or {@code null}
      *                       here is interpreted as an unlimited timeout value.
+     * @param keepTrying A guard condition that controls whether another attempt to create the client should be
+     *                     started. Client code can set this to {@code false} in order to prevent any further attempts.
      * @return A future indicating the outcome of the creation attempt.
      * @throws NullPointerException if any of the parameters except retriesTimeout is {@code null}.
      */
     public Future<KafkaAdminClient> createKafkaAdminClientWithRetries(
             final Map<String, String> clientConfig,
+            final Supplier<Boolean> keepTrying,
             final Duration retriesTimeout) {
         Objects.requireNonNull(clientConfig);
+        Objects.requireNonNull(keepTrying);
 
         final Promise<KafkaAdminClient> resultPromise = Promise.promise();
         createClientWithRetries(
                 () -> KafkaAdminClient.create(vertx, clientConfig),
+                keepTrying,
                 getRetriesTimeLimit(retriesTimeout),
                 () -> containsValidServerEntries(clientConfig.get(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG)),
                 resultPromise);
@@ -184,9 +192,16 @@ public class KafkaClientFactory {
 
     private <T> void createClientWithRetries(
             final Supplier<T> clientSupplier,
+            final Supplier<Boolean> keepTrying,
             final Instant retriesTimeLimit,
             final Supplier<Boolean> serverEntriesValid,
             final Promise<T> resultPromise) {
+
+        if (!keepTrying.get()) {
+            resultPromise.fail("client code has canceled further attempts to create Kafka client");
+            return;
+        }
+
         try {
             final var client = clientSupplier.get();
             LOG.debug("successully created client [type: {}]", client.getClass().getName());
@@ -197,11 +212,16 @@ public class KafkaClientFactory {
             // (see org.apache.kafka.clients.ClientUtils#parseAndValidateAddresses)
             if (!retriesTimeLimit.equals(Instant.MIN) && e instanceof KafkaException
                     && isBootstrapServersConfigException(e.getCause()) && serverEntriesValid.get()) {
-                if (Instant.now(clock).isBefore(retriesTimeLimit)) {
+
+                if (!keepTrying.get()) {
+                    // client code has canceled further attempts
+                    LOG.debug("client code has canceled further attempts to create Kafka client");
+                    resultPromise.fail(e);
+                } else if (Instant.now(clock).isBefore(retriesTimeLimit)) {
                     LOG.debug("error creating Kafka client, will retry in {}ms: {}", CLIENT_CREATION_RETRY_DELAY_MILLIS,
                             e.getCause().getMessage());
                     vertx.setTimer(CLIENT_CREATION_RETRY_DELAY_MILLIS, tid -> {
-                        createClientWithRetries(clientSupplier, retriesTimeLimit, () -> true, resultPromise);
+                        createClientWithRetries(clientSupplier, keepTrying, retriesTimeLimit, () -> true, resultPromise);
                     });
                 } else {
                     // retries time limit reached

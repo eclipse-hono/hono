@@ -13,6 +13,7 @@
 package org.eclipse.hono.commandrouter.quarkus;
 
 import java.util.List;
+import java.util.Optional;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -43,6 +44,7 @@ import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
 import org.eclipse.hono.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.client.util.MessagingClientProvider;
+import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.commandrouter.AdapterInstanceStatusService;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterAmqpServer;
@@ -65,10 +67,12 @@ import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.service.cache.Caches;
 import org.eclipse.hono.service.quarkus.AbstractServiceApplication;
+import org.eclipse.hono.service.util.ServiceClientAdapter;
 import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
 import org.eclipse.hono.util.WrappedLifecycleComponentVerticle;
+import org.eclipse.microprofile.health.Readiness;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,6 +83,7 @@ import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
 import io.opentracing.Tracer;
 import io.smallrye.config.ConfigMapping;
+import io.smallrye.health.api.HealthRegistry;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
@@ -131,6 +136,10 @@ public class Application extends AbstractServiceApplication {
     @Inject
     CommandRouterMetrics metrics;
 
+    @Readiness
+    @Inject
+    HealthRegistry readinessChecks;
+
     private ServiceConfigProperties amqpServerProperties;
     private ClientConfigProperties commandConsumerConnectionConfig;
     private RequestResponseClientConfigProperties deviceRegistrationClientConfig;
@@ -141,7 +150,6 @@ public class Application extends AbstractServiceApplication {
     private MessagingKafkaConsumerConfigProperties kafkaConsumerConfig;
     private KafkaAdminClientConfigProperties kafkaAdminClientConfig;
     private NotificationKafkaConsumerConfigProperties kafkaNotificationConfig;
-    private InternalKafkaTopicCleanupService internalKafkaTopicCleanupService;
 
     private Cache<Object, RegistrationResult> registrationResponseCache;
     private Cache<Object, TenantResult<TenantObject>> tenantResponseCache;
@@ -272,7 +280,17 @@ public class Application extends AbstractServiceApplication {
         final Future<String> notificationReceiverTracker = vertx.deployVerticle(
                 new WrappedLifecycleComponentVerticle(notificationReceiver()));
 
-        CompositeFuture.all(authServiceDeploymentTracker, amqpServerDeploymentTracker, notificationReceiverTracker)
+        // deploy Kafka topic clean-up service (once only)
+        final Future<String> topicCleanUpServiceDeploymentTracker = createKafkaTopicCleanUpService()
+                .map(service -> vertx.deployVerticle(service)
+                        .onSuccess(ok -> readinessChecks.register(() -> service.checkReadiness())))
+                .orElse(Future.succeededFuture());
+
+        CompositeFuture.all(
+                authServiceDeploymentTracker,
+                amqpServerDeploymentTracker,
+                notificationReceiverTracker,
+                topicCleanUpServiceDeploymentTracker)
             .mapEmpty()
             .onComplete(deploymentCheck);
     }
@@ -295,15 +313,15 @@ public class Application extends AbstractServiceApplication {
 
             @Override
             public void registerLivenessChecks(final HealthCheckHandler handler) {
-                if (service instanceof HealthCheckProvider) {
-                    ((HealthCheckProvider) service).registerLivenessChecks(handler);
+                if (service instanceof HealthCheckProvider provider) {
+                    provider.registerLivenessChecks(handler);
                 }
             }
 
             @Override
             public void registerReadinessChecks(final HealthCheckHandler handler) {
-                if (service instanceof HealthCheckProvider) {
-                    ((HealthCheckProvider) service).registerReadinessChecks(handler);
+                if (service instanceof HealthCheckProvider provider) {
+                    provider.registerReadinessChecks(handler);
                 }
             }
         };
@@ -327,24 +345,29 @@ public class Application extends AbstractServiceApplication {
                 tracer);
     }
 
+    private Optional<InternalKafkaTopicCleanupService> createKafkaTopicCleanUpService() {
+        if (kafkaAdminClientConfig.isConfigured()
+                && !(adapterInstanceStatusService instanceof AdapterInstanceStatusService.UnknownStatusProvidingService)) {
+            return Optional.of(new InternalKafkaTopicCleanupService(
+                    adapterInstanceStatusService,
+                    kafkaAdminClientConfig));
+        } else {
+            return Optional.empty();
+        }
+    }
+
     private MessagingClientProvider<CommandConsumerFactory> commandConsumerFactoryProvider(
             final TenantClient tenantClient,
             final CommandTargetMapper commandTargetMapper) {
 
         final var commandConsumerFactoryProvider = new MessagingClientProvider<CommandConsumerFactory>();
-        if (kafkaConsumerConfig.isConfigured() && commandResponseKafkaProducerConfig.isConfigured()
+
+        if (kafkaConsumerConfig.isConfigured()
+                && commandResponseKafkaProducerConfig.isConfigured()
                 && commandInternalKafkaProducerConfig.isConfigured()) {
 
             final var kafkaProducerFactory = CachingKafkaProducerFactory.<String, Buffer>sharedFactory(vertx);
             kafkaProducerFactory.setMetricsSupport(kafkaClientMetricsSupport);
-            if (internalKafkaTopicCleanupService == null && commandInternalKafkaProducerConfig.isConfigured()
-                    && kafkaConsumerConfig.isConfigured() && kafkaAdminClientConfig.isConfigured()
-                    && !(adapterInstanceStatusService instanceof AdapterInstanceStatusService.UnknownStatusProvidingService)) {
-                internalKafkaTopicCleanupService = new InternalKafkaTopicCleanupService(
-                        vertx,
-                        adapterInstanceStatusService,
-                        kafkaAdminClientConfig);
-            }
             commandConsumerFactoryProvider.setClient(new KafkaBasedCommandConsumerFactoryImpl(
                     vertx,
                     tenantClient,
@@ -355,8 +378,7 @@ public class Application extends AbstractServiceApplication {
                     kafkaConsumerConfig,
                     metrics,
                     kafkaClientMetricsSupport,
-                    tracer,
-                    internalKafkaTopicCleanupService));
+                    tracer));
         }
         if (commandConsumerConnectionConfig.isHostConfigured()) {
             commandConsumerFactoryProvider.setClient(new ProtonBasedCommandConsumerFactoryImpl(
@@ -421,6 +443,9 @@ public class Application extends AbstractServiceApplication {
             notificationConfig.setServerRole("Notification");
             notificationReceiver = new ProtonBasedNotificationReceiver(
                     HonoConnection.newConnection(vertx, notificationConfig, tracer));
+        }
+        if (notificationReceiver instanceof ServiceClient serviceClient) {
+            healthCheckServer.registerHealthCheckResources(ServiceClientAdapter.forClient(serviceClient));
         }
         final var notificationSender = NotificationEventBusSupport.getNotificationSender(vertx);
         NotificationConstants.DEVICE_REGISTRY_NOTIFICATION_TYPES.forEach(notificationType -> {
