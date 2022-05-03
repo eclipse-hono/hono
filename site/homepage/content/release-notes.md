@@ -26,6 +26,9 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The device registry components now support the reporting of Kafka client metrics.
 * The Java source code level of the Hono code has been raised from 11 to 17. This also means that a JDK version 17 or
   later is required for building and running Hono.
+* The mechanism to delete obsolete `hono.command_internal.*` Kafka topics could have deleted still used topics in
+  case the Kubernetes API server gave information about the running containers with a delay of several seconds. This has
+  been fixed.
 
 ### API Changes
 
