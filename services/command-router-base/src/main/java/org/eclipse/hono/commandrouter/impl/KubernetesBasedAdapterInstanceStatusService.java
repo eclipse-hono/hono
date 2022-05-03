@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,8 +13,12 @@
 
 package org.eclipse.hono.commandrouter.impl;
 
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -54,6 +58,13 @@ import io.vertx.core.Vertx;
  */
 public class KubernetesBasedAdapterInstanceStatusService implements AdapterInstanceStatusService {
 
+    /**
+     * The minimum duration a container, not contained in the list of current adapter containers, is kept in the
+     * "suspected" state before it is considered dead. This accounts for cases when there is a significant delay in
+     * the current cluster state being represented by the K8s API.
+     */
+    static final Duration MIN_TIME_IN_SUSPECTED_STATE = Duration.ofMinutes(5);
+
     private static final Logger LOG = LoggerFactory.getLogger(KubernetesBasedAdapterInstanceStatusService.class);
     private static final String ADAPTER_NAME_MATCH = "adapter";
     private static final long WATCH_RECREATION_DELAY_MILLIS = 100;
@@ -68,10 +79,14 @@ public class KubernetesBasedAdapterInstanceStatusService implements AdapterInsta
     private final Map<String, String> containerIdToPodNameMap = new ConcurrentHashMap<>();
     private final Map<String, String> podNameToContainerIdMap = new ConcurrentHashMap<>();
     private final Set<String> terminatedContainerIds = Collections
-            .newSetFromMap(Collections.synchronizedMap(new LRUMap(MAX_LRU_MAP_ENTRIES)));
-    private final Set<String> suspectedContainerIds = Collections
-            .newSetFromMap(Collections.synchronizedMap(new LRUMap(MAX_LRU_MAP_ENTRIES)));
+            .newSetFromMap(Collections.synchronizedMap(new LRUMap<>(MAX_LRU_MAP_ENTRIES)));
+    /**
+     * Value is the Instant the entry got added, i.e. the container was first marked as "suspected".
+     */
+    private final Map<String, Instant> suspectedContainerIds = Collections
+            .synchronizedMap(new LRUMap<>(MAX_LRU_MAP_ENTRIES));
     private Watch watch;
+    private Clock clock = Clock.systemUTC();
 
     private KubernetesBasedAdapterInstanceStatusService() throws KubernetesClientException {
         this(new DefaultKubernetesClient());
@@ -107,6 +122,21 @@ public class KubernetesBasedAdapterInstanceStatusService implements AdapterInsta
         return null;
     }
 
+    /**
+     * Sets a clock to use for determining the current system time.
+     * <p>
+     * The default value of this property is {@link Clock#systemUTC()}.
+     * <p>
+     * This property should only be set for running tests expecting the current
+     * time to be a certain value, e.g. by using {@link Clock#fixed(Instant, java.time.ZoneId)}.
+     *
+     * @param clock The clock to use.
+     * @throws NullPointerException if clock is {@code null}.
+     */
+    void setClock(final Clock clock) {
+        this.clock = Objects.requireNonNull(clock);
+    }
+
     private static boolean runningInKubernetes() {
         return System.getenv("KUBERNETES_SERVICE_HOST") != null;
     }
@@ -140,16 +170,26 @@ public class KubernetesBasedAdapterInstanceStatusService implements AdapterInsta
     private void refreshContainerLists(final List<Pod> podList) {
         containerIdToPodNameMap.clear();
         podNameToContainerIdMap.clear();
+        LOG.info("refresh container status list");
         podList.forEach(pod -> {
             LOG.trace("handle pod list result entry: {}", pod.getMetadata().getName());
             applyPodStatus(Watcher.Action.ADDED, pod);
         });
         // now that we have the full pod list, use the created container list to evaluate the suspected containers
-        final Set<String> suspectedIds = new HashSet<>(suspectedContainerIds);
+        final Map<String, Instant> oldSuspectedIds = new HashMap<>(suspectedContainerIds);
         suspectedContainerIds.clear();
-        suspectedIds.stream()
-                .filter(id -> !containerIdToPodNameMap.containsKey(id))
-                .forEach(terminatedContainerIds::add);
+        oldSuspectedIds.forEach((suspectedId, timeAdded) -> {
+            if (!containerIdToPodNameMap.containsKey(suspectedId)) {
+                // container not marked as active; only consider it terminated if it is suspected for long enough already
+                // (for cases where a newly started container is returned in the pod list only after a considerable delay,
+                // preventing this container to be considered dead here)
+                if (timeAdded.plus(MIN_TIME_IN_SUSPECTED_STATE).isBefore(Instant.now(clock))) {
+                    terminatedContainerIds.add(suspectedId);
+                } else {
+                    suspectedContainerIds.put(suspectedId, timeAdded);
+                }
+            }
+        });
     }
 
     private void applyPodStatus(final Watcher.Action watchAction, final Pod pod) {
@@ -299,7 +339,7 @@ public class KubernetesBasedAdapterInstanceStatusService implements AdapterInsta
                 // or, in an unlikely case, could be newly started and alive, and the watcher hasn't informed us about it yet
                 // (watcher could be currently reconnecting internally)
                 LOG.debug("no container found for adapter instance id [{}]", adapterInstanceId);
-                suspectedContainerIds.add(shortContainerId);
+                suspectedContainerIds.putIfAbsent(shortContainerId, Instant.now(clock));
                 return AdapterInstanceStatus.SUSPECTED_DEAD;
             }
         }
@@ -380,8 +420,10 @@ public class KubernetesBasedAdapterInstanceStatusService implements AdapterInsta
 
     /**
      * Map with limited size.
+     *
+     * @param <T> The map value type.
      */
-    private static class LRUMap extends LinkedHashMap<String, Boolean> {
+    private static class LRUMap<T> extends LinkedHashMap<String, T> {
 
         private static final long serialVersionUID = 1L;
 
@@ -393,7 +435,7 @@ public class KubernetesBasedAdapterInstanceStatusService implements AdapterInsta
         }
 
         @Override
-        protected boolean removeEldestEntry(final Map.Entry<String, Boolean> eldest) {
+        protected boolean removeEldestEntry(final Map.Entry<String, T> eldest) {
             return size() > maxEntries;
         }
     }

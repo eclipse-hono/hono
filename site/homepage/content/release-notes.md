@@ -4,6 +4,14 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
+## 1.12.3 (not yet released)
+
+### Fixes & Enhancements
+
+* The mechanism to delete obsolete `hono.command_internal.*` Kafka topics could have deleted still used topics in
+  case the Kubernetes API server gave information about the running containers with a delay of several seconds. This has
+  been fixed.
+
 ## 1.12.2
 
 ### Fixes & Enhancements

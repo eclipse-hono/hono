@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,11 +18,14 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
+import java.time.Clock;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.util.AdapterInstanceStatus;
+import org.eclipse.hono.util.CommandConstants;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +43,7 @@ import io.fabric8.kubernetes.api.model.WatchEventBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 import io.fabric8.kubernetes.client.server.mock.KubernetesMockServer;
+import io.vertx.core.Future;
 
 /**
  * Tests verifying behavior of {@link KubernetesBasedAdapterInstanceStatusService}.
@@ -106,6 +110,55 @@ public class KubernetesBasedAdapterInstanceStatusServiceTest {
         } else {
             fail("added pod not detected");
         }
+    }
+
+    /**
+     * Verifies that the status service identifies a given adapter instance as dead, if no container with that id
+     * exists and the {@link KubernetesBasedAdapterInstanceStatusService#MIN_TIME_IN_SUSPECTED_STATE} period has
+     * elapsed.
+     */
+    @Test
+    public void testServiceReportsStateOfUnknownAdapterInstanceAsDeadAfterDelay() {
+
+        final String nonExistingInstanceId = "old-adapter-pod_000000000000_0";
+        assertThat(CommandConstants.KUBERNETES_ADAPTER_INSTANCE_ID_PATTERN.matcher(nonExistingInstanceId).matches())
+                .isTrue();
+
+        final Pod pod0 = createAdapterPodWithRunningContainer("testPod0");
+        final String pod0ContainerId = KubernetesBasedAdapterInstanceStatusService
+                .getShortContainerId(pod0.getStatus().getContainerStatuses().get(0).getContainerID());
+        assertThat(pod0ContainerId).isNotNull();
+
+        server.expect().withPath("/api/v1/namespaces/test/pods")
+                .andReturn(200, new PodListBuilder().addToItems(pod0).build())
+                .times(3);
+
+        server.expect().withPath("/api/v1/namespaces/test/pods?watch=true")
+                .andUpgradeToWebSocket()
+                .open()
+                .waitFor(100).andEmit(new WatchEvent(pod0, "MODIFIED")) // event irrelevant here, watcher just has to be kept active
+                .done()
+                .always();
+
+        // GIVEN a status service working on a cluster with one running adapter pod
+        statusService = new KubernetesBasedAdapterInstanceStatusService(client);
+        assertThat(statusService).isNotNull();
+
+        // WHEN getting the status of a non-existing adapter instance
+        assertThat(statusService.getStatus(nonExistingInstanceId)).isEqualTo(AdapterInstanceStatus.SUSPECTED_DEAD);
+        // THEN the invocation of "getDeadAdapterInstances" (doing the extra checks concerning already suspected entries)
+        //  will first return a SUSPECTED_DEAD state
+        Future<Set<String>> deadAdapterInstances = statusService.getDeadAdapterInstances(Set.of(nonExistingInstanceId));
+        assertThat(deadAdapterInstances.succeeded()).isTrue();
+        assertThat(deadAdapterInstances.result()).isEmpty();
+        // WHEN the MIN_TIME_IN_SUSPECTED_STATE has elapsed
+        statusService.setClock(Clock.offset(Clock.systemUTC(),
+                KubernetesBasedAdapterInstanceStatusService.MIN_TIME_IN_SUSPECTED_STATE));
+
+        // THEN the state is returned as DEAD
+        deadAdapterInstances = statusService.getDeadAdapterInstances(Set.of(nonExistingInstanceId));
+        assertThat(deadAdapterInstances.succeeded()).isTrue();
+        assertThat(deadAdapterInstances.result()).containsExactly(nonExistingInstanceId);
     }
 
     /**
