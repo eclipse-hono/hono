@@ -242,7 +242,7 @@
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-service-command-router-base</artifactId>
+      <artifactId>hono-service-command-router-quarkus</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
