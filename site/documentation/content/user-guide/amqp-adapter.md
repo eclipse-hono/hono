@@ -256,7 +256,7 @@ client and can then be (re-)used for sending multiple messages.
     * `amqp:precondition-failed`: The message does not fulfill certain requirements, e.g adapter cannot assert device registration etc.
 
 This address format is used by devices that have not authenticated to the protocol adapter. Note that this requires the
-adapter's `HONO_AMQP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
+adapter's *HONO_AMQP_AUTHENTICATION_REQUIRED* configuration property to be explicitly set to `false`.
 
 **Examples**
 
@@ -281,6 +281,31 @@ but instead are connected to the gateway, e.g. using some low-bandwidth radio ba
 [SigFox](https://www.sigfox.com) or [LoRa](https://lora-alliance.org/). In this case the credentials provided by the
 gateway during connection establishment with the protocol adapter are used to authenticate the gateway whereas the
 message address is used to identify the device that the gateway publishes data for.
+
+* Authentication: SASL PLAIN or SASL EXTERNAL
+* Message *properties*:
+  * (required) *to*: either `telemetry/${tenant-id}/${device-id}` or `t/${tenant-id}/${device-id}` or
+    `telemetry//${device-id}` or `t//${device-id}`
+  * (optional) *content-type*: The type of payload contained in the message body. The given content type will be used
+    in the AMQP message being forwarded downstream if not empty. Otherwise, the content type of the downstream
+    message will be set to `application/octet-stream` if the payload is not empty and no default content type has been
+    defined for the origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
+* Message Body:
+  * (optional) Arbitrary payload contained in either a single AMQP *Data* or *AmqpValue* section. Note that the adapter
+    only supports values of type *string* or *array* of *byte*s in the *AmqpValue* section. Values of other types will
+    be ignored.
+* Outcomes:
+  * `accepted`: The message has been successfully forwarded downstream.
+  * `released`: The message could not be processed by the adapter due to a (temporary) problem that has not been caused
+    by the client. Potential reasons include that there is no active downstream consumer for messages from the device.
+  * `rejected`: The message could not be processed by the adapter because the client and/or the message did not fulfill
+    some requirements. The *rejected* outcome's *error* field will indicate the reason why the message could not
+    be processed. Possible error conditions include:
+    * `hono:bad-request`: The message does not meet all formal requirements, e.g. a required property is missing.
+    * `amqp:unauthorized-access`: The adapter is not enabled for the tenant that the client belongs to.
+    * `amqp:resource-limit-exceeded`: One of the [Resource Limit Checks]({{< relref "#resource-limit-checks" >}}) has
+       failed for the tenant that the client belongs to.
+    * `amqp:precondition-failed`: The message does not fulfill certain requirements, e.g adapter cannot assert device registration etc.
 
 **Examples**
 
@@ -369,7 +394,7 @@ java -jar hono-cli-*-exec.jar amqp --sandbox event --payload '{"foo": "bar"}' --
     * `amqp:precondition-failed`: The message does not fulfill certain requirements, e.g adapter cannot assert device registration etc.
 
 This address format is used by devices that have not authenticated to the protocol adapter. Note that this requires the
-adapter's `HONO_AMQP_AUTHENTICATION_REQUIRED` configuration property to be explicitly set to `false`.
+adapter's *HONO_AMQP_AUTHENTICATION_REQUIRED* configuration property to be explicitly set to `false`.
 
 **Example**
 
@@ -387,6 +412,31 @@ the AMQP adapter could determine the tenant and device ID from.
 {{% /notice %}}
 
 ## Publish an Event (authenticated Gateway)
+
+* Authentication: SASL PLAIN or SASL EXTERNAL
+* Message *properties*:
+  * (required) *to*: either `event/${tenant-id}/${device-id}` or `e/${tenant-id}/${device-id}` or `event//${device-id}` or
+    `e//${device-id}`
+  * (optional) *content-type*: The type of payload contained in the message body. The given content type will be used
+    in the AMQP message being forwarded downstream if not empty. Otherwise, the content type of the downstream
+    message will be set to `application/octet-stream` if the payload is not empty and no default content type has been
+    defined for the origin device or its tenant (see [Downstream Meta Data]({{< relref "#downstream-meta-data" >}})).
+* Message Body:
+  * (optional) Arbitrary payload contained in either a single AMQP *Data* or *AmqpValue* section. Note that the adapter
+    only supports values of type *string* or *array* of *byte*s in the *AmqpValue* section. Values of other types will
+    be ignored.
+* Outcomes:
+  * `accepted`: The message has been successfully forwarded downstream.
+  * `released`: The message could not be processed by the adapter due to a (temporary) problem that has not been caused
+    by the client.
+  * `rejected`: The message could not be processed by the adapter because the client and/or the message did not fulfill
+    some requirements. The *rejected* outcome's *error* field will indicate the reason why the message could not
+    be processed. Possible error conditions include:
+    * `hono:bad-request`: The message does not meet all formal requirements, e.g. a required property is missing.
+    * `amqp:unauthorized-access`: The adapter is not enabled for the tenant that the client belongs to.
+    * `amqp:resource-limit-exceeded`: One of the [Resource Limit Checks]({{< relref "#resource-limit-checks" >}}) has
+       failed for the tenant that the client belongs to.
+    * `amqp:precondition-failed`: The message does not fulfill certain requirements, e.g adapter cannot assert device registration etc.
 
 **Example**
 
@@ -433,7 +483,8 @@ A device MUST use the following source address in its *attach* frame to open a l
 * `command` (authenticated device)
 * `command` (authenticated gateway receiving commands for all devices it acts on behalf of)
 * `command/${tenant}/${device-id}` (unauthenticated device)
-* `command/${tenant}/${device-id}` (authenticated gateway receiving commands for a specific device it acts on behalf of)
+* `command/${tenant}/${device-id}` or `command//${device-id}` (authenticated gateway receiving commands for a specific device
+  it acts on behalf of)
 
 The adapter supports *AT LEAST ONCE* delivery of command messages only. A client therefore MUST use `unsettled` for
 the *snd-settle-mode* and `first` for the *rcv-settle-mode* fields of its *attach* frame during link establishment.
