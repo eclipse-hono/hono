@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -31,11 +31,13 @@ import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.commandrouter.AdapterInstanceStatusService;
+import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.CommandConstants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.Timeout;
@@ -57,10 +59,13 @@ public class InternalKafkaTopicCleanupServiceTest {
     @BeforeEach
     public void setUp() {
         final Vertx vertx = mock(Vertx.class);
+        final Context context = VertxMockSupport.mockContext(vertx);
         adapterInstanceStatusService = mock(AdapterInstanceStatusService.class);
         kafkaAdminClient = mock(KafkaAdminClient.class);
-        internalKafkaTopicCleanupService = new InternalKafkaTopicCleanupService(vertx, adapterInstanceStatusService,
+        internalKafkaTopicCleanupService = new InternalKafkaTopicCleanupService(
+                adapterInstanceStatusService,
                 kafkaAdminClient);
+        internalKafkaTopicCleanupService.init(vertx, context);
         internalKafkaTopicCleanupService.start();
     }
 
