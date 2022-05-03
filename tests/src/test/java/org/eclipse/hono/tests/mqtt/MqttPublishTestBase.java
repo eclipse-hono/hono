@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -103,6 +103,8 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
      * @param deviceId The identifier of the device.
      * @param payload The message to send.
      * @param useShortTopicName Whether to use short or standard topic names
+     * @param includeTenantIdInTopic {@code true} if the tenant identifier should be included in the
+     *                               message's topic name.
      * @param topicPropertyBag Property bag properties to add to the topic.
      * @return A future indicating the outcome of the attempt to publish the
      *         message. The future will be succeeded if and when the message
@@ -114,6 +116,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
             String deviceId,
             Buffer payload,
             boolean useShortTopicName,
+            boolean includeTenantIdInTopic,
             Map<String, String> topicPropertyBag);
 
     /**
@@ -215,7 +218,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
 
     /**
      * Verifies that a number of messages published to Hono's MQTT adapter
-     * using the standard topic names can be successfully consumed via the AMQP Messaging Network.
+     * using the standard topic names can be successfully consumed via the messaging infrastructure.
      *
      * @param ctx The test context.
      * @throws InterruptedException if the test fails.
@@ -229,9 +232,10 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
 
         final VertxTestContext setup = new VertxTestContext();
 
-        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password).onComplete(setup.succeedingThenComplete());
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password)
+            .onComplete(setup.succeedingThenComplete());
 
-        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;
@@ -243,6 +247,46 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
                 deviceId,
                 connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password),
                 false);
+    }
+
+    /**
+     * Verifies that a number of messages published to Hono's MQTT adapter via an authenticated gateway
+     * can be successfully consumed via the messaging infrastructure.
+     *
+     * @param ctx The test context.
+     * @throws InterruptedException if the test fails.
+     */
+    @Test
+    public void testUploadMessagesViaGateway(final VertxTestContext ctx) throws InterruptedException {
+
+        final String tenantId = helper.getRandomTenantId();
+        final Tenant tenant = new Tenant();
+        final String gatewayId = helper.getRandomDeviceId(tenantId);
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final Device deviceConfig = new Device().setVia(List.of(gatewayId));
+
+        final VertxTestContext setup = new VertxTestContext();
+
+        helper.registry.addDeviceForTenant(tenantId, tenant, gatewayId, password)
+            .compose(response -> helper.registry.addDeviceToTenant(tenantId, deviceId, deviceConfig, password))
+            .onComplete(setup.succeedingThenComplete());
+
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
+        if (setup.failed()) {
+            ctx.failNow(setup.causeOfFailure());
+            return;
+        }
+
+        final AtomicInteger count = new AtomicInteger();
+        doTestUploadMessages(
+                ctx,
+                tenantId,
+                connectToAdapter(IntegrationTestSupport.getUsername(gatewayId, tenantId), password),
+                (payload) -> send(tenantId, deviceId, payload, false, (count.getAndIncrement() % 2 == 0), null)
+                    .map(String::valueOf),
+                (messageHandler) -> createConsumer(tenantId, messageHandler),
+                null,
+                null);
     }
 
     /**
@@ -270,7 +314,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
             .compose(ok -> connectToAdapter(IntegrationTestSupport.getUsername(gatewayId, tenantId), password))
             .compose(ok -> {
                 customizeConnectedClient();
-                return send(tenantId, edgeDeviceId, Buffer.buffer("hello".getBytes()), false, null);
+                return send(tenantId, edgeDeviceId, Buffer.buffer("hello".getBytes()), false, true, null);
             })
             .compose(ok -> provisioningNotificationReceived.future())
             .compose(ok -> helper.registry.getRegistrationInfo(tenantId, edgeDeviceId))
@@ -300,9 +344,10 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
         final Tenant tenant = new Tenant();
         final VertxTestContext setup = new VertxTestContext();
 
-        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password).onComplete(setup.succeedingThenComplete());
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password)
+            .onComplete(setup.succeedingThenComplete());
 
-        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;
@@ -332,12 +377,13 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
         final VertxTestContext setup = new VertxTestContext();
 
         helper.getCertificate(deviceCert.certificatePath())
-        .compose(cert -> {
-            final var tenant = Tenants.createTenantForTrustAnchor(cert);
-            return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
-        }).onComplete(setup.succeedingThenComplete());
+            .compose(cert -> {
+                final var tenant = Tenants.createTenantForTrustAnchor(cert);
+                return helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, cert);
+            })
+            .onComplete(setup.succeedingThenComplete());
 
-        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;
@@ -367,9 +413,10 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
 
         final VertxTestContext setup = new VertxTestContext();
 
-        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password).onComplete(setup.succeedingThenComplete());
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password)
+            .onComplete(setup.succeedingThenComplete());
 
-        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;
@@ -410,7 +457,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
                     mqttClient.closeHandler(v -> clientClosedPromise.complete());
                     // WHEN a device publishes a message with a payload exceeding the max size
                     final Future<Integer> sendFuture = send(tenantId, deviceId, Buffer.buffer(payloadBytes), false,
-                            null);
+                            true, null);
                     return CompositeFuture.join(clientClosedPromise.future(), sendFuture)
                             .onComplete(ar -> {
                                 // THEN publishing the message fails (if QoS 1)
@@ -446,9 +493,10 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
 
         final VertxTestContext setup = new VertxTestContext();
 
-        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password).onComplete(setup.succeedingThenComplete());
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password)
+            .onComplete(setup.succeedingThenComplete());
 
-        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;
@@ -458,8 +506,12 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
         testUploadMessageWithInvalidContentType(ctx, tenantId, deviceId, gatewayManagedDevice);
     }
 
-    private void testUploadMessageWithInvalidContentType(final VertxTestContext ctx, final String tenantId,
-            final String deviceId, final String deviceToSendTo) throws InterruptedException {
+    private void testUploadMessageWithInvalidContentType(
+            final VertxTestContext ctx,
+            final String tenantId,
+            final String deviceId,
+            final String deviceToSendTo) throws InterruptedException {
+
         doTestUploadMessages(
                 ctx,
                 tenantId,
@@ -511,10 +563,11 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
 
         final VertxTestContext setup = new VertxTestContext();
 
-        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password).onComplete(setup.succeedingThenComplete());
+        helper.registry.addDeviceForTenant(tenantId, tenant, deviceId, password)
+            .onComplete(setup.succeedingThenComplete());
         final String deviceToSendTo = "nonExistingDevice";
 
-        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
             ctx.failNow(setup.causeOfFailure());
             return;
@@ -559,7 +612,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
         if (getQos().value() == 0) {
             propertyBagToUse.put(MessageHelper.SYS_PROPERTY_CORRELATION_ID, correlationId);
         }
-        return send(tenantId, deviceId, payload, false, propertyBagToUse)
+        return send(tenantId, deviceId, payload, false, true, propertyBagToUse)
                 .map(id -> getQos().value() == 0 ? correlationId : Integer.toString(id));
     }
 
@@ -573,7 +626,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
         doTestUploadMessages(ctx,
                 tenantId,
                 connection,
-                (payload) -> send(tenantId, deviceId, payload, useShortTopicName, null).map(String::valueOf),
+                (payload) -> send(tenantId, deviceId, payload, useShortTopicName, true, null).map(String::valueOf),
                 (messageHandler) -> createConsumer(tenantId, messageHandler),
                 null,
                 null);

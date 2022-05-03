@@ -69,9 +69,17 @@ public class TelemetryMqttQoS1IT extends MqttPublishTestBase {
             final String deviceId,
             final Buffer payload,
             final boolean useShortTopicName,
+            final boolean includeTenantIdInTopic,
             final Map<String, String> topicPropertyBag) {
 
-        return send(tenantId, deviceId, payload, useShortTopicName, topicPropertyBag, DEFAULT_PUBLISH_COMPLETION_TIMEOUT);
+        return send(
+                tenantId,
+                deviceId,
+                payload,
+                useShortTopicName,
+                includeTenantIdInTopic,
+                topicPropertyBag,
+                DEFAULT_PUBLISH_COMPLETION_TIMEOUT);
     }
 
     private Future<Integer> send(
@@ -79,13 +87,14 @@ public class TelemetryMqttQoS1IT extends MqttPublishTestBase {
             final String deviceId,
             final Buffer payload,
             final boolean useShortTopicName,
+            final boolean includeTenantIdInTopic,
             final Map<String, String> topicPropertyBag,
             final long publishCompletionTimeout) {
 
         final String topic = String.format(
                 TOPIC_TEMPLATE,
                 useShortTopicName ? TelemetryConstants.TELEMETRY_ENDPOINT_SHORT : TelemetryConstants.TELEMETRY_ENDPOINT,
-                tenantId,
+                includeTenantIdInTopic ? tenantId : "",
                 deviceId);
         final Promise<Integer> result = Promise.promise();
         mqttClient.publish(
@@ -140,7 +149,7 @@ public class TelemetryMqttQoS1IT extends MqttPublishTestBase {
                 ctx,
                 tenantId,
                 connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password),
-                (payload) -> send(tenantId, deviceId, payload, true, null, publishCompletionTimeout)
+                (payload) -> send(tenantId, deviceId, payload, true, true, null, publishCompletionTimeout)
                         .map(String::valueOf),
                 (messageHandler) -> Future.succeededFuture(), // no consumer created here (future succeeded with null value)
                 (msg) -> {

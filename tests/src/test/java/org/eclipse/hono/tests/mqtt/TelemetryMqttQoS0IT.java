@@ -57,12 +57,13 @@ public class TelemetryMqttQoS0IT extends MqttPublishTestBase {
             final String deviceId,
             final Buffer payload,
             final boolean useShortTopicName,
+            final boolean includeTenantIdInTopic,
             final Map<String, String> topicPropertyBag) {
 
         final String topic = String.format(
                 TOPIC_TEMPLATE,
                 useShortTopicName ? TelemetryConstants.TELEMETRY_ENDPOINT_SHORT : TelemetryConstants.TELEMETRY_ENDPOINT,
-                tenantId,
+                includeTenantIdInTopic ? tenantId : "",
                 deviceId);
         final Promise<Integer> result = Promise.promise();
         // throttle sending to allow adapter to be replenished with credits from consumer
