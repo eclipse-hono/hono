@@ -204,7 +204,7 @@ public class KafkaClientFactory {
 
         try {
             final var client = clientSupplier.get();
-            LOG.debug("successully created client [type: {}]", client.getClass().getName());
+            LOG.debug("successfully created client [type: {}]", client.getClass().getName());
             resultPromise.complete(client);
         } catch (final Exception e) {
             // perform retry in case bootstrap URLs are not resolvable ("No resolvable bootstrap urls given in

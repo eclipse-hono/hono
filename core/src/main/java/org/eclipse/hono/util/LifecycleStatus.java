@@ -24,8 +24,8 @@ import io.vertx.core.Promise;
  */
 public final class LifecycleStatus {
 
-    private Promise<Void> startupTracker = Promise.promise();
-    private Promise<Void> shutdownTracker = Promise.promise();
+    private final Promise<Void> startupTracker = Promise.promise();
+    private final Promise<Void> shutdownTracker = Promise.promise();
     private Status state = Status.STOPPED;
 
     /**

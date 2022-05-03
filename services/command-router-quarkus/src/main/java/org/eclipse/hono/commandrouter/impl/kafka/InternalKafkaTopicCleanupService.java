@@ -18,6 +18,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -231,6 +232,7 @@ public class InternalKafkaTopicCleanupService extends AbstractVerticle {
     public void stop(final Promise<Void> stopResult) {
 
         if (lifecycleStatus.isStopped()) {
+            stopResult.tryComplete();
             return;
         }
 
@@ -242,7 +244,9 @@ public class InternalKafkaTopicCleanupService extends AbstractVerticle {
 
         lifecycleStatus.setStopping();
         vertx.cancelTimer(timerId);
-        adminClient.close()
+        Optional.ofNullable(adminClient)
+            .map(KafkaAdminClient::close)
+            .orElseGet(Future::succeededFuture)
             .onFailure(thr -> LOG.warn("error closing admin client", thr))
             .onSuccess(ok -> lifecycleStatus.setStopped());
     }
