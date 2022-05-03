@@ -115,8 +115,7 @@ public class KubernetesBasedAdapterInstanceStatusServiceTest {
 
     /**
      * Verifies that the status service identifies a given adapter instance as dead, if no container with that id
-     * exists and the {@link KubernetesBasedAdapterInstanceStatusService#MIN_TIME_IN_SUSPECTED_STATE} period has
-     * elapsed.
+     * exists and the minimum time period in the suspected state has elapsed.
      */
     @Test
     public void testServiceReportsStateOfUnknownAdapterInstanceAsDeadAfterDelay() {
