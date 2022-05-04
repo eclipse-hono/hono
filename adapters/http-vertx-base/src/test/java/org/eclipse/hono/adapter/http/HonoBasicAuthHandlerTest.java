@@ -67,7 +67,7 @@ public class HonoBasicAuthHandlerTest {
     @BeforeEach
     void setUp() {
         req = mock(HttpServerRequest.class);
-        when(req.uri()).thenReturn("/" + TelemetryConstants.TELEMETRY_ENDPOINT);
+        when(req.path()).thenReturn("/" + TelemetryConstants.TELEMETRY_ENDPOINT);
         resp = mock(HttpServerResponse.class);
         ctx = mock(RoutingContext.class);
         when(ctx.request()).thenReturn(req);

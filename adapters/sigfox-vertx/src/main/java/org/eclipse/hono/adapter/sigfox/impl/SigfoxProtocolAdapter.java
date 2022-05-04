@@ -154,7 +154,6 @@ public final class SigfoxProtocolAdapter
 
         final String deviceId = ctx.getRoutingContext().queryParams().get(SIGFOX_PARAM_DEVICE_ID);
         final String strData = ctx.getRoutingContext().queryParams().get(SIGFOX_PARAM_DATA);
-        final Buffer data = decodeData(strData);
 
         LOG.debug("{} handler - deviceTenant: {}, requestTenant: {}, deviceId: {}, data: {}",
                 ctx.request().method(), deviceTenant, requestTenant, deviceId, strData);
@@ -171,6 +170,7 @@ public final class SigfoxProtocolAdapter
             return;
         }
 
+        final Buffer data = decodeData(strData);
         final String contentType = Optional.ofNullable(data)
                 .map(d -> CONTENT_TYPE_OCTET_STREAM)
                 .orElse(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
@@ -196,7 +196,7 @@ public final class SigfoxProtocolAdapter
 
     private static Buffer decodeData(final String data) {
         if (data == null) {
-            return Buffer.buffer();
+            return null;
         }
         return Buffer.buffer(BaseEncoding.base16().decode(data.toUpperCase()));
     }

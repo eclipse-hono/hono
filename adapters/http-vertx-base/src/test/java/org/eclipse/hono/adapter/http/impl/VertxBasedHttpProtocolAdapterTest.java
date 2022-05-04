@@ -410,7 +410,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     }
 
     /**
-     * Verifies that a request to upload eventsusing PUT fails if the request contains a malformed URI.
+     * Verifies that a request to upload events using PUT fails if the request contains a malformed URI.
      *
      * @param uri The request URI.
      * @param expectedErrorCode The HTTP status code expected in the HTTP response.

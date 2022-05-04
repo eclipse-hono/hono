@@ -46,8 +46,8 @@ public final class HttpContext implements TelemetryExecutionContext {
 
     private HttpContext(final RoutingContext routingContext) {
         this.routingContext = Objects.requireNonNull(routingContext);
-        this.requestedResource = Optional.ofNullable(routingContext.request().uri())
-                .map(uri -> ResourceIdentifier.fromString(uri.substring(1)))
+        this.requestedResource = Optional.ofNullable(routingContext.request().path())
+                .map(path -> ResourceIdentifier.fromString(path.substring(1)))
                 .orElseThrow(() -> new IllegalArgumentException("HTTP request contains no URI"));
 
         this.eventEndpoint = EventConstants.isEventEndpoint(requestedResource.getEndpoint());

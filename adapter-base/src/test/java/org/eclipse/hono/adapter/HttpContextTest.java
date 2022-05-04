@@ -40,7 +40,7 @@ public class HttpContextTest {
     @BeforeEach
     public void setUp() {
         httpServerRequest = mock(HttpServerRequest.class);
-        when(httpServerRequest.uri()).thenReturn("/telemetry");
+        when(httpServerRequest.path()).thenReturn("/telemetry");
         routingContext = mock(RoutingContext.class);
         when(routingContext.request()).thenReturn(httpServerRequest);
 
@@ -100,7 +100,7 @@ public class HttpContextTest {
     @Test
     public void testGetTimeToLiveUsesHeader() {
 
-        when(httpServerRequest.uri()).thenReturn("/event");
+        when(httpServerRequest.path()).thenReturn("/event");
         final HttpContext httpContext = HttpContext.from(routingContext);
 
         // GIVEN a time to live in seconds
@@ -120,7 +120,7 @@ public class HttpContextTest {
     @Test
     public void testGetTimeToLiveUsesQueryParam() {
 
-        when(httpServerRequest.uri()).thenReturn("/event");
+        when(httpServerRequest.path()).thenReturn("/event");
         final HttpContext httpContext = HttpContext.from(routingContext);
 
         // GIVEN a time to live in seconds

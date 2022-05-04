@@ -407,8 +407,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         // WHEN a device publishes an event with a time to live value as a header
         final Buffer payload = Buffer.buffer("some payload");
         final HttpServerResponse response = mock(HttpServerResponse.class);
-        final HttpServerRequest request = mock(HttpServerRequest.class);
-        when(request.uri()).thenReturn("/" + EventConstants.EVENT_ENDPOINT);
+        final HttpServerRequest request = newEventRequest();
         when(request.getHeader(eq(Constants.HEADER_TIME_TO_LIVE))).thenReturn("10");
         final HttpContext ctx = newHttpContext(payload, "text/plain", request, response);
         when(ctx.getRoutingContext().addBodyEndHandler(VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
@@ -867,28 +866,20 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
 
     private HttpServerRequest newCommandResponseRequest() {
         final HttpServerRequest request = mock(HttpServerRequest.class);
-        when(request.uri()).thenReturn("/" + CommandConstants.COMMAND_RESPONSE_ENDPOINT);
+        when(request.path()).thenReturn("/" + CommandConstants.COMMAND_RESPONSE_ENDPOINT);
         return request;
     }
 
     private HttpServerRequest newTelemetryRequest() {
         final HttpServerRequest request = mock(HttpServerRequest.class);
-        when(request.uri()).thenReturn("/" + TelemetryConstants.TELEMETRY_ENDPOINT);
+        when(request.path()).thenReturn("/" + TelemetryConstants.TELEMETRY_ENDPOINT);
         return request;
     }
 
     private HttpServerRequest newEventRequest() {
         final HttpServerRequest request = mock(HttpServerRequest.class);
-        when(request.uri()).thenReturn("/" + EventConstants.EVENT_ENDPOINT);
+        when(request.path()).thenReturn("/" + EventConstants.EVENT_ENDPOINT);
         return request;
-    }
-
-    private HttpContext newHttpContext(
-            final Buffer payload,
-            final HttpServerRequest request,
-            final HttpServerResponse response) {
-
-        return newHttpContext(payload, null, request, response);
     }
 
     private HttpContext newHttpContext(

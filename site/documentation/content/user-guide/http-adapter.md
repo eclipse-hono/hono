@@ -366,8 +366,10 @@ The example above assumes that a gateway device has been registered with `hashed
     [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the
     device to present a client certificate as part of the TLS handshake during connection establishment.
   * (required) *content-type*: The type of payload contained in the request body.
-  * (optional) *hono-ttd*: The number of seconds the device will wait for the response.
-  * (optional) *hono-ttl*: The *time-to-live* in number of seconds for event messages.  
+  * (optional) *hono-ttd*: The number of seconds the device will wait for the response. Alternatively, this may be
+    specified using a URI query parameter of the same name.
+  * (optional) *hono-ttl*: The message's *time-to-live* in number of seconds. Alternatively, this may be
+    specified using a URI query parameter of the same name.
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Response Headers:
@@ -422,8 +424,10 @@ content-length: 0
 * Method: `PUT`
 * Request Headers:
   * (required) *content-type*: The type of payload contained in the request body.
-  * (optional) *hono-ttd*: The number of seconds the device will wait for the response.
-  * (optional) *hono-ttl*: The *time-to-live* in number of seconds for event messages.
+  * (optional) *hono-ttd*: The number of seconds the device will wait for the response. Alternatively, this may be
+    specified using a URI query parameter of the same name.
+  * (optional) *hono-ttl*: The message's *time-to-live* in number of seconds. Alternatively, this may be
+    specified using a URI query parameter of the same name.
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Response Headers:
@@ -479,8 +483,10 @@ content-length: 0
     [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the
     gateway to present a client certificate as part of the TLS handshake during connection establishment.
   * (required) *content-type*: The type of payload contained in the request body.
-  * (optional) *hono-ttd*: The number of seconds the device will wait for the response.
-  * (optional) *hono-ttl*: The *time-to-live* in number of seconds for event messages.
+  * (optional) *hono-ttd*: The number of seconds the device will wait for the response. Alternatively, this may be
+    specified using a URI query parameter of the same name.
+  * (optional) *hono-ttl*: The message's *time-to-live* in number of seconds. Alternatively, this may be
+    specified using a URI query parameter of the same name.
 * Request Body:
   * (required) Arbitrary payload encoded according to the given content type.
 * Response Headers:

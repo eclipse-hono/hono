@@ -426,7 +426,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<HttpProt
         metaData.setFunctionPort(TEST_FUNCTION_PORT);
 
         final HttpServerRequest request = mock(HttpServerRequest.class);
-        when(request.uri()).thenReturn("/lora");
+        when(request.path()).thenReturn("/lora");
 
         final RoutingContext context = mock(RoutingContext.class);
         when(context.getBody()).thenReturn(Buffer.buffer());
