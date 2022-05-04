@@ -45,7 +45,6 @@ import io.opentracing.tag.Tags;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.Promise;
 import io.vertx.core.json.EncodeException;
 import io.vertx.core.json.Json;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
@@ -188,13 +187,7 @@ public abstract class AbstractKafkaBasedMessageSender<V> implements MessagingCli
             return Future.succeededFuture();
         }
 
-        final Promise<Void> result = Promise.promise();
-        lifecycleStatus.addOnStoppedHandler(result);
-        if (lifecycleStatus.isStopping()) {
-            return result.future();
-        }
-
-        lifecycleStatus.setStopping();
+        final var result = lifecycleStatus.newStopAttempt();
         producerFactory.closeProducer(producerName)
             .onSuccess(ok -> lifecycleStatus.setStopped());
         return result.future();

@@ -140,6 +140,29 @@ public final class LifecycleStatus {
     }
 
     /**
+     * Prepares an attempt to stop the component.
+     *
+     * @return A promise for conveying the outcome of stopping the component to client code. The promise will
+     *         succeed once the {@link #setStopped()} method has been invoked.
+     * @throws IllegalStateException if this component is already in state {@link Status#STOPPED}.
+     */
+    public synchronized Promise<Void> newStopAttempt() {
+
+        if (isStopped()) {
+            throw new IllegalStateException("component is already stopped");
+        }
+
+        final Promise<Void> result = Promise.promise();
+        addOnStoppedHandler(result);
+        if (isStopping()) {
+            return result;
+        }
+
+        setStopping();
+        return result;
+    }
+
+    /**
      * Checks if the component is in the process of shutting down.
      *
      * @return {@code true} if the current status is {@link Status#STOPPING}.

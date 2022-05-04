@@ -92,8 +92,6 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
      * Key is the tenant id, value is a Map with partition index as key and offset as value.
      */
     private final Map<String, Map<Integer, Long>> lastHandledPartitionOffsetsPerTenant = new HashMap<>();
-//    private final Promise<Void> kafkaConsumerReadyTracker = Promise.promise();
-//    private final AtomicBoolean keepTryingToCreateKafkaClients = new AtomicBoolean(true);
     private final LifecycleStatus lifecycleStatus = new LifecycleStatus();
 
     private KafkaConsumer<String, Buffer> consumer;
@@ -374,17 +372,10 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
             return Future.succeededFuture();
         }
 
-        final Promise<Void> result = Promise.promise();
-        lifecycleStatus.addOnStoppedHandler(result);
-        if (lifecycleStatus.isStopping()) {
-            return result.future();
-        }
-
-        lifecycleStatus.setStopping();
+        final var result = lifecycleStatus.newStopAttempt();
         retryCreateTopic.set(false);
         vertx.cancelTimer(retryCreateTopicTimerId);
 
-        lifecycleStatus.addOnStoppedHandler(result);
         CompositeFuture.all(closeAdminClient(), closeConsumer())
             .map((Void) null)
             .onSuccess(ok -> lifecycleStatus.setStopped());
