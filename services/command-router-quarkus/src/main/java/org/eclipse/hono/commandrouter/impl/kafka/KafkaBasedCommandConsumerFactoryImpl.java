@@ -29,6 +29,7 @@ import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
 import org.eclipse.hono.client.registry.TenantClient;
+import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterMetrics;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
@@ -46,6 +47,7 @@ import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.kafka.client.common.impl.Helper;
 
 /**
@@ -58,7 +60,7 @@ import io.vertx.kafka.client.common.impl.Helper;
  * which protocol adapter instance can handle the command. The command is then forwarded to the Kafka cluster on
  * a topic containing that adapter instance id.
  */
-public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFactory {
+public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFactory, ServiceClient {
     private static final Logger LOG = LoggerFactory.getLogger(KafkaBasedCommandConsumerFactoryImpl.class);
 
     private static final Pattern COMMANDS_TOPIC_PATTERN = Pattern
@@ -128,6 +130,24 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
                 kafkaProducerFactory,
                 commandResponseProducerConfig,
                 tracer);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
+        internalCommandSender.registerLivenessChecks(livenessHandler);
+        kafkaBasedCommandResponseSender.registerLivenessChecks(livenessHandler);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
+        internalCommandSender.registerReadinessChecks(readinessHandler);
+        kafkaBasedCommandResponseSender.registerReadinessChecks(readinessHandler);
     }
 
     /**
