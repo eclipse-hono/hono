@@ -28,7 +28,6 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -48,6 +47,7 @@ import java.util.stream.Collectors;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.KafkaException;
 import org.eclipse.hono.application.client.ApplicationClient;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
@@ -970,47 +970,70 @@ public final class IntegrationTestSupport {
     }
 
     private Future<Void> deleteTenantKafkaTopics(final List<String> tenantsToDelete) {
+
         if (!isUsingKafkaMessaging()) {
             return Future.succeededFuture();
         }
-        // topics for the given tenants are not deleted right away: It could be that the offset-commit interval of the CommandRouter
-        // command consumer (5s) hasn't elapsed yet and it has to be avoided to delete the topics before the consumer has
-        // committed corresponding offsets (otherwise the consumer will retry the commit for some time and be blocked during that time)
+
+        // topics for the given tenants are not deleted right away: It could be that the offset-commit
+        // interval of the CommandRouter command consumer (5s) hasn't elapsed yet and it has to be avoided
+        // to delete the topics before the consumer has committed corresponding offsets (otherwise the consumer
+        // will retry the commit for some time and be blocked during that time)
         final Promise<Void> tenantTopicsDeletionDonePromise = Promise.promise();
-        tenantsToDeleteTopicsForAfterDelay.add(Pair.of(tenantsToDelete, Instant.now()));
-        final List<String> tenantsToDeleteTopicsForNow = new LinkedList<>();
-        final Instant nowMinusCommitInterval = Instant.now()
-                .minus(AsyncHandlingAutoCommitKafkaConsumer.DEFAULT_COMMIT_INTERVAL.plusSeconds(1)); // commit interval with added buffer
-        final Iterator<Pair<List<String>, Instant>> iterator = tenantsToDeleteTopicsForAfterDelay.iterator();
+        // commit interval with added buffer
+        final var timeAtWhichTopicsShouldGetDeleted = Instant.now()
+                .plus(AsyncHandlingAutoCommitKafkaConsumer.DEFAULT_COMMIT_INTERVAL)
+                .plusSeconds(2);
+        tenantsToDeleteTopicsForAfterDelay.add(Pair.of(tenantsToDelete, timeAtWhichTopicsShouldGetDeleted));
+
+        // now determine topics that are "due"
+        final var tenantsToDeleteTopicsForNow = new LinkedList<String>();
+        final var now = Instant.now();
+        final var iterator = tenantsToDeleteTopicsForAfterDelay.iterator();
         while (iterator.hasNext()) {
-            final Pair<List<String>, Instant> tenantsToDeleteAndInstantPair = iterator.next();
-            if (tenantsToDeleteAndInstantPair.two().isBefore(nowMinusCommitInterval)) {
+            final var tenantsToDeleteAndInstantPair = iterator.next();
+            if (tenantsToDeleteAndInstantPair.two().isBefore(now)) {
                 tenantsToDeleteTopicsForNow.addAll(tenantsToDeleteAndInstantPair.one());
                 iterator.remove();
             }
         }
-        if (!tenantsToDeleteTopicsForNow.isEmpty()) {
-            final KafkaAdminClient adminClient = KafkaAdminClient.create(vertx,
-                    getKafkaAdminClientConfig().getAdminClientConfig("test"));
-            final Promise<Void> adminClientClosedPromise = Promise.promise();
-            LOGGER.debug("deleting topics for temporary tenants {}", tenantsToDeleteTopicsForNow);
-            final List<String> topicNames = tenantsToDeleteTopicsForNow.stream()
-                    .flatMap(tenant -> HonoTopic.Type.MESSAGING_API_TYPES.stream()
-                            .map(type -> new HonoTopic(type, tenant).toString()))
-                    .collect(Collectors.toList());
-            adminClient.deleteTopics(topicNames, ar -> {
-                // note that the result will probably have failed with an UnknownTopicOrPartitionException here;
-                // not necessarily all tenant topics may have been created before
-                LOGGER.debug("done triggering deletion of topics for tenants {}", tenantsToDeleteTopicsForNow);
-                adminClient.close(adminClientClosedPromise);
-            });
-            adminClientClosedPromise.future().recover(thr -> {
-                LOGGER.warn("error closing Kafka admin client", thr);
-                return Future.succeededFuture();
-            }).onComplete(tenantTopicsDeletionDonePromise);
-        } else {
+
+        if (tenantsToDeleteTopicsForNow.isEmpty()) {
             tenantTopicsDeletionDonePromise.complete();
+        } else {
+            // and delete them
+            try {
+                final var adminClient = KafkaAdminClient.create(
+                        vertx,
+                        getKafkaAdminClientConfig().getAdminClientConfig("test"));
+                LOGGER.debug("deleting topics for temporary tenants {}", tenantsToDeleteTopicsForNow);
+                final List<String> topicNames = tenantsToDeleteTopicsForNow.stream()
+                        .flatMap(tenant -> HonoTopic.Type.MESSAGING_API_TYPES.stream()
+                                .map(type -> new HonoTopic(type, tenant).toString()))
+                        .collect(Collectors.toList());
+                LOGGER.info("deleting {} topics for temporary tenants", topicNames.size());
+                adminClient.deleteTopics(topicNames)
+                    .recover(t -> {
+                        LOGGER.warn("error deleting topics", t);
+                        return Future.succeededFuture();
+                    })
+                    .compose(ar -> {
+                        // note that the result will probably have failed with an UnknownTopicOrPartitionException here;
+                        // not necessarily all tenant topics may have been created before
+                        LOGGER.debug("done triggering deletion of topics for tenants {}", tenantsToDeleteTopicsForNow);
+                        return adminClient.close();
+                    })
+                    .recover(t -> {
+                        LOGGER.warn("error closing Kafka admin client", t);
+                        return Future.succeededFuture();
+                    })
+                    .onComplete(tenantTopicsDeletionDonePromise);
+            } catch (final KafkaException e) {
+                LOGGER.error("failed to create Kafka admin client", e);
+                tenantTopicsDeletionDonePromise.complete();
+            }
         }
+
         return tenantTopicsDeletionDonePromise.future();
     }
 
