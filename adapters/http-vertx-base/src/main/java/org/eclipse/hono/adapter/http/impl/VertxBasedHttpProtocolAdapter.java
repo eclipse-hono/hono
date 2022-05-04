@@ -31,8 +31,9 @@ import org.eclipse.hono.adapter.http.X509AuthHandler;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.http.HttpUtils;
-import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
+import org.eclipse.hono.util.ResourceIdentifier;
+import org.eclipse.hono.util.Strings;
 
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpHeaders;
@@ -115,21 +116,21 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
             addTelemetryApiRoutes(router, authHandler);
             addEventApiRoutes(router, authHandler);
-            addCommandResponseRoutes(CommandConstants.COMMAND_ENDPOINT, router, authHandler);
+            addCommandResponseRoutes(router, authHandler);
         } else {
 
             log.warn("device authentication has been disabled");
             log.warn("any device may publish data on behalf of all other devices");
             addTelemetryApiRoutes(router, null);
             addEventApiRoutes(router, null);
-            addCommandResponseRoutes(CommandConstants.COMMAND_ENDPOINT, router, null);
+            addCommandResponseRoutes(router, null);
         }
     }
 
     private void addTelemetryApiRoutes(final Router router, final Handler<RoutingContext> authHandler) {
 
         // support CORS headers for PUTing telemetry
-        router.routeWithRegex("\\/telemetry\\/[^\\/]+\\/.*").handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
+        router.routeWithRegex("\\/telemetry\\/.+").handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
                 .allowedMethod(HttpMethod.PUT)
                 .allowedHeader(Constants.HEADER_QOS_LEVEL)
                 .allowedHeader(Constants.HEADER_TIME_TILL_DISCONNECT)
@@ -158,21 +159,20 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
             router.route(HttpMethod.POST, ROUTE_TELEMETRY_ENDPOINT).handler(this::handlePostTelemetry);
 
             // require auth for PUTing telemetry
-            router.route(HttpMethod.PUT, "/telemetry/*").handler(authHandler);
+            router.route(HttpMethod.PUT, ROUTE_TELEMETRY_ENDPOINT + "/*").handler(authHandler);
             // assert that authenticated device's tenant matches tenant from path variables
             router.route(HttpMethod.PUT, String.format("/telemetry/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
                 .handler(this::assertTenant);
         }
 
         // route for uploading telemetry data
-        router.route(HttpMethod.PUT, String.format("/telemetry/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
-                .handler(ctx -> uploadTelemetryMessage(HttpContext.from(ctx), getTenantParam(ctx), getDeviceIdParam(ctx)));
+        router.routeWithRegex(HttpMethod.PUT, "\\/telemetry\\/.+").handler(this::handlePutTelemetry);
     }
 
     private void addEventApiRoutes(final Router router, final Handler<RoutingContext> authHandler) {
 
         // support CORS headers for PUTing events
-        router.routeWithRegex("\\/event\\/[^\\/]+\\/.*").handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
+        router.routeWithRegex("\\/event\\/.+").handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
                 .allowedMethod(HttpMethod.PUT)
                 .allowedHeader(Constants.HEADER_TIME_TILL_DISCONNECT)
                 .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
@@ -196,7 +196,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
             // route for posting events using tenant and device ID determined as part of
             // device authentication
-            router.route(HttpMethod.POST, ROUTE_EVENT_ENDPOINT).handler(this::handlePostEvent);
+            router.route(HttpMethod.POST, ROUTE_EVENT_ENDPOINT).handler(this::handlePostTelemetry);
 
             // require auth for PUTing events
             router.route(HttpMethod.PUT, "/event/*").handler(authHandler);
@@ -206,37 +206,32 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
         }
 
         // route for sending event messages
-        router.route(HttpMethod.PUT, String.format("/event/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
-                .handler(ctx -> uploadEventMessage(HttpContext.from(ctx), getTenantParam(ctx), getDeviceIdParam(ctx)));
+        router.routeWithRegex(HttpMethod.PUT, "\\/event\\/.+").handler(this::handlePutTelemetry);
     }
 
-    private void addCommandResponseRoutes(final String commandResponsePrefix, final Router router,
-            final Handler<RoutingContext> authHandler) {
+    private void addCommandResponseRoutes(final Router router, final Handler<RoutingContext> authHandler) {
+
+        final String commandResponseMatchAllPath = "/command/res/*";
 
         // support CORS headers for PUTing command response messages
-        router.routeWithRegex(String.format("\\/%s\\/res\\/[^\\/]+\\/[^\\/]+\\/.*", commandResponsePrefix))
-                .handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
-                        .allowedMethod(HttpMethod.PUT)
-                        .allowedHeader(Constants.HEADER_COMMAND_RESPONSE_STATUS)
-                        .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
-                        .allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
+        final var corsHandler = CorsHandler.create(getConfig().getCorsAllowedOrigin())
+                .allowedMethod(HttpMethod.PUT)
+                .allowedHeader(Constants.HEADER_COMMAND_RESPONSE_STATUS)
+                .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
+                .allowedHeader(HttpHeaders.CONTENT_TYPE.toString());
+        router.route(commandResponseMatchAllPath).handler(corsHandler);
 
         if (getConfig().isAuthenticationRequired()) {
 
-            final String commandResponseMatchAllPath = String.format("/%s/res/*", commandResponsePrefix);
             // support CORS headers for POSTing command response messages
-            router.route(commandResponseMatchAllPath).handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
-                    .allowedMethod(HttpMethod.POST)
-                    .allowedHeader(Constants.HEADER_COMMAND_RESPONSE_STATUS)
-                    .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
-                    .allowedHeader(HttpHeaders.CONTENT_TYPE.toString()));
+            corsHandler.allowedMethod(HttpMethod.POST);
 
             // require auth for POSTing command response messages
             router.route(HttpMethod.POST, commandResponseMatchAllPath).handler(authHandler);
 
             // route for POSTing command response messages using tenant and device ID determined as part of
             // device authentication
-            router.route(HttpMethod.POST, String.format("/%s/res/:%s", commandResponsePrefix, PARAM_COMMAND_REQUEST_ID))
+            router.route(HttpMethod.POST, String.format("/command/res/:%s", PARAM_COMMAND_REQUEST_ID))
                 .handler(this::handlePostCommandResponse);
 
             // require auth for PUTing command response message
@@ -244,26 +239,18 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
             // assert that authenticated device's tenant matches tenant from path variables
             router.route(
                     HttpMethod.PUT,
-                    String.format("/%s/res/:%s/:%s/:%s", commandResponsePrefix, PARAM_TENANT, PARAM_DEVICE_ID, PARAM_COMMAND_REQUEST_ID))
+                    String.format("/command/res/:%s/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID, PARAM_COMMAND_REQUEST_ID))
                .handler(this::assertTenant);
         }
 
         // route for uploading command response message
-        router.route(
-                HttpMethod.PUT,
-                String.format("/%s/res/:%s/:%s/:%s", commandResponsePrefix, PARAM_TENANT, PARAM_DEVICE_ID, PARAM_COMMAND_REQUEST_ID))
-            .handler(ctx -> uploadCommandResponseMessage(HttpContext.from(ctx), getTenantParam(ctx), getDeviceIdParam(ctx),
-                    getCommandRequestIdParam(ctx), getCommandResponseStatusParam(ctx)));
+        router.route(HttpMethod.PUT, commandResponseMatchAllPath).handler(this::handlePutCommandResponse);
     }
 
 
 
     private static String getTenantParam(final RoutingContext ctx) {
         return ctx.request().getParam(PARAM_TENANT);
-    }
-
-    private static String getDeviceIdParam(final RoutingContext ctx) {
-        return ctx.request().getParam(PARAM_DEVICE_ID);
     }
 
     private static String getCommandRequestIdParam(final RoutingContext ctx) {
@@ -280,40 +267,98 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
     void handlePostTelemetry(final RoutingContext ctx) {
 
-        if (Device.class.isInstance(ctx.user())) {
-            final Device device = (Device) ctx.user();
-            uploadTelemetryMessage(HttpContext.from(ctx), device.getTenantId(), device.getDeviceId());
+        if (ctx.user() instanceof Device authenticatedDevice) {
+            doUploadMessage(
+                    HttpContext.from(ctx),
+                    authenticatedDevice.getTenantId(),
+                    authenticatedDevice.getDeviceId());
         } else {
             handle401(ctx);
         }
     }
 
-    void handlePostEvent(final RoutingContext ctx) {
+    void handlePutTelemetry(final RoutingContext ctx) {
 
-        if (Device.class.isInstance(ctx.user())) {
-            final Device device = (Device) ctx.user();
-            uploadEventMessage(HttpContext.from(ctx), device.getTenantId(), device.getDeviceId());
+        final var requestedResource = ResourceIdentifier.fromString(ctx.request().uri().substring(1));
+        if (Strings.isNullOrEmpty(requestedResource.getResourceId())) {
+            HttpUtils.notFound(ctx, "request URI must contain device ID");
+        } else if (ctx.user() instanceof Device authenticatedDevice) {
+            doUploadMessage(
+                    HttpContext.from(ctx),
+                    // if the request URI contains a tenant ID then it has already been
+                    // verified to match the tenant of the authenticated device
+                    // by the assertTenant route handler
+                    authenticatedDevice.getTenantId(),
+                    requestedResource.getResourceId());
+        } else if (Strings.isNullOrEmpty(requestedResource.getTenantId())) {
+            HttpUtils.notFound(ctx, "request URI must contain tenant ID");
         } else {
-            handle401(ctx);
+            doUploadMessage(
+                    HttpContext.from(ctx),
+                    requestedResource.getTenantId(),
+                    requestedResource.getResourceId());
         }
     }
 
     void handlePostCommandResponse(final RoutingContext ctx) {
 
-        if (Device.class.isInstance(ctx.user())) {
-            final Device device = (Device) ctx.user();
-            uploadCommandResponseMessage(HttpContext.from(ctx), device.getTenantId(), device.getDeviceId(),
-                    getCommandRequestIdParam(ctx), getCommandResponseStatusParam(ctx));
+        if (ctx.user() instanceof Device authenticatedDevice) {
+            uploadCommandResponseMessage(
+                    HttpContext.from(ctx),
+                    authenticatedDevice.getTenantId(),
+                    authenticatedDevice.getDeviceId(),
+                    getCommandRequestIdParam(ctx),
+                    getCommandResponseStatusParam(ctx));
         } else {
             handle401(ctx);
         }
     }
 
+    void handlePutCommandResponse(final RoutingContext ctx) {
+
+        final var requestedResource = ResourceIdentifier.fromString(ctx.request().uri().substring(1));
+        final var path = requestedResource.toPath();
+        if (path.length < 5) {
+            HttpUtils.notFound(ctx, "request URI must contain tenant, device and request ID");
+            return;
+        }
+
+        // the URI scheme is a little different from that of telemetry and event
+        // endpoint (command/res) is at indices 0 and 1
+        // tenant ID is at index 2
+        final var tenantId = path[2];
+        // device ID is at index 3
+        final var deviceId = path[3];
+        // request ID is at index 4
+        final var requestId = path[4];
+        if (Strings.isNullOrEmpty(deviceId)) {
+            HttpUtils.notFound(ctx, "request URI must contain device ID");
+        } else if (ctx.user() instanceof Device authenticatedDevice) {
+            uploadCommandResponseMessage(
+                    HttpContext.from(ctx),
+                    // if the request URI contains a tenant ID then it has already been
+                    // verified to match the tenant of the authenticated device
+                    // by the assertTenant route handler
+                    authenticatedDevice.getTenantId(),
+                    deviceId,
+                    requestId,
+                    getCommandResponseStatusParam(ctx));
+        } else if (Strings.isNullOrEmpty(tenantId)) {
+            HttpUtils.notFound(ctx, "request URI must contain tenant ID");
+        } else {
+            uploadCommandResponseMessage(
+                    HttpContext.from(ctx),
+                    tenantId,
+                    deviceId,
+                    requestId,
+                    getCommandResponseStatusParam(ctx));
+        }
+    }
+
     void assertTenant(final RoutingContext ctx) {
 
-        if (Device.class.isInstance(ctx.user())) {
-            final Device device = (Device) ctx.user();
-            if (device.getTenantId().equals(getTenantParam(ctx))) {
+        if (ctx.user() instanceof Device authenticatedDevice) {
+            if (authenticatedDevice.getTenantId().equals(getTenantParam(ctx))) {
                 ctx.next();
             } else {
                 ctx.fail(new ClientErrorException(HttpURLConnection.HTTP_FORBIDDEN,

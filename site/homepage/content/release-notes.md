@@ -6,6 +6,13 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 ## 2.0.0 (not yet released)
 
+### New features
+
+* The HTTP protocol adapter now allows authenticated gateway devices to omit the tenant ID from the URI of requests
+  used to upload telemetry, event or command response messages.
+* The AMQP protocol adapter now allows authenticated gateway devices to omit the tenant ID from the address of
+  messages used to upload telemetry or event messages.
+
 ### Fixes & Enhancements
 
 * The Quarkus variant of the MongoDB based device registry failed to start up if the *hono.mongodb.dbName* property

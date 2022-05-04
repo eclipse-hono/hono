@@ -97,7 +97,9 @@ import io.vertx.junit5.VertxTestContext;
      * for managing tenants/devices/credentials.
      */
     protected static IntegrationTestSupport helper;
-
+    /**
+     * The number of messages to send during a test run.
+     */
     protected static final int MESSAGES_TO_SEND = 60;
 
     private static final String COMMAND_TO_SEND = "setBrightness";
@@ -345,14 +347,24 @@ import io.vertx.junit5.VertxTestContext;
                 .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, gatewayTwoId, PWD))
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI);
 
-        final String uri = String.format("%s/%s/%s", getEndpointUri(), tenantId, deviceId);
+        final String uriOne = String.format("%s/%s/%s", getEndpointUri(), tenantId, deviceId);
+        final String uriTwo = String.format("%s//%s", getEndpointUri(), deviceId);
 
         testUploadMessages(
                 ctx,
                 tenantId,
                 count -> {
-                    final MultiMap headers = (count.intValue() & 1) == 0 ? requestHeadersOne : requestHeadersTwo;
-                    return httpClient.update( // GW uses PUT when acting on behalf of a device
+                    final MultiMap headers;
+                    final String uri;
+                    if ((count.intValue() & 1) == 0) {
+                        headers = requestHeadersOne;
+                        uri = uriOne;
+                    } else {
+                        headers = requestHeadersTwo;
+                        uri = uriTwo;
+                    }
+                    // GW uses PUT when acting on behalf of a device
+                    return httpClient.update(
                             uri,
                             Buffer.buffer("hello " + count),
                             headers,
@@ -872,24 +884,29 @@ import io.vertx.junit5.VertxTestContext;
         deviceData.setVia(Collections.singletonList("not-the-created-gateway"));
 
         helper.registry
-        .addDeviceForTenant(tenantId, tenant, gatewayId, PWD)
-        .compose(ok -> helper.registry.registerDevice(tenantId, deviceId, deviceData))
-        .compose(ok -> {
+            .addDeviceForTenant(tenantId, tenant, gatewayId, PWD)
+            .compose(ok -> helper.registry.registerDevice(tenantId, deviceId, deviceData))
+            .compose(ok -> {
 
-            // WHEN another gateway tries to upload a message for the device
-            final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
-                    .add(HttpHeaders.CONTENT_TYPE, "text/plain")
-                    .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, gatewayId, PWD));
+                // WHEN another gateway tries to upload a message for the device
+                final MultiMap requestHeaders = MultiMap.caseInsensitiveMultiMap()
+                        .add(HttpHeaders.CONTENT_TYPE, "text/plain")
+                        .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, gatewayId, PWD));
 
-            return httpClient.update(
-                    String.format("%s/%s/%s", getEndpointUri(), tenantId, deviceId),
-                    Buffer.buffer("hello"),
-                    requestHeaders,
-                    ResponsePredicate.status(HttpURLConnection.HTTP_FORBIDDEN));
-
-        })
-        // THEN the message gets rejected by the HTTP adapter with a 403
-        .onComplete(ctx.succeedingThenComplete());
+                return httpClient.update(
+                        String.format("%s/%s/%s", getEndpointUri(), tenantId, deviceId),
+                        Buffer.buffer("hello"),
+                        requestHeaders,
+                        ResponsePredicate.status(HttpURLConnection.HTTP_FORBIDDEN))
+                    .map(requestHeaders);
+            })
+            .compose(requestHeaders -> httpClient.update(
+                        String.format("%s//%s", getEndpointUri(), deviceId),
+                        Buffer.buffer("hello"),
+                        requestHeaders,
+                        ResponsePredicate.status(HttpURLConnection.HTTP_FORBIDDEN)))
+            // THEN the message gets rejected by the HTTP adapter with a 403
+            .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -1227,7 +1244,16 @@ import io.vertx.junit5.VertxTestContext;
                             }).compose(receivedCommandRequestId -> {
 
                                 // send a response to the command now
-                                final String responseUri = endpointConfig.getCommandResponseUri(tenantId, commandTargetDeviceId, receivedCommandRequestId);
+                                final String tenantIdToUseInResponseUri;
+                                if (count % 2 == 0 && endpointConfig.isSubscribeAsGateway()) {
+                                    tenantIdToUseInResponseUri = "";
+                                } else {
+                                    tenantIdToUseInResponseUri = tenantId;
+                                }
+                                final String responseUri = endpointConfig.getCommandResponseUri(
+                                        tenantIdToUseInResponseUri,
+                                        commandTargetDeviceId,
+                                        receivedCommandRequestId);
                                 logger.debug("sending response to command [uri: {}]", responseUri);
 
                                 final Buffer body = Buffer.buffer("ok");
@@ -1240,7 +1266,9 @@ import io.vertx.junit5.VertxTestContext;
                                     result = httpClient.create(responseUri, body, cmdResponseRequestHeaders,
                                             ResponsePredicate.status(HttpURLConnection.HTTP_ACCEPTED));
                                 }
-                                return result.recover(thr -> { // wrap exception, making clear it occurred when sending the command response, not the preceding telemetry/event message
+                                return result.recover(thr -> {
+                                    // wrap exception, making clear it occurred when sending the command response,
+                                    // not the preceding telemetry/event message
                                     final String msg = "Error sending command response: " + thr.getMessage();
                                     return Future.failedFuture(new RuntimeException(msg, thr));
                                 });

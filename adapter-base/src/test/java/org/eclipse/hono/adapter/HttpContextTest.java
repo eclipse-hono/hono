@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,7 +19,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import org.eclipse.hono.adapter.HttpContext;
 import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,8 +39,9 @@ public class HttpContextTest {
      */
     @BeforeEach
     public void setUp() {
-        routingContext = mock(RoutingContext.class);
         httpServerRequest = mock(HttpServerRequest.class);
+        when(httpServerRequest.path()).thenReturn("/telemetry");
+        routingContext = mock(RoutingContext.class);
         when(routingContext.request()).thenReturn(httpServerRequest);
 
     }
@@ -100,7 +100,7 @@ public class HttpContextTest {
     @Test
     public void testGetTimeToLiveUsesHeader() {
 
-        when(httpServerRequest.uri()).thenReturn("/event");
+        when(httpServerRequest.path()).thenReturn("/event");
         final HttpContext httpContext = HttpContext.from(routingContext);
 
         // GIVEN a time to live in seconds
@@ -120,7 +120,7 @@ public class HttpContextTest {
     @Test
     public void testGetTimeToLiveUsesQueryParam() {
 
-        when(httpServerRequest.uri()).thenReturn("/event");
+        when(httpServerRequest.path()).thenReturn("/event");
         final HttpContext httpContext = HttpContext.from(routingContext);
 
         // GIVEN a time to live in seconds

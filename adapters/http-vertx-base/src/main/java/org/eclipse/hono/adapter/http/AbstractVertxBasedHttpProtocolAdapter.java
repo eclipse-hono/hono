@@ -88,8 +88,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
     private static final String KEY_TIMER_ID = "timerId";
 
-    protected HttpAdapterMetrics metrics = HttpAdapterMetrics.NOOP;
-
+    private HttpAdapterMetrics metrics = HttpAdapterMetrics.NOOP;
     private HttpServer server;
     private HttpServer insecureServer;
 
@@ -511,27 +510,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     }
 
     /**
-     * Uploads the body of an HTTP request as a telemetry message to Hono.
-     * <p>
-     * This method simply invokes {@link #uploadTelemetryMessage(HttpContext, String, String, Buffer, String)}
-     * with objects retrieved from the routing context.
-     *
-     * @param ctx The context to retrieve the message payload and content type from.
-     * @param tenant The tenant of the device that has produced the data.
-     * @param deviceId The id of the device that has produced the data.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
-    public final void uploadTelemetryMessage(final HttpContext ctx, final String tenant, final String deviceId) {
-
-        uploadTelemetryMessage(
-                Objects.requireNonNull(ctx),
-                Objects.requireNonNull(tenant),
-                Objects.requireNonNull(deviceId),
-                ctx.getRoutingContext().getBody(),
-                ctx.getContentType());
-    }
-
-    /**
      * Uploads a telemetry message to Hono.
      * <p>
      * This method always sends a response to the device. The status code will be set
@@ -546,7 +524,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * @param contentType The content type of the message payload.
      * @throws NullPointerException if any of response, tenant or device ID is {@code null}.
      */
-    public final void uploadTelemetryMessage(final HttpContext ctx, final String tenant, final String deviceId,
+    protected final void uploadTelemetryMessage(final HttpContext ctx, final String tenant, final String deviceId,
             final Buffer payload, final String contentType) {
 
         doUploadMessage(
@@ -556,27 +534,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 payload,
                 contentType,
                 MetricsTags.EndpointType.TELEMETRY);
-    }
-
-    /**
-     * Uploads the body of an HTTP request as an event message to Hono.
-     * <p>
-     * This method simply invokes {@link #uploadEventMessage(HttpContext, String, String, Buffer, String)}
-     * with objects retrieved from the routing context.
-     *
-     * @param ctx The context to retrieve the message payload and content type from.
-     * @param tenant The tenant of the device that has produced the data.
-     * @param deviceId The id of the device that has produced the data.
-     * @throws NullPointerException if any of the parameters is {@code null}.
-     */
-    public final void uploadEventMessage(final HttpContext ctx, final String tenant, final String deviceId) {
-
-        uploadEventMessage(
-                Objects.requireNonNull(ctx),
-                Objects.requireNonNull(tenant),
-                Objects.requireNonNull(deviceId),
-                ctx.getRoutingContext().getBody(),
-                ctx.getContentType());
     }
 
     /**
@@ -594,7 +551,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * @param contentType The content type of the message payload.
      * @throws NullPointerException if any of response, tenant or device ID is {@code null}.
      */
-    public final void uploadEventMessage(final HttpContext ctx, final String tenant, final String deviceId,
+    protected final void uploadEventMessage(final HttpContext ctx, final String tenant, final String deviceId,
             final Buffer payload, final String contentType) {
 
         doUploadMessage(
@@ -604,6 +561,32 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 payload,
                 contentType,
                 MetricsTags.EndpointType.EVENT);
+    }
+
+    /**
+     * Uploads a telemetry/event message to Hono.
+     * <p>
+     * This method always sends a response to the device. The status code will be set
+     * as specified in the
+     * <a href="https://www.eclipse.org/hono/docs/user-guide/http-adapter/#publish-an-event-authenticated-device">
+     * HTTP adapter User Guide</a>.
+     *
+     * @param ctx The context to retrieve cookies and the HTTP response from.
+     * @param tenant The tenant of the device that has produced the data.
+     * @param deviceId The id of the device that has produced the data.
+     * @throws NullPointerException if any of the parameters are {@code null}.
+     */
+    protected void doUploadMessage(
+            final HttpContext ctx,
+            final String tenant,
+            final String deviceId) {
+        doUploadMessage(
+                ctx,
+                tenant,
+                deviceId,
+                ctx.getRoutingContext().getBody(),
+                ctx.getContentType(),
+                MetricsTags.EndpointType.fromString(ctx.getRequestedResource().getEndpoint()));
     }
 
     private void doUploadMessage(
