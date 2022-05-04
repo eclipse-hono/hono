@@ -65,11 +65,6 @@
       <artifactId>opentelemetry-sdk</artifactId>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>io.opentelemetry</groupId>
-      <artifactId>opentelemetry-extension-trace-propagators</artifactId>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
 
   <build>

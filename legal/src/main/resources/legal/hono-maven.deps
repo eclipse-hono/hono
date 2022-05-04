@@ -89,7 +89,6 @@ io.opentelemetry:opentelemetry-context:jar:1.9.1
 io.opentelemetry:opentelemetry-exporter-otlp-common:jar:1.9.1
 io.opentelemetry:opentelemetry-exporter-otlp-trace:jar:1.9.1
 io.opentelemetry:opentelemetry-extension-annotations:jar:1.9.1
-io.opentelemetry:opentelemetry-extension-trace-propagators:jar:1.9.1
 io.opentelemetry:opentelemetry-opentracing-shim:jar:1.9.0-alpha
 io.opentelemetry:opentelemetry-sdk-common:jar:1.9.1
 io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:jar:1.9.1

@@ -23,8 +23,8 @@ import org.apache.qpid.proton.message.Message;
 import org.junit.jupiter.api.Test;
 
 import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
 import io.opentelemetry.context.propagation.ContextPropagators;
-import io.opentelemetry.extension.trace.propagation.JaegerPropagator;
 import io.opentelemetry.opentracingshim.OpenTracingShim;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentracing.Span;
@@ -79,7 +79,7 @@ public class MessageAnnotationsInjectExtractAdapterTest {
     @Test
     public void testTracerShimCanUseAdapter() {
         final OpenTelemetry openTelemetry = OpenTelemetrySdk.builder()
-                .setPropagators(ContextPropagators.create(JaegerPropagator.getInstance()))
+                .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
                 .build();
         final Tracer tracer = OpenTracingShim.createTracerShim(openTelemetry);
         final Span span = tracer.buildSpan("do").start();

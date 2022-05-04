@@ -128,6 +128,11 @@ Please refer to the
 [Quarkus OpenTelemetry documentation](https://quarkus.io/guides/opentelemetry#quarkus-opentelemetry-exporter-otlp_configuration)
 for further configuration trace exporter options.
 
+In order to integrate traces from Hono with those from other applications, Hono supports reading and writing trace
+context information from and to messages exchanged with these applications. This is done according to the
+[W3C Trace Context](https://www.w3.org/TR/trace-context/) and the [W3C Baggage](https://www.w3.org/TR/baggage/)
+specifications.
+
 ## OpenTracing instrumentation
 
 [OpenTracing](https://opentracing.io/) is a predecessor to [OpenTelemetry](https://opentelemetry.io/). Hono components

@@ -93,6 +93,10 @@ description = "Information about changes in recent Hono releases. Includes new f
   configure the trace sampling and the OpenTelemetry Collector endpoint to send the traces to. The `jaeger` Maven build
   profile used for including the Jaeger client in the Hono images has been removed. In order to forward Hono traces to a
   Jaeger back-end, the OpenTelemetry Collector should be configured accordingly.
+* The Hono components now support reading and writing trace context information from and to messages exchanged with
+  other applications in the format defined by the [W3C Trace Context](https://www.w3.org/TR/trace-context/) and the
+  [W3C Baggage](https://www.w3.org/TR/baggage/) specifications. The Jaeger native propagation format used in earlier Hono
+  versions is not supported any more.
 
 ### Deprecations
 
