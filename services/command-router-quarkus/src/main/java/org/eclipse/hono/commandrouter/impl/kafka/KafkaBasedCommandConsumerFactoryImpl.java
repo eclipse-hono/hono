@@ -207,10 +207,16 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
             LOG.debug("createCommandConsumer: topic is already subscribed [{}]", topic);
             return Future.succeededFuture();
         }
-        LOG.debug("createCommandConsumer: topic not subscribed; check for its existence, triggering auto-creation if enabled [{}]", topic);
-        final Span span = TracingHelper
-                .buildServerChildSpan(tracer, context, "wait for topic subscription update", CommandConsumerFactory.class.getSimpleName())
-                .start();
+        LOG.debug("""
+                createCommandConsumer: topic not subscribed; check for its existence, triggering auto-creation \
+                if enabled [{}]
+                """, topic);
+        final Span span = TracingHelper.buildServerChildSpan(
+                tracer,
+                context,
+                "wait for topic subscription update",
+                CommandConsumerFactory.class.getSimpleName())
+            .start();
         TracingHelper.TAG_TENANT_ID.set(span, tenantId);
         Tags.MESSAGE_BUS_DESTINATION.set(span, topic);
         return kafkaConsumer.ensureTopicIsAmongSubscribedTopicPatternTopics(topic)

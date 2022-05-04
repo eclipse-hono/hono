@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -352,14 +352,14 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
 
     @Override
     public void registerReadinessChecks(final HealthCheckHandler handler) {
-        if (registrationClient instanceof ServiceClient) {
-            ((ServiceClient) registrationClient).registerReadinessChecks(handler);
+        if (registrationClient instanceof ServiceClient client) {
+            client.registerReadinessChecks(handler);
         }
-        if (tenantClient instanceof ServiceClient) {
-            ((ServiceClient) tenantClient).registerReadinessChecks(handler);
+        if (tenantClient instanceof ServiceClient client) {
+            client.registerReadinessChecks(handler);
         }
-        if (deviceConnectionInfo instanceof ServiceClient) {
-            ((ServiceClient) deviceConnectionInfo).registerReadinessChecks(handler);
+        if (deviceConnectionInfo instanceof ServiceClient client) {
+            client.registerReadinessChecks(handler);
         }
         commandConsumerFactoryProvider.registerReadinessChecks(handler);
     }
@@ -367,14 +367,14 @@ public class CommandRouterServiceImpl implements CommandRouterService, HealthChe
     @Override
     public void registerLivenessChecks(final HealthCheckHandler handler) {
         registerEventLoopBlockedCheck(handler);
-        if (registrationClient instanceof ServiceClient) {
-            ((ServiceClient) registrationClient).registerLivenessChecks(handler);
+        if (registrationClient instanceof ServiceClient client) {
+            client.registerLivenessChecks(handler);
         }
-        if (tenantClient instanceof ServiceClient) {
-            ((ServiceClient) tenantClient).registerLivenessChecks(handler);
+        if (tenantClient instanceof ServiceClient client) {
+            client.registerLivenessChecks(handler);
         }
-        if (deviceConnectionInfo instanceof ServiceClient) {
-            ((ServiceClient) deviceConnectionInfo).registerLivenessChecks(handler);
+        if (deviceConnectionInfo instanceof ServiceClient client) {
+            client.registerLivenessChecks(handler);
         }
         commandConsumerFactoryProvider.registerLivenessChecks(handler);
     }

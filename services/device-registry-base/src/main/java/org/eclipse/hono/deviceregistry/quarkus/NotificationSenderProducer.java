@@ -15,6 +15,7 @@ package org.eclipse.hono.deviceregistry.quarkus;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
+import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
@@ -43,12 +44,18 @@ import io.vertx.core.json.JsonObject;
 @ApplicationScoped
 public class NotificationSenderProducer {
 
+    @Inject
+    Vertx vertx;
+
+    @Inject
+    Tracer tracer;
+
+    @Inject
+    HealthCheckServer healthCheckServer;
+
     @Produces
     @Singleton
     NotificationSender notificationSender(
-            final Vertx vertx,
-            final Tracer tracer,
-            final HealthCheckServer healthCheckServer,
             @Named("amqp-messaging-network")
             final ClientConfigProperties downstreamSenderConfig,
             final NotificationKafkaProducerConfigProperties kafkaProducerConfig,
@@ -65,8 +72,8 @@ public class NotificationSenderProducer {
                     downstreamSenderConfig,
                     tracer));
         }
-        if (notificationSender instanceof ServiceClient) {
-            healthCheckServer.registerHealthCheckResources(ServiceClientAdapter.forClient((ServiceClient) notificationSender));
+        if (notificationSender instanceof ServiceClient serviceClient) {
+            healthCheckServer.registerHealthCheckResources(ServiceClientAdapter.forClient(serviceClient));
         }
         NotificationConstants.DEVICE_REGISTRY_NOTIFICATION_TYPES.forEach(notificationType -> {
             NotificationEventBusSupport.registerConsumer(vertx, notificationType, notificationSender::publish);
