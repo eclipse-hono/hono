@@ -101,7 +101,6 @@ quarkus.micrometer.binder.kafka.enabled=false
 quarkus.micrometer.binder.system=true
 quarkus.micrometer.binder.vertx.enabled=true
 quarkus.micrometer.export.prometheus.path=/prometheus
-quarkus.opentelemetry.propagators=tracecontext,baggage,jaeger
 quarkus.smallrye-health.root-path=${health.check.root-path}
 quarkus.smallrye-health.liveness-path=${health.check.liveness-path}
 quarkus.smallrye-health.readiness-path=${health.check.readiness-path}

@@ -87,8 +87,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
 import io.opentelemetry.context.propagation.ContextPropagators;
-import io.opentelemetry.extension.trace.propagation.JaegerPropagator;
 import io.opentelemetry.opentracingshim.OpenTracingShim;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentracing.Tracer;
@@ -486,7 +486,7 @@ public final class IntegrationTestSupport {
     public static final int KAFKA_TOPIC_CREATION_ADD_TO_TIMEOUT = 2; // seconds to add
 
     private static final OpenTelemetry OPENTELEMETRY = OpenTelemetrySdk.builder()
-            .setPropagators(ContextPropagators.create(JaegerPropagator.getInstance()))
+            .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
             .build();
     /**
      * An OpenTracing tracer that can be used by devices and downstream clients to inject

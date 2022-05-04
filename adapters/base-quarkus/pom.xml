@@ -67,11 +67,6 @@
       <artifactId>jakarta.ws.rs-api</artifactId>
     </dependency>
     <dependency>
-      <!-- adding support for jaeger propagator -->
-      <groupId>io.opentelemetry</groupId>
-      <artifactId>opentelemetry-extension-trace-propagators</artifactId>
-    </dependency>
-    <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-smallrye-health</artifactId>
     </dependency>

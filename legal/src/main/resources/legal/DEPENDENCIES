@@ -89,7 +89,6 @@ maven/mavencentral/io.opentelemetry/opentelemetry-context/1.9.1, Apache-2.0, app
 maven/mavencentral/io.opentelemetry/opentelemetry-exporter-otlp-common/1.9.1, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.opentelemetry/opentelemetry-exporter-otlp-trace/1.9.1, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.opentelemetry/opentelemetry-extension-annotations/1.9.1, Apache-2.0, approved, clearlydefined
-maven/mavencentral/io.opentelemetry/opentelemetry-extension-trace-propagators/1.9.1, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.opentelemetry/opentelemetry-opentracing-shim/1.9.0-alpha, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.opentelemetry/opentelemetry-sdk/1.9.1, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.opentelemetry/opentelemetry-sdk-common/1.9.1, Apache-2.0, approved, clearlydefined
