@@ -107,11 +107,16 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
 
     /**
      * Stops the created consumer.
+     *
+     * @param ctx The vert.x test context.
      */
     @AfterEach
-    public void stopConsumer() {
+    public void stopConsumer(final VertxTestContext ctx) {
         if (consumer != null) {
-            consumer.stop();
+            consumer.stop()
+                .onComplete(ar -> ctx.completeNow());
+        } else {
+            ctx.completeNow();
         }
     }
 
@@ -793,6 +798,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
 
         final Checkpoint commitCheckDone = ctx.checkpoint(1);
         consumer.setOnPartitionsAssignedHandler(partitions -> {
+            LOG.info("rebalancing ...");
             final Map<TopicPartition, OffsetAndMetadata> committed = mockConsumer.committed(Set.of(TOPIC_PARTITION));
             ctx.verify(() -> {
                 // the last rebalance where topicPartition got revoked should have just
