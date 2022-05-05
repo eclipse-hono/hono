@@ -319,11 +319,15 @@ public class HonoKafkaConsumerIT {
         publishRecords(numTestRecordsPerTopicPerRound, "round3_", topics)
                 .onFailure(ctx::failNow)
                 .onSuccess(v -> {
+                    final Promise<Void> newReadyTracker = Promise.promise();
                     kafkaConsumer = new HonoKafkaConsumer<>(vertx, topics, recordHandler2, consumerConfig);
-                    kafkaConsumer.start().onComplete(ctx.succeeding(v2 -> {
-                        LOG.debug("consumer started, publish another record to be received by the consumer");
-                        publish(publishTestTopic, lastRecordKey, Buffer.buffer("testPayload"));
-                    }));
+                    kafkaConsumer.addOnKafkaConsumerReadyHandler(newReadyTracker);
+                    kafkaConsumer.start()
+                        .compose(ok -> newReadyTracker.future())
+                        .onComplete(ctx.succeeding(v2 -> {
+                            LOG.debug("consumer started, publish another record to be received by the consumer");
+                            publish(publishTestTopic, lastRecordKey, Buffer.buffer("testPayload"));
+                        }));
                 });
 
         if (!ctx.awaitCompletion(9, TimeUnit.SECONDS)) {
