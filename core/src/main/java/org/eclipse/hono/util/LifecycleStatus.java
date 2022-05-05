@@ -149,11 +149,19 @@ public final class LifecycleStatus {
 
     /**
      * Executes an attempt to stop the tracked component.
+     * <p>
+     * This method will execute the given stop action <em>once</em> if the component is in state
+     * {@link Status#STARTING} or {@link Status#STARTED}. The future returned by the stop action is then
+     * passed in to the {@link #setStopped(AsyncResult)} method to transition the status
+     * to {@link Status#STOPPED}.
+     * <p>
+     * Note that if this method is invoked concurrently, then only the first invocation's stop
+     * action will be run and its outcome will determine the returned future's completion status.
      *
      * @param stopAction The logic implementing the stopping of the component.
-     * @return A future for conveying the outcome of stopping the component to client code. The future will
-     *         be completed with the result returned by the stop action.
-     * @throws IllegalStateException if this component is already in state {@link Status#STOPPED}.
+     * @return A future for conveying the outcome of stopping the component to client code.
+     *         The future will be succeeded if the component is already in the {@link Status#STOPPED} state. Otherwise,
+     *         the future will be completed with the result returned by the stop action.
      * @throws NullPointerException if stop action is {@code null}.
      */
     public synchronized Future<Void> runStopAttempt(final Supplier<Future<Void>> stopAction) {
@@ -161,7 +169,7 @@ public final class LifecycleStatus {
         Objects.requireNonNull(stopAction);
 
         if (isStopped()) {
-            throw new IllegalStateException("component is already stopped");
+            return Future.succeededFuture();
         }
 
         final Promise<Void> result = Promise.promise();

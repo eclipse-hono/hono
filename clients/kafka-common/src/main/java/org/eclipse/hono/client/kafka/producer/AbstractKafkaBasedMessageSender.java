@@ -182,11 +182,6 @@ public abstract class AbstractKafkaBasedMessageSender<V> implements MessagingCli
     @Override
     public Future<Void> stop() {
 
-        if (lifecycleStatus.isStopped()) {
-            // nothing to do
-            return Future.succeededFuture();
-        }
-
         return lifecycleStatus.runStopAttempt(this::stopProducer);
     }
 

@@ -958,11 +958,6 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
     @Override
     public Future<Void> stop() {
 
-        if (lifecycleStatus.isStopped()) {
-            // nothing to do
-            return Future.succeededFuture();
-        }
-
         return lifecycleStatus.runStopAttempt(() -> {
             if (pollPauseTimeoutTimerId != null) {
                 vertx.cancelTimer(pollPauseTimeoutTimerId);

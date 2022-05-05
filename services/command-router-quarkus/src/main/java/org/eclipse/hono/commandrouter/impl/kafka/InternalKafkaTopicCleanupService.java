@@ -231,11 +231,6 @@ public class InternalKafkaTopicCleanupService extends AbstractVerticle {
     @Override
     public void stop(final Promise<Void> stopResult) {
 
-        if (lifecycleStatus.isStopped()) {
-            stopResult.tryComplete();
-            return;
-        }
-
         lifecycleStatus.runStopAttempt(() -> Optional.ofNullable(adminClient)
                 .map(KafkaAdminClient::close)
                 .orElseGet(Future::succeededFuture)

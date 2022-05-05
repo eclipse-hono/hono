@@ -272,11 +272,6 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
     @Override
     public Future<Void> stop() {
 
-        if (lifecycleStatus.isStopped()) {
-            // nothing to be done
-            return Future.succeededFuture();
-        }
-
         return lifecycleStatus.runStopAttempt(() -> CompositeFuture.join(kafkaConsumer.stop(), commandHandler.stop())
                 .mapEmpty());
     }

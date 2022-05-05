@@ -113,11 +113,6 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender<Buf
     @Override
     public Future<Void> stop() {
 
-        if (lifecycleStatus.isStopped()) {
-            // nothing to do
-            return Future.succeededFuture();
-        }
-
         return lifecycleStatus.runStopAttempt(() -> {
             // assemble futures for closing the command response consumers
             final List<Future> stopConsumersTracker = commandResponseConsumers.values().stream()

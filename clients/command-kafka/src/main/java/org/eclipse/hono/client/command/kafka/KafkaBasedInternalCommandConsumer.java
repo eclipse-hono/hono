@@ -367,11 +367,6 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
     @Override
     public Future<Void> stop() {
 
-        if (lifecycleStatus.isStopped()) {
-            // nothing to do
-            return Future.succeededFuture();
-        }
-
         return lifecycleStatus.runStopAttempt(() -> {
             retryCreateTopic.set(false);
             vertx.cancelTimer(retryCreateTopicTimerId);
