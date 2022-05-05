@@ -46,15 +46,18 @@ import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.registry.TenantDisabledOrNotRegisteredException;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.LifecycleStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -84,12 +87,12 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
     private final Tracer tracer;
     private final CommandResponseSender commandResponseSender;
     private final TenantClient tenantClient;
-    private final AtomicBoolean isTopicCreated = new AtomicBoolean(false);
     private final AtomicBoolean retryCreateTopic = new AtomicBoolean(true);
     /**
      * Key is the tenant id, value is a Map with partition index as key and offset as value.
      */
     private final Map<String, Map<Integer, Long>> lastHandledPartitionOffsetsPerTenant = new HashMap<>();
+    private final LifecycleStatus lifecycleStatus = new LifecycleStatus();
 
     private KafkaConsumer<String, Buffer> consumer;
     private Admin adminClient;
@@ -136,6 +139,7 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
         final KafkaClientFactory kafkaClientFactory = new KafkaClientFactory(vertx);
         kafkaAdminClientCreator = () -> kafkaClientFactory.createClientWithRetries(
                 () -> Admin.create(new HashMap<>(adminClientConfig)),
+                lifecycleStatus::isStarting,
                 bootstrapServersConfig,
                 KafkaClientFactory.UNLIMITED_RETRIES_DURATION);
 
@@ -148,6 +152,7 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
         this.clientId = consumerConfig.get(ConsumerConfig.CLIENT_ID_CONFIG);
         consumerCreator = () -> kafkaClientFactory.createClientWithRetries(
                 () -> KafkaConsumer.create(vertx, consumerConfig),
+                lifecycleStatus::isStarting,
                 consumerConfig.get(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG),
                 KafkaClientFactory.UNLIMITED_RETRIES_DURATION);
     }
@@ -204,8 +209,39 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
         return this;
     }
 
+    /**
+     * Adds a handler to be invoked with a succeeded future once the Kafka consumer is ready to be used.
+     *
+     * @param handler The handler to invoke. The handler will never be invoked with a failed future.
+     */
+    public final void addOnKafkaConsumerReadyHandler(final Handler<AsyncResult<Void>> handler) {
+        if (handler != null) {
+            lifecycleStatus.addOnStartedHandler(handler);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * This methods triggers the creation of the internal command topic and a corresponding Kafka consumer in the
+     * background. A new attempt to create the topic and the consumer is made periodically until creation succeeds
+     * or the {@link #stop()} method has been invoked.
+     * <p>
+     * Client code may {@linkplain #addOnKafkaConsumerReadyHandler(Handler) register a dedicated handler}
+     * to be notified once the consumer is up and running.
+     *
+     * @return A succeeded future. Note that the successful completion of the returned future does not
+     *         mean that the consumer will be ready to receive messages from the broker.
+     */
     @Override
     public Future<Void> start() {
+
+        if (lifecycleStatus.isStarting()) {
+            return Future.succeededFuture();
+        } else if (!lifecycleStatus.setStarting()) {
+            return Future.failedFuture(new IllegalStateException("consumer is already started/stopping"));
+        }
+
         if (context == null) {
             context = Vertx.currentContext();
             if (context == null) {
@@ -213,33 +249,32 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
             }
         }
         // trigger creation of admin client, adapter specific topic and consumer
-        return kafkaAdminClientCreator.get()
-                .onFailure(thr -> LOG.error("admin client creation failed", thr))
-                .compose(client -> {
-                    adminClient = client;
-                    return createTopic();
-                })
-                .recover(e -> retryCreateTopic())
-                .compose(v -> {
-                    isTopicCreated.set(true);
-                    // create consumer
-                    return consumerCreator.get()
-                            .onFailure(thr -> LOG.error("consumer creation failed", thr));
-                })
-                .compose(client -> {
-                    consumer = client;
-                    Optional.ofNullable(metricsSupport).ifPresent(ms -> ms.registerKafkaConsumer(consumer.unwrap()));
-                    return subscribeToTopic();
-                });
+        kafkaAdminClientCreator.get()
+            .onFailure(thr -> LOG.error("admin client creation failed", thr))
+            .compose(client -> {
+                adminClient = client;
+                return createTopic();
+            })
+            .recover(e -> retryCreateTopic())
+            .compose(v -> consumerCreator.get()
+                    .onFailure(thr -> LOG.error("consumer creation failed", thr)))
+            .compose(client -> {
+                consumer = client;
+                Optional.ofNullable(metricsSupport).ifPresent(ms -> ms.registerKafkaConsumer(consumer.unwrap()));
+                return subscribeToTopic();
+            })
+            .onSuccess(ok -> lifecycleStatus.setStarted());
+
+        return Future.succeededFuture();
     }
 
     @Override
     public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
         LOG.trace("registering readiness check using kafka based internal command consumer [adapter instance id: {}]",
                 adapterInstanceId);
-        readinessHandler.register(String.format("internal-command-consumer[%s]-readiness", adapterInstanceId),
+        readinessHandler.register("internal-command-consumer[%s]-readiness".formatted(adapterInstanceId),
                 status -> {
-                    if (isTopicCreated.get()) {
+                    if (lifecycleStatus.isStarted()) {
                         status.tryComplete(Status.OK());
                     } else {
                         LOG.debug("readiness check failed [internal command topic is not created]");
@@ -321,20 +356,30 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
         return new HonoTopic(HonoTopic.Type.COMMAND_INTERNAL, adapterInstanceId).toString();
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Closes the Kafka admin client and consumer.
+     *
+     * @return A future indicating the outcome of the operation.
+     *         The future will be succeeded once this component is stopped.
+     */
     @Override
     public Future<Void> stop() {
-        retryCreateTopic.set(false);
-        vertx.cancelTimer(retryCreateTopicTimerId);
 
-        if (consumer == null) {
-            return Future.failedFuture("not started");
-        }
+        return lifecycleStatus.runStopAttempt(() -> {
+            retryCreateTopic.set(false);
+            vertx.cancelTimer(retryCreateTopicTimerId);
 
-        return CompositeFuture.all(closeAdminClient(), closeConsumer())
+            return CompositeFuture.all(closeAdminClient(), closeConsumer())
                 .mapEmpty();
+        });
     }
 
     private Future<Void> closeAdminClient() {
+        if (adminClient == null) {
+            return Future.succeededFuture();
+        }
         final Promise<Void> adminClientClosePromise = Promise.promise();
         LOG.debug("stop: close admin client");
         context.executeBlocking(future -> {
@@ -346,14 +391,14 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
     }
 
     private Future<Void> closeConsumer() {
-        final Promise<Void> consumerClosePromise = Promise.promise();
+        if (consumer == null) {
+            return Future.succeededFuture();
+        }
         LOG.debug("stop: close consumer");
-        consumer.close(consumerClosePromise);
-        consumerClosePromise.future().onComplete(ar -> {
+        return consumer.close().onComplete(ar -> {
             LOG.debug("consumer closed");
             Optional.ofNullable(metricsSupport).ifPresent(ms -> ms.unregisterKafkaConsumer(consumer.unwrap()));
         });
-        return consumerClosePromise.future();
     }
 
     void handleCommandMessage(final KafkaConsumerRecord<String, Buffer> record) {

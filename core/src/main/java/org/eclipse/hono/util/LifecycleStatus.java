@@ -14,7 +14,11 @@
 
 package org.eclipse.hono.util;
 
+import java.util.Objects;
+import java.util.function.Supplier;
+
 import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 
@@ -58,6 +62,8 @@ public final class LifecycleStatus {
 
     /**
      * Adds a handler to be notified once the tracked component has started up.
+     * <p>
+     * The handlers will be invoked with a succeeded result when the {@link #setStarted()} method is called.
      *
      * @param handler The handler.
      */
@@ -69,6 +75,8 @@ public final class LifecycleStatus {
 
     /**
      * Adds a handler to be notified once the tracked component has shut down.
+     * <p>
+     * The handlers will be invoked with the outcome passed in to the {@link #setStopped(AsyncResult)} method.
      *
      * @param handler The handler.
      */
@@ -140,6 +148,42 @@ public final class LifecycleStatus {
     }
 
     /**
+     * Executes an attempt to stop the tracked component.
+     * <p>
+     * This method will execute the given stop action <em>once</em> if the component is in state
+     * {@link Status#STARTING} or {@link Status#STARTED}. The future returned by the stop action is then
+     * passed in to the {@link #setStopped(AsyncResult)} method to transition the status
+     * to {@link Status#STOPPED}.
+     * <p>
+     * Note that if this method is invoked concurrently, then only the first invocation's stop
+     * action will be run and its outcome will determine the returned future's completion status.
+     *
+     * @param stopAction The logic implementing the stopping of the component.
+     * @return A future for conveying the outcome of stopping the component to client code.
+     *         The future will be succeeded if the component is already in the {@link Status#STOPPED} state. Otherwise,
+     *         the future will be completed with the result returned by the stop action.
+     * @throws NullPointerException if stop action is {@code null}.
+     */
+    public synchronized Future<Void> runStopAttempt(final Supplier<Future<Void>> stopAction) {
+
+        Objects.requireNonNull(stopAction);
+
+        if (isStopped()) {
+            return Future.succeededFuture();
+        }
+
+        final Promise<Void> result = Promise.promise();
+        addOnStoppedHandler(result);
+
+        if (setStopping()) {
+            stopAction.get()
+                .onComplete(this::setStopped);
+        }
+
+        return result.future();
+    }
+
+    /**
      * Checks if the component is in the process of shutting down.
      *
      * @return {@code true} if the current status is {@link Status#STOPPING}.
@@ -150,15 +194,27 @@ public final class LifecycleStatus {
 
     /**
      * Marks the tracked component as being shut down.
-     *
+     * <p>
+     * Simply invokes {@link #setStopped(AsyncResult)} with a succeeded future.
      * @return {@code false} if the component is already in state {@code STOPPED}.
      */
     public synchronized boolean setStopped() {
+        return setStopped(Future.succeededFuture());
+    }
+
+    /**
+     * Marks the tracked component as being shut down.
+     *
+     * @param outcome The outcome of stopping the component. The handlers registered via
+     *                {@link #addOnStoppedHandler(Handler)} will be invoked with the given result.
+     * @return {@code false} if the component is already in state {@code STOPPED}.
+     */
+    public synchronized boolean setStopped(final AsyncResult<Void> outcome) {
         if (state == Status.STOPPED) {
             return false;
         } else {
             setState(Status.STOPPED);
-            shutdownTracker.complete();
+            shutdownTracker.handle(outcome);
             return true;
         }
     }

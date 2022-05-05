@@ -140,6 +140,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         final Function<KafkaConsumerRecord<String, Buffer>, Future<Void>> handler = record -> Future.succeededFuture();
         final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig("test");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
+        final Promise<Void> readyTracker = Promise.promise();
 
         mockConsumer.updateBeginningOffsets(Map.of(TOPIC_PARTITION, 0L));
         mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, 0L));
@@ -147,7 +148,10 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(TOPIC_PARTITION));
         consumer = new AsyncHandlingAutoCommitKafkaConsumer<>(vertx, Set.of(TOPIC), handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
-        consumer.start().onComplete(ctx.succeedingThenComplete());
+        consumer.addOnKafkaConsumerReadyHandler(readyTracker);
+        consumer.start()
+            .compose(ok -> readyTracker.future())
+            .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -160,6 +164,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         final Function<KafkaConsumerRecord<String, Buffer>, Future<Void>> handler = record -> Future.succeededFuture();
         final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig("test");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
+        final Promise<Void> readyTracker = Promise.promise();
 
         mockConsumer.updateBeginningOffsets(Map.of(TOPIC_PARTITION, 0L));
         mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, 0L));
@@ -167,7 +172,10 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(TOPIC_PARTITION));
         consumer = new AsyncHandlingAutoCommitKafkaConsumer<>(vertx, TOPIC_PATTERN, handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
-        consumer.start().onComplete(ctx.succeedingThenComplete());
+        consumer.addOnKafkaConsumerReadyHandler(readyTracker);
+        consumer.start()
+            .compose(ok -> readyTracker.future())
+            .onComplete(ctx.succeedingThenComplete());
     }
 
     /**
@@ -220,6 +228,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig("test");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
         consumerConfig.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, Integer.toString(maxPollRecords));
+        final Promise<Void> readyTracker = Promise.promise();
 
         mockConsumer.updateBeginningOffsets(Map.of(TOPIC_PARTITION, 0L));
         mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, 0L));
@@ -227,24 +236,27 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(TOPIC_PARTITION));
         consumer = new AsyncHandlingAutoCommitKafkaConsumer<>(vertx, Set.of(TOPIC), recordHandler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
-        consumer.start().onComplete(ctx.succeeding(v2 -> {
-            // schedule the poll tasks
-            schedulePollTasksWithConsumerPausedCheck(offsetCounter, numRecordsPerBatch, testBatchesToAdd);
-            final long timerId = vertx.setTimer(8000, tid -> {
-                LOG.info("received records:\n{}",
-                        receivedRecords.stream().map(Object::toString).collect(Collectors.joining(",\n")));
-                allRecordsReceivedPromise.tryFail(String.format("only received %d out of %d expected messages after 8s",
-                        uncompletedRecordHandlingPromises.size(), numRecords));
-            });
-            allRecordsReceivedPromise.future().onComplete(ctx.succeeding(v -> {
-                vertx.cancelTimer(timerId);
-                ctx.verify(() -> {
-                    assertWithMessage("observed max no. of records in processing")
-                            .that(observedMaxRecordsInProcessing.get()).isEqualTo(maxRecordsInProcessing);
+        consumer.addOnKafkaConsumerReadyHandler(readyTracker);
+        consumer.start()
+            .compose(ok -> readyTracker.future())
+            .onComplete(ctx.succeeding(v2 -> {
+                // schedule the poll tasks
+                schedulePollTasksWithConsumerPausedCheck(offsetCounter, numRecordsPerBatch, testBatchesToAdd);
+                final long timerId = vertx.setTimer(8000, tid -> {
+                    LOG.info("received records:\n{}",
+                            receivedRecords.stream().map(Object::toString).collect(Collectors.joining(",\n")));
+                    allRecordsReceivedPromise.tryFail(String.format("only received %d out of %d expected messages after 8s",
+                            uncompletedRecordHandlingPromises.size(), numRecords));
                 });
-                ctx.completeNow();
+                allRecordsReceivedPromise.future().onComplete(ctx.succeeding(v -> {
+                    vertx.cancelTimer(timerId);
+                    ctx.verify(() -> {
+                        assertWithMessage("observed max no. of records in processing")
+                                .that(observedMaxRecordsInProcessing.get()).isEqualTo(maxRecordsInProcessing);
+                    });
+                    ctx.completeNow();
+                }));
             }));
-        }));
     }
 
     /**
@@ -305,6 +317,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
         consumerConfig.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "300000"); // periodic commit shall not play a role here
         consumerConfig.put(AsyncHandlingAutoCommitKafkaConsumer.CONFIG_HONO_OFFSETS_COMMIT_RECORD_COMPLETION_TIMEOUT_MILLIS, "0");
+        final Promise<Void> readyTracker = Promise.promise();
 
         mockConsumer.updateBeginningOffsets(Map.of(TOPIC_PARTITION, 0L));
         mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, 0L));
@@ -312,13 +325,16 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(TOPIC_PARTITION));
         consumer = new AsyncHandlingAutoCommitKafkaConsumer<>(vertx, Set.of(TOPIC), handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
-        consumer.start().onComplete(ctx.succeeding(v2 -> {
-            mockConsumer.schedulePollTask(() -> {
-                IntStream.range(0, numTestRecords).forEach(offset -> {
-                    mockConsumer.addRecord(new ConsumerRecord<>(TOPIC, PARTITION, offset, "key_" + offset, Buffer.buffer()));
+        consumer.addOnKafkaConsumerReadyHandler(readyTracker);
+        consumer.start()
+            .compose(ok -> readyTracker.future())
+            .onComplete(ctx.succeeding(v2 -> {
+                mockConsumer.schedulePollTask(() -> {
+                    IntStream.range(0, numTestRecords).forEach(offset -> {
+                        mockConsumer.addRecord(new ConsumerRecord<>(TOPIC, PARTITION, offset, "key_" + offset, Buffer.buffer()));
+                    });
                 });
-            });
-        }));
+            }));
         assertWithMessage("records received in 5s")
                 .that(receivedRecordsCtx.awaitCompletion(5, TimeUnit.SECONDS))
                 .isTrue();
@@ -412,6 +428,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
         consumerConfig.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "300000"); // periodic commit shall not play a role here
         consumerConfig.put(AsyncHandlingAutoCommitKafkaConsumer.CONFIG_HONO_OFFSETS_COMMIT_RECORD_COMPLETION_TIMEOUT_MILLIS, "21000");
+        final Promise<Void> readyTracker = Promise.promise();
 
         mockConsumer.updateBeginningOffsets(Map.of(TOPIC_PARTITION, 0L));
         mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, 0L));
@@ -429,16 +446,19 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
             }
         };
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
+        consumer.addOnKafkaConsumerReadyHandler(readyTracker);
         final Context consumerVertxContext = vertx.getOrCreateContext();
         consumerVertxContext.runOnContext(v -> {
-            consumer.start().onComplete(ctx.succeeding(v2 -> {
-                mockConsumer.schedulePollTask(() -> {
-                    IntStream.range(0, numTestRecords).forEach(offset -> {
-                        mockConsumer.addRecord(
-                                new ConsumerRecord<>(TOPIC, PARTITION, offset, "key_" + offset, Buffer.buffer()));
+            consumer.start()
+                .compose(ok -> readyTracker.future())
+                .onComplete(ctx.succeeding(v2 -> {
+                    mockConsumer.schedulePollTask(() -> {
+                        IntStream.range(0, numTestRecords).forEach(offset -> {
+                            mockConsumer.addRecord(
+                                    new ConsumerRecord<>(TOPIC, PARTITION, offset, "key_" + offset, Buffer.buffer()));
+                        });
                     });
-                });
-            }));
+                }));
         });
         assertWithMessage("records received in 5s")
                 .that(receivedRecordsCtx.awaitCompletion(5, TimeUnit.SECONDS))
@@ -504,6 +524,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
         consumerConfig.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "300000"); // periodic commit shall not play a role here
         consumerConfig.put(AsyncHandlingAutoCommitKafkaConsumer.CONFIG_HONO_OFFSETS_COMMIT_RECORD_COMPLETION_TIMEOUT_MILLIS, "0");
+        final Promise<Void> readyTracker = Promise.promise();
 
         mockConsumer.updateBeginningOffsets(Map.of(TOPIC_PARTITION, 0L));
         mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, 0L));
@@ -511,13 +532,16 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(TOPIC_PARTITION));
         consumer = new AsyncHandlingAutoCommitKafkaConsumer<>(vertx, Set.of(TOPIC), handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
-        consumer.start().onComplete(ctx.succeeding(v2 -> {
-            mockConsumer.schedulePollTask(() -> {
-                IntStream.range(0, numTestRecords).forEach(offset -> {
-                    mockConsumer.addRecord(new ConsumerRecord<>(TOPIC, PARTITION, offset, "key_" + offset, Buffer.buffer()));
+        consumer.addOnKafkaConsumerReadyHandler(readyTracker);
+        consumer.start()
+            .compose(ok -> readyTracker.future())
+            .onComplete(ctx.succeeding(v2 -> {
+                mockConsumer.schedulePollTask(() -> {
+                    IntStream.range(0, numTestRecords).forEach(offset -> {
+                        mockConsumer.addRecord(new ConsumerRecord<>(TOPIC, PARTITION, offset, "key_" + offset, Buffer.buffer()));
+                    });
                 });
-            });
-        }));
+            }));
         assertWithMessage("records received in 5s")
                 .that(receivedRecordsCtx.awaitCompletion(5, TimeUnit.SECONDS))
                 .isTrue();
@@ -563,6 +587,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         // 1000ms commit interval - keep the value not too low,
         // otherwise the frequent commit task on the event loop thread will prevent the test main thread from getting things done
         consumerConfig.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "1000");
+        final Promise<Void> readyTracker = Promise.promise();
 
         mockConsumer.updateBeginningOffsets(Map.of(TOPIC_PARTITION, 0L));
         mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, 0L));
@@ -571,11 +596,14 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
 
         consumer = new AsyncHandlingAutoCommitKafkaConsumer<>(vertx, Set.of(TOPIC), handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
-        consumer.start().onComplete(ctx.succeeding(v2 -> {
-            mockConsumer.schedulePollTask(() -> {
-                mockConsumer.addRecord(new ConsumerRecord<>(TOPIC, PARTITION, 0, "key_0", Buffer.buffer()));
-            });
-        }));
+        consumer.addOnKafkaConsumerReadyHandler(readyTracker);
+        consumer.start()
+            .compose(ok -> readyTracker.future())
+            .onComplete(ctx.succeeding(v2 -> {
+                mockConsumer.schedulePollTask(() -> {
+                    mockConsumer.addRecord(new ConsumerRecord<>(TOPIC, PARTITION, 0, "key_0", Buffer.buffer()));
+                });
+            }));
         testRecordsReceived.future().onComplete(v -> {
             // we have no hook to integrate into for the commit check
             // therefore do the check multiple times with some delay in between
@@ -621,6 +649,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         // 1000ms commit interval - keep the value not too low,
         // otherwise the frequent commit task on the event loop thread will prevent the test main thread from getting things done
         consumerConfig.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "1000");
+        final Promise<Void> readyTracker = Promise.promise();
 
         mockConsumer.updateBeginningOffsets(Map.of(TOPIC_PARTITION, 0L));
         mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, 0L));
@@ -632,9 +661,12 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         consumer = new AsyncHandlingAutoCommitKafkaConsumer<>(vertx, Set.of(TOPIC), handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
         consumer.setOnRebalanceDoneHandler(s -> consumerStartedCheckpoint.flag());
+        consumer.addOnKafkaConsumerReadyHandler(readyTracker);
         vertx.getOrCreateContext().runOnContext(v -> {
-            consumer.start().onSuccess(v2 -> consumerStartedCheckpoint.flag());
-        });
+            consumer.start()
+                .compose(ok -> readyTracker.future())
+                .onSuccess(v2 -> consumerStartedCheckpoint.flag());
+            });
         assertWithMessage("consumer started in 5s")
                 .that(consumerStartedCtx.awaitCompletion(5, TimeUnit.SECONDS))
                 .isTrue();
@@ -723,6 +755,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
         consumerConfig.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "300000"); // periodic commit shall not play a role here
         consumerConfig.put(AsyncHandlingAutoCommitKafkaConsumer.CONFIG_HONO_OFFSETS_COMMIT_RECORD_COMPLETION_TIMEOUT_MILLIS, "0");
+        final Promise<Void> readyTracker = Promise.promise();
 
         mockConsumer.updateBeginningOffsets(Map.of(TOPIC_PARTITION, 0L));
         mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, 0L));
@@ -730,14 +763,17 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         mockConsumer.setRebalancePartitionAssignmentAfterSubscribe(List.of(TOPIC_PARTITION));
         consumer = new AsyncHandlingAutoCommitKafkaConsumer<>(vertx, Set.of(TOPIC), handler, consumerConfig);
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
-        consumer.start().onComplete(ctx.succeeding(v2 -> {
-            mockConsumer.schedulePollTask(() -> {
-                IntStream.range(0, numTestRecords).forEach(offset -> {
-                    mockConsumer.addRecord(
-                            new ConsumerRecord<>(TOPIC, PARTITION, offset, "key_" + offset, Buffer.buffer()));
+        consumer.addOnKafkaConsumerReadyHandler(readyTracker);
+        consumer.start()
+            .compose(ok -> readyTracker.future())
+            .onComplete(ctx.succeeding(v2 -> {
+                mockConsumer.schedulePollTask(() -> {
+                    IntStream.range(0, numTestRecords).forEach(offset -> {
+                        mockConsumer.addRecord(
+                                new ConsumerRecord<>(TOPIC, PARTITION, offset, "key_" + offset, Buffer.buffer()));
+                    });
                 });
-            });
-        }));
+            }));
         assertWithMessage("records received in 5s")
                 .that(receivedRecordsCtx.awaitCompletion(5, TimeUnit.SECONDS))
                 .isTrue();
@@ -791,6 +827,7 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig("test");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
         consumerConfig.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "300000"); // periodic commit shall not play a role here
+        final Promise<Void> readyTracker = Promise.promise();
 
         mockConsumer.updateBeginningOffsets(Map.of(TOPIC_PARTITION, 0L));
         mockConsumer.updateEndOffsets(Map.of(TOPIC_PARTITION, 0L));
@@ -804,17 +841,20 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
             }
         };
         consumer.setKafkaConsumerSupplier(() -> mockConsumer);
+        consumer.addOnKafkaConsumerReadyHandler(readyTracker);
         final Context consumerVertxContext = vertx.getOrCreateContext();
         consumerVertxContext.runOnContext(v -> {
-            consumer.start().onComplete(ctx.succeeding(v2 -> {
-                mockConsumer.schedulePollTask(() -> {
-                    // add record with elapsed ttl
-                    mockConsumer.addRecord(createRecordWithElapsedTtl());
-                    IntStream.range(1, numNonExpiredTestRecords + 1).forEach(offset -> {
-                        mockConsumer.addRecord(new ConsumerRecord<>(TOPIC, PARTITION, offset, "key_" + offset, Buffer.buffer()));
+            consumer.start()
+                .compose(ok -> readyTracker.future())
+                .onComplete(ctx.succeeding(v2 -> {
+                    mockConsumer.schedulePollTask(() -> {
+                        // add record with elapsed ttl
+                        mockConsumer.addRecord(createRecordWithElapsedTtl());
+                        IntStream.range(1, numNonExpiredTestRecords + 1).forEach(offset -> {
+                            mockConsumer.addRecord(new ConsumerRecord<>(TOPIC, PARTITION, offset, "key_" + offset, Buffer.buffer()));
+                        });
                     });
-                });
-            }));
+                }));
         });
         assertWithMessage("records received in 5s")
                 .that(receivedRecordsCtx.awaitCompletion(5, TimeUnit.SECONDS))

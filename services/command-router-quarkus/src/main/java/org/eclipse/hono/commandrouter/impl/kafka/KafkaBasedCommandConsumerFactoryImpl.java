@@ -15,6 +15,7 @@ package org.eclipse.hono.commandrouter.impl.kafka;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -34,7 +35,9 @@ import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterMetrics;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.LifecycleStatus;
 import org.eclipse.hono.util.MessagingType;
+import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,12 +45,16 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
+import io.vertx.ext.healthchecks.Status;
 import io.vertx.kafka.client.common.impl.Helper;
 
 /**
@@ -76,7 +83,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
     private final KafkaBasedInternalCommandSender internalCommandSender;
     private final KafkaBasedCommandResponseSender kafkaBasedCommandResponseSender;
     private final KafkaClientMetricsSupport kafkaClientMetricsSupport;
-
+    private final LifecycleStatus lifecycleStatus = new LifecycleStatus();
     private String groupId = DEFAULT_GROUP_ID;
     private KafkaBasedMappingAndDelegatingCommandHandler commandHandler;
     private AsyncHandlingAutoCommitKafkaConsumer<Buffer> kafkaConsumer;
@@ -96,7 +103,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
      * @param metrics The component to use for reporting metrics.
      * @param kafkaClientMetricsSupport The Kafka metrics support.
      * @param tracer The tracer instance.
-     * @throws NullPointerException if any of the parameters except internalKafkaTopicCleanupService is {@code null}.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public KafkaBasedCommandConsumerFactoryImpl(
             final Vertx vertx,
@@ -133,6 +140,17 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
     }
 
     /**
+     * Adds a handler to be invoked with a succeeded future once this factory is ready to be used.
+     *
+     * @param handler The handler to invoke. The handler will never be invoked with a failed future.
+     */
+    public final void addOnFactoryReadyHandler(final Handler<AsyncResult<Void>> handler) {
+        if (handler != null) {
+            lifecycleStatus.addOnStartedHandler(handler);
+        }
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
@@ -148,6 +166,17 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
     public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
         internalCommandSender.registerReadinessChecks(readinessHandler);
         kafkaBasedCommandResponseSender.registerReadinessChecks(readinessHandler);
+        readinessHandler.register(
+                "command-consumer-factory-kafka-consumer-%s".formatted(UUID.randomUUID()),
+                status -> {
+                    if (kafkaConsumer == null) {
+                        // this factory has not been started yet
+                        status.tryComplete(Status.KO());
+                    } else {
+                        final var response = kafkaConsumer.checkReadiness();
+                        status.tryComplete(new Status().setOk(response.getStatus() == HealthCheckResponse.Status.UP));
+                    }
+                });
     }
 
     /**
@@ -177,25 +206,46 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
     /**
      * {@inheritDoc}
      *
-     * @return The combined outcome of starting the Kafka consumer, the command handler and the internal Kafka
-     * topic cleanup service.
+     * @return The combined outcome of starting the Kafka consumer and the command handler.
      */
     @Override
     public Future<Void> start() {
+        if (lifecycleStatus.isStarting()) {
+            return Future.succeededFuture();
+        } else if (!lifecycleStatus.setStarting()) {
+            return Future.failedFuture(new IllegalStateException("factory is already started/stopping"));
+        }
         final Context context = Vertx.currentContext();
         if (context == null) {
             return Future.failedFuture(new IllegalStateException("factory must be started in a Vert.x context"));
         }
-        final KafkaCommandProcessingQueue commandQueue = new KafkaCommandProcessingQueue(context);
-        commandHandler = new KafkaBasedMappingAndDelegatingCommandHandler(vertx, tenantClient, commandQueue,
-                commandTargetMapper, internalCommandSender, kafkaBasedCommandResponseSender, metrics, tracer);
+        final var commandQueue = new KafkaCommandProcessingQueue(context);
+        final Promise<Void> internalCommandSenderTracker = Promise.promise();
+        internalCommandSender.addOnKafkaProducerReadyHandler(internalCommandSenderTracker);
+        final Promise<Void> commandResponseSenderTracker = Promise.promise();
+        kafkaBasedCommandResponseSender.addOnKafkaProducerReadyHandler(commandResponseSenderTracker);
+        commandHandler = new KafkaBasedMappingAndDelegatingCommandHandler(
+                vertx,
+                tenantClient,
+                commandQueue,
+                commandTargetMapper,
+                internalCommandSender,
+                kafkaBasedCommandResponseSender,
+                metrics,
+                tracer);
 
         final Map<String, String> consumerConfig = kafkaConsumerConfig.getConsumerConfig("command");
         consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
         consumerConfig.putIfAbsent(ConsumerConfig.PARTITION_ASSIGNMENT_STRATEGY_CONFIG, CooperativeStickyAssignor.class.getName());
         consumerConfig.putIfAbsent(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        kafkaConsumer = new AsyncHandlingAutoCommitKafkaConsumer<>(vertx, COMMANDS_TOPIC_PATTERN,
-                commandHandler::mapAndDelegateIncomingCommandMessage, consumerConfig);
+
+        final Promise<Void> consumerTracker = Promise.promise();
+        kafkaConsumer = new AsyncHandlingAutoCommitKafkaConsumer<>(
+                vertx,
+                COMMANDS_TOPIC_PATTERN,
+                commandHandler::mapAndDelegateIncomingCommandMessage,
+                consumerConfig);
+        kafkaConsumer.addOnKafkaConsumerReadyHandler(consumerTracker);
         kafkaConsumer.setPollTimeout(Duration.ofMillis(kafkaConsumerConfig.getPollTimeout()));
         kafkaConsumer.setConsumerCreationRetriesTimeout(KafkaClientFactory.UNLIMITED_RETRIES_DURATION);
         kafkaConsumer.setMetricsSupport(kafkaClientMetricsSupport);
@@ -204,20 +254,26 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
         kafkaConsumer.setOnPartitionsLostHandler(
                 partitions -> commandQueue.setRevokedPartitions(Helper.to(partitions)));
 
-        return CompositeFuture.all(commandHandler.start(), kafkaConsumer.start())
-                .mapEmpty();
+        CompositeFuture.all(
+                internalCommandSenderTracker.future(),
+                commandResponseSenderTracker.future(),
+                consumerTracker.future())
+            .onSuccess(ok -> lifecycleStatus.setStarted());
+
+        return CompositeFuture.all(commandHandler.start(), kafkaConsumer.start()).mapEmpty();
     }
 
     /**
      * {@inheritDoc}
      *
-     * @return The combined outcome of stopping the Kafka consumer, the command handler and the internal Kafka
-     * topic cleanup service.
+     * @return A future indicating the combined outcome of stopping the Kafka consumer and the command handler.
+     *         The future will be succeeded once this component is stopped.
      */
     @Override
     public Future<Void> stop() {
-        return CompositeFuture.join(kafkaConsumer.stop(), commandHandler.stop())
-                .mapEmpty();
+
+        return lifecycleStatus.runStopAttempt(() -> CompositeFuture.join(kafkaConsumer.stop(), commandHandler.stop())
+                .mapEmpty());
     }
 
     @Override

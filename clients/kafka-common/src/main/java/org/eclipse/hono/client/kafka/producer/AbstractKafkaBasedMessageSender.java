@@ -29,6 +29,7 @@ import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
 import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.Lifecycle;
+import org.eclipse.hono.util.LifecycleStatus;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingClient;
 import org.eclipse.hono.util.MessagingType;
@@ -41,7 +42,9 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.tag.Tags;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.json.EncodeException;
 import io.vertx.core.json.Json;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
@@ -53,6 +56,8 @@ import io.vertx.kafka.client.producer.RecordMetadata;
 
 /**
  * A client for publishing messages to a Kafka cluster.
+ * <p>
+ * Wraps a vert.x Kafka producer that is created during startup.
  *
  * @param <V> The type of payload supported by this sender.
  */
@@ -67,13 +72,14 @@ public abstract class AbstractKafkaBasedMessageSender<V> implements MessagingCli
      * An OpenTracing tracer to be shared with subclasses.
      */
     protected final Tracer tracer;
+    /**
+     * This component's current life cycle state.
+     */
+    protected final LifecycleStatus lifecycleStatus = new LifecycleStatus();
 
     private final KafkaProducerConfigProperties config;
     private final KafkaProducerFactory<String, V> producerFactory;
     private final String producerName;
-
-    private boolean stopped = false;
-    private boolean producerCreated = false;
 
     /**
      * Creates a new Kafka-based message sender.
@@ -106,47 +112,77 @@ public abstract class AbstractKafkaBasedMessageSender<V> implements MessagingCli
     }
 
     /**
+     * Adds a handler to be invoked with a succeeded future once the Kafka producer is ready to be used.
+     *
+     * @param handler The handler to invoke. The handler will never be invoked with a failed future.
+     */
+    public final void addOnKafkaProducerReadyHandler(final Handler<AsyncResult<Void>> handler) {
+        if (handler != null) {
+            lifecycleStatus.addOnStartedHandler(handler);
+        }
+    }
+
+    /**
      * {@inheritDoc}
      * <p>
-     * Starts the producer.
+     * Registers a procedure for checking if this client's initial Kafka client creation succeeded.
+     */
+    @Override
+    public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
+        // verify that client creation succeeded
+        readinessHandler.register(
+                "%s-kafka-producer-creation-%s".formatted(producerName, UUID.randomUUID()),
+                status -> status.tryComplete(new Status().setOk(lifecycleStatus.isStarted())));
+    }
+
+    @Override
+    public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
+        // no liveness checks to be added
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * This methods triggers the creation of a Kafka producer in the background. A new attempt to create the
+     * producer is made once a second until creation succeeds or the {@link #stop()} method has been invoked.
+     * <p>
+     * Client code may {@linkplain #addOnKafkaProducerReadyHandler(Handler) register a dedicated handler}
+     * to be notified once the producer has been created successfully.
+     *
+     * @return A succeeded future. Note that the successful completion of the returned future does not
+     *         mean that the producer will be ready to send messages to the broker.
      */
     @Override
     public Future<Void> start() {
-        stopped = false;
 
-        return Future.succeededFuture()
-                .map(v -> getOrCreateProducer()) // enclosed in map() to catch exceptions
-                .onSuccess(v -> producerCreated = true)
-                .recover(thr -> {
-                    if (KafkaClientFactory.isRetriableClientCreationError(thr, config.getBootstrapServers())) {
-                        // retry client creation in the background
-                        getOrCreateProducerWithRetries()
-                                .onSuccess(v -> producerCreated = true);
-                        return Future.succeededFuture();
-                    }
-                    return Future.failedFuture(thr);
-                })
-                .mapEmpty();
+        if (lifecycleStatus.isStarting()) {
+            return Future.succeededFuture();
+        } else if (!lifecycleStatus.setStarting()) {
+            return Future.failedFuture(new IllegalStateException("sender is already started/stopping"));
+        }
+
+        producerFactory.getOrCreateProducerWithRetries(
+                producerName,
+                config,
+                lifecycleStatus::isStarting,
+                KafkaClientFactory.UNLIMITED_RETRIES_DURATION)
+            .onSuccess(producer -> lifecycleStatus.setStarted());
+
+        return Future.succeededFuture();
     }
 
     /**
      * {@inheritDoc}
      * <p>
      * Closes the producer.
+     *
+     * @return A future indicating the outcome of the operation.
+     *         The future will be succeeded once this component is stopped.
      */
     @Override
     public Future<Void> stop() {
-        stopped = true;
-        return producerFactory.closeProducer(producerName);
-    }
 
-    /**
-     * Checks if this sender has been stopped.
-     *
-     * @return {@code true} if this sender's {@link #stop()} method has been called already.
-     */
-    protected final boolean isStopped() {
-        return stopped;
+        return lifecycleStatus.runStopAttempt(this::stopProducer);
     }
 
     /**
@@ -220,8 +256,8 @@ public abstract class AbstractKafkaBasedMessageSender<V> implements MessagingCli
         Objects.requireNonNull(headers);
         Objects.requireNonNull(currentSpan);
 
-        if (isStopped()) {
-            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "sender already stopped"));
+        if (!lifecycleStatus.isStarted()) {
+            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "sender not started"));
         }
         final KafkaProducerRecord<String, V> record = KafkaProducerRecord.create(topic, deviceId, payload);
 
@@ -249,27 +285,13 @@ public abstract class AbstractKafkaBasedMessageSender<V> implements MessagingCli
         return producerFactory.getOrCreateProducer(producerName, config);
     }
 
-    private Future<KafkaProducer<String, V>> getOrCreateProducerWithRetries() {
-        return producerFactory.getOrCreateProducerWithRetries(producerName, config,
-                KafkaClientFactory.UNLIMITED_RETRIES_DURATION);
-    }
-
     /**
-     * {@inheritDoc}
-     * <p>
-     * Registers a procedure for checking if this client's initial Kafka client creation succeeded.
+     * Closes the producer used for sending records.
+     *
+     * @return The outcome of the attempt to close the producer.
      */
-    @Override
-    public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
-        // verify that client creation succeeded
-        readinessHandler.register(
-                String.format("%s-kafka-client-creation-%s", producerName, UUID.randomUUID()),
-                status -> status.tryComplete(producerCreated ? Status.OK() : Status.KO()));
-    }
-
-    @Override
-    public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
-        // no liveness checks to be added
+    protected final Future<Void> stopProducer() {
+        return producerFactory.closeProducer(producerName);
     }
 
     /**

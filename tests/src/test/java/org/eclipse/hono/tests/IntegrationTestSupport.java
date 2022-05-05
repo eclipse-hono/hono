@@ -858,10 +858,16 @@ public final class IntegrationTestSupport {
         initRegistryClient();
 
         kafkaProducerFactory = CachingKafkaProducerFactory.sharedFactory(vertx);
-        applicationClient = new KafkaApplicationClientImpl(vertx, kafkaDownstreamProps, kafkaProducerFactory,
+        final Promise<Void> readyTracker = Promise.promise();
+        final var client = new KafkaApplicationClientImpl(
+                vertx,
+                kafkaDownstreamProps,
+                kafkaProducerFactory,
                 getKafkaProducerConfig());
-
-        return Future.succeededFuture();
+        client.addOnKafkaProducerReadyHandler(readyTracker);
+        return client.start()
+                .compose(ok -> readyTracker.future())
+                .onSuccess(ok -> applicationClient = client);
     }
 
     /**

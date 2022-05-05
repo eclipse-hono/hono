@@ -42,6 +42,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
@@ -104,13 +105,17 @@ public class KafkaBasedTelemetrySenderTest {
         final var mockProducer = KafkaClientUnitTestHelper.newMockProducer(true);
         final var factory = CachingKafkaProducerFactory
                 .testFactory(vertxMock, (n, c) -> KafkaClientUnitTestHelper.newKafkaProducer(mockProducer));
+        final Promise<Void> readyTracker = Promise.promise();
         final var sender = new KafkaBasedTelemetrySender(vertxMock, factory, kafkaProducerConfig, true, tracer);
+        sender.addOnKafkaProducerReadyHandler(readyTracker);
         tenant.setResourceLimits(new ResourceLimits()
                 .setMaxTtlTelemetryQoS0(10L)
                 .setMaxTtlTelemetryQoS1(60L));
 
         // WHEN sending telemetry data
-        sender.sendTelemetry(tenant, device, qos, contentType, Buffer.buffer(payload), properties, null)
+        sender.start()
+            .compose(ok -> readyTracker.future())
+            .compose(ok -> sender.sendTelemetry(tenant, device, qos, contentType, Buffer.buffer(payload), properties, null))
             .onComplete(ctx.succeeding(t -> {
                 ctx.verify(() -> {
 

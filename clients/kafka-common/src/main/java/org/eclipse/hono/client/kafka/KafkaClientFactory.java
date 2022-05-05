@@ -35,7 +35,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.kafka.admin.KafkaAdminClient;
-import io.vertx.kafka.client.consumer.KafkaConsumer;
 
 /**
  * A factory to create Kafka clients.
@@ -50,7 +49,7 @@ public class KafkaClientFactory {
     /**
      * The number of milliseconds to wait before retrying to create a client.
      */
-    public static final int CLIENT_CREATION_RETRY_DELAY_MILLIS = 100;
+    public static final int CLIENT_CREATION_RETRY_DELAY_MILLIS = 1000;
 
     private static final Logger LOG = LoggerFactory.getLogger(KafkaClientFactory.class);
 
@@ -87,10 +86,8 @@ public class KafkaClientFactory {
     /**
      * Creates a new Kafka client.
      * <p>
-     * If creation fails because the {@value CommonClientConfigs#BOOTSTRAP_SERVERS_CONFIG} config property contains a
-     * (non-empty) list of URLs that are not (yet) resolvable, further creation attempts are done with a delay of
-     * {@value #CLIENT_CREATION_RETRY_DELAY_MILLIS}ms in between. These retries are done until the given
-     * <em>retriesTimeout</em> has elapsed.
+     * Simply invokes {@link #createClientWithRetries(Supplier, Supplier, String, Duration)} with a keep retrying
+     * condition that always returns {@code true}.
      *
      * @param <T> The type of client.
      * @param clientSupplier The action that will create the client.
@@ -105,45 +102,42 @@ public class KafkaClientFactory {
             final Supplier<T> clientSupplier,
             final String bootstrapServersConfig,
             final Duration retriesTimeout) {
-        Objects.requireNonNull(clientSupplier);
-
-        final Promise<T> resultPromise = Promise.promise();
-        createClientWithRetries(
-                clientSupplier,
-                () -> true,
-                getRetriesTimeLimit(retriesTimeout),
-                () -> containsValidServerEntries(bootstrapServersConfig),
-                resultPromise);
-        return resultPromise.future();
+        return createClientWithRetries(clientSupplier, () -> true, bootstrapServersConfig, retriesTimeout);
     }
 
     /**
-     * Creates a new KafkaConsumer.
+     * Creates a new Kafka client.
      * <p>
      * If creation fails because the {@value CommonClientConfigs#BOOTSTRAP_SERVERS_CONFIG} config property contains a
      * (non-empty) list of URLs that are not (yet) resolvable, further creation attempts are done with a delay of
      * {@value #CLIENT_CREATION_RETRY_DELAY_MILLIS}ms in between. These retries are done until the given
      * <em>retriesTimeout</em> has elapsed.
      *
-     * @param consumerConfig The consumer configuration properties.
+     * @param <T> The type of client.
+     * @param clientSupplier The action that will create the client.
+     * @param keepTrying A guard condition that controls whether another attempt to create the client should be
+     *                     started. Client code can set this to {@code false} in order to prevent any further attempts.
+     * @param bootstrapServersConfig The {@value CommonClientConfigs#BOOTSTRAP_SERVERS_CONFIG} config property value.
+     *                               A {@code null} value will lead to a failed result future.
      * @param retriesTimeout The maximum time for which retries are done. Using a negative duration or {@code null}
      *                       here is interpreted as an unlimited timeout value.
-     * @param <K> The class type for the key deserialization.
-     * @param <V> The class type for the value deserialization.
      * @return A future indicating the outcome of the creation attempt.
-     * @throws NullPointerException if any of the parameters except retriesTimeout is {@code null}.
+     * @throws NullPointerException if clientSupplier or keepTrying are {@code null}.
      */
-    public <K, V> Future<KafkaConsumer<K, V>> createKafkaConsumerWithRetries(
-            final Map<String, String> consumerConfig,
+    public <T> Future<T> createClientWithRetries(
+            final Supplier<T> clientSupplier,
+            final Supplier<Boolean> keepTrying,
+            final String bootstrapServersConfig,
             final Duration retriesTimeout) {
-        Objects.requireNonNull(consumerConfig);
+        Objects.requireNonNull(clientSupplier);
+        Objects.requireNonNull(keepTrying);
 
-        final Promise<KafkaConsumer<K, V>> resultPromise = Promise.promise();
+        final Promise<T> resultPromise = Promise.promise();
         createClientWithRetries(
-                () -> KafkaConsumer.create(vertx, consumerConfig),
-                () -> true,
+                clientSupplier,
+                keepTrying,
                 getRetriesTimeLimit(retriesTimeout),
-                () -> containsValidServerEntries(consumerConfig.get(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG)),
+                () -> containsValidServerEntries(bootstrapServersConfig),
                 resultPromise);
         return resultPromise.future();
     }

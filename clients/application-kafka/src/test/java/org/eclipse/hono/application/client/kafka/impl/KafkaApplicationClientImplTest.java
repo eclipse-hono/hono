@@ -43,6 +43,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.junit5.Timeout;
@@ -57,6 +58,7 @@ import io.vertx.junit5.VertxTestContext;
 public class KafkaApplicationClientImplTest {
 
     private static final String PARAMETERIZED_TEST_NAME_PATTERN = "{displayName} [{index}]; parameters: {argumentsWithNames}";
+    private Promise<Void> clientReadyTracker;
     private KafkaApplicationClientImpl client;
     private KafkaMockConsumer<String, Buffer> mockConsumer;
     private String tenantId;
@@ -94,8 +96,10 @@ public class KafkaApplicationClientImplTest {
         producerConfig.setCommonClientConfig(commonConfig);
         producerConfig.setProducerConfig(Map.of("client.id", "application-test-sender"));
 
+        clientReadyTracker = Promise.promise();
         client = new KafkaApplicationClientImpl(vertx, consumerConfig, producerFactory, producerConfig);
         client.setKafkaConsumerFactory(() -> mockConsumer);
+        client.addOnKafkaProducerReadyHandler(clientReadyTracker);
     }
 
     /**
@@ -119,11 +123,13 @@ public class KafkaApplicationClientImplTest {
     public void testCreateConsumer(final Type msgType, final VertxTestContext ctx) {
 
         // Verify that the consumer for the given tenant and the message type is successfully created
-        createConsumer(tenantId, msgType, m -> {}, t -> {})
-                .onComplete(ctx.succeeding(consumer -> ctx.verify(() -> {
-                    assertThat(consumer).isNotNull();
-                    ctx.completeNow();
-                })));
+        client.start()
+            .compose(ok -> clientReadyTracker.future())
+            .compose(ok -> createConsumer(tenantId, msgType, m -> {}, t -> {}))
+            .onComplete(ctx.succeeding(consumer -> ctx.verify(() -> {
+                assertThat(consumer).isNotNull();
+                ctx.completeNow();
+            })));
     }
 
     /**
@@ -138,14 +144,15 @@ public class KafkaApplicationClientImplTest {
     public void testStopClosesConsumer(final Type msgType, final VertxTestContext ctx) {
 
         // Verify that the consumer for the given tenant and the message type is successfully created
-        createConsumer(tenantId, msgType, m -> {}, t -> {})
-                // stop the application client
-                .compose(c -> client.stop())
-                .onComplete(ctx.succeeding(v -> ctx.verify(() -> {
-                    // verify that the Kafka mock consumer is closed
-                    assertThat(mockConsumer.closed()).isTrue();
-                    ctx.completeNow();
-                })));
+        client.start()
+            .compose(ok -> clientReadyTracker.future())
+            .compose(ok -> createConsumer(tenantId, msgType, m -> {}, t -> {}))
+            // stop the application client
+            .compose(c -> client.stop())
+            .onComplete(ctx.succeeding(v -> {
+                ctx.verify(() -> assertThat(mockConsumer.closed()).isTrue());
+                ctx.completeNow();
+            }));
     }
 
     /**
@@ -157,19 +164,24 @@ public class KafkaApplicationClientImplTest {
     @ParameterizedTest(name = PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("messageTypes")
     public void testCloseConsumer(final Type msgType, final VertxTestContext ctx) {
+
         // Given a consumer for the given tenant and the message type
-        createConsumer(tenantId, msgType, m -> {}, t -> {})
-                // When the message consumer is closed
-                .compose(MessageConsumer::close)
-                .onComplete(ctx.succeeding(consumer -> ctx.verify(() -> {
-                    // verify that the Kafka mock consumer is also closed
-                    assertThat(mockConsumer.closed()).isTrue();
-                    ctx.completeNow();
-                })));
+        client.start()
+            .compose(ok -> clientReadyTracker.future())
+            .compose(ok -> createConsumer(tenantId, msgType, m -> {}, t -> {}))
+            // When the message consumer is closed
+            .compose(MessageConsumer::close)
+            .onComplete(ctx.succeeding(ok -> {
+                ctx.verify(() -> assertThat(mockConsumer.closed()).isTrue());
+                ctx.completeNow();
+            }));
     }
 
-    private Future<MessageConsumer> createConsumer(final String tenantId, final Type type,
-            final Handler<DownstreamMessage<KafkaMessageContext>> msgHandler, final Handler<Throwable> closeHandler) {
+    private Future<MessageConsumer> createConsumer(
+            final String tenantId,
+            final Type type,
+            final Handler<DownstreamMessage<KafkaMessageContext>> msgHandler,
+            final Handler<Throwable> closeHandler) {
 
         final String topic = new HonoTopic(type, tenantId).toString();
         final TopicPartition topicPartition = new TopicPartition(topic, 0);

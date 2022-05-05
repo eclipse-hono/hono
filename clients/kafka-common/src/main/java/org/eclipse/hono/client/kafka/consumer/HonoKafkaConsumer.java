@@ -33,6 +33,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
@@ -42,19 +43,25 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.kafka.KafkaClientFactory;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
+import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.util.Futures;
 import org.eclipse.hono.util.Lifecycle;
+import org.eclipse.hono.util.LifecycleStatus;
 import org.eclipse.hono.util.Pair;
+import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.ext.healthchecks.HealthCheckHandler;
+import io.vertx.ext.healthchecks.Status;
 import io.vertx.kafka.client.common.TopicPartition;
 import io.vertx.kafka.client.common.impl.Helper;
 import io.vertx.kafka.client.consumer.KafkaConsumer;
@@ -71,7 +78,7 @@ import io.vertx.kafka.client.consumer.impl.KafkaReadStreamImpl;
  * @param <V> The type of record payload this consumer supports.
  */
 @RegisterForReflection(targets = io.vertx.kafka.client.consumer.impl.KafkaReadStreamImpl.class)
-public class HonoKafkaConsumer<V> implements Lifecycle {
+public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
 
     /**
      * The default timeout to use when polling the broker for messages.
@@ -102,11 +109,14 @@ public class HonoKafkaConsumer<V> implements Lifecycle {
      * The pattern of topic names that this consumer subscribes to.
      */
     protected final Pattern topicPattern;
+    /**
+     * This component's current life cycle state.
+     */
+    protected final LifecycleStatus lifecycleStatus = new LifecycleStatus();
 
     private final AtomicReference<Pair<Promise<Void>, Promise<Void>>> subscriptionUpdatedAndPartitionsAssignedPromiseRef = new AtomicReference<>();
     private final AtomicBoolean pollingPaused = new AtomicBoolean();
     private final AtomicBoolean recordFetchingPaused = new AtomicBoolean();
-    private final AtomicBoolean stopCalled = new AtomicBoolean();
 
     private Handler<KafkaConsumerRecord<String, V>> recordHandler;
     private KafkaConsumer<String, V> kafkaConsumer;
@@ -225,7 +235,7 @@ public class HonoKafkaConsumer<V> implements Lifecycle {
      */
     public final void setRecordHandler(final Handler<KafkaConsumerRecord<String, V>> handler) {
         Objects.requireNonNull(handler);
-        if (isStarted()) {
+        if (!lifecycleStatus.isStopped()) {
             throw new IllegalStateException("Record handler can only be set if consumer has not been started yet");
         }
         this.recordHandler = handler;
@@ -239,13 +249,24 @@ public class HonoKafkaConsumer<V> implements Lifecycle {
      * @throws IllegalStateException if this consumer is already started.
      */
     protected final void addTopic(final String topicName) {
-        Objects.requireNonNull(topics);
-        if (isStarted()) {
+        Objects.requireNonNull(topicName);
+        if (!lifecycleStatus.isStopped()) {
             throw new IllegalStateException("Topics can only be set if consumer has not been started yet");
         } else if (topics == null) {
             throw new IllegalStateException("Cannot add topic on consumer which has been created with a topic pattern");
         }
         this.topics.add(topicName);
+    }
+
+    /**
+     * Adds a handler to be invoked with a succeeded future once the Kafka consumer is ready to be used.
+     *
+     * @param handler The handler to invoke. The handler will never be invoked with a failed future.
+     */
+    public final void addOnKafkaConsumerReadyHandler(final Handler<AsyncResult<Void>> handler) {
+        if (handler != null) {
+            lifecycleStatus.addOnStartedHandler(handler);
+        }
     }
 
     /**
@@ -492,74 +513,132 @@ public class HonoKafkaConsumer<V> implements Lifecycle {
     }
 
     /**
-     * Checks if this consumer has been started already.
-     *
-     * @return {@code true} if this consumer's start method has been invoked already.
+     * {@inheritDoc}
+     * <p>
+     * Does nothing.
      */
-    protected final boolean isStarted() {
-        return context != null;
+    @Override
+    public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Registers a check for the Kafka consumer being ready to be used.
+     */
+    @Override
+    public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
+        readinessHandler.register(
+                "notification-kafka-consumer-creation-%s".formatted(UUID.randomUUID()),
+                status -> status.tryComplete(new Status().setOk(lifecycleStatus.isStarted())));
+    }
+
+    /**
+     * Checks if this consumer is ready to be used.
+     *
+     * @return A response indicating if this consumer is ready to be used (UP) or not (DOWN).
+     */
+    public final HealthCheckResponse checkReadiness() {
+        return HealthCheckResponse.builder()
+                .name("kafka-consumer-status")
+                .status(lifecycleStatus.isStarted())
+                .build();
+    }
+
+    private Future<KafkaConsumer<String, V>> initConsumer(final KafkaConsumer<String, V> consumer) {
+
+        final Promise<KafkaConsumer<String, V>> initResult = Promise.promise();
+
+        Optional.ofNullable(metricsSupport).ifPresent(ms -> ms.registerKafkaConsumer(consumer.unwrap()));
+        consumer.handler(record -> {
+            if (!initResult.future().isComplete()) {
+                LOG.debug("""
+                        postponing record handling until consumer has been initialized \
+                        [topic: {}, partition: {}, offset: {}]
+                        """,
+                        record.topic(), record.partition(), record.offset());
+            }
+            initResult.future().onSuccess(ok -> {
+                if (respectTtl && KafkaRecordHelper.isTtlElapsed(record.headers())) {
+                    onRecordHandlerSkippedForExpiredRecord(record);
+                } else {
+                    try {
+                        recordHandler.handle(record);
+                    } catch (final Exception e) {
+                        LOG.warn("error handling record [topic: {}, partition: {}, offset: {}, headers: {}]",
+                                record.topic(), record.partition(), record.offset(), record.headers(), e);
+                    }
+                }
+            });
+        });
+        consumer.batchHandler(this::onBatchOfRecordsReceived);
+        consumer.exceptionHandler(error -> LOG.error("consumer error occurred [client-id: {}]", getClientId(), error));
+        installRebalanceListeners();
+        // let polls finish quickly until initConsumer() is completed
+        consumer.asStream().pollTimeout(Duration.ofMillis(10));
+        // subscribe and wait for re-balance to make sure that when initConsumer() completes,
+        // the consumer is actually ready to receive records already
+        subscribeAndWaitForRebalance()
+                .onSuccess(ok -> {
+                    consumer.asStream().pollTimeout(pollTimeout);
+                    logSubscribedTopicsWhenConsumerIsReady();
+                    initResult.complete(consumer);
+                })
+                .onFailure(initResult::fail);
+        return initResult.future();
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * This methods triggers the creation of a Kafka consumer in the background. A new attempt to create the
+     * consumer is made periodically until creation succeeds or the {@link #stop()} method has been invoked.
+     * <p>
+     * Client code may {@linkplain #addOnKafkaConsumerReadyHandler(Handler) register a dedicated handler}
+     * to be notified once the consumer is up and running.
+     *
+     * @return A future indicating the outcome of the operation.
+     *         The future will be failed with an {@link IllegalStateException} if the record handler is not set
+     *         or if this component is already started or is in the process of being stopped.
+     *         Note that the successful completion of the returned future does not mean that the consumer will be
+     *         ready to receive messages from the broker.
+     */
     @Override
     public Future<Void> start() {
+
         if (recordHandler == null) {
             throw new IllegalStateException("Record handler must be set");
         }
+        if (lifecycleStatus.isStarting()) {
+            LOG.debug("already starting consumer");
+            return Future.succeededFuture();
+        } else if (!lifecycleStatus.setStarting()) {
+            return Future.failedFuture(new IllegalStateException("consumer is already started/stopping"));
+        }
+
         context = vertx.getOrCreateContext();
-        final Promise<Void> startPromise = Promise.promise();
+        final Supplier<KafkaConsumer<String, V>> consumerSupplier = () -> Optional.ofNullable(kafkaConsumerSupplier)
+                .map(s -> KafkaConsumer.create(vertx, s.get()))
+                .orElseGet(() -> KafkaConsumer.create(vertx, consumerConfig));
+
         runOnContext(v -> {
-            // create KafkaConsumer here so that it is created in the Vert.x context of the start() method (KafkaConsumer uses vertx.getOrCreateContext())
-            Optional.ofNullable(kafkaConsumerSupplier)
-                    .map(supplier -> Future.succeededFuture(KafkaConsumer.create(vertx, supplier.get())))
-                    .orElseGet(() -> {
-                        final KafkaClientFactory kafkaClientFactory = new KafkaClientFactory(vertx);
-                        return kafkaClientFactory.createKafkaConsumerWithRetries(consumerConfig,
-                                consumerCreationRetriesTimeout);
-                    })
-                    .onFailure(thr -> {
-                        LOG.error("error creating consumer [client-id: {}]", getClientId(), thr);
-                        startPromise.fail(thr);
-                    })
-                    .onSuccess(consumer -> {
-                        kafkaConsumer = consumer;
-                        Optional.ofNullable(metricsSupport).ifPresent(ms -> ms.registerKafkaConsumer(kafkaConsumer.unwrap()));
-                        kafkaConsumer.handler(record -> {
-                            if (!startPromise.future().isComplete()) {
-                                LOG.debug("postponing record handling until start() is completed [topic: {}, partition: {}, offset: {}]",
-                                        record.topic(), record.partition(), record.offset());
-                            }
-                            startPromise.future().onSuccess(v2 -> {
-                                if (respectTtl && KafkaRecordHelper.isTtlElapsed(record.headers())) {
-                                    onRecordHandlerSkippedForExpiredRecord(record);
-                                } else {
-                                    try {
-                                        recordHandler.handle(record);
-                                    } catch (final Exception e) {
-                                        LOG.warn("error handling record [topic: {}, partition: {}, offset: {}, headers: {}]",
-                                                record.topic(), record.partition(), record.offset(), record.headers(), e);
-                                    }
-                                }
-                            });
-                        });
-                        kafkaConsumer.batchHandler(this::onBatchOfRecordsReceived);
-                        kafkaConsumer.exceptionHandler(error -> LOG.error("consumer error occurred [client-id: {}]",
-                                getClientId(), error));
-                        installRebalanceListeners();
-                        // subscribe and wait for rebalance to make sure that when start() completes,
-                        // the consumer is actually ready to receive records already
-                        kafkaConsumer.asStream().pollTimeout(Duration.ofMillis(10)); // let polls finish quickly until start() is completed
-                        subscribeAndWaitForRebalance()
-                                .onSuccess(v2 -> {
-                                    kafkaConsumer.asStream().pollTimeout(pollTimeout);
-                                    logSubscribedTopicsOnStartComplete();
-                                })
-                                .onComplete(startPromise);
-                    });
+            // create KafkaConsumer here so that it is created in the Vert.x context of the start() method
+            // (KafkaConsumer uses vertx.getOrCreateContext())
+            final KafkaClientFactory kafkaClientFactory = new KafkaClientFactory(vertx);
+            kafkaClientFactory.createClientWithRetries(
+                    consumerSupplier,
+                    lifecycleStatus::isStarting,
+                    consumerConfig.get(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG),
+                    consumerCreationRetriesTimeout)
+                .onFailure(t -> LOG.error("error creating consumer [client-id: {}]", getClientId(), t))
+                .onSuccess(consumer -> kafkaConsumer = consumer)
+                .compose(this::initConsumer)
+                .onSuccess(c -> lifecycleStatus.setStarted());
         });
-        return startPromise.future();
+        return Future.succeededFuture();
     }
 
-    private void logSubscribedTopicsOnStartComplete() {
+    private void logSubscribedTopicsWhenConsumerIsReady() {
         if (topicPattern != null) {
             if (subscribedTopicPatternTopics.size() <= 5) {
                 LOG.debug("consumer started, subscribed to topic pattern [{}], matching topics: {}", topicPattern,
@@ -753,7 +832,7 @@ public class HonoKafkaConsumer<V> implements Lifecycle {
     }
 
     private Future<Void> subscribeAndWaitForRebalance() {
-        if (stopCalled.get()) {
+        if (lifecycleStatus.isStopping() || lifecycleStatus.isStopped()) {
             return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "already stopped"));
         }
         final Promise<Void> partitionAssignmentDone = Promise.promise();
@@ -868,21 +947,32 @@ public class HonoKafkaConsumer<V> implements Lifecycle {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Closes the Kafka consumer.
+     *
+     * @return A future indicating the outcome of the operation.
+     *         The future will be succeeded once this component is stopped.
+     */
     @Override
     public Future<Void> stop() {
-        if (pollPauseTimeoutTimerId != null) {
-            vertx.cancelTimer(pollPauseTimeoutTimerId);
-            pollPauseTimeoutTimerId = null;
-        }
-        if (kafkaConsumer == null) {
-            return Future.failedFuture("not started");
-        } else if (!stopCalled.compareAndSet(false, true)) {
-            LOG.trace("stop already called");
-            return Future.succeededFuture();
-        }
-        return kafkaConsumer.close()
-                .onComplete(ar -> Optional.ofNullable(metricsSupport)
-                        .ifPresent(ms -> ms.unregisterKafkaConsumer(kafkaConsumer.unwrap())));
+
+        return lifecycleStatus.runStopAttempt(() -> {
+            if (pollPauseTimeoutTimerId != null) {
+                vertx.cancelTimer(pollPauseTimeoutTimerId);
+                pollPauseTimeoutTimerId = null;
+            }
+
+            return Optional.ofNullable(kafkaConsumer)
+                .map(consumer -> consumer.close()
+                        .onComplete(ar -> {
+                            Optional.ofNullable(metricsSupport)
+                                .ifPresent(ms -> ms.unregisterKafkaConsumer(kafkaConsumer.unwrap()));
+                        }))
+                .orElseGet(Future::succeededFuture)
+                .onFailure(t -> LOG.info("error stopping Kafka consumer", t));
+        });
     }
 
     /**
@@ -915,9 +1005,9 @@ public class HonoKafkaConsumer<V> implements Lifecycle {
         if (kafkaConsumerWorker == null) {
             throw new IllegalStateException(MSG_CONSUMER_NOT_INITIALIZED_STARTED);
         }
-        if (!stopCalled.get()) {
+        if (lifecycleStatus.isStarted()) {
             kafkaConsumerWorker.submit(() -> {
-                if (!stopCalled.get()) {
+                if (lifecycleStatus.isStarted()) {
                     try {
                         handler.handle(null);
                     } catch (final Exception ex) {
@@ -996,10 +1086,8 @@ public class HonoKafkaConsumer<V> implements Lifecycle {
         } else if (!topicPattern.matcher(topic).find()) {
             throw new IllegalArgumentException("topic doesn't match pattern");
         }
-        if (kafkaConsumer == null) {
+        if (!lifecycleStatus.isStarted()) {
             return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, "not started"));
-        } else if (stopCalled.get()) {
-            return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "already stopped"));
         }
         // check whether topic exists and its existence has been applied to the wildcard subscription yet;
         // use previously updated topics list (less costly than invoking kafkaConsumer.subscription() here)

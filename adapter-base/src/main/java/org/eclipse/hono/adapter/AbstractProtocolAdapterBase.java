@@ -782,20 +782,20 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     @Override
     public void registerReadinessChecks(final HealthCheckHandler handler) {
 
-        if (commandConsumerFactory instanceof ServiceClient) {
-            ((ServiceClient) commandConsumerFactory).registerReadinessChecks(handler);
+        if (commandConsumerFactory instanceof ServiceClient client) {
+            client.registerReadinessChecks(handler);
         }
-        if (tenantClient instanceof ServiceClient) {
-            ((ServiceClient) tenantClient).registerReadinessChecks(handler);
+        if (tenantClient instanceof ServiceClient client) {
+            client.registerReadinessChecks(handler);
         }
-        if (registrationClient instanceof ServiceClient) {
-            ((ServiceClient) registrationClient).registerReadinessChecks(handler);
+        if (registrationClient instanceof ServiceClient client) {
+            client.registerReadinessChecks(handler);
         }
-        if (credentialsClient instanceof ServiceClient) {
-            ((ServiceClient) credentialsClient).registerReadinessChecks(handler);
+        if (credentialsClient instanceof ServiceClient client) {
+            client.registerReadinessChecks(handler);
         }
-        if (commandRouterClient instanceof ServiceClient) {
-            ((ServiceClient) commandRouterClient).registerReadinessChecks(handler);
+        if (commandRouterClient instanceof ServiceClient client) {
+            client.registerReadinessChecks(handler);
         }
         messagingClientProviders.registerReadinessChecks(handler);
     }
@@ -810,20 +810,20 @@ public abstract class AbstractProtocolAdapterBase<T extends ProtocolAdapterPrope
     public void registerLivenessChecks(final HealthCheckHandler handler) {
         registerEventLoopBlockedCheck(handler);
 
-        if (commandConsumerFactory instanceof ServiceClient) {
-            ((ServiceClient) commandConsumerFactory).registerLivenessChecks(handler);
+        if (commandConsumerFactory instanceof ServiceClient client) {
+            client.registerLivenessChecks(handler);
         }
-        if (tenantClient instanceof ServiceClient) {
-            ((ServiceClient) tenantClient).registerLivenessChecks(handler);
+        if (tenantClient instanceof ServiceClient client) {
+            client.registerLivenessChecks(handler);
         }
-        if (registrationClient instanceof ServiceClient) {
-            ((ServiceClient) registrationClient).registerLivenessChecks(handler);
+        if (registrationClient instanceof ServiceClient client) {
+            client.registerLivenessChecks(handler);
         }
-        if (credentialsClient instanceof ServiceClient) {
-            ((ServiceClient) credentialsClient).registerLivenessChecks(handler);
+        if (credentialsClient instanceof ServiceClient client) {
+            client.registerLivenessChecks(handler);
         }
-        if (commandRouterClient instanceof ServiceClient) {
-            ((ServiceClient) commandRouterClient).registerLivenessChecks(handler);
+        if (commandRouterClient instanceof ServiceClient client) {
+            client.registerLivenessChecks(handler);
         }
         messagingClientProviders.registerLivenessChecks(handler);
     }

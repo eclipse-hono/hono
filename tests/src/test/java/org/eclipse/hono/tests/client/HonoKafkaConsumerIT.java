@@ -164,7 +164,8 @@ public class HonoKafkaConsumerIT {
     @ParameterizedTest
     @MethodSource("partitionAssignmentStrategies")
     @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
-    public void testConsumerReadsLatestRecordsPublishedAfterStart(final String partitionAssignmentStrategy,
+    public void testConsumerReadsLatestRecordsPublishedAfterStart(
+            final String partitionAssignmentStrategy,
             final VertxTestContext ctx) throws InterruptedException {
         final int numTopics = 2;
         final int numPartitions = 5;
@@ -200,10 +201,14 @@ public class HonoKafkaConsumerIT {
         };
         kafkaConsumer = new HonoKafkaConsumer<>(vertx, topics, recordHandler, consumerConfig);
         // start consumer
-        kafkaConsumer.start().onComplete(ctx.succeeding(v -> {
-            LOG.debug("consumer started, publish record to be received by the consumer");
-            publish(publishTestTopic, publishedAfterStartRecordKey, Buffer.buffer("testPayload"));
-        }));
+        final Promise<Void> readyTracker = Promise.promise();
+        kafkaConsumer.addOnKafkaConsumerReadyHandler(readyTracker);
+        kafkaConsumer.start()
+            .compose(ok -> readyTracker.future())
+            .onComplete(ctx.succeeding(v -> {
+                LOG.debug("consumer started, publish record to be received by the consumer");
+                publish(publishTestTopic, publishedAfterStartRecordKey, Buffer.buffer("testPayload"));
+            }));
 
         if (!ctx.awaitCompletion(9, TimeUnit.SECONDS)) {
             ctx.failNow(new IllegalStateException("timeout waiting for record to be received"));
@@ -220,7 +225,9 @@ public class HonoKafkaConsumerIT {
      */
     @Test
     @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
-    public void testConsumerReadsLatestRecordsPublishedAfterOutOfRangeOffsetReset(final VertxTestContext ctx) throws InterruptedException {
+    public void testConsumerReadsLatestRecordsPublishedAfterOutOfRangeOffsetReset(final VertxTestContext ctx)
+            throws InterruptedException {
+
         final int numTopics = 1;
         final int numTestRecordsPerTopicPerRound = 20;
         final int numPartitions = 1; // has to be 1 here because we expect partition 0 to contain *all* the records published for a topic
@@ -274,13 +281,19 @@ public class HonoKafkaConsumerIT {
 
         kafkaConsumer = new HonoKafkaConsumer<>(vertx, topics, recordHandler, consumerConfig);
         // first start of consumer, letting it commit offsets
-        kafkaConsumer.start().onComplete(ctx.succeeding(v -> {
-            LOG.trace("consumer started, publish first round of records to be received by the consumer (so that it has offsets to commit)");
-            publishRecords(numTestRecordsPerTopicPerRound, "round1_", topics);
-        }));
+        final Promise<Void> readyTracker = Promise.promise();
+        kafkaConsumer.addOnKafkaConsumerReadyHandler(readyTracker);
+        kafkaConsumer.start()
+            .compose(ok -> readyTracker.future())
+            .onComplete(ctx.succeeding(v -> {
+                LOG.trace("consumer started, publish first round of records to be received by the consumer (so that it has offsets to commit)");
+                publishRecords(numTestRecordsPerTopicPerRound, "round1_", topics);
+            }));
 
-        assertThat(firstConsumerInstanceStartedAndStopped.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(),
-                TimeUnit.SECONDS)).isTrue();
+        assertThat(firstConsumerInstanceStartedAndStopped.awaitCompletion(
+                IntegrationTestSupport.getTestSetupTimeout(),
+                TimeUnit.SECONDS))
+            .isTrue();
         if (firstConsumerInstanceStartedAndStopped.failed()) {
             ctx.failNow(firstConsumerInstanceStartedAndStopped.causeOfFailure());
             return;
@@ -306,11 +319,15 @@ public class HonoKafkaConsumerIT {
         publishRecords(numTestRecordsPerTopicPerRound, "round3_", topics)
                 .onFailure(ctx::failNow)
                 .onSuccess(v -> {
+                    final Promise<Void> newReadyTracker = Promise.promise();
                     kafkaConsumer = new HonoKafkaConsumer<>(vertx, topics, recordHandler2, consumerConfig);
-                    kafkaConsumer.start().onComplete(ctx.succeeding(v2 -> {
-                        LOG.debug("consumer started, publish another record to be received by the consumer");
-                        publish(publishTestTopic, lastRecordKey, Buffer.buffer("testPayload"));
-                    }));
+                    kafkaConsumer.addOnKafkaConsumerReadyHandler(newReadyTracker);
+                    kafkaConsumer.start()
+                        .compose(ok -> newReadyTracker.future())
+                        .onComplete(ctx.succeeding(v2 -> {
+                            LOG.debug("consumer started, publish another record to be received by the consumer");
+                            publish(publishTestTopic, lastRecordKey, Buffer.buffer("testPayload"));
+                        }));
                 });
 
         if (!ctx.awaitCompletion(9, TimeUnit.SECONDS)) {
@@ -420,30 +437,34 @@ public class HonoKafkaConsumerIT {
         };
         kafkaConsumer = new HonoKafkaConsumer<>(vertx, topicPattern, recordHandler, consumerConfig);
         // start consumer
-        kafkaConsumer.start().onComplete(ctx.succeeding(v -> {
-            ctx.verify(() -> {
-                assertThat(receivedRecords.size()).isEqualTo(0);
-            });
-            final Promise<Void> nextRecordReceivedPromise = Promise.promise();
-            nextRecordReceivedPromiseRef.set(nextRecordReceivedPromise);
-
-            LOG.debug("consumer started, create new topic implicitly by invoking ensureTopicIsAmongSubscribedTopicPatternTopics()");
-            final String newTopic = patternPrefix + "new";
-            final String recordKey = "addedAfterStartKey";
-            kafkaConsumer.ensureTopicIsAmongSubscribedTopicPatternTopics(newTopic)
-                    .onComplete(ctx.succeeding(v2 -> {
-                        LOG.debug("publish record to be received by the consumer");
-                        publish(newTopic, recordKey, Buffer.buffer("testPayload"));
-                    }));
-
-            nextRecordReceivedPromise.future().onComplete(ar -> {
+        final Promise<Void> readyTracker = Promise.promise();
+        kafkaConsumer.addOnKafkaConsumerReadyHandler(readyTracker);
+        kafkaConsumer.start()
+            .compose(ok -> readyTracker.future())
+            .onComplete(ctx.succeeding(v -> {
                 ctx.verify(() -> {
-                    assertThat(receivedRecords.size()).isEqualTo(1);
-                    assertThat(receivedRecords.get(0).key()).isEqualTo(recordKey);
+                    assertThat(receivedRecords.size()).isEqualTo(0);
                 });
-                ctx.completeNow();
-            });
-        }));
+                final Promise<Void> nextRecordReceivedPromise = Promise.promise();
+                nextRecordReceivedPromiseRef.set(nextRecordReceivedPromise);
+
+                LOG.debug("consumer started, create new topic implicitly by invoking ensureTopicIsAmongSubscribedTopicPatternTopics()");
+                final String newTopic = patternPrefix + "new";
+                final String recordKey = "addedAfterStartKey";
+                kafkaConsumer.ensureTopicIsAmongSubscribedTopicPatternTopics(newTopic)
+                        .onComplete(ctx.succeeding(v2 -> {
+                            LOG.debug("publish record to be received by the consumer");
+                            publish(newTopic, recordKey, Buffer.buffer("testPayload"));
+                        }));
+
+                nextRecordReceivedPromise.future().onComplete(ar -> {
+                    ctx.verify(() -> {
+                        assertThat(receivedRecords.size()).isEqualTo(1);
+                        assertThat(receivedRecords.get(0).key()).isEqualTo(recordKey);
+                    });
+                    ctx.completeNow();
+                });
+            }));
     }
 
     /**
@@ -480,28 +501,32 @@ public class HonoKafkaConsumerIT {
 
         kafkaConsumer = new HonoKafkaConsumer<>(vertx, topicPattern, recordHandler, consumerConfig);
         // start consumer
-        kafkaConsumer.start().onComplete(ctx.succeeding(v -> {
-            ctx.verify(() -> {
-                assertThat(receivedRecords.size()).isEqualTo(0);
-            });
-            LOG.debug("consumer started, create new topics implicitly by invoking ensureTopicIsAmongSubscribedTopicPatternTopics()");
-            final String recordKey = "addedAfterStartKey";
-            for (int i = 0; i < numTopicsAndRecords; i++) {
-                final String topic = patternPrefix + i;
-                kafkaConsumer.ensureTopicIsAmongSubscribedTopicPatternTopics(topic)
-                        .onComplete(ctx.succeeding(v2 -> {
-                            LOG.debug("publish record to be received by the consumer");
-                            publish(topic, recordKey, Buffer.buffer("testPayload"));
-                        }));
-            }
-            allRecordsReceivedPromise.future().onComplete(ar -> {
+        final Promise<Void> readyTracker = Promise.promise();
+        kafkaConsumer.addOnKafkaConsumerReadyHandler(readyTracker);
+        kafkaConsumer.start()
+            .compose(ok -> readyTracker.future())
+            .onComplete(ctx.succeeding(v -> {
                 ctx.verify(() -> {
-                    assertThat(receivedRecords.size()).isEqualTo(numTopicsAndRecords);
-                    receivedRecords.forEach(record -> assertThat(record.key()).isEqualTo(recordKey));
+                    assertThat(receivedRecords.size()).isEqualTo(0);
                 });
-                ctx.completeNow();
-            });
-        }));
+                LOG.debug("consumer started, create new topics implicitly by invoking ensureTopicIsAmongSubscribedTopicPatternTopics()");
+                final String recordKey = "addedAfterStartKey";
+                for (int i = 0; i < numTopicsAndRecords; i++) {
+                    final String topic = patternPrefix + i;
+                    kafkaConsumer.ensureTopicIsAmongSubscribedTopicPatternTopics(topic)
+                            .onComplete(ctx.succeeding(v2 -> {
+                                LOG.debug("publish record to be received by the consumer");
+                                publish(topic, recordKey, Buffer.buffer("testPayload"));
+                            }));
+                }
+                allRecordsReceivedPromise.future().onComplete(ar -> {
+                    ctx.verify(() -> {
+                        assertThat(receivedRecords.size()).isEqualTo(numTopicsAndRecords);
+                        receivedRecords.forEach(record -> assertThat(record.key()).isEqualTo(recordKey));
+                    });
+                    ctx.completeNow();
+                });
+            }));
         if (!ctx.awaitCompletion(9, TimeUnit.SECONDS)) {
             ctx.failNow(new IllegalStateException(String.format(
                     "timeout waiting for expected number of records (%d) to be received; received records: %d",
@@ -554,17 +579,21 @@ public class HonoKafkaConsumerIT {
         };
         kafkaConsumer = new HonoKafkaConsumer<>(vertx, topics, recordHandler, consumerConfig);
         // start consumer
-        kafkaConsumer.start().onComplete(ctx.succeeding(v -> {
-            ctx.verify(() -> {
-                assertThat(receivedRecords.size()).isEqualTo(0);
-            });
-            allRecordsReceivedPromise.future().onComplete(ar -> {
+        final Promise<Void> readyTracker = Promise.promise();
+        kafkaConsumer.addOnKafkaConsumerReadyHandler(readyTracker);
+        kafkaConsumer.start()
+            .compose(ok -> readyTracker.future())
+            .onComplete(ctx.succeeding(v -> {
                 ctx.verify(() -> {
-                    assertThat(receivedRecords.size()).isEqualTo(totalExpectedMessages);
+                    assertThat(receivedRecords.size()).isEqualTo(0);
                 });
-                ctx.completeNow();
-            });
-        }));
+                allRecordsReceivedPromise.future().onComplete(ar -> {
+                    ctx.verify(() -> {
+                        assertThat(receivedRecords.size()).isEqualTo(totalExpectedMessages);
+                    });
+                    ctx.completeNow();
+                });
+            }));
     }
 
     /**
@@ -597,25 +626,29 @@ public class HonoKafkaConsumerIT {
         topicsToDeleteAfterTests.add(topic);
         kafkaConsumer = new HonoKafkaConsumer<>(vertx, Set.of(topic), recordHandler, consumerConfig);
         // start consumer
-        kafkaConsumer.start().onComplete(ctx.succeeding(v -> {
-            ctx.verify(() -> {
-                assertThat(receivedRecords.size()).isEqualTo(0);
-            });
-            final Promise<Void> nextRecordReceivedPromise = Promise.promise();
-            nextRecordReceivedPromiseRef.set(nextRecordReceivedPromise);
-
-            LOG.debug("consumer started, publish record to be received by the consumer");
-            final String recordKey = "addedAfterStartKey";
-            publish(topic, recordKey, Buffer.buffer("testPayload"));
-
-            nextRecordReceivedPromise.future().onComplete(ar -> {
+        final Promise<Void> readyTracker = Promise.promise();
+        kafkaConsumer.addOnKafkaConsumerReadyHandler(readyTracker);
+        kafkaConsumer.start()
+            .compose(ok -> readyTracker.future())
+            .onComplete(ctx.succeeding(v -> {
                 ctx.verify(() -> {
-                    assertThat(receivedRecords.size()).isEqualTo(1);
-                    assertThat(receivedRecords.get(0).key()).isEqualTo(recordKey);
+                    assertThat(receivedRecords.size()).isEqualTo(0);
                 });
-                ctx.completeNow();
-            });
-        }));
+                final Promise<Void> nextRecordReceivedPromise = Promise.promise();
+                nextRecordReceivedPromiseRef.set(nextRecordReceivedPromise);
+
+                LOG.debug("consumer started, publish record to be received by the consumer");
+                final String recordKey = "addedAfterStartKey";
+                publish(topic, recordKey, Buffer.buffer("testPayload"));
+
+                nextRecordReceivedPromise.future().onComplete(ar -> {
+                    ctx.verify(() -> {
+                        assertThat(receivedRecords.size()).isEqualTo(1);
+                        assertThat(receivedRecords.get(0).key()).isEqualTo(recordKey);
+                    });
+                    ctx.completeNow();
+                });
+            }));
     }
 
     private static Future<Void> createTopics(final Collection<String> topicNames, final int numPartitions) {

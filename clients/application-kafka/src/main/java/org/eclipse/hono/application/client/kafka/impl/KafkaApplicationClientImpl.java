@@ -38,6 +38,7 @@ import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
@@ -106,7 +107,8 @@ public class KafkaApplicationClientImpl extends KafkaBasedCommandSender implemen
     public Future<Void> stop() {
         // stop created consumers
         final List<Future> closeKafkaClientsTracker = consumersToCloseOnStop.stream()
-                .map(MessageConsumer::close).collect(Collectors.toList());
+                .map(MessageConsumer::close)
+                .collect(Collectors.toList());
         // add command sender related clients
         closeKafkaClientsTracker.add(super.stop());
         return CompositeFuture.join(closeKafkaClientsTracker)
@@ -165,12 +167,15 @@ public class KafkaApplicationClientImpl extends KafkaBasedCommandSender implemen
         final Handler<KafkaConsumerRecord<String, Buffer>> recordHandler = record -> {
             messageHandler.handle(new KafkaDownstreamMessage(record));
         };
+        final Promise<Void> readyTracker = Promise.promise();
         final HonoKafkaConsumer<Buffer> consumer = new HonoKafkaConsumer<>(vertx, Set.of(topic), recordHandler,
                 consumerConfig.getConsumerConfig(type.toString()));
         consumer.setPollTimeout(Duration.ofMillis(consumerConfig.getPollTimeout()));
+        consumer.addOnKafkaConsumerReadyHandler(readyTracker);
         Optional.ofNullable(kafkaConsumerSupplier)
                 .ifPresent(consumer::setKafkaConsumerSupplier);
         return consumer.start()
+                .compose(ok -> readyTracker.future())
                 .map(v -> (MessageConsumer) new MessageConsumer() {
                     @Override
                     public Future<Void> close() {
