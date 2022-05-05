@@ -17,7 +17,7 @@
 
 /adapters/sigfox-vertx/               @ctron
 
-/cli/                                 @calohmn
+/cli-quarkus/                         @calohmn
 /client/                              @calohmn
 /client-device-connection-infinispan/ @calohmn @sophokles73
 
