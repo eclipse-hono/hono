@@ -187,10 +187,7 @@ public abstract class AbstractKafkaBasedMessageSender<V> implements MessagingCli
             return Future.succeededFuture();
         }
 
-        final var result = lifecycleStatus.newStopAttempt();
-        producerFactory.closeProducer(producerName)
-            .onSuccess(ok -> lifecycleStatus.setStopped());
-        return result.future();
+        return lifecycleStatus.runStopAttempt(this::stopProducer);
     }
 
     /**
@@ -291,6 +288,15 @@ public abstract class AbstractKafkaBasedMessageSender<V> implements MessagingCli
      */
     protected final KafkaProducer<String, V> getOrCreateProducer() {
         return producerFactory.getOrCreateProducer(producerName, config);
+    }
+
+    /**
+     * Closes the producer used for sending records.
+     *
+     * @return The outcome of the attempt to close the producer.
+     */
+    protected final Future<Void> stopProducer() {
+        return producerFactory.closeProducer(producerName);
     }
 
     /**

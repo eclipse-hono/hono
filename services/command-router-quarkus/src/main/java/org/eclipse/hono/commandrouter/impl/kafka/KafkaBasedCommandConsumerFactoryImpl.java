@@ -277,10 +277,8 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
             return Future.succeededFuture();
         }
 
-        final var result = lifecycleStatus.newStopAttempt();
-        CompositeFuture.join(kafkaConsumer.stop(), commandHandler.stop())
-            .onSuccess(ok -> lifecycleStatus.setStopped());
-        return result.future();
+        return lifecycleStatus.runStopAttempt(() -> CompositeFuture.join(kafkaConsumer.stop(), commandHandler.stop())
+                .mapEmpty());
     }
 
     @Override

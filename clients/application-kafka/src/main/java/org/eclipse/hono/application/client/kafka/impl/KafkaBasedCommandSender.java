@@ -113,15 +113,22 @@ public class KafkaBasedCommandSender extends AbstractKafkaBasedMessageSender<Buf
     @Override
     public Future<Void> stop() {
 
-        return super.stop()
-                .compose(ok -> {
-                    // assemble futures for closing the command response consumers
-                    final List<Future> stopKafkaClientsTracker = commandResponseConsumers.values().stream()
-                            .map(HonoKafkaConsumer::stop)
-                            .collect(Collectors.toList());
-                    commandResponseConsumers.clear();
-                    return CompositeFuture.join(stopKafkaClientsTracker).mapEmpty();
-                });
+        if (lifecycleStatus.isStopped()) {
+            // nothing to do
+            return Future.succeededFuture();
+        }
+
+        return lifecycleStatus.runStopAttempt(() -> {
+            // assemble futures for closing the command response consumers
+            final List<Future> stopConsumersTracker = commandResponseConsumers.values().stream()
+                    .map(HonoKafkaConsumer::stop)
+                    .collect(Collectors.toList());
+            commandResponseConsumers.clear();
+            return CompositeFuture.join(
+                    stopProducer(),
+                    CompositeFuture.join(stopConsumersTracker))
+                .mapEmpty();
+        });
     }
 
     /**

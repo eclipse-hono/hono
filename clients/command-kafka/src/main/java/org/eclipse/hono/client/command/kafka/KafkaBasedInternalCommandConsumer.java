@@ -372,14 +372,13 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
             return Future.succeededFuture();
         }
 
-        final var result = lifecycleStatus.newStopAttempt();
-        retryCreateTopic.set(false);
-        vertx.cancelTimer(retryCreateTopicTimerId);
+        return lifecycleStatus.runStopAttempt(() -> {
+            retryCreateTopic.set(false);
+            vertx.cancelTimer(retryCreateTopicTimerId);
 
-        CompositeFuture.all(closeAdminClient(), closeConsumer())
-            .map((Void) null)
-            .onSuccess(ok -> lifecycleStatus.setStopped());
-        return result.future();
+            return CompositeFuture.all(closeAdminClient(), closeConsumer())
+                .mapEmpty();
+        });
     }
 
     private Future<Void> closeAdminClient() {

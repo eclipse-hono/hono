@@ -963,22 +963,21 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
             return Future.succeededFuture();
         }
 
-        final var result = lifecycleStatus.newStopAttempt();
-        if (pollPauseTimeoutTimerId != null) {
-            vertx.cancelTimer(pollPauseTimeoutTimerId);
-            pollPauseTimeoutTimerId = null;
-        }
+        return lifecycleStatus.runStopAttempt(() -> {
+            if (pollPauseTimeoutTimerId != null) {
+                vertx.cancelTimer(pollPauseTimeoutTimerId);
+                pollPauseTimeoutTimerId = null;
+            }
 
-        Optional.ofNullable(kafkaConsumer)
-            .map(consumer -> consumer.close()
-                    .onComplete(ar -> {
-                        Optional.ofNullable(metricsSupport)
-                            .ifPresent(ms -> ms.unregisterKafkaConsumer(kafkaConsumer.unwrap()));
-                    }))
-            .orElseGet(Future::succeededFuture)
-            .onFailure(t -> LOG.info("error stopping Kafka consumer", t))
-            .onSuccess(ok -> lifecycleStatus.setStopped());
-        return result.future();
+            return Optional.ofNullable(kafkaConsumer)
+                .map(consumer -> consumer.close()
+                        .onComplete(ar -> {
+                            Optional.ofNullable(metricsSupport)
+                                .ifPresent(ms -> ms.unregisterKafkaConsumer(kafkaConsumer.unwrap()));
+                        }))
+                .orElseGet(Future::succeededFuture)
+                .onFailure(t -> LOG.info("error stopping Kafka consumer", t));
+        });
     }
 
     /**
