@@ -790,7 +790,13 @@ public class AsyncHandlingAutoCommitKafkaConsumerTest {
         // do a rebalance with the currently assigned partition not being assigned anymore after it
         mockConsumer.updateBeginningOffsets(Map.of(TOPIC2_PARTITION, 0L));
         mockConsumer.updateEndOffsets(Map.of(TOPIC2_PARTITION, 0L));
+        final CountDownLatch rebalanceWithTopic2Done = new CountDownLatch(1);
+        consumer.setOnPartitionsAssignedHandler(partitions -> {
+            rebalanceWithTopic2Done.countDown();
+        });
         mockConsumer.rebalance(List.of(TOPIC2_PARTITION));
+        rebalanceWithTopic2Done.await();
+
         // mark the handling of some records as completed
         recordsHandlingPromiseMap.get(0L).complete();
         recordsHandlingPromiseMap.get(1L).complete();
