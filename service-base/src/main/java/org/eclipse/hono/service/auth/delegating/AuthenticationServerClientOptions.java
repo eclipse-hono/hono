@@ -16,7 +16,7 @@ package org.eclipse.hono.service.auth.delegating;
 import java.util.List;
 
 import org.eclipse.hono.client.amqp.config.ClientOptions;
-import org.eclipse.hono.config.quarkus.SignatureSupportingOptions;
+import org.eclipse.hono.config.SignatureSupportingOptions;
 
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.ConfigMapping.NamingStrategy;

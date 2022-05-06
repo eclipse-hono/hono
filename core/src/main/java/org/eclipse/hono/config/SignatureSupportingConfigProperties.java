@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,8 +14,6 @@ package org.eclipse.hono.config;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
-
-import org.eclipse.hono.config.quarkus.SignatureSupportingOptions;
 
 /**
  * Common properties required for creating/validating cryptographic signatures.

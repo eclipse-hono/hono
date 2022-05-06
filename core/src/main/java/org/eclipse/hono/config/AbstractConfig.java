@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-import org.eclipse.hono.config.quarkus.GenericOptions;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.PortConfigurationHelper;
 import org.eclipse.hono.util.Strings;

@@ -28,7 +28,7 @@ import org.eclipse.hono.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.client.telemetry.kafka.KafkaBasedEventSender;
 import org.eclipse.hono.client.util.MessagingClientProvider;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.config.quarkus.ServiceOptions;
+import org.eclipse.hono.config.ServiceOptions;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryAmqpServer;
 import org.eclipse.hono.deviceregistry.service.credentials.AbstractCredentialsService;
 import org.eclipse.hono.deviceregistry.service.device.AbstractRegistrationService;

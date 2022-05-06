@@ -16,7 +16,6 @@ package org.eclipse.hono.config;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
-import org.eclipse.hono.config.quarkus.ServiceOptions;
 import org.eclipse.hono.util.RegistryManagementConstants;
 
 /**

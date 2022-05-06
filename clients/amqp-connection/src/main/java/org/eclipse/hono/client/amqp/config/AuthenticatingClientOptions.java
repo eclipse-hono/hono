@@ -15,7 +15,7 @@ package org.eclipse.hono.client.amqp.config;
 
 import java.util.Optional;
 
-import org.eclipse.hono.config.quarkus.GenericOptions;
+import org.eclipse.hono.config.GenericOptions;
 import org.eclipse.hono.util.Constants;
 
 import io.smallrye.config.WithDefault;

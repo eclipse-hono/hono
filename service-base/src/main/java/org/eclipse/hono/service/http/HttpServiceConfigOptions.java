@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.service.http;
 
-import org.eclipse.hono.config.quarkus.ServiceOptions;
+import org.eclipse.hono.config.ServiceOptions;
 
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;

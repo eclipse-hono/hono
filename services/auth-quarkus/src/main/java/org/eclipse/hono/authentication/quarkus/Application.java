@@ -23,7 +23,7 @@ import org.eclipse.hono.authentication.file.FileBasedAuthenticationService;
 import org.eclipse.hono.authentication.file.FileBasedAuthenticationServiceConfigProperties;
 import org.eclipse.hono.authentication.file.FileBasedAuthenticationServiceOptions;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.config.quarkus.ServiceOptions;
+import org.eclipse.hono.config.ServiceOptions;
 import org.eclipse.hono.service.AbstractServiceApplication;
 import org.eclipse.hono.service.auth.AuthTokenHelper;
 import org.eclipse.hono.service.auth.AuthTokenHelperImpl;

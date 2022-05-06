@@ -25,7 +25,7 @@ import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.client.amqp.config.ClientOptions;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.device.amqp.AmqpAdapterClient;
-import org.eclipse.hono.config.quarkus.ServerOptions;
+import org.eclipse.hono.config.ServerOptions;
 import org.eclipse.hono.util.Constants;
 
 import io.smallrye.config.ConfigMapping;

@@ -12,13 +12,15 @@
  */
 
 
-package org.eclipse.hono.config.quarkus;
+package org.eclipse.hono.config;
 
 import static com.google.common.truth.Truth.assertThat;
 
 import org.eclipse.hono.config.FileFormat;
 import org.eclipse.hono.config.ServerConfig;
+import org.eclipse.hono.config.ServerOptions;
 import org.eclipse.hono.config.ServiceConfigProperties;
+import org.eclipse.hono.config.ServiceOptions;
 import org.eclipse.hono.test.ConfigMappingSupport;
 import org.junit.jupiter.api.Test;
 
@@ -26,7 +28,7 @@ import org.junit.jupiter.api.Test;
  * Tests verifying the mapping of YAML properties to configuration classes.
  *
  */
-class QuarkusConfigMappingTest {
+class ConfigMappingTest {
 
     /**
      * Verifies that Quarkus correctly binds properties from a yaml file to a
