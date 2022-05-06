@@ -12,7 +12,6 @@
  */
 package org.eclipse.hono.service.quarkus;
 
-import java.net.URI;
 import java.util.List;
 
 import io.opentelemetry.api.common.Attributes;
@@ -43,23 +42,12 @@ public class DropHttpRequestSpansSampler implements Sampler {
     public SamplingResult shouldSample(final Context parentContext, final String traceId, final String spanName, final SpanKind spanKind,
             final Attributes attributes, final List<LinkData> parentLinks) {
         if (spanKind.equals(SpanKind.SERVER)) {
-            final String httpTargetPath = getHttpTargetPath(attributes.get(SemanticAttributes.HTTP_TARGET));
-            if (httpTargetPath != null && !httpTargetPath.isBlank() && httpTargetPath.equals(spanName)) {
+            final String httpTarget = attributes.get(SemanticAttributes.HTTP_TARGET);
+            if (httpTarget != null && httpTarget.equals(spanName)) {
                 return SamplingResult.drop();
             }
         }
         return sampler.shouldSample(parentContext, traceId, spanName, spanKind, attributes, parentLinks);
-    }
-
-    private String getHttpTargetPath(final String httpTarget) {
-        if (httpTarget != null) {
-            try {
-                return URI.create(httpTarget).getPath();
-            } catch (final IllegalArgumentException e) {
-                // ignore
-            }
-        }
-        return null;
     }
 
     @Override
