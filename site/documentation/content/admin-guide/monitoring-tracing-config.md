@@ -113,20 +113,28 @@ to generate, emit, collect, process and export tracing data.
 The Hono container images all can be configured to send tracing data to an
 [OpenTelemetry collector](https://opentelemetry.io/docs/collector/) from which data can be exported to a back-end like
 Jaeger. The decision, whether a trace should be sampled and exported, controlling the amount of tracing data to be
-collected, is configured by means of a sampler configuration.
+collected, is configured by means of a *Sampler* configuration.
 
-The table below provides an overview of the configuration properties regarding the sampler and the trace exporter, for
-exporting to an OpenTelemetry collector.
+Hono supports configuration of the sampler and trace exporter by means of the following configuration properties:
 
-| OS Environment Variable<br>Java System Property | Type          | Default Value | Description  |
-| :---------------------------------------------- | :------------ | :------------ | :------------|
-| `QUARKUS_OPENTELEMETRY_TRACER_SAMPLER`<br>`quarkus.opentelemetry.tracer.sampler` | *string* | `on` | The sampler to use for tracing. Valid values are `off` to export no traces at all, `on` to export *all* traces and `ratio` to define a ratio of traces to be exported.<br>In order to configure a rate-limiting sampler, a system property or environment variable `OTEL_TRACES_SAMPLER` can be set with value `rate-limiting`. The limit in terms of maximum traces per seconds then needs to be configured using a `OTEL_TRACES_SAMPLER_ARG` system property or environment variable.  |
+| OS Environment Variable<br>Java System Property | Type      | Default Value | Description  |
+| :---------------------------------------------- | :-------- | :------------ | :------------|
+| `QUARKUS_OPENTELEMETRY_TRACER_SAMPLER`<br>`quarkus.opentelemetry.tracer.sampler` | *string* | `on` | The sampler to use for determining if a tracing span should be reported. Valid values are `off` to export no traces at all, `on` to export *all* traces and `ratio` to define a ratio of traces to be exported.<br>In order to configure a rate-limiting sampler, a system property or environment variable `OTEL_TRACES_SAMPLER` can be set with value `rate-limiting`. The limit in terms of maximum traces per seconds then needs to be configured using a `OTEL_TRACES_SAMPLER_ARG` system property or environment variable. |
 | `QUARKUS_OPENTELEMETRY_TRACER_SAMPLER_RATIO`<br>`quarkus.opentelemetry.tracer.sampler.ratio` | *double* | | The ratio of traces to be exported. To be used if the sampler is set to `ratio`. Must be within `[0.0, 1.0]`. Note that in a YAML configuration, the `ratio` sampler has to be configured [using `~` as key](https://quarkus.io/guides/config-yaml#configuration-key-conflicts), in order to set the ratio value as well. Example:<br><code>sampler:<br>&nbsp;&nbsp;~: ratio<br>&nbsp;&nbsp;ratio: 0.8</code> |
-| `QUARKUS_OPENTELEMETRY_TRACER_EXPORTER_OTLP_ENDPOINT`<br>`quarkus.opentelemetry.tracer.exporter.otlp.endpoint` | *string* | | The OTLP endpoint of the OpenTelemetry Collector to connect to. The endpoint must start with either `http://` or `https://`. |
+| `QUARKUS_OPENTELEMETRY_TRACER_EXPORTER_OTLP_ENDPOINT`<br>`quarkus.opentelemetry.tracer.exporter.otlp.endpoint` | *string* | `-` | The OTLP endpoint of the OpenTelemetry Collector to connect to. The endpoint must start with either `http://` or `https://`. |
 
 Please refer to the
 [Quarkus OpenTelemetry documentation](https://quarkus.io/guides/opentelemetry#quarkus-opentelemetry-exporter-otlp_configuration)
-for further configuration trace exporter options.
+for further configuration options for the tracer exporter.
+
+Alternatively, the sampler can be configured using the following
+[OpenTelemetry SDK](https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/#general-sdk-configuration)
+configuration properties. These properties, if set, take precendence over the corresponding Quarkus specific properties.
+
+| OS Environment Variable<br>Java System Property | Type      | Default Value | Description  |
+| :---------------------------------------------- | :-------- | :------------ | :------------|
+| `OTEL_TRACER_SAMPLER`<br>`otel.tracer.sampler`        | *string*  | `always_on`     | The sampler to use for determining if a tracing span should be reported. Please refer to the [OpenTelemetry documentation](https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/#general-sdk-configuration) for supported values.<br>In addition to the standard samplers, a rate-limiting sampler can be configured by setting this property to `rate_limiting` or `rate-limiting` and using the `OTEL_TRACES_SAMPLER_ARG` property to set the maximum number of traces to report per second. |
+| `OTEL_TRACER_SAMPLER_ARG`<br>`otel.tracer.sampler.arg`  | *string*  | `-`           | A value to be used as the sampler argument. The specified value will only be used if `OTEL_TRACES_SAMPLER` is set. Each sampler type defines its own expected input, if any. Please refer to the [OpenTelemetry documentation](https://opentelemetry.io/docs/reference/specification/sdk-environment-variables/#general-sdk-configuration) for details. |
 
 In order to integrate traces from Hono with those from other applications, Hono supports reading and writing trace
 context information from and to messages exchanged with these applications. This is done according to the

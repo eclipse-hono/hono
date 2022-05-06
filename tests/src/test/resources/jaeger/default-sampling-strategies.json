@@ -1,6 +1,13 @@
 {
   "service_strategies": [
     {
+      "service": "${hono.auth.host}",
+      "type": "probabilistic",
+      "param": 1.0,
+      "operation_strategies": [
+      ]
+    },
+    {
       "service": "${hono.registration.host}",
       "type": "probabilistic",
       "param": 1.0,
@@ -41,10 +48,17 @@
       "param": 1.0,
       "operation_strategies": [
       ]
+    },
+    {
+      "service": "${hono.lora-adapter.host}",
+      "type": "probabilistic",
+      "param": 1.0,
+      "operation_strategies": [
+      ]
     }
   ],
   "default_strategy": {
     "type": "probabilistic",
-    "param": 1.0
+    "param": 0.1
   }
 }

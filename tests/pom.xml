@@ -827,9 +827,9 @@
                       prevents the container from swapping at all.
                       This way we can force the same behavior for running the integration
                       tests on both a local machine (which usually has swap space available) as
-                      well as on Travis where there is no swap space available on the build job VMs.
+                      well as on CI infrastructure where there usually is no swap space available.
                       We can thus detect OOM problems when running locally as opposed to only
-                      later on Travis.
+                      later on CI infrastructure.
                      -->
                     <memorySwap>314572800</memorySwap>
                     <memory>314572800</memory>
@@ -904,14 +904,14 @@
                       <name>${custom.network.name}</name>
                       <alias>${hono.auth.host}</alias>
                     </network>
-                    <!-- 
+                    <!--
                       Setting the swap property to the same value as the memory property effectively
                       prevents the container from swapping at all.
                       This way we can force the same behavior for running the integration
                       tests on both a local machine (which usually has swap space available) as
-                      well as on Travis where there is no swap space available on the build job VMs.
+                      well as on CI infrastructure where there usually is no swap space available.
                       We can thus detect OOM problems when running locally as opposed to only
-                      later on Travis.
+                      later on CI infrastructure.
                      -->
                     <memorySwap>${hono.auth-server.max-mem}</memorySwap>
                     <memory>${hono.auth-server.max-mem}</memory>
@@ -926,6 +926,9 @@
                       </QUARKUS_CONFIG_LOCATIONS>
                       <JDK_JAVA_OPTIONS>${hono.auth-server.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
+                      <OTEL_SERVICE_NAME>${hono.auth.host}</OTEL_SERVICE_NAME>
+                      <OTEL_TRACES_SAMPLER>jaeger_remote</OTEL_TRACES_SAMPLER>
+                      <OTEL_TRACES_SAMPLER_ARG>endpoint=http://${jaeger.host}:14250</OTEL_TRACES_SAMPLER_ARG>
                     </env>
                     <log>
                       <prefix>AUTH</prefix>
@@ -1261,6 +1264,9 @@
                       </QUARKUS_CONFIG_LOCATIONS>
                       <JDK_JAVA_OPTIONS>${hono.deviceregistry.mongodb.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
+                      <OTEL_SERVICE_NAME>${hono.registration.host}</OTEL_SERVICE_NAME>
+                      <OTEL_TRACES_SAMPLER>jaeger_remote</OTEL_TRACES_SAMPLER>
+                      <OTEL_TRACES_SAMPLER_ARG>endpoint=http://${jaeger.host}:14250</OTEL_TRACES_SAMPLER_ARG>
                     </env>
                     <log>
                       <prefix>REGISTRY</prefix>
@@ -1357,6 +1363,9 @@
                       </QUARKUS_CONFIG_LOCATIONS>
                       <JDK_JAVA_OPTIONS>${hono.deviceregistry.jdbc.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
+                      <OTEL_SERVICE_NAME>${hono.registration.host}</OTEL_SERVICE_NAME>
+                      <OTEL_TRACES_SAMPLER>jaeger_remote</OTEL_TRACES_SAMPLER>
+                      <OTEL_TRACES_SAMPLER_ARG>endpoint=http://${jaeger.host}:14250</OTEL_TRACES_SAMPLER_ARG>
                     </env>
                     <log>
                       <prefix>REGISTRY</prefix>
@@ -1434,6 +1443,9 @@
                       </QUARKUS_CONFIG_LOCATIONS>
                       <JDK_JAVA_OPTIONS>${hono.command-router.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
+                      <OTEL_SERVICE_NAME>${hono.commandrouter.host}</OTEL_SERVICE_NAME>
+                      <OTEL_TRACES_SAMPLER>jaeger_remote</OTEL_TRACES_SAMPLER>
+                      <OTEL_TRACES_SAMPLER_ARG>endpoint=http://${jaeger.host}:14250</OTEL_TRACES_SAMPLER_ARG>
                     </env>
                     <log>
                       <prefix>CMDROUTER</prefix>
@@ -1518,6 +1530,9 @@
                       </QUARKUS_CONFIG_LOCATIONS>
                       <JDK_JAVA_OPTIONS>${hono.http-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
+                      <OTEL_SERVICE_NAME>${hono.http-adapter.host}</OTEL_SERVICE_NAME>
+                      <OTEL_TRACES_SAMPLER>jaeger_remote</OTEL_TRACES_SAMPLER>
+                      <OTEL_TRACES_SAMPLER_ARG>endpoint=http://${jaeger.host}:14250</OTEL_TRACES_SAMPLER_ARG>
                     </env>
                     <log>
                       <prefix>HTTP</prefix>
@@ -1591,6 +1606,9 @@
                       </QUARKUS_CONFIG_LOCATIONS>
                       <JDK_JAVA_OPTIONS>${hono.mqtt-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
+                      <OTEL_SERVICE_NAME>${hono.mqtt-adapter.host}</OTEL_SERVICE_NAME>
+                      <OTEL_TRACES_SAMPLER>jaeger_remote</OTEL_TRACES_SAMPLER>
+                      <OTEL_TRACES_SAMPLER_ARG>endpoint=http://${jaeger.host}:14250</OTEL_TRACES_SAMPLER_ARG>
                     </env>
                     <log>
                       <prefix>MQTT</prefix>
@@ -1665,6 +1683,9 @@
                       </QUARKUS_CONFIG_LOCATIONS>
                       <JDK_JAVA_OPTIONS>${hono.amqp-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
+                      <OTEL_SERVICE_NAME>${hono.amqp-adapter.host}</OTEL_SERVICE_NAME>
+                      <OTEL_TRACES_SAMPLER>jaeger_remote</OTEL_TRACES_SAMPLER>
+                      <OTEL_TRACES_SAMPLER_ARG>endpoint=http://${jaeger.host}:14250</OTEL_TRACES_SAMPLER_ARG>
                     </env>
                     <log>
                       <prefix>AMQP</prefix>
@@ -1738,6 +1759,9 @@
                       </QUARKUS_CONFIG_LOCATIONS>
                       <JDK_JAVA_OPTIONS>${hono.coap-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
+                      <OTEL_SERVICE_NAME>${hono.coap-adapter.host}</OTEL_SERVICE_NAME>
+                      <OTEL_TRACES_SAMPLER>jaeger_remote</OTEL_TRACES_SAMPLER>
+                      <OTEL_TRACES_SAMPLER_ARG>endpoint=http://${jaeger.host}:14250</OTEL_TRACES_SAMPLER_ARG>
                     </env>
                     <log>
                       <prefix>COAP</prefix>
@@ -1811,6 +1835,9 @@
                       </SMALLRYE_CONFIG_LOCATIONS>
                       <JDK_JAVA_OPTIONS>${hono.lora-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
+                      <OTEL_SERVICE_NAME>${hono.lora-adapter.host}</OTEL_SERVICE_NAME>
+                      <OTEL_TRACES_SAMPLER>jaeger_remote</OTEL_TRACES_SAMPLER>
+                      <OTEL_TRACES_SAMPLER_ARG>endpoint=http://${jaeger.host}:14250</OTEL_TRACES_SAMPLER_ARG>
                     </env>
                     <log>
                       <prefix>LORA</prefix>
