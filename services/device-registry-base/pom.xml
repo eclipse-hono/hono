@@ -110,17 +110,6 @@
 
   <build>
     <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <properties>
-            <configurationParameters>
-              junit.jupiter.execution.parallel.enabled = false
-            </configurationParameters>
-          </properties>
-        </configuration>
-      </plugin>
       <!--
         Copy legal documents from "target/classes" folder to "target/test-classes" folder
         so that we make sure to include legal docs in test jar.
@@ -177,7 +166,7 @@
         </executions>
         <configuration>
           <excludes>
-            <exclude>logback-test.xml</exclude>
+            <exclude>application.yml</exclude>
           </excludes>
         </configuration>
       </plugin>
