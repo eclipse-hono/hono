@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,6 +17,7 @@ import java.util.Set;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
+import org.eclipse.hono.adapter.AbstractProtocolAdapterApplication;
 import org.eclipse.hono.adapter.coap.CoapAdapterMetrics;
 import org.eclipse.hono.adapter.coap.CoapAdapterProperties;
 import org.eclipse.hono.adapter.coap.CommandResponseResource;
@@ -26,7 +27,6 @@ import org.eclipse.hono.adapter.coap.EventResource;
 import org.eclipse.hono.adapter.coap.TelemetryResource;
 import org.eclipse.hono.adapter.coap.impl.ConfigBasedCoapEndpointFactory;
 import org.eclipse.hono.adapter.coap.impl.VertxBasedCoapAdapter;
-import org.eclipse.hono.adapter.quarkus.AbstractProtocolAdapterApplication;
 
 /**
  * The Hono CoAP adapter main application class.

@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.eclipse.hono.adapter.quarkus;
+package org.eclipse.hono.adapter;
 
 import java.time.Duration;
 import java.util.List;
@@ -20,9 +20,6 @@ import java.util.concurrent.Executors;
 
 import javax.inject.Inject;
 
-import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
-import org.eclipse.hono.adapter.MessagingClientProviders;
-import org.eclipse.hono.adapter.ProtocolAdapterProperties;
 import org.eclipse.hono.adapter.monitoring.ConnectionEventProducer;
 import org.eclipse.hono.adapter.monitoring.ConnectionEventProducerConfig;
 import org.eclipse.hono.adapter.monitoring.ConnectionEventProducerOptions;

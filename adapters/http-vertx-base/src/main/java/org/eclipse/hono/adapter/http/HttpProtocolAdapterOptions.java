@@ -13,7 +13,7 @@
 
 package org.eclipse.hono.adapter.http;
 
-import org.eclipse.hono.adapter.quarkus.ProtocolAdapterOptions;
+import org.eclipse.hono.adapter.ProtocolAdapterOptions;
 
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.ConfigMapping.NamingStrategy;
