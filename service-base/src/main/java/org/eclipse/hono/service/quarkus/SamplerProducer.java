@@ -12,12 +12,15 @@
  */
 package org.eclipse.hono.service.quarkus;
 
+import java.util.List;
 import java.util.Optional;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 
+import org.eclipse.hono.util.AuthenticationConstants;
+import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,7 +55,12 @@ public class SamplerProducer {
         // Dropping all requests spans also makes sure there are no liveness/readiness request spans created.
         // Suppression of these spans via "quarkus.opentelemetry.tracer.suppress-non-application-uris" doesn't work
         // if the non-application-root-path is the same as the overall root path.
-        return new DropHttpRequestSpansSampler(sampler);
+        sampler = new DropHttpRequestSpansSampler(sampler);
+        // drop spans for the given event bus message prefixes
+        return new DropBySpanNamePrefixSampler(
+                sampler,
+                List.of(Constants.EVENT_BUS_ADDRESS_NOTIFICATION_PREFIX, Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
+                        AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN));
     }
 
     private static Sampler getBaseSampler(final String samplerName, final Optional<Double> ratio) {
