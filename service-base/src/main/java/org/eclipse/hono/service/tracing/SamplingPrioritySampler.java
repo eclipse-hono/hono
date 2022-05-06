@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.eclipse.hono.service.quarkus;
+package org.eclipse.hono.service.tracing;
 
 import java.util.List;
 import java.util.Optional;

@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.eclipse.hono.service.quarkus;
+package org.eclipse.hono.service.tracing;
 
 import java.util.List;
 
@@ -20,30 +20,33 @@ import io.opentelemetry.context.Context;
 import io.opentelemetry.sdk.trace.data.LinkData;
 import io.opentelemetry.sdk.trace.samplers.Sampler;
 import io.opentelemetry.sdk.trace.samplers.SamplingResult;
-import io.opentelemetry.semconv.trace.attributes.SemanticAttributes;
 
 /**
- * Sampler that drops all HTTP request spans having the request path as span name.
+ * Sampler that drops spans based on a given list of span name prefixes.
  */
-public class DropHttpRequestSpansSampler implements Sampler {
+public class DropBySpanNamePrefixSampler implements Sampler {
 
     private final Sampler sampler;
+    private final List<String> spanNamePrefixList;
 
     /**
-     * Creates a new DropHttpRequestSpansSampler.
+     * Creates a new DropBySpanNamePrefixSampler.
      *
-     * @param sampler Sampler to use if the span wasn't identified as an HTTP request span to be dropped.
+     * @param sampler Sampler to use if the span name didn't match the given prefixes.
+     * @param spanNamePrefixList The list of prefixes to match the span name against for the decision whether to drop
+     *            the span.
      */
-    public DropHttpRequestSpansSampler(final Sampler sampler) {
+    public DropBySpanNamePrefixSampler(final Sampler sampler, final List<String> spanNamePrefixList) {
         this.sampler = sampler;
+        this.spanNamePrefixList = spanNamePrefixList;
     }
 
     @Override
     public SamplingResult shouldSample(final Context parentContext, final String traceId, final String spanName, final SpanKind spanKind,
             final Attributes attributes, final List<LinkData> parentLinks) {
-        if (spanKind.equals(SpanKind.SERVER)) {
-            final String httpTarget = attributes.get(SemanticAttributes.HTTP_TARGET);
-            if (httpTarget != null && httpTarget.equals(spanName)) {
+
+        for (final String spanNamePrefix : spanNamePrefixList) {
+            if (spanName.startsWith(spanNamePrefix)) {
                 return SamplingResult.drop();
             }
         }
