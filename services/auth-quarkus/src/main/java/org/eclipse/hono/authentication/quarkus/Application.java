@@ -24,12 +24,12 @@ import org.eclipse.hono.authentication.file.FileBasedAuthenticationServiceConfig
 import org.eclipse.hono.authentication.file.FileBasedAuthenticationServiceOptions;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.quarkus.ServiceOptions;
+import org.eclipse.hono.service.AbstractServiceApplication;
 import org.eclipse.hono.service.auth.AuthTokenHelper;
 import org.eclipse.hono.service.auth.AuthTokenHelperImpl;
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.service.auth.EventBusAuthenticationService;
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
-import org.eclipse.hono.service.quarkus.AbstractServiceApplication;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

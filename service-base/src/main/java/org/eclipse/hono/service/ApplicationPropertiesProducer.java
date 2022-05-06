@@ -12,14 +12,11 @@
  */
 
 
-package org.eclipse.hono.service.quarkus;
+package org.eclipse.hono.service;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
-
-import org.eclipse.hono.config.ApplicationConfigProperties;
-import org.eclipse.hono.config.quarkus.ApplicationOptions;
 
 /**
  * A producer of {@link ApplicationConfigProperties}.

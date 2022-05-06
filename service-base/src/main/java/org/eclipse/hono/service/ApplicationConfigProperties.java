@@ -11,9 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 
-package org.eclipse.hono.config;
-
-import org.eclipse.hono.config.quarkus.ApplicationOptions;
+package org.eclipse.hono.service;
 
 /**
  * Configuration of common properties that are valid for an application (and not only a specific server).
