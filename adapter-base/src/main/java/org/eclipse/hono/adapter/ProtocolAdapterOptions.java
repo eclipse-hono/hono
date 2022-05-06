@@ -11,12 +11,11 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.adapter.quarkus;
+package org.eclipse.hono.adapter;
 
 import java.time.Duration;
 import java.util.Map;
 
-import org.eclipse.hono.adapter.MapperEndpointOptions;
 import org.eclipse.hono.config.ServiceOptions;
 
 import io.smallrye.config.ConfigMapping;

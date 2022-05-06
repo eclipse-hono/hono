@@ -18,7 +18,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-import org.eclipse.hono.adapter.quarkus.ProtocolAdapterOptions;
 import org.eclipse.hono.config.ServiceConfigProperties;
 
 /**

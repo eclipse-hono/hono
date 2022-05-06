@@ -12,20 +12,18 @@
  */
 
 
-package org.eclipse.hono.adapter.quarkus;
+package org.eclipse.hono.adapter;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import org.eclipse.hono.adapter.MapperEndpoint;
-import org.eclipse.hono.adapter.ProtocolAdapterProperties;
 import org.eclipse.hono.test.ConfigMappingSupport;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests verifying the mapping of YAML properties to configuration classes.
+ * Tests verifying the behavior of {@link ProtocolAdapterProperties}.
  *
  */
-class QuarkusConfigMappingTest {
+class ProtocolAdapterPropertiesTest {
 
     /**
      * Verifies that Quarkus correctly binds properties from a yaml file to a

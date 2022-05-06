@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,13 +15,13 @@ package org.eclipse.hono.adapter.mqtt.quarkus;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
+import org.eclipse.hono.adapter.AbstractProtocolAdapterApplication;
 import org.eclipse.hono.adapter.mqtt.MessageMapping;
 import org.eclipse.hono.adapter.mqtt.MqttAdapterMetrics;
 import org.eclipse.hono.adapter.mqtt.MqttContext;
 import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
 import org.eclipse.hono.adapter.mqtt.impl.HttpBasedMessageMapping;
 import org.eclipse.hono.adapter.mqtt.impl.VertxBasedMqttProtocolAdapter;
-import org.eclipse.hono.adapter.quarkus.AbstractProtocolAdapterApplication;
 
 import io.vertx.ext.web.client.WebClient;
 

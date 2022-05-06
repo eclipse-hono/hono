@@ -15,8 +15,8 @@ package org.eclipse.hono.adapter.sigfox.quarkus;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
+import org.eclipse.hono.adapter.AbstractProtocolAdapterApplication;
 import org.eclipse.hono.adapter.http.HttpAdapterMetrics;
-import org.eclipse.hono.adapter.quarkus.AbstractProtocolAdapterApplication;
 import org.eclipse.hono.adapter.sigfox.impl.SigfoxProtocolAdapter;
 import org.eclipse.hono.adapter.sigfox.impl.SigfoxProtocolAdapterProperties;
 
