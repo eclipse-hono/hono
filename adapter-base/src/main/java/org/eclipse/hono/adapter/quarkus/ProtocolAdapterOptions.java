@@ -17,7 +17,7 @@ import java.time.Duration;
 import java.util.Map;
 
 import org.eclipse.hono.adapter.MapperEndpointOptions;
-import org.eclipse.hono.config.quarkus.ServiceOptions;
+import org.eclipse.hono.config.ServiceOptions;
 
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.ConfigMapping.NamingStrategy;

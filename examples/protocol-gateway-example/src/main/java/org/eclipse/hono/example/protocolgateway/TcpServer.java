@@ -19,7 +19,7 @@ import javax.enterprise.context.Dependent;
 import javax.inject.Inject;
 
 import org.eclipse.hono.config.ServerConfig;
-import org.eclipse.hono.config.quarkus.ServerOptions;
+import org.eclipse.hono.config.ServerOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -57,7 +57,7 @@ import org.eclipse.hono.commandrouter.impl.amqp.ProtonBasedCommandConsumerFactor
 import org.eclipse.hono.commandrouter.impl.kafka.InternalKafkaTopicCleanupService;
 import org.eclipse.hono.commandrouter.impl.kafka.KafkaBasedCommandConsumerFactoryImpl;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.config.quarkus.ServiceOptions;
+import org.eclipse.hono.config.ServiceOptions;
 import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
 import org.eclipse.hono.notification.NotificationConstants;
 import org.eclipse.hono.notification.NotificationEventBusSupport;

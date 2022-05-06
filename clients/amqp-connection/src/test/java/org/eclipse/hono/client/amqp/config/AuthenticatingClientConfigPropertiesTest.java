@@ -24,7 +24,7 @@ import java.nio.file.Paths;
 import java.util.Optional;
 
 import org.eclipse.hono.config.FileFormat;
-import org.eclipse.hono.config.quarkus.GenericOptions;
+import org.eclipse.hono.config.GenericOptions;
 import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.Test;
 
