@@ -43,19 +43,23 @@ public final class DeploymentHealthCheck implements HealthCheck, Handler<AsyncRe
      */
     @Override
     public void handle(final AsyncResult<Object> result) {
-        deploymentTracker.handle(result);
+        synchronized (deploymentTracker) {
+            deploymentTracker.handle(result);
+        }
     }
 
     @Override
     public HealthCheckResponse call() {
         final var builder  = HealthCheckResponse.builder().name("Vert.x deployment");
 
-        if (!deploymentTracker.future().isComplete()) {
-            builder.down();
-        } else if (deploymentTracker.future().succeeded()) {
-            builder.up();
-        } else {
-            builder.withData("error deploying instance(s)", deploymentTracker.future().cause().getMessage()).down();
+        synchronized (deploymentTracker) {
+            if (!deploymentTracker.future().isComplete()) {
+                builder.down();
+            } else if (deploymentTracker.future().succeeded()) {
+                builder.up();
+            } else {
+                builder.withData("error deploying instance(s)", deploymentTracker.future().cause().getMessage()).down();
+            }
         }
         return builder.build();
     }

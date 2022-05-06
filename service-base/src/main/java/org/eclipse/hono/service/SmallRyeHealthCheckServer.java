@@ -23,13 +23,14 @@ import javax.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.eclipse.microprofile.health.Liveness;
 import org.eclipse.microprofile.health.Readiness;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.smallrye.health.api.HealthRegistry;
 import io.smallrye.mutiny.vertx.UniHelper;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
 import io.vertx.ext.healthchecks.CheckResult;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
@@ -49,25 +50,27 @@ import io.vertx.ext.web.RoutingContext;
 @Deprecated
 public class SmallRyeHealthCheckServer implements HealthCheckServer {
 
+    private static final Logger LOG = LoggerFactory.getLogger(SmallRyeHealthCheckServer.class);
+
     private final SmallRyeHealthAdapter readinessChecksAdapter;
     private final SmallRyeHealthAdapter livenessChecksAdapter;
 
     /**
-     * @param vertx The vert.x instance to use.
+     * Creates a new server for Small Rye Health registries.
+     *
      * @param readinessCheckRegistry The registry for readiness checks.
      * @param livenessCheckRegistry The registry for liveness checks.
+     * @throws NullPointerException if any of the parameters are {@code null}.
      */
     public SmallRyeHealthCheckServer(
-            final Vertx vertx,
             @Readiness
             final HealthRegistry readinessCheckRegistry,
             @Liveness
             final HealthRegistry livenessCheckRegistry) {
-        Objects.requireNonNull(vertx);
         Objects.requireNonNull(readinessCheckRegistry);
         Objects.requireNonNull(livenessCheckRegistry);
-        this.readinessChecksAdapter = new SmallRyeHealthAdapter(readinessCheckRegistry);
-        this.livenessChecksAdapter = new SmallRyeHealthAdapter(livenessCheckRegistry);
+        this.readinessChecksAdapter = new SmallRyeHealthAdapter("readiness", readinessCheckRegistry);
+        this.livenessChecksAdapter = new SmallRyeHealthAdapter("liveness", livenessCheckRegistry);
     }
 
     /**
@@ -99,14 +102,20 @@ public class SmallRyeHealthCheckServer implements HealthCheckServer {
 
     private static class SmallRyeHealthAdapter implements HealthCheckHandler {
 
-        final HealthRegistry registry;
+        private final HealthRegistry registry;
+        private final String type;
 
         /**
          * Creates a new adapter.
          *
+         * @param type The type of checks, e.g. readiness or liveness.
          * @param registry The registry to add the health checks to.
+         * @throws NullPointerException if any of the parameters are {@code null}.
          */
-        private SmallRyeHealthAdapter(final HealthRegistry registry) {
+        private SmallRyeHealthAdapter(
+                final String type,
+                final HealthRegistry registry) {
+            this.type = Objects.requireNonNull(type);
             this.registry = Objects.requireNonNull(registry);
         }
 
@@ -121,30 +130,31 @@ public class SmallRyeHealthCheckServer implements HealthCheckServer {
         }
 
         private HealthCheckResponse getResponse(final String name, final Status status) {
-            final var builder = HealthCheckResponse.builder();
-            builder.name(name);
-            builder.status(status.isOk());
+            final var builder = HealthCheckResponse.builder()
+                    .name(name)
+                    .status(status.isOk());
+
             Optional.ofNullable(status.getData())
-                .ifPresent(json -> {
-                    json.stream().forEach(entry -> {
-                        if (entry.getValue() instanceof Boolean) {
-                            builder.withData(entry.getKey(), (Boolean) entry.getValue());
-                        } else if (entry.getValue() instanceof String) {
-                            builder.withData(entry.getKey(), (String) entry.getValue());
-                        } else if (entry.getValue() instanceof Number) {
-                            builder.withData(entry.getKey(), ((Number) entry.getValue()).longValue());
-                        }
-                    });
-                });
+                .ifPresent(json -> json.stream().forEach(entry -> {
+                    if (entry.getValue() instanceof Boolean v) {
+                        builder.withData(entry.getKey(), v);
+                    } else if (entry.getValue() instanceof String v) {
+                        builder.withData(entry.getKey(), v);
+                    } else if (entry.getValue() instanceof Number v) {
+                        builder.withData(entry.getKey(), v.longValue());
+                    }
+                }));
+
             return builder.build();
         }
 
         private HealthCheckResponse getResponse(final String name, final Throwable error) {
-            final var builder = HealthCheckResponse.builder()
+            return HealthCheckResponse.builder()
                     .name(name)
-                    .withData("error", error.getMessage())
-                    .down();
-            return builder.build();
+                    .down()
+                    .withData("error", Optional.ofNullable(error.getMessage())
+                            .orElse(error.getClass().getName()))
+                    .build();
         }
 
         /**
@@ -152,6 +162,7 @@ public class SmallRyeHealthCheckServer implements HealthCheckServer {
          */
         @Override
         public HealthCheckHandler register(final String name, final Handler<Promise<Status>> procedure) {
+            LOG.debug("registering legacy {} check [name: {}]", type, name);
             registry.register(name, () -> {
                 final Promise<Status> result = Promise.promise();
                 procedure.handle(result);
