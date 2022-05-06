@@ -16,8 +16,8 @@ package org.eclipse.hono.deviceregistry.quarkus;
 import javax.inject.Inject;
 
 import org.eclipse.hono.notification.NotificationSender;
+import org.eclipse.hono.service.AbstractServiceApplication;
 import org.eclipse.hono.service.auth.AuthenticationService;
-import org.eclipse.hono.service.quarkus.AbstractServiceApplication;
 import org.eclipse.hono.util.WrappedLifecycleComponentVerticle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.service.quarkus;
+package org.eclipse.hono.service;
 
 import java.util.Base64;
 import java.util.Optional;
@@ -21,11 +21,6 @@ import java.util.concurrent.CompletableFuture;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 
-import org.eclipse.hono.config.ApplicationConfigProperties;
-import org.eclipse.hono.service.ComponentNameProvider;
-import org.eclipse.hono.service.DeploymentHealthCheck;
-import org.eclipse.hono.service.HealthCheckProvider;
-import org.eclipse.hono.service.SmallRyeHealthCheckServer;
 import org.eclipse.microprofile.health.Readiness;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

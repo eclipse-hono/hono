@@ -16,7 +16,6 @@ package org.eclipse.hono.config.quarkus;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import org.eclipse.hono.config.ApplicationConfigProperties;
 import org.eclipse.hono.config.FileFormat;
 import org.eclipse.hono.config.ServerConfig;
 import org.eclipse.hono.config.ServiceConfigProperties;
@@ -28,17 +27,6 @@ import org.junit.jupiter.api.Test;
  *
  */
 class QuarkusConfigMappingTest {
-
-    @Test
-    void testApplicationOptionsBinding() {
-
-        final ApplicationConfigProperties props = new ApplicationConfigProperties(
-                ConfigMappingSupport.getConfigMapping(
-                        ApplicationOptions.class,
-                        this.getClass().getResource("/application-options.yaml")));
-
-        assertThat(props.getMaxInstances()).isEqualTo(1);
-    }
 
     /**
      * Verifies that Quarkus correctly binds properties from a yaml file to a
