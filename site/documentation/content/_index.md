@@ -1,12 +1,14 @@
-+++
-title="Documentation"
-weight = 120
-pre = '&nbsp;<i class="fas fa-book"></i>&nbsp;'
-+++
+---
+title: "Documentation"
+weight: 120
+pre: '&nbsp;<i class="fas fa-book"></i>&nbsp;'
+resources:
+- src: overview_hono.svg
+---
 
 # Documentation 
 
-![Diagram showing data flowing from devices through Hono to Business Applications and back](images/overview_hono.svg?width=70pc)
+{{< figure src="overview_hono.svg?width=70pc" title="Diagram showing data flowing from devices through Hono to Business Applications and back" >}}
 
 The place of Eclipse Hono&trade; is within an IoT cloud. The goal is simplified device connectivity for _Business Applications_ (or _Solutions_).
 It abstracts away the multiple specifics of different device-side connection protocols from a backend application
