@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -10,23 +10,23 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.eclipse.hono.adapter.sigfox.quarkus;
+package org.eclipse.hono.adapter.http.app;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
 import org.eclipse.hono.adapter.AbstractProtocolAdapterApplication;
 import org.eclipse.hono.adapter.http.HttpAdapterMetrics;
-import org.eclipse.hono.adapter.sigfox.impl.SigfoxProtocolAdapter;
-import org.eclipse.hono.adapter.sigfox.impl.SigfoxProtocolAdapterProperties;
+import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
+import org.eclipse.hono.adapter.http.impl.VertxBasedHttpProtocolAdapter;
 
 /**
- * The Hono Sigfox adapter main application class.
+ * The Hono HTTP adapter main application class.
  */
 @ApplicationScoped
-public class Application extends AbstractProtocolAdapterApplication<SigfoxProtocolAdapterProperties> {
+public class Application extends AbstractProtocolAdapterApplication<HttpProtocolAdapterProperties> {
 
-    private static final String CONTAINER_ID = "Hono Sigfox Adapter";
+    private static final String CONTAINER_ID = "Hono HTTP Adapter";
 
     @Inject
     HttpAdapterMetrics metrics;
@@ -43,9 +43,9 @@ public class Application extends AbstractProtocolAdapterApplication<SigfoxProtoc
      * {@inheritDoc}
      */
     @Override
-    protected SigfoxProtocolAdapter adapter() {
+    protected VertxBasedHttpProtocolAdapter adapter() {
 
-        final var adapter = new SigfoxProtocolAdapter();
+        final VertxBasedHttpProtocolAdapter adapter = new VertxBasedHttpProtocolAdapter();
         adapter.setConfig(protocolAdapterProperties);
         adapter.setMetrics(metrics);
         setCollaborators(adapter);

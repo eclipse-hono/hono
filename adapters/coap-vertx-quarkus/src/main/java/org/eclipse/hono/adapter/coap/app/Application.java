@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.eclipse.hono.adapter.coap.quarkus;
+package org.eclipse.hono.adapter.coap.app;
 
 import java.util.Set;
 

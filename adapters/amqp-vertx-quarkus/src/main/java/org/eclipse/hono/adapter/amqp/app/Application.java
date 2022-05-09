@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.eclipse.hono.adapter.amqp.quarkus;
+package org.eclipse.hono.adapter.amqp.app;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;

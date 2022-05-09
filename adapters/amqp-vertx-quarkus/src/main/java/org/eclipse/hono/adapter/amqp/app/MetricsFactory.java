@@ -10,21 +10,20 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.eclipse.hono.adapter.lora.quarkus;
+package org.eclipse.hono.adapter.amqp.app;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 
-import org.eclipse.hono.adapter.http.HttpProtocolAdapterOptions;
-import org.eclipse.hono.adapter.http.HttpProtocolAdapterProperties;
-import org.eclipse.hono.adapter.http.MicrometerBasedHttpAdapterMetrics;
+import org.eclipse.hono.adapter.amqp.AmqpAdapterOptions;
+import org.eclipse.hono.adapter.amqp.AmqpAdapterProperties;
+import org.eclipse.hono.adapter.amqp.MicrometerBasedAmqpAdapterMetrics;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.config.MeterFilter;
-import io.smallrye.config.ConfigMapping;
 import io.vertx.core.Vertx;
 
 /**
@@ -35,23 +34,22 @@ public class MetricsFactory {
 
     @Singleton
     @Produces
-    HttpProtocolAdapterProperties adapterProperties(@ConfigMapping(prefix = "hono.lora")
-            final HttpProtocolAdapterOptions adapterOptions) {
-        return new HttpProtocolAdapterProperties(adapterOptions);
+    AmqpAdapterProperties adapterProperties(final AmqpAdapterOptions adapterOptions) {
+        return new AmqpAdapterProperties(adapterOptions);
     }
 
     @Produces
     @Singleton
     MeterFilter commonTags() {
-        return MeterFilter.commonTags(MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_LORA));
+        return MeterFilter.commonTags(MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_AMQP));
     }
 
     @Singleton
     @Produces
-    MicrometerBasedHttpAdapterMetrics metrics(
+    MicrometerBasedAmqpAdapterMetrics metrics(
             final Vertx vertx,
             final MeterRegistry registry,
-            final HttpProtocolAdapterProperties adapterProperties) {
-        return new MicrometerBasedHttpAdapterMetrics(registry, vertx, adapterProperties);
+            final AmqpAdapterProperties adapterProperties) {
+        return new MicrometerBasedAmqpAdapterMetrics(registry, vertx, adapterProperties);
     }
 }
