@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.commandrouter.quarkus;
+package org.eclipse.hono.commandrouter.app;
 
 import java.io.IOException;
 import java.nio.file.Files;

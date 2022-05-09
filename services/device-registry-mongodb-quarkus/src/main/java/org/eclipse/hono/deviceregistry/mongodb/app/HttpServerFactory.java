@@ -12,16 +12,16 @@
  */
 
 
-package org.eclipse.hono.deviceregistry.mongodb.quarkus;
+package org.eclipse.hono.deviceregistry.mongodb.app;
 
 import java.util.Optional;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
+import org.eclipse.hono.deviceregistry.app.AbstractHttpServerFactory;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedHttpServiceConfigOptions;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedHttpServiceConfigProperties;
-import org.eclipse.hono.deviceregistry.quarkus.AbstractHttpServerFactory;
 import org.eclipse.hono.deviceregistry.server.DeviceRegistryHttpServer;
 import org.eclipse.hono.service.http.HttpServiceConfigProperties;
 import org.slf4j.Logger;

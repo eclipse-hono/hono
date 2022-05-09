@@ -10,11 +10,11 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.eclipse.hono.deviceregistry.mongodb.quarkus;
+package org.eclipse.hono.deviceregistry.mongodb.app;
 
 import javax.enterprise.context.ApplicationScoped;
 
-import org.eclipse.hono.deviceregistry.quarkus.AbstractDeviceRegistryApplication;
+import org.eclipse.hono.deviceregistry.app.AbstractDeviceRegistryApplication;
 
 /**
  * The Quarkus based Mongo DB registry main application class.

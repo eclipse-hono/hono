@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.eclipse.hono.commandrouter.quarkus;
+package org.eclipse.hono.commandrouter.app;
 
 import java.util.List;
 import java.util.Optional;

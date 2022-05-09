@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.commandrouter.quarkus;
+package org.eclipse.hono.commandrouter.app;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;

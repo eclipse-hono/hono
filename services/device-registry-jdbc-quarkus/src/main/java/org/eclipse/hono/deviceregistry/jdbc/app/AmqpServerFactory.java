@@ -12,18 +12,18 @@
  */
 
 
-package org.eclipse.hono.deviceregistry.jdbc.quarkus;
+package org.eclipse.hono.deviceregistry.jdbc.app;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
+import org.eclipse.hono.deviceregistry.app.AbstractAmqpServerFactory;
 import org.eclipse.hono.deviceregistry.jdbc.config.DeviceServiceOptions;
 import org.eclipse.hono.deviceregistry.jdbc.config.SchemaCreator;
 import org.eclipse.hono.deviceregistry.jdbc.config.TenantServiceOptions;
 import org.eclipse.hono.deviceregistry.jdbc.impl.CredentialsServiceImpl;
 import org.eclipse.hono.deviceregistry.jdbc.impl.RegistrationServiceImpl;
 import org.eclipse.hono.deviceregistry.jdbc.impl.TenantServiceImpl;
-import org.eclipse.hono.deviceregistry.quarkus.AbstractAmqpServerFactory;
 import org.eclipse.hono.service.base.jdbc.store.device.TableAdapterStore;
 import org.eclipse.hono.service.base.jdbc.store.tenant.AdapterStore;
 import org.eclipse.hono.service.tenant.TenantService;

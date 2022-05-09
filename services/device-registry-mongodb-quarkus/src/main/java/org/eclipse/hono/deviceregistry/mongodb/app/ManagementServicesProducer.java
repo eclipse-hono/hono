@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.deviceregistry.mongodb.quarkus;
+package org.eclipse.hono.deviceregistry.mongodb.app;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
