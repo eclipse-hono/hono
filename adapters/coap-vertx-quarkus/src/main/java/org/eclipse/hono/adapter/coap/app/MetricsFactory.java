@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -10,15 +10,15 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.eclipse.hono.adapter.mqtt.quarkus;
+package org.eclipse.hono.adapter.coap.app;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 
-import org.eclipse.hono.adapter.mqtt.MicrometerBasedMqttAdapterMetrics;
-import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterOptions;
-import org.eclipse.hono.adapter.mqtt.MqttProtocolAdapterProperties;
+import org.eclipse.hono.adapter.coap.CoapAdapterOptions;
+import org.eclipse.hono.adapter.coap.CoapAdapterProperties;
+import org.eclipse.hono.adapter.coap.MicrometerBasedCoapAdapterMetrics;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
 
@@ -34,22 +34,22 @@ public class MetricsFactory {
 
     @Singleton
     @Produces
-    MqttProtocolAdapterProperties adapterProperties(final MqttProtocolAdapterOptions adapterOptions) {
-        return new MqttProtocolAdapterProperties(adapterOptions);
+    CoapAdapterProperties adapterProperties(final CoapAdapterOptions adapterOptions) {
+        return new CoapAdapterProperties(adapterOptions);
     }
 
     @Produces
     @Singleton
     MeterFilter commonTags() {
-        return MeterFilter.commonTags(MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_MQTT));
+        return MeterFilter.commonTags(MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_COAP));
     }
 
     @Singleton
     @Produces
-    MicrometerBasedMqttAdapterMetrics metrics(
+    MicrometerBasedCoapAdapterMetrics metrics(
             final Vertx vertx,
             final MeterRegistry registry,
-            final MqttProtocolAdapterProperties adapterProperties) {
-        return new MicrometerBasedMqttAdapterMetrics(registry, vertx, adapterProperties);
+            final CoapAdapterProperties adapterProperties) {
+        return new MicrometerBasedCoapAdapterMetrics(registry, vertx, adapterProperties);
     }
 }

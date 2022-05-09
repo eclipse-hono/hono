@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.eclipse.hono.adapter.http.quarkus;
+package org.eclipse.hono.adapter.lora.app;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
@@ -24,6 +24,7 @@ import org.eclipse.hono.util.Constants;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.config.MeterFilter;
+import io.smallrye.config.ConfigMapping;
 import io.vertx.core.Vertx;
 
 /**
@@ -34,14 +35,15 @@ public class MetricsFactory {
 
     @Singleton
     @Produces
-    HttpProtocolAdapterProperties adapterProperties(final HttpProtocolAdapterOptions adapterOptions) {
+    HttpProtocolAdapterProperties adapterProperties(@ConfigMapping(prefix = "hono.lora")
+            final HttpProtocolAdapterOptions adapterOptions) {
         return new HttpProtocolAdapterProperties(adapterOptions);
     }
 
     @Produces
     @Singleton
     MeterFilter commonTags() {
-        return MeterFilter.commonTags(MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_HTTP));
+        return MeterFilter.commonTags(MetricsTags.forProtocolAdapter(Constants.PROTOCOL_ADAPTER_TYPE_LORA));
     }
 
     @Singleton
