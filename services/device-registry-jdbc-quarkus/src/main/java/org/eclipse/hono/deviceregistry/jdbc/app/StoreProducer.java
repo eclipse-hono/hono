@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.deviceregistry.jdbc.quarkus;
+package org.eclipse.hono.deviceregistry.jdbc.app;
 
 import java.io.IOException;
 

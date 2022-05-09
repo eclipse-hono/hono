@@ -12,11 +12,12 @@
  */
 
 
-package org.eclipse.hono.deviceregistry.mongodb.quarkus;
+package org.eclipse.hono.deviceregistry.mongodb.app;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
+import org.eclipse.hono.deviceregistry.app.AbstractAmqpServerFactory;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedCredentialsConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedTenantsConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.model.CredentialsDao;
@@ -25,7 +26,6 @@ import org.eclipse.hono.deviceregistry.mongodb.model.TenantDao;
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedCredentialsService;
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedRegistrationService;
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedTenantService;
-import org.eclipse.hono.deviceregistry.quarkus.AbstractAmqpServerFactory;
 import org.eclipse.hono.deviceregistry.service.credentials.AbstractCredentialsService;
 import org.eclipse.hono.deviceregistry.service.device.AbstractRegistrationService;
 import org.eclipse.hono.service.tenant.TenantService;

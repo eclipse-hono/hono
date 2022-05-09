@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.deviceregistry.mongodb.quarkus;
+package org.eclipse.hono.deviceregistry.mongodb.app;
 
 import java.io.FileInputStream;
 import java.util.Base64;

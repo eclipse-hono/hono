@@ -11,12 +11,12 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.deviceregistry.jdbc.quarkus;
+package org.eclipse.hono.deviceregistry.jdbc.app;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
-import org.eclipse.hono.deviceregistry.quarkus.AbstractHttpServerFactory;
+import org.eclipse.hono.deviceregistry.app.AbstractHttpServerFactory;
 import org.eclipse.hono.service.http.HttpServiceConfigOptions;
 import org.eclipse.hono.service.http.HttpServiceConfigProperties;
 

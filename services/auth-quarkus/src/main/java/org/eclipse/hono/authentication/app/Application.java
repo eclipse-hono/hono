@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.eclipse.hono.authentication.quarkus;
+package org.eclipse.hono.authentication.app;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;

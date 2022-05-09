@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+ * Copyright (c) 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -10,37 +10,29 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.eclipse.hono.commandrouter.quarkus;
+
+
+package org.eclipse.hono.authentication.app;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 
-import org.eclipse.hono.commandrouter.MicrometerBasedCommandRouterMetrics;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
 
-import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.config.MeterFilter;
-import io.vertx.core.Vertx;
 
 /**
- * A factory class that creates Command Router specific metrics.
+ * A factory for {@code MeterFilter}s.
+ *
  */
 @ApplicationScoped
-public class MetricsFactory {
+class MeterFilterProducer {
 
     @Produces
     @Singleton
     MeterFilter commonTags() {
-        return MeterFilter.commonTags(MetricsTags.forService(Constants.SERVICE_NAME_COMMAND_ROUTER));
-    }
-
-    @Singleton
-    @Produces
-    MicrometerBasedCommandRouterMetrics metrics(
-            final Vertx vertx,
-            final MeterRegistry registry) {
-        return new MicrometerBasedCommandRouterMetrics(registry, vertx);
+        return MeterFilter.commonTags(MetricsTags.forService(Constants.SERVICE_NAME_AUTH));
     }
 }

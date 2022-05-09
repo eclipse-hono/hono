@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.deviceregistry.quarkus;
+package org.eclipse.hono.deviceregistry.app;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
