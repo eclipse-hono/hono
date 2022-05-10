@@ -1,7 +1,7 @@
 ---
-title: "Telemetry API Specification"
-linkTitle: "Telemetry API"
-weight: 405
+title: "Telemetry API Specification for AMQP 1.0"
+linkTitle: "Telemetry API (AMQP 1.0)"
+weight: 417
 resources:
   - src: forward_qos0.svg
   - src: forward_qos1.svg
@@ -15,6 +15,11 @@ consumers use the API to receive data published by devices belonging to a partic
 The Telemetry API is defined by means of AMQP 1.0 message exchanges, i.e. a client needs to connect to Hono using
 AMQP 1.0 in order to invoke operations of the API as described in the following sections. Throughout the remainder of
 this page we will simply use *AMQP* when referring to AMQP 1.0.
+
+The Telemetry API for AMQP 1.0 is an alternative to the [Telemetry API for Kafka]({{< relref "/api/telemetry-kafka" >}})
+for applications that want to consume telemetry data from an AMQP Messaging Network instead of an Apache Kafka&trade;
+broker.
+
 
 ## Southbound Operations
 

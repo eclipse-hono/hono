@@ -1,7 +1,7 @@
 ---
-title: "Event API for Kafka Specification"
-linkTitle: "Event API for Kafka"
-weight: 418
+title: "Event API Specification for Kafka"
+linkTitle: "Event API (Kafka)"
+weight: 410
 resources:
   - src: produce_kafka.svg
   - src: consume_kafka.svg
@@ -10,9 +10,6 @@ resources:
 The *Event* API is used by *Protocol Adapters* to send event messages downstream.
 *Business Applications* and other consumers use the API to receive messages published by devices belonging to a
 particular tenant.
-
-The Event API for Kafka is an alternative to the [Event API for AMQP]({{< relref "/api/event" >}}).
-With this API, clients publish event messages to an Apache Kafka&reg; cluster instead of an AMQP Messaging Network. 
 
 See [Kafka-based APIs]({{< relref "/api/kafka-api" >}}) for fundamental information about Hono's Kafka-based APIs.
 The statements there apply to this specification.

@@ -1,7 +1,7 @@
 ---
-title: "Telemetry API for Kafka Specification"
-linkTitle: "Telemetry API for Kafka"
-weight: 417
+title: "Telemetry API Specification for Kafka"
+linkTitle: "Telemetry API (Kafka)"
+weight: 405
 resources:
   - src: produce_kafka_qos0.svg
   - src: produce_kafka_qos1.svg
@@ -11,9 +11,6 @@ resources:
 The *Telemetry* API is used by *Protocol Adapters* to send telemetry data downstream.
 *Business Applications* and other consumers use the API to receive data published by devices belonging to a particular
 tenant.
-
-The Telemetry API for Kafka is an alternative to the [Telemetry API for AMQP]({{< relref "/api/telemetry" >}}).
-With this API, clients publish telemetry data to an Apache Kafka&reg; cluster instead of an AMQP Messaging Network. 
 
 See [Kafka-based APIs]({{< relref "/api/kafka-api" >}}) for fundamental information about Hono's Kafka-based APIs.
 The statements there apply to this specification.

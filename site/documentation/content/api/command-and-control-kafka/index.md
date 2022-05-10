@@ -1,10 +1,11 @@
 ---
-title: "Command & Control API for Kafka Specification"
-linkTitle: "Command & Control API for Kafka"
-weight: 419
+title: "Command & Control API Specification for Kafka"
+linkTitle: "Command & Control API (Kafka)"
+weight: 415
 ---
 
-The *Command & Control* API of Eclipse Hono&trade; is used by *Business Applications* to send commands to connected devices.
+The *Command & Control* API of Eclipse Hono&trade; is used by *Business Applications* to send commands to connected
+devices.
 
 Commands can be used to trigger actions on devices. Examples include updating a configuration property, installing a
 software component or switching the state of an actuator.
@@ -19,10 +20,6 @@ The second type of commands expects a *response* to be sent back from the device
 In this case the response contains a *status* code which indicates whether the command could be processed successfully.
 If so, the response may also include data representing the result of processing the command. This type of command is
 plainly referred to as a *command* because it represents the default case.
-
-The Command & Control API for Kafka is an alternative to the
-[Command & Control API for AMQP]({{< relref "/api/command-and-control" >}}). With this API, clients send command
-messages to an Apache Kafka&reg; cluster instead of an AMQP Messaging Network.
 
 See [Kafka-based APIs]({{< relref "/api/kafka-api" >}}) for fundamental information about Hono's Kafka-based APIs.
 The statements there apply to this specification.
