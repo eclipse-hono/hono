@@ -24,6 +24,7 @@ import org.eclipse.hono.application.client.amqp.AmqpMessageContext;
 import org.eclipse.hono.application.client.kafka.KafkaMessageContext;
 import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
+import org.eclipse.hono.util.MessageHelper;
 
 import io.opentracing.SpanContext;
 
@@ -74,30 +75,84 @@ public final class DownstreamMessageAssertions {
     }
 
     /**
+     * Verifies that a downstream message contains a time until disconnect.
+     *
+     * @param msg The message to check.
+     * @throws AssertionError if any of the checks fails.
+     */
+    public static void assertMessageContainsTimeTillDisconnect(final DownstreamMessage<? extends MessageContext> msg) {
+        assertWithMessage("ttd property value").that(msg.getTimeTillDisconnect()).isAtLeast(-1);
+    }
+
+    /**
+     * Verifies that a downstream message contains a tenant ID.
+     *
+     * @param msg The message to check.
+     * @param expectedTenantId The expected tenant identifier.
+     * @throws AssertionError if any of the checks fails.
+     */
+    public static void assertMessageContainsTenantId(
+            final DownstreamMessage<? extends MessageContext> msg,
+            final String expectedTenantId) {
+        assertWithMessage("message contains tenant ID").that(msg.getTenantId()).isEqualTo(expectedTenantId);
+    }
+
+    /**
+     * Verifies that a downstream message contains the adapter and address that the message has originally
+     * been uploaded to.
+     *
+     * @param msg The message to check.
+     * @throws AssertionError if any of the checks fail.
+     */
+    public static void assertMessageContainsAdapterAndAddress(final DownstreamMessage<? extends MessageContext> msg) {
+        assertAll("message contains original adapter type and address",
+            () -> assertWithMessage("message contains %s", MessageHelper.APP_PROPERTY_ORIG_ADDRESS)
+                .that(msg.getProperties().getProperty(MessageHelper.APP_PROPERTY_ORIG_ADDRESS, String.class))
+                .isNotNull(),
+            () -> assertWithMessage("message contains %s", MessageHelper.APP_PROPERTY_ORIG_ADAPTER)
+                .that(msg.getProperties().getProperty(MessageHelper.APP_PROPERTY_ORIG_ADAPTER, String.class))
+                .isNotNull());
+    }
+
+
+    /**
      * Verifies that a telemetry message that has been received by a downstream consumer contains
      * all properties that are required by the north bound Telemetry API.
      *
      * @param msg The message to check.
-     * @param expectedTenantId The identifier of the tenant that the origin device is expected to belong to.
      * @throws AssertionError if any of the checks fail.
      */
-    public static void assertTelemetryMessageProperties(
-            final DownstreamMessage<? extends MessageContext> msg,
-            final String expectedTenantId) {
+    public static void assertTelemetryApiProperties(
+            final DownstreamMessage<? extends MessageContext> msg) {
 
-        assertAll(() -> assertWithMessage("message has expected tenant ID").that(msg.getTenantId())
-                .isEqualTo(expectedTenantId),
+        assertAll("message has properties required by Telemetry API",
+                () -> assertWithMessage("message has content type").that(msg.getContentType()).isNotNull(),
+                () -> assertMessageContainsCreationTime(msg),
                 () -> assertWithMessage("message has device ID").that(msg.getDeviceId()).isNotNull(),
-                () -> {
-                    final var ttdValue = msg.getTimeTillDisconnect();
-                    if (ttdValue != null) {
-                        assertAll(() -> assertWithMessage("ttd property value").that(ttdValue).isAtLeast(-1),
-                                () -> assertWithMessage("message creation time").that(msg.getCreationTime()).isNotNull());
-                        ;
-                    }
-                },
                 () -> assertMessageContainsTracingContext(msg, null));
 
+    }
+
+    /**
+     * Verifies that a command response message that has been received by a downstream consumer contains
+     * all properties that are required by the north bound Command &amp; Control API.
+     *
+     * @param msg The message to check.
+     * @param expectedTenantId The expected tenant identifier.
+     * @param expectedDeviceId The expected device identifier.
+     * @throws AssertionError if any of the checks fail.
+     */
+    public static void assertCommandAndControlApiProperties(
+            final DownstreamMessage<? extends MessageContext> msg,
+            final String expectedTenantId,
+            final String expectedDeviceId) {
+
+        assertAll("message has properties required by Command & Control API",
+                () -> assertMessageContainsCreationTime(msg),
+                () -> assertMessageContainsTenantId(msg, expectedTenantId),
+                () -> assertWithMessage("message has device ID").that(msg.getDeviceId()).isEqualTo(expectedDeviceId),
+                () -> assertWithMessage("message has correlation ID").that(msg.getCorrelationId()).isNotNull(),
+                () -> assertWithMessage("message has status code").that(msg.getStatus()).isNotNull());
     }
 
     /**

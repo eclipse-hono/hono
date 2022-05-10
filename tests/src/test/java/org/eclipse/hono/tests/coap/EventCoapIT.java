@@ -61,7 +61,6 @@ public class EventCoapIT extends CoapTestBase {
     @Override
     protected void assertAdditionalMessageProperties(final DownstreamMessage<? extends MessageContext> msg) {
         DownstreamMessageAssertions.assertMessageIsDurable(msg);
-        DownstreamMessageAssertions.assertMessageContainsCreationTime(msg);
     }
 
     @Override

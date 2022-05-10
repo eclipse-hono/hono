@@ -433,9 +433,8 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
                             helper.getSendCommandTimeout(counter.get() == 1))
                         .map(response -> {
                             ctx.verify(() -> {
-                                assertThat(response.getDeviceId()).isEqualTo(commandTargetDeviceId);
-                                assertThat(response.getTenantId()).isEqualTo(tenantId);
-                                DownstreamMessageAssertions.assertMessageContainsCreationTime(response);
+                                DownstreamMessageAssertions.assertCommandAndControlApiProperties(
+                                        response, tenantId, commandTargetDeviceId);
                                 DownstreamMessageAssertions.assertMessageContainsTimeToLive(response, TTL_COMMAND_RESPONSE);
                             });
                             return (Void) null;

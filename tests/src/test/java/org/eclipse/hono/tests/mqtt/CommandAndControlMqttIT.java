@@ -43,6 +43,7 @@ import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.tests.AssumeMessagingSystem;
 import org.eclipse.hono.tests.CommandEndpointConfiguration.SubscriberRole;
+import org.eclipse.hono.tests.DownstreamMessageAssertions;
 import org.eclipse.hono.tests.GenericKafkaSender;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.EventConstants;
@@ -254,9 +255,8 @@ public class CommandAndControlMqttIT extends MqttTestBase {
                     helper.getSendCommandTimeout(counter.get() == 1))
                     .map(response -> {
                         ctx.verify(() -> {
-                            assertThat(response.getDeviceId()).isEqualTo(commandTargetDeviceId);
-                            assertThat(response.getTenantId()).isEqualTo(tenantId);
-                            assertThat(response.getCreationTime()).isNotNull();
+                            DownstreamMessageAssertions.assertCommandAndControlApiProperties(
+                                    response, tenantId, commandTargetDeviceId);
                         });
                         return (Void) null;
                     });

@@ -90,7 +90,8 @@ The following table provides an overview of the headers a client needs to set on
 | *ttd*           | no              | *int*       | The *time 'til disconnect* indicates the number of seconds that the device will remain connected to the protocol adapter. The value of this header must be interpreted relative to the message's *creation-time*. A value of `-1` is used to indicate that the device will remain connected until further notice, i.e. until another message indicates a *ttd* value of `0`. In absence of this property, the connection status of the device is to be considered indeterminate. *Backend Applications* might use this information to determine a time window during which the device will be able to receive a command. |
 | *ttl*           | no              | *long*      | The *time-to-live* in milliseconds. A consumer of the message SHOULD discard the message if the sum of *creation-time* and *ttl* is greater than the current time (milliseconds since the Unix epoch). |
 
-Protocol adapters MAY add additional headers to the Kafka record. 
+Protocol adapters MAY set additional headers on the Kafka record.  Any such headers will be defined in the adapter's
+corresponding user guide.
 
 The value of the message MUST consist of a byte array containing the telemetry data. The format and encoding of the
 data MUST be indicated by the *content-type* and (optional) *content-encoding* headers of the message.

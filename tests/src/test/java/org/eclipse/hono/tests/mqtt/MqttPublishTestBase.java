@@ -673,7 +673,8 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
             }
             LOGGER.trace("received {}", msg);
             ctx.verify(() -> {
-                DownstreamMessageAssertions.assertTelemetryMessageProperties(msg, tenantId);
+                DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
+                DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
                 assertThat(msg.getQos().ordinal()).isEqualTo(getQos().ordinal());
                 assertAdditionalMessageProperties(msg);
             });
