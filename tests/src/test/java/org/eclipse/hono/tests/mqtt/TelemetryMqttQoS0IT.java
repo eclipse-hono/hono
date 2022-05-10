@@ -18,7 +18,6 @@ import java.util.Map;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
-import org.eclipse.hono.tests.DownstreamMessageAssertions;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,11 +39,6 @@ import io.vertx.junit5.VertxTestContext;
 public class TelemetryMqttQoS0IT extends MqttPublishTestBase {
 
     private static final String TOPIC_TEMPLATE = "%s/%s/%s";
-
-    @Override
-    protected void assertAdditionalMessageProperties(final DownstreamMessage<? extends MessageContext> msg) {
-        DownstreamMessageAssertions.assertMessageContainsCreationTime(msg);
-    }
 
     @Override
     protected MqttQoS getQos() {

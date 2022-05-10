@@ -447,7 +447,8 @@ public abstract class AmqpUploadTestBase extends AmqpAdapterTestBase {
                             msg.getContentType(), msg.getPayload().toString());
                 }
                 messageSending.verify(() -> {
-                    DownstreamMessageAssertions.assertTelemetryMessageProperties(msg, tenantId);
+                    DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
+                    DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
                     assertThat(msg.getQos()).isEqualTo(AmqpUploadTestBase.getQoS(senderQoS));
                     assertAdditionalMessageProperties(msg);
                     callback.handle(null);

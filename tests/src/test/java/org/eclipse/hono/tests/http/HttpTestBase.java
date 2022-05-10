@@ -569,7 +569,8 @@ import io.vertx.junit5.VertxTestContext;
         createConsumer(tenantId, msg -> {
             logger.trace("received {}", msg);
             ctx.verify(() -> {
-                DownstreamMessageAssertions.assertTelemetryMessageProperties(msg, tenantId);
+                DownstreamMessageAssertions.assertTelemetryApiProperties(msg);
+                DownstreamMessageAssertions.assertMessageContainsAdapterAndAddress(msg);
                 assertThat(msg.getQos()).isEqualTo(getExpectedQoS(expectedQos));
                 assertAdditionalMessageProperties(msg);
             });
@@ -1212,10 +1213,9 @@ import io.vertx.junit5.VertxTestContext;
                                         notification.getMillisecondsUntilExpiry())
                                         .map(response -> {
                                             ctx.verify(() -> {
+                                                DownstreamMessageAssertions.assertCommandAndControlApiProperties(
+                                                        response, tenantId, commandTargetDeviceId);
                                                 assertThat(response.getContentType()).isEqualTo("text/plain");
-                                                assertThat(response.getDeviceId()).isEqualTo(commandTargetDeviceId);
-                                                assertThat(response.getTenantId()).isEqualTo(tenantId);
-                                                assertThat(response.getCreationTime()).isNotNull();
                                             });
                                             return (Void) null;
                                         });

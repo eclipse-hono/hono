@@ -29,7 +29,6 @@ import org.eclipse.hono.client.SendMessageTimeoutException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.AssumeMessagingSystem;
-import org.eclipse.hono.tests.DownstreamMessageAssertions;
 import org.eclipse.hono.tests.EnabledIfDnsRebindingIsSupported;
 import org.eclipse.hono.tests.EnabledIfRegistrySupportsFeatures;
 import org.eclipse.hono.tests.IntegrationTestSupport;
@@ -78,11 +77,6 @@ public class TelemetryHttpIT extends HttpTestBase {
             final Handler<DownstreamMessage<? extends MessageContext>> messageConsumer) {
         return helper.applicationClient
                 .createTelemetryConsumer(tenantId, (Handler) messageConsumer, remoteClose -> {});
-    }
-
-    @Override
-    protected void assertAdditionalMessageProperties(final DownstreamMessage<? extends MessageContext> msg) {
-        DownstreamMessageAssertions.assertMessageContainsCreationTime(msg);
     }
 
     /**

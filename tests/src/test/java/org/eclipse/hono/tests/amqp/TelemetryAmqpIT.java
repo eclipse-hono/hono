@@ -64,7 +64,6 @@ public class TelemetryAmqpIT extends AmqpUploadTestBase {
 
     @Override
     protected void assertAdditionalMessageProperties(final DownstreamMessage<? extends MessageContext> msg) {
-        DownstreamMessageAssertions.assertMessageContainsCreationTime(msg);
         final Duration expectedTtl = msg.getQos() == QoS.AT_MOST_ONCE ? TTL_QOS0 : TTL_QOS1;
         DownstreamMessageAssertions.assertMessageContainsTimeToLive(msg, expectedTtl);
     }

@@ -26,7 +26,6 @@ import org.eclipse.hono.client.NoConsumerException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.AssumeMessagingSystem;
-import org.eclipse.hono.tests.DownstreamMessageAssertions;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.MessageHelper;
 import org.eclipse.hono.util.MessagingType;
@@ -52,11 +51,6 @@ import io.vertx.junit5.VertxTestContext;
 public class TelemetryMqttQoS1IT extends MqttPublishTestBase {
 
     private static final String TOPIC_TEMPLATE = "%s/%s/%s";
-
-    @Override
-    protected void assertAdditionalMessageProperties(final DownstreamMessage<? extends MessageContext> msg) {
-        DownstreamMessageAssertions.assertMessageContainsCreationTime(msg);
-    }
 
     @Override
     protected MqttQoS getQos() {
