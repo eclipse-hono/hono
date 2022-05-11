@@ -12,11 +12,14 @@
  *******************************************************************************/
 package org.eclipse.hono.tests.registry;
 
+import static org.junit.jupiter.api.Assertions.fail;
+
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
@@ -40,6 +43,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.Checkpoint;
 import io.vertx.junit5.VertxExtension;
@@ -109,12 +113,11 @@ public class DeviceRegistryNotificationsIT {
      * Verifies that AMQP-based notifications for adding tenant/device/credentials resources are received by a local
      * client.
      *
-     * @param ctx The vert.x test context.
      * @throws InterruptedException if test is interrupted while running.
      */
     @Test
     @AssumeMessagingSystem(type = MessagingType.amqp)
-    public void testReceiveNotificationViaAmqp(final VertxTestContext ctx) throws InterruptedException {
+    public void testReceiveNotificationViaAmqp() throws InterruptedException {
 
         final ClientConfigProperties messagingNetworkProperties = IntegrationTestSupport.getMessagingNetworkProperties();
         // use user that may open receiver links on "notification/*" addresses
@@ -122,31 +125,33 @@ public class DeviceRegistryNotificationsIT {
         messagingNetworkProperties.setPassword(NOTIFICATION_TEST_PWD);
         receiver = new ProtonBasedNotificationReceiver(
                 HonoConnection.newConnection(vertx, messagingNetworkProperties));
-        testReceiveNotification(ctx);
+        testReceiveNotification(() -> receiver.start());
     }
 
     /**
      * Verifies that Kafka-based notifications for adding tenant/device/credentials resources are received by a local
      * client.
      *
-     * @param ctx The vert.x test context.
      * @throws InterruptedException if test is interrupted while running.
      */
     @Test
     @AssumeMessagingSystem(type = MessagingType.kafka)
-    public void testReceiveNotificationViaKafka(final VertxTestContext ctx) throws InterruptedException {
+    public void testReceiveNotificationViaKafka() throws InterruptedException {
 
         final var notificationConsumerConfig = new NotificationKafkaConsumerConfigProperties();
         notificationConsumerConfig.setConsumerConfig(IntegrationTestSupport.getKafkaConsumerConfig()
                 .getConsumerConfig("notification-receiver"));
-        receiver = new KafkaBasedNotificationReceiver(vertx, notificationConsumerConfig);
-        testReceiveNotification(ctx);
+        final var kafkaReceiver = new KafkaBasedNotificationReceiver(vertx, notificationConsumerConfig);
+        final Promise<Void> readyTracker = Promise.promise();
+        kafkaReceiver.addOnKafkaConsumerReadyHandler(readyTracker);
+        receiver = kafkaReceiver;
+        testReceiveNotification(() -> kafkaReceiver.start().compose(ok -> readyTracker.future()));
     }
 
-    private void testReceiveNotification(final VertxTestContext ctx) throws InterruptedException {
+    private void testReceiveNotification(final Supplier<Future<Void>> startUpAction) throws InterruptedException {
 
-        final VertxTestContext notificationsReceivedContext = new VertxTestContext();
-        final Checkpoint notificationsReceivedCheckpoint = notificationsReceivedContext.checkpoint(3);
+        final VertxTestContext ctx = new VertxTestContext();
+        final Checkpoint notificationsReceivedCheckpoint = ctx.checkpoint(3);
 
         final VertxTestContext setup = new VertxTestContext();
         receiver.registerConsumer(TenantChangeNotification.TYPE,
@@ -170,11 +175,11 @@ public class DeviceRegistryNotificationsIT {
                     });
                     notificationsReceivedCheckpoint.flag();
                 });
-        receiver.start().onComplete(setup.succeedingThenComplete());
+        startUpAction.get().onComplete(setup.succeedingThenComplete());
 
-        assertThat(setup.awaitCompletion(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(setup.awaitCompletion(IntegrationTestSupport.getTestSetupTimeout(), TimeUnit.SECONDS)).isTrue();
         if (setup.failed()) {
-            ctx.failNow(setup.causeOfFailure());
+            fail(setup.causeOfFailure());
             return;
         }
 
@@ -187,13 +192,11 @@ public class DeviceRegistryNotificationsIT {
                 .onFailure(ctx::failNow);
 
         assertWithMessage("notifications received in 5s")
-                .that(notificationsReceivedContext.awaitCompletion(5, TimeUnit.SECONDS))
+                .that(ctx.awaitCompletion(5, TimeUnit.SECONDS))
                 .isTrue();
-        if (notificationsReceivedContext.failed()) {
-            ctx.failNow(notificationsReceivedContext.causeOfFailure());
-            return;
+        if (ctx.failed()) {
+            fail(ctx.causeOfFailure());
         }
-        ctx.completeNow();
     }
 }
 
