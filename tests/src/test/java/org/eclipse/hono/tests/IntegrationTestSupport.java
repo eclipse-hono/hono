@@ -1044,13 +1044,13 @@ public final class IntegrationTestSupport {
     }
 
     /**
-     * Closes the connections to the Messaging Network.
+     * Closes the application client's connection to the messaging infrastructure.
      *
      * @return A future indicating the outcome of the operation.
      */
     public Future<Void> disconnect() {
         return applicationClient.stop()
-                .onSuccess(ok -> LOGGER.info("connection to messaging network closed"));
+                .onSuccess(ok -> LOGGER.info("connection to messaging infrastructure closed"));
     }
 
     /**

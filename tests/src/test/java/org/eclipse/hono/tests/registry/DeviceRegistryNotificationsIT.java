@@ -38,7 +38,10 @@ import org.eclipse.hono.util.MessagingType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -55,6 +58,7 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 public class DeviceRegistryNotificationsIT {
 
+    private static final Logger LOG = LoggerFactory.getLogger(DeviceRegistryNotificationsIT.class);
     private static final String NOTIFICATION_TEST_USER = "notification-test";
     private static final String NOTIFICATION_TEST_PWD = "pw";
 
@@ -66,11 +70,13 @@ public class DeviceRegistryNotificationsIT {
     /**
      * Creates a HTTP client for accessing the device registry (for registering tenants and devices).
      *
+     * @param testInfo Test meta data.
      * @param vertx The Vert.x instance to use.
      * @param ctx The Vert.x test context.
      */
     @BeforeEach
-    public void setUp(final Vertx vertx, final VertxTestContext ctx) {
+    public void setUp(final TestInfo testInfo, final Vertx vertx, final VertxTestContext ctx) {
+        LOG.info("running {}", testInfo.getDisplayName());
         this.vertx = vertx;
         helper = new IntegrationTestSupport(vertx);
         helper.init().onComplete(ctx.succeedingThenComplete());
@@ -137,6 +143,9 @@ public class DeviceRegistryNotificationsIT {
         final Checkpoint tenantChangedNotificationReceived = ctx.checkpoint();
         final Checkpoint deviceChangedNotificationReceived = ctx.checkpoint();
         final Checkpoint credentialsChangedNotificationReceived = ctx.checkpoint();
+        final String tenantId = helper.getRandomTenantId();
+        final String deviceId = helper.getRandomDeviceId(tenantId);
+        final String password = "secret";
 
         final VertxTestContext setup = new VertxTestContext();
         receiver.registerConsumer(TenantChangeNotification.TYPE,
@@ -144,21 +153,29 @@ public class DeviceRegistryNotificationsIT {
                     ctx.verify(() -> {
                         assertThat(notification).isInstanceOf(TenantChangeNotification.class);
                     });
-                    tenantChangedNotificationReceived.flag();
+                    if (tenantId.equals(notification.getTenantId())) {
+                        tenantChangedNotificationReceived.flag();
+                    }
                 });
         receiver.registerConsumer(DeviceChangeNotification.TYPE,
                 notification -> {
                     ctx.verify(() -> {
                         assertThat(notification).isInstanceOf(DeviceChangeNotification.class);
                     });
-                    deviceChangedNotificationReceived.flag();
+                    if (tenantId.equals(notification.getTenantId()) &&
+                            deviceId.equals(notification.getDeviceId())) {
+                        deviceChangedNotificationReceived.flag();
+                    }
                 });
         receiver.registerConsumer(CredentialsChangeNotification.TYPE,
                 notification -> {
                     ctx.verify(() -> {
                         assertThat(notification).isInstanceOf(CredentialsChangeNotification.class);
                     });
-                    credentialsChangedNotificationReceived.flag();
+                    if (tenantId.equals(notification.getTenantId()) &&
+                            deviceId.equals(notification.getDeviceId())) {
+                        credentialsChangedNotificationReceived.flag();
+                    }
                 });
         startUpAction.get().onComplete(setup.succeedingThenComplete());
 
@@ -167,10 +184,6 @@ public class DeviceRegistryNotificationsIT {
             fail(setup.causeOfFailure());
             return;
         }
-
-        final String tenantId = helper.getRandomTenantId();
-        final String deviceId = helper.getRandomDeviceId(tenantId);
-        final String password = "secret";
 
         helper.registry
                 .addDeviceForTenant(tenantId, new Tenant(), deviceId, password)
