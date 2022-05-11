@@ -36,7 +36,6 @@ import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.MessagingType;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -59,33 +58,28 @@ public class DeviceRegistryNotificationsIT {
     private static final String NOTIFICATION_TEST_USER = "notification-test";
     private static final String NOTIFICATION_TEST_PWD = "pw";
 
-    private static Vertx vertx;
     private static IntegrationTestSupport helper;
 
+    private Vertx vertx;
     private NotificationReceiver receiver;
-
-    /**
-     * Sets up vert.x.
-     */
-    @BeforeAll
-    public static void init() {
-        vertx = Vertx.vertx();
-    }
 
     /**
      * Creates a HTTP client for accessing the device registry (for registering tenants and devices).
      *
+     * @param vertx The Vert.x instance to use.
      * @param ctx The Vert.x test context.
      */
     @BeforeEach
-    public void setUp(final VertxTestContext ctx) {
-
+    public void setUp(final Vertx vertx, final VertxTestContext ctx) {
+        this.vertx = vertx;
         helper = new IntegrationTestSupport(vertx);
         helper.init().onComplete(ctx.succeedingThenComplete());
     }
 
     /**
      * Shuts down the client connected to the messaging network and stops the receiver.
+     * Also deletes all temporary objects from the Device Registry which
+     * have been created during the last test execution.
      *
      * @param ctx The Vert.x test context.
      */
@@ -95,18 +89,7 @@ public class DeviceRegistryNotificationsIT {
                 .map(Lifecycle::stop)
                 .orElseGet(Future::succeededFuture);
         CompositeFuture.join(receiverStopFuture, helper.disconnect())
-                        .onComplete(ctx.succeedingThenComplete());
-    }
-
-    /**
-     * Deletes all temporary objects from the Device Registry which
-     * have been created during the last test execution.
-     *
-     * @param ctx The Vert.x test context.
-     */
-    @AfterEach
-    public void deleteObjects(final VertxTestContext ctx) {
-        helper.deleteObjects(ctx);
+            .onComplete(ar -> helper.deleteObjects(ctx));
     }
 
     /**
@@ -151,7 +134,9 @@ public class DeviceRegistryNotificationsIT {
     private void testReceiveNotification(final Supplier<Future<Void>> startUpAction) throws InterruptedException {
 
         final VertxTestContext ctx = new VertxTestContext();
-        final Checkpoint notificationsReceivedCheckpoint = ctx.checkpoint(3);
+        final Checkpoint tenantChangedNotificationReceived = ctx.checkpoint();
+        final Checkpoint deviceChangedNotificationReceived = ctx.checkpoint();
+        final Checkpoint credentialsChangedNotificationReceived = ctx.checkpoint();
 
         final VertxTestContext setup = new VertxTestContext();
         receiver.registerConsumer(TenantChangeNotification.TYPE,
@@ -159,21 +144,21 @@ public class DeviceRegistryNotificationsIT {
                     ctx.verify(() -> {
                         assertThat(notification).isInstanceOf(TenantChangeNotification.class);
                     });
-                    notificationsReceivedCheckpoint.flag();
+                    tenantChangedNotificationReceived.flag();
                 });
         receiver.registerConsumer(DeviceChangeNotification.TYPE,
                 notification -> {
                     ctx.verify(() -> {
                         assertThat(notification).isInstanceOf(DeviceChangeNotification.class);
                     });
-                    notificationsReceivedCheckpoint.flag();
+                    deviceChangedNotificationReceived.flag();
                 });
         receiver.registerConsumer(CredentialsChangeNotification.TYPE,
                 notification -> {
                     ctx.verify(() -> {
                         assertThat(notification).isInstanceOf(CredentialsChangeNotification.class);
                     });
-                    notificationsReceivedCheckpoint.flag();
+                    credentialsChangedNotificationReceived.flag();
                 });
         startUpAction.get().onComplete(setup.succeedingThenComplete());
 
