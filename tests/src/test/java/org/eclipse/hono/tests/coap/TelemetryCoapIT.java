@@ -57,7 +57,8 @@ import io.vertx.junit5.VertxTestContext;
 public class TelemetryCoapIT extends CoapTestBase {
 
     private static final String POST_URI = "/" + TelemetryConstants.TELEMETRY_ENDPOINT;
-    private static final String PUT_URI_TEMPLATE = POST_URI + "/%s/%s";
+    private static final String POST_URI_SHORT = "/" + TelemetryConstants.TELEMETRY_ENDPOINT_SHORT;
+    private static final String PUT_URI_TEMPLATE = "%s/%s/%s";
 
     @Override
     protected Future<MessageConsumer> createConsumer(
@@ -69,13 +70,13 @@ public class TelemetryCoapIT extends CoapTestBase {
     }
 
     @Override
-    protected String getPutResource(final String tenant, final String deviceId) {
-        return String.format(PUT_URI_TEMPLATE, tenant, deviceId);
+    protected String getPutResource(final int msgNo, final String tenant, final String deviceId) {
+        return String.format(PUT_URI_TEMPLATE, getPostResource(msgNo), tenant, deviceId);
     }
 
     @Override
-    protected String getPostResource() {
-        return POST_URI;
+    protected String getPostResource(final int msgNo) {
+        return msgNo % 2 == 0 ? POST_URI : POST_URI_SHORT;
     }
 
     @Override

@@ -29,7 +29,6 @@ import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -319,7 +318,21 @@ public abstract class CoapTestBase {
      * @param deviceId The device ID.
      * @return The resource name.
      */
-    protected abstract String getPutResource(String tenant, String deviceId);
+    protected String getPutResource(final String tenant, final String deviceId) {
+        return getPutResource(0, tenant, deviceId);
+    }
+
+    /**
+     * Gets the name of the resource that unauthenticated devices
+     * or gateways should use for uploading data.
+     *
+     * @param msgNo The sequence number of the message to send. This can for example be used to return alternating
+     *              short and long resource names.
+     * @param tenant The tenant.
+     * @param deviceId The device ID.
+     * @return The resource name.
+     */
+    protected abstract String getPutResource(int msgNo, String tenant, String deviceId);
 
     /**
      * Gets the name of the resource that authenticated devices
@@ -327,7 +340,19 @@ public abstract class CoapTestBase {
      *
      * @return The resource name.
      */
-    protected abstract String getPostResource();
+    protected String getPostResource() {
+        return getPostResource(0);
+    }
+
+    /**
+     * Gets the name of the resource that authenticated devices
+     * should use for uploading data.
+     *
+     * @param msgNo The sequence number of the message to send. This can for example be used to return alternating
+     *              short and long resource names.
+     * @return The resource name.
+     */
+    protected abstract String getPostResource(int msgNo);
 
     /**
      * Gets the CoAP message type to use for requests to the adapter.
@@ -395,6 +420,68 @@ public abstract class CoapTestBase {
         // empty
     }
 
+    private void assertResponseContainsOneWayCommand(
+            final CoapCommandEndpointConfiguration endpointConfiguration,
+            final OptionSet responseOptions,
+            final String expectedCommand,
+            final String tenantId,
+            final String commandTargetDeviceId) {
+
+        assertWithMessage("location-query option contains command name")
+                .that(responseOptions.getLocationQuery()).contains(expectedCommand);
+        assertThat(responseOptions.getContentFormat()).isEqualTo(MediaTypeRegistry.APPLICATION_JSON);
+        assertThat(responseOptions.getLocationPath().size()).isAtLeast(1);
+        assertWithMessage("location-path indicates one-way command")
+            .that(responseOptions.getLocationPath().get(0))
+            .isAnyOf(CommandConstants.COMMAND_ENDPOINT, CommandConstants.COMMAND_ENDPOINT_SHORT);
+
+        if (endpointConfiguration.isSubscribeAsGateway()) {
+            assertThat(responseOptions.getLocationPath()).hasSize(3);
+            assertWithMessage("location-path option indicates target device")
+                .that(responseOptions.getLocationPath().subList(1, 3))
+                .containsExactly("", commandTargetDeviceId)
+                .inOrder();
+        } else {
+            assertThat(responseOptions.getLocationPath()).hasSize(1);
+        }
+    }
+
+    private void assertResponseContainsCommand(
+            final CoapCommandEndpointConfiguration endpointConfiguration,
+            final OptionSet responseOptions,
+            final String expectedCommand,
+            final String tenantId,
+            final String commandTargetDeviceId) {
+
+        final boolean isTenantRequiredInUri = endpointConfiguration.isSubscribeAsUnauthenticatedDevice();
+        final boolean isDeviceRequiredInUri = endpointConfiguration.isSubscribeAsGateway() || isTenantRequiredInUri;
+
+        final int requestIdIdx = isDeviceRequiredInUri ? 3 : 1;
+        assertWithMessage("location-query option contains command name")
+                .that(responseOptions.getLocationQuery()).contains(expectedCommand);
+        assertThat(responseOptions.getContentFormat()).isEqualTo(MediaTypeRegistry.APPLICATION_JSON);
+        assertThat(responseOptions.getLocationPath().size()).isAtLeast(1);
+        assertWithMessage("location-path indicates request-response command")
+            .that(responseOptions.getLocationPath().get(0))
+            .isAnyOf(CommandConstants.COMMAND_RESPONSE_ENDPOINT, CommandConstants.COMMAND_RESPONSE_ENDPOINT_SHORT);
+
+        if (isTenantRequiredInUri) {
+            assertThat(responseOptions.getLocationPath().size()).isAtLeast(2);
+            assertWithMessage("location-path contains target device's tenant ID")
+                .that(responseOptions.getLocationPath().get(1))
+                .isEqualTo(tenantId);
+        }
+        if (isDeviceRequiredInUri) {
+            assertThat(responseOptions.getLocationPath().size()).isAtLeast(3);
+            assertWithMessage("location-path contains target device ID")
+                .that(responseOptions.getLocationPath().get(2))
+                .isEqualTo(commandTargetDeviceId);
+        }
+        assertWithMessage("location-path contains request ID")
+            .that(responseOptions.getLocationPath().get(requestIdIdx))
+            .isNotNull();
+    }
+
     /**
      * Verifies that a number of messages uploaded to Hono's CoAP adapter
      * can be successfully consumed via the AMQP Messaging Network.
@@ -417,7 +504,7 @@ public abstract class CoapTestBase {
                 () -> warmUp(client, createCoapRequest(Code.PUT, getPutResource(tenantId, deviceId), 0)),
                 count -> {
                     final Promise<CoapResponse> result = Promise.promise();
-                    final Request request = createCoapRequest(Code.PUT, getPutResource(tenantId, deviceId), count);
+                    final Request request = createCoapRequest(Code.PUT, getPutResource(count, tenantId, deviceId), count);
                     client.advanced(getHandler(result), request);
                     return result.future();
                 });
@@ -457,7 +544,7 @@ public abstract class CoapTestBase {
                 () -> warmUp(client, createCoapsRequest(Code.POST, getPostResource(), 0)),
                 count -> {
                     final Promise<CoapResponse> result = Promise.promise();
-                    final Request request = createCoapsRequest(Code.POST, getPostResource(), count);
+                    final Request request = createCoapsRequest(Code.POST, getPostResource(count), count);
                     client.advanced(getHandler(result), request);
                     return result.future();
                 });
@@ -486,7 +573,7 @@ public abstract class CoapTestBase {
                 () -> warmUp(client, createCoapsRequest(Code.POST, getPostResource(), 0)),
                 count -> {
                     final Promise<CoapResponse> result = Promise.promise();
-                    final Request request = createCoapsRequest(Code.POST, getPostResource(), count);
+                    final Request request = createCoapsRequest(Code.POST, getPostResource(count), count);
                     client.advanced(getHandler(result), request);
                     return result.future();
                 });
@@ -518,20 +605,18 @@ public abstract class CoapTestBase {
 
         final CoapClient gatewayOne = getCoapsClient(gatewayOneId, tenantId, SECRET);
         final CoapClient gatewayTwo = getCoapsClient(gatewayTwoId, tenantId, SECRET);
-        final String resourceOne = getPutResource(tenantId, deviceId);
-        final String resourceTwo = getPutResource("", deviceId);
 
         testUploadMessages(ctx, tenantId,
-                () -> warmUp(gatewayOne, createCoapsRequest(Code.PUT, resourceOne, 0)),
+                () -> warmUp(gatewayOne, createCoapsRequest(Code.PUT, getPutResource(tenantId, deviceId), 0)),
                 count -> {
                     final CoapClient client;
                     final String resource;
-                    if ((count.intValue() & 1) == 0) {
+                    if (count % 2 == 0) {
                         client = gatewayOne;
-                        resource = resourceOne;
+                        resource = getPutResource(count, tenantId, deviceId);
                     } else {
                         client = gatewayTwo;
-                        resource = resourceTwo;
+                        resource = getPutResource(count, "", deviceId);
                     }
                     final Promise<CoapResponse> result = Promise.promise();
                     final Request request = createCoapsRequest(Code.PUT, resource, count);
@@ -956,14 +1041,14 @@ public abstract class CoapTestBase {
                                     "application/json",
                                     inputData.toBuffer(),
                                     notification.getMillisecondsUntilExpiry())
-                                    .map(response -> {
-                                        ctx.verify(() -> {
-                                            DownstreamMessageAssertions.assertCommandAndControlApiProperties(
-                                                    response, tenantId, commandTargetDeviceId);
-                                            assertThat(response.getContentType()).isEqualTo("text/plain");
-                                        });
-                                        return response;
+                                .map(response -> {
+                                    ctx.verify(() -> {
+                                        DownstreamMessageAssertions.assertCommandAndControlApiProperties(
+                                                response, tenantId, commandTargetDeviceId);
+                                        assertThat(response.getContentType()).isEqualTo("text/plain");
                                     });
+                                    return response;
+                                });
                         });
                 },
                 count -> {
@@ -981,27 +1066,19 @@ public abstract class CoapTestBase {
                                             tenantId,
                                             commandTargetDeviceId);
                                 });
-                                final List<String> locationPath = response.getOptions().getLocationPath();
-                                return locationPath.get(locationPath.size() - 1);
+                                return response.getOptions().getLocationPathString();
                             })
-                            .compose(receivedCommandRequestId -> {
+                            .compose(locationPath -> {
                                 // send a response to the command now
-                                final String tenantIdToUseInResponseUri;
-                                if (count % 2 == 0 && endpointConfig.isSubscribeAsGateway()) {
-                                    tenantIdToUseInResponseUri = "";
-                                } else {
-                                    tenantIdToUseInResponseUri = tenantId;
-                                }
-                                final String responseUri = endpointConfig.getCommandResponseUri(
-                                        tenantIdToUseInResponseUri,
-                                        commandTargetDeviceId,
-                                        receivedCommandRequestId);
+                                final String responseUri = "/" + locationPath;
                                 logger.debug("sending response to command [uri: {}]", responseUri);
 
                                 final Buffer body = Buffer.buffer("ok");
                                 final Promise<CoapResponse> commandResponseResult = Promise.promise();
-                                final Request commandResponseRequest = createCoapsOrCoapRequest(endpointConfig,
-                                        responseUri, body.getBytes());
+                                final Request commandResponseRequest = createCoapsOrCoapRequest(
+                                        endpointConfig,
+                                        responseUri,
+                                        body.getBytes());
                                 commandResponseRequest.getOptions()
                                     .setContentFormat(MediaTypeRegistry.TEXT_PLAIN)
                                     .addUriQuery(String.format("%s=%d", Constants.HEADER_COMMAND_RESPONSE_STATUS, 200));
@@ -1017,33 +1094,6 @@ public abstract class CoapTestBase {
                                         });
                             });
                 });
-    }
-
-    private void assertResponseContainsCommand(
-            final CoapCommandEndpointConfiguration endpointConfiguration,
-            final OptionSet responseOptions,
-            final String expectedCommand,
-            final String tenantId,
-            final String commandTargetDeviceId) {
-
-        assertWithMessage("location query")
-                .that(responseOptions.getLocationQuery()).contains(expectedCommand);
-        assertThat(responseOptions.getContentFormat()).isEqualTo(MediaTypeRegistry.APPLICATION_JSON);
-        if (endpointConfiguration.isSubscribeAsGateway()) {
-            assertWithMessage("location path size")
-                    .that(responseOptions.getLocationPath().size()).isAtLeast(4);
-            assertThat(responseOptions.getLocationPath().subList(0, 3))
-                    .containsExactly(CommandConstants.COMMAND_RESPONSE_ENDPOINT, tenantId, commandTargetDeviceId).inOrder();
-        } else {
-            assertWithMessage("location path size")
-                    .that(responseOptions.getLocationPath().size()).isAtLeast(2);
-            assertThat(responseOptions.getLocationPath().get(0)).isEqualTo(CommandConstants.COMMAND_RESPONSE_ENDPOINT);
-        }
-        // request ID
-        final int requestIdIndex = endpointConfiguration.isSubscribeAsGateway() ? 3 : 1;
-        assertWithMessage("request ID in location path")
-                .that(responseOptions.getLocationPath().get(requestIdIndex))
-                .isNotNull();
     }
 
     /**
@@ -1284,24 +1334,6 @@ public abstract class CoapTestBase {
                                 return response;
                             });
                 });
-    }
-
-    private void assertResponseContainsOneWayCommand(
-            final CoapCommandEndpointConfiguration endpointConfiguration,
-            final OptionSet responseOptions,
-            final String expectedCommand,
-            final String tenantId,
-            final String commandTargetDeviceId) {
-
-        assertWithMessage("response location query")
-                .that(responseOptions.getLocationQuery()).contains(expectedCommand);
-        assertThat(responseOptions.getContentFormat()).isEqualTo(MediaTypeRegistry.APPLICATION_JSON);
-        if (endpointConfiguration.isSubscribeAsGateway()) {
-            assertThat(responseOptions.getLocationPath())
-                    .containsExactly(CommandConstants.COMMAND_ENDPOINT, tenantId, commandTargetDeviceId).inOrder();
-        } else {
-            assertThat(responseOptions.getLocationPath()).containsExactly(CommandConstants.COMMAND_ENDPOINT);
-        }
     }
 
     private QoS getExpectedQoS(final QoS qos) {

@@ -27,6 +27,9 @@ import org.eclipse.hono.adapter.coap.EventResource;
 import org.eclipse.hono.adapter.coap.TelemetryResource;
 import org.eclipse.hono.adapter.coap.impl.ConfigBasedCoapEndpointFactory;
 import org.eclipse.hono.adapter.coap.impl.VertxBasedCoapAdapter;
+import org.eclipse.hono.util.CommandConstants;
+import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.TelemetryConstants;
 
 /**
  * The Hono CoAP adapter main application class.
@@ -58,9 +61,12 @@ public class Application extends AbstractProtocolAdapterApplication<CoapAdapterP
         adapter.setMetrics(metrics);
         setCollaborators(adapter);
         adapter.addResources(Set.of(
-                new TelemetryResource(adapter, tracer, vertx),
-                new EventResource(adapter, tracer, vertx),
-                new CommandResponseResource(adapter, tracer, vertx)));
+                new TelemetryResource(TelemetryConstants.TELEMETRY_ENDPOINT, adapter, tracer, vertx),
+                new TelemetryResource(TelemetryConstants.TELEMETRY_ENDPOINT_SHORT, adapter, tracer, vertx),
+                new EventResource(EventConstants.EVENT_ENDPOINT, adapter, tracer, vertx),
+                new EventResource(EventConstants.EVENT_ENDPOINT_SHORT, adapter, tracer, vertx),
+                new CommandResponseResource(CommandConstants.COMMAND_RESPONSE_ENDPOINT, adapter, tracer, vertx),
+                new CommandResponseResource(CommandConstants.COMMAND_RESPONSE_ENDPOINT_SHORT, adapter, tracer, vertx)));
 
         final var endpointFactory = new ConfigBasedCoapEndpointFactory(vertx, protocolAdapterProperties);
         endpointFactory.setPskStore(new DeviceRegistryBasedPskStore(adapter, tracer));

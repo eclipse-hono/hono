@@ -64,7 +64,9 @@ page lists all (currently) registered codes and the corresponding media types.
 
 ## Publish Telemetry Data (authenticated Device)
 
-* URI: `/telemetry`
+* URI:
+  * `/t`
+  * `/telemetry`
 * Method: `POST`
 * Type:
   * `CON`: *at least once* delivery semantics
@@ -75,7 +77,7 @@ page lists all (currently) registered codes and the corresponding media types.
   * (optional) *hono-ttd*: The number of seconds the device will wait for the response.
   * (optional) *empty*: Marks the request as an [empty notification]({{< relref "/api/event#empty-notification" >}}).
 * Request Body:
-  * (optional) Arbitrary payload encoded according to the given content type. Maybe empty, if `URI-query: empty` is provided.
+  * (optional) Arbitrary payload encoded according to the given content type.
 * Response Options:
   * (optional) *content-format*: A media type describing the semantics and format of payload contained in the response body.
     This option will only be present if the response contains a command to be executed by the device which requires input
@@ -83,11 +85,12 @@ page lists all (currently) registered codes and the corresponding media types.
     property cannot be mapped to one of the registered CoAP *content-format* codes.
   * (optional) *location-query*: The *hono-command* query parameter contains the name of the command to execute.
     This option will only be present if the response contains a command to be executed by the device.
-  * (optional) *location-path*: The location path is `command` for one-way-commands and
-    `command_response/<command-request-id>` for commands expecting  a response.
+  * (optional) *location-path*: This option will only be present if the response contains a command to be executed
+    by the device. The location path is `c` or `command` for one-way-commands and `cr/<command-request-id>` or
+    `command_response/<command-request-id>` for commands expecting a response.
     In the latter case, the *location-path* option contains exactly the URI-path that the device must use when sending
-    its response to the command. This option will only be present if the response contains a command to be executed
-    by the device.
+    its response to the command. `command` and `command_response` will be used if the request also uses the fully spelled
+    out endpoint name.
 * Response Body:
   * (optional) Arbitrary data serving as input to a command to be executed by the device.
   * (optional) Error details, if status code is >= 4.00.
@@ -125,7 +128,7 @@ The examples provided below make use of the *coap-client* command line tool whic
 Publish some JSON data for device `4711` using default message type `CON` (*at least once*):
 
 ~~~sh
-coap-client -u sensor1@DEFAULT_TENANT -k hono-secret -m POST coaps://hono.eclipseprojects.io/telemetry -t application/json -e '{"temp": 5}'
+coap-client -u sensor1@DEFAULT_TENANT -k hono-secret -m POST coaps://hono.eclipseprojects.io/t -t application/json -e '{"temp": 5}'
 ~~~
 
 {{% notice tip %}}
@@ -135,13 +138,13 @@ coap-client -u sensor1@DEFAULT_TENANT -k hono-secret -m POST coaps://hono.eclips
 Publish some JSON data for device `4711` using message type `NON` (*at most once*):
 
 ~~~sh
-coap-client -u sensor1@DEFAULT_TENANT -k hono-secret -N -m POST coaps://hono.eclipseprojects.io/telemetry -t application/json -e '{"temp": 5}'
+coap-client -u sensor1@DEFAULT_TENANT -k hono-secret -N -m POST coaps://hono.eclipseprojects.io/t -t application/json -e '{"temp": 5}'
 ~~~
 
 Publish some JSON data for device `4711`, indicating that the device will wait for 10 seconds to receive the response:
 
 ~~~sh
-coap-client -u sensor1@DEFAULT_TENANT -k hono-secret -m POST coaps://hono.eclipseprojects.io/telemetry?hono-ttd=10 -t application/json -e '{"temp": 5}'
+coap-client -u sensor1@DEFAULT_TENANT -k hono-secret -m POST coaps://hono.eclipseprojects.io/t?hono-ttd=10 -t application/json -e '{"temp": 5}'
 
 {
   "brightness": 87
@@ -156,7 +159,9 @@ downstream application attached which could send any commands to the device.
 
 ## Publish Telemetry Data (unauthenticated Device)
 
-* URI: `/telemetry/${tenantId}/${deviceId}`
+* URI:
+  * `/t/${tenantId}/${deviceId}`
+  * `/telemetry/${tenantId}/${deviceId}`
 * Method: `PUT`
 * Type:
   * `CON`: *at least once* delivery semantics
@@ -167,7 +172,7 @@ downstream application attached which could send any commands to the device.
   * (optional) *hono-ttd*: The number of seconds the device will wait for the response.
   * (optional) *empty*: Marks the request as an [empty notification]({{< relref "/api/event#empty-notification" >}}).
 * Request Body:
-  * (optional) Arbitrary payload encoded according to the given content type. Maybe empty, if `URI-query: empty` is provided.
+  * (optional) Arbitrary payload encoded according to the given content type.
 * Response Options:
   * (optional) *content-format*: A media type describing the semantics and format of payload contained in the response body.
     This option will only be present if the response contains a command to be executed by the device which requires input
@@ -175,11 +180,12 @@ downstream application attached which could send any commands to the device.
     property cannot be mapped to one of the registered CoAP *content-format* codes.
   * (optional) *location-query*: The *hono-command* query parameter contains the name of the command to execute.
     This option will only be present if the response contains a command to be executed by the device.
-  * (optional) *location-path*: The location path is `command` for one-way-commands and
-    `command_response/<command-request-id>` for commands expecting  a response.
-    In the latter case, the *location-path* option contains exactly the URI-path that the device must use when sending
-    its response to the command. This option will only be present if the response contains a command to be executed by
-    the device.
+  * (optional) *location-path*: This option will only be present if the response contains
+    a command to be executed by the device. The location path is `c` or `command` for one-way-commands and
+    `cr/${tenantId}/${deviceId}/<command-request-id>` or `command_response/${tenantId}/${deviceId}/<command-request-id>` for commands
+    expecting  a response. In the latter case, the *location-path* option contains exactly the URI-path that the
+    device must use when sending its response to the command. `command` and `command_response` will be used if the request
+    also uses the fully spelled out endpoint name.
 * Response Body:
   * (optional) Arbitrary data serving as input to a command to be executed by the device, if status code is 2.05 (Content).
   * (optional) Error details, if status code is >= 4.00.
@@ -207,36 +213,50 @@ downstream application attached which could send any commands to the device.
       * The consumer has indicated that it didn't process the telemetry data.
       * The consumer failed to indicate in time whether it has processed the telemetry data.
 
-This resource MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the
-*HONO_COAP_AUTHENTICATION_REQUIRED* configuration property to be explicitly set to `false`.
+This resource MUST be used by devices that have not authenticated to the protocol adapter.
+
+{{% notice info %}}
+In order to allow devices to use this resource, the protocol adapter's *HONO_COAP_AUTHENTICATION_REQUIRED*
+configuration property needs to be set to `false` explicitly.
+{{% /notice %}}
 
 **Examples**
 
 Publish some JSON data for device `4711` using default message type `CON` (*at least once*):
 
 ~~~sh
-coap-client -m PUT coap://hono.eclipseprojects.io/telemetry/DEFAULT_TENANT/4711 -t application/json -e '{"temp": 5}'
+coap-client -m PUT coap://hono.eclipseprojects.io/t/DEFAULT_TENANT/4711 -t application/json -e '{"temp": 5}'
 ~~~
 
 Publish some JSON data for device `4711` using message type `NON` (*at most once*):
 
 ~~~sh
-coap-client -N -m PUT coap://hono.eclipseprojects.io/telemetry/DEFAULT_TENANT/4711 -t application/json -e '{"temp": 5}'
+coap-client -N -m PUT coap://hono.eclipseprojects.io/t/DEFAULT_TENANT/4711 -t application/json -e '{"temp": 5}'
 ~~~
 
 Publish some JSON data for device `4711`, indicating that the device will wait for 10 seconds to receive the response:
 
 ~~~sh
-coap-client -m PUT coap://hono.eclipseprojects.io/telemetry/DEFAULT_TENANT/4711?hono-ttd=10 -t application/json -e '{"temp": 5}'
+coap-client -m PUT coap://hono.eclipseprojects.io/t/DEFAULT_TENANT/4711?hono-ttd=10 -t application/json -e '{"temp": 5}'
 
 {
   "brightness": 87
 }
 ~~~
 
+{{% notice info %}}
+The example commands above actually do not work with the Hono Sandbox because it requires devices to always
+authenticate. However, these commands can be used with a custom Hono installation that allows connections from
+unauthenticated devices.
+{{% /notice %}}
+
 ## Publish Telemetry Data (authenticated Gateway)
 
-* URI: `/telemetry/${tenantId}/${deviceId}` or `/telemetry//${deviceId}`
+* URI:
+  * `/t//${deviceId}`
+  * `/telemetry//${deviceId}`
+  * `/t/${tenantId}/${deviceId}`
+  * `/telemetry/${tenantId}/${deviceId}`
 * Method: `PUT`
 * Type:
   * `CON`: *at least once* delivery semantics
@@ -247,7 +267,7 @@ coap-client -m PUT coap://hono.eclipseprojects.io/telemetry/DEFAULT_TENANT/4711?
   * (optional) *hono-ttd*: The number of seconds the device will wait for the response.
   * (optional) *empty*: Marks the request as an [empty notification]({{< relref "/api/event#empty-notification" >}}).
 * Request Body:
-  * (optional) Arbitrary payload encoded according to the given content type. Maybe empty, if `URI-query: empty` is provided.
+  * (optional) Arbitrary payload encoded according to the given content type.
 * Response Options:
   * (optional) *content-format*: A media type describing the semantics and format of payload contained in the response body.
     This option will only be present if the response contains a command to be executed by the device which requires input
@@ -255,12 +275,13 @@ coap-client -m PUT coap://hono.eclipseprojects.io/telemetry/DEFAULT_TENANT/4711?
     property cannot be mapped to one of the registered CoAP *content-format* codes.
   * (optional) *location-query*: The *hono-command* query parameter contains the name of the command to execute.
     This option will only be present if the response contains a command to be executed by the device.
-  * (optional) *location-path*: The location path is `command/${tenantId}/${deviceId}` for one-way-commands and
-    `command_response/${tenantId}/${deviceId}/<command-request-id>` for commands expecting  a response.
-    In the latter case, the *location-path* option contains exactly the URI-path that the device must use when sending
-    its response to the command. Note that in both cases the `${tenantId}/${deviceId}` path segments indicate the device
-    that the command is targeted at. This option will only be present if the response contains a command to be executed
-    by the device.
+  * (optional) *location-path*: This option will only be present if the response
+    contains a command to be executed by the device. The location path is `c//${deviceId}` or `command//${deviceId}` for
+    one-way-commands and `cr//${deviceId}/<command-request-id>` or `command_response//${deviceId}/<command-request-id>` for commands
+    expecting a response. In the latter case, the *location-path* option contains exactly the URI-path that the device
+    must use when sending its response to the command. Note that in both cases the `${deviceId}` path segment indicates
+    the device that the command is targeted at. `command` and `command_response` will be used if the request also uses
+    the fully spelled out endpoint name.
 * Response Body:
   * (optional) Arbitrary data serving as input to a command to be executed by the device, if status code is 2.05 (Content).
   * (optional) Error details, if status code is >= 4.00.
@@ -305,19 +326,19 @@ retrieving a *registration assertion* for the device from the configured
 Publish some JSON data on behalf of device `4712` using default message type `CON` (*at least once*):
 
 ~~~sh
-coap-client -u gw@DEFAULT_TENANT -k gw-secret -m PUT coaps://hono.eclipseprojects.io/telemetry//4712 -t application/json -e '{"temp": 5}'
+coap-client -u gw@DEFAULT_TENANT -k gw-secret -m PUT coaps://hono.eclipseprojects.io/t//4712 -t application/json -e '{"temp": 5}'
 ~~~
 
 Publish some JSON data on behalf of device `4712` using message type `NON` (*at most once*):
 
 ~~~sh
-coap-client -u gw@DEFAULT_TENANT -k gw-secret -N -m PUT coaps://hono.eclipseprojects.io/telemetry//4712 -t application/json -e '{"temp": 5}'
+coap-client -u gw@DEFAULT_TENANT -k gw-secret -N -m PUT coaps://hono.eclipseprojects.io/t//4712 -t application/json -e '{"temp": 5}'
 ~~~
 
 Publish some JSON data on behalf of device `4712`, indicating that the gateway will wait for 10 seconds to receive the response:
 
 ~~~sh
-coap-client -u gw@DEFAULT_TENANT -k gw-secret -m PUT coaps://hono.eclipseprojects.io/telemetry//4712?hono-ttd=10 -t application/json -e '{"temp": 5}'
+coap-client -u gw@DEFAULT_TENANT -k gw-secret -m PUT coaps://hono.eclipseprojects.io/t//4712?hono-ttd=10 -t application/json -e '{"temp": 5}'
 
 {
   "brightness": 87
@@ -331,7 +352,9 @@ The example above assumes that a gateway device has been registered with `psk` c
 
 ## Publish an Event (authenticated Device)
 
-* URI: `/event`
+* URI:
+  * `/e`
+  * `/event`
 * Method: `POST`
 * Type:`CON`
 * Request Options:
@@ -340,7 +363,7 @@ The example above assumes that a gateway device has been registered with `psk` c
   * (optional) *hono-ttd*: The number of seconds the device will wait for the response.
   * (optional) *empty*: Marks the request as an [empty notification]({{< relref "/api/event#empty-notification" >}}).
 * Request Body:
-  * (optional) Arbitrary payload encoded according to the given content type. Maybe empty, if `URI-query: empty` is provided.
+  * (optional) Arbitrary payload encoded according to the given content type.
 * Response Options:
   * (optional) *content-format*: A media type describing the semantics and format of payload contained in the response body.
     This option will only be present if the response contains a command to be executed by the device which requires input
@@ -348,11 +371,12 @@ The example above assumes that a gateway device has been registered with `psk` c
     property cannot be mapped to one of the registered CoAP *content-format* codes.
   * (optional) *location-query*: The *hono-command* query parameter contains the name of the command to execute.
     This option will only be present if the response contains a command to be executed by the device.
-  * (optional) *location-path*: The location path is `command` for one-way-commands and
-    `command_response/<command-request-id>` for commands expecting  a response.
+  * (optional) *location-path*: This option will only be present if the response contains a command to be executed
+    by the device. The location path is `c` or `command` for one-way-commands and `cr/<command-request-id>` or
+    `command_response/<command-request-id>` for commands expecting a response.
     In the latter case, the *location-path* option contains exactly the URI-path that the device must use when sending
-    its response to the command.
-    This option will only be present if the response contains a command to be executed by the device.
+    its response to the command. `command` and `command_response` will be used if the request also uses the fully spelled
+    out endpoint name.
 * Response Body:
   * (optional) Arbitrary data serving as input to a command to be executed by the device, if status code is 2.05 (Content).
   * (optional) Error details, if status code is >= 4.00.
@@ -386,7 +410,7 @@ The examples provided below make use of the *coap-client* command line tool whic
 Publish some JSON data for device `4711` using default message type `CON` (*at least once*):
 
 ~~~sh
-coap-client -u sensor1@DEFAULT_TENANT -k hono-secret -m POST coaps://hono.eclipseprojects.io/event -t application/json -e '{"temp": 5}'
+coap-client -u sensor1@DEFAULT_TENANT -k hono-secret -m POST coaps://hono.eclipseprojects.io/e -t application/json -e '{"temp": 5}'
 ~~~
 
 {{% notice tip %}}
@@ -396,7 +420,7 @@ coap-client -u sensor1@DEFAULT_TENANT -k hono-secret -m POST coaps://hono.eclips
 Publish some JSON data for device `4711`, indicating that the device will wait for 10 seconds to receive the response:
 
 ~~~sh
-coap-client -u sensor1@DEFAULT_TENANT -k hono-secret -m POST coaps://hono.eclipseprojects.io/event?hono-ttd=10 -t application/json -e '{"temp": 5}'
+coap-client -u sensor1@DEFAULT_TENANT -k hono-secret -m POST coaps://hono.eclipseprojects.io/e?hono-ttd=10 -t application/json -e '{"temp": 5}'
 
 {
   "brightness": 87
@@ -411,7 +435,9 @@ downstream application attached which could send any commands to the device.
 
 ## Publish an Event (unauthenticated Device)
 
-* URI: `/event/${tenantId}/${deviceId}`
+* URI:
+  * `/e/${tenantId}/${deviceId}`
+  * `/event/${tenantId}/${deviceId}`
 * Method: `PUT`
 * Type:`CON`
 * Request Options:
@@ -420,7 +446,7 @@ downstream application attached which could send any commands to the device.
   * (optional) *hono-ttd*: The number of seconds the device will wait for the response.
   * (optional) *empty*: Marks the request as an [empty notification]({{< relref "/api/event#empty-notification" >}}).
 * Request Body:
-  * (optional) Arbitrary payload encoded according to the given content type. Maybe empty, if `URI-query: empty` is provided.
+  * (optional) Arbitrary payload encoded according to the given content type.
 * Response Options:
   * (optional) *content-format*: A media type describing the semantics and format of payload contained in the response body.
     This option will only be present if the response contains a command to be executed by the device which requires input
@@ -428,11 +454,12 @@ downstream application attached which could send any commands to the device.
     property cannot be mapped to one of the registered CoAP *content-format* codes.
   * (optional) *location-query*: The *hono-command* query parameter contains the name of the command to execute.
     This option will only be present if the response contains a command to be executed by the device.
-  * (optional) *location-path*: The location path is `command` for one-way-commands and
-    `command_response/<command-request-id>` for commands expecting  a response.
-    In the latter case, the *location-path* option contains exactly the URI-path that the device must use when sending
-    its response to the command.
-    This option will only be present if the response contains a command to be executed by the device.
+  * (optional) *location-path*: This option will only be present if the response contains
+    a command to be executed by the device. The location path is `c` or `command` for one-way-commands and
+    `cr/${tenantId}/${deviceId}/<command-request-id>` or `command_response/${tenantId}/${deviceId}/<command-request-id>` for commands
+    expecting  a response. In the latter case, the *location-path* option contains exactly the URI-path that the
+    device must use when sending its response to the command. `command` and `command_response` will be used if the request
+    also uses the fully spelled out endpoint name.
 * Response Body:
   * (optional) Arbitrary data serving as input to a command to be executed by the device, if status code is 2.05 (Content).
   * (optional) Error details, if status code is >= 4.00.
@@ -456,30 +483,44 @@ downstream application attached which could send any commands to the device.
   * 5.03 (Service Unavailable): The request cannot be processed because there is no consumer of events for the given
     tenant connected to Hono, or the consumer didn't process the event.
 
-This resource MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the
-*HONO_COAP_AUTHENTICATION_REQUIRED* configuration property to be explicitly set to `false`.
+This resource MUST be used by devices that have not authenticated to the protocol adapter.
+
+{{% notice info %}}
+In order to allow devices to use this resource, the protocol adapter's *HONO_COAP_AUTHENTICATION_REQUIRED*
+configuration property needs to be set to `false` explicitly.
+{{% /notice %}}
 
 **Examples**
 
 Publish some JSON data for device `4711` using default message type `CON` (*at least once*):
 
 ~~~sh
-coap-client -m PUT coap://hono.eclipseprojects.io/event/DEFAULT_TENANT/4711 -t application/json -e '{"temp": 5}'
+coap-client -m PUT coap://hono.eclipseprojects.io/e/DEFAULT_TENANT/4711 -t application/json -e '{"temp": 5}'
 ~~~
 
 Publish some JSON data for device `4711`, indicating that the device will wait for 10 seconds to receive the response:
 
 ~~~sh
-coap-client -m PUT coap://hono.eclipseprojects.io/event/DEFAULT_TENANT/4711?hono-ttd=10 -t application/json -e '{"temp": 5}'
+coap-client -m PUT coap://hono.eclipseprojects.io/e/DEFAULT_TENANT/4711?hono-ttd=10 -t application/json -e '{"temp": 5}'
 
 {
   "brightness": 87
 }
 ~~~
 
+{{% notice info %}}
+The example commands above actually do not work with the Hono Sandbox because it requires devices to always
+authenticate. However, these commands can be used with a custom Hono installation that allows connections from
+unauthenticated devices.
+{{% /notice %}}
+
 ## Publish an Event (authenticated Gateway)
 
-* URI: `/event/${tenantId}/${deviceId}` or `/event//${deviceId}`
+* URI:
+  * `/e//${deviceId}`
+  * `/event//${deviceId}`
+  * `/e/${tenantId}/${deviceId}`
+  * `/event/${tenantId}/${deviceId}`
 * Method: `PUT`
 * Type:`CON`
 * Request Options:
@@ -488,7 +529,7 @@ coap-client -m PUT coap://hono.eclipseprojects.io/event/DEFAULT_TENANT/4711?hono
   * (optional) *hono-ttd*: The number of seconds the device will wait for the response.
   * (optional) *empty*: Marks the request as an [empty notification]({{< relref "/api/event#empty-notification" >}}).
 * Request Body:
-  * (optional) Arbitrary payload encoded according to the given content type. Maybe empty, if `URI-query: empty` is provided.
+  * (optional) Arbitrary payload encoded according to the given content type.
 * Response Options:
   * (optional) *content-format*: A media type describing the semantics and format of payload contained in the response body.
     This option will only be present if the response contains a command to be executed by the device which requires input
@@ -496,12 +537,13 @@ coap-client -m PUT coap://hono.eclipseprojects.io/event/DEFAULT_TENANT/4711?hono
     property cannot be mapped to one of the registered CoAP *content-format* codes.
   * (optional) *location-query*: The *hono-command* query parameter contains the name of the command to execute.
     This option will only be present if the response contains a command to be executed by the device.
-  * (optional) *location-path*: The location path is `command/${tenantId}/${deviceId}` for one-way-commands and
-    `command_response/${tenantId}/${deviceId}/<command-request-id>` for commands expecting  a response.
-    In the latter case, the *location-path* option contains exactly the URI-path that the device must use when sending
-    its response to the command. Note that in both cases the `${tenantId}/${deviceId}` path segments indicate the device that
-    the command is targeted at.
-    This option will only be present if the response contains a command to be executed by the device.
+  * (optional) *location-path*: This option will only be present if the response
+    contains a command to be executed by the device. The location path is `c//${deviceId}` or `command//${deviceId}` for
+    one-way-commands and `cr//${deviceId}/<command-request-id>` or `command_response//${deviceId}/<command-request-id>` for commands
+    expecting a response. In the latter case, the *location-path* option contains exactly the URI-path that the device
+    must use when sending its response to the command. Note that in both cases the `${deviceId}` path segment indicates
+    the device that the command is targeted at. `command` and `command_response` will be used if the request also uses
+    the fully spelled out endpoint name.
 * Response Body:
   * (optional) Arbitrary data serving as input to a command to be executed by the device, if status code is 2.05 (Content).
   * (optional) Error details, if status code is >= 4.00.
@@ -542,13 +584,13 @@ retrieving a *registration assertion* for the device from the configured
 Publish some JSON data on behalf of device `4712` using default message type `CON` (*at least once*):
 
 ~~~sh
-coap-client -u gw@DEFAULT_TENANT -k gw-secret -m PUT coaps://hono.eclipseprojects.io/event//4712 -t application/json -e '{"temp": 5}'
+coap-client -u gw@DEFAULT_TENANT -k gw-secret -m PUT coaps://hono.eclipseprojects.io/e//4712 -t application/json -e '{"temp": 5}'
 ~~~
 
 Publish some JSON data on behalf of device `4712`, indicating that the gateway will wait for 10 seconds to receive the response:
 
 ~~~sh
-coap-client -u gw@DEFAULT_TENANT -k gw-secret -m PUT coaps://hono.eclipseprojects.io/event//4712?hono-ttd=10 -t application/json -e '{"temp": 5}'
+coap-client -u gw@DEFAULT_TENANT -k gw-secret -m PUT coaps://hono.eclipseprojects.io/e//4712?hono-ttd=10 -t application/json -e '{"temp": 5}'
 
 {
   "brightness": 87
@@ -565,7 +607,7 @@ The example above assumes that a gateway device has been registered with `psk` c
 The CoAP adapter enables devices to receive commands that have been sent by business applications. Commands are
 delivered to the device by means of a response message. That means a device first has to send a request, indicating
 how long it will wait for the response. That request can either be a telemetry or event message, with a *hono-ttd*
-query parameter (`ttd` for `time till disconnect`) specifying the number of seconds the device will wait for the response.
+query parameter (*time till disconnect*) specifying the number of seconds that the device will wait for the response.
 The business application can react on that message by sending a command message, targeted at the device. The CoAP
 adapter will then send the command message as part of the response message to the device.
 
@@ -577,31 +619,34 @@ gateway.
 See [Connecting via a Device Gateway]({{< relref "/concepts/connecting-devices#connecting-via-a-device-gateway" >}})
 for details.
 
-A gateway can send a request with the *hono-ttd* query parameter on the `/event` or `/telemetry` URI, indicating its readiness
-to receive a command for *any* device it acts on behalf of. Note that in this case, the business application will be
-notified with the gateway id in the `device_id` property of the downstream message.
+A gateway can send a request with the *hono-ttd* query parameter on the `/e` or `/t` URIs, indicating its readiness
+to receive a command for *any* of the devices that it acts on behalf of. Note that in this case, the business
+application will be notified with the gateway's identifier in the `device_id` property of the downstream message.
 
 An authenticated gateway can also indicate its readiness to receive a command targeted at a *specific* device. For that,
-the `/event/${tenantId}/${deviceId}` or `/telemetry/${tenantId}/${deviceId}` URI is to be used, containing the id of the device to
-receive a command for. The business application will receive a notification with that device id.
+the `/e//${deviceId}` or `/t//${deviceId}` URIs are to be used, containing the identifier of the device to
+receive a command for. The business application will receive a notification with that device identifier.
 
 If there are multiple concurrent requests with a *hono-ttd* query parameter, sent by the command target device and/or one
 or more of its potential gateways, the CoAP adapter will choose the device or gateway to send the command to as follows:
 
 * A request done by the command target device or by a gateway specifically done for that device, has precedence. If
-  there are multiple, concurrent such requests, the last one will get the command message (if received) in its response.
-  Note that the other requests won't be answered with a command message in their response event if the business application
-  sent multiple command messages. That means commands for a single device can only be requested sequentially, not in parallel.
-* If the above doesn't apply, a single *hono-ttd* request on the `/event` or `/telemetry` URI, sent by a gateway that the
+  there are multiple concurrent such requests, the last one will get the command message (if received) in its response.
+  Note that the other requests won't be answered with a command message in their response event if the business
+  application sent multiple command messages. This means that commands for a single device can only be requested
+  sequentially, but not in parallel.
+* If the above doesn't apply, a single *hono-ttd* request on the `/e` or `/t` URIs, sent by a gateway that the
   command target device is configured for, will get the command message in its response.
-* If there are multiple, concurrent such requests by different gateways, all configured for the command target device,
+* If there are multiple concurrent such requests by different gateways, all configured for the command target device,
   the request by the gateway will be chosen, through which the target device has last sent a telemetry or event message.
   If the target device hasn't sent a message yet and it is thereby unknown via which gateway the device communicates,
-  then one of the requests will be chosen randomly to set the command in its response. 
+  then one of the requests will be chosen randomly to include the command in its response. 
 
 ### Sending a Response to a Command (authenticated Device)
 
-* URI: `/command_response/${commandRequestId}`
+* URI:
+  * `/cr/${commandRequestId}`
+  * `/command_response/${commandRequestId}`
 * Method: `POST`
 * Type: `CON`
 * Request Options:
@@ -636,12 +681,14 @@ to require devices to authenticate (which is the default).
 Send a response to a previously received command with the command-request-id `req-id-uuid` for device `4711`:
 
 ~~~sh
-coap-client -u sensor1@DEFAULT_TENANT -k hono-secret coaps://hono.eclipseprojects.io/command_response/req-id-uuid?hono-cmd-status=200
+coap-client -u sensor1@DEFAULT_TENANT -k hono-secret coaps://hono.eclipseprojects.io/cr/req-id-uuid?hono-cmd-status=200
 ~~~
 
 ### Sending a Response to a Command (unauthenticated Device)
 
-* URI: `/command_response/${tenantId}/${deviceId}/${commandRequestId}`
+* URI:
+  * `/cr/${tenantId}/${deviceId}/${commandRequestId}`
+  * `/command_response/${tenantId}/${deviceId}/${commandRequestId}`
 * Method: `PUT`
 * Type: `CON`
 * Request Options:
@@ -669,8 +716,12 @@ coap-client -u sensor1@DEFAULT_TENANT -k hono-secret coaps://hono.eclipseproject
     * There is no application listening for a reply to the given *commandRequestId*.
     * The application has already given up on waiting for a response.
 
-This resource MUST be used by devices that have not authenticated to the protocol adapter. Note that this requires the
-*HONO_COAP_AUTHENTICATION_REQUIRED* configuration property to be explicitly set to `false`.
+This resource MUST be used by devices that have not authenticated to the protocol adapter.
+
+{{% notice info %}}
+In order to allow devices to use this resource, the protocol adapter's *HONO_COAP_AUTHENTICATION_REQUIRED*
+configuration property needs to be set to `false` explicitly.
+{{% /notice %}}
 
 **Examples**
 
@@ -678,12 +729,22 @@ Send a response to a previously received command with the command-request-id `re
 device `4711`:
 
 ~~~sh
-coap-client -u sensor1@DEFAULT_TENANT -k hono-secret coaps://hono.eclipseprojects.io/command_response/DEFAULT_TENANT/4711/req-id-uuid?hono-cmd-status=200 -e '{"brightness-changed": true}'
+coap-client -u sensor1@DEFAULT_TENANT -k hono-secret coaps://hono.eclipseprojects.io/cr/DEFAULT_TENANT/4711/req-id-uuid?hono-cmd-status=200 -e '{"brightness-changed": true}'
 ~~~
+
+{{% notice info %}}
+The example command above actually does not work with the Hono Sandbox because it requires devices to always
+authenticate. However, this command can be used with a custom Hono installation that allows connections from
+unauthenticated devices.
+{{% /notice %}}
 
 ### Sending a Response to a Command (authenticated Gateway)
 
-* URI: `/command_response/${tenantId}/${deviceId}/${commandRequestId}` or `/command_response//${deviceId}/${commandRequestId}`
+* URI:
+  * `/cr//${deviceId}/${commandRequestId}`
+  * `/command_response//${deviceId}/${commandRequestId}`
+  * `/cr/${tenantId}/${deviceId}/${commandRequestId}`
+  * `/command_response/${tenantId}/${deviceId}/${commandRequestId}`
 * Method: `PUT`
 * Type: `CON`
 * Request Options:
@@ -728,7 +789,7 @@ by means of retrieving a *registration assertion* for the device from the config
 Send a response to a previously received command with the command-request-id `req-id-uuid` on behalf of device `4712`:
 
 ~~~sh
-coap-client -u gw@DEFAULT_TENANT -k gw-secret coaps://hono.eclipseprojects.io/command_response//4712/req-id-uuid?hono-cmd-status=200 -e '{"brightness-changed": true}'
+coap-client -u gw@DEFAULT_TENANT -k gw-secret coaps://hono.eclipseprojects.io/cr//4712/req-id-uuid?hono-cmd-status=200 -e '{"brightness-changed": true}'
 ~~~
 
 {{% notice info %}}
@@ -783,4 +844,4 @@ The following properties are (currently) supported:
 | :----------------- | :--------- | :------------ | :-------------------------------------------------------------- |
 | *enabled*          | *boolean*  | `true`       | If set to `false` the adapter will reject all data from devices belonging to the tenant. |
 | *max-ttd*          | *integer*  | `60`         | Defines a tenant specific upper limit for the *time until disconnect* property that devices may include in requests for uploading telemetry data or events. Please refer to the [Command & Control concept page]({{< relref "/concepts/command-and-control/index.md" >}}) for a discussion of this parameter's purpose and usage.<br>This property can be set for the `hono-coap` adapter type as an *extension* property in the adapter section of the tenant configuration.<br>If it is not set, then the default value of `60` seconds is used.|
-| *timeoutToAck*     | *integer*  | -             | This property has the same semantics as the [corresponding property at the adapter level]({{< relref "admin-guide/coap-adapter-config" >}}). However, any (non-null) value configured for a tenant takes precedence over the adapter level value for all devices of the particular tenant. | |
+| *timeoutToAck*     | *integer*  | -             | This property has the same semantics as the [corresponding property at the adapter level]({{< relref "admin-guide/coap-adapter-config" >}}). However, any (non-null) value configured for a tenant takes precedence over the adapter level value for all devices of the particular tenant. |
