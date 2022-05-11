@@ -667,7 +667,8 @@ public final class IntegrationTestSupport {
         LOGGER.info("Configured to connect to Kafka on {}", IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS);
         final KafkaAdminClientConfigProperties adminClientConfig = new KafkaAdminClientConfigProperties();
         adminClientConfig.setAdminClientConfig(Map.of(
-                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS));
+                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS,
+                ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, "2000"));
         return adminClientConfig;
     }
 
