@@ -17,6 +17,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.californium.core.coap.CoAP.ResponseCode;
@@ -25,9 +26,11 @@ import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.hono.adapter.MapBasedTelemetryExecutionContext;
 import org.eclipse.hono.auth.Device;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.QoS;
+import org.eclipse.hono.util.TelemetryConstants;
 import org.eclipse.hono.util.TenantObject;
 
 import io.micrometer.core.instrument.Timer.Sample;
@@ -50,6 +53,10 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
      * (Legacy support for device with firmware versions not supporting  piggypacked response.)
      */
     static final String PARAM_PIGGYBACKED = "piggy";
+    private static final Set<String> SHORT_EP_NAMES = Set.of(
+                            TelemetryConstants.TELEMETRY_ENDPOINT_SHORT,
+                            EventConstants.EVENT_ENDPOINT_SHORT,
+                            CommandConstants.COMMAND_RESPONSE_ENDPOINT_SHORT);
 
     private final CoapExchange exchange;
     private final Device originDevice;
@@ -460,5 +467,15 @@ public final class CoapContext extends MapBasedTelemetryExecutionContext {
     @Override
     public String getOrigAddress() {
         return "/" + exchange.getRequestOptions().getUriPathString();
+    }
+
+    /**
+     * Checks if the request URI contains the short version of an API endpoint name.
+     *
+     * @return {@code true} if the URI contains a short version.
+     */
+    public boolean hasShortEndpointName() {
+        final String ep = exchange.getRequestOptions().getUriPath().get(0);
+        return SHORT_EP_NAMES.contains(ep);
     }
 }

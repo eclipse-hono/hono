@@ -362,7 +362,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                     final CommandContext commandContext = context.get(CommandContext.KEY_COMMAND_CONTEXT);
                     final Response response = new Response(ResponseCode.CHANGED);
                     if (commandContext != null) {
-                        addCommandToResponse(response, commandContext, currentSpan);
+                        addCommandToResponse(context, response, commandContext, currentSpan);
                         commandContext.accept();
                         getAdapter().getMetrics().reportCommand(
                                 commandContext.getCommand().isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
@@ -426,45 +426,73 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
      * This default implementation adds the command name, content format and response URI to the
      * CoAP response options and puts the command's input data (if any) to the response body.
      *
+     * @param requestContext The CoAP request context.
      * @param response The CoAP response.
      * @param commandContext The context containing the command to add.
      * @param currentSpan The Open Tracing span used for tracking the CoAP request.
      */
     protected void addCommandToResponse(
+            final CoapContext requestContext,
             final Response response,
             final CommandContext commandContext,
             final Span currentSpan) {
 
         final Command command = commandContext.getCommand();
         final OptionSet options = response.getOptions();
-        options.addLocationQuery(Constants.HEADER_COMMAND + "=" + command.getName());
-        if (command.isOneWay()) {
-            options.setLocationPath(CommandConstants.COMMAND_ENDPOINT);
-        } else {
-            options.setLocationPath(CommandConstants.COMMAND_RESPONSE_ENDPOINT);
-        }
-
-        currentSpan.setTag(Constants.HEADER_COMMAND, command.getName());
         LOG.debug("adding command [name: {}, request-id: {}] to response for device [tenant-id: {}, device-id: {}]",
                 command.getName(), command.getRequestId(), command.getTenant(), command.getGatewayOrDeviceId());
         commandContext.getTracingSpan().log("forwarding command to device in CoAP response");
 
-        if (command.isTargetedAtGateway()) {
-            options.addLocationPath(command.getTenant());
-            options.addLocationPath(command.getDeviceId());
-            currentSpan.setTag(Constants.HEADER_COMMAND_TARGET_DEVICE, command.getDeviceId());
+        options.addLocationQuery(Constants.HEADER_COMMAND + "=" + command.getName());
+        currentSpan.setTag(Constants.HEADER_COMMAND, command.getName());
+
+        final boolean useShortEndpointName = requestContext.hasShortEndpointName();
+        String endpointName = null;
+        String tenantId = null;
+        String deviceId = null;
+        String requestId = null;
+
+        if (command.isOneWay()) {
+            endpointName = useShortEndpointName ?
+                    CommandConstants.COMMAND_ENDPOINT_SHORT : CommandConstants.COMMAND_ENDPOINT;
+            if (command.isTargetedAtGateway()) {
+                tenantId = "";
+                deviceId = command.getDeviceId();
+            }
+        } else {
+            endpointName = useShortEndpointName ?
+                    CommandConstants.COMMAND_RESPONSE_ENDPOINT_SHORT : CommandConstants.COMMAND_RESPONSE_ENDPOINT;
+            requestId = command.getRequestId();
+
+            if (requestContext.getAuthenticatedDevice() == null) {
+                tenantId = command.getTenant();
+                deviceId = command.getDeviceId();
+            } else if (command.isTargetedAtGateway()) {
+                tenantId = "";
+                deviceId = command.getDeviceId();
+            }
         }
-        if (!command.isOneWay()) {
-            options.addLocationPath(command.getRequestId());
+
+        options.addLocationPath(endpointName);
+        Optional.ofNullable(tenantId).ifPresent(options::addLocationPath);
+        Optional.ofNullable(deviceId).ifPresent(id -> {
+            options.addLocationPath(id);
+            currentSpan.setTag(Constants.HEADER_COMMAND_TARGET_DEVICE, id);
+        });
+        Optional.ofNullable(requestId).ifPresent(id -> {
+            options.addLocationPath(id);
             currentSpan.setTag(Constants.HEADER_COMMAND_REQUEST_ID, command.getRequestId());
-        }
+        });
+
         final int formatCode = MediaTypeRegistry.parse(command.getContentType());
         if (formatCode != MediaTypeRegistry.UNDEFINED) {
             options.setContentFormat(formatCode);
         } else {
             currentSpan.log("ignoring unknown content type [" + command.getContentType() + "] of command");
         }
-        Optional.ofNullable(command.getPayload()).ifPresent(b -> response.setPayload(b.getBytes()));
+        Optional.ofNullable(command.getPayload())
+            .map(Buffer::getBytes)
+            .ifPresent(response::setPayload);
     }
 
     /**

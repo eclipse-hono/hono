@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.adapter.coap;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -44,13 +45,16 @@ import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
 import org.eclipse.hono.test.VertxMockSupport;
-import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.MessagingType;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.TenantObject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.mockito.ArgumentCaptor;
 
 import io.micrometer.core.instrument.Timer.Sample;
 import io.opentracing.noop.NoopTracerFactory;
@@ -381,21 +385,59 @@ public class TelemetryResourceTest extends ResourceTestBase {
     /**
      * Verifies that the adapter includes a command in the response to a telemetry request.
      *
+     * @param isAuthenticated {@code true} if the device has been authenticated.
+     * @param isOneWayCommand {@code true} if the response should contain a one-way command,
+     *                        {@code false} if the response should contain a request-response command.
+     * @param requestEndpoint The endpoint name contained in the CoAP request.
+     * @param expectedLocationPath The expected value of the location-path option of the response.
+     *                             If isOneWayCommand is {@code false}, then the command's request ID is being
+     *                             appended to this parameter's value when performing the check.
      * @param ctx The vert.x test context.
      */
-    @Test
-    public void testUploadTelemetryWithOneWayCommand(final VertxTestContext ctx) {
+    @ParameterizedTest
+    @CsvSource(value = {
+            "true,true,t,c",
+            "true,false,t,cr/",
+            "false,true,t,c",
+            "false,false,t,cr/tenant/device/",
+            "true,true,telemetry,command",
+            "true,false,telemetry,command_response/",
+            "false,true,telemetry,command",
+            "false,false,telemetry,command_response/tenant/device/",
+            })
+    public void testUploadTelemetryWithOneWayCommand(
+            final boolean isAuthenticated,
+            final boolean isOneWayCommand,
+            final String requestEndpoint,
+            final String expectedLocationPath,
+            final VertxTestContext ctx) {
 
         // GIVEN an adapter with a downstream telemetry consumer attached
         givenAnAdapter(properties);
         givenATelemetrySenderForAnyTenant();
         final var resource = givenAResource(adapter);
+        final var tenantId = "tenant";
+        final var deviceId = "device";
+        final var commandName = "doThis";
 
         // and a commandConsumerFactory that upon creating a consumer will invoke it with a command
         final Sample commandTimer = mock(Sample.class);
-        final CommandContext commandContext = givenAOneWayCommandContext("tenant", "device", "doThis", null, null);
+        final CommandContext commandContext;
+        if (isOneWayCommand) {
+            commandContext = givenAOneWayCommandContext(tenantId, deviceId, commandName, null, null);
+        } else {
+            commandContext = givenARequestResponseCommandContext(
+                    tenantId,
+                    deviceId,
+                    commandName,
+                    "reply-to-id",
+                    null,
+                    null,
+                    MessagingType.kafka);
+        }
+
         when(commandContext.get(anyString())).thenReturn(commandTimer);
-        when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("device"), VertxMockSupport.anyHandler(), any(), any()))
+        when(commandConsumerFactory.createCommandConsumer(eq(tenantId), eq(deviceId), VertxMockSupport.anyHandler(), any(), any()))
             .thenAnswer(invocation -> {
                 final Handler<CommandContext> consumer = invocation.getArgument(2);
                 consumer.handle(commandContext);
@@ -405,11 +447,13 @@ public class TelemetryResourceTest extends ResourceTestBase {
         // WHEN a device publishes a telemetry message with a hono-ttd parameter
         final Buffer payload = Buffer.buffer("some payload");
         final OptionSet options = new OptionSet();
+        options.setUriPath(requestEndpoint);
         options.addUriQuery(String.format("%s=%d", Constants.HEADER_TIME_TILL_DISCONNECT, 20));
         options.setContentFormat(MediaTypeRegistry.TEXT_PLAIN);
         final CoapExchange coapExchange = newCoapExchange(payload, Type.CON, options);
-        final Device authenticatedDevice = new Device("tenant", "device");
-        final CoapContext context = CoapContext.fromRequest(coapExchange, authenticatedDevice, authenticatedDevice, "device", span);
+        final Device originDevice = new Device(tenantId, deviceId);
+        final Device authenticatedDevice = isAuthenticated ? originDevice : null;
+        final CoapContext context = CoapContext.fromRequest(coapExchange, originDevice, authenticatedDevice, deviceId, span);
 
         resource.handlePostRequest(context)
             .onComplete(ctx.succeeding(ok -> {
@@ -417,27 +461,40 @@ public class TelemetryResourceTest extends ResourceTestBase {
                     // THEN the message is being forwarded downstream
                     assertTelemetryMessageHasBeenSentDownstream(
                             QoS.AT_LEAST_ONCE,
-                            "tenant",
-                            "device",
+                            tenantId,
+                            deviceId,
                             "text/plain");
                     // correctly reported
                     verify(metrics).reportTelemetry(
                             eq(MetricsTags.EndpointType.TELEMETRY),
-                            eq("tenant"),
+                            eq(tenantId),
                             any(),
                             eq(ProcessingOutcome.FORWARDED),
                             eq(MetricsTags.QoS.AT_LEAST_ONCE),
                             eq(payload.length()),
                             eq(TtdStatus.COMMAND),
                             any());
-                    // and the device gets a response which contains a (one-way) command
-                    verify(coapExchange).respond(argThat((Response res) -> ResponseCode.CHANGED == res.getCode()
-                            && CommandConstants.COMMAND_ENDPOINT.equals(res.getOptions().getLocationPathString())
-                            && res.getOptions().getLocationQueryString().endsWith("=doThis")
-                            && res.getPayloadSize() == 0));
+                    // and the device gets a response which contains a command
+                    final ArgumentCaptor<Response> res = ArgumentCaptor.forClass(Response.class);
+                    verify(coapExchange).respond(res.capture());
+                    assertAll("response contains command",
+                            () -> assertThat(res.getValue().getCode()).isEqualTo(ResponseCode.CHANGED),
+                            () -> assertThat(res.getValue().getOptions().getLocationQuery())
+                                    .contains("hono-command=%s".formatted(commandName)),
+                            () -> assertThat(res.getValue().getPayloadSize()).isEqualTo(0));
+
+                    final String expectedPath;
+                    if (isOneWayCommand) {
+                        expectedPath = expectedLocationPath;
+                    } else {
+                        expectedPath = expectedLocationPath + commandContext.getCommand().getRequestId();
+                    }
+                    assertThat(res.getValue().getOptions().getLocationPathString())
+                        .isEqualTo(expectedPath);
+
                     verify(metrics).reportCommand(
-                            eq(Direction.ONE_WAY),
-                            eq("tenant"),
+                            eq(isOneWayCommand ? Direction.ONE_WAY : Direction.REQUEST),
+                            eq(tenantId),
                             any(),
                             eq(ProcessingOutcome.FORWARDED),
                             eq(0),

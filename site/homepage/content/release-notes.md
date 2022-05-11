@@ -16,6 +16,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   messages used to upload telemetry or event messages.
 * The MQTT protocol adapter now allows authenticated gateway devices to omit the tenant ID from the topic of
   messages used to upload telemetry or event messages.
+* The CoAP adapter now exposes its resources using short endpoint name alternatives to the existing resources.
+  Using the short endpoint names, devices can save a few bytes per request.
 
 ### Fixes & Enhancements
 

@@ -48,7 +48,8 @@ import io.vertx.junit5.VertxTestContext;
 public class EventCoapIT extends CoapTestBase {
 
     private static final String POST_URI = "/" + EventConstants.EVENT_ENDPOINT;
-    private static final String PUT_URI_TEMPLATE = POST_URI + "/%s/%s";
+    private static final String POST_URI_SHORT = "/" + EventConstants.EVENT_ENDPOINT_SHORT;
+    private static final String PUT_URI_TEMPLATE = "%s/%s/%s";
 
     @Override
     protected Future<MessageConsumer> createConsumer(
@@ -64,13 +65,13 @@ public class EventCoapIT extends CoapTestBase {
     }
 
     @Override
-    protected String getPutResource(final String tenant, final String deviceId) {
-        return String.format(PUT_URI_TEMPLATE, tenant, deviceId);
+    protected String getPutResource(final int msgNo, final String tenant, final String deviceId) {
+        return String.format(PUT_URI_TEMPLATE, getPostResource(msgNo), tenant, deviceId);
     }
 
     @Override
-    protected String getPostResource() {
-        return POST_URI;
+    protected String getPostResource(final int msgNo) {
+        return msgNo % 2 == 0 ? POST_URI : POST_URI_SHORT;
     }
 
     @Override
