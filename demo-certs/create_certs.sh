@@ -40,7 +40,13 @@ EXAMPLE_GATEWAY_KEY_STORE=exampleGatewayKeyStore.p12
 EXAMPLE_GATEWAY_KEY_STORE_PWD=examplegatewaykeys
 # set to either EC or RSA
 KEY_ALG=EC
-JAVA_KEY_TOOL=${JAVA_HOME}/bin/keytool
+
+if [ -z "${JAVA_HOME}" ]
+then
+   JAVA_KEY_TOOL=keytool
+else
+   JAVA_KEY_TOOL=${JAVA_HOME}/bin/keytool
+fi
 
 function create_key { 
 
@@ -50,6 +56,12 @@ function create_key {
     openssl ecparam -name secp384r1 -genkey -noout | openssl pkcs8 -topk8 -nocrypt -inform PEM -outform PEM -out $DIR/$1
   else
     openssl genrsa 4096 | openssl pkcs8 -topk8 -nocrypt -inform PEM -outform PEM -out $DIR/$1
+  fi
+
+  if [ $? -ne 0 ]; then
+    error=$?
+    echo "failed to create keys"
+    exit $error
   fi
 }
 
@@ -71,6 +83,12 @@ function create_cert {
     echo "adding key/cert for $1 to key store $DIR/$2"
     openssl pkcs12 -export -inkey $DIR/$1-key.pem -in $DIR/$1-cert.pem -out $DIR/$2 -name $1 -password pass:$3
   fi
+
+  if [ $? -ne 0 ]; then
+    error=$?
+    echo "failed to create certificate"
+    exit $error
+  fi
 }
 
 function create_client_cert {
@@ -81,6 +99,12 @@ function create_client_cert {
     openssl x509 -req -out "$DIR/device-$1-cert.pem" -days 365 -CA $DIR/default_tenant-cert.pem -CAkey $DIR/default_tenant-key.pem -CAcreateserial
   SUBJECT=$(openssl x509 -in "$DIR/device-$1-cert.pem" -noout -subject -nameopt RFC2253)
   echo "cert.device-$1.$SUBJECT" >> $DIR/device-certs.properties
+
+  if [ $? -ne 0 ]; then
+    error=$?
+    echo "failed to create client certificate"
+    exit $error
+  fi
 }
 
 if [ -d $DIR ]
@@ -112,6 +136,11 @@ echo ""
 echo "creating JKS trust store ($DIR/$HONO_TRUST_STORE) containing CA certificate"
 ${JAVA_KEY_TOOL} -import -trustcacerts -noprompt -alias root -file $DIR/root-cert.pem -keystore $DIR/$HONO_TRUST_STORE -storepass $HONO_TRUST_STORE_PWD
 ${JAVA_KEY_TOOL} -import -trustcacerts -noprompt -alias ca -file $DIR/ca-cert.pem -keystore $DIR/$HONO_TRUST_STORE -storepass $HONO_TRUST_STORE_PWD
+if [ $? -ne 0 ]; then
+  error=$?
+  echo "failed to create truststore"
+  exit $error
+fi
 echo $HONO_TRUST_STORE_PWD > $DIR/$HONO_TRUST_STORE_PWD_FILE
 
 echo ""
