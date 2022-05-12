@@ -231,10 +231,12 @@ public class InternalKafkaTopicCleanupService extends AbstractVerticle {
     @Override
     public void stop(final Promise<Void> stopResult) {
 
-        lifecycleStatus.runStopAttempt(() -> Optional.ofNullable(adminClient)
-                .map(KafkaAdminClient::close)
-                .orElseGet(Future::succeededFuture)
-                .onFailure(thr -> LOG.warn("error closing admin client", thr)))
-            .onComplete(stopResult);
+        lifecycleStatus.runStopAttempt(() -> {
+            vertx.cancelTimer(timerId);
+            return Optional.ofNullable(adminClient)
+                    .map(KafkaAdminClient::close)
+                    .orElseGet(Future::succeededFuture)
+                    .onFailure(thr -> LOG.warn("error closing admin client", thr));
+        }).onComplete(stopResult);
     }
 }
