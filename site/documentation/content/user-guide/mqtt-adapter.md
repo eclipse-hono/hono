@@ -316,10 +316,13 @@ with *auth-id* `gw` and password `gw-secret`.
 The MQTT adapter enables devices to receive commands that have been sent by business applications by means of sending an
 MQTT *SUBSCRIBE* packet containing a device specific *topic filter* as described below. Devices can subscribe with QoS
 1 or QoS 0. The adapter indicates the outcome of the subscription request by sending back a corresponding *SUBACK* packet.
-The SUBACK packet will contain *Success - QoS 0* (`0x00`) or *Success - QoS 1* (`0x01`) for a valid command topic filter
-indicating QoS 0 or 1 and will contain the *Failure* (`0x80`) value for an invalid or unsupported filter. When a device
-no longer wants to receive commands anymore, it can send an MQTT *UNSUBSCRIBE* packet to the adapter, including the same
-topic filter that has been used to subscribe.
+The SUBACK packet will contain *Success - QoS 0* (`0x00`) or *Success - QoS 1* (`0x01`), indicating QoS 0 or 1, if the
+command topic filter is valid and the subscription was successfully registered. The SUBACK packet will contain the
+*Failure* (`0x80`) value in case of an invalid or unsupported filter and in case there was a (temporary) error
+registering the command subscription. Devices should therefore retry sending an MQTT *SUBSCRIBE* packet in case a SUBACK
+packet with the *Failure* value is received, provided a valid filter is used. When a device no longer wants to receive
+commands anymore, it can send an MQTT *UNSUBSCRIBE* packet to the adapter, including the same topic filter that has been
+used to subscribe.
 
 When a device has successfully subscribed, the adapter sends an
 [empty notification]({{< relref "/api/event#empty-notification" >}}) on behalf of the device to the downstream
@@ -605,9 +608,11 @@ corresponding error message on a specific error topic to the device. To enable t
 MQTT *SUBSCRIBE* packet with a topic filter as described below on *the same MQTT connection* that is also used for
 publishing the telemetry, event or command response messages. Devices can subscribe with QoS 0 only. The adapter
 indicates the outcome of the subscription request by sending back a corresponding *SUBACK* packet. The SUBACK packet
-will contain *Success - QoS 0* (`0x00`) for a valid error topic filter and will contain the *Failure* (`0x80`) value for
-an invalid or unsupported filter. In order to again activate the default error handling behavior, the device can send
-an MQTT *UNSUBSCRIBE* packet to the adapter, including the same topic filter that has been used to subscribe.
+will contain *Success - QoS 0* (`0x00`) for a valid error topic filter. The SUBACK packet will contain the *Failure*
+(`0x80`) value in case of an invalid or unsupported filter and in case a gateway is trying to subscribe on behalf of a
+device that doesn't have the gateway in its list of supported `via` gateways. In order to again activate the default
+error handling behavior, the device can send an MQTT *UNSUBSCRIBE* packet to the adapter, including the same topic
+filter that has been used to subscribe.
 
 The following sections define the topic filters to use for subscribing to error messages and the resulting error message
 topic. Instead of the `error` topic path segment, the shorthand version `e` is also supported.
