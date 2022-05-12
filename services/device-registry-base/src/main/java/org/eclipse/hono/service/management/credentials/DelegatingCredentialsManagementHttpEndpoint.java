@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.http.TracingHandler;
+import org.eclipse.hono.service.http.HttpServerSpanHelper;
 import org.eclipse.hono.service.management.AbstractDelegatingRegistryHttpEndpoint;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -105,7 +105,7 @@ public class DelegatingCredentialsManagementHttpEndpoint<S extends CredentialsMa
 
         final Span span = TracingHelper.buildServerChildSpan(
                 tracer,
-                TracingHandler.serverSpanContext(ctx),
+                HttpServerSpanHelper.serverSpanContext(ctx),
                 SPAN_NAME_GET_CREDENTIALS,
                 getClass().getSimpleName()
         ).start();
@@ -126,7 +126,7 @@ public class DelegatingCredentialsManagementHttpEndpoint<S extends CredentialsMa
                     // Jackson does not include the credential's type property in the
                     // JSON when serializing a plain java List<?> object.
                     final JsonArray credentialsArray = operationResult.getPayload().stream()
-                            .map(credentials -> JsonObject.mapFrom(credentials))
+                            .map(JsonObject::mapFrom)
                             .collect(JsonArray::new, JsonArray::add, JsonArray::addAll);
                     return OperationResult.ok(
                             operationResult.getStatus(),
@@ -146,7 +146,7 @@ public class DelegatingCredentialsManagementHttpEndpoint<S extends CredentialsMa
 
         final Span span = TracingHelper.buildServerChildSpan(
                 tracer,
-                TracingHandler.serverSpanContext(ctx),
+                HttpServerSpanHelper.serverSpanContext(ctx),
                 SPAN_NAME_UPDATE_CREDENTIALS,
                 getClass().getSimpleName()
         ).start();

@@ -25,7 +25,7 @@ import org.eclipse.hono.adapter.auth.device.PreCredentialsValidationHandler;
 import org.eclipse.hono.adapter.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.adapter.auth.device.X509Authentication;
 import org.eclipse.hono.service.auth.SniExtensionHelper;
-import org.eclipse.hono.service.http.TracingHandler;
+import org.eclipse.hono.service.http.HttpServerSpanHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -104,7 +104,7 @@ public class X509AuthHandler extends AuthenticationHandlerImpl<DeviceCredentials
                 auth.validateClientCertificate(
                         context.request().sslSession().getPeerCertificates(),
                         SniExtensionHelper.getHostNames(context.request().sslSession()),
-                        TracingHandler.serverSpanContext(context))
+                        HttpServerSpanHelper.serverSpanContext(context))
                     .compose(credentialsJson -> {
                         final var authHandler = new ExecutionContextAuthHandler<HttpContext>(
                                 (DeviceCredentialsAuthProvider<?>) authProvider,

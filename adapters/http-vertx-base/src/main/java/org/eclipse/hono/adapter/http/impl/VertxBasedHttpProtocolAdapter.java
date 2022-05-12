@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -49,7 +49,7 @@ import io.vertx.ext.web.handler.CorsHandler;
  */
 public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpProtocolAdapter<HttpProtocolAdapterProperties> {
 
-    private static final String PARAM_TENANT = "tenant";
+    private static final String PARAM_TENANT = "tenant_id";
     private static final String PARAM_DEVICE_ID = "device_id";
     private static final String PARAM_COMMAND_REQUEST_ID = "cmd_req_id";
 
@@ -129,89 +129,109 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
     private void addTelemetryApiRoutes(final Router router, final Handler<RoutingContext> authHandler) {
 
+        final String telemetryPutPathWithParams = String.format("/telemetry/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID);
+
         // support CORS headers for PUTing telemetry
-        router.routeWithRegex("\\/telemetry\\/.+").handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
-                .allowedMethod(HttpMethod.PUT)
-                .allowedHeader(Constants.HEADER_QOS_LEVEL)
-                .allowedHeader(Constants.HEADER_TIME_TILL_DISCONNECT)
-                .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
-                .allowedHeader(HttpHeaders.CONTENT_TYPE.toString())
-                .exposedHeader(Constants.HEADER_COMMAND)
-                .exposedHeader(Constants.HEADER_COMMAND_REQUEST_ID));
+        router.routeWithRegex("\\/telemetry\\/.+")
+                .handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
+                        .allowedMethod(HttpMethod.PUT)
+                        .allowedHeader(Constants.HEADER_QOS_LEVEL)
+                        .allowedHeader(Constants.HEADER_TIME_TILL_DISCONNECT)
+                        .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
+                        .allowedHeader(HttpHeaders.CONTENT_TYPE.toString())
+                        .exposedHeader(Constants.HEADER_COMMAND)
+                        .exposedHeader(Constants.HEADER_COMMAND_REQUEST_ID))
+                .setName("/telemetry (CORS)");
 
         if (getConfig().isAuthenticationRequired()) {
 
             // support CORS headers for POSTing telemetry
-            router.route(ROUTE_TELEMETRY_ENDPOINT).handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
-                    .allowedMethod(HttpMethod.POST)
-                    .allowedHeader(Constants.HEADER_QOS_LEVEL)
-                    .allowedHeader(Constants.HEADER_TIME_TILL_DISCONNECT)
-                    .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
-                    .allowedHeader(HttpHeaders.CONTENT_TYPE.toString())
-                    .exposedHeader(Constants.HEADER_COMMAND)
-                    .exposedHeader(Constants.HEADER_COMMAND_REQUEST_ID));
+            router.route(ROUTE_TELEMETRY_ENDPOINT)
+                    .handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
+                            .allowedMethod(HttpMethod.POST)
+                            .allowedHeader(Constants.HEADER_QOS_LEVEL)
+                            .allowedHeader(Constants.HEADER_TIME_TILL_DISCONNECT)
+                            .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
+                            .allowedHeader(HttpHeaders.CONTENT_TYPE.toString())
+                            .exposedHeader(Constants.HEADER_COMMAND)
+                            .exposedHeader(Constants.HEADER_COMMAND_REQUEST_ID))
+                    .setName("/telemetry (CORS)");
 
             // require auth for POSTing telemetry
-            router.route(HttpMethod.POST, ROUTE_TELEMETRY_ENDPOINT).handler(authHandler);
+            router.post(ROUTE_TELEMETRY_ENDPOINT).handler(authHandler);
 
             // route for posting telemetry data using tenant and device ID determined as part of
             // device authentication
-            router.route(HttpMethod.POST, ROUTE_TELEMETRY_ENDPOINT).handler(this::handlePostTelemetry);
+            router.post(ROUTE_TELEMETRY_ENDPOINT).handler(this::handlePostTelemetry);
 
             // require auth for PUTing telemetry
-            router.route(HttpMethod.PUT, ROUTE_TELEMETRY_ENDPOINT + "/*").handler(authHandler);
+            router.put(ROUTE_TELEMETRY_ENDPOINT + "/*")
+                    .handler(authHandler)
+                    .setName(telemetryPutPathWithParams);
             // assert that authenticated device's tenant matches tenant from path variables
-            router.route(HttpMethod.PUT, String.format("/telemetry/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
-                .handler(this::assertTenant);
+            router.put(telemetryPutPathWithParams).handler(this::assertTenant);
         }
 
         // route for uploading telemetry data
-        router.routeWithRegex(HttpMethod.PUT, "\\/telemetry\\/.+").handler(this::handlePutTelemetry);
+        router.putWithRegex("\\/telemetry\\/.+")
+                .handler(this::handlePutTelemetry)
+                .setName(telemetryPutPathWithParams);
     }
 
     private void addEventApiRoutes(final Router router, final Handler<RoutingContext> authHandler) {
 
+        final String eventPutPathWithParams = String.format("/event/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID);
+
         // support CORS headers for PUTing events
-        router.routeWithRegex("\\/event\\/.+").handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
-                .allowedMethod(HttpMethod.PUT)
-                .allowedHeader(Constants.HEADER_TIME_TILL_DISCONNECT)
-                .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
-                .allowedHeader(HttpHeaders.CONTENT_TYPE.toString())
-                .exposedHeader(Constants.HEADER_COMMAND)
-                .exposedHeader(Constants.HEADER_COMMAND_REQUEST_ID));
+        router.routeWithRegex("\\/event\\/.+")
+                .handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
+                        .allowedMethod(HttpMethod.PUT)
+                        .allowedHeader(Constants.HEADER_TIME_TILL_DISCONNECT)
+                        .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
+                        .allowedHeader(HttpHeaders.CONTENT_TYPE.toString())
+                        .exposedHeader(Constants.HEADER_COMMAND)
+                        .exposedHeader(Constants.HEADER_COMMAND_REQUEST_ID))
+                .setName("/event (CORS)");
 
         if (getConfig().isAuthenticationRequired()) {
 
             // support CORS headers for POSTing events
-            router.route(ROUTE_EVENT_ENDPOINT).handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
-                    .allowedMethod(HttpMethod.POST)
-                    .allowedHeader(Constants.HEADER_TIME_TILL_DISCONNECT)
-                    .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
-                    .allowedHeader(HttpHeaders.CONTENT_TYPE.toString())
-                    .exposedHeader(Constants.HEADER_COMMAND)
-                    .exposedHeader(Constants.HEADER_COMMAND_REQUEST_ID));
+            router.route(ROUTE_EVENT_ENDPOINT)
+                    .handler(CorsHandler.create(getConfig().getCorsAllowedOrigin())
+                            .allowedMethod(HttpMethod.POST)
+                            .allowedHeader(Constants.HEADER_TIME_TILL_DISCONNECT)
+                            .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
+                            .allowedHeader(HttpHeaders.CONTENT_TYPE.toString())
+                            .exposedHeader(Constants.HEADER_COMMAND)
+                            .exposedHeader(Constants.HEADER_COMMAND_REQUEST_ID))
+                    .setName("/event (CORS)");
 
             // require auth for POSTing events
-            router.route(HttpMethod.POST, ROUTE_EVENT_ENDPOINT).handler(authHandler);
+            router.post(ROUTE_EVENT_ENDPOINT).handler(authHandler);
 
             // route for posting events using tenant and device ID determined as part of
             // device authentication
-            router.route(HttpMethod.POST, ROUTE_EVENT_ENDPOINT).handler(this::handlePostTelemetry);
+            router.post(ROUTE_EVENT_ENDPOINT).handler(this::handlePostTelemetry);
 
             // require auth for PUTing events
-            router.route(HttpMethod.PUT, "/event/*").handler(authHandler);
+            router.put("/event/*")
+                    .handler(authHandler)
+                    .setName(eventPutPathWithParams);
             // route for asserting that authenticated device's tenant matches tenant from path variables
-            router.route(HttpMethod.PUT, String.format("/event/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID))
-                .handler(this::assertTenant);
+            router.put(eventPutPathWithParams).handler(this::assertTenant);
         }
 
         // route for sending event messages
-        router.routeWithRegex(HttpMethod.PUT, "\\/event\\/.+").handler(this::handlePutTelemetry);
+        router.putWithRegex("\\/event\\/.+")
+                .handler(this::handlePutTelemetry)
+                .setName(eventPutPathWithParams);
     }
 
     private void addCommandResponseRoutes(final Router router, final Handler<RoutingContext> authHandler) {
 
         final String commandResponseMatchAllPath = "/command/res/*";
+        final String commandResponsePutPathWithParams = String.format("/command/res/:%s/:%s/:%s", PARAM_TENANT,
+                PARAM_DEVICE_ID, PARAM_COMMAND_REQUEST_ID);
 
         // support CORS headers for PUTing command response messages
         final var corsHandler = CorsHandler.create(getConfig().getCorsAllowedOrigin())
@@ -219,34 +239,40 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
                 .allowedHeader(Constants.HEADER_COMMAND_RESPONSE_STATUS)
                 .allowedHeader(HttpHeaders.AUTHORIZATION.toString())
                 .allowedHeader(HttpHeaders.CONTENT_TYPE.toString());
-        router.route(commandResponseMatchAllPath).handler(corsHandler);
+        router.route(commandResponseMatchAllPath)
+                .handler(corsHandler)
+                .setName(commandResponseMatchAllPath + " (CORS)");
 
         if (getConfig().isAuthenticationRequired()) {
 
             // support CORS headers for POSTing command response messages
             corsHandler.allowedMethod(HttpMethod.POST);
 
+            final String commandResponsePostPathWithParam = String.format("/command/res/:%s", PARAM_COMMAND_REQUEST_ID);
             // require auth for POSTing command response messages
-            router.route(HttpMethod.POST, commandResponseMatchAllPath).handler(authHandler);
+            router.post(commandResponseMatchAllPath)
+                    .handler(authHandler)
+                    .setName(commandResponsePostPathWithParam);
 
             // route for POSTing command response messages using tenant and device ID determined as part of
             // device authentication
-            router.route(HttpMethod.POST, String.format("/command/res/:%s", PARAM_COMMAND_REQUEST_ID))
+            router.post(commandResponsePostPathWithParam)
                 .handler(this::handlePostCommandResponse);
 
             // require auth for PUTing command response message
-            router.route(HttpMethod.PUT, commandResponseMatchAllPath).handler(authHandler);
+            router.put(commandResponseMatchAllPath)
+                    .handler(authHandler)
+                    .setName(commandResponsePutPathWithParams);
             // assert that authenticated device's tenant matches tenant from path variables
-            router.route(
-                    HttpMethod.PUT,
-                    String.format("/command/res/:%s/:%s/:%s", PARAM_TENANT, PARAM_DEVICE_ID, PARAM_COMMAND_REQUEST_ID))
+            router.put(commandResponsePutPathWithParams)
                .handler(this::assertTenant);
         }
 
         // route for uploading command response message
-        router.route(HttpMethod.PUT, commandResponseMatchAllPath).handler(this::handlePutCommandResponse);
+        router.put(commandResponseMatchAllPath)
+                .handler(this::handlePutCommandResponse)
+                .setName(commandResponsePutPathWithParams);
     }
-
 
 
     private static String getTenantParam(final RoutingContext ctx) {

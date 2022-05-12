@@ -39,8 +39,8 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.service.auth.DeviceUser;
+import org.eclipse.hono.service.http.HttpServerSpanHelper;
 import org.eclipse.hono.service.http.HttpUtils;
-import org.eclipse.hono.service.http.TracingHandler;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
@@ -896,7 +896,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         when(ctx.getBody()).thenReturn(payload);
         when(ctx.response()).thenReturn(response);
         when(ctx.request()).thenReturn(request);
-        when(ctx.get(TracingHandler.CURRENT_SPAN)).thenReturn(mock(Span.class));
+        when(ctx.get(HttpServerSpanHelper.ROUTING_CONTEXT_SPAN_KEY)).thenReturn(mock(Span.class));
         when(ctx.vertx()).thenReturn(vertx);
         when(ctx.get(CommandContext.KEY_COMMAND_CONTEXT)).thenReturn(null);
         when(ctx.get(MetricsTags.TtdStatus.class.getName())).thenReturn(MetricsTags.TtdStatus.NONE);

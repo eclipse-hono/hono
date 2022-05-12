@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,7 +21,7 @@ import java.util.Set;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.service.http.TracingHandler;
+import org.eclipse.hono.service.http.HttpServerSpanHelper;
 import org.eclipse.hono.service.management.AbstractDelegatingRegistryHttpEndpoint;
 import org.eclipse.hono.service.management.Filter;
 import org.eclipse.hono.service.management.Id;
@@ -143,7 +143,7 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
 
         final Span span = TracingHelper.buildServerChildSpan(
                 tracer,
-                TracingHandler.serverSpanContext(ctx),
+                HttpServerSpanHelper.serverSpanContext(ctx),
                 SPAN_NAME_GET_DEVICE,
                 getClass().getSimpleName()
         ).start();
@@ -165,7 +165,7 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
     private void doSearchDevices(final RoutingContext ctx) {
         final Span span = TracingHelper.buildServerChildSpan(
                 tracer,
-                TracingHandler.serverSpanContext(ctx),
+                HttpServerSpanHelper.serverSpanContext(ctx),
                 SPAN_NAME_SEARCH_DEVICES,
                 getClass().getSimpleName()).start();
 
@@ -205,7 +205,7 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
 
         final Span span = TracingHelper.buildServerChildSpan(
                 tracer,
-                TracingHandler.serverSpanContext(ctx),
+                HttpServerSpanHelper.serverSpanContext(ctx),
                 SPAN_NAME_CREATE_DEVICE,
                 getClass().getSimpleName()
         ).start();
@@ -237,7 +237,7 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
 
         final Span span = TracingHelper.buildServerChildSpan(
                 tracer,
-                TracingHandler.serverSpanContext(ctx),
+                HttpServerSpanHelper.serverSpanContext(ctx),
                 SPAN_NAME_UPDATE_DEVICE,
                 getClass().getSimpleName()
         ).start();
@@ -262,7 +262,7 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
 
         final Span span = TracingHelper.buildServerChildSpan(
                 tracer,
-                TracingHandler.serverSpanContext(ctx),
+                HttpServerSpanHelper.serverSpanContext(ctx),
                 SPAN_NAME_REMOVE_DEVICE,
                 getClass().getSimpleName()
         ).start();
@@ -286,7 +286,7 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
 
         final Span span = TracingHelper.buildServerChildSpan(
                 tracer,
-                TracingHandler.serverSpanContext(ctx),
+                HttpServerSpanHelper.serverSpanContext(ctx),
                 SPAN_NAME_REMOVE_DEVICES_OF_TENANT,
                 getClass().getSimpleName()
         ).start();

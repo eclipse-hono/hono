@@ -43,8 +43,8 @@ import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.registry.TenantDisabledOrNotRegisteredException;
 import org.eclipse.hono.client.util.StatusCodeMapper;
+import org.eclipse.hono.service.http.HttpServerSpanHelper;
 import org.eclipse.hono.service.http.HttpUtils;
-import org.eclipse.hono.service.http.TracingHandler;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.tracing.TracingHelper;
@@ -256,7 +256,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
         }
         final Span currentSpan = TracingHelper.buildServerChildSpan(
                 tracer,
-                TracingHandler.serverSpanContext(ctx.getRoutingContext()),
+                ctx.getTracingContext(),
                 SPAN_NAME_PROCESS_MESSAGE,
                 getClass().getSimpleName())
                 .start();
@@ -456,7 +456,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
 
         final Span currentSpan = TracingHelper.buildServerChildSpan(
                 tracer,
-                TracingHandler.serverSpanContext(ctx),
+                HttpServerSpanHelper.serverSpanContext(ctx),
                 "process OPTIONS request",
                 getClass().getSimpleName())
                 .start();
