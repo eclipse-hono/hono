@@ -15,9 +15,7 @@ package org.eclipse.hono.adapter.http;
 
 import java.net.HttpURLConnection;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -34,11 +32,9 @@ import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandResponse;
-import org.eclipse.hono.service.http.ComponentMetaDataDecorator;
 import org.eclipse.hono.service.http.DefaultFailureHandler;
+import org.eclipse.hono.service.http.HttpServerSpanHelper;
 import org.eclipse.hono.service.http.HttpUtils;
-import org.eclipse.hono.service.http.TracingHandler;
-import org.eclipse.hono.service.http.WebSpanDecorator;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.EndpointType;
@@ -211,14 +207,11 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         ctx.put(TtdStatus.class.getName(), status);
     }
 
-    private TracingHandler createTracingHandler() {
+    private Map<String, String> getCustomTags() {
         final Map<String, String> customTags = new HashMap<>();
         customTags.put(Tags.COMPONENT.getKey(), getTypeName());
         addCustomTags(customTags);
-        final List<WebSpanDecorator> decorators = new ArrayList<>();
-        decorators.add(new ComponentMetaDataDecorator(customTags));
-        addCustomSpanDecorators(decorators);
-        return new TracingHandler(tracer, decorators);
+        return customTags;
     }
 
     /**
@@ -232,21 +225,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      *                 under key {@link Tags#COMPONENT}.
      */
     protected void addCustomTags(final Map<String, String> customTags) {
-        // empty by default
-    }
-
-    /**
-     * Adds decorators to apply to the active OpenTracing span on certain
-     * stages of processing requests handled by this adapter.
-     * <p>
-     * This method is empty by default.
-     *
-     * @param decorators The decorators to add to. The list will already
-     *                 include a {@linkplain ComponentMetaDataDecorator decorator} for
-     *                 adding standard tags and component specific tags which can be customized by
-     *                 means of overriding {@link #addCustomTags(Map)}.
-     */
-    protected void addCustomSpanDecorators(final List<WebSpanDecorator> decorators) {
         // empty by default
     }
 
@@ -277,8 +255,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * This method creates a router instance along with a route matching all request. That route is initialized with the
      * following handlers and failure handlers:
      * <ol>
+     * <li>a handler to keep track of the tracing span created for the request by means of the Vert.x/Quarkus
+     * instrumentation,</li>
      * <li>a handler to add a Micrometer {@code Timer.Sample} to the routing context,</li>
-     * <li>a handler and failure handler that creates tracing data for all server requests,</li>
      * <li>a handler to log when the connection is closed prematurely,</li>
      * <li>a default failure handler,</li>
      * <li>a handler limiting the body size of requests to the maximum payload size set in the <em>config</em>
@@ -292,14 +271,14 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         final Router router = Router.router(vertx);
         final Route matchAllRoute = router.route();
         // the handlers and failure handlers are added here in a specific order!
-        // 1. handler to start the metrics timer
+        // 1. handler to keep track of the tracing span created by the Vert.x/Quarkus instrumentation (set as active span there)
+        matchAllRoute.handler(HttpServerSpanHelper.getRouteHandlerForAdoptingActiveSpan(tracer, getCustomTags()));
+
+        // 2. handler to start the metrics timer
         matchAllRoute.handler(ctx -> {
             ctx.put(KEY_MICROMETER_SAMPLE, getMetrics().startTimer());
             ctx.next();
         });
-        // 2. tracing handler
-        final TracingHandler tracingHandler = createTracingHandler();
-        matchAllRoute.handler(tracingHandler).failureHandler(tracingHandler);
 
         // 3. handler to log when the connection is closed prematurely
         matchAllRoute.handler(ctx -> {
@@ -612,8 +591,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 ? authenticatedDevice.getDeviceId()
                 : null;
         final Span currentSpan = TracingHelper
-                .buildChildSpan(tracer, TracingHandler.serverSpanContext(ctx.getRoutingContext()),
-                        "upload " + endpoint.getCanonicalName(), getTypeName())
+                .buildChildSpan(tracer, ctx.getTracingContext(), "upload " + endpoint.getCanonicalName(), getTypeName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
                 .withTag(TracingHelper.TAG_TENANT_ID, tenant)
                 .withTag(TracingHelper.TAG_DEVICE_ID, deviceId)
@@ -815,14 +793,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
     private void logResponseGettingClosedPrematurely(final RoutingContext ctx) {
         log.trace("connection got closed before response could be sent");
-        Optional.ofNullable(getRootSpan(ctx)).ifPresent(span -> {
+        Optional.ofNullable(HttpServerSpanHelper.serverSpan(ctx)).ifPresent(span -> {
             TracingHelper.logError(span, "connection got closed before response could be sent");
         });
-    }
-
-    private Span getRootSpan(final RoutingContext ctx) {
-        final Object rootSpanObject = ctx.get(TracingHandler.CURRENT_SPAN);
-        return rootSpanObject instanceof Span ? (Span) rootSpanObject : null;
     }
 
     /**
@@ -1196,8 +1169,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
         final Device authenticatedDevice = ctx.getAuthenticatedDevice();
         final Span currentSpan = TracingHelper
-                .buildChildSpan(tracer, TracingHandler.serverSpanContext(ctx.getRoutingContext()),
-                        "upload Command response", getTypeName())
+                .buildChildSpan(tracer, ctx.getTracingContext(), "upload Command response", getTypeName())
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
                 .withTag(TracingHelper.TAG_TENANT_ID, tenant)
                 .withTag(TracingHelper.TAG_DEVICE_ID, deviceId)

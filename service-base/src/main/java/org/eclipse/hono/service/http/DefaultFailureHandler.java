@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,10 +17,12 @@ import java.net.HttpURLConnection;
 import java.util.Optional;
 
 import org.eclipse.hono.client.ServiceInvocationException;
+import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentracing.Span;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServerResponse;
@@ -66,6 +68,7 @@ public class DefaultFailureHandler implements Handler<RoutingContext> {
                         ctx.request().method(), HttpUtils.getAbsoluteURI(ctx.request()), ctx.statusCode(), ctx.getBody(),
                         ctx.failure());
                 if (ctx.failure() != null) {
+                    final Span span = HttpServerSpanHelper.serverSpan(ctx);
                     final int statusCode;
                     if (ctx.failure() instanceof ServiceInvocationException) {
                         statusCode = ((ServiceInvocationException) ctx.failure()).getErrorCode();
@@ -77,6 +80,8 @@ public class DefaultFailureHandler implements Handler<RoutingContext> {
                         LOG.debug("unexpected internal failure", ctx.failure());
                         statusCode = HttpURLConnection.HTTP_INTERNAL_ERROR;
                     }
+                    Optional.ofNullable(span)
+                            .ifPresent(s -> logErrorInTraceSpan(span, ctx.failure(), statusCode));
                     sendError(ctx.response(), statusCode, ctx.failure().getMessage());
                 } else if (ctx.statusCode() != -1) {
                     sendError(ctx.response(), ctx.statusCode(), null);
@@ -103,6 +108,14 @@ public class DefaultFailureHandler implements Handler<RoutingContext> {
         return new JsonObject()
                 .put(RequestResponseApiConstants.FIELD_ERROR, Optional.ofNullable(errorMessage).orElse(ERROR_DETAIL_NOT_AVAILABLE))
                 .toBuffer();
+    }
+
+    /**
+     * Has to be invoked before the span is finished in response.end().
+     */
+    private void logErrorInTraceSpan(final Span span, final Throwable error, final int errorCode) {
+        final boolean skipUnexpectedErrorCheck = errorCode >= 400 && errorCode < 500; // client error
+        TracingHelper.logError(span, error, skipUnexpectedErrorCheck);
     }
 
     private void sendError(final HttpServerResponse response, final int errorCode, final String errorMessage) {

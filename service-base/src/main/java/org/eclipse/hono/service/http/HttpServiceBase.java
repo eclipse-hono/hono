@@ -14,7 +14,6 @@
 package org.eclipse.hono.service.http;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -178,10 +177,12 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
      * This method creates a router instance along with a route matching all request. That route is initialized with the
      * following handlers and failure handlers:
      * <ul>
-     * <li>a handler and failure handler that creates tracing data for all server requests,</li>
+     * <li>a handler to keep track of the tracing span created for the request by means of the Vert.x/Quarkus
+     * instrumentation,</li>
      * <li>a default failure handler,</li>
      * <li>a handler limiting the body size of requests to the maximum payload size set in the <em>config</em>
      * properties.</li>
+     * <li>the authentication handler, set via {@link #setAuthHandler(AuthenticationHandler)}.</li>
      * </ul>
      *
      * @return The newly created router (never {@code null}).
@@ -191,26 +192,17 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
         final Router router = Router.router(vertx);
         final Route matchAllRoute = router.route();
         // the handlers and failure handlers are added here in a specific order!
-        // 1. tracing handler
-        final TracingHandler tracingHandler = createTracingHandler();
-        matchAllRoute.handler(tracingHandler).failureHandler(tracingHandler);
+        // 1. handler to keep track of the tracing span created by the Vert.x/Quarkus instrumentation (set as active span there)
+        matchAllRoute.handler(HttpServerSpanHelper.getRouteHandlerForAdoptingActiveSpan(tracer, getCustomTags()));
         // 2. default handler for failed routes
         matchAllRoute.failureHandler(new DefaultFailureHandler());
         // 3. BodyHandler with request size limit
         log.info("limiting size of inbound request body to {} bytes", getConfig().getMaxPayloadSize());
         matchAllRoute.handler(BodyHandler.create().setUploadsDirectory(DEFAULT_UPLOADS_DIRECTORY)
                 .setBodyLimit(getConfig().getMaxPayloadSize()));
-        //4. AuthHandler
+        // 4. AuthHandler
         addAuthHandler(router);
         return router;
-    }
-
-    private TracingHandler createTracingHandler() {
-        final Map<String, String> customTags = new HashMap<>();
-        customTags.put(Tags.COMPONENT.getKey(), getClass().getSimpleName());
-        addCustomTags(customTags);
-        final List<WebSpanDecorator> decorators = Collections.singletonList(new ComponentMetaDataDecorator(customTags));
-        return new TracingHandler(tracer, decorators);
     }
 
     /**
@@ -223,6 +215,13 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
             final Route matchAllRoute = router.route();
             matchAllRoute.handler(authHandler);
         }
+    }
+
+    private Map<String, String> getCustomTags() {
+        final Map<String, String> customTags = new HashMap<>();
+        customTags.put(Tags.COMPONENT.getKey(), getClass().getSimpleName());
+        addCustomTags(customTags);
+        return customTags;
     }
 
     /**

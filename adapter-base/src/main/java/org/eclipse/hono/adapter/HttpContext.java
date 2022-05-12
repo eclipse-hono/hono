@@ -19,7 +19,7 @@ import java.util.Optional;
 
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.service.auth.DeviceUser;
-import org.eclipse.hono.service.http.TracingHandler;
+import org.eclipse.hono.service.http.HttpServerSpanHelper;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
@@ -127,8 +127,7 @@ public final class HttpContext implements TelemetryExecutionContext {
 
     @Override
     public Span getTracingSpan() {
-        final Object spanObject = routingContext.get(TracingHandler.CURRENT_SPAN);
-        return spanObject instanceof Span ? (Span) spanObject : null;
+        return HttpServerSpanHelper.serverSpan(routingContext);
     }
 
     @Override

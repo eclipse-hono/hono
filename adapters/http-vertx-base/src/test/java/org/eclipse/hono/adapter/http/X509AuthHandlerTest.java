@@ -44,7 +44,7 @@ import org.eclipse.hono.adapter.auth.device.SubjectDnCredentials;
 import org.eclipse.hono.adapter.auth.device.X509Authentication;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.service.http.TracingHandler;
+import org.eclipse.hono.service.http.HttpServerSpanHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -107,7 +107,7 @@ public class X509AuthHandlerTest {
         when(req.headers()).thenReturn(MultiMap.caseInsensitiveMultiMap());
         final HttpServerResponse resp = mock(HttpServerResponse.class);
         final RoutingContext ctx = mock(RoutingContext.class);
-        when(ctx.get(TracingHandler.CURRENT_SPAN)).thenReturn(mock(Span.class));
+        when(ctx.get(HttpServerSpanHelper.ROUTING_CONTEXT_SPAN_KEY)).thenReturn(mock(Span.class));
         when(ctx.request()).thenReturn(req);
         when(ctx.response()).thenReturn(resp);
         authHandler.handle(ctx);

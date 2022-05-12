@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -45,7 +45,7 @@ import org.eclipse.hono.client.command.Command;
 import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.service.auth.DeviceUser;
-import org.eclipse.hono.service.http.TracingHandler;
+import org.eclipse.hono.service.http.HttpServerSpanHelper;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.CommandEndpoint;
 import org.eclipse.hono.util.QoS;
@@ -437,7 +437,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<HttpProt
         when(context.get(LoraConstants.APP_PROPERTY_META_DATA)).thenReturn(metaData);
         final Span parentSpan = mock(Span.class);
         when(parentSpan.context()).thenReturn(mock(SpanContext.class));
-        when(context.get(TracingHandler.CURRENT_SPAN)).thenReturn(parentSpan);
+        when(context.get(HttpServerSpanHelper.ROUTING_CONTEXT_SPAN_KEY)).thenReturn(parentSpan);
 
         return HttpContext.from(context);
     }
