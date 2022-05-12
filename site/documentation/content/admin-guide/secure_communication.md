@@ -275,10 +275,10 @@ the `--mount` parameter. Please refer to the
 [Docker reference documentation](https://docs.docker.com/engine/reference/commandline/service_create/#add-bind-mounts-volumes-or-memory-filesystems)
 for details.
 
-{{% warning %}}
+{{% notice warning %}}
 Configuring containers to use OpenSSL the way described above does **not** work with container images based on
 native executables.
-{{% /warning %}}
+{{% /notice %}}
 
 ## Server Name Indication (SNI)
 

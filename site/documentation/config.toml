@@ -2,7 +2,7 @@ baseurl = "https://www.eclipse.org/hono/docs/"
 
 languageCode = "en-us"
 title = "Eclipse Hono&trade;"
-theme = "hugo-theme-learn"
+theme = "hugo-theme-relearn"
 metadataformat = "toml"
 canonifyurls = false
 # Enable Google Analytics by entering your tracking id
@@ -39,6 +39,8 @@ pluralizeListTitles = "false"
   disableInlineCopyToClipBoard = true
   # A title for shortcuts in menu is set by default. Set this to true to disable it.
   disableShortcutsTitle = true
+  # do not show Home button above left hand side navigation menu
+  disableLandingPageButton = true
   # When using mulitlingual website, disable the switch language button.
   disableLanguageSwitchingButton = false
   # Hide breadcrumbs in the header and only show the current page title

@@ -1,6 +1,6 @@
 #!/bin/bash
 #*******************************************************************************
-# Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+# Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -29,26 +29,18 @@ fi
 cd homepage/
 if [ ! -d themes/hugo-universal-theme ]
 then
-  git clone https://github.com/devcows/hugo-universal-theme.git themes/hugo-universal-theme
+  git clone --depth 1 --branch 1.1.1 https://github.com/devcows/hugo-universal-theme.git themes/hugo-universal-theme
 fi
-cd themes/hugo-universal-theme
-git fetch
-git checkout 1.1.1
-cd ../..
 
 echo "Going to build homepage in directory: $TARGET"
 hugo -v -d $TARGET
 cd .. 
 
 cd documentation/
-if [ ! -d themes/hugo-theme-learn ]
+if [ ! -d themes/hugo-theme-relearn ]
 then
-  git clone https://github.com/matcornic/hugo-theme-learn.git themes/hugo-theme-learn
+  git clone --depth 1 --branch 3.4.1 https://github.com/McShelby/hugo-theme-relearn.git themes/hugo-theme-relearn
 fi
-cd themes/hugo-theme-learn
-git fetch
-git checkout 2.5.0
-cd ../..
 
 echo "Going to build documentation in directory: $TARGET/docs"
 hugo -v -d $TARGET/docs

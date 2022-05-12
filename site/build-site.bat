@@ -1,5 +1,5 @@
 @rem ***************************************************************************
-@rem Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+@rem Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
 @rem
 @rem See the NOTICE file(s) distributed with this work for additional
 @rem information regarding copyright ownership.
@@ -23,11 +23,8 @@ IF ERRORLEVEL 1 (
 cd homepage
 IF NOT EXIST themes\hugo-universal-theme (
   ECHO Going to download theme 'universal' for hugo...
-  git clone https://github.com/devcows/hugo-universal-theme.git themes\hugo-universal-theme
+  git clone --depth 1 --branch 1.1.1 https://github.com/devcows/hugo-universal-theme.git themes\hugo-universal-theme
 )
-cd themes\hugo-universal-theme
-git checkout 1.1.1
-cd ..\..
 
 IF NOT "%~1"==""  (
   ECHO Going to build homepage in directory: %1
@@ -39,13 +36,10 @@ IF NOT "%~1"==""  (
 cd ..
 
 cd documentation
-IF NOT EXIST themes\hugo-theme-learn (
-  ECHO Going to download theme 'learn' for hugo...
-  git clone https://github.com/matcornic/hugo-theme-learn.git themes\hugo-theme-learn
+IF NOT EXIST themes\hugo-theme-relearn (
+  ECHO Going to download theme 'relearn' for hugo...
+  git clone --depth 1 --branch 3.4.1 https://github.com/McShelby/hugo-theme-relearn.git themes\hugo-theme-relearn
 )
-cd themes\hugo-theme-learn
-git checkout 2.5.0
-cd ..\..
 
 IF NOT "%~1"==""  (
   ECHO Going to build documentation in directory: %1\docs

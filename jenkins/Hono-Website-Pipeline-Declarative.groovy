@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -87,17 +87,13 @@ spec:
 
     stage('Cloning Hugo themes') {
       steps {
-        echo "cloning Hugo Learn theme..."
+        echo "cloning Hugo Relearn theme..."
         sh '''
-            git clone https://github.com/matcornic/hugo-theme-learn.git ${WORKSPACE}/hono-documentation-assembly/themes/hugo-theme-learn
-            cd ${WORKSPACE}/hono-documentation-assembly/themes/hugo-theme-learn
-            git checkout 2.5.0
+            git clone --depth 1 --branch 3.4.1 https://github.com/McShelby/hugo-theme-relearn.git ${WORKSPACE}/hono-documentation-assembly/themes/hugo-theme-relearn
         '''
         echo "cloning Hugo Universal theme..."
         sh '''
-            git clone https://github.com/devcows/hugo-universal-theme.git ${WORKSPACE}/hono/site/homepage/themes/hugo-universal-theme
-            cd ${WORKSPACE}/hono/site/homepage/themes/hugo-universal-theme
-            git checkout 1.1.1
+            git clone --depth 1 --branch 1.1.1 https://github.com/devcows/hugo-universal-theme.git ${WORKSPACE}/hono/site/homepage/themes/hugo-universal-theme
             echo "Remove images from theme" # We do not need the pictures. Removing them, so they don't get deployed
             rm ${WORKSPACE}/hono/site/homepage/themes/hugo-universal-theme/static/img/*
         '''

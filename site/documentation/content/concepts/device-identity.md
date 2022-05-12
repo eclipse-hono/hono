@@ -133,7 +133,7 @@ the adapter extracts the first label of the first host name conveyed in the SNI 
 Information* operation with the extracted value as the tenant identifier. For example, a host name of
 `my-tenant.hono.eclipseprojects.io` would result in a tenant identifier of `my-tenant` being used in the look-up.
 
-{{% note info %}}
+{{% notice info %}}
 Labels in host names may only consist of letters, digits and hyphens. In order to be able to refer to tenants which
 have an identifier that consists of other characters as well, the Device Registry Management API supports registering
 an *alias* for a tenant which can be used as an alternate identifier when looking up tenant configuration information.
@@ -141,7 +141,7 @@ an *alias* for a tenant which can be used as an alternate identifier when lookin
 Based on that, a tenant with identifier `unsupported_id` that has been registered using *alias* `my-tenant`,
 can be referred to by a device by means of including a host name like `my-tenant.hono.eclipseprojects.io` in the SNI
 extension.
-{{% /note %}}
+{{% /notice %}}
 
 After having verified the client certificate using the trust anchor(s), the protocol adapter extracts
 the client certificate's *subject DN* and invokes the Credentials API's
