@@ -1,7 +1,7 @@
 {{ if not (hasPrefix .Site.Params.honoVersion "stable" ) }}
     <div class="old-version-hint">
         <p>This page refers to version <em>{{ .Site.Params.HonoVersion }}</em>.
-            You might want to use the <a href="{{ .Site.BaseURL }}">current stable</a> version.
+            You might want to use the <a href="{{ .Site.BaseURL }}">current stable</a> version instead.
         </p>
     </div>
 {{ end }}

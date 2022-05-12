@@ -28,6 +28,7 @@
     <div id="body" class="default-animation">
       <div id="sidebar-overlay"></div>
       <div id="toc-overlay"></div>
+      {{- partial "old-version-hint.html" . }}
       <nav id="topbar" class="highlightable">
         <div>
         {{- $showPrevNext := (and (not .Params.disableNextPrev) (not .Site.Params.disableNextPrev)) }}
