@@ -1,3 +1,8 @@
+/* replace fa-languag icon with fa-code-branch icon */
+#sidebar i.fa-language::before {
+  content: "\f126";
+}
+
 /* alert classes are used by the (deprecated) "note" and "warning" short codes only */
 .alert {
   padding-left: 1.4rem;
