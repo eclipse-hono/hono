@@ -40,7 +40,7 @@ spec:
         memory: "512Mi"
         cpu: "1"
   - name: hugo
-    image: eclipsecbi/hugo:0.81.0
+    image: cibuilds/hugo:0.97
     command:
     - cat
     tty: true
