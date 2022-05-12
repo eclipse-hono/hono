@@ -211,7 +211,7 @@ public final class TracingHelper {
             logUnexpectedError(error, span);
         }
         if (span != null) {
-            logError(span, getErrorLogItems(error));
+            logError(span, getErrorLogItems(null, error));
         }
     }
 
@@ -227,21 +227,33 @@ public final class TracingHelper {
     }
 
     /**
-     * Creates a set of items to log for an error.
+     * Creates a set of items to log for a message and an error.
      *
+     * @param message The message.
      * @param error The error.
      * @return The items to log.
      */
-    public static Map<String, Object> getErrorLogItems(final Throwable error) {
-        final Map<String, Object> items = new HashMap<>(2);
+    public static Map<String, Object> getErrorLogItems(final String message, final Throwable error) {
+        final Map<String, Object> items = new HashMap<>(4);
         items.put(Fields.EVENT, Tags.ERROR.getKey());
+        Optional.ofNullable(message)
+                .ifPresent(ok -> items.put(Fields.MESSAGE, message));
         if (error != null) {
-            items.put(Fields.ERROR_OBJECT, error);
+            items.put(Fields.ERROR_OBJECT, getErrorObjectFieldValue(error));
             if (error.getCause() != null) {
                 items.put(ERROR_CAUSE_OBJECT, error.getCause());
             }
         }
         return items;
+    }
+
+    private static Object getErrorObjectFieldValue(final Throwable error) {
+        if (error.getClass().getName().startsWith("org.eclipse.hono.")) {
+            // skip inclusion of stacktrace for all Hono exceptions (e.g. ServiceInvocationException)
+            // in order to reduce the size of the trace (stacktrace for these exceptions usually isn't really useful here)
+            return error.toString();
+        }
+        return error;
     }
 
     /**
@@ -282,13 +294,7 @@ public final class TracingHelper {
             if (message == null && error == null) {
                 throw new NullPointerException("Either message or error must not be null");
             }
-            final Map<String, Object> items = new HashMap<>(3);
-            items.put(Fields.EVENT, Tags.ERROR.getKey());
-            Optional.ofNullable(message)
-                    .ifPresent(ok -> items.put(Fields.MESSAGE, message));
-            Optional.ofNullable(error)
-                    .ifPresent(ok -> items.put(Fields.ERROR_OBJECT, error));
-            logError(span, items);
+            logError(span, getErrorLogItems(message, error));
         }
     }
 
