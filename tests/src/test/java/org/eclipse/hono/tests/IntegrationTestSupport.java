@@ -439,7 +439,7 @@ public final class IntegrationTestSupport {
     /**
      * The number of messages to send by default in protocol adapter tests.
      */
-    public static final int MSG_COUNT = Integer.getInteger("msg.count", 400);
+    public static final int MSG_COUNT = Integer.getInteger("msg.count", 200);
 
     /**
      * The maximum BCrypt cost factor supported by Hono.

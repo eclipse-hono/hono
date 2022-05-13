@@ -61,8 +61,7 @@ public class CommandEndpointConfiguration {
      */
     @Override
     public String toString() {
-        return String.format("subscribe as: %s, southbound endpoint: %s, northbound endpoint: %s",
-                getSubscriberRole(), getSouthboundEndpoint(), getNorthboundEndpoint());
+        return String.format("subscribe as: %s", getSubscriberRole());
     }
 
     /**

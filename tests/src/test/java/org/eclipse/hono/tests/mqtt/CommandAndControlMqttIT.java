@@ -238,7 +238,11 @@ public class CommandAndControlMqttIT extends MqttTestBase {
 
             // send response
             mqttClient.publish(
-                    endpointConfig.getResponseTopic(commandTargetDeviceId, commandRequestId, HttpURLConnection.HTTP_OK),
+                    endpointConfig.getResponseTopic(
+                            counter.get(),
+                            commandTargetDeviceId,
+                            commandRequestId,
+                            HttpURLConnection.HTTP_OK),
                     Buffer.buffer(command + ": ok"),
                     qos,
                     false,

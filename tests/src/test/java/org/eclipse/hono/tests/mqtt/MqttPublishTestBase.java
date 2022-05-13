@@ -512,18 +512,23 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
             final String deviceId,
             final String deviceToSendTo) throws InterruptedException {
 
+        final boolean isGatewayOnBehalfOfDevice = !deviceId.equals(deviceToSendTo);
+
         doTestUploadMessages(
                 ctx,
                 tenantId,
                 connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password),
                 (payload) -> {
                     // send message with empty-notification content type, will cause error since doTestUploadMessages() uses non-empty payload
-                    return sendWithCorrelationIdIfNeeded(tenantId, deviceToSendTo, payload, Map.of(
-                            MessageHelper.SYS_PROPERTY_CONTENT_TYPE, EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
+                    return sendWithCorrelationIdIfNeeded(
+                            tenantId,
+                            deviceToSendTo,
+                            payload,
+                            Map.of(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION));
                 },
                 (messageHandler) -> createConsumer(tenantId, messageHandler),
-                (msg) -> {
-                    final JsonObject payload = new JsonObject(msg.payload());
+                (errorMsg) -> {
+                    final JsonObject payload = new JsonObject(errorMsg.payload());
                     final String correlationId = payload.getString(MessageHelper.SYS_PROPERTY_CORRELATION_ID);
                     ctx.verify(() -> {
                         assertThat(payload.getInteger("code")).isEqualTo(HttpURLConnection.HTTP_BAD_REQUEST);
@@ -531,11 +536,11 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
                         assertThat(payload.getString("message"))
                                 .contains(EventConstants.CONTENT_TYPE_EMPTY_NOTIFICATION);
                         // validate topic segments; example: error//myDeviceId/telemetry/4/503
-                        final String[] topicSegments = msg.topicName().split("/");
+                        final String[] topicSegments = errorMsg.topicName().split("/");
                         assertThat(topicSegments.length).isEqualTo(6);
-                        assertThat(topicSegments[0]).isEqualTo("error");
+                        assertThat(topicSegments[0]).isEqualTo("e");
                         assertThat(topicSegments[1]).isEmpty(); // tenant
-                        assertThat(topicSegments[2]).isEqualTo(deviceId.equals(deviceToSendTo) ? "" : deviceToSendTo);
+                        assertThat(topicSegments[2]).isEqualTo(isGatewayOnBehalfOfDevice ? deviceToSendTo : "");
                         assertThat(topicSegments[3]).isNotEmpty(); // endpoint used when sending the message that caused the error (e.g. "telemetry")
                         assertThat(topicSegments[4]).isEqualTo(correlationId);
                         assertThat(topicSegments[5]).isEqualTo(Integer.toString(HttpURLConnection.HTTP_BAD_REQUEST));
@@ -543,7 +548,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
                     });
                     return Future.succeededFuture(correlationId);
                 },
-                "error///#");
+                "e//%s/#".formatted(isGatewayOnBehalfOfDevice ? "+" : ""));
     }
 
     /**
@@ -579,8 +584,8 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
                 connectToAdapter(IntegrationTestSupport.getUsername(deviceId, tenantId), password),
                 (payload) -> sendWithCorrelationIdIfNeeded(tenantId, deviceToSendTo, payload, null),
                 (messageHandler) -> createConsumer(tenantId, messageHandler),
-                (msg) -> {
-                    final JsonObject payload = new JsonObject(msg.payload());
+                (errorMsg) -> {
+                    final JsonObject payload = new JsonObject(errorMsg.payload());
                     final String correlationId = payload.getString(MessageHelper.SYS_PROPERTY_CORRELATION_ID);
                     ctx.verify(() -> {
                         assertThat(payload.getInteger("code")).isEqualTo(HttpURLConnection.HTTP_NOT_FOUND);
@@ -589,10 +594,10 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
                                 ServiceInvocationException.getLocalizedMessage(
                                         "CLIENT_ERROR_DEVICE_DISABLED_OR_NOT_REGISTERED"));
                         // validate topic segments; example: error//myDeviceId/telemetry/4/503
-                        final String[] topicSegments = msg.topicName().split("/");
+                        final String[] topicSegments = errorMsg.topicName().split("/");
                         assertThat(topicSegments.length).isEqualTo(6);
                         assertThat(topicSegments[0]).isEqualTo("error");
-                        assertThat(topicSegments[1]).isEmpty(); // tenant
+                        assertThat(topicSegments[1]).isEqualTo(tenantId);
                         assertThat(topicSegments[2]).isEqualTo(deviceToSendTo);
                         assertThat(topicSegments[3]).isNotEmpty(); // endpoint used when sending the message that caused the error (e.g. "telemetry")
                         assertThat(topicSegments[4]).isEqualTo(correlationId);
@@ -601,7 +606,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
                     });
                     return Future.succeededFuture(correlationId);
                 },
-                "error///#");
+                "error/%s/+/#".formatted(tenantId));
     }
 
     private Future<String> sendWithCorrelationIdIfNeeded(final String tenantId, final String deviceId,
@@ -644,7 +649,7 @@ public abstract class MqttPublishTestBase extends MqttTestBase {
      *                         error message handling for a non-existing consumer shall get tested.
      * @param errorMsgHandler The handler to invoke with received error messages or {@code null} if no error messages
      *            are expected. The future result is the error message correlation id.
-     * @param errorTopic The errorTopic to subscribe to. Will be ignored of errorMsgHandler is {@code null}.
+     * @param errorTopic The errorTopic to subscribe to. Will be ignored if errorMsgHandler is {@code null}.
      * @throws InterruptedException if the test fails.
      */
     protected void doTestUploadMessages(

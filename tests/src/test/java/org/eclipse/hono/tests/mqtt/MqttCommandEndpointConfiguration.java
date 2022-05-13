@@ -18,6 +18,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
 import org.eclipse.hono.tests.CommandEndpointConfiguration;
+import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.ResourceIdentifier;
 
 /**
@@ -74,16 +75,29 @@ public class MqttCommandEndpointConfiguration extends CommandEndpointConfigurati
     /**
      * Gets the name of the topic that a device uses for publishing the response to a command.
      *
+     * @param msgNo The response message number.
      * @param deviceId The identifier of the device.
      * @param requestId The request identifier from the command.
      * @param status The status code indicating the outcome of processing the command.
      * @return The topic name.
      */
-    public final String getResponseTopic(final String deviceId, final String requestId, final int status) {
+    public final String getResponseTopic(
+            final int msgNo,
+            final String deviceId,
+            final String requestId,
+            final int status) {
+        final boolean useShortNames = msgNo % 2 == 0;
+        final var ep = useShortNames ? CommandConstants.COMMAND_ENDPOINT_SHORT : CommandConstants.COMMAND_ENDPOINT;
+        final var resSegment = useShortNames ? "s" : "res";
         if (isSubscribeAsGateway()) {
-            return String.format("%s//%s/res/%s/%d", getSouthboundEndpoint(), deviceId, requestId, status);
+            return String.format("%s//%s/%s/%s/%d",
+                    ep,
+                    deviceId,
+                    resSegment,
+                    requestId,
+                    status);
         }
-        return String.format("%s///res/%s/%d", getSouthboundEndpoint(), requestId, status);
+        return String.format("%s///%s/%s/%d", ep, resSegment, requestId, status);
     }
 
     void assertCommandPublishTopicStructure(

@@ -37,8 +37,10 @@ certificate containing a public key that can be used for digital signature. The 
 client certificate to verify the device's identity as described in
 [Client Certificate based Authentication]({{< relref "/concepts/device-identity#client-certificate-based-authentication" >}}).
 
-**NB** The adapter needs to be [configured for TLS]({{< relref "/admin-guide/secure_communication#mqtt-adapter" >}})
+{{% notice info %}}
+The adapter needs to be [configured for TLS]({{< relref "/admin-guide/secure_communication#mqtt-adapter" >}})
 in order to support this mechanism.
+{{% /notice %}}
 
 ### Username/Password
 
@@ -55,9 +57,11 @@ has on record for the client as described in
 [Username/Password based Authentication]({{< relref "/concepts/device-identity#usernamepassword-based-authentication" >}}).
 If the credentials match, the client has been authenticated successfully and the connection is being established.
 
-**NB** There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses
+{{% notice info %}}
+There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses
 for authentication. See [Device Identity]({{< relref "/concepts/device-identity.md" >}}) for a discussion of the
 concepts.
+{{% /notice %}}
 
 ## Resource Limit Checks
 
@@ -130,7 +134,9 @@ URL encoded property names and values that are separated by `&`. For example, a 
 
 ## Publish Telemetry Data (authenticated Device)
 
-* Topic: `telemetry` or `t`
+* Topic:
+  * `t`
+  * `telemetry`
 * Authentication: required
 * Payload:
   * (required) Arbitrary payload
@@ -144,22 +150,26 @@ the device's tenant and device identity as part of the authentication process.
 Publish some JSON data for device `4711`:
 
 ```sh
-mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t telemetry -m '{"temp": 5}'
+mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t t -m '{"temp": 5}'
 ```
 
 Publish some JSON data for device `4711` using a client certificate for authentication:
 
 ```sh
 # in base directory of Hono repository:
-mosquitto_pub -p 8883 -t telemetry -m '{"temp": 5}' --cert demo-certs/certs/device-4711-cert.pem --key demo-certs/certs/device-4711-key.pem --cafile demo-certs/certs/trusted-certs.pem
+mosquitto_pub -p 8883 -t t -m '{"temp": 5}' --cert demo-certs/certs/device-4711-cert.pem --key demo-certs/certs/device-4711-key.pem --cafile demo-certs/certs/trusted-certs.pem
 ```
 
-**NB** The example above assumes that the MQTT adapter is
+{{% notice info %}}
+The example above assumes that the MQTT adapter is
 [configured for TLS]({{< ref "/admin-guide/secure_communication#mqtt-adapter" >}}) and the secure port is used.
+{{% /notice %}}
 
 ## Publish Telemetry Data (unauthenticated Device)
 
-* Topic: `telemetry/${tenant-id}/${device-id}` or `t/${tenant-id}/${device-id}`
+* Topic:
+  * `t/${tenant-id}/${device-id}`
+  * `telemetry/${tenant-id}/${device-id}`
 * Authentication: none
 * Payload:
   * (required) Arbitrary payload
@@ -172,12 +182,16 @@ This topic can be used by devices that have not authenticated to the protocol ad
 Publish some JSON data for device `4711`:
 
 ```sh
-mosquitto_pub -t telemetry/DEFAULT_TENANT/4711 -m '{"temp": 5}'
+mosquitto_pub -t t/DEFAULT_TENANT/4711 -m '{"temp": 5}'
 ```
 
 ## Publish Telemetry Data (authenticated Gateway)
 
-* Topic: `telemetry/${tenant-id}/${device-id}` or `t/${tenant-id}/${device-id}` or `telemetry//${device-id}` or `t//${device-id}`
+* Topic:
+  * `t//${device-id}`
+  * `telemetry//${device-id}`
+  * `t/${tenant-id}/${device-id}`
+  * `telemetry/${tenant-id}/${device-id}`
 * Authentication: required
 * Payload:
   * (required) Arbitrary payload
@@ -197,11 +211,13 @@ retrieving a *registration assertion* for the device from the configured
 Publish some JSON data for device `4712` via gateway `gw-1`:
 
 ```sh
-mosquitto_pub -u 'gw@DEFAULT_TENANT' -P gw-secret -t telemetry/DEFAULT_TENANT/4712 -m '{"temp": 5}'
+mosquitto_pub -u 'gw@DEFAULT_TENANT' -P gw-secret -t t/DEFAULT_TENANT/4712 -m '{"temp": 5}'
 ```
 
-**NB** The example above assumes that a gateway device with ID `gw-1` has been registered with `hashed-password` credentials
+{{% notice info %}}
+The example above assumes that a gateway device with ID `gw-1` has been registered with `hashed-password` credentials
 with *auth-id* `gw` and password `gw-secret`.
+{{% /notice %}}
 
 ## Publishing Events
 
@@ -237,7 +253,9 @@ The MQTT adapter currently does not use any properties except *hono-ttl*.
 
 ## Publish an Event (authenticated Device)
 
-* Topic: `event` or `e`
+* Topic:
+  * `e`
+  * `event`
 * Authentication: required
 * Payload:
   * (required) Arbitrary payload
@@ -245,23 +263,25 @@ The MQTT adapter currently does not use any properties except *hono-ttl*.
 This is the preferred way for devices to publish events. It is available only if the protocol adapter has been configured
 to require devices to authenticate (which is the default).
 
-**Example**
+**Examples**
 
 Upload a JSON string for device `4711`:
 
 ```sh
-mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t event -q 1 -m '{"alarm": 1}'
+mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t e -q 1 -m '{"alarm": 1}'
 ```
 
 Upload a JSON string for device `4711` with `time-to-live` as 10 seconds:
 
 ```sh
-mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t event/?hono-ttl=10 -q 1 -m '{"alarm": 1}'
+mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t e/?hono-ttl=10 -q 1 -m '{"alarm": 1}'
 ```
 
 ## Publish an Event (unauthenticated Device)
 
-* Topic: `event/${tenant-id}/${device-id}` or `e/${tenant-id}/${device-id}`
+* Topic:
+  * `e/${tenant-id}/${device-id}`
+  * `event/${tenant-id}/${device-id}`
 * Authentication: none
 * Payload:
   * (required) Arbitrary payload
@@ -274,18 +294,22 @@ This topic can be used by devices that have not authenticated to the protocol ad
 Publish some JSON data for device `4711`:
 
 ```sh
-mosquitto_pub -t event/DEFAULT_TENANT/4711 -q 1 -m '{"alarm": 1}'
+mosquitto_pub -t e/DEFAULT_TENANT/4711 -q 1 -m '{"alarm": 1}'
 ```
 
 Publish some JSON data for device `4711` with `time-to-live` as 15 seconds:
 
 ```sh
-mosquitto_pub -t event/DEFAULT_TENANT/4711/?hono-ttl=15 -q 1 -m '{"alarm": 1}'
+mosquitto_pub -t e/DEFAULT_TENANT/4711/?hono-ttl=15 -q 1 -m '{"alarm": 1}'
 ```
 
 ## Publish an Event (authenticated Gateway)
 
-* Topic: `event/${tenant-id}/${device-id}` or `e/${tenant-id}/${device-id}` or `event//${device-id}` or `e//${device-id}`
+* Topic:
+  * `e//${device-id}`
+  * `event//${device-id}`
+  * `e/${tenant-id}/${device-id}`
+  * `event/${tenant-id}/${device-id}`
 * Authentication: required
 * Payload:
   * (required) Arbitrary payload
@@ -305,11 +329,13 @@ retrieving a *registration assertion* for the device from the configured
 Publish some JSON data for device `4712` via gateway `gw-1`:
 
 ```sh
-mosquitto_pub -u 'gw@DEFAULT_TENANT' -P gw-secret -t event/DEFAULT_TENANT/4712 -q 1 -m '{"temp": 5}'
+mosquitto_pub -u 'gw@DEFAULT_TENANT' -P gw-secret -t e//4712 -q 1 -m '{"temp": 5}'
 ```
 
-**NB** The example above assumes that a gateway device with ID `gw-1` has been registered with `hashed-password` credentials
+{{% notice info %}}
+The example above assumes that a gateway device with ID `gw-1` has been registered with `hashed-password` credentials
 with *auth-id* `gw` and password `gw-secret`.
+{{% /notice %}}
 
 ## Command & Control
 
@@ -367,21 +393,28 @@ other way than defined below.
 
 ### Receiving Commands (authenticated Device)
 
-An authenticated device MUST use the following topic filter for subscribing to commands:
+An authenticated device MUST use one of the following topic filters for subscribing to commands:
 
-`command/[${tenant-id}]/[${device-id}]/req/#`
+* `c/[${tenant-id}]/[${device-id}]/q/#`
+* `command/[${tenant-id}]/[${device-id}]/req/#`
 
 Both the tenant and the device ID are optional. If specified, they MUST match the authenticated device's tenant and/or
 device ID. Note that the *authentication identifier* used in the device's credentials is *not* necessarily the same as
 the device ID.
 
-The protocol adapter will publish commands for the device to the following topic names
+The protocol adapter will publish **one-way** commands for the device to the following topic names respectively:
 
-* **one-way** `command/${tenant-id}/${device-id}/req//${command}`
-* **request-response** `command/${tenant-id}/${device-id}/req/${req-id}/${command}`
+* `c/[${tenant-id}]/[${device-id}]/q//${command}`
+* `command/[${tenant-id}]/[${device-id}]/req//${command}`
 
-The *tenant-id* and/or *device-id* will be included in the topic name if the tenant and/or device ID had been included
-in the topic filter used for subscribing to commands.
+The protocol adapter will publish **request-response** commands for the device to the following topic names respectively:
+
+* `c/[${tenant-id}]/[${device-id}]/q/${req-id}/${command}`
+* `command/[${tenant-id}]/[${device-id}]/req/${req-id}/${command}`
+
+The topic name will contain
+* the *tenant-id* and/or *device-id* if the tenant and/or device ID had been included in the topic filter used for subscribing,
+* `command` and `req` if the topic filter used for subscribing also contained the spelled-out segments.
 
 **Examples**
 
@@ -389,22 +422,22 @@ The following command can be used to subscribe to commands resulting in command 
 topic that does not include tenant nor device ID:
 
 ```sh
-mosquitto_sub -v -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t command///req/#
+mosquitto_sub -v -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t c///q/#
 ```
 
-A request/response command with name `setBrightness` from an application might look like this:
+A request-response command with name `setBrightness` from an application might look like this:
 
-```plaintext
-command///req/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness
+```
+c///q/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness
 {
   "brightness": 79
 }
 ```
 
-A corresponding *one-way* command might look like this:
+A corresponding one-way command might look like this:
 
-```plaintext
-command///req//setBrightness
+```
+c///q//setBrightness
 {
   "brightness": 79
 }
@@ -416,59 +449,67 @@ The following command can be used to subscribe to commands resulting in command 
 topic that includes the tenant ID:
 
 ```sh
-mosquitto_sub -v -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t c/DEFAULT_TENANT//q/#
+mosquitto_sub -v -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t command/DEFAULT_TENANT//req/#
 ```
 
-Note the usage of the abbreviated names (`c` and `q` instead of `command` and `req`) and the inclusion of the tenant ID
+Note the usage of the fully spelled out names (`command` and `req` instead of `c` and `q`) and the inclusion of the tenant ID
 in the topic filter.
 
-A corresponding request/response command with name `setBrightness` from an application might look like this:
+A corresponding request-response command with name `setBrightness` from an application might look like this:
 
-```plaintext
-c/DEFAULT_TENANT//q/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness
+```
+command/DEFAULT_TENANT//req/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness
 {
   "brightness": 79
 }
 ```
 
-A corresponding *one-way* command might look like this:
+A corresponding one-way command might look like this:
 
-```plaintext
-c/DEFAULT_TENANT//q//setBrightness
+```
+command/DEFAULT_TENANT//req//setBrightness
 {
   "brightness": 79
 }
 ```
 
-Note that the topic also includes the abbreviated names and the tenant identifier because the
+Note that the topic also includes the tenant identifier because the
 topic filter used for subscribing did contain the tenant ID as well.
 
 ### Receiving Commands (unauthenticated Device)
 
-An unauthenticated device MUST use the topic filter `command/${tenant-id}/${device-id}/req/#` to subscribe to commands.
+An unauthenticated device MUST use one of the following topic filters for subscribing to commands:
+
+* `c/${tenant-id}/${device-id}/q/#`
+* `command/${tenant-id}/${device-id}/req/#`
+
+The protocol adapter will publish **one-way** commands for the device to the following topic names respectively:
+* `c/${tenant-id}/${device-id}/q//${command}`
+* `command/${tenant-id}/${device-id}/q//${command}`
+
+The protocol adapter will publish **request-response** commands for the device to the following topic names respectively:
+* `c/${tenant-id}/${device-id}/q/${req-id}/${command}`
+* `command/${tenant-id}/${device-id}/q/${req-id}/${command}`
 
 **Example**
 
 ```sh
-mosquitto_sub -v -t command/DEFAULT_TENANT/4711/req/#
+mosquitto_sub -v -t c/DEFAULT_TENANT/4711/q/#
 ```
 
-The adapter will then publish *Request/Response* commands for the device to topic `command/${tenant-id}/${device-id}/req/${req-id}/${command}`
-and *one-way* commands to topic `command/${tenant-id}/${device-id}/req//${command}`.
+A request-response command with name `setBrightness` from an application might look like this:
 
-For example, a request/response command with name `setBrightness` from an application might look like this:
-
-```plaintext
-command/DEFAULT_TENANT/4711/req/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness
+```
+c/DEFAULT_TENANT/4711/q/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness
 {
   "brightness": 79
 }
 ```
 
-A corresponding *one-way* command might look like this:
+A corresponding one-way command might look like this:
 
-```plaintext
-command/DEFAULT_TENANT/4711/req//setBrightness
+```
+c/DEFAULT_TENANT/4711/q//setBrightness
 {
   "brightness": 79
 }
@@ -487,20 +528,23 @@ for details.
 
 An authenticated gateway MUST use one of the following topic filters for subscribing to commands:
 
-| Topic Filter                       | Description                                                                  |
-| :--------------------------------- | :--------------------------------------------------------------------------- |
-| `command//+/req/#`                    | Subscribe to commands for all devices that the gateway is authorized to act on behalf of. |
-| `command/${tenant-id}/+/req/#`          | Subscribe to commands for all devices that the gateway is authorized to act on behalf of. |
-| `command//${device-id}/req/#`           | Subscribe to commands for a specific device that the gateway is authorized to act on behalf of. |
-| `command/${tenant-id}/${device-id}/req/#` | Subscribe to commands for a specific device that the gateway is authorized to act on behalf of. |
+| Topic Filter | Description |
+| :----------- | :---------- |
+| `c/[${tenant-id}]/+/q/#`<br>`command/[${tenant-id}]/+/req/#` | Subscribe to commands for **all** devices that the gateway is authorized to act on behalf of. |
+| `c/[${tenant-id}]/${device-id}/q/#`<br>`command/[${tenant-id}]/${device-id}/req/#` | Subscribe to commands for **one specific** device that the gateway is authorized to act on behalf of. |
 
-The protocol adapter will publish commands for devices to the following topic names
 
-* **one-way** `command//${device-id}/req//${command}` or `command/${tenant-id}/${device-id}/req//${command}`
-* **request-response** `command//${device-id}/req/${req-id}/${command}` or `command/${tenant-id}/${device-id}/req/${req-id}/${command}`
+The protocol adapter will publish **one-way** commands for devices to the following topic names respectively:
+* `c/[${tenant-id}]/${device-id}/q//${command}`
+* `command/[${tenant-id}]/${device-id}/req//${command}`
 
-The `${tenant-id}` will be included in the topic name if the tenant ID had been included in the topic filter used for
-subscribing to commands.
+The protocol adapter will publish **request-response** commands for devices to the following topic names respectively:
+* `c/[${tenant-id}]/${device-id}/q/${req-id}/${command}`
+* `command/[${tenant-id}]/${device-id}/req/${req-id}/${command}`
+
+The topic name will contain
+* the *tenant-id* segment if the tenant identifier had been included in the topic filter used for subscribing,
+* `command` and `req` if the topic filter used for subscribing also contained the spelled-out segments.
 
 When processing an incoming command message, the protocol adapter will give precedence to a device-specific command
 subscription matching the command target device, whether the subscription comes from a gateway or the device itself.
@@ -517,18 +561,18 @@ that gateway has created such a command subscription, that gateway will be chose
 on behalf of the command target device and that has an open subscription will be chosen randomly to receive the command
 message.
 
-**Subscribe to all Devices**
+**Subscribe to Commands for all Devices**
 
 A subscription to commands for all devices that a gateway acts on behalf of looks like this:
 
 ```sh
-mosquitto_sub -v -u 'gw@DEFAULT_TENANT' -P gw-secret -t command/DEFAULT_TENANT/+/req/#
+mosquitto_sub -v -u 'gw@DEFAULT_TENANT' -P gw-secret -t c/DEFAULT_TENANT/+/q/#
 ```
 
 A request/response command for device `4711` with name `setBrightness` from an application might then look like this:
 
-```plaintext
-command/DEFAULT_TENANT/4711/req/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness
+```
+c/DEFAULT_TENANT/4711/q/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrightness
 {
   "brightness": 79
 }
@@ -537,7 +581,7 @@ command/DEFAULT_TENANT/4711/req/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/setBrig
 Note that the tenant identifier is included in the topic name that the command has been published to because it had been
 included in the topic filter used for subscribing to the commands.
 
-**Subscribe to a specific Device**
+**Subscribe to Commands for a specific Device**
 
 A subscription to commands for a specific device can be done like this:
 
@@ -545,57 +589,61 @@ A subscription to commands for a specific device can be done like this:
 mosquitto_sub -v -u 'gw@DEFAULT_TENANT' -P gw-secret -t c//4711/q/#
 ```
 
-Note the usage of the abbreviated names (`c` and `q` instead of `command` and `req`) in the topic filter.
-
 A corresponding *one-way* command might look like this:
 
-```plaintext
+```
 c//4711/q//setBrightness
 {
   "brightness": 79
 }
 ```
 
-Note that the topic also includes the abbreviated names and does not include the tenant identifier because the
+Note that the topic does not include the tenant identifier because the
 topic filter used for subscribing did not contain the tenant ID either.
 
 
 ### Sending a Response to a Command (authenticated Device)
 
-An authenticated device MUST send the response to a previously received command to the topic `command///res/${req-id}/${status}`.
+An authenticated device MUST send the response to a previously received command to
+one of the following topics:
+* `c///s/${req-id}/${status}`
+* `command///res/${req-id}/${status}`
 
 **Example**
 
-After a command has arrived as in the above example, you send a response using the arrived `${req-id}`:
+Sending a response to a command using the `${req-id}` from the command:
 
 ```sh
-mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t command///res/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200 -m '{"lumen": 200}'
+mosquitto_pub -u 'sensor1@DEFAULT_TENANT' -P hono-secret -t c///s/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200 -m '{"lumen": 200}'
 ```
 
 ### Sending a Response to a Command (unauthenticated Device)
 
-An unauthenticated device MUST send the response to a previously received command to the topic `command/${tenant-id}/${device-id}/res/${req-id}/${status}`.
+An unauthenticated device MUST send the response to a previously received command to
+one of the following topics:
+* `c/${tenant-id}/${device-id}/s/${req-id}/${status}`
+* `command/${tenant-id}/${device-id}/res/${req-id}/${status}`
 
 **Example**
 
-After a command has arrived as in the above example, you send a response using the arrived `${req-id}`:
+Sending a response to a command using the `${req-id}` from the command:
 
 ```sh
-mosquitto_pub -t command/DEFAULT_TENANT/4711/res/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200 -m '{"lumen": 200}'
+mosquitto_pub -t c/DEFAULT_TENANT/4711/s/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200 -m '{"lumen": 200}'
 ```
 
 ### Sending a Response to a Command (authenticated Gateway)
 
-An authenticated gateway MUST send a device's response to a command it has received on behalf of the device to the
-topic `command//${device-id}/res/${req-id}/${status}`.
+An authenticated gateway MUST send a device's response to a command it has received on behalf of the device to one of the following topics:
+* `c//${device-id}/s/${req-id}/${status}`
+* `command//${device-id}/res/${req-id}/${status}`
 
 **Example**
 
-After a command has arrived as in the above example, the response is sent using the `${req-id}` from the topic that the
-command had been published to:
+Sending a response to a command using the `${req-id}` from the command:
 
 ```sh
-mosquitto_pub -u 'gw@DEFAULT_TENANT' -P gw-secret -t command//4711/res/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200 -m '{"lumen": 200}'
+mosquitto_pub -u 'gw@DEFAULT_TENANT' -P gw-secret -t c//4711/s/1010f8ab0b53-bd96-4d99-9d9c-56b868474a6a/200 -m '{"lumen": 200}'
 ```
 
 ## Error Reporting via Error Topic
@@ -637,47 +685,55 @@ connection for both subscribing and publishing.
 
 ### Receiving Error Messages (authenticated Device)
 
-An authenticated device MUST use the following topic filter for subscribing to error messages:
+An authenticated device MUST use one of the following topic filters for subscribing to error messages:
 
-`error/[${tenant-id}]/[${device-id}]/#`
+* `e/[${tenant-id}]/[${device-id}]/#`
+* `error/[${tenant-id}]/[${device-id}]/#`
 
 Both the tenant and the device ID are optional. If specified, they MUST match the authenticated device's tenant and/or
 device ID. Note that the *authentication identifier* used in the device's credentials is *not* necessarily the same as
 the device ID.
 
-The protocol adapter will publish error messages for the device to the following topic name
+The protocol adapter will publish error messages for the device to the following topic names
+respectively:
 
-`error/[${tenant-id}]/[${device-id}]/${endpoint-type}/${correlation-id}/${error-status}`
+* `e/[${tenant-id}]/[${device-id}]/${endpoint-type}/${correlation-id}/${error-status}`
+* `error/[${tenant-id}]/[${device-id}]/${endpoint-type}/${correlation-id}/${error-status}`
 
-The *tenant-id* and/or *device-id* will be included in the topic name if the tenant and/or device ID had been included
-in the topic filter used for subscribing to error messages.
+The topic name will contain
+* the *tenant-id* and/or *device-id* if the tenant and/or device ID had been included in the topic filter used for subscribing,
+* `error` if the topic filter used for subscribing also contained the spelled-out segment.
 
 **Example**
 
-An example using the [MQTT CLI](https://hivemq.github.io/mqtt-cli/) that will produce an error output provided there is
+An example using the [MQTT CLI](https://hivemq.github.io/mqtt-cli/) that will produce an error output if there is
 no downstream consumer for the device messages.
 
 ```sh
 mqtt shell
 con -V 3 -h [MQTT_ADAPTER_IP] -u [DEVICE]@[TENANT] -pw [PWD]
-sub -t error///# --qos 0 --outputToConsole
-pub -t telemetry -m '{"temp": 5}' --qos 1
+sub -t e///# --qos 0 --outputToConsole
+pub -t t -m '{"temp": 5}' --qos 1
 ```
 
 Using an explicit correlation id:
+
 ```sh
-pub -t telemetry/?correlation-id=123 -m '{"temp": 5}' --qos 1
+pub -t t/?correlation-id=123 -m '{"temp": 5}' --qos 1
 ```
 
 ### Receiving Error Messages (unauthenticated Device)
 
-An unauthenticated device MUST use the following topic filter for subscribing to error messages:
+An unauthenticated device MUST use one of the following topic filters for subscribing to error messages:
 
-`error/${tenant-id}/${device-id}/#`
+* `es/${tenant-id}/${device-id}/#`
+* `error/${tenant-id}/${device-id}/#`
 
-The protocol adapter will publish error messages for the device to the following topic name
+The protocol adapter will publish error messages for the device to the following topic names
+respectively:
 
-`error/${tenant-id}/${device-id}/${endpoint-type}/${correlation-id}/${error-status}`
+* `e/${tenant-id}/${device-id}/${endpoint-type}/${correlation-id}/${error-status}`
+* `error/${tenant-id}/${device-id}/${endpoint-type}/${correlation-id}/${error-status}`
 
 ### Receiving Error Messages (authenticated Gateway)
 
@@ -685,15 +741,19 @@ An authenticated gateway MUST use one of the following topic filters for subscri
 
 | Topic Filter                                           | Description |
 | :----------------------------------------------------- | :---------- |
-| `error//+/#`<br/>`error/${tenant-id}/+/#`                   | Subscribe to error messages for all devices that the gateway is authorized to act on behalf of. |
-| `error//${device-id}/#`<br/>`error/${tenant-id}/${device-id}/#` | Subscribe to error messages for a specific device that the gateway is authorized to act on behalf of. |
+| `e/[${tenant-id}]/+/#`<br/>`error/[${tenant-id}]/+/#` | Subscribe to error messages for **all devices** that the gateway is authorized to act on behalf of. |
+| `e/[${tenant-id}]/${device-id}/#`<br/>`error/[${tenant-id}]/${device-id}/#` | Subscribe to error messages for **one specific** device that the gateway is authorized to act on behalf of. |
 
-The protocol adapter will publish error messages for the device to the following topic name
+The protocol adapter will publish error messages for the device to the following topic names
+respectively:
 
-`error/[${tenant-id}]/[${device-id}]/${endpoint-type}/${correlation-id}/${error-status}`
+* `e/[${tenant-id}]/[${device-id}]/${endpoint-type}/${correlation-id}/${error-status}`
+* `error/[${tenant-id}]/[${device-id}]/${endpoint-type}/${correlation-id}/${error-status}`
 
-The *tenant-id* and/or *device-id* will be included in the topic name if the tenant and/or device ID had been included
-in the topic filter used for subscribing to error messages.
+The topic name will contain
+* the *tenant-id* and/or *device-id* if the tenant and/or device ID had been included in the topic filter used for subscribing,
+* `error` if the topic filter used for subscribing also contained the spelled-out segment.
+
 
 ### Error Message Payload
 
@@ -780,8 +840,8 @@ functionality are therefore subject to change without prior notice.
 {{% /notice %}}
 
 This feature is useful in scenarios where devices are connected to the adapter via a gateway but the gateway is not
-able to include the device ID in the topic that the gateway publishes data to. The gateway will use the plain `telemetry`,
-`event` or `command` topics in this case. The message payload will usually contain the identifier of the device that the
+able to include the device ID in the topic that the gateway publishes data to. The gateway will use the single-segment `t`,
+`e` or `c` topics in this case. The message payload will usually contain the identifier of the device that the
 data originates from.
 
 The same functionality can also be used to transform the payload of messages uploaded by a device. This can be used for
@@ -817,7 +877,6 @@ The adapter includes the following meta data in messages being sent downstream:
 
 | Name               | Location                | Type      | Description                                                     |
 | :----------------- | :---------------------- | :-------- | :-------------------------------------------------------------- |
-| *device_id*        | *application*           | *string*  | The identifier of the device that the message originates from.  |
 | *orig_adapter*     | *application*           | *string*  | Contains the adapter's *type name* which can be used by downstream consumers to determine the protocol adapter that the message has been received over. The MQTT adapter's type name is `hono-mqtt`. |
 | *orig_address*     | *application*           | *string*  | Contains the name of the MQTT topic that the device has originally published the data to. |
 | *x-opt-retain*     | *message-annotations*   | *boolean* | Contains `true` if the device has published an event or telemetry message with its *retain* flag set to `1` |
