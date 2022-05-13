@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,6 +16,12 @@ package org.eclipse.hono.util;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+
+import static com.google.common.truth.Truth.assertThat;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -25,7 +31,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.smallrye.common.vertx.VertxContext;
 import io.vertx.core.Context;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
@@ -107,4 +115,58 @@ class FuturesTest {
             assertEquals(expectedException, r.cause());
         });
     }
+
+    /**
+     * Verifies that code is scheduled to be executed on a given Context
+     * other than the current Context.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
+    public void testExecuteOnContextRunsOnGivenContext(final VertxTestContext ctx) {
+
+        final Context mockContext = mock(Context.class);
+        doAnswer(invocation -> {
+            final Handler<Void> codeToRun = invocation.getArgument(0);
+            codeToRun.handle(null);
+            return null;
+        }).when(mockContext).runOnContext(any(Handler.class));
+
+        Futures.executeOnContextWithSameRoot(mockContext, result -> result.complete("done"))
+                .onComplete(ctx.succeeding(s -> {
+                    ctx.verify(() -> {
+                        verify(mockContext).runOnContext(any(Handler.class));
+                        assertThat(s).isEqualTo("done");
+                    });
+                    ctx.completeNow();
+                }));
+    }
+
+    /**
+     * Verifies that {@link Futures#executeOnContextWithSameRoot(Context, Handler)} will run code on the
+     * current context if invoked from a DuplicatedContext of the context given as method parameter.
+     *
+     * @param ctx The vert.x test context.
+     * @param vertx The vert.x instance.
+     */
+    @Test
+    @Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
+    public void testExecuteOnContextSticksToCurrentDuplicatedContext(final VertxTestContext ctx, final Vertx vertx) {
+
+        final Context rootContext = vertx.getOrCreateContext();
+        final Context duplicatedContext = VertxContext.getOrCreateDuplicatedContext(rootContext);
+        duplicatedContext.runOnContext(v -> {
+            Futures.executeOnContextWithSameRoot(rootContext, result -> result.complete("done"))
+                    .onComplete(ctx.succeeding(s -> {
+                        ctx.verify(() -> {
+                            assertThat(Vertx.currentContext()).isEqualTo(duplicatedContext);
+                            assertThat(s).isEqualTo("done");
+                        });
+                        ctx.completeNow();
+                    }));
+        });
+    }
+
 }
