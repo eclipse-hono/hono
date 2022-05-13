@@ -44,6 +44,7 @@ import org.eclipse.hono.client.amqp.connection.ErrorConverter;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.HonoProtonHelper;
 import org.eclipse.hono.client.amqp.connection.ReconnectListener;
+import org.eclipse.hono.util.Futures;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -221,7 +222,7 @@ public final class HonoConnectionImpl implements HonoConnection {
             // this means that the connection to the peer is not established (yet) and no (re)connect attempt is in progress
             return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "not connected"));
         } else {
-            return HonoProtonHelper.executeOnContext(context, codeToRun);
+            return Futures.executeOnContextWithSameRoot(context, codeToRun);
         }
     }
 

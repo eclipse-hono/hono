@@ -14,6 +14,7 @@ package org.eclipse.hono.client.amqp.connection;
 
 import java.util.Objects;
 
+import org.eclipse.hono.util.Futures;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,7 +23,6 @@ import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonConnection;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonLink;
@@ -204,42 +204,6 @@ public final class HonoProtonHelper {
     }
 
     /**
-     * Executes some code on a given context.
-     *
-     * @param <T> The type of the result that the code produces.
-     * @param requiredContext The context to run the code on.
-     * @param codeToRun The code to execute. The code is required to either complete or
-     *                  fail the promise that is passed into the handler.
-     * @return The future containing the result of the promise passed in to the handler for
-     *         executing the code. The future thus indicates the outcome of executing
-     *         the code. The future will always be failed if the required context is {@code null}.
-     */
-    public static <T> Future<T> executeOnContext(
-            final Context requiredContext,
-            final Handler<Promise<T>> codeToRun) {
-
-        Objects.requireNonNull(codeToRun);
-
-        final Promise<T> result = Promise.promise();
-        if (requiredContext == null) {
-            result.fail(new IllegalStateException("no context to run on"));
-        } else {
-            final Context currentContext = Vertx.currentContext();
-            if (currentContext == requiredContext) {
-                // we are already running on the correct Context,
-                // just execute the code
-                codeToRun.handle(result);
-            } else {
-                // we need to run the code on the Context on which
-                // we had originally established the connection,
-                // otherwise vertx-proton will yield undefined results
-                requiredContext.runOnContext(go -> codeToRun.handle(result));
-            }
-        }
-        return result.future();
-    }
-
-    /**
      * Closes an AMQP link and frees up its allocated resources.
      * <p>
      * This method simply invokes {@link #closeAndFree(Context, ProtonLink, long, Handler)} with
@@ -289,7 +253,7 @@ public final class HonoProtonHelper {
             throw new IllegalArgumentException("detach time-out must be > 0");
         }
 
-        executeOnContext(context, result -> {
+        Futures.executeOnContextWithSameRoot(context, result -> {
 
             if (link == null) {
                 closeHandler.handle(null);
@@ -348,7 +312,7 @@ public final class HonoProtonHelper {
 
         final int timeout = Math.max(timeoutMillis, 200);
 
-        return executeOnContext(vertxContext, (Promise<ProtonConnection> r) -> {
+        return Futures.executeOnContextWithSameRoot(vertxContext, (Promise<ProtonConnection> r) -> {
             connectionToClose.disconnectHandler(null); // make sure we are not trying to re-connect
             final Handler<AsyncResult<ProtonConnection>> closeHandler = remoteClose -> {
                 connectionToClose.disconnect();
