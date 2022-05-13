@@ -41,9 +41,11 @@ The examples below refer to devices `4711` and `gw-1` of tenant `DEFAULT_TENANT`
 corresponding passwords. The example deployment as described in the [Deployment Guide]({{< relref "deployment" >}})
 comes pre-configured with the corresponding entities in its device registry component.
 
-**NB** There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses
+{{% notice info %}}
+There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses
 for authentication. See [Device Identity]({{< relref "/concepts/device-identity.md" >}}) for a discussion of the
 concepts.
+{{% /notice %}}
 
 ### SASL EXTERNAL Authentication
 
@@ -51,7 +53,9 @@ The AMQP adapter supports authenticating clients using the SASL EXTERNAL mechani
 a successful validation of an X.509 (client) certificate presented by the client during a TLS handshake as described in
 [Client Certificate based Authentication]({{< relref "/concepts/device-identity#client-certificate-based-authentication" >}}).
 
-**NB** The AMQP adapter needs to be configured for TLS in order to support this mechanism.
+{{% notice info %}}
+The AMQP adapter needs to be configured for TLS in order to support this mechanism.
+{{% /notice %}}
 
 ## Resource Limit Checks
 
@@ -144,7 +148,8 @@ adapter and prompts the user for a command to execute:
 ~~~sh
 # in directory: hono/cli-quarkus/target/
 java -jar hono-cli-*-exec.jar amqp --sandbox
-
+~~~
+~~~
 hono-cli/amqp-device>
 ~~~
 
@@ -168,7 +173,9 @@ or rejected (unsettled).
 
 * Authentication: SASL PLAIN or SASL EXTERNAL
 * Message *properties*:
-  * (required) *to*: either `telemetry` or `t`
+  * (required) *to*:
+    * `t`
+    * `telemetry`
   * (optional) *content-type*: The type of payload contained in the message body. The given content type will be used
     in the AMQP message being forwarded downstream if not empty. Otherwise, the content type of the downstream
     message will be set to `application/octet-stream` if the payload is not empty and no default content type has been
@@ -191,7 +198,7 @@ or rejected (unsettled).
     * `amqp:precondition-failed`: The message does not fulfill certain requirements, e.g adapter cannot assert device
       registration etc.
 
-When a device publishes data to the `telemetry` address, the AMQP adapter automatically determines the device's identity
+When a device publishes data to the telemetry address, the AMQP adapter automatically determines the device's identity
 and tenant during the authentication process.
 
 **Examples**
@@ -201,6 +208,8 @@ Start the client in interactive mode:
 ~~~sh
 # in directory: hono/cli-quarkus/target/
 java -jar hono-cli-*-exec.jar amqp -H hono.eclipseprojects.io -P 5672 -u sensor1@DEFAULT_TENANT -p hono-secret
+~~~
+~~~
 hono-cli/amqp-device>
 ~~~
 
@@ -233,7 +242,9 @@ client and can then be (re-)used for sending multiple messages.
 
 * Authentication: SASL PLAIN or SASL EXTERNAL
 * Message *properties*:
-  * (required) *to*: either `telemetry/${tenant-id}/${device-id}` or `t/${tenant-id}/${device-id}`
+  * (required) *to*:
+    * `t/${tenant-id}/${device-id}`
+    * `telemetry/${tenant-id}/${device-id}`
   * (optional) *content-type*: The type of payload contained in the message body. The given content type will be used
     in the AMQP message being forwarded downstream if not empty. Otherwise, the content type of the downstream
     message will be set to `application/octet-stream` if the payload is not empty and no default content type has been
@@ -284,8 +295,11 @@ message address is used to identify the device that the gateway publishes data f
 
 * Authentication: SASL PLAIN or SASL EXTERNAL
 * Message *properties*:
-  * (required) *to*: either `telemetry/${tenant-id}/${device-id}` or `t/${tenant-id}/${device-id}` or
-    `telemetry//${device-id}` or `t//${device-id}`
+  * (required) *to*:
+    * `t//${device-id}`
+    * `t/${tenant-id}/${device-id}`
+    * `telemetry//${device-id}`
+    * `telemetry/${tenant-id}/${device-id}`
   * (optional) *content-type*: The type of payload contained in the message body. The given content type will be used
     in the AMQP message being forwarded downstream if not empty. Otherwise, the content type of the downstream
     message will be set to `application/octet-stream` if the payload is not empty and no default content type has been
@@ -333,7 +347,9 @@ All other combinations are not supported by the adapter and result in the messag
 
 * Authentication: SASL PLAIN or SASL EXTERNAL
 * Message *properties*:
-  * (required) *to*: either `event` or `e`
+  * (required) *to*:
+    * `e`
+    * `event`
   * (optional) *content-type*: The type of payload contained in the message body. The given content type will be used
     in the AMQP message being forwarded downstream if not empty. Otherwise, the content type of the downstream
     message will be set to `application/octet-stream` if the payload is not empty and no default content type has been
@@ -371,7 +387,9 @@ java -jar hono-cli-*-exec.jar amqp --sandbox event --payload '{"foo": "bar"}' --
 
 * Authentication: SASL PLAIN or SASL EXTERNAL
 * Message *properties*:
-  * (required) *to*: either `event/${tenant-id}/${device-id}` or `e/${tenant-id}/${device-id}`
+  * (required) *to*:
+    * `e/${tenant-id}/${device-id}`
+    * `event/${tenant-id}/${device-id}`
   * (optional) *content-type*: The type of payload contained in the message body. The given content type will be used
     in the AMQP message being forwarded downstream if not empty. Otherwise, the content type of the downstream
     message will be set to `application/octet-stream` if the payload is not empty and no default content type has been
@@ -415,8 +433,11 @@ the AMQP adapter could determine the tenant and device ID from.
 
 * Authentication: SASL PLAIN or SASL EXTERNAL
 * Message *properties*:
-  * (required) *to*: either `event/${tenant-id}/${device-id}` or `e/${tenant-id}/${device-id}` or `event//${device-id}` or
-    `e//${device-id}`
+  * (required) *to*:
+    * `e//${device-id}`
+    * `event//${device-id}`
+    * `e/${tenant-id}/${device-id}`
+    * `event/${tenant-id}/${device-id}`
   * (optional) *content-type*: The type of payload contained in the message body. The given content type will be used
     in the AMQP message being forwarded downstream if not empty. Otherwise, the content type of the downstream
     message will be set to `application/octet-stream` if the payload is not empty and no default content type has been
@@ -644,7 +665,6 @@ The adapter includes the following meta data in messages being sent downstream:
 
 | Name               | Type      | Description                                                     |
 | :----------------- | :-------- | :-------------------------------------------------------------- |
-| *device_id*        | *string*  | The identifier of the device that the message originates from.  |
 | *orig_adapter*     | *string*  | Contains the adapter's *type name* which can be used by downstream consumers to determine the protocol adapter that the message has been received over. The AMQP adapter's type name is `hono-amqp`. |
 | *orig_address*     | *string*  | Contains the AMQP *target address* that the device has used to send the data. |
 

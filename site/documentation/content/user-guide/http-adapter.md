@@ -25,8 +25,10 @@ certificate containing a public key that can be used for digital signature. The 
 client certificate to verify the device's identity as described in
 [Client Certificate based Authentication]({{< relref "/concepts/device-identity#client-certificate-based-authentication" >}}).
 
-**NB** The HTTP adapter needs to be [configured for TLS]({{< relref "/admin-guide/secure_communication#http-adapter" >}})
+{{% notice info %}}
+The HTTP adapter needs to be [configured for TLS]({{< relref "/admin-guide/secure_communication#http-adapter" >}})
 in order to support this mechanism.
+{{% /notice %}}
 
 ### HTTP Basic Auth
 
@@ -42,9 +44,11 @@ has on record for the client as described in
 [Username/Password based Authentication]({{< relref "/concepts/device-identity#usernamepassword-based-authentication" >}}).
 If the credentials match, the client has been authenticated successfully and the request is being processed.
 
-**NB** There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses
+{{% notice info %}}
+There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses
 for authentication. See [Device Identity]({{< relref "/concepts/device-identity.md" >}}) for a discussion of the
 concepts.
+{{% /notice %}}
 
 ## Message Limits
 
@@ -120,7 +124,8 @@ Publish some JSON data for device `4711`:
 
 ~~~sh
 curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry
-
+~~~
+~~~
 HTTP/1.1 202 Accepted
 content-length: 0
 ~~~
@@ -129,7 +134,8 @@ Publish some JSON data for device `4711` using *at least once* QoS:
 
 ~~~sh
 curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' -H 'qos-level: 1' --data-binary '{"temp": 5}' http://localhost:8080/telemetry
-
+~~~
+~~~
 HTTP/1.1 202 Accepted
 content-length: 0
 ~~~
@@ -138,7 +144,8 @@ Publish some JSON data for device `4711`, indicating that the device will wait f
 
 ~~~sh
 curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' -H 'hono-ttd: 10' --data-binary '{"temp": 5}' http://localhost:8080/telemetry
-
+~~~
+~~~
 HTTP/1.1 200 OK
 hono-command: set
 hono-cmd-req-id: 1010a7249aa5-f742-4376-8458-bbfc88c72d92
@@ -154,13 +161,16 @@ Publish some JSON data for device `4711` using a client certificate for authenti
 ~~~sh
 # in base directory of Hono repository:
 curl -i --cert demo-certs/certs/device-4711-cert.pem --key demo-certs/certs/device-4711-key.pem --cacert demo-certs/certs/trusted-certs.pem -H 'content-type: application/json' --data-binary '{"temp": 5}' https://localhost:8443/telemetry
-
+~~~
+~~~
 HTTP/1.1 202 Accepted
 content-length: 0
 ~~~
 
-**NB** The example above assumes that the HTTP adapter is
+{{% notice info %}}
+The example above assumes that the HTTP adapter is
 [configured for TLS]({{< relref "/admin-guide/secure_communication#http-adapter" >}}) and the secure port is used.
+{{% /notice %}}
 
 ## Publish Telemetry Data (unauthenticated Device)
 
@@ -220,7 +230,8 @@ Publish some JSON data for device `4711`:
 
 ~~~sh
 curl -i -X PUT -H 'content-type: application/json' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4711
-
+~~~
+~~~
 HTTP/1.1 202 Accepted
 content-length: 0
 ~~~
@@ -229,7 +240,8 @@ Publish some JSON data for device `4711` using *at least once* QoS:
 
 ~~~sh
 curl -i -X PUT -H 'content-type: application/json' -H 'qos-level: 1' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry/DEFAULT_TENANT/4711
-
+~~~
+~~~
 HTTP/1.1 202 Accepted
 content-length: 0
 ~~~
@@ -238,7 +250,8 @@ Publish some JSON data for device `4711`, indicating that the device will wait f
 
 ~~~sh
 curl -i -X PUT -H 'content-type: application/json' -H 'hono-ttd: 10' --data-binary '{"temp": 5}' http://localhost:8080/telemetry/DEFAULT_TENANT/4711
-
+~~~
+~~~
 HTTP/1.1 200 OK
 hono-command: set
 hono-cmd-req-id: 1010a7249aa5-f742-4376-8458-bbfc88c72d92
@@ -322,7 +335,8 @@ Publish some JSON data on behalf of device `4712`:
 
 ~~~sh
 curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry//4712
-
+~~~
+~~~
 HTTP/1.1 202 Accepted
 content-length: 0
 ~~~
@@ -331,7 +345,8 @@ Publish some JSON data on behalf of device `4712` using *at least once* QoS:
 
 ~~~sh
 curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' -H 'qos-level: 1' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry//4712
-
+~~~
+~~~
 HTTP/1.1 202 Accepted
 content-length: 0
 ~~~
@@ -341,7 +356,8 @@ response:
 
 ~~~sh
 curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' -H 'hono-ttd: 10' --data-binary '{"temp": 5}' http://localhost:8080/telemetry//4712
-
+~~~
+~~~
 HTTP/1.1 200 OK
 hono-command: set
 hono-cmd-req-id: 1010a7249aa5-f742-4376-8458-bbfc88c72d92
@@ -413,7 +429,8 @@ Publish some JSON data for device `4711`:
 
 ~~~sh
 curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' --data-binary '{"alarm": true}' http://127.0.0.1:8080/event
-
+~~~
+~~~
 HTTP/1.1 202 Accepted
 content-length: 0
 ~~~
@@ -469,7 +486,8 @@ Publish some JSON data for device `4711`:
 
 ~~~sh
 curl -i -X PUT -H 'content-type: application/json' --data-binary '{"alarm": true}' http://127.0.0.1:8080/event/DEFAULT_TENANT/4711
-
+~~~
+~~~
 HTTP/1.1 202 Accepted
 content-length: 0
 ~~~
@@ -540,7 +558,8 @@ Publish some JSON data on behalf of device `4712`:
 
 ~~~sh
 curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' --data-binary '{"temp": 5}' http://127.0.0.1:8080/event//4712
-
+~~~
+~~~
 HTTP/1.1 202 Accepted
 content-length: 0
 ~~~
@@ -566,29 +585,30 @@ response will be sent to the device (provided the request was valid).
 The adapter lets devices indicate the number of seconds they will wait for a response by setting a header or a query
 parameter.
 
-#### Using an HTTP Header
-
-The (optional) *hono-ttd* header can be set in requests for publishing telemetry data or events.
-
-Example:
+{{< tabs groupId="TTD">}}
+{{% tab name="Header" %}}
+The (optional) *hono-ttd* header can be set in requests for publishing telemetry data or events:
 
 ~~~sh
 curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' -H 'hono-ttd: 60' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry
-
+~~~
+~~~
 HTTP/1.1 202 Accepted
 content-length: 0
 ~~~
-
-#### Using a Query Parameter
-
-Alternatively the *hono-ttd* query parameter can be used:
+{{% /tab %}}
+{{% tab name="Query Parameter" %}}
+The (optional) *hono-ttd* query parameter can be used in requests for publishing telemetry data or events:
 
 ~~~sh
 curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' --data-binary '{"temp": 5}' http://127.0.0.1:8080/telemetry?hono-ttd=60
-
+~~~
+~~~
 HTTP/1.1 202 Accepted
 content-length: 0
 ~~~
+{{% /tab %}}
+{{< /tabs >}}
 
 ### Commands handled by gateways
 
@@ -667,7 +687,8 @@ Send a response to a previously received command with the command-request-id `re
 
 ~~~sh
 curl -i -u sensor1@DEFAULT_TENANT:hono-secret -H 'content-type: application/json' --data-binary '{"brightness-changed": true}' http://127.0.0.1:8080/command/res/req-id-uuid?hono-cmd-status=200
-
+~~~
+~~~
 HTTP/1.1 202 Accepted
 content-length: 0
 ~~~
@@ -714,7 +735,8 @@ device `4711`:
 
 ~~~sh
 curl -i -X PUT -H 'content-type: application/json' --data-binary '{"brightness-changed": true}' http://127.0.0.1:8080/command/res/DEFAULT_TENANT/4711/req-id-uuid?hono-cmd-status=200
-
+~~~
+~~~
 HTTP/1.1 202 Accepted
 content-length: 0
 ~~~
@@ -774,7 +796,8 @@ Send a response to a previously received command with the command-request-id `re
 
 ~~~sh
 curl -i -X PUT -u gw@DEFAULT_TENANT:gw-secret -H 'content-type: application/json' --data-binary '{"brightness-changed": true}' http://127.0.0.1:8080/command/res//4712/req-id-uuid?hono-cmd-status=200
-
+~~~
+~~~
 HTTP/1.1 202 Accepted
 content-length: 0
 ~~~
@@ -790,7 +813,6 @@ The adapter includes the following meta data in messages being sent downstream:
 
 | Name               | Type      | Description                                                     |
 | :----------------- | :-------- | :-------------------------------------------------------------- |
-| *device_id*        | *string*  | The identifier of the device that the message originates from.  |
 | *orig_adapter*     | *string*  | Contains the adapter's *type name* which can be used by downstream consumers to determine the protocol adapter that the message has been received over. The HTTP adapter's type name is `hono-http`. |
 | *orig_address*     | *string*  | Contains the (relative) URI that the device has originally posted the data to. |
 | *ttd*              | *integer* | Contains the effective number of seconds that the device will wait for a response. This property is only set if the HTTP request contains the *hono-ttd* header or request parameter. |

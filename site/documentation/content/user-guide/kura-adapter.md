@@ -35,8 +35,10 @@ certificate containing a public key that can be used for digital signature. The 
 client certificate to verify the device's identity as described in
 [Client Certificate based Authentication]({{< relref "/concepts/device-identity#client-certificate-based-authentication" >}}).
 
-**NB** The adapter needs to be [configured for TLS]({{< relref "/admin-guide/secure_communication#mqtt-adapter" >}})
+{{% notice info %}}
+The adapter needs to be [configured for TLS]({{< relref "/admin-guide/secure_communication#mqtt-adapter" >}})
 in order to support this mechanism.
+{{% /notice %}}
 
 ### Username/Password
 
@@ -53,9 +55,11 @@ has on record for the client as described in
 [Username/Password based Authentication]({{< relref "/concepts/device-identity#usernamepassword-based-authentication" >}}).
 If the credentials match, the client has been authenticated successfully and the connection is being established.
 
-**NB** There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses
+{{% notice info %}}
+There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses
 for authentication. See [Device Identity]({{< relref "/concepts/device-identity.md" >}}) for a discussion of the
 concepts.
+{{% /notice %}}
 
 ## Resource Limit Checks
 

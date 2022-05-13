@@ -177,11 +177,7 @@ The table below provides an overview of the members of a JSON object representin
 | *subject-dn*             | *yes*      | *string*      | `-`           | The subject DN of the trusted root certificate in the format defined by [RFC 2253](https://www.ietf.org/rfc/rfc2253.txt). |
 | *public-key*             | *yes*      | *string*      | `-`           | The Base64 encoded binary DER encoding of the trusted root certificate's public key. |
 | *algorithm*              | *no*       | *string*      | `RSA`         | The name of the public key algorithm. Supported values are `RSA` and `EC`. |
-| *auto-provisioning-enabled* | *no*    | *boolean*     | `false`       | If set to `true`, protocol adapters MAY request auto-provisioning of devices that authenticate with a client certificate issued by this CA. Otherwise, protocol adapters MUST NOT request auto-provisioning. |
-
-**NB** CAs of the *same* tenant MAY share the same subject DN, e.g. allowing for the definition of overlapping validity periods.
-However, CAs of *different* tenants MUST NOT share the same subject DN in order to allow for the unique look-up of a tenant by
-the subject DN of one of its trusted CAs.
+| *auto-provisioning-enabled* | *no*    | *boolean*     | `false`       | If `true`, protocol adapters MAY request auto-provisioning of devices that authenticate with a client certificate issued by this CA. Otherwise, protocol adapters MUST NOT request auto-provisioning. |
 
 **Examples**
 
@@ -215,8 +211,8 @@ The table below contains the properties which are used to configure a *Hono prot
 | Name                               | Mandatory | JSON Type  | Default Value | Description |
 | :--------------------------------- | :-------: | :--------- | :------------ | :---------- |
 | *type*                             | *yes*     | *string*   | `-`          | The type of the adapter which this configuration belongs to.|
-| *enabled*                          | *no*      | *boolean*  | `false`      | If set to false the tenant is not allowed to receive / send data utilizing the given adapter. |
-| *device-authentication-required*   | *no*      | *boolean*  | `true`       | If set to false, devices are not required to authenticate with the adapter before sending / receiving data. |
+| *enabled*                          | *no*      | *boolean*  | `false`      | If `false`, the tenant is not allowed to receive/send data utilizing the given type of adapter. |
+| *device-authentication-required*   | *no*      | *boolean*  | `true`       | If `false`, devices are not required to authenticate with an adapter of the given type before sending/receiving data. |
 
 Protocol adapters SHOULD use the configuration properties set for a tenant when interacting with devices of that tenant, e.g. in order to make authorization decisions etc.
 

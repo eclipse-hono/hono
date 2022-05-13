@@ -26,9 +26,11 @@ The examples below refer to devices `4711` and `gw-1` of tenant `DEFAULT_TENANT`
 corresponding secrets. The example deployment as described in the [Deployment Guides]({{< relref "deployment" >}})
 comes pre-configured with the corresponding entities in its device registry component.
 
-**NB** There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses
+{{% notice info %}}
+There is a subtle difference between the *device identifier* (*device-id*) and the *auth-id* a device uses
 for authentication. See [Device Identity]({{< relref "/concepts/device-identity.md" >}}) for a discussion of the
 concepts.
+{{% /notice %}}
 
 ### X.509
 
@@ -38,8 +40,10 @@ X.509 client certificate containing an ECDSA-capable public key. The adapter use
 certificate to verify the device's identity as described in
 [Client Certificate based Authentication]({{< relref "/concepts/device-identity#client-certificate-based-authentication" >}}).
 
-**NB** The CoAP adapter needs to be [configured for DTLS]({{< relref "/admin-guide/secure_communication#coap-adapter" >}})
+{{% notice info %}}
+The CoAP adapter needs to be [configured for DTLS]({{< relref "/admin-guide/secure_communication#coap-adapter" >}})
 in order to support this mechanism.
+{{% /notice %}}
 
 ## Message Limits
 

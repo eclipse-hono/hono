@@ -131,7 +131,9 @@ For each set of credentials the combination of *auth-id* and *type* MUST be uniq
 
 The device registry may choose to not return information which is not suitable for authentication a device. This includes for example the `enabled` property. If set to `false`, then the device registry may choose to treat this request as if no credentials would be found. For secrets for example, this could mean that the device registry does not return secrets which are not valid at the current point in time.
 
-**NB** Care needs to be taken that the value for the *authentication identifier* is compliant with the authentication mechanism(s) it is supposed to be used with. For example, when using standard HTTP Basic authentication, the *username* part of the Basic Authorization header value (which corresponds to the *auth-id*) MUST not contain any *colon* (`:`) characters, because the colon character is used as the separator between username and password. Similar constraints may exist for other authentication mechanisms, so the *authentication identifier* needs to be chosen with the anticipated mechanism(s) being used in mind. Otherwise, devices may fail to authenticate with protocol adapters, even if the credentials provided by the device match the credentials registered for the device. In general, using only characters from the `[a-zA-Z0-9_-]` range for the authentication identifier should be compatible with most mechanisms.
+{{% notice info %}}
+Care needs to be taken that the value for the *authentication identifier* is compliant with the authentication mechanism(s) it is supposed to be used with. For example, when using standard HTTP Basic authentication, the *username* part of the Basic Authorization header value (which corresponds to the *auth-id*) MUST not contain any *colon* (`:`) characters, because the colon character is used as the separator between username and password. Similar constraints may exist for other authentication mechanisms, so the *authentication identifier* needs to be chosen with the anticipated mechanism(s) being used in mind. Otherwise, devices may fail to authenticate with protocol adapters, even if the credentials provided by the device match the credentials registered for the device. In general, using only characters from the `[a-zA-Z0-9_-]` range for the authentication identifier should be compatible with most mechanisms.
+{{% /notice %}}
 
 ### Secrets Format
 
@@ -234,10 +236,14 @@ Example:
 | *salt*           | *no*      | *string*   |           | The Base64 encoding of the *salt* used in the password hash (see table below for details). |
 | <nobr>*hash-function*<nobr>  | *no*      | *string*   | `sha-256` | The name of the hash function used to create the password hash. The hash functions supported by Hono are described in the table below. |
 
-**NB** It is strongly recommended to use salted password hashes only. Furthermore, the salt should be unique per user and password, so no lookup table or rainbow table attacks can be used to crack the salt-hashed password.
+{{% notice tip %}}
+It is strongly recommended to use salted password hashes only. Furthermore, the salt should be unique per user and password, so no lookup table or rainbow table attacks can be used to crack the salt-hashed password.
 Whenever a password is updated for a user, the salt should change as well.
+{{% /notice %}}
 
-**NB** The example above does not contain any of the `not-before`, `not-after` and `enabled` properties, thus the credentials can be used at any time according to the rules defined in [Credential Verification]({{< relref "#credential-verification" >}}).
+{{% notice note %}}
+The example above does not contain any of the `not-before`, `not-after` and `enabled` properties, thus the credentials can be used at any time according to the rules defined in [Credential Verification]({{< relref "#credential-verification" >}}).
+{{% /notice %}}
 
 The table below describes the hash functions supported by Hono and how they map to the *secret* structure.
 
@@ -270,7 +276,10 @@ Example:
 | *auth-id*        | *yes*     | *string*   | The PSK identity. |
 | *key*            | *yes*     | *string*   | The Base64 encoded bytes representing the shared (secret) key. |
 
-**NB** The example above does not contain any of the `not-before`, `not-after` and `enabled` properties, thus the credentials can be used at any time according to the rules defined in [Credential Verification]({{< relref "#credential-verification" >}}).
+{{% notice note %}}
+The example above does not contain any of the `not-before`, `not-after` and `enabled` properties, thus the credentials can be used at any time according to the rules defined in [Credential Verification]({{< relref "#credential-verification" >}}).
+{{% /notice %}}
+
 
 ### X.509 Certificate
 
@@ -292,5 +301,7 @@ Example:
 | *type*           | *yes*     | *string*   | The credential type name, always `x509-cert`. |
 | *auth-id*        | *yes*     | *string*   | The subject DN of the client certificate in the format defined by [RFC 2253](https://www.ietf.org/rfc/rfc2253.txt). |
 
-**NB** The example above does not contain any of the `not-before`, `not-after` and `enabled` properties. The `not-before` and `not-after` properties should be omitted if the validity period is the same as the period indicated by the client certificate's corresponding properties. It is still necessary to provide a (empty) JSON object in the *secrets* array, though.
+{{% notice note %}}
+The example above does not contain any of the `not-before`, `not-after` and `enabled` properties. The `not-before` and `not-after` properties should be omitted if the validity period is the same as the period indicated by the client certificate's corresponding properties. It is still necessary to provide a (empty) JSON object in the *secrets* array, though.
+{{% /notice %}}
 

@@ -22,8 +22,10 @@ The scripts need to be executed in the order of the numbers in the file names.
   invoke the script again against the productive Let's Encrypt API: `./20-create-certificate.sh <your-email-address> production`
 * Deploy Hono: `./30-deploy-hono.sh`.
 
-**NB:** Let's Encrypt has quite strict rate limits. Therefore the script `./20-create-certificate.sh` does not use
+{{% notice info %}}
+Let's Encrypt has quite strict rate limits. Therefore the script `./20-create-certificate.sh` does not use
 the productive Let's Encrypt API by default. 
+{{% /notice %}}
 
 # Updating the Let's Encrypt certificate
 

@@ -101,5 +101,7 @@ To achieve this, several strategies are possible:
 The producer MUST retain the order in which it received messages from a client. 
 This requires to either set *retries* to `0` or to set *max.in.flight.requests.per.connection* to `1`.
 
-**NB:** To send messages with both delivery semantics with the same producer, it MUST be configured for *AT LEAST ONCE*.
+{{% notice tip %}}
+To send messages with both delivery semantics with the same producer, it MUST be configured for *AT LEAST ONCE*.
 Such a producer may ignore the outcome of the *produce* operation for *AT MOST ONCE* messages.
+{{% /notice %}}
