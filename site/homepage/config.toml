@@ -34,6 +34,11 @@ pluralizeListTitles = "false"
     unsafe = true
 
 [[menu.main]]
+    name = "Getting Started"
+    weight = 110
+    url  = "/docs/getting-started/kafka/"
+
+[[menu.main]]
     name = "Documentation"
     weight = 120
     url  = "/docs/"

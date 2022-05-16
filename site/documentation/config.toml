@@ -72,9 +72,3 @@ url = "https://www.eclipse.org/hono/"
 title = "Hono's Homepage"
 weight = 10
 
-[[menu.shortcuts]] 
-name = "<i class='fas fa-plane-departure'></i> Getting Started"
-url = "https://www.eclipse.org/hono/getting-started/"
-title = "Getting started with Eclipse Hono"
-weight = 20
-

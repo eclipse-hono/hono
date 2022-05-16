@@ -7,14 +7,16 @@ weight: 160
 ---
 
 We are providing a publicly accessible Eclipse Hono&trade; *sandbox* environment at `hono.eclipseprojects.io`.
-The main purpose of the system is to provide an environment for experimenting with devices and how to connect them to Hono without the need for setting up a local instance.
+The main purpose of the system is to provide an environment for experimenting with devices and how to connect them
+to Hono without the need for setting up a local instance.
 
 {{% note title="Deprecated domain name" %}}
 The sandbox used to be available at `hono.eclipse.org`. That domain name will still work for some time but
 will eventually be disabled. Please update your URLs accordingly.
 {{% /note %}}
 
-The sandbox hosts a Hono instance consisting of the same components as described in the [Getting started Guide]({{< relref "getting-started" >}}).
+The sandbox hosts a Hono instance consisting of the same components as described in the
+[Getting started Guide]({{% doclink "getting-started" %}}).
 All services are exposed via the same ports as used in the guide.
 
 ## Take note
