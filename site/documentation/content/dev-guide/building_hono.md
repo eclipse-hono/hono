@@ -139,5 +139,34 @@ mvn verify -Prun-tests
 ```
 
 The tests are executed against the Docker images of the Hono components. Because of that, it is necessary to build the
-respective images as described above before the execution of the tests. The respective `Readme.md` file in the folder
-`hono/tests` contains more information regarding the test suite.
+respective images as described above before the execution of the tests. See the [hono/tests/readme.md](https://github.com/eclipse/hono/blob/master/tests/readme.md)
+file for more information regarding the test suite.
+
+## IDE setup
+
+### Checkstyle
+
+Hono uses Checkstyle to ensure its code conforms to a set of defined coding rules. Corresponding checks are done
+during the Hono build by means of the Maven Checkstyle plugin.
+In order to integrate the coding rules in the IDE, the corresponding plugin (e.g. [Eclipse Checkstyle Plugin](https://checkstyle.org/eclipse-cs) or [Checkstyle-IDEA](https://plugins.jetbrains.com/plugin/1065-checkstyle-idea))
+can be configured to use the `legal/src/main/resources/checkstyle/default.xml` configuration file.
+
+The `checkstyle.suppressions.file` Checkstyle configuration property should point to the `legal/src/main/resources/checkstyle/suppressions.xml` file.
+
+### Code Formatter
+
+In the Eclipse IDE, the following files can be used to configure the Java code style formatter according to the style used in Hono:
+
+- `eclipse/hono-code-style.xml`
+- `eclipse/hono-clean-up-profile.xml`
+- `eclipse/hono.importorder`
+
+In Intellij IDEA, the above code style and import order configuration files can be applied by means of the
+[Adapter for Eclipse Code Formatter](https://plugins.jetbrains.com/plugin/6546-adapter-for-eclipse-code-formatter/) IDEA plugin.
+
+### Running tests
+
+When running Hono unit tests in the IDE, the log output can be configured via the corresponding `src/test/resources/application.yml` file.
+Note that by default, color output is enabled via the `quarkus.log.console.color` property. To see the colored output
+in Eclipse, the [ANSI Escape in Console plugin](https://marketplace.eclipse.org/content/ansi-escape-console) can be used.
+The output looks best when using a dark IDE theme.
