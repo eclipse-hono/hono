@@ -168,13 +168,19 @@ public class NorthBoundApis {
         producerProps.setCommonClientConfig(commonClientConfig);
 
         System.err.printf("Connecting to Kafka based messaging infrastructure [%s]%n", bootstrapServers);
+        final Promise<Void> readyTracker = Promise.promise();
         final var kafkaClient = new KafkaApplicationClientImpl(
                 vertx,
                 consumerProps,
                 CachingKafkaProducerFactory.sharedFactory(vertx),
                 producerProps);
-        this.client = kafkaClient;
-        return Future.succeededFuture(kafkaClient);
+        kafkaClient.addOnKafkaProducerReadyHandler(readyTracker);
+        return kafkaClient.start()
+                .compose(ok -> readyTracker.future())
+                .map(ok -> {
+                    this.client = kafkaClient;
+                    return kafkaClient;
+                });
     }
 
     Future<ProtonBasedApplicationClient> createAmqpClient() {
