@@ -1,19 +1,18 @@
 ---
-title: "Getting started with Eclipse Hono"
-linkTitle: "Getting started"
+title: "Getting started with Eclipse Hono using Apache Kafka"
+linkTitle: "Getting started using Kafka"
 description: |
   Take a quick tour and learn how Hono can help you connect devices via HTTP and/or MQTT and how downstream
-  applications can consume the data published by devices."
-menu: "main"
-weight: 100
+  applications can consume the data published by devices.
+weight: 171
 resources:
-  - src: Hono_instance.svg
+- src: "Hono_instance.svg"
 ---
 
 This guide will walk you through an interactive example usage scenario of Eclipse Hono. You will learn how devices can
-use Hono's protocol adapters to publish telemetry data and events using both HTTP and/or MQTT. You will also see how a
-downstream application can consume this data using Hono's north bound API without requiring the application to know
-anything about the specifics of the communication protocols used by the devices.
+use Hono's protocol adapters to publish telemetry data and events using both HTTP and/or MQTT. You will also see how
+downstream applications can consume this data via an Apache Kafka&trade; broker using Hono's north bound API regardless
+of the communication protocols used by the devices.
 
 ## Prerequisites for the Getting started Guide
 
@@ -33,40 +32,20 @@ The `mosquitto_pub` command is used in this guide for simulating a device publis
 Please refer to the [Mosquitto project page](https://mosquitto.org/) for installation instructions, if you do not
 have it installed already.
 
-**NB** The installation of the Mosquitto command line client is optional. If you do not install it then you will not b
+**NB** The installation of the Mosquitto command line client is optional. If you do not install it then you will not be
 able to simulate an MQTT based device but otherwise will be able to get the same results described in this guide.
 
 #### Hono Command Line Client
 
 The Hono command line client is used in this guide for simulating an application that consumes telemetry data and events
-published by devices. The client is available from [Hono's download page]({{< relref "downloads" >}}).
+published by devices. The client is available from [Hono's download page]({{% homelink "/downloads" %}}).
 Note that running the command line client requires a Java 11 runtime environment being installed locally.
-
-#### Very quick Quickstart
-
-In the following all necessary commands and operations will be explained on how to register a tenant and a device via
-the HTTP API. Then, it will be shown how messages can be sent via the HTTP and MQTT protocol adapters.
-If you want to really kickstart your Hono experience there also is a convenience Python script which you can use to 
-automatically replay the Tutorial given here (at least the telemetry part for now).
-
-{{% note title="Python Quickstart" %}}
-You can find the Python tutorial in the [Examples](https://github.com/eclipse/hono/tree/master/examples/quickstart-python).
-The python script does
-
-* Set up a Tenant
-* Set up a Device in the tenant
-* Add credentials to the device
-* Start an (northbound) AMQP Receiver as "Consumer" of the data
-* Send a Telemetry message via HTTP API
-* Send a Telemetry message via MQTT API
-For more details have a look in the [Readme](https://github.com/eclipse/hono/tree/master/examples/quickstart-python/README.md).
-{{% /note %}}
 
 #### Hono Sandbox
 
 The most important prerequisite is, of course, a Hono instance that you can work with.
 
-The most straightforward option to use for this guide is the [Hono Sandbox]({{< relref "sandbox" >}}) which is running on
+The most straightforward option to use for this guide is the [Hono Sandbox]({{% homelink "/sandbox" %}}) which is running on
 infrastructure provided by the Eclipse Foundation and which is publicly accessible from the internet.
 
 Using the Sandbox, there is no need to set up your own Hono instance locally. However, it requires several non-standard
@@ -103,17 +82,18 @@ However, if the `curl` command yielded different output, you will need to set up
 section.
 
 For interacting with the Device Registry of the Hono Sandbox (e.g. for creating tenants, devices), you can also use the
-testing functionality integrated in the [Device Registry Management API documentation]({{% doclink "/api/management/" %}}).
+testing functionality integrated in the [Device Registry Management API documentation]({{< relref "/api/management" >}}).
 
 #### Setting up a local Hono Instance
 
 In case you cannot access the Hono Sandbox as described above, you will need to set up an instance of Hono running on
 your local computer. For evaluation purposes a single node *Minikube* cluster is sufficient to deploy Hono to.
 
-1. Please refer to the [installation instructions]({{% doclink "/deployment/create-kubernetes-cluster/#setting-up-a-local-development-environment" %}})
+1. Please refer to the [installation instructions]({{< relref "/deployment/create-kubernetes-cluster#setting-up-a-local-development-environment" >}})
    for setting up a local Minikube cluster, then
-1. follow the [Deployment Guide]({{% doclink "/deployment/helm-based-deployment/" %}}) in order to install Hono to your
-   local Minikube cluster.
+1. follow the instructions in the [README](https://github.com/eclipse/packages/blob/master/charts/hono/README.md#using-kafka-based-messaging)
+   of Hono's Helm chart in the [Eclipse IoT Packages chart repository](https://www.eclipse.org/packages/repository/) in
+   order to install Hono with a small Kafka instance to your local Minikube cluster.
 
 Once Hono has been deployed to your local cluster, run the following commands to set some environment variables which
 will be used during the guide
@@ -132,14 +112,26 @@ echo $REGISTRY_IP
 
 If this does not print an IP address, check that `minikube tunnel` is running.
 
+{{% notice info "Secure Connections to Kafka" %}}
+By default, the Kafka broker deployed with the Helm chart is configured to accept client connections only with
+_Transport Layer Security_ (TLS) enabled. While the Hono components, like protocol adapters, are already deployed with a
+matching configuration of the Kafka clients they use, external connections, like Hono's example application, need to be
+provided with configuration that enables TLS and a truststore file containing the broker certificate.
+The following guide assumes that for a local deployment in a Minikube cluster TLS is enabled on the Kafka broker.
+
+**NB** The instructions below disable hostname verification (by setting the Kafka config property
+`ssl.endpoint.identification.algorithm` to an empty string) because the external IP in the Minikube cluster is dynamic
+and not included in the certificate. Don't disable hostname verification in productive setups!
+{{% /notice %}}
+
 <a name="overview"></a>
 ## Overview of Hono Components
 
 Hono consists of a set of microservices which are deployed as Docker containers. The diagram below provides an overview
 of the containers that are part of the example deployment of Hono on the Sandbox or a local Minikube cluster.
 
-{{< figure src="Hono_instance.svg" title="Components of the example Hono deployment"
-alt="The Docker containers representing the services of the example Hono deployment" >}}
+{{< figure src="Hono_instance.svg" title="Components of the example Hono deployment with Kafka"
+alt="The Docker containers representing the services of the example Hono deployment with Kafka" >}}
 
 * Hono Instance
   * An *HTTP Adapter* instance that exposes Hono's Telemetry and Event APIs as URI resources.
@@ -149,34 +141,39 @@ alt="The Docker containers representing the services of the example Hono deploym
   * A *Device Registry* instance that manages registration information and issues device registration assertions to
     protocol adapters.
   * An *Auth Server* instance that authenticates Hono components and issues tokens asserting identity and authorities.
-* AMQP Network
-  * An *Apache Qpid Dispatch Router* instance that downstream applications connect to in order to consume telemetry
-    data and events from devices and to send Command & Control messages to devices.
-  * An *Apache ActiveMQ Artemis* instance serving as the persistence store for events.
+* Kafka Cluster
+  * An *Apache Kafka* broker instance that downstream applications connect to in order to consume telemetry data and
+    events from devices and to send Command & Control messages to devices.
+  * An *Apache Zookeeper* instance that is required by the Kafka cluster.
 * Monitoring Infrastructure
   * A *Prometheus* instance for storing metrics data from services and protocol adapters.
   * A *Grafana* instance providing a dash board visualizing the collected metrics data.
 
 In the example scenario used in the remainder of this guide, the devices will connect to the HTTP and MQTT adapters in
 order to publish telemetry data and events. The devices will be authenticated using information stored in the Device
-Registry. The data is then forwarded downstream to the example application via the AMQP Messaging Network.
+Registry. The data is then forwarded downstream to the example application via the Kafka cluster.
 
 ## Registering Devices
 
-When a device tries to connect to one of Hono's protocol adapters, the protocol adapter first tries to authenticate the
-device using information kept in the Device Registry. The information maintained in the registry includes the *tenant*
-(a logical scope) that the device belongs to, the device's unique *identity* within the tenant and the *credentials*
-used by the device for authentication.
+When a device tries to connect to one of Hono's protocol adapters, the protocol adapter first tries to authenticate
+the device using information kept in the Device Registry. The information maintained in the registry includes the
+*tenant* (a logical scope) that the device belongs to, the device's unique *identity* within the tenant and the
+*credentials* used by the device for authentication.
 
-Before a device can connect to Hono and publish any data, the corresponding information needs to be added to the Device
-Registry.
+Before a device can connect to Hono and publish any data, the corresponding information needs to be added to the
+Device Registry.
 
 ### Creating a new Tenant
 
-Register a tenant using Hono's Device Registry's management HTTP API (a random tenant identifier will be generated):
+Register a tenant that is configured for Kafka based messaging using Hono's Device Registry's management HTTP API (a
+random tenant identifier will be generated):
 
 ~~~sh
-curl -i -X POST http://$REGISTRY_IP:28080/v1/tenants
+curl -i -X POST -H "content-type: application/json" http://$REGISTRY_IP:28080/v1/tenants --data-binary '{
+  "ext": {
+    "messaging-type": "kafka"
+  }
+}'
 
 HTTP/1.1 201 Created
 etag: becc93d7-ab0f-48ec-ad26-debdf339cbf4
@@ -187,14 +184,14 @@ content-length: 45
 {"id":"85f63e23-1b78-4156-8500-debcbd1a8d35"}
 ~~~
 
-{{% note title="Random tenant ID value" %}}
+{{% notice info "Random tenant ID value" %}}
 You will receive a randomly generated tenantId value. It will probably be different than the value given in this example.
 Make sure to export it to an environment variable to make the following steps easier:
 
 ~~~sh
 export MY_TENANT=85f63e23-1b78-4156-8500-debcbd1a8d35
 ~~~
-{{% /note %}}
+{{% /notice %}}
 
 ### Adding a Device to the Tenant
 
@@ -212,14 +209,14 @@ content-length: 45
 {"id":"4412abe2-f219-4099-ae14-b446604ae9c6"}
 ~~~
 
-{{% note title="Random device ID value" %}}
+{{% notice info "Random device ID value" %}}
 You will receive a randomly generated deviceId value. It will probably be different than the value given in this example.
 Make sure to export it to an environment variable to make the following steps easier:
 
 ~~~sh
 export MY_DEVICE=4412abe2-f219-4099-ae14-b446604ae9c6
 ~~~
-{{% /note %}}
+{{% /notice %}}
 
 ### Setting a Password for the Device
 
@@ -245,32 +242,46 @@ Content-Length: 0
 ## Starting the example Application
 
 The telemetry data produced by devices is usually consumed by downstream applications that use it to implement their
-corresponding business functionality. In this guide we will use the Hono command line client to simulate such an
-application. The client will connect to Hono's north bound [Telemetry]({{% doclink "/api/telemetry/" %}}) and
-[Event API]({{% doclink "/api/event/" %}})s using the AMQP 1.0 transport protocol, subscribe to all telemetry and event
-messages and log the messages to the console.
+corresponding business functionality.
+In this guide we will use the Hono command line client to simulate such an application.
+The client will connect to the Kafka cluster that provides Hono's north bound Kafka based
+[Telemetry]({{< relref "/api/telemetry-kafka" >}}) and [Event API]({{< relref "/api/event-kafka" >}})s, subscribe
+to all telemetry and event messages and log the messages to the console.
 
-Open a new terminal window and set the `AMQP_NETWORK_IP` environment variable.
-If you are using the Sandbox server:
+Open a new terminal window to run the client from the command line.
 
-~~~sh
-export AMQP_NETWORK_IP=hono.eclipseprojects.io
-~~~
-
-Otherwise, if you are using a local Minikube cluster:
+If you are using the Sandbox server (make sure to replace `my-tenant` with your tenant identifier):
 
 ~~~sh
-export AMQP_NETWORK_IP=$(kubectl get service eclipse-hono-dispatch-router-ext --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)
+# in directory where the hono-cli-*-exec.jar file has been downloaded to
+export MY_TENANT=my-tenant
+java -jar hono-cli-*-exec.jar --spring.profiles.active=receiver,kafka,sandbox --tenant.id=$MY_TENANT
 ~~~
 
-The client can then be started from the command line as follows (make sure to replace `my-tenant` with your tenant
+Otherwise, if you are using a local Minikube cluster, first save the trust store file of the Kafka broker to your file
+system with the following command (adapt the value of environment variable `KAFKA_TRUSTSTORE_PATH` to the location that
+the trust store should be saved to):
+
+~~~sh
+export KAFKA_TRUSTSTORE_PATH=/tmp/truststore.pem
+kubectl get secrets eclipse-hono-kafka-certs --template="{{index .data \"ca.crt\" | base64decode}}" -n hono > $KAFKA_TRUSTSTORE_PATH
+~~~
+
+Then set the following environment variables and start the client (make sure to replace `my-tenant` with your tenant
 identifier):
 
 ~~~sh
 # in directory where the hono-cli-*-exec.jar file has been downloaded to
 export MY_TENANT=my-tenant
-java -jar hono-cli-*-exec.jar --hono.client.host=$AMQP_NETWORK_IP --hono.client.port=15672 --hono.client.username=consumer@HONO --hono.client.password=verysecret --spring.profiles.active=receiver --tenant.id=$MY_TENANT
+export KAFKA_IP=$(kubectl get service eclipse-hono-kafka-0-external --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)
+export KAFKA_PORT=$(kubectl get service eclipse-hono-kafka-0-external --output="jsonpath={.spec.ports[?(@.name=='tcp-kafka')].port}" -n hono)
+java -jar hono-cli-*-exec.jar --hono.kafka.commonClientConfig.bootstrap.servers=$KAFKA_IP:$KAFKA_PORT --hono.kafka.commonClientConfig.ssl.truststore.location=$KAFKA_TRUSTSTORE_PATH --hono.kafka.commonClientConfig.ssl.truststore.type=PEM --spring.profiles.active=receiver,kafka,local --tenant.id=$MY_TENANT
 ~~~
+
+
+Note that the profiles `sandbox` respectively `local` enable default configurations for TLS and the authentication of an
+existing example Kafka user.
+
 
 ## Publishing Telemetry Data to the HTTP Adapter
 
@@ -289,38 +300,15 @@ If you have started the downstream application as described above, you should no
 to the application's console in the other terminal. The output should look something like this:
 
 ~~~sh
-13:36:49.169 [vert.x-eventloop-thread-0] INFO  org.eclipse.hono.cli.Receiver - received telemetry message [device: my-device, content-type: application/json]: {"temp": 5}
-13:36:49.170 [vert.x-eventloop-thread-0] INFO  org.eclipse.hono.cli.Receiver - ... with application properties: {orig_adapter=hono-http, device_id=my-device, orig_address=/telemetry, JMS_AMQP_CONTENT_TYPE=application/json}
+13:36:49.169 [vert.x-eventloop-thread-0] INFO  org.eclipse.hono.cli.app.Receiver - received telemetry message [device: my-device, content-type: application/json]: {"temp": 5}
+13:36:49.170 [vert.x-eventloop-thread-0] INFO  org.eclipse.hono.cli.app.Receiver - ... with properties: {orig_adapter=hono-http, qos=0, device_id=my-device, importance=high, uber-trace-id=6fd25dfcc1904fa1:95b598b9325f7ea3:a2ab14cbc5032ec9:0, content-type=application/json, orig_address=/telemetry}
 ~~~
 
 You can publish more data simply by re-running the `curl` command above with arbitrary payload.
 
-{{% note title="Service Unavailable" %}}
-When you invoke the command above for the first time, you may get the following response:
-
-~~~
-HTTP/1.1 503 Service Unavailable
-Content-Length: 23
-Content-Type: text/plain; charset=utf-8
-Retry-After: 2
-
-temporarily unavailable
-~~~
-
-This is because the first request to publish data for a given tenant is used as the trigger to establish a tenant
-specific sender link with the AMQP 1.0 Messaging Network to forward the data over. However, the HTTP adapter may not
-receive credits quickly enough for the request to be served immediately. You can simply ignore this response and
-re-submit the command.
-{{% /note %}}
-
-If you haven't started the application you will always get `503 Resource Unavailable` responses because Hono does not
-accept any telemetry data from devices if there aren't any consumers connected that are interested in the data. The
-reason for this is that Hono *never* persists Telemetry data and thus it doesn't make any sense to accept and process
-telemetry data if there is no consumer to deliver it to.
-
 The HTTP Adapter also supports publishing telemetry messages using *at least once* delivery semantics. For information
 on how that works and additional examples for interacting with Hono via HTTP, please refer to the
-[HTTP Adapter's User Guide]({{% doclink "/user-guide/http-adapter/" %}}).
+[HTTP Adapter's User Guide]({{< relref "/user-guide/http-adapter" >}}).
 
 ## Publishing Events to the HTTP Adapter
 
@@ -348,7 +336,7 @@ Again, you should now see the telemetry message being logged to console of the d
 
 The MQTT Adapter also supports publishing telemetry messages using QoS 1. For information on how that works
 and additional examples for interacting with Hono via MQTT, please refer to the
-[MQTT Adapter's User Guide]({{% doclink "/user-guide/mqtt-adapter/" %}}).
+[MQTT Adapter's User Guide]({{< relref "/user-guide/mqtt-adapter" >}}).
 
 ## Publishing Events to the MQTT Adapter
 
@@ -360,23 +348,24 @@ mosquitto_pub -h $MQTT_ADAPTER_IP -u $MY_DEVICE@$MY_TENANT -P $MY_PWD -t event -
 
 Again, you should now see the telemetry message being logged to console of the downstream application.
 
-{{% note title="Congratulations" %}}
+{{% notice tip "Congratulations" %}}
 You have successfully connected a device to Hono and published sensor data for consumption by an application connected
-to Hono's north bound API. The application used the AMQP 1.0 protocol to receive messages regardless of the transport
-protocol used by the device to publish the data.
+to Hono's north bound API. The application consumed messages from the Kafka cluster regardless of the transport protocol
+used by the device to publish the data.
 
 **What to try next?**
 
 * Continue with the next sections to learn how applications can send commands to devices by means of the
-  [Command & Control API]({{% doclink "/api/command-and-control/" %}}).
-* Take a look at some of the metrics collected by Hono's components by opening the Hono dashboard. When running a local
-  Minikube cluster, please refer to [Opening the Dashboard](https://github.com/eclipse/packages/tree/master/charts/hono#accessing-the-grafana-dashboard)
+  [Command & Control API for Kafka]({{< relref "/api/command-and-control-kafka" >}}).
+* Take a look at some of the metrics collected by Hono's components by opening the Hono dashboard. On the Sandbox
+  server the dashboard is available at https://hono.eclipseprojects.io:3000. When running a local Minikube cluster,
+  please refer to [Opening the Dashboard](https://github.com/eclipse/packages/tree/master/charts/hono#accessing-the-grafana-dashboard)
   for instructions.
-* Check out the [User Guides]({{% doclink "/user-guide/" %}}) to explore more options for devices to connect to Hono
+* Check out the [User Guides]({{< relref "/user-guide" >}}) to explore more options for devices to connect to Hono
   using different transport protocols.
 * Learn more about the managing tenants, devices and credentials using the
-  [Device Registry's HTTP API]({{% doclink "/user-guide/device-registry/" %}}).
-{{% /note %}}
+  [Device Registry's HTTP API]({{< relref "/user-guide/device-registry" >}}).
+{{% /notice %}}
 
 ## Advanced: Sending Commands to a Device
 
@@ -387,7 +376,7 @@ direction here is exactly the other way round than with telemetry and events.
 The following assumes that the steps in the
 [Prerequisites for the Getting started Guide]({{< relref "#prerequisites-for-the-getting-started-guide" >}}) and
 [Registering Devices]({{< relref "#registering-devices" >}}) sections above have been completed. To simulate the device,
-you can use the Mosquitto tools again while the Hono Command Line Client simulates the application as before.
+you can use the Mosquitto tools again while the Hono Command Line Client simulates the application as before. 
 
 ### Receiving a Command
 
@@ -400,16 +389,24 @@ variables `MQTT_ADAPTER_IP`, `MY_TENANT` and `MY_DEVICE`)
  ~~~
 
 Now that the device is waiting to receive commands, the application can start sending them.
-Start the Command Line Client in the terminal for the application side (don't forget to set the environment variables
-`AMQP_NETWORK_IP`, `MY_TENANT` and `MY_DEVICE`)
+Start the Command Line Client in the terminal for the application side.
+If you are using the Sandbox server (don't forget to set the environment variables `MY_TENANT` and `MY_DEVICE`):
 
 ~~~sh
 # in directory where the hono-cli-*-exec.jar file has been downloaded to
-java -jar hono-cli-*-exec.jar --hono.client.host=$AMQP_NETWORK_IP --hono.client.port=15672 --hono.client.username=consumer@HONO --hono.client.password=verysecret --tenant.id=$MY_TENANT --device.id=$MY_DEVICE --spring.profiles.active=command
+java -jar hono-cli-*-exec.jar --spring.profiles.active=command,kafka,sandbox --tenant.id=$MY_TENANT --device.id=$MY_DEVICE
 ~~~
 
-Note that this time the profile is `command` instead of `receiver`, which enables a different mode of the Command Line
-Client.
+Otherwise, if you are using a local Minikube cluster (don't forget to set the environment variables `KAFKA_IP`,
+`KAFKA_PORT`, `KAFKA_TRUSTSTORE_PATH`, `MY_TENANT` and `MY_DEVICE`):
+
+~~~sh
+# in directory where the hono-cli-*-exec.jar file has been downloaded to
+java -jar hono-cli-*-exec.jar --hono.kafka.commonClientConfig.bootstrap.servers=$KAFKA_IP:$KAFKA_PORT --hono.kafka.commonClientConfig.ssl.truststore.location=$KAFKA_TRUSTSTORE_PATH --spring.profiles.active=command,kafka,local --tenant.id=$MY_TENANT --device.id=$MY_DEVICE
+~~~
+
+Note that this time the profile `command` is activated instead of `receiver`, which enables a different mode of the
+Command Line Client.
 
 The client will prompt you to enter the command's name, the payload to send and the payload's content type. 
 The example below illustrates how a one-way command to set the volume with a JSON payload is sent to the device.
@@ -432,9 +429,10 @@ In the terminal for the simulated device you should see the received command as 
 ### Sending a Response to a Command
 
 Now that you have sent a one-way command to the device,  you may get to know _request/response_ commands where the
-device sends a response to the application. A _request/response_ command received from an application contains an
-identifier that is unique to each new command. The device must include this identifier in its response so that the
-application can correctly correlate the response with the request.
+device sends a response to the application.
+A _request/response_ command received from an application contains an identifier that is unique to each new command.
+The device must include this identifier in its response so that the application can correctly correlate the response
+with the request.
 
 If you send a _request/response_ command like this 
 
@@ -470,20 +468,19 @@ mosquitto_pub -h $MQTT_ADAPTER_IP -u $MY_DEVICE@$MY_TENANT -P $MY_PWD -t command
 The `200` at the end of the topic is an HTTP status code that reports the result of processing the command to the
 application.
 
-If the Command Line Client has successfully received the response in time, it will print it to the console.
-This looks like this:
+If the Command Line Client has successfully received the response in time, it will print it to the console. This looks
+like this:
 
 ~~~sh
 INFO  org.eclipse.hono.cli.app.Commander - Received Command response: {"success": true}
 ~~~
 
 If the 60 seconds have already expired, an error message is logged.
-In this case you can send a new command or restart the Command Line Client with a higher timeout (append
-`--command.timeoutInSeconds=120`).
+In this case you can send a new command or restart the Command Line Client with a higher timeout (append `--command.timeoutInSeconds=120`).
     
-Congratulations. Now you have successfully sent commands to a device and responded to them. 
-For more information on Command &amp; Control refer to
-[Commands using HTTP]({{% doclink "/user-guide/http-adapter/#specifying-the-time-a-device-will-wait-for-a-response" %}}) 
-and [Commands using MQTT]({{% doclink "/user-guide/mqtt-adapter/#command--control" %}}).
-The [Command and Control Concepts]({{% doclink "/concepts/command-and-control/" %}}) page contains sequence diagrams that
+Congratulations. Now you have successfully sent commands to a device and responded to them. For more information on
+Command &amp; Control refer to
+[Commands using HTTP]({{< relref "/user-guide/http-adapter#specifying-the-time-a-device-will-wait-for-a-response" >}}) 
+and [Commands using MQTT]({{< relref "/user-guide/mqtt-adapter#command--control" >}}).
+The [Command and Control Concepts]({{< relref "/concepts/command-and-control" >}}) page contains sequence diagrams that
 explain this in more detail.
