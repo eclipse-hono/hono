@@ -23,12 +23,15 @@ to configure and use these components.
 
 ## Using Hono
 
-Please take a look at the [Developer Guide](https://www.eclipse.org/hono/docs/dev-guide/) which provides examples of how clients can interact with Hono and how to create a custom protocol adapter.
+Please take a look at the [Developer Guide](https://www.eclipse.org/hono/docs/dev-guide/) which provides examples of
+how clients can interact with Hono and how to create a custom protocol adapter.
 
 ## Remote API
 
-Clients can interact with Hono by means of AMQP 1.0 based message exchanges. Please refer to the corresponding [API documentation pages](https://www.eclipse.org/hono/docs/api/) for details:
+Applications can interact with Hono by means of Apache Kafka &trade; or AMQP 1.0 based message exchanges. Please refer
+to the corresponding [API documentation pages](https://www.eclipse.org/hono/docs/api/) for details.
 
 ## Get in Touch
 
-Please check out the [Eclipse Hono project home page](https://www.eclipse.org/hono/community/get-in-touch/) for details regarding our mailing list and Gitter channel.
+Please check out the [Eclipse Hono project home page](https://www.eclipse.org/hono/community/get-in-touch/) for
+details regarding our Gitter channel and mailing list.
