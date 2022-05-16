@@ -23,7 +23,7 @@ A Java based command line client for consuming telemetry data and events from Ho
 
 * [Eclipse Hono 1.12.2 Command Line Client](https://www.eclipse.org/downloads/download.php?file=/hono/hono-cli-1.12.2-exec.jar)
 
-The client requires a Java 11 runtime environment to run.
+The client requires a Java 17 runtime environment to run.
 
 Please refer to the [Admin Guide]({{% doclink "/admin-guide/hono-client-configuration/" %}}) for details regarding the command
 line options that the client supports.
