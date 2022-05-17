@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -43,7 +43,7 @@ import io.vertx.core.Future;
  * Tests verifying behavior of {@link CommandRouterCommandConsumerFactory}.
  *
  */
-class CommandRouterCommandConsumerFactoryTest {
+public class CommandRouterCommandConsumerFactoryTest {
 
     private CommandRouterClient commandRouterClient;
     private CommandRouterCommandConsumerFactory factory;
@@ -69,9 +69,9 @@ class CommandRouterCommandConsumerFactoryTest {
         verify(conLifecycle).addReconnectListener(reconnectListener.capture());
         factory.setMaxTenantIdsPerRequest(2);
 
-        factory.createCommandConsumer("tenant1", "device1", "adapter", ctx -> {}, Duration.ofMinutes(10), null);
-        factory.createCommandConsumer("tenant2", "device2", "adapter", ctx -> {}, Duration.ofMinutes(10), null);
-        factory.createCommandConsumer("tenant3", "device3", "adapter", ctx -> {}, Duration.ofMinutes(10), null);
+        factory.createCommandConsumer("tenant1", "device1", "adapter", ctx -> Future.succeededFuture(), Duration.ofMinutes(10), null);
+        factory.createCommandConsumer("tenant2", "device2", "adapter", ctx -> Future.succeededFuture(), Duration.ofMinutes(10), null);
+        factory.createCommandConsumer("tenant3", "device3", "adapter", ctx -> Future.succeededFuture(), Duration.ofMinutes(10), null);
 
         // WHEN connection is lost and re-established
         final List<String> enabledTenants = new ArrayList<>();

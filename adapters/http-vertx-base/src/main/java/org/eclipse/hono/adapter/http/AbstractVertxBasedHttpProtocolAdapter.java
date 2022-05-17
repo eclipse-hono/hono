@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 
 import org.eclipse.hono.adapter.AbstractProtocolAdapterBase;
 import org.eclipse.hono.adapter.HttpContext;
@@ -955,7 +956,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 .start();
         TracingHelper.setDeviceTags(waitForCommandSpan, tenantObject.getTenantId(), deviceId);
 
-        final Handler<CommandContext> commandHandler = commandContext -> {
+        final Function<CommandContext, Future<Void>> commandHandler = commandContext -> {
 
             final Span processCommandSpan = TracingHelper
                     .buildFollowsFromSpan(tracer, waitForCommandSpan.context(), "process received command")
@@ -971,7 +972,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             final Command command = commandContext.getCommand();
             final Sample commandSample = getMetrics().startTimer();
             if (isCommandValid(command, processCommandSpan)) {
-
+                final Promise<Void> commandHandlerDonePromise = Promise.promise();
                 if (requestProcessed.compareAndSet(false, true)) {
                     waitForCommandSpan.finish();
                     checkMessageLimit(tenantObject, command.getPayloadSize(), processCommandSpan.context())
@@ -980,6 +981,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             addMicrometerSample(commandContext, commandSample);
                             // put command context to routing context and notify
                             ctx.put(CommandContext.KEY_COMMAND_CONTEXT, commandContext);
+                            commandHandlerDonePromise.complete();
                         } else {
                             commandContext.reject(result.cause());
                             TracingHelper.logError(processCommandSpan, "rejected command for device", result.cause());
@@ -990,6 +992,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                                     ProcessingOutcome.from(result.cause()),
                                     command.getPayloadSize(),
                                     commandSample);
+                            commandHandlerDonePromise.fail(result.cause());
                         }
                         cancelCommandReceptionTimer(ctx);
                         setTtdStatus(ctx, TtdStatus.COMMAND);
@@ -1006,11 +1009,14 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                             ProcessingOutcome.UNDELIVERABLE,
                             command.getPayloadSize(),
                             commandSample);
-                    commandContext.release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, errorMsg));
+                    final var exception = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, errorMsg);
+                    commandContext.release(exception);
                     TracingHelper.logError(processCommandSpan, errorMsg);
                     processCommandSpan.finish();
+                    commandHandlerDonePromise.fail(exception);
                 }
 
+                return commandHandlerDonePromise.future();
             } else {
                 getMetrics().reportCommand(
                         command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
@@ -1023,6 +1029,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
                 commandContext.reject("malformed command message");
                 TracingHelper.logError(processCommandSpan, "malformed command message");
                 processCommandSpan.finish();
+                return Future.failedFuture("malformed command message");
             }
         };
 

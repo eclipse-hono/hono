@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,12 +17,13 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Context;
-import io.vertx.core.Handler;
+import io.vertx.core.Future;
 
 /**
  * A container for command handlers associated with devices.
@@ -46,12 +47,13 @@ public class CommandHandlers {
      * @param commandHandler The command handler. The handler must invoke one of the terminal methods of the passed
      *                       in {@link CommandContext} in order to settle the command message transfer and finish
      *                       the trace span associated with the {@link CommandContext}.
+     *                       The future returned by the handler indicates the outcome of handling the command.
      * @param context The vert.x context to run the handler on or {@code null} to invoke the handler directly.
      * @return The replaced handler entry or {@code null} if there was none.
      * @throws NullPointerException If any of tenantId, deviceId or commandHandler is {@code null}.
      */
     public CommandHandlerWrapper putCommandHandler(final String tenantId, final String deviceId,
-            final String gatewayId, final Handler<CommandContext> commandHandler, final Context context) {
+            final String gatewayId, final Function<CommandContext, Future<Void>> commandHandler, final Context context) {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(deviceId);
         Objects.requireNonNull(commandHandler);

@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 
 import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.coap.MediaTypeRegistry;
@@ -549,7 +550,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                 .start();
         TracingHelper.setDeviceTags(waitForCommandSpan, tenantObject.getTenantId(), deviceId);
 
-        final Handler<CommandContext> commandHandler = commandContext -> {
+        final Function<CommandContext, Future<Void>> commandHandler = commandContext -> {
 
             final Span processCommandSpan = TracingHelper
                     .buildFollowsFromSpan(getTracer(), waitForCommandSpan.context(), "process received command")
@@ -565,7 +566,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
             final Command command = commandContext.getCommand();
             final Sample commandSample = getAdapter().getMetrics().startTimer();
             if (isCommandValid(command, processCommandSpan)) {
-
+                final Promise<Void> commandHandlerDonePromise = Promise.promise();
                 if (requestProcessed.compareAndSet(false, true)) {
                     waitForCommandSpan.finish();
                     getAdapter().checkMessageLimit(tenantObject, command.getPayloadSize(), processCommandSpan.context())
@@ -574,6 +575,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                                     addMicrometerSample(commandContext, commandSample);
                                     // put command context to routing context and notify
                                     context.put(CommandContext.KEY_COMMAND_CONTEXT, commandContext);
+                                    commandHandlerDonePromise.complete();
                                 } else {
                                     commandContext.reject(result.cause());
                                     TracingHelper.logError(processCommandSpan, "rejected command for device", result.cause());
@@ -584,6 +586,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                                             ProcessingOutcome.from(result.cause()),
                                             command.getPayloadSize(),
                                             commandSample);
+                                    commandHandlerDonePromise.fail(result.cause());
                                 }
                                 cancelCommandReceptionTimer(context);
                                 setTtdStatus(context, TtdStatus.COMMAND);
@@ -600,11 +603,13 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                             ProcessingOutcome.UNDELIVERABLE,
                             command.getPayloadSize(),
                             commandSample);
-                    commandContext.release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, errorMsg));
+                    final var exception = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, errorMsg);
+                    commandContext.release(exception);
                     TracingHelper.logError(processCommandSpan, errorMsg);
                     processCommandSpan.finish();
+                    commandHandlerDonePromise.fail(exception);
                 }
-
+                return commandHandlerDonePromise.future();
             } else {
                 getAdapter().getMetrics().reportCommand(
                         command.isOneWay() ? Direction.ONE_WAY : Direction.REQUEST,
@@ -617,6 +622,7 @@ public abstract class AbstractHonoResource extends TracingSupportingHonoResource
                 commandContext.reject("malformed command message");
                 TracingHelper.logError(processCommandSpan, "malformed command message");
                 processCommandSpan.finish();
+                return Future.failedFuture("malformed command message");
             }
         };
 
