@@ -17,7 +17,7 @@ This page describes how authentication and authorization of devices, consumers (
 
 The following diagram provides an overview of the components involved in use cases requiring authentication and authorization.
 
-{{< figure src="Hono-Auth-Overview-Today.jpg">}}
+{{< figure src="Hono-Auth-Overview-Today.drawio.svg" >}}
 
 ### Device Auth
 
