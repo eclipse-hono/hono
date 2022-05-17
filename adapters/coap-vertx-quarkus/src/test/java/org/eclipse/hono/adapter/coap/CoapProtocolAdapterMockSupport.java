@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -30,7 +30,6 @@ import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.hono.adapter.test.ProtocolAdapterMockSupport;
 import org.eclipse.hono.client.command.CommandConsumer;
 import org.eclipse.hono.test.TracingMockSupport;
-import org.eclipse.hono.test.VertxMockSupport;
 import org.junit.jupiter.api.BeforeEach;
 
 import io.opentracing.Span;
@@ -69,9 +68,9 @@ abstract class CoapProtocolAdapterMockSupport<T extends CoapProtocolAdapter, P e
 
         commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), VertxMockSupport.anyHandler(), any(), any()))
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(), any(), any()))
             .thenReturn(Future.succeededFuture(commandConsumer));
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), anyString(), VertxMockSupport.anyHandler(), any(), any()))
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), anyString(), any(), any(), any()))
             .thenReturn(Future.succeededFuture(commandConsumer));
 
         properties = newDefaultConfigurationProperties();

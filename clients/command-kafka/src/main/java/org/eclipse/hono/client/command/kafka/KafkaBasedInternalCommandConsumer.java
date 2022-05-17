@@ -14,6 +14,7 @@
 package org.eclipse.hono.client.command.kafka;
 
 import java.net.HttpURLConnection;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +27,7 @@ import java.util.function.Supplier;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.NewTopic;
+import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.errors.TopicExistsException;
 import org.eclipse.hono.client.NoConsumerException;
@@ -40,6 +42,8 @@ import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaAdminClientConfigProperties;
 import org.eclipse.hono.client.kafka.KafkaClientFactory;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
+import org.eclipse.hono.client.kafka.consumer.AsyncHandlingAutoCommitKafkaConsumer;
+import org.eclipse.hono.client.kafka.consumer.KafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
@@ -63,8 +67,6 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
-import io.vertx.kafka.client.common.TopicPartition;
-import io.vertx.kafka.client.consumer.KafkaConsumer;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 
 /**
@@ -79,10 +81,9 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
     private static final long CREATE_TOPIC_RETRY_INTERVAL = 1000L;
 
     private final Vertx vertx;
-    private final Supplier<Future<KafkaConsumer<String, Buffer>>> consumerCreator;
+    private final Supplier<Future<AsyncHandlingAutoCommitKafkaConsumer<Buffer>>> consumerCreator;
     private final Supplier<Future<Admin>> kafkaAdminClientCreator;
     private final String adapterInstanceId;
-    private final String clientId;
     private final CommandHandlers commandHandlers;
     private final Tracer tracer;
     private final CommandResponseSender commandResponseSender;
@@ -94,10 +95,12 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
     private final Map<String, Map<Integer, Long>> lastHandledPartitionOffsetsPerTenant = new HashMap<>();
     private final LifecycleStatus lifecycleStatus = new LifecycleStatus();
 
-    private KafkaConsumer<String, Buffer> consumer;
+    private AsyncHandlingAutoCommitKafkaConsumer<Buffer> consumer;
     private Admin adminClient;
     private Context context;
     private KafkaClientMetricsSupport metricsSupport;
+
+    private final Duration pollTimeout;
     private long retryCreateTopicTimerId;
 
     /**
@@ -131,6 +134,7 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
         this.adapterInstanceId = Objects.requireNonNull(adapterInstanceId);
         this.commandHandlers = Objects.requireNonNull(commandHandlers);
         this.tracer = Objects.requireNonNull(tracer);
+        this.pollTimeout = Duration.ofMillis(consumerConfigProperties.getPollTimeout());
 
         final Map<String, String> adminClientConfig = adminClientConfigProperties.getAdminClientConfig("internal-cmd-admin");
         // Vert.x KafkaAdminClient doesn't support creating topics using the broker default replication factor,
@@ -144,14 +148,13 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
                 KafkaClientFactory.UNLIMITED_RETRIES_DURATION);
 
         final Map<String, String> consumerConfig = consumerConfigProperties.getConsumerConfig("internal-cmd");
-        consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, adapterInstanceId);
-        // enable auto-commits of partition offsets; this is needed in case the consumer partition assignment gets lost (e.g. because the group coordinator gets restarted)
-        consumerConfig.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
-        // use "earliest" "auto.offset.reset" setting to include records published before/during consumer start
-        consumerConfig.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        this.clientId = consumerConfig.get(ConsumerConfig.CLIENT_ID_CONFIG);
+        setFixedConsumerConfigValues(consumerConfig, adapterInstanceId);
         consumerCreator = () -> kafkaClientFactory.createClientWithRetries(
-                () -> KafkaConsumer.create(vertx, consumerConfig),
+                () -> new AsyncHandlingAutoCommitKafkaConsumer<>(
+                        vertx,
+                        Set.of(getTopicName()),
+                        this::handleCommandMessage,
+                        consumerConfig),
                 lifecycleStatus::isStarting,
                 consumerConfig.get(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG),
                 KafkaClientFactory.UNLIMITED_RETRIES_DURATION);
@@ -165,7 +168,6 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
      * @param context The vert.x context to run on.
      * @param kafkaAdminClient The Kafka admin client to use.
      * @param kafkaConsumer The Kafka consumer to use.
-     * @param clientId The consumer client identifier.
      * @param tenantClient The client to use for retrieving tenant configuration data.
      * @param commandResponseSender The sender used to send command responses.
      * @param adapterInstanceId The adapter instance id.
@@ -176,8 +178,7 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
     KafkaBasedInternalCommandConsumer(
             final Context context,
             final Admin kafkaAdminClient,
-            final KafkaConsumer<String, Buffer> kafkaConsumer,
-            final String clientId,
+            final Consumer<String, Buffer> kafkaConsumer,
             final TenantClient tenantClient,
             final CommandResponseSender commandResponseSender,
             final String adapterInstanceId,
@@ -186,16 +187,35 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
 
         this.context = Objects.requireNonNull(context);
         Objects.requireNonNull(kafkaAdminClient);
-        this.consumer = Objects.requireNonNull(kafkaConsumer);
-        this.clientId = Objects.requireNonNull(clientId);
+        Objects.requireNonNull(kafkaConsumer);
         this.tenantClient = Objects.requireNonNull(tenantClient);
         this.commandResponseSender = Objects.requireNonNull(commandResponseSender);
         this.adapterInstanceId = Objects.requireNonNull(adapterInstanceId);
         this.commandHandlers = Objects.requireNonNull(commandHandlers);
         this.tracer = Objects.requireNonNull(tracer);
         this.vertx = context.owner();
-        consumerCreator = () -> Future.succeededFuture(kafkaConsumer);
+        this.pollTimeout = Duration.ofMillis(KafkaConsumerConfigProperties.DEFAULT_POLL_TIMEOUT_MILLIS);
+
+        final var consumerConfig = new HashMap<String, String>();
+        setFixedConsumerConfigValues(consumerConfig, adapterInstanceId);
+        consumerCreator = () -> {
+            final var result = new AsyncHandlingAutoCommitKafkaConsumer<>(
+                    vertx,
+                    Set.of(getTopicName()),
+                    this::handleCommandMessage,
+                    consumerConfig);
+            result.setKafkaConsumerSupplier(() -> kafkaConsumer);
+            return Future.succeededFuture(result);
+        };
         kafkaAdminClientCreator = () -> Future.succeededFuture(kafkaAdminClient);
+    }
+
+    private void setFixedConsumerConfigValues(final Map<String, String> consumerConfig, final String adapterInstanceId) {
+        consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, adapterInstanceId);
+        // enable auto-commits of partition offsets; this is needed in case the consumer partition assignment gets lost (e.g. because the group coordinator gets restarted)
+        consumerConfig.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
+        // use "earliest" "auto.offset.reset" setting to include records published before/during consumer start
+        consumerConfig.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
     }
 
     /**
@@ -258,12 +278,14 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
             .recover(e -> retryCreateTopic())
             .compose(v -> consumerCreator.get()
                     .onFailure(thr -> LOG.error("consumer creation failed", thr)))
-            .compose(client -> {
-                consumer = client;
-                Optional.ofNullable(metricsSupport).ifPresent(ms -> ms.registerKafkaConsumer(consumer.unwrap()));
-                return subscribeToTopic();
-            })
-            .onSuccess(ok -> lifecycleStatus.setStarted());
+            .compose(createdConsumer -> {
+                consumer = createdConsumer;
+                consumer.addOnKafkaConsumerReadyHandler(ar -> lifecycleStatus.setStarted());
+                consumer.setPollTimeout(pollTimeout);
+                consumer.setConsumerCreationRetriesTimeout(KafkaClientFactory.UNLIMITED_RETRIES_DURATION);
+                consumer.setMetricsSupport(metricsSupport);
+                return consumer.start();
+            });
 
         return Future.succeededFuture();
     }
@@ -322,36 +344,6 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
         return createTopicRetryPromise.future();
     }
 
-    private Future<Void> subscribeToTopic() {
-        consumer.handler(this::handleCommandMessage);
-        consumer.exceptionHandler(thr -> {
-            LOG.error("consumer error occurred [adapterInstanceId: {}, clientId: {}]", adapterInstanceId, clientId, thr);
-        });
-        consumer.partitionsRevokedHandler(this::onPartitionsRevoked);
-        final Promise<Void> partitionAssignedPromise = Promise.promise();
-        consumer.partitionsAssignedHandler(partitionsSet -> {
-            LOG.debug("partitions assigned: {}", partitionsSet);
-            partitionAssignedPromise.tryComplete();
-        });
-        final String topicName = getTopicName();
-        final Promise<Void> subscribedPromise = Promise.promise();
-        consumer.subscribe(topicName, subscribedPromise);
-
-        return CompositeFuture.all(subscribedPromise.future(), partitionAssignedPromise.future())
-                .map((Void) null)
-                .onComplete(ar -> consumer.partitionsAssignedHandler(this::onPartitionsAssigned))
-                .onSuccess(v -> LOG.debug("subscribed and got partition assignment for topic [{}]", topicName))
-                .onFailure(thr -> LOG.error("error subscribing to topic [{}]", topicName, thr));
-    }
-
-    private void onPartitionsAssigned(final Set<TopicPartition> partitionsSet) {
-        LOG.debug("partitions assigned: {}", partitionsSet);
-    }
-
-    private void onPartitionsRevoked(final Set<TopicPartition> partitionsSet) {
-        LOG.debug("partitions revoked: {}", partitionsSet);
-    }
-
     private String getTopicName() {
         return new HonoTopic(HonoTopic.Type.COMMAND_INTERNAL, adapterInstanceId).toString();
     }
@@ -371,7 +363,7 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
             retryCreateTopic.set(false);
             vertx.cancelTimer(retryCreateTopicTimerId);
 
-            return CompositeFuture.all(closeAdminClient(), closeConsumer())
+            return CompositeFuture.all(closeAdminClient(), stopConsumer())
                 .mapEmpty();
         });
     }
@@ -390,18 +382,13 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
         return adminClientClosePromise.future();
     }
 
-    private Future<Void> closeConsumer() {
-        if (consumer == null) {
-            return Future.succeededFuture();
-        }
-        LOG.debug("stop: close consumer");
-        return consumer.close().onComplete(ar -> {
-            LOG.debug("consumer closed");
-            Optional.ofNullable(metricsSupport).ifPresent(ms -> ms.unregisterKafkaConsumer(consumer.unwrap()));
-        });
+    private Future<Void> stopConsumer() {
+        return Optional.ofNullable(consumer)
+                .map(AsyncHandlingAutoCommitKafkaConsumer::stop)
+                .orElseGet(Future::succeededFuture);
     }
 
-    void handleCommandMessage(final KafkaConsumerRecord<String, Buffer> record) {
+    Future<Void> handleCommandMessage(final KafkaConsumerRecord<String, Buffer> record) {
 
         // get partition/offset of the command record - related to the tenant-based topic the command was originally received in
         final Integer commandPartition = KafkaRecordHelper.getOriginalPartitionHeader(record.headers())
@@ -410,7 +397,7 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
                 .orElse(null);
         if (commandPartition == null || commandOffset == null) {
             LOG.warn("command record is invalid - missing required original partition/offset headers");
-            return;
+            return Future.failedFuture("command record is invalid");
         }
 
         final KafkaBasedCommand command;
@@ -421,7 +408,7 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
                     KafkaRecordHelper.getTenantId(record.headers()).orElse(null),
                     KafkaRecordHelper.getDeviceId(record.headers()).orElse(null),
                     e);
-            return;
+            return Future.failedFuture("command record is invalid");
         }
         // check whether command has already been received and handled;
         // partition index and offset here are related to the *tenant-based* topic the command was originally received in
@@ -434,6 +421,7 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
                 LOG.debug("ignoring command - record partition offset {} <= last handled offset {} [{}]", commandOffset,
                         lastHandledOffset, command);
             }
+            return Future.succeededFuture();
         } else {
             lastHandledPartitionOffsets.put(commandPartition, commandOffset);
 
@@ -456,29 +444,35 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
 
             final var commandContext = new KafkaBasedCommandContext(command, commandResponseSender, currentSpan);
 
-            tenantClient.get(command.getTenant(), spanContext)
-                    .onFailure(t -> {
+            return tenantClient.get(command.getTenant(), spanContext)
+                    .recover(t -> {
+                        final Throwable mappedException;
                         if (ServiceInvocationException.extractStatusCode(t) == HttpURLConnection.HTTP_NOT_FOUND) {
-                            commandContext.reject(new TenantDisabledOrNotRegisteredException(
+                            mappedException = new TenantDisabledOrNotRegisteredException(
                                     command.getTenant(),
-                                    HttpURLConnection.HTTP_NOT_FOUND));
+                                    HttpURLConnection.HTTP_NOT_FOUND);
+                            commandContext.reject(mappedException);
                         } else {
-                            commandContext.release(new ServerErrorException(
+                            mappedException = new ServerErrorException(
                                     command.getTenant(),
                                     HttpURLConnection.HTTP_UNAVAILABLE,
                                     "error retrieving tenant configuration",
-                                    t));
+                                    t);
+                            commandContext.release(mappedException);
                         }
+                        return Future.failedFuture(mappedException);
                     })
-                    .onSuccess(tenantConfig -> {
+                    .compose(tenantConfig -> {
                         commandContext.put(CommandContext.KEY_TENANT_CONFIG, tenantConfig);
                         if (commandHandler != null) {
                             LOG.trace("using [{}] for received command [{}]", commandHandler, command);
                             // command.isValid() check not done here - it is to be done in the command handler
-                            commandHandler.handleCommand(commandContext);
+                            return commandHandler.handleCommand(commandContext);
                         } else {
                             LOG.info("no command handler found for command [{}]", command);
-                            commandContext.release(new NoConsumerException("no command handler found for command"));
+                            final var exception = new NoConsumerException("no command handler found for command");
+                            commandContext.release(exception);
+                            return Future.failedFuture(exception);
                         }
                     });
         }

@@ -23,6 +23,7 @@ import static org.mockito.Mockito.when;
 
 import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import org.eclipse.hono.adapter.auth.device.DeviceCredentialsAuthProvider;
 import org.eclipse.hono.adapter.auth.device.UsernamePasswordCredentials;
@@ -146,7 +147,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
 
         final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), VertxMockSupport.anyHandler(), any(), any())).
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(), any(), any())).
                 thenReturn(Future.succeededFuture(commandConsumer));
 
         doAnswer(invocation -> {
@@ -507,10 +508,10 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 "DEFAULT_TENANT", "device_1", "doThis", "reply-to-id", null, null, MessagingType.amqp);
         final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"), VertxMockSupport.anyHandler(), any(), any()))
+        when(commandConsumerFactory.createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"), any(), any(), any()))
                 .thenAnswer(invocation -> {
-                    final Handler<CommandContext> consumer = invocation.getArgument(2);
-                    consumer.handle(commandContext);
+                    final Function<CommandContext, Future<Void>> consumer = invocation.getArgument(2);
+                    consumer.apply(commandContext);
                     return Future.succeededFuture(commandConsumer);
                 });
 
@@ -535,7 +536,7 @@ public class VertxBasedHttpProtocolAdapterTest extends ProtocolAdapterTestSuppor
                 .sendJsonObject(new JsonObject(), ctx.succeeding(r -> {
                     ctx.verify(() -> {
                         verify(commandConsumerFactory).createCommandConsumer(eq("DEFAULT_TENANT"), eq("device_1"),
-                                VertxMockSupport.anyHandler(), any(), any());
+                                any(), any(), any());
                         // and the command consumer has been closed again
                         verify(commandConsumer).close(any());
                         verify(commandContext).accept();

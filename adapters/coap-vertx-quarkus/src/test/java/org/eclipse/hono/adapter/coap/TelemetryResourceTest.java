@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2018, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -29,6 +29,7 @@ import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.coap.CoAP.Type;
@@ -44,7 +45,6 @@ import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.service.metric.MetricsTags.Direction;
 import org.eclipse.hono.service.metric.MetricsTags.ProcessingOutcome;
 import org.eclipse.hono.service.metric.MetricsTags.TtdStatus;
-import org.eclipse.hono.test.VertxMockSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessagingType;
@@ -59,7 +59,6 @@ import org.mockito.ArgumentCaptor;
 import io.micrometer.core.instrument.Timer.Sample;
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.junit5.Timeout;
@@ -437,10 +436,10 @@ public class TelemetryResourceTest extends ResourceTestBase {
         }
 
         when(commandContext.get(anyString())).thenReturn(commandTimer);
-        when(commandConsumerFactory.createCommandConsumer(eq(tenantId), eq(deviceId), VertxMockSupport.anyHandler(), any(), any()))
+        when(commandConsumerFactory.createCommandConsumer(eq(tenantId), eq(deviceId), any(), any(), any()))
             .thenAnswer(invocation -> {
-                final Handler<CommandContext> consumer = invocation.getArgument(2);
-                consumer.handle(commandContext);
+                final Function<CommandContext, Future<Void>> consumer = invocation.getArgument(2);
+                consumer.apply(commandContext);
                 return Future.succeededFuture(commandConsumer);
             });
 
@@ -521,10 +520,10 @@ public class TelemetryResourceTest extends ResourceTestBase {
 
         // and a commandConsumerFactory that upon creating a consumer will invoke it with a command
         final CommandContext commandContext = givenAOneWayCommandContext("tenant", "device", "doThis", null, null);
-        when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("device"), VertxMockSupport.anyHandler(), any(), any()))
+        when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("device"), any(), any(), any()))
             .thenAnswer(invocation -> {
-                final Handler<CommandContext> consumer = invocation.getArgument(2);
-                consumer.handle(commandContext);
+                final Function<CommandContext, Future<Void>> consumer = invocation.getArgument(2);
+                consumer.apply(commandContext);
                 return Future.succeededFuture(commandConsumer);
             });
 

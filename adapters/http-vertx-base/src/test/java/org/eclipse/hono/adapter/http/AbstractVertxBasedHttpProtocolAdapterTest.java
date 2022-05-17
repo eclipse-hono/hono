@@ -119,7 +119,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
 
         commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), VertxMockSupport.anyHandler(), any(), any()))
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(), any(), any()))
             .thenReturn(Future.succeededFuture(commandConsumer));
 
         resourceLimitChecks = mock(ResourceLimitChecks.class);
@@ -239,7 +239,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         // THEN the device gets a 403
         assertContextFailedWithClientError(ctx, HttpURLConnection.HTTP_FORBIDDEN);
         // and no Command consumer has been created for the device
-        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), VertxMockSupport.anyHandler(), any(), any());
+        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), any(), any(), any());
         // and the message has not been forwarded downstream
         assertNoTelemetryMessageHasBeenSentDownstream();
         // and has not been reported as processed
@@ -290,7 +290,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         // and the message has not been forwarded downstream
         assertNoTelemetryMessageHasBeenSentDownstream();
         // and no Command consumer has been created for the device
-        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), VertxMockSupport.anyHandler(), any(), any());
+        verify(commandConsumerFactory, never()).createCommandConsumer(anyString(), anyString(), any(), any(), any());
         // and has not been reported as processed
         verify(metrics, never())
             .reportTelemetry(
@@ -683,7 +683,7 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
         });
         // and the creation of the command consumer completes at a later point
         final Promise<CommandConsumer> commandConsumerPromise = Promise.promise();
-        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), VertxMockSupport.anyHandler(), any(), any()))
+        when(commandConsumerFactory.createCommandConsumer(anyString(), anyString(), any(), any(), any()))
                 .thenReturn(commandConsumerPromise.future());
 
         adapter.doUploadMessage(ctx, "tenant", "device");

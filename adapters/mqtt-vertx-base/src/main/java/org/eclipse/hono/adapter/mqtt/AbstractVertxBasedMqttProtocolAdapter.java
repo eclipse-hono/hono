@@ -33,6 +33,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -1525,20 +1526,21 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
         private Future<CommandConsumer> createCommandConsumer(final CommandSubscription subscription, final Span span) {
 
-            final Handler<CommandContext> commandHandler = commandContext -> {
+            final Function<CommandContext, Future<Void>> commandHandler = commandContext -> {
 
                 Tags.COMPONENT.set(commandContext.getTracingSpan(), getTypeName());
                 TracingHelper.TAG_CLIENT_ID.set(commandContext.getTracingSpan(), endpoint.clientIdentifier());
                 final Sample timer = metrics.startTimer();
+                addMicrometerSample(commandContext, timer);
                 final Command command = commandContext.getCommand();
                 final Future<TenantObject> tenantTracker = getTenantConfiguration(subscription.getTenant(), commandContext.getTracingContext());
 
-                tenantTracker.compose(tenantObject -> {
-                    if (command.isValid()) {
-                        return checkMessageLimit(tenantObject, command.getPayloadSize(), commandContext.getTracingContext());
-                    } else {
-                        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST, "malformed command message"));
+                return tenantTracker.compose(tenantObject -> {
+                    if (!command.isValid()) {
+                        return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
+                                "malformed command message"));
                     }
+                    return checkMessageLimit(tenantObject, command.getPayloadSize(), commandContext.getTracingContext());
                 }).compose(success -> {
                     // in case of a gateway having subscribed for a specific device,
                     // check the via-gateways, ensuring that the gateway may act on behalf of the device at this point in time
@@ -1549,10 +1551,6 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                                 authenticatedDevice,
                                 commandContext.getTracingContext());
                     }
-                    return Future.succeededFuture();
-                }).compose(success -> {
-                    addMicrometerSample(commandContext, timer);
-                    onCommandReceived(tenantTracker.result(), subscription, commandContext);
                     return Future.succeededFuture();
                 }).onFailure(t -> {
                     if (t instanceof ClientErrorException) {
@@ -1567,7 +1565,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                             ProcessingOutcome.from(t),
                             command.getPayloadSize(),
                             timer);
-                });
+                }).compose(success -> onCommandReceived(tenantTracker.result(), subscription, commandContext));
             };
 
             final Future<RegistrationAssertion> tokenTracker = Optional.ofNullable(authenticatedDevice)
@@ -1598,14 +1596,19 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
         }
 
         /**
-         * Called for a command to be delivered to a device.
+         * Handles a valid command that has been received from an application, forwarding it to the device.
+         * <p>
+         * Note that this method invokes one of the terminal methods of the passed in {@link CommandContext} in order to
+         * settle the command message transfer and finish the trace span associated with the {@link CommandContext}.
          *
          * @param tenantObject The tenant configuration object.
          * @param subscription The device's command subscription.
          * @param commandContext The command to be delivered.
+         * @return A future indicating the outcome of the operation. The future will be succeeded if the command has
+         *         been sent to the device, otherwise it will be failed.
          * @throws NullPointerException if any of the parameters are {@code null}.
          */
-        protected final void onCommandReceived(
+        protected final Future<Void> onCommandReceived(
                 final TenantObject tenantObject,
                 final CommandSubscription subscription,
                 final CommandContext commandContext) {
@@ -1623,9 +1626,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                 ? String.format("gateway [%s], device [%s]", command.getGatewayId(), command.getDeviceId())
                 : String.format("device [%s]", command.getDeviceId());
 
-            getCommandPayload(commandContext)
+            return getCommandPayload(commandContext)
                     .map(mappedPayload -> Optional.ofNullable(mappedPayload).orElseGet(Buffer::buffer))
                     .onSuccess(payload -> {
+                        // don't wait for the PUBACK from the device in order to complete the onCommandReceived result future here
                         publish(publishTopic, payload, subscription.getQos())
                                 .onSuccess(msgId -> {
                                     log.debug("published command [packet-id: {}] to {} [tenant-id: {}, MQTT client-id: {}, QoS: {}, topic: {}]",
@@ -1659,7 +1663,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
                                 commandContext,
                                 ProcessingOutcome.from(t));
                         commandContext.release(t);
-                    });
+                    }).mapEmpty();
         }
 
         private Future<Integer> publish(final String topic, final Buffer payload, final MqttQoS qosLevel) {

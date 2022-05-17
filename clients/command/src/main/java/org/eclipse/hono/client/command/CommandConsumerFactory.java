@@ -14,12 +14,12 @@
 package org.eclipse.hono.client.command;
 
 import java.time.Duration;
+import java.util.function.Function;
 
 import org.eclipse.hono.util.Lifecycle;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 
 /**
  * A factory for creating consumers for commands targeted at devices.
@@ -41,6 +41,7 @@ public interface CommandConsumerFactory extends Lifecycle {
      * @param commandHandler The handler to invoke with every command received. The handler must invoke one of the
      *                       terminal methods of the passed in {@link CommandContext} in order to settle the command
      *                       message transfer and finish the trace span associated with the {@link CommandContext}.
+     *                       The future returned by the handler indicates the outcome of handling the command.
      * @param lifespan The time period in which the command consumer shall be active. Using a negative duration or
      *                 {@code null} here is interpreted as an unlimited life span. The guaranteed granularity
      *                 taken into account here is seconds.
@@ -59,7 +60,7 @@ public interface CommandConsumerFactory extends Lifecycle {
     Future<CommandConsumer> createCommandConsumer(
             String tenantId,
             String deviceId,
-            Handler<CommandContext> commandHandler,
+            Function<CommandContext, Future<Void>> commandHandler,
             Duration lifespan,
             SpanContext context);
 
@@ -79,6 +80,7 @@ public interface CommandConsumerFactory extends Lifecycle {
      * @param commandHandler The handler to invoke with every command received. The handler must invoke one of the
      *                       terminal methods of the passed in {@link CommandContext} in order to settle the command
      *                       message transfer and finish the trace span associated with the {@link CommandContext}.
+     *                       The future returned by the handler indicates the outcome of handling the command.
      * @param lifespan The time period in which the command consumer shall be active. Using a negative duration or
      *                 {@code null} here is interpreted as an unlimited life span. The guaranteed granularity
      *                 taken into account here is seconds.
@@ -98,7 +100,7 @@ public interface CommandConsumerFactory extends Lifecycle {
             String tenantId,
             String deviceId,
             String gatewayId,
-            Handler<CommandContext> commandHandler,
+            Function<CommandContext, Future<Void>> commandHandler,
             Duration lifespan,
             SpanContext context);
 }

@@ -993,7 +993,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             final Device authenticatedDevice,
             final Span span) {
 
-        final Handler<CommandContext> commandHandler = commandContext -> {
+        final Function<CommandContext, Future<Void>> commandHandler = commandContext -> {
 
             final Sample timer = metrics.startTimer();
             addMicrometerSample(commandContext, timer);
@@ -1002,7 +1002,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             final Future<TenantObject> tenantTracker = getTenantConfiguration(sourceAddress.getTenantId(),
                     commandContext.getTracingContext());
 
-            tenantTracker.compose(tenantObject -> {
+            return tenantTracker.compose(tenantObject -> {
                 if (!command.isValid()) {
                     return Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST,
                             "malformed command message"));
@@ -1023,10 +1023,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                             commandContext.getTracingContext());
                 }
                 return Future.succeededFuture();
-            }).compose(success -> {
-                onCommandReceived(tenantTracker.result(), sender, commandContext);
-                return Future.succeededFuture();
-            }).otherwise(failure -> {
+            }).onFailure(failure -> {
                 if (failure instanceof ClientErrorException) {
                     commandContext.reject(failure);
                 } else {
@@ -1039,8 +1036,7 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                         ProcessingOutcome.from(failure),
                         command.getPayloadSize(),
                         timer);
-                return null;
-            });
+            }).compose(success -> onCommandReceived(tenantTracker.result(), sender, commandContext));
         };
 
         final Future<RegistrationAssertion> tokenTracker = Optional.ofNullable(authenticatedDevice)
@@ -1071,18 +1067,19 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
     }
 
     /**
-     * Invoked for every valid command that has been received from
-     * an application.
+     * Handles a valid command that has been received from an application, forwarding it to the device.
      * <p>
-     * This implementation simply forwards the command to the device
-     * via the given link.
+     * Note that this method invokes one of the terminal methods of the passed in {@link CommandContext} in order to
+     * settle the command message transfer and finish the trace span associated with the {@link CommandContext}.
      *
      * @param tenantObject The tenant configuration object.
      * @param sender The link for sending the command to the device.
      * @param commandContext The context in which the adapter receives the command message.
+     * @return A future indicating the outcome of the operation. The future will be succeeded if the command has been
+     *         sent to the device, otherwise it will be failed.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    protected void onCommandReceived(
+    Future<Void> onCommandReceived(
             final TenantObject tenantObject,
             final ProtonSender sender,
             final CommandContext commandContext) {
@@ -1097,9 +1094,11 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
 
         if (sender.sendQueueFull()) {
             log.debug("cannot send command to device: no credit available [{}]", command);
-            commandContext.release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
-                    "no credit available for sending command to device"));
+            final var exception = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                    "no credit available for sending command to device");
+            commandContext.release(exception);
             reportSentCommand(tenantObject, commandContext, ProcessingOutcome.UNDELIVERABLE);
+            return Future.failedFuture(exception);
         } else {
 
             final Message msg = ProtonHelper.message();
@@ -1159,20 +1158,19 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
                     final DeliveryState remoteState = delivery.getRemoteState();
                     ProcessingOutcome outcome = null;
                     if (delivery.remotelySettled()) {
-                        if (Accepted.class.isInstance(remoteState)) {
+                        if (remoteState instanceof Accepted) {
                             outcome = ProcessingOutcome.FORWARDED;
                             commandContext.accept();
-                        } else if (Rejected.class.isInstance(remoteState)) {
+                        } else if (remoteState instanceof Rejected rejected) {
                             outcome = ProcessingOutcome.UNPROCESSABLE;
-                            final String cause = Optional.ofNullable(((Rejected) remoteState).getError())
+                            final String cause = Optional.ofNullable(rejected.getError())
                                     .map(ErrorCondition::getDescription)
                                     .orElse(null);
                             commandContext.reject(cause);
-                        } else if (Released.class.isInstance(remoteState)) {
+                        } else if (remoteState instanceof Released) {
                             outcome = ProcessingOutcome.UNDELIVERABLE;
                             commandContext.release();
-                        } else if (Modified.class.isInstance(remoteState)) {
-                            final Modified modified = (Modified) remoteState;
+                        } else if (remoteState instanceof Modified modified) {
                             outcome = modified.getUndeliverableHere() ? ProcessingOutcome.UNPROCESSABLE : ProcessingOutcome.UNDELIVERABLE;
                             commandContext.modify(modified.getDeliveryFailed(), modified.getUndeliverableHere());
                         }
@@ -1198,6 +1196,8 @@ public final class VertxBasedAmqpProtocolAdapter extends AbstractProtocolAdapter
             items.put(TracingHelper.TAG_QOS.getKey(), sender.getQoS().name());
             items.put(TracingHelper.TAG_CREDIT.getKey(), sender.getCredit());
             commandContext.getTracingSpan().log(items);
+            // return succeeded future, not waiting for the delivery update from the device
+            return Future.succeededFuture();
         }
     }
 

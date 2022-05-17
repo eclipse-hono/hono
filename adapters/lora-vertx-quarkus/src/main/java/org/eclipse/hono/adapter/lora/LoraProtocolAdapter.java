@@ -355,7 +355,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                 }).onComplete(ar -> currentSpan.finish());
     }
 
-    private void handleCommand(final CommandContext commandContext) {
+    private Future<Void> handleCommand(final CommandContext commandContext) {
         Tags.COMPONENT.set(commandContext.getTracingSpan(), getTypeName());
         final Sample timer = getMetrics().startTimer();
         final Command command = commandContext.getCommand();
@@ -363,8 +363,9 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
         if (command.getGatewayId() == null) {
             final String errorMsg = "no gateway defined for command";
             LOG.debug("{} [{}]", errorMsg, command);
-            commandContext.release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, errorMsg));
-            return;
+            final var exception = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, errorMsg);
+            commandContext.release(exception);
+            return Future.failedFuture(exception);
         }
         final String tenant = command.getTenant();
         final String gatewayId = command.getGatewayId();
@@ -375,11 +376,13 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
             LOG.debug("received command for unknown gateway [{}] for tenant [{}]", gatewayId, tenant);
             TracingHelper.logError(commandContext.getTracingSpan(),
                     String.format("received command for unknown gateway [%s]", gatewayId));
-            commandContext.release(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "received command for unknown gateway"));
-            return;
+            final var exception = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                    "received command for unknown gateway");
+            commandContext.release(exception);
+            return Future.failedFuture(exception);
         }
         final Future<TenantObject> tenantTracker = getTenantConfiguration(tenant, commandContext.getTracingContext());
-        tenantTracker
+        return tenantTracker
                 .compose(tenantObject -> {
                     if (command.isValid()) {
                         return checkMessageLimit(tenantObject, command.getPayloadSize(), commandContext.getTracingContext());

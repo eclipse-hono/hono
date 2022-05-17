@@ -902,7 +902,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         // WHEN a device subscribes to commands
         final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("deviceId"), VertxMockSupport.anyHandler(), any(), any()))
+        when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("deviceId"), any(), any(), any()))
                         .thenReturn(Future.succeededFuture(commandConsumer));
         final List<MqttTopicSubscription> subscriptions = Collections.singletonList(
                 newMockTopicSubscription(getCommandSubscriptionTopic("tenant", "deviceId"), qos));
@@ -915,7 +915,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         mqttDeviceEndpoint.onSubscribe(msg);
 
         // THEN the adapter creates a command consumer that is checked periodically
-        verify(commandConsumerFactory).createCommandConsumer(eq("tenant"), eq("deviceId"), VertxMockSupport.anyHandler(), any(), any());
+        verify(commandConsumerFactory).createCommandConsumer(eq("tenant"), eq("deviceId"), any(), any(), any());
         // and the adapter registers a hook on the connection to the device
         final ArgumentCaptor<Handler<Void>> closeHookCaptor = VertxMockSupport.argumentCaptorHandler();
         verify(endpoint).closeHandler(closeHookCaptor.capture());
@@ -1049,7 +1049,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         // WHEN a device subscribes to commands
         final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.failedFuture(new ClientErrorException(HttpURLConnection.HTTP_PRECON_FAILED)));
-        when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("deviceId"), VertxMockSupport.anyHandler(), any(), any()))
+        when(commandConsumerFactory.createCommandConsumer(eq("tenant"), eq("deviceId"), any(), any(), any()))
                 .thenReturn(Future.succeededFuture(commandConsumer));
         final List<MqttTopicSubscription> subscriptions = Collections.singletonList(
                 newMockTopicSubscription(getCommandSubscriptionTopic("tenant", "deviceId"), MqttQoS.AT_MOST_ONCE));
@@ -1062,7 +1062,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         mqttDeviceEndpoint.onSubscribe(msg);
 
         // THEN the adapter creates a command consumer that is checked periodically
-        verify(commandConsumerFactory).createCommandConsumer(eq("tenant"), eq("deviceId"), VertxMockSupport.anyHandler(), any(), any());
+        verify(commandConsumerFactory).createCommandConsumer(eq("tenant"), eq("deviceId"), any(), any(), any());
         // and the adapter registers a hook on the connection to the device
         final ArgumentCaptor<Handler<Void>> closeHookCaptor = VertxMockSupport.argumentCaptorHandler();
         verify(endpoint).closeHandler(closeHookCaptor.capture());
@@ -1098,7 +1098,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         // and for subscribing to commands
         final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
-        when(commandConsumerFactory.createCommandConsumer(eq("tenant-1"), eq("device-A"), VertxMockSupport.anyHandler(), any(), any()))
+        when(commandConsumerFactory.createCommandConsumer(eq("tenant-1"), eq("device-A"), any(), any(), any()))
                         .thenReturn(Future.succeededFuture(commandConsumer));
         subscriptions.add(
                 newMockTopicSubscription(getCommandSubscriptionTopic("tenant-1", "device-A"), MqttQoS.AT_MOST_ONCE));

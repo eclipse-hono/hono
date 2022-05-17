@@ -33,6 +33,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 import org.eclipse.hono.adapter.HttpContext;
 import org.eclipse.hono.adapter.http.HttpAdapterMetrics;
@@ -62,7 +63,6 @@ import io.opentracing.Tracer;
 import io.opentracing.Tracer.SpanBuilder;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServerRequest;
@@ -202,7 +202,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<HttpProt
         verify(commandConsumerFactory).createCommandConsumer(
                 eq("myTenant"),
                 eq("myLoraGateway"),
-                VertxMockSupport.anyHandler(),
+                any(),
                 isNull(),
                 any());
     }
@@ -235,7 +235,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<HttpProt
 
         adapter.handleProviderRoute(httpContext, providerMock);
 
-        final ArgumentCaptor<Handler<CommandContext>> handlerArgumentCaptor = VertxMockSupport.argumentCaptorHandler();
+        final ArgumentCaptor<Function<CommandContext, Future<Void>>> handlerArgumentCaptor = ArgumentCaptor.forClass(Function.class);
 
         verify(commandConsumerFactory).createCommandConsumer(
                 eq(TEST_TENANT_ID),
@@ -244,7 +244,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<HttpProt
                 isNull(),
                 any());
 
-        final Handler<CommandContext> commandHandler = handlerArgumentCaptor.getValue();
+        final Function<CommandContext, Future<Void>> commandHandler = handlerArgumentCaptor.getValue();
         final Command command = mock(Command.class);
         when(command.getTenant()).thenReturn(TEST_TENANT_ID);
         when(command.getDeviceId()).thenReturn(TEST_DEVICE_ID);
@@ -267,7 +267,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<HttpProt
         when(httpClientRequest.sendJson(any(JsonObject.class))).thenReturn(Future.succeededFuture(httpResponse));
 
         when(webClient.postAbs(anyString())).thenReturn(httpClientRequest);
-        commandHandler.handle(commandContext);
+        commandHandler.apply(commandContext);
 
         verify(webClient, times(1)).postAbs("https://my-server.com/commands/deviceId/send");
         verify(httpClientRequest, times(1)).putHeader("my-header", "my-header-value");

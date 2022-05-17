@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.client.command.amqp;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -21,6 +22,7 @@ import static org.mockito.Mockito.when;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.util.Collections;
+import java.util.function.Function;
 
 import org.apache.qpid.proton.amqp.messaging.ApplicationProperties;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
@@ -40,7 +42,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import io.vertx.core.Context;
-import io.vertx.core.Handler;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.proton.ProtonDelivery;
 import io.vertx.proton.ProtonHelper;
@@ -109,6 +111,7 @@ public class ProtonBasedInternalCommandConsumerTest {
      * Verifies that the consumer handles a valid message by invoking the matching command handler.
      */
     @Test
+    @SuppressWarnings("unchecked")
     void testHandleCommandMessageWithHandlerForDevice() {
         final String deviceId = "4711";
         final String correlationId = "the-correlation-id";
@@ -118,13 +121,14 @@ public class ProtonBasedInternalCommandConsumerTest {
         message.setSubject("doThis");
         message.setCorrelationId(correlationId);
 
-        final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
+        final Function<CommandContext, Future<Void>> commandHandler = mock(Function.class);
+        when(commandHandler.apply(any())).thenReturn(Future.succeededFuture());
         commandHandlers.putCommandHandler(Constants.DEFAULT_TENANT, deviceId, null, commandHandler, context);
 
         internalCommandConsumer.handleCommandMessage(mock(ProtonDelivery.class), message);
 
         final ArgumentCaptor<CommandContext> commandContextCaptor = ArgumentCaptor.forClass(CommandContext.class);
-        verify(commandHandler).handle(commandContextCaptor.capture());
+        verify(commandHandler).apply(commandContextCaptor.capture());
         assertThat(commandContextCaptor.getValue()).isNotNull();
         assertThat(commandContextCaptor.getValue().getCommand().getDeviceId()).isEqualTo(deviceId);
     }
@@ -134,6 +138,7 @@ public class ProtonBasedInternalCommandConsumerTest {
      * handler.
      */
     @Test
+    @SuppressWarnings("unchecked")
     void testHandleCommandMessageWithHandlerForGateway() {
         final String deviceId = "4711";
         final String gatewayId = "gw-1";
@@ -146,13 +151,14 @@ public class ProtonBasedInternalCommandConsumerTest {
         message.setApplicationProperties(
                 new ApplicationProperties(Collections.singletonMap(MessageHelper.APP_PROPERTY_CMD_VIA, gatewayId)));
 
-        final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
+        final Function<CommandContext, Future<Void>> commandHandler = mock(Function.class);
+        when(commandHandler.apply(any())).thenReturn(Future.succeededFuture());
         commandHandlers.putCommandHandler(Constants.DEFAULT_TENANT, gatewayId, null, commandHandler, context);
 
         internalCommandConsumer.handleCommandMessage(mock(ProtonDelivery.class), message);
 
         final ArgumentCaptor<CommandContext> commandContextCaptor = ArgumentCaptor.forClass(CommandContext.class);
-        verify(commandHandler).handle(commandContextCaptor.capture());
+        verify(commandHandler).apply(commandContextCaptor.capture());
         assertThat(commandContextCaptor.getValue()).isNotNull();
         // assert that command is directed at the gateway
         assertThat(commandContextCaptor.getValue().getCommand().getGatewayId()).isEqualTo(gatewayId);
@@ -164,6 +170,7 @@ public class ProtonBasedInternalCommandConsumerTest {
      * with a gateway, by invoking the handler and adopting the gateway identifier in the command object.
      */
     @Test
+    @SuppressWarnings("unchecked")
     void testHandleCommandMessageWithHandlerForGatewayAndSpecificDevice() {
         final String deviceId = "4711";
         final String gatewayId = "gw-1";
@@ -174,13 +181,14 @@ public class ProtonBasedInternalCommandConsumerTest {
         message.setSubject("doThis");
         message.setCorrelationId(correlationId);
 
-        final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
+        final Function<CommandContext, Future<Void>> commandHandler = mock(Function.class);
+        when(commandHandler.apply(any())).thenReturn(Future.succeededFuture());
         commandHandlers.putCommandHandler(Constants.DEFAULT_TENANT, deviceId, gatewayId, commandHandler, context);
 
         internalCommandConsumer.handleCommandMessage(mock(ProtonDelivery.class), message);
 
         final ArgumentCaptor<CommandContext> commandContextCaptor = ArgumentCaptor.forClass(CommandContext.class);
-        verify(commandHandler).handle(commandContextCaptor.capture());
+        verify(commandHandler).apply(commandContextCaptor.capture());
         assertThat(commandContextCaptor.getValue()).isNotNull();
         // assert that command is directed at the gateway
         assertThat(commandContextCaptor.getValue().getCommand().getGatewayId()).isEqualTo(gatewayId);

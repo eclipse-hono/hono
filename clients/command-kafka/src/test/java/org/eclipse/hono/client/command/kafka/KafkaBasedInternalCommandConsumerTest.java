@@ -29,8 +29,10 @@ import static com.google.common.truth.Truth.assertThat;
 import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 import org.apache.kafka.clients.admin.Admin;
+import org.apache.kafka.clients.consumer.Consumer;
 import org.eclipse.hono.client.command.CommandContext;
 import org.eclipse.hono.client.command.CommandHandlers;
 import org.eclipse.hono.client.command.CommandResponse;
@@ -55,10 +57,8 @@ import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.kafka.client.consumer.KafkaConsumer;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
 import io.vertx.kafka.client.producer.KafkaHeader;
 
@@ -81,7 +81,7 @@ public class KafkaBasedInternalCommandConsumerTest {
     public void setUp() {
         final Admin kafkaAdminClient = mock(Admin.class);
         @SuppressWarnings("unchecked")
-        final KafkaConsumer<String, Buffer> kafkaConsumer = mock(KafkaConsumer.class);
+        final Consumer<String, Buffer> kafkaConsumer = mock(Consumer.class);
         final String adapterInstanceId = "adapterInstanceId";
         final Span span = TracingMockSupport.mockSpan();
         final Tracer tracer = TracingMockSupport.mockTracer(span);
@@ -103,7 +103,6 @@ public class KafkaBasedInternalCommandConsumerTest {
                 context,
                 kafkaAdminClient,
                 kafkaConsumer,
-                "testClientId",
                 tenantClient,
                 commandResponseSender,
                 adapterInstanceId,
@@ -123,7 +122,7 @@ public class KafkaBasedInternalCommandConsumerTest {
         final String deviceId = "4711";
         final String subject = "subject";
 
-        final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
+        final Function<CommandContext, Future<Void>> commandHandler = mock(Function.class);
         commandHandlers.putCommandHandler(tenantId, deviceId, null, commandHandler, context);
         when(tenantClient.get(eq("myTenant"), any())).thenReturn(
                 Future.failedFuture(StatusCodeMapper.from(tenantServiceErrorCode, "failed to retrieve tenant")));
@@ -133,7 +132,7 @@ public class KafkaBasedInternalCommandConsumerTest {
 
         internalCommandConsumer.handleCommandMessage(commandRecord);
 
-        verify(commandHandler, never()).handle(any(KafkaBasedCommandContext.class));
+        verify(commandHandler, never()).apply(any(KafkaBasedCommandContext.class));
         verify(commandResponseSender).sendCommandResponse(
                 argThat(t -> t.getTenantId().equals("myTenant")),
                 argThat(r -> r.getDeviceId().equals("4711")),
@@ -157,13 +156,14 @@ public class KafkaBasedInternalCommandConsumerTest {
                 KafkaRecordHelper.createOriginalOffsetHeader(0L));
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(deviceId, headers);
 
-        final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
+        final Function<CommandContext, Future<Void>> commandHandler = mock(Function.class);
+        when(commandHandler.apply(any())).thenReturn(Future.succeededFuture());
         commandHandlers.putCommandHandler(tenantId, deviceId, null, commandHandler, context);
 
         internalCommandConsumer.handleCommandMessage(commandRecord);
 
         final ArgumentCaptor<CommandContext> commandContextCaptor = ArgumentCaptor.forClass(CommandContext.class);
-        verify(commandHandler).handle(commandContextCaptor.capture());
+        verify(commandHandler).apply(commandContextCaptor.capture());
         assertThat(commandContextCaptor.getValue()).isNotNull();
         // assert that command is not valid
         assertThat(commandContextCaptor.getValue().getCommand().isValid()).isFalse();
@@ -183,13 +183,14 @@ public class KafkaBasedInternalCommandConsumerTest {
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(deviceId,
                 getHeaders(tenantId, deviceId, subject, 0L));
 
-        final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
+        final Function<CommandContext, Future<Void>> commandHandler = mock(Function.class);
+        when(commandHandler.apply(any())).thenReturn(Future.succeededFuture());
         commandHandlers.putCommandHandler(tenantId, deviceId, null, commandHandler, context);
 
         internalCommandConsumer.handleCommandMessage(commandRecord);
 
         final ArgumentCaptor<CommandContext> commandContextCaptor = ArgumentCaptor.forClass(CommandContext.class);
-        verify(commandHandler).handle(commandContextCaptor.capture());
+        verify(commandHandler).apply(commandContextCaptor.capture());
         assertThat(commandContextCaptor.getValue()).isNotNull();
         assertThat(commandContextCaptor.getValue().getCommand().isValid()).isTrue();
     }
@@ -211,7 +212,8 @@ public class KafkaBasedInternalCommandConsumerTest {
         final KafkaConsumerRecord<String, Buffer> commandRecord2 = getCommandRecord(deviceId,
                 getHeaders(tenantId, deviceId, subject, 5L));
 
-        final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
+        final Function<CommandContext, Future<Void>> commandHandler = mock(Function.class);
+        when(commandHandler.apply(any())).thenReturn(Future.succeededFuture());
         commandHandlers.putCommandHandler(tenantId, deviceId, null, commandHandler, context);
 
         internalCommandConsumer.handleCommandMessage(commandRecord);
@@ -220,11 +222,11 @@ public class KafkaBasedInternalCommandConsumerTest {
         final InOrder inOrder = inOrder(commandHandler);
         final ArgumentCaptor<CommandContext> commandContextCaptor = ArgumentCaptor.forClass(CommandContext.class);
         // first invocation
-        inOrder.verify(commandHandler).handle(commandContextCaptor.capture());
+        inOrder.verify(commandHandler).apply(commandContextCaptor.capture());
         assertThat(commandContextCaptor.getValue()).isNotNull();
         assertThat(commandContextCaptor.getValue().getCommand().isValid()).isTrue();
         // verify there was no second invocation
-        inOrder.verify(commandHandler, never()).handle(any());
+        inOrder.verify(commandHandler, never()).apply(any());
     }
 
     /**
@@ -243,13 +245,14 @@ public class KafkaBasedInternalCommandConsumerTest {
 
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(deviceId, headers);
 
-        final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
+        final Function<CommandContext, Future<Void>> commandHandler = mock(Function.class);
+        when(commandHandler.apply(any())).thenReturn(Future.succeededFuture());
         commandHandlers.putCommandHandler(tenantId, gatewayId, null, commandHandler, context);
 
         internalCommandConsumer.handleCommandMessage(commandRecord);
 
         final ArgumentCaptor<CommandContext> commandContextCaptor = ArgumentCaptor.forClass(CommandContext.class);
-        verify(commandHandler).handle(commandContextCaptor.capture());
+        verify(commandHandler).apply(commandContextCaptor.capture());
         assertThat(commandContextCaptor.getValue()).isNotNull();
         assertThat(commandContextCaptor.getValue().getCommand().isValid()).isTrue();
         // assert that command is directed at the gateway
@@ -271,13 +274,14 @@ public class KafkaBasedInternalCommandConsumerTest {
         final KafkaConsumerRecord<String, Buffer> commandRecord = getCommandRecord(deviceId,
                 getHeaders(tenantId, deviceId, subject, 0L));
 
-        final Handler<CommandContext> commandHandler = VertxMockSupport.mockHandler();
+        final Function<CommandContext, Future<Void>> commandHandler = mock(Function.class);
+        when(commandHandler.apply(any())).thenReturn(Future.succeededFuture());
         commandHandlers.putCommandHandler(tenantId, deviceId, gatewayId, commandHandler, context);
 
         internalCommandConsumer.handleCommandMessage(commandRecord);
 
         final ArgumentCaptor<CommandContext> commandContextCaptor = ArgumentCaptor.forClass(CommandContext.class);
-        verify(commandHandler).handle(commandContextCaptor.capture());
+        verify(commandHandler).apply(commandContextCaptor.capture());
         assertThat(commandContextCaptor.getValue()).isNotNull();
         assertThat(commandContextCaptor.getValue().getCommand().isValid()).isTrue();
         // assert that command is directed at the gateway

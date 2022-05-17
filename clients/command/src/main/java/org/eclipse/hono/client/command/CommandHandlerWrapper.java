@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -14,10 +14,12 @@
 package org.eclipse.hono.client.command;
 
 import java.util.Objects;
+import java.util.function.Function;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.Context;
-import io.vertx.core.Handler;
+import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 
 /**
@@ -28,7 +30,7 @@ public final class CommandHandlerWrapper {
     private final String tenantId;
     private final String deviceId;
     private final String gatewayId;
-    private final Handler<CommandContext> commandHandler;
+    private final Function<CommandContext, Future<Void>> commandHandler;
     private final Context context;
     private final SpanContext consumerCreationSpanContext;
 
@@ -54,7 +56,7 @@ public final class CommandHandlerWrapper {
      * @throws NullPointerException If tenantId, deviceId or commandHandler is {@code null}.
      */
     public CommandHandlerWrapper(final String tenantId, final String deviceId, final String gatewayId,
-            final Handler<CommandContext> commandHandler, final Context context,
+            final Function<CommandContext, Future<Void>> commandHandler, final Context context,
             final SpanContext consumerCreationSpanContext) {
         this.tenantId = Objects.requireNonNull(tenantId);
         this.deviceId = Objects.requireNonNull(deviceId);
@@ -106,12 +108,15 @@ public final class CommandHandlerWrapper {
      * Invokes the command handler with the given command context.
      *
      * @param commandContext The command context to pass on to the command handler.
+     * @return The result of the command handler invocation.
      */
-    public void handleCommand(final CommandContext commandContext) {
+    public Future<Void> handleCommand(final CommandContext commandContext) {
         if (context == null || Vertx.currentContext() == context) {
-            commandHandler.handle(commandContext);
+            return commandHandler.apply(commandContext);
         } else {
-            context.runOnContext(go -> commandHandler.handle(commandContext));
+            final Promise<Void> resultPromise = Promise.promise();
+            context.runOnContext(go -> commandHandler.apply(commandContext).onComplete(resultPromise));
+            return resultPromise.future();
         }
     }
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.eclipse.hono.client.ClientErrorException;
@@ -36,7 +37,6 @@ import org.slf4j.LoggerFactory;
 import io.opentracing.SpanContext;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 
@@ -163,7 +163,7 @@ public class CommandRouterCommandConsumerFactory implements CommandConsumerFacto
     public final Future<CommandConsumer> createCommandConsumer(
             final String tenantId,
             final String deviceId,
-            final Handler<CommandContext> commandHandler,
+            final Function<CommandContext, Future<Void>> commandHandler,
             final Duration lifespan,
             final SpanContext context) {
 
@@ -179,7 +179,7 @@ public class CommandRouterCommandConsumerFactory implements CommandConsumerFacto
             final String tenantId,
             final String deviceId,
             final String gatewayId,
-            final Handler<CommandContext> commandHandler,
+            final Function<CommandContext, Future<Void>> commandHandler,
             final Duration lifespan,
             final SpanContext context) {
 
@@ -195,7 +195,7 @@ public class CommandRouterCommandConsumerFactory implements CommandConsumerFacto
             final String tenantId,
             final String deviceId,
             final String gatewayId,
-            final Handler<CommandContext> commandHandler,
+            final Function<CommandContext, Future<Void>> commandHandler,
             final Duration lifespan,
             final SpanContext context) {
         // lifespan greater than what can be expressed in nanoseconds (i.e. 292 years) is considered unlimited, preventing ArithmeticExceptions down the road
