@@ -46,6 +46,10 @@ pluralizeListTitles = "false"
 [params]
     author = "The Eclipse Hono Project"
     copyright = "&copy; 2019-2022 The Eclipse Hono Project"
+    disabled_logo = false
+    logo = "img/HONO-Logo_Bild-Wort_quer-s-310x120px.svg"
+    logo_text = "Home"
+    logo_small = "img/HONO-Logo_Bild-Wort_quer-s-310x120px.svg"
     viewMorePostLink = "/blog/"
     defaultKeywords = []
     defaultDescription = "Eclipse Hono provides means for connecting millions of IoT devices using arbitrary protocols and interacting with them via uniform APIs."
@@ -57,7 +61,7 @@ pluralizeListTitles = "false"
     twitter_site = "EclipseHono"
 
     # Style options: default (light-blue), blue, green, marsala, pink, red, turquoise, violet
-    style = "hono"
+    style = "default"
 
     # Format dates with Go's time formatting
     date_format = "January 2, 2006"
@@ -72,7 +76,7 @@ pluralizeListTitles = "false"
     tags = false
     search = false
 
-[params.carousel]
+[params.carouselHomepage]
     enable = false
     # All carousel items are defined in their own files. You can find example items
     # at 'exampleSite/data/carousel'.
@@ -80,6 +84,7 @@ pluralizeListTitles = "false"
 
 [params.features]
     enable = true
+    cols = 3
     # All features are defined in their own files. You can find example items
     # at 'exampleSite/data/features'.
     # For more information take a look at the README.
