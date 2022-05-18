@@ -18,11 +18,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.deviceregistry.jdbc.config.DeviceServiceOptions;
 import org.eclipse.hono.deviceregistry.service.credentials.AbstractCredentialsManagementService;
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
+import org.eclipse.hono.service.auth.HonoPasswordEncoder;
 import org.eclipse.hono.service.base.jdbc.store.OptimisticLockingException;
 import org.eclipse.hono.service.base.jdbc.store.SQL;
 import org.eclipse.hono.service.base.jdbc.store.device.TableManagementStore;

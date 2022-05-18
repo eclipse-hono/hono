@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.eclipse.hono.auth;
+package org.eclipse.hono.service.auth;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;

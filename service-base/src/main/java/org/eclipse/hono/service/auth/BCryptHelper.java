@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.auth;
+package org.eclipse.hono.service.auth;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;

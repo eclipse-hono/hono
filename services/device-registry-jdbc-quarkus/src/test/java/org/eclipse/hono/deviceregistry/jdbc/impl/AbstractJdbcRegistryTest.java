@@ -36,11 +36,11 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.deviceregistry.jdbc.config.DeviceServiceOptions;
 import org.eclipse.hono.deviceregistry.jdbc.config.TenantServiceOptions;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantKey;
+import org.eclipse.hono.service.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.service.base.jdbc.config.JdbcProperties;
 import org.eclipse.hono.service.base.jdbc.store.device.DeviceStores;
 import org.eclipse.hono.service.base.jdbc.store.tenant.Stores;

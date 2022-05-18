@@ -15,8 +15,8 @@ package org.eclipse.hono.service.management.credentials;
 import java.util.Objects;
 import java.util.Set;
 
-import org.eclipse.hono.auth.BCryptHelper;
-import org.eclipse.hono.auth.HonoPasswordEncoder;
+import org.eclipse.hono.service.auth.BCryptHelper;
+import org.eclipse.hono.service.auth.HonoPasswordEncoder;
 import org.eclipse.hono.util.RegistryManagementConstants;
 import org.eclipse.hono.util.Strings;
 

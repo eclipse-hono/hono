@@ -19,7 +19,6 @@ import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedCredentialsConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedTenantsConfigProperties;
@@ -31,6 +30,7 @@ import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedCredentialsMa
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedDeviceManagementService;
 import org.eclipse.hono.deviceregistry.mongodb.service.MongoDbBasedTenantManagementService;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
+import org.eclipse.hono.service.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.service.management.credentials.CredentialsManagementService;
 import org.eclipse.hono.service.management.device.DeviceManagementService;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;

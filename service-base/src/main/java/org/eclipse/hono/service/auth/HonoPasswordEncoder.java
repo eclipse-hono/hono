@@ -12,7 +12,7 @@
  */
 
 
-package org.eclipse.hono.auth;
+package org.eclipse.hono.service.auth;
 
 import io.vertx.core.json.JsonObject;
 

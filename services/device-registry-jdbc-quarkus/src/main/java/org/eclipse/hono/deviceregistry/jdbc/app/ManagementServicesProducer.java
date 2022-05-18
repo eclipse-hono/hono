@@ -19,13 +19,13 @@ import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.deviceregistry.jdbc.config.DeviceServiceOptions;
 import org.eclipse.hono.deviceregistry.jdbc.impl.CredentialsManagementServiceImpl;
 import org.eclipse.hono.deviceregistry.jdbc.impl.DeviceManagementServiceImpl;
 import org.eclipse.hono.deviceregistry.jdbc.impl.StoreBasedTenantInformationService;
 import org.eclipse.hono.deviceregistry.jdbc.impl.TenantManagementServiceImpl;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
+import org.eclipse.hono.service.auth.SpringBasedHonoPasswordEncoder;
 import org.eclipse.hono.service.base.jdbc.store.device.TableManagementStore;
 import org.eclipse.hono.service.base.jdbc.store.tenant.AdapterStore;
 import org.eclipse.hono.service.base.jdbc.store.tenant.ManagementStore;

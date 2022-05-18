@@ -28,10 +28,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import org.eclipse.hono.auth.HonoPasswordEncoder;
 import org.eclipse.hono.deviceregistry.service.device.DeviceKey;
 import org.eclipse.hono.notification.NotificationEventBusSupport;
 import org.eclipse.hono.notification.deviceregistry.CredentialsChangeNotification;
+import org.eclipse.hono.service.auth.HonoPasswordEncoder;
 import org.eclipse.hono.service.management.OperationResult;
 import org.eclipse.hono.service.management.credentials.CommonCredential;
 import org.junit.jupiter.api.BeforeEach;

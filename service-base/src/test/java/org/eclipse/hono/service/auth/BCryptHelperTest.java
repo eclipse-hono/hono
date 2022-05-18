@@ -12,12 +12,13 @@
  */
 
 
-package org.eclipse.hono.auth;
+package org.eclipse.hono.service.auth;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import org.eclipse.hono.service.auth.BCryptHelper;
 import org.junit.jupiter.api.Test;
 
 

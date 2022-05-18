@@ -17,8 +17,8 @@ import java.util.Base64;
 import java.util.List;
 import java.util.OptionalInt;
 
-import org.eclipse.hono.auth.EncodedPassword;
-import org.eclipse.hono.auth.SpringBasedHonoPasswordEncoder;
+import org.eclipse.hono.service.auth.EncodedPassword;
+import org.eclipse.hono.service.auth.SpringBasedHonoPasswordEncoder;
 
 /**
  * Helper methods for working with credentials.
