@@ -45,7 +45,7 @@ pluralizeListTitles = "false"
 
 [params]
     author = "The Eclipse Hono Project"
-    copyright = "&copy; 2019-2021 The Eclipse Hono Project"
+    copyright = "&copy; 2019-2022 The Eclipse Hono Project"
     viewMorePostLink = "/blog/"
     defaultKeywords = []
     defaultDescription = "Eclipse Hono provides means for connecting millions of IoT devices using arbitrary protocols and interacting with them via uniform APIs."
