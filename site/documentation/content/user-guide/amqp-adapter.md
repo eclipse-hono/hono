@@ -483,7 +483,7 @@ commands anymore, it can simply close the link.
 
 When a device has successfully opened a receiver link for commands, the adapter sends an
 [empty notification]({{< relref "/api/event#empty-notification" >}}) on behalf of the device to the downstream
-AMQP 1.0 Messaging Network with the *ttd* header set to `-1`, indicating that the device will be ready to receive
+messaging infrastructure with the *ttd* header set to `-1`, indicating that the device will be ready to receive
 commands until further notice. Analogously, the adapter sends an empty notification with the *ttd* header set to `0`
 when a device closes the link or disconnects.
 
