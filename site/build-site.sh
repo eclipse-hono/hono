@@ -29,7 +29,7 @@ fi
 cd homepage/
 if [ ! -d themes/hugo-universal-theme ]
 then
-  git clone --depth 1 --branch 1.1.1 https://github.com/devcows/hugo-universal-theme.git themes/hugo-universal-theme
+  git clone --depth 1 --branch 1.3.2 https://github.com/devcows/hugo-universal-theme.git themes/hugo-universal-theme
 fi
 
 echo "Going to build homepage in directory: $TARGET"

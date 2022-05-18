@@ -23,7 +23,7 @@ IF ERRORLEVEL 1 (
 cd homepage
 IF NOT EXIST themes\hugo-universal-theme (
   ECHO Going to download theme 'universal' for hugo...
-  git clone --depth 1 --branch 1.1.1 https://github.com/devcows/hugo-universal-theme.git themes\hugo-universal-theme
+  git clone --depth 1 --branch 1.3.2 https://github.com/devcows/hugo-universal-theme.git themes\hugo-universal-theme
 )
 
 IF NOT "%~1"==""  (

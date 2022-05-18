@@ -93,7 +93,7 @@ spec:
         '''
         echo "cloning Hugo Universal theme..."
         sh '''
-            git clone --depth 1 --branch 1.1.1 https://github.com/devcows/hugo-universal-theme.git ${WORKSPACE}/hono/site/homepage/themes/hugo-universal-theme
+            git clone --depth 1 --branch 1.3.2 https://github.com/devcows/hugo-universal-theme.git ${WORKSPACE}/hono/site/homepage/themes/hugo-universal-theme
             echo "Remove images from theme" # We do not need the pictures. Removing them, so they don't get deployed
             rm ${WORKSPACE}/hono/site/homepage/themes/hugo-universal-theme/static/img/*
         '''

@@ -1,5 +1,17 @@
 @import url("https://www.eclipse.org/eclipse.org-common/themes/solstice/public/stylesheets/vendor/cookieconsent/cookieconsent.min.css");
 
+/* Themed colors */
+:root {
+  --primary-accent: #f08712;
+  --navbar-border-top: #c55c04;
+  --button-border: #c55c04;
+  --link-focus: #c55c08;
+  --form-shadow: #c55c09;
+  --pagination-bg: #f6b771;
+  --link-hover-bg: #c55c06;
+  --navbar-focus: #f6b771;
+}
+
 #footer div.eclipse-logos {
   height: 120px;
 }
@@ -65,8 +77,130 @@ div#landing-vp {
   margin: -80px 0 0;
 }
 
-#navbar .logo {
-  height: 46px;
+section,
+div.section {
+  margin-bottom: 0px;
+}
+
+.bar.background-gray {
+  background: #757575;
+}
+.bar.background-white {
+  background: var(--primary-accent);
+}
+
+.navbar-brand img {
+  height: 42px;
+}
+
+.navbar ul.nav > li > a {
+  text-transform: none;
+  text-decoration: none;
+}
+.navbar.navbar-light ul.nav > li > a:hover,
+.navbar.navbar-light ul.nav > li.open > a:hover,
+.navbar.navbar-light ul.nav > li > a:focus,
+.navbar.navbar-light ul.nav > li.open > a:focus {
+  border-top: solid 5px var(--primary-accent);
+  background: #555555 !important;
+  color: #eeeeee !important;
+}
+.navbar ul.dropdown-menu li {
+  text-transform: none;
+}
+.navbar ul.dropdown-menu li a {
+  color: #eeeeee;
+}
+
+.box-simple {
+  color: white !important;
+}
+.box-simple .icon {
+  color: white;
+  border-color: white;
+}
+.box-simple h3 {
+  color: white;
+}
+.box-simple p {
+  /*color: #999999;*/
+  color: white;
+}
+.box-simple:hover .icon {
+  -webkit-transform: scale(1.3, 1.3);
+  -ms-transform: scale(1.3, 1.3);
+  -o-transform: scale(1.3, 1.3);
+  transform: scale(1.3, 1.3);
+}
+
+#heading-breadcrumbs {
+  background: none;
+  padding: 0;
+  margin-bottom: 0;
+}
+section#landing h1,
+#heading-breadcrumbs h1 {
+  color: var(--primary-accent);
+  font-variant: small-caps;
+  text-transform: none;
+  font-size: 42px;
+  letter-spacing: 0.07em;
+  text-align: center;
+  padding-top: 25px;
+  padding-bottom: 0px;
+}
+
+#footer {
+  color: #eeeeee;
+}
+#footer ul a {
+  color: #eeeeee;
+}
+
+.navbar-default {
+  background-color: #555555;
+}
+.navbar-default .navbar-brand {
+  color: #eeeeee;
+}
+.navbar-default .navbar-brand:hover,
+.navbar-default .navbar-brand:focus {
+  color: #eeeeee;
+  background-color: transparent;
+}
+.navbar-default .navbar-text {
+  color: #eeeeee;
+}
+.navbar-default .navbar-nav > li > a {
+  color: #eeeeee;
+}
+.navbar-default .navbar-nav > .active > a,
+.navbar-default .navbar-nav > .active > a:hover,
+.navbar-default .navbar-nav > .active > a:focus {
+  color: #eeeeee;
+}
+.navbar-default .navbar-nav > .open > a,
+.navbar-default .navbar-nav > .open > a:hover,
+.navbar-default .navbar-nav > .open > a:focus {
+  color: #eeeeee;
+}
+@media (max-width: 767px) {
+  .navbar-default .navbar-nav .open .dropdown-menu > li > a {
+    color: #eeeeee;
+  }
+  .navbar-default .navbar-nav .open .dropdown-menu > .active > a,
+  .navbar-default .navbar-nav .open .dropdown-menu > .active > a:hover,
+  .navbar-default .navbar-nav .open .dropdown-menu > .active > a:focus {
+    color: #eeeeee;
+  }
+}
+
+.dropdown-menu {
+  background-color: #555555;
+}
+
+.home-carousel .owl-carousel .owl-item.active .img-responsive{
+  background-color: rgba(255, 255, 255, 0.99);
 }
 
 /* Change font size to Bootstrap 4 defaults, which are similar to the values in theme "learn" (used for the documentation). */
@@ -113,10 +247,11 @@ pre {
 }
 
 /*Dropdown menu*/
+/*
 .navbar ul.dropdown-menu li a {
   font-size: 0.9rem;
 }
-
+*/
 .eclipsefdn-adopters ul {
   list-style: none;
   padding-left: 0;

@@ -1,20 +1,20 @@
 <!DOCTYPE html>
 <html lang="{{ .Site.LanguageCode }}">
 
-  {{ partial "head.html" . }}
+  <head>
+    {{ partial "headers.html" . }}
+    {{ partial "custom_headers.html" . }}
+  </head>
 
   <body>
 
     <div id="all">
 
+       {{ partial "top.html" . }}
+
+       {{ partial "nav.html" . }}
+
         <div id="landing-vp">
-            <header>
-
-                {{ partial "top.html" . }}
-
-                {{ partial "nav.html" . }}
-
-            </header>
 
             <section id="landing">
                 <div class="container landing">
@@ -27,7 +27,7 @@
                     </p>
 
                     <div id="landing-img">
-                        <object data="hono_landing_page.svg" title="What Hono can do for you" ></object>
+                      <img src="hono_landing_page.svg" alt="What Hono can do for you"/>
                     </div>
                 </div>
             </section>
