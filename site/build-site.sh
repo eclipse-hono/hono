@@ -27,20 +27,47 @@ else
 fi
 
 cd homepage/
-if [ ! -d themes/hugo-universal-theme ]
+WEBSITE_THEME_CLONING_REQUIRED=1
+if [ -d themes/hugo-universal-theme/.git ]
 then
+  HEAD=$(cat themes/hugo-universal-theme/.git/HEAD)
+  WEBSITE_THEME_HEAD_REVISION="78887402aeca0ab44deb8f0de800f7a6974f8c8a"
+  echo "rev required: ${WEBSITE_THEME_HEAD_REVISION}, rev found: ${HEAD}"
+  if [[ "${WEBSITE_THEME_HEAD_REVISION}" == "${HEAD}" ]]
+  then
+    WEBSITE_THEME_CLONING_REQUIRED=0
+  fi
+fi
+
+if [[ ${WEBSITE_THEME_CLONING_REQUIRED} -eq 1 ]]
+then
+  rm -rf themes/hugo-universal-theme
+  echo "cloning website theme repository..."
   git clone --depth 1 --branch 1.3.2 https://github.com/devcows/hugo-universal-theme.git themes/hugo-universal-theme
 fi
 
-echo "Going to build homepage in directory: $TARGET"
+echo "Building homepage in directory: $TARGET"
 hugo -v -d $TARGET
 cd .. 
 
 cd documentation/
-if [ ! -d themes/hugo-theme-relearn ]
+DOC_THEME_CLONING_REQUIRED=1
+if [ -d themes/hugo-theme-relearn/.git ]
 then
+  HEAD=$(cat themes/hugo-theme-relearn/.git/HEAD)
+  DOC_THEME_HEAD_REVISION="64911282a49967f886c5a3c5e23e46907af85335"
+  if [[ "${DOC_THEME_HEAD_REVISION}" == "${HEAD}" ]]
+  then
+    DOC_THEME_CLONING_REQUIRED=0
+  fi
+fi
+
+if [[ ${DOC_THEME_CLONING_REQUIRED} -eq 1 ]]
+then
+  rm -rf themes/hugo-theme-relearn
+  echo "cloning doc theme repository..."
   git clone --depth 1 --branch 3.4.1 https://github.com/McShelby/hugo-theme-relearn.git themes/hugo-theme-relearn
 fi
 
-echo "Going to build documentation in directory: $TARGET/docs"
+echo "Building documentation in directory: $TARGET/docs"
 hugo -v -d $TARGET/docs
