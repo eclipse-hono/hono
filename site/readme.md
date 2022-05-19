@@ -23,7 +23,7 @@ The short codes use a site parameter set in the `config.toml` file to determine 
 The UML Sequence Diagrams are created with the [PlantUML online server](http://www.plantuml.com/plantuml). The SVG files
 contain the source code and can be edited by pasting their link on this page like e.g.:
 
-    https://raw.githubusercontent.com/eclipse/hono/master/site/documentation/content/api/setLastKnownGatewayForDevice_Success.svg 
+    https://raw.githubusercontent.com/eclipse/hono/master/site/documentation/content/api/telemetry-kafka/consume_kafka.svg
 
 # Building locally
 
