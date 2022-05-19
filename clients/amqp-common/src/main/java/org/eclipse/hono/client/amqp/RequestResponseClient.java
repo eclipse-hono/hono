@@ -647,8 +647,7 @@ public class RequestResponseClient<R extends RequestResponseResult<?>> extends A
                     final Promise<R> failedResult = Promise.promise();
                     final DeliveryState remoteState = deliveryUpdated.getRemoteState();
                     sample.completed(remoteState);
-                    if (Rejected.class.isInstance(remoteState)) {
-                        final Rejected rejected = (Rejected) remoteState;
+                    if (remoteState instanceof Rejected rejected) {
                         if (rejected.getError() != null) {
                             LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}]: {}",
                                     requestTargetAddress, request.getSubject(), correlationId, rejected.getError());
@@ -660,7 +659,7 @@ public class RequestResponseClient<R extends RequestResponseResult<?>> extends A
                             failedResult.fail(new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
                             cancelRequest(correlationId, failedResult.future());
                         }
-                    } else if (Accepted.class.isInstance(remoteState)) {
+                    } else if (remoteState instanceof Accepted) {
                         LOG.trace("service has accepted request [target address: {}, subject: {}, correlation ID: {}]",
                                 requestTargetAddress, request.getSubject(), correlationId);
                         currentSpan.log("request accepted by peer");
@@ -673,15 +672,14 @@ public class RequestResponseClient<R extends RequestResponseResult<?>> extends A
                                         requestTargetAddress, request.getSubject(), correlationId);
                             }
                         }
-                    } else if (Released.class.isInstance(remoteState)) {
+                    } else if (remoteState instanceof Released) {
                         LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}], remote state: {}",
                                 requestTargetAddress, request.getSubject(), correlationId, remoteState);
                         failedResult.fail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
                         cancelRequest(correlationId, failedResult.future());
-                    } else if (Modified.class.isInstance(remoteState)) {
+                    } else if (remoteState instanceof Modified modified) {
                         LOG.debug("service did not accept request [target address: {}, subject: {}, correlation ID: {}], remote state: {}",
                                 requestTargetAddress, request.getSubject(), correlationId, remoteState);
-                        final Modified modified = (Modified) deliveryUpdated.getRemoteState();
                         failedResult.fail(modified.getUndeliverableHere() ? new ClientErrorException(HttpURLConnection.HTTP_NOT_FOUND)
                                 : new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE));
                         cancelRequest(correlationId, failedResult.future());

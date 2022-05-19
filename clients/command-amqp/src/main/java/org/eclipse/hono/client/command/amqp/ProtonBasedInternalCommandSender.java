@@ -86,17 +86,15 @@ public class ProtonBasedInternalCommandSender extends SenderCachingServiceClient
                     final DeliveryState remoteState = delivery.getRemoteState();
                     LOG.trace("command [{}] sent to downstream peer; remote state of delivery: {}",
                             commandContext.getCommand(), remoteState);
-                    if (Accepted.class.isInstance(remoteState)) {
+                    if (remoteState instanceof Accepted) {
                         commandContext.accept();
-                    } else if (Rejected.class.isInstance(remoteState)) {
-                        final Rejected rejected = (Rejected) remoteState;
+                    } else if (remoteState instanceof Rejected rejected) {
                         commandContext.reject(Optional.ofNullable(rejected.getError())
                                 .map(ErrorCondition::getDescription)
                                 .orElse(null));
-                    } else if (Released.class.isInstance(remoteState)) {
+                    } else if (remoteState instanceof Released) {
                         commandContext.release();
-                    } else if (Modified.class.isInstance(remoteState)) {
-                        final Modified modified = (Modified) remoteState;
+                    } else if (remoteState instanceof Modified modified) {
                         commandContext.modify(modified.getDeliveryFailed(), modified.getUndeliverableHere());
                     }
                     return (Void) null;

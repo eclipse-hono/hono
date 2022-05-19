@@ -287,7 +287,7 @@ public final class MetricsTags {
 
         static final String TAG_NAME = "qos";
 
-        private Tag tag;
+        private final Tag tag;
 
         QoS() {
             this.tag = null;

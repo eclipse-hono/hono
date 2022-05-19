@@ -541,19 +541,17 @@ public class GenericSenderLink extends AbstractHonoClient {
 
     private Future<ProtonDelivery> mapUnacceptedOutcomeToErrorResult(final ProtonDelivery delivery) {
         final DeliveryState remoteState = delivery.getRemoteState();
-        if (Accepted.class.isInstance(remoteState)) {
+        if (remoteState instanceof Accepted) {
             throw new IllegalStateException("delivery is expected to be rejected, released or modified here, not accepted");
         }
         ServiceInvocationException e = null;
-        if (Rejected.class.isInstance(remoteState)) {
-            final Rejected rejected = (Rejected) remoteState;
+        if (remoteState instanceof Rejected rejected) {
             e = Optional.ofNullable(rejected.getError())
                     .map(ErrorConverter::fromTransferError)
                     .orElseGet(() -> new ClientErrorException(HttpURLConnection.HTTP_BAD_REQUEST));
-        } else if (Released.class.isInstance(remoteState)) {
+        } else if (remoteState instanceof Released) {
             e = new MessageNotProcessedException();
-        } else if (Modified.class.isInstance(remoteState)) {
-            final Modified modified = (Modified) remoteState;
+        } else if (remoteState instanceof Modified modified) {
             if (modified.getUndeliverableHere()) {
                 e = new MessageUndeliverableException();
             } else {
@@ -593,14 +591,13 @@ public class GenericSenderLink extends AbstractHonoClient {
         final String messageId = message.getMessageId() != null ? message.getMessageId().toString() : "";
         final String messageAddress = getMessageAddress(message);
         final DeliveryState remoteState = delivery.getRemoteState();
-        if (Accepted.class.isInstance(remoteState)) {
+        if (remoteState instanceof Accepted) {
             log.trace("message [ID: {}, address: {}] accepted by peer", messageId, messageAddress);
             currentSpan.log("message accepted by peer");
             Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_ACCEPTED);
         } else {
             final Map<String, Object> events = new HashMap<>();
-            if (Rejected.class.isInstance(remoteState)) {
-                final Rejected rejected = (Rejected) delivery.getRemoteState();
+            if (remoteState instanceof Rejected rejected) {
                 Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_BAD_REQUEST);
                 if (rejected.getError() == null) {
                     logMessageSendingError("message [ID: {}, address: {}] rejected by peer", messageId, messageAddress);
@@ -611,13 +608,12 @@ public class GenericSenderLink extends AbstractHonoClient {
                     events.put(Fields.MESSAGE, String.format("message rejected by peer: %s, %s",
                             rejected.getError().getCondition(), rejected.getError().getDescription()));
                 }
-            } else if (Released.class.isInstance(remoteState)) {
+            } else if (remoteState instanceof Released) {
                 logMessageSendingError("message [ID: {}, address: {}] not accepted by peer, remote state: {}",
                         messageId, messageAddress, remoteState.getClass().getSimpleName());
                 Tags.HTTP_STATUS.set(currentSpan, HttpURLConnection.HTTP_UNAVAILABLE);
                 events.put(Fields.MESSAGE, "message not accepted by peer, remote state: " + remoteState);
-            } else if (Modified.class.isInstance(remoteState)) {
-                final Modified modified = (Modified) delivery.getRemoteState();
+            } else if (remoteState instanceof Modified modified) {
                 logMessageSendingError("message [ID: {}, address: {}] not accepted by peer, remote state: {}",
                         messageId, messageAddress, modified);
                 Tags.HTTP_STATUS.set(currentSpan, modified.getUndeliverableHere() ? HttpURLConnection.HTTP_NOT_FOUND

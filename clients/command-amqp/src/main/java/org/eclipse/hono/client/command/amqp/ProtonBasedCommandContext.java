@@ -144,23 +144,22 @@ public class ProtonBasedCommandContext extends MapBasedExecutionContext implemen
                         deliveryState, delivery.getRemoteState());
                 TracingHelper.logError(getTracingSpan(), msg);
                 LOG.info("{} [{}]", msg, getCommand());
-            } else if (Accepted.class.isInstance(deliveryState)) {
+            } else if (deliveryState instanceof Accepted) {
                 LOG.trace("accepted command message [{}]", getCommand());
                 span.log("accepted command for device");
 
-            } else if (Released.class.isInstance(deliveryState)) {
+            } else if (deliveryState instanceof Released) {
                 LOG.debug("released command message [{}]", getCommand());
                 TracingHelper.logError(span, "released command for device");
 
-            } else if (Modified.class.isInstance(deliveryState)) {
-                final Modified modified = (Modified) deliveryState;
+            } else if (deliveryState instanceof Modified modified) {
                 LOG.debug("modified command message [{}]", getCommand());
                 TracingHelper.logError(span, "modified command for device"
                         + (Boolean.TRUE.equals(modified.getDeliveryFailed()) ? "; delivery failed" : "")
                         + (Boolean.TRUE.equals(modified.getUndeliverableHere()) ? "; undeliverable here" : ""));
 
-            } else if (Rejected.class.isInstance(deliveryState)) {
-                final ErrorCondition errorCondition = ((Rejected) deliveryState).getError();
+            } else if (deliveryState instanceof Rejected rejected) {
+                final ErrorCondition errorCondition = rejected.getError();
                 LOG.debug("rejected command message [error: {}, command: {}]", errorCondition, getCommand());
                 TracingHelper.logError(span, "rejected command for device"
                         + ((errorCondition != null && errorCondition.getDescription() != null)

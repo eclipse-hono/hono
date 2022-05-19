@@ -103,15 +103,11 @@ public class KerlinkProvider extends JsonBasedLoraProvider {
         switch (encodingType) {
             case ENCODING_TYPE_HEX:
                 return payload
-                    .filter(String.class::isInstance)
-                    .map(String.class::cast)
                     .map(s -> Buffer.buffer(BaseEncoding.base16().decode(s.toUpperCase())))
                     .orElseThrow(() -> new LoraProviderMalformedPayloadException("message does not contain HEX encoded payload property"));
             default:
             case ENCODING_TYPE_BASE64:
                 return payload
-                    .filter(String.class::isInstance)
-                    .map(String.class::cast)
                     .map(s -> Buffer.buffer(Base64.getDecoder().decode(s)))
                     .orElseThrow(() -> new LoraProviderMalformedPayloadException("message does not contain BASE64 encoded payload property"));
         }

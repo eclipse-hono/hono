@@ -199,7 +199,7 @@ public class HonoExampleApplicationBase {
         Optional.ofNullable(telemetryConsumer)
             .map(MessageConsumer::close)
             .ifPresent(closeFutures::add);
-        Optional.ofNullable(client)
+        Optional.of(client)
             .map(Lifecycle::stop)
             .ifPresent(closeFutures::add);
 

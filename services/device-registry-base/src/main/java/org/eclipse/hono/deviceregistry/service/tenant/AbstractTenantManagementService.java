@@ -225,7 +225,7 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
                 .compose(ok -> processCreateTenant(tenantIdValue, tenantObj, span))
                 .onSuccess(result -> notificationSender.handle(new TenantChangeNotification(LifecycleChange.CREATE,
                         tenantIdValue, Instant.now(), tenantObj.isEnabled())))
-                .recover(t -> DeviceRegistryUtils.mapError(t, tenantId.get()));
+                .recover(t -> DeviceRegistryUtils.mapError(t, tenantIdValue));
     }
 
     @Override

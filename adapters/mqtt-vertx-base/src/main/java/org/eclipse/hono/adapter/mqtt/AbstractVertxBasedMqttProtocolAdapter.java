@@ -962,8 +962,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
         }).recover(t -> {
 
-            if (ClientErrorException.class.isInstance(t)) {
-                final ClientErrorException e = (ClientErrorException) t;
+            if (t instanceof ClientErrorException e) {
                 log.debug("cannot process message [endpoint: {}] from device [tenantId: {}, deviceId: {}]: {} - {}",
                         endpoint, tenantObject.getTenantId(), deviceId, e.getErrorCode(), e.getMessage());
             } else {

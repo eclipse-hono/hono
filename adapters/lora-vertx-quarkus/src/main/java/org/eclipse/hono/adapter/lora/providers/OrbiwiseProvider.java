@@ -65,8 +65,6 @@ public class OrbiwiseProvider extends JsonBasedLoraProvider {
 
         Objects.requireNonNull(loraMessage);
         return LoraUtils.getChildObject(loraMessage, FIELD_ORBIWISE_DEVICE_EUI, String.class)
-                .filter(String.class::isInstance)
-                .map(String.class::cast)
                 .map(String::toUpperCase)
                 .orElseThrow(() -> new LoraProviderMalformedPayloadException("message does not contain String valued device ID property"));
     }

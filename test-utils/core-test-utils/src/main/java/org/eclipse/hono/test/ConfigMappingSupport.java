@@ -27,7 +27,7 @@ import io.smallrye.config.source.yaml.YamlConfigSource;
 public final class ConfigMappingSupport {
 
     private ConfigMappingSupport() {
-        // prevent instantation
+        // prevent instantiation
     }
 
     /**

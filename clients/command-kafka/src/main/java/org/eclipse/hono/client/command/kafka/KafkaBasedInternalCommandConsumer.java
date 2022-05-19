@@ -84,6 +84,7 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
     private final Supplier<Future<AsyncHandlingAutoCommitKafkaConsumer<Buffer>>> consumerCreator;
     private final Supplier<Future<Admin>> kafkaAdminClientCreator;
     private final String adapterInstanceId;
+    private final Duration pollTimeout;
     private final CommandHandlers commandHandlers;
     private final Tracer tracer;
     private final CommandResponseSender commandResponseSender;
@@ -99,8 +100,6 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
     private Admin adminClient;
     private Context context;
     private KafkaClientMetricsSupport metricsSupport;
-
-    private final Duration pollTimeout;
     private long retryCreateTopicTimerId;
 
     /**

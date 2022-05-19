@@ -58,7 +58,7 @@ public class JdbcProperties {
         setDriverClass(options.driverClass());
         options.maximumPoolSize().ifPresent(this::setMaximumPoolSize);
         options.password().ifPresent(this::setPassword);
-        options.tableName().ifPresent(this::setTableName);;
+        options.tableName().ifPresent(this::setTableName);
         setUrl(options.url());
         options.username().ifPresent(this::setUsername);
     }
