@@ -59,11 +59,11 @@ commandRouterService:
   imageName: "my.registry.io/eclipse/hono-service-command-router-quarkus:1.12.0-CUSTOM"
 adapters:
   amqp:
-    imageName: "my.registry.io/eclipse/hono-adapter-amqp-vertx-quarkus:1.12.0-CUSTOM"
+    imageName: "my.registry.io/eclipse/hono-adapter-amqp:2.0.0-CUSTOM"
   mqtt:
-    imageName: "my.registry.io/eclipse/hono-adapter-mqtt-vertx-quarkus:1.12.0-CUSTOM"
+    imageName: "my.registry.io/eclipse/hono-adapter-mqtt:2.0.0-CUSTOM"
   http:
-    imageName: "my.registry.io/eclipse/hono-adapter-http-vertx-quarkus:1.12.0-CUSTOM"
+    imageName: "my.registry.io/eclipse/hono-adapter-http:2.0.0-CUSTOM"
 ```
 
 Assuming that the YAML file is called `imageNames.yaml`, installation can then be done using:

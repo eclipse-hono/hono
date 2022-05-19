@@ -65,7 +65,7 @@ spec:
         group: ${project.groupId}
     spec:
       containers:
-      - image: eclipse/hono-adapter-http-vertx-quarkus:${project.version}
+      - image: eclipse/hono-adapter-http:${project.version}
         name: eclipse-hono-adapter-http-vertx
         resources:
           limits:

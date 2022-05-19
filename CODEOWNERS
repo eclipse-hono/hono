@@ -3,17 +3,17 @@
 /adapter-base/                        @dejanb @sophokles73
 
 /adapters/                            @calohmn @kaniyan
-/adapters/amqp-vertx-quarkus/         @calohmn
+/adapters/amqp/                       @calohmn
 
-/adapters/coap-vertx-quarkus/         @sophokles73
+/adapters/coap/                       @sophokles73
 
-/adapters/http-vertx-base/            @ctron @calohmn
-/adapters/http-vertx-quarkus/         @ctron @calohmn
+/adapters/http/                       @ctron @calohmn
+/adapters/http-base/                  @ctron @calohmn
 
-/adapters/lora-vertx-quarkus/         @calohmn
+/adapters/lora/                       @calohmn
 
-/adapters/mqtt-vertx-base/            @ctron @kaniyan
-/adapters/mqtt-vertx-quarkus/         @ctron @kaniyan
+/adapters/mqtt/                       @ctron @kaniyan
+/adapters/mqtt-base/                  @ctron @kaniyan
 
 /adapters/sigfox-vertx/               @ctron
 

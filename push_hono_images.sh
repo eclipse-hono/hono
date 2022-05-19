@@ -14,23 +14,23 @@
 
 TAG=$1
 CR=$2
-IMAGES="hono-adapter-amqp-vertx-quarkus \
-        hono-adapter-coap-vertx-quarkus \
-        hono-adapter-http-vertx-quarkus \
-        hono-adapter-lora-vertx-quarkus \
-        hono-adapter-mqtt-vertx-quarkus \
-        hono-adapter-sigfox-vertx-quarkus \
+IMAGES="hono-adapter-amqp \
+        hono-adapter-coap \
+        hono-adapter-http \
+        hono-adapter-lora \
+        hono-adapter-mqtt \
+        hono-adapter-sigfox \
         hono-service-auth-quarkus \
         hono-service-command-router-quarkus \
         hono-service-device-registry-jdbc-quarkus \
         hono-service-device-registry-mongodb-quarkus"
 
-NATIVE_IMAGES="hono-adapter-amqp-vertx-quarkus-native \
-        hono-adapter-coap-vertx-quarkus-native \
-        hono-adapter-http-vertx-quarkus-native \
-        hono-adapter-lora-vertx-quarkus-native \
-        hono-adapter-mqtt-vertx-quarkus-native \
-        hono-adapter-sigfox-vertx-quarkus-native \
+NATIVE_IMAGES="hono-adapter-amqp-native \
+        hono-adapter-coap-native \
+        hono-adapter-http-native \
+        hono-adapter-lora-native \
+        hono-adapter-mqtt-native \
+        hono-adapter-sigfox-native \
         hono-service-auth-quarkus-native \
         hono-service-command-router-quarkus-native \
         hono-service-device-registry-mongodb-quarkus-native"

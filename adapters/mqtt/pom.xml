@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+    Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
 
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -11,8 +11,9 @@
 
     SPDX-License-Identifier: EPL-2.0
  -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd"
+    xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.eclipse.hono</groupId>
@@ -20,30 +21,19 @@
     <version>2.0.0-SNAPSHOT</version>
     <relativePath>../base-quarkus</relativePath>
   </parent>
-  <artifactId>hono-adapter-coap-vertx-quarkus</artifactId>
-  <name>Hono CoAP Adapter (Quarkus)</name>
+  <artifactId>hono-adapter-mqtt</artifactId>
+  <name>Hono MQTT Adapter</name>
 
-  <description>A Quarkus based protocol adapter exposing Hono's Telemetry &amp; Event APIs via CoAP.</description>
+  <description>A Quarkus based protocol adapter exposing Hono's Telemetry &amp; Event APIs via MQTT.</description>
   <url>https://www.eclipse.org/hono</url>
 
   <dependencies>
     <dependency>
-      <groupId>org.eclipse.californium</groupId>
-      <artifactId>californium-core</artifactId>
+      <groupId>org.eclipse.hono</groupId>
+      <artifactId>hono-adapter-mqtt-base</artifactId>
+      <version>${project.version}</version>
+      <scope>compile</scope>
     </dependency>
-    <dependency>
-      <groupId>org.eclipse.californium</groupId>
-      <artifactId>element-connector</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.eclipse.californium</groupId>
-      <artifactId>scandium</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-core</artifactId>
-    </dependency>
-
   </dependencies>
 
   <build>
@@ -57,8 +47,8 @@
               <image>
                 <build>
                   <ports>
-                    <port>5683/udp</port>
-                    <port>5684/udp</port>
+                    <port>1883</port>
+                    <port>8883</port>
                     <port>${health.check.port}</port>
                   </ports>
                 </build>
@@ -68,7 +58,6 @@
         </plugin>
       </plugins>
     </pluginManagement>
-
   </build>
 
   <profiles>
