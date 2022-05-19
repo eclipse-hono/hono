@@ -14,7 +14,7 @@ registration information and credentials of devices.
 
 The registry is implemented as a Quarkus application, using a MongoDB database as the persistence store. It can be run
 either directly from the command line or by means of starting the corresponding
-[Docker image](https://hub.docker.com/r/eclipse/hono-service-device-registry-mongodb-quarkus/) created from it.
+[Docker image](https://hub.docker.com/r/eclipse/hono-service-device-registry-mongodb/) created from it.
 
 {{% notice info %}}
 The registry had originally been implemented as a Spring Boot application. That variant has been removed in Hono 2.0.0.

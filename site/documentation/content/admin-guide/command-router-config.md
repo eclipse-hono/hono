@@ -18,7 +18,7 @@ storing information about device connections. The data grid can be scaled out in
 service components to meet the storage demands at hand.
 
 The Command Router is implemented as a Quarkus application. It can be run either directly from the command line or by
-means of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-service-command-router-quarkus/)
+means of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-service-command-router/)
 created from it.
 
 {{% notice info %}}

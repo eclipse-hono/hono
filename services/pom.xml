@@ -26,14 +26,14 @@
   <packaging>pom</packaging>
 
   <modules>
+    <module>auth</module>
     <module>auth-base</module>
-    <module>auth-quarkus</module>
     <module>base-jdbc</module>
     <module>base-quarkus</module>
-    <module>command-router-quarkus</module>
+    <module>command-router</module>
     <module>device-registry-base</module>
-    <module>device-registry-jdbc-quarkus</module>
-    <module>device-registry-mongodb-quarkus</module>
+    <module>device-registry-jdbc</module>
+    <module>device-registry-mongodb</module>
   </modules>
 
   <name>Hono Services</name>
