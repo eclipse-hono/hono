@@ -26,15 +26,15 @@
   <packaging>pom</packaging>
 
   <modules>
-    <module>amqp-vertx-quarkus</module>
+    <module>amqp</module>
     <module>base-quarkus</module>
-    <module>coap-vertx-quarkus</module>
-    <module>http-vertx-base</module>
-    <module>http-vertx-quarkus</module>
-    <module>lora-vertx-quarkus</module>
-    <module>mqtt-vertx-base</module>
-    <module>mqtt-vertx-quarkus</module>
-    <module>sigfox-vertx</module>
+    <module>coap</module>
+    <module>http</module>
+    <module>http-base</module>
+    <module>lora</module>
+    <module>mqtt</module>
+    <module>mqtt-base</module>
+    <module>sigfox</module>
   </modules>
 
   <name>Hono Protocol Adapters</name>

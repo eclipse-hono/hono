@@ -8,7 +8,7 @@ Command & Control APIs.
 <!--more-->
 
 The adapter is implemented as a Quarkus application. It can be run either directly from the command line or by means
-of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-adapter-http-vertx-quarkus/)
+of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-adapter-http/)
 created from it.
 
 {{% notice info %}}

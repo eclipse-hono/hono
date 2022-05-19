@@ -147,26 +147,26 @@
     <hono.postgres.disabled>true</hono.postgres.disabled>
 
     <hono.amqp-adapter.host>hono-adapter-amqp</hono.amqp-adapter.host>
-    <hono.amqp-adapter.image>hono-adapter-amqp-vertx-quarkus</hono.amqp-adapter.image>
+    <hono.amqp-adapter.image>hono-adapter-amqp</hono.amqp-adapter.image>
     <hono.amqp-adapter.max-mem>314572800</hono.amqp-adapter.max-mem>
     <hono.amqp-adapter.java-options>${default.java-options}</hono.amqp-adapter.java-options>
     <hono.amqp-adapter.native-image-args></hono.amqp-adapter.native-image-args>
 
     <hono.coap-adapter.host>hono-adapter-coap</hono.coap-adapter.host>
-    <hono.coap-adapter.image>hono-adapter-coap-vertx-quarkus</hono.coap-adapter.image>
+    <hono.coap-adapter.image>hono-adapter-coap</hono.coap-adapter.image>
     <hono.coap-adapter.max-mem>314572800</hono.coap-adapter.max-mem>
     <hono.coap-adapter.java-options>${default.java-options}</hono.coap-adapter.java-options>
     <hono.coap-adapter.native-image-args></hono.coap-adapter.native-image-args>
 
     <hono.http-adapter.host>hono-adapter-http</hono.http-adapter.host>
-    <hono.http-adapter.image>hono-adapter-http-vertx-quarkus</hono.http-adapter.image>
+    <hono.http-adapter.image>hono-adapter-http</hono.http-adapter.image>
     <hono.http-adapter.max-mem>314572800</hono.http-adapter.max-mem>
     <hono.http-adapter.nativeTlsRequired>true</hono.http-adapter.nativeTlsRequired>
     <hono.http-adapter.java-options>${default.java-options}</hono.http-adapter.java-options>
     <hono.http-adapter.native-image-args></hono.http-adapter.native-image-args>
 
     <hono.mqtt-adapter.host>hono-adapter-mqtt</hono.mqtt-adapter.host>
-    <hono.mqtt-adapter.image>hono-adapter-mqtt-vertx-quarkus</hono.mqtt-adapter.image>
+    <hono.mqtt-adapter.image>hono-adapter-mqtt</hono.mqtt-adapter.image>
     <hono.mqtt-adapter.max-mem>314572800</hono.mqtt-adapter.max-mem>
     <hono.mqtt-adapter.java-options>${default.java-options}</hono.mqtt-adapter.java-options>
     <hono.mqtt-adapter.native-image-args></hono.mqtt-adapter.native-image-args>
@@ -544,17 +544,17 @@
       </activation>
       <properties>
         <hono.image-suffix>-quarkus-native</hono.image-suffix>
-        <hono.amqp-adapter.image>hono-adapter-amqp-vertx-quarkus-native</hono.amqp-adapter.image>
+        <hono.amqp-adapter.image>hono-adapter-amqp-native</hono.amqp-adapter.image>
         <hono.amqp-adapter.max-mem>67108864</hono.amqp-adapter.max-mem>
 
-        <hono.coap-adapter.image>hono-adapter-coap-vertx-quarkus-native</hono.coap-adapter.image>
+        <hono.coap-adapter.image>hono-adapter-coap-native</hono.coap-adapter.image>
         <hono.coap-adapter.max-mem>90000000</hono.coap-adapter.max-mem>
 
-        <hono.http-adapter.image>hono-adapter-http-vertx-quarkus-native</hono.http-adapter.image>
+        <hono.http-adapter.image>hono-adapter-http-native</hono.http-adapter.image>
         <hono.http-adapter.max-mem>67108864</hono.http-adapter.max-mem>
         <hono.http-adapter.nativeTlsRequired>false</hono.http-adapter.nativeTlsRequired>
 
-        <hono.mqtt-adapter.image>hono-adapter-mqtt-vertx-quarkus-native</hono.mqtt-adapter.image>
+        <hono.mqtt-adapter.image>hono-adapter-mqtt-native</hono.mqtt-adapter.image>
         <hono.mqtt-adapter.max-mem>67108864</hono.mqtt-adapter.max-mem>
 
         <hono.auth-server.image>hono-service-auth-quarkus-native</hono.auth-server.image>

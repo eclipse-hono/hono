@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
+    Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
 
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -11,8 +11,8 @@
 
     SPDX-License-Identifier: EPL-2.0
  -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.eclipse.hono</groupId>
@@ -20,25 +20,18 @@
     <version>2.0.0-SNAPSHOT</version>
     <relativePath>../base-quarkus</relativePath>
   </parent>
-  <artifactId>hono-adapter-sigfox-vertx-quarkus</artifactId>
-  <name>Hono Sigfox Adapter (Quarkus)</name>
+  <artifactId>hono-adapter-http</artifactId>
+  <name>Hono HTTP Adapter</name>
 
-  <description>A Quarkus based protocol adapter for connecting to the Sigfox backend.</description>
+  <description>A Quarkus based protocol adapter exposing Hono's Telemetry &amp; Event APIs via HTTP.</description>
   <url>https://www.eclipse.org/hono</url>
 
   <dependencies>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-adapter-http-vertx-base</artifactId>
+      <artifactId>hono-adapter-http-base</artifactId>
       <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
+      <scope>compile</scope>
     </dependency>
   </dependencies>
 
@@ -53,9 +46,9 @@
               <image>
                 <build>
                   <ports>
-                      <port>8080</port>
-                      <port>8443</port>
-                      <port>${health.check.port}</port>
+                    <port>8080</port>
+                    <port>8443</port>
+                    <port>${health.check.port}</port>
                   </ports>
                 </build>
               </image>

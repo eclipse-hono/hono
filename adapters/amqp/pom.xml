@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
+    Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
 
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -11,8 +11,7 @@
 
     SPDX-License-Identifier: EPL-2.0
  -->
-<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd"
-    xmlns="http://maven.apache.org/POM/4.0.0"
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
   <parent>
@@ -21,18 +20,23 @@
     <version>2.0.0-SNAPSHOT</version>
     <relativePath>../base-quarkus</relativePath>
   </parent>
-  <artifactId>hono-adapter-mqtt-vertx-quarkus</artifactId>
-  <name>Hono MQTT Adapter (Quarkus)</name>
+  <artifactId>hono-adapter-amqp</artifactId>
+  <name>Hono AMQP Adapter</name>
 
-  <description>A Quarkus based protocol adapter exposing Hono's Telemetry &amp; Event APIs via MQTT.</description>
+  <description>A Quarkus based protocol adapter exposing Hono's Telemetry &amp; Event APIs via AMQP.</description>
   <url>https://www.eclipse.org/hono</url>
 
   <dependencies>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-adapter-mqtt-vertx-base</artifactId>
-      <version>${project.version}</version>
-      <scope>compile</scope>
+      <artifactId>hono-client-notification</artifactId>
+    </dependency>
+
+    <!-- testing -->
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-junit5</artifactId>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 
@@ -47,8 +51,8 @@
               <image>
                 <build>
                   <ports>
-                    <port>1883</port>
-                    <port>8883</port>
+                    <port>8080</port>
+                    <port>8443</port>
                     <port>${health.check.port}</port>
                   </ports>
                 </build>

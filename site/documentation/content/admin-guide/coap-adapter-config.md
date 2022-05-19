@@ -9,7 +9,7 @@ Command & Control APIs.
 
 The adapter is implemented as a Quarkus application using [Eclipse Californium&trade;](https://www.eclipse.org/californium/)
 for implementing the CoAP protocol handling. It can be run either directly from the command line or by means of starting
-the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-adapter-coap-vertx-quarkus/) created from it.
+the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-adapter-coap/) created from it.
 
 {{% notice info %}}
 The CoAP adapter had originally been implemented as a Spring Boot application. That variant has been removed in Hono
