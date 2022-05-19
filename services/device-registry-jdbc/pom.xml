@@ -22,8 +22,8 @@
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
-  <artifactId>hono-service-device-registry-jdbc-quarkus</artifactId>
-  <name>Hono JDBC Based Device Registry (Quarkus)</name>
+  <artifactId>hono-service-device-registry-jdbc</artifactId>
+  <name>Hono JDBC Based Device Registry</name>
   <description>
     A Quarkus based implementation of Hono's device registry using JDBC for persistence.
   </description>

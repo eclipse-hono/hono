@@ -81,13 +81,11 @@
       -XX:MaxRAMPercentage=90
     </default.java-options>
 
-    <hono.image-suffix>-quarkus</hono.image-suffix>
-
     <!--
      Command Router related properties.
      -->
     <hono.command-router.config-src>clustered-cache</hono.command-router.config-src>
-    <hono.command-router.image>hono-service-command-router-quarkus</hono.command-router.image>
+    <hono.command-router.image>hono-service-command-router</hono.command-router.image>
     <hono.command-router.max-mem>300000000</hono.command-router.max-mem>
     <hono.command-router.java-options>${default.java-options}</hono.command-router.java-options>
     <hono.command-router.native-image-args></hono.command-router.native-image-args>
@@ -112,7 +110,7 @@
     <hono.deviceregistry.type>mongodb</hono.deviceregistry.type>
 
     <hono.deviceregistry.mongodb.disabled>false</hono.deviceregistry.mongodb.disabled>
-    <hono.deviceregistry.mongodb.image>hono-service-device-registry-mongodb-quarkus</hono.deviceregistry.mongodb.image>
+    <hono.deviceregistry.mongodb.image>hono-service-device-registry-mongodb</hono.deviceregistry.mongodb.image>
     <hono.deviceregistry.mongodb.max-mem>400000000</hono.deviceregistry.mongodb.max-mem>
     <hono.deviceregistry.mongodb.java-options>${default.java-options}</hono.deviceregistry.mongodb.java-options>
     <hono.deviceregistry.mongodb.native-image-args></hono.deviceregistry.mongodb.native-image-args>
@@ -171,7 +169,7 @@
     <hono.mqtt-adapter.java-options>${default.java-options}</hono.mqtt-adapter.java-options>
     <hono.mqtt-adapter.native-image-args></hono.mqtt-adapter.native-image-args>
 
-    <hono.auth-server.image>hono-service-auth-quarkus</hono.auth-server.image>
+    <hono.auth-server.image>hono-service-auth</hono.auth-server.image>
     <hono.auth-server.max-mem>205520896</hono.auth-server.max-mem>
     <hono.auth-server.java-options>${default.java-options}</hono.auth-server.java-options>
     <hono.auth-server.native-image-args></hono.auth-server.native-image-args>
@@ -242,7 +240,7 @@
     </dependency>
     <dependency>
       <groupId>org.eclipse.hono</groupId>
-      <artifactId>hono-service-command-router-quarkus</artifactId>
+      <artifactId>hono-service-command-router</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -543,7 +541,6 @@
         </property>
       </activation>
       <properties>
-        <hono.image-suffix>-quarkus-native</hono.image-suffix>
         <hono.amqp-adapter.image>hono-adapter-amqp-native</hono.amqp-adapter.image>
         <hono.amqp-adapter.max-mem>67108864</hono.amqp-adapter.max-mem>
 
@@ -557,12 +554,12 @@
         <hono.mqtt-adapter.image>hono-adapter-mqtt-native</hono.mqtt-adapter.image>
         <hono.mqtt-adapter.max-mem>67108864</hono.mqtt-adapter.max-mem>
 
-        <hono.auth-server.image>hono-service-auth-quarkus-native</hono.auth-server.image>
+        <hono.auth-server.image>hono-service-auth-native</hono.auth-server.image>
         <hono.auth-server.max-mem>33554432</hono.auth-server.max-mem>
         <hono.auth-server.nativeTlsRequired>false</hono.auth-server.nativeTlsRequired>
-        <hono.command-router.image>hono-service-command-router-quarkus-native</hono.command-router.image>
+        <hono.command-router.image>hono-service-command-router-native</hono.command-router.image>
         <hono.command-router.max-mem>67108864</hono.command-router.max-mem>
-        <hono.deviceregistry.mongodb.image>hono-service-device-registry-mongodb-quarkus-native</hono.deviceregistry.mongodb.image>
+        <hono.deviceregistry.mongodb.image>hono-service-device-registry-mongodb-native</hono.deviceregistry.mongodb.image>
         <hono.deviceregistry.mongodb.max-mem>150000000</hono.deviceregistry.mongodb.max-mem>
       </properties>
     </profile>
@@ -1254,7 +1251,7 @@
                   <build>
                     <skip>${hono.deviceregistry.jdbc.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
-                    <from>${docker.repository}/hono-service-device-registry-jdbc-quarkus:${project.version}</from>
+                    <from>${docker.repository}/hono-service-device-registry-jdbc:${project.version}</from>
                     <assembly>
                       <mode>dir</mode>
                       <basedir>/</basedir>

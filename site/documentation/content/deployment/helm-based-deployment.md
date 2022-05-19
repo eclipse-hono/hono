@@ -52,11 +52,11 @@ The image names that Hono should use for starting up containers can be configure
 
 ```yaml
 deviceRegistryExample:
-  imageName: "my.registry.io/eclipse/hono-service-device-registry-mongodb-quarkus:1.12.0-CUSTOM"
+  imageName: "my.registry.io/eclipse/hono-service-device-registry-mongodb:2.0.0-CUSTOM"
 authServer:
-  imageName: "my.registry.io/eclipse/hono-service-auth-quarkus:1.12.0-CUSTOM"
+  imageName: "my.registry.io/eclipse/hono-service-auth:2.0.0-CUSTOM"
 commandRouterService:
-  imageName: "my.registry.io/eclipse/hono-service-command-router-quarkus:1.12.0-CUSTOM"
+  imageName: "my.registry.io/eclipse/hono-service-command-router:2.0.0-CUSTOM"
 adapters:
   amqp:
     imageName: "my.registry.io/eclipse/hono-adapter-amqp:2.0.0-CUSTOM"

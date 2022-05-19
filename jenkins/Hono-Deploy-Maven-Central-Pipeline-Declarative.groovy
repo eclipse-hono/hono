@@ -140,10 +140,10 @@ spec:
                   :hono-adapter-sigfox,\
                   :hono-cli,\
                   :hono-example,\
-                  :hono-service-auth-quarkus,\
-                  :hono-service-command-router-quarkus,\
-                  :hono-service-device-registry-jdbc-quarkus,\
-                  :hono-service-device-registry-mongodb-quarkus,\
+                  :hono-service-auth,\
+                  :hono-service-command-router,\
+                  :hono-service-device-registry-jdbc,\
+                  :hono-service-device-registry-mongodb,\
                   '"
         }
       }

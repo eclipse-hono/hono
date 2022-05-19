@@ -13,7 +13,7 @@ identities and their authorities from a JSON file from the file system. All data
 are no remote service APIs for managing the identities and their authorities.
 
 The Auth Server is implemented as a Quarkus application. It can be run either directly from the command line or by
-means of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-service-auth-quarkus/) created
+means of starting the corresponding [Docker image](https://hub.docker.com/r/eclipse/hono-service-auth/) created
 from it.
 
 {{% notice info %}}

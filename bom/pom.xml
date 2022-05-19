@@ -302,7 +302,7 @@ quarkus.vertx.resolver.cache-max-time-to-live=0
       </dependency>
       <dependency>
         <groupId>org.eclipse.hono</groupId>
-        <artifactId>hono-service-command-router-quarkus</artifactId>
+        <artifactId>hono-service-command-router</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

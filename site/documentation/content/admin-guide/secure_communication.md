@@ -260,7 +260,7 @@ steps are necessary:
 3. Start the Auth Server Docker image mounting the host folder:
 
 ```sh
-docker run --name hono-auth-server --mount type=bind,src=/tmp/tcnative,dst=/opt/hono/extensions,ro ... eclipse/hono-service-auth-quarkus
+docker run --name hono-auth-server --mount type=bind,src=/tmp/tcnative,dst=/opt/hono/extensions,ro ... eclipse/hono-service-auth
 ```
 
 Note that the command given above does not contain the environment variables and secrets that are usually required to

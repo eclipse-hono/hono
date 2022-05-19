@@ -20,10 +20,10 @@ IMAGES="hono-adapter-amqp \
         hono-adapter-lora \
         hono-adapter-mqtt \
         hono-adapter-sigfox \
-        hono-service-auth-quarkus \
-        hono-service-command-router-quarkus \
-        hono-service-device-registry-jdbc-quarkus \
-        hono-service-device-registry-mongodb-quarkus"
+        hono-service-auth \
+        hono-service-command-router \
+        hono-service-device-registry-jdbc \
+        hono-service-device-registry-mongodb"
 
 NATIVE_IMAGES="hono-adapter-amqp-native \
         hono-adapter-coap-native \
@@ -31,9 +31,9 @@ NATIVE_IMAGES="hono-adapter-amqp-native \
         hono-adapter-lora-native \
         hono-adapter-mqtt-native \
         hono-adapter-sigfox-native \
-        hono-service-auth-quarkus-native \
-        hono-service-command-router-quarkus-native \
-        hono-service-device-registry-mongodb-quarkus-native"
+        hono-service-auth-native \
+        hono-service-command-router-native \
+        hono-service-device-registry-mongodb-native"
 
 ME=`basename "$0"`
 echo "called as $ME"

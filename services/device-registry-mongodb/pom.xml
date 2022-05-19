@@ -22,8 +22,8 @@
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
-  <artifactId>hono-service-device-registry-mongodb-quarkus</artifactId>
-  <name>Hono Mongodb Based Device Registry (Quarkus)</name>
+  <artifactId>hono-service-device-registry-mongodb</artifactId>
+  <name>Hono Mongodb Based Device Registry</name>
   <description>
     A Quarkus based implementation of Hono's device registry using MongoDB for persistence.
   </description>
