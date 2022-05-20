@@ -9,7 +9,7 @@ using the `--help` and/or `-h` command line options.
 ## Building
 
 ```bash 
-# in directory hono/cli-quarkus/
+# in directory hono/cli/
 mvn clean install
 cd target/
 ```

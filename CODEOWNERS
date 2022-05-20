@@ -15,9 +15,9 @@
 /adapters/mqtt/                       @ctron @kaniyan
 /adapters/mqtt-base/                  @ctron @kaniyan
 
-/adapters/sigfox-vertx/               @ctron
+/adapters/sigfox/                     @ctron
 
-/cli-quarkus/                         @calohmn
+/cli/                                 @sophokles73
 /client/                              @calohmn
 /client-device-connection-infinispan/ @calohmn @sophokles73
 
