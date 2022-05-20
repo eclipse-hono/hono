@@ -177,9 +177,9 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
      * This method creates a router instance along with a route matching all request. That route is initialized with the
      * following handlers and failure handlers:
      * <ul>
+     * <li>a default failure handler,</li>
      * <li>a handler to keep track of the tracing span created for the request by means of the Vert.x/Quarkus
      * instrumentation,</li>
-     * <li>a default failure handler,</li>
      * <li>a handler limiting the body size of requests to the maximum payload size set in the <em>config</em>
      * properties.</li>
      * <li>the authentication handler, set via {@link #setAuthHandler(AuthenticationHandler)}.</li>
@@ -189,18 +189,24 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
      */
     protected Router createRouter() {
 
+        // route (failure) handlers are added in a specific order here!
         final Router router = Router.router(vertx);
+        final Route matchAllFailuresRoute = router.route();
+        // failure handler is added on a separate route for which no name is set, otherwise all tracing spans
+        // of failed HTTP requests would get that route name as span name
+        matchAllFailuresRoute.failureHandler(new DefaultFailureHandler());
+
         final Route matchAllRoute = router.route();
-        // the handlers and failure handlers are added here in a specific order!
+        // route name will be used as HTTP request tracing span name,
+        // ensuring a fixed name is set in case no other route matches (otherwise the span name would unsuitably be set to the request path)
+        matchAllRoute.setName("/* (default route)");
         // 1. handler to keep track of the tracing span created by the Vert.x/Quarkus instrumentation (set as active span there)
         matchAllRoute.handler(HttpServerSpanHelper.getRouteHandlerForAdoptingActiveSpan(tracer, getCustomTags()));
-        // 2. default handler for failed routes
-        matchAllRoute.failureHandler(new DefaultFailureHandler());
-        // 3. BodyHandler with request size limit
+        // 2. BodyHandler with request size limit
         log.info("limiting size of inbound request body to {} bytes", getConfig().getMaxPayloadSize());
         matchAllRoute.handler(BodyHandler.create().setUploadsDirectory(DEFAULT_UPLOADS_DIRECTORY)
                 .setBodyLimit(getConfig().getMaxPayloadSize()));
-        // 4. AuthHandler
+        // 3. AuthHandler
         addAuthHandler(router);
         return router;
     }
