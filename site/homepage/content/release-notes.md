@@ -108,6 +108,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   line client as well.
 * The Hono protocol adapter, command router and device registry Maven modules and Docker images have been renamed,
   removing the *-vertx* and *-quarkus* parts from the names.
+* The *hono-adapters-quarkus* and *hono-services-quarkus* Maven modules, used as parent modules for protocol adapter
+  and service implementations, have been renamed to *hono-adapters-parent* and *hono-services-parent*, respectively.
 
 ### Deprecations
 

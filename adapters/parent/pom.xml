@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
+    Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
 
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -11,24 +11,20 @@
 
     SPDX-License-Identifier: EPL-2.0
  -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
-    <artifactId>hono-services</artifactId>
+    <artifactId>hono-adapters</artifactId>
     <groupId>org.eclipse.hono</groupId>
     <version>2.0.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
+  <artifactId>hono-adapters-parent</artifactId>
   <packaging>pom</packaging>
-  <artifactId>hono-services-quarkus</artifactId>
 
-  <name>Hono Services (Quarkus)</name>
-  <description>Defines common dependencies for Quarkus-based service implementations</description>
-
-  <properties>
-    <!-- delegate verification of credentials to Authentication server by default -->
-    <hono.auth>delegating</hono.auth>
-  </properties>
+  <name>Hono Protocol Adapters Parent</name>
+  <description>Defines common dependencies and build profiles for Quarkus-based protocol adapter implementations</description>
 
   <dependencies>
     <dependency>
@@ -75,6 +71,14 @@
       <artifactId>quarkus-smallrye-health</artifactId>
     </dependency>
     <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-kafka-client</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-caffeine</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.jboss.logmanager</groupId>
       <artifactId>log4j2-jboss-logmanager</artifactId>
     </dependency>
@@ -82,7 +86,6 @@
       <groupId>org.jboss.logging</groupId>
       <artifactId>commons-logging-jboss-logging</artifactId>
     </dependency>
-
   </dependencies>
 
   <build>
@@ -96,26 +99,6 @@
       <plugin>
         <groupId>io.quarkus</groupId>
         <artifactId>quarkus-maven-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>properties-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <phase>initialize</phase>
-            <goals>
-              <goal>set-system-properties</goal>
-            </goals>
-            <configuration>
-              <properties>
-                <property>
-                  <name>hono.auth</name>
-                  <value>${hono.auth}</value>
-                </property>
-              </properties>
-            </configuration>
-          </execution>
-        </executions>
       </plugin>
     </plugins>
   </build>
@@ -154,8 +137,7 @@
                         <!-- use Base64 encoder/decoder that is compatible with vert.x 3 -->
                         <JAVA_OPTIONS>
                           -Dvertx.json.base64=legacy
-                          -Djava.util.logging.manager=org.jboss.logmanager.LogManager
-                        </JAVA_OPTIONS>
+                          -Djava.util.logging.manager=org.jboss.logmanager.LogManager</JAVA_OPTIONS>
                       </env>
                       <entryPoint>
                         <arg>/opt/hono/run-java.sh</arg>
