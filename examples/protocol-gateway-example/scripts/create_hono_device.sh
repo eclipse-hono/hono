@@ -1,6 +1,6 @@
 #!/bin/bash
 #*******************************************************************************
-# Copyright (c) 2020 Contributors to the Eclipse Foundation
+# Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -12,14 +12,14 @@
 # SPDX-License-Identifier: EPL-2.0
 #*******************************************************************************
 
-# A simple shell script to get IP addresses for hono-service-device-registry-ext, hono-dispatch-router-ext and hono-adapter-amqp-vertx and creates a device id and password
+# A simple shell script to get IP addresses for hono-service-device-registry-ext, hono-dispatch-router-ext and hono-adapter-amqp and creates a device id and password
 
 # prior: setup hono in kubernetes namespace "hono"
 export REGISTRY_IP=$(kubectl -n hono get service hono-service-device-registry-ext --output='jsonpath={.status.loadBalancer.ingress[0].ip}')
 echo "REGISTRY_IP=${REGISTRY_IP}"
 export AMQP_NETWORK_IP=$(kubectl -n hono get service hono-dispatch-router-ext --output='jsonpath={.status.loadBalancer.ingress[0].ip}')
 echo "AMQP_NETWORK_IP=${AMQP_NETWORK_IP}"
-export AMQP_ADAPTER_PORT=$(kubectl -n hono get service hono-adapter-amqp-vertx --output='jsonpath={.status.loadBalancer.ingress[0].port}')
+export AMQP_ADAPTER_PORT=$(kubectl -n hono get service hono-adapter-amqp --output='jsonpath={.status.loadBalancer.ingress[0].port}')
 echo "AMQP_ADAPTER_IP=${AMQP_ADAPTER_IP}"
 
 # Get example tenant or

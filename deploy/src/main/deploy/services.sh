@@ -1,6 +1,6 @@
 #!/bin/bash
 #*******************************************************************************
-# Copyright (c) 2019 Contributors to the Eclipse Foundation
+# Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -29,11 +29,11 @@ function get_service_ip {
 
 get_service_ip hono-dispatch-router-ext AMQP_NETWORK_IP
 get_service_ip hono-service-device-registry-ext REGISTRY_IP
-get_service_ip hono-adapter-amqp-vertx AMQP_ADAPTER_IP
-get_service_ip hono-adapter-coap-vertx COAP_ADAPTER_IP
-get_service_ip hono-adapter-http-vertx HTTP_ADAPTER_IP
-get_service_ip hono-adapter-kura KURA_ADAPTER_IP
-get_service_ip hono-adapter-mqtt-vertx MQTT_ADAPTER_IP
+get_service_ip hono-adapter-amqp AMQP_ADAPTER_IP
+get_service_ip hono-adapter-coap COAP_ADAPTER_IP
+get_service_ip hono-adapter-http HTTP_ADAPTER_IP
+get_service_ip hono-adapter-lora LORA_ADAPTER_IP
+get_service_ip hono-adapter-mqtt MQTT_ADAPTER_IP
 echo "# Run this command to populate environment variables"
 echo "# with the IP addresses of Hono's API endpoints:"
 echo "# eval \"\$(./services.sh namespace)\""

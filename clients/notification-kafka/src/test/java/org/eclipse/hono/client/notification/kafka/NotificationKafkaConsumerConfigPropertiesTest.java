@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -123,7 +123,7 @@ public class NotificationKafkaConsumerConfigPropertiesTest {
      */
     @Test
     public void testThatCreatedClientIdConformsToExpectedFormat() {
-        final String componentUid = "hono-adapter-amqp-vertx-7548cc6c66-4qhqh_ed7c6ab9cc27";
+        final String componentUid = "hono-adapter-amqp-7548cc6c66-4qhqh_ed7c6ab9cc27";
 
         final NotificationKafkaConsumerConfigProperties config = new NotificationKafkaConsumerConfigProperties();
         config.setConsumerConfig(Map.of("client.id", "configuredId"));

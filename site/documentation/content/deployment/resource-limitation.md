@@ -55,18 +55,18 @@ resource descriptor illustrates the mechanism:
 apiVersion: apps/v1beta1
 kind: Deployment
 metadata:
-  name: hono-adapter-http-vertx
+  name: hono-adapter-http
 spec:
   template:
     metadata:
       labels:
-        app: hono-adapter-http-vertx
+        app: hono-adapter-http
         version: "${project.version}"
         group: ${project.groupId}
     spec:
       containers:
       - image: eclipse/hono-adapter-http:${project.version}
-        name: eclipse-hono-adapter-http-vertx
+        name: eclipse-hono-adapter-http
         resources:
           limits:
             memory: "300Mi"
@@ -83,7 +83,7 @@ spec:
       volumes:
       - name: conf
         secret:
-          secretName: hono-adapter-http-vertx-conf
+          secretName: hono-adapter-http-conf
 ~~~
 
 The `resources` property defines the overall limit of 256 MB of memory that the pod may use. The `JDK_JAVA_OPTIONS`
