@@ -26,10 +26,10 @@
   <packaging>pom</packaging>
 
   <modules>
+    <module>parent</module>
     <module>auth</module>
     <module>auth-base</module>
     <module>base-jdbc</module>
-    <module>base-quarkus</module>
     <module>command-router</module>
     <module>device-registry-base</module>
     <module>device-registry-jdbc</module>

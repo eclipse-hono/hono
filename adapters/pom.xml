@@ -26,8 +26,8 @@
   <packaging>pom</packaging>
 
   <modules>
+    <module>parent</module>
     <module>amqp</module>
-    <module>base-quarkus</module>
     <module>coap</module>
     <module>http</module>
     <module>http-base</module>
