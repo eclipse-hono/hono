@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -28,28 +28,48 @@ public class MemoryBasedConnectionLimitStrategy implements ConnectionLimitStrate
     private final long maxMemory;
 
     /**
-     * Creates an instance that calculates the recommended limit dependent on the runtime's memory and the amount of
-     * memory required by the protocol adapter.
+     * Constructor for tests.
      *
      * @param memoryRequiredToStart The minimum amount of memory that the adapter requires to run in bytes.
      * @param memoryRequiredPerConnection The amount of memory required for each connection in bytes.
+     * @param memoryAvailableForLiveDataSet The amount of memory that can be used for the live data-set. This
+     *                                      is the total amount of memory available to the JVM minus the head room
+     *                                      required by the GC.
      */
-    public MemoryBasedConnectionLimitStrategy(final long memoryRequiredToStart, final long memoryRequiredPerConnection) {
-        this(memoryRequiredToStart, memoryRequiredPerConnection, Runtime.getRuntime().maxMemory());
+    MemoryBasedConnectionLimitStrategy(
+            final long memoryRequiredToStart,
+            final long memoryRequiredPerConnection,
+            final long memoryAvailableForLiveDataSet) {
+        this.memoryRequiredToStart = memoryRequiredToStart;
+        this.memoryRequiredPerConnection = memoryRequiredPerConnection;
+        this.maxMemory = memoryAvailableForLiveDataSet;
     }
 
     /**
-     * Constructor for tests.
+     * Creates an instance that calculates the recommended limit based on the memory available to the JVM and
+     * the amount of memory required by the protocol adapter.
      *
-     * @param maxMemory The amount of memory to test against.
      * @param memoryRequiredToStart The minimum amount of memory that the adapter requires to run in bytes.
      * @param memoryRequiredPerConnection The amount of memory required for each connection in bytes.
+     * @param gcHeapPercentage The share of heap memory that should not be used by the live-data set but should be
+     *                         left to be used by the garbage collector.
+     * @return The instance.
+     * @throws IllegalArgumentException if the GC heap percentage is &lt; 0 or &gt; 100.
      */
-    MemoryBasedConnectionLimitStrategy(final long memoryRequiredToStart, final long memoryRequiredPerConnection,
-            final long maxMemory) {
-        this.memoryRequiredToStart = memoryRequiredToStart;
-        this.memoryRequiredPerConnection = memoryRequiredPerConnection;
-        this.maxMemory = maxMemory;
+    public static MemoryBasedConnectionLimitStrategy forParams(
+            final long memoryRequiredToStart,
+            final long memoryRequiredPerConnection,
+            final int gcHeapPercentage) {
+
+        if (gcHeapPercentage < 0 || gcHeapPercentage > 100) {
+            throw new IllegalArgumentException("GC heap percentage must be an integer in the range [0,100]");
+        }
+
+        final long memoryAvailableForLiveDataSet = Runtime.getRuntime().maxMemory() * (100 - gcHeapPercentage) / 100;
+        return new MemoryBasedConnectionLimitStrategy(
+                memoryRequiredToStart,
+                memoryRequiredPerConnection,
+                memoryAvailableForLiveDataSet);
     }
 
     /**
@@ -75,7 +95,7 @@ public class MemoryBasedConnectionLimitStrategy implements ConnectionLimitStrate
 
     @Override
     public String getResourcesDescription() {
-        return String.format("max. available memory: %dMB, memory required to start: %dMB",
+        return String.format("max. memory avail. for live data-set: %dMB, memory required to start: %dMB",
                 maxMemory / 1_000_000, memoryRequiredToStart / 1_000_000);
     }
 

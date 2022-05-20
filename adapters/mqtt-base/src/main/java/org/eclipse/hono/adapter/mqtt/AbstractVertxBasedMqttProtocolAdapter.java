@@ -422,9 +422,10 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
 
     private ConnectionLimitManager createConnectionLimitManager() {
         return new DefaultConnectionLimitManager(
-                new MemoryBasedConnectionLimitStrategy(
+                MemoryBasedConnectionLimitStrategy.forParams(
                         getConfig().isSubstrateVm() ? MINIMAL_MEMORY_SUBSTRATE : MINIMAL_MEMORY_JVM,
-                        MEMORY_PER_CONNECTION),
+                        MEMORY_PER_CONNECTION,
+                        getConfig().getGcHeapPercentage()),
                 () -> metrics.getNumberOfConnections(), getConfig());
     }
 

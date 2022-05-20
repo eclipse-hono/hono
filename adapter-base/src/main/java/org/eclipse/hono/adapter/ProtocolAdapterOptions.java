@@ -102,6 +102,18 @@ public interface ProtocolAdapterOptions {
     Duration tenantIdleTimeout();
 
     /**
+     * Gets the share of heap memory that should not be used by the live-data set but should be left
+     * to be used by the garbage collector.
+     * <p>
+     * This value should be adapted based on the total amount of heap memory available to the JVM and
+     * the type of garbage collector being used.
+     *
+     * @return The percentage of the heap memory reserved for the GC.
+     */
+    @WithDefault("25")
+    int gcHeapPercentage();
+
+    /**
      * Gets the configured mapper endpoints.
      *
      * @return The endpoints.

@@ -31,12 +31,17 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
      * disables automatic tenant timeout.
      */
     public static final Duration DEFAULT_TENANT_IDLE_TIMEOUT = Duration.ZERO;
+    /**
+     * The default share of heap memory that should not be used by the live-data set.
+     */
+    public static final int DEFAULT_GC_HEAP_PERCENTAGE = 25;
 
     private boolean authenticationRequired = true;
     private boolean jmsVendorPropsEnabled = false;
     private boolean defaultsEnabled = true;
     private int maxConnections = 0;
     private Duration tenantIdleTimeout = DEFAULT_TENANT_IDLE_TIMEOUT;
+    private int gcHeapPercentage = DEFAULT_GC_HEAP_PERCENTAGE;
     private Map<String, MapperEndpoint> mapperEndpoints = new HashMap<>();
 
     /**
@@ -55,6 +60,7 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
         super(options.serviceOptions());
         this.authenticationRequired = options.authenticationRequired();
         this.defaultsEnabled = options.defaultsEnabled();
+        this.gcHeapPercentage = options.gcHeapPercentage();
         this.jmsVendorPropsEnabled = options.jmsVendorPropsEnabled();
         options.mapperEndpoints().entrySet()
             .forEach(entry -> mapperEndpoints.put(entry.getKey(), new MapperEndpoint(entry.getValue())));
@@ -198,6 +204,38 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
             throw new IllegalArgumentException("connection limit must be a positive integer");
         }
         this.maxConnections = maxConnections;
+    }
+
+    /**
+     * Gets the share of heap memory that should not be used by the live-data set but should be left
+     * to be used by the garbage collector.
+     * <p>
+     * This value should be adapted based on the total amount of heap memory available to the JVM and
+     * the type of garbage collector being used.
+     * <p> The default value of this property is {@value #DEFAULT_GC_HEAP_PERCENTAGE}.
+     *
+     * @return The percentage of the heap memory reserved for the GC.
+     */
+    public final int getGcHeapPercentage() {
+        return gcHeapPercentage;
+    }
+
+    /**
+     * Gets the share of heap memory that should not be used by the live-data set but should be left
+     * to be used by the garbage collector.
+     * <p>
+     * This value should be adapted based on the total amount of heap memory available to the JVM and
+     * the type of garbage collector being used.
+     * <p> The default value of this property is {@value #DEFAULT_GC_HEAP_PERCENTAGE}.
+     *
+     * @param share The percentage of the heap memory to be reserved for the GC.
+     * @throws IllegalArgumentException if the share is &lt; 0 or &gt; 100.
+     */
+    public final void setGcHeapPercentage(final int share) {
+        if (share < 0 || share > 100) {
+            throw new IllegalArgumentException("percentage must be an integer in the range [0,100]");
+        }
+        this.gcHeapPercentage = share;
     }
 
     /**
