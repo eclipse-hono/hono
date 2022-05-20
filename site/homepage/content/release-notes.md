@@ -106,6 +106,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The Hono command line client has been re-implemented using the Picocli framework. The synopsis of the client has been
   changed to provide for a richer user experience. The Getting Started guides have been updated to use the new command
   line client as well.
+* The Hono protocol adapter, command router and device registry Maven modules and Docker images have been renamed,
+  removing the *-vertx* and *-quarkus* parts from the names.
 
 ### Deprecations
 
