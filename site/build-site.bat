@@ -11,6 +11,7 @@
 @rem SPDX-License-Identifier: EPL-2.0
 @rem ***************************************************************************
 @ECHO off
+SETLOCAL EnableDelayedExpansion
 ECHO Going to build documentation...
 hugo version
 IF ERRORLEVEL 1 (
@@ -21,8 +22,18 @@ IF ERRORLEVEL 1 (
 )
 
 cd homepage
-IF NOT EXIST themes\hugo-universal-theme (
-  ECHO Going to download theme 'universal' for hugo...
+SET WEBSITE_THEME_CLONING_REQUIRED=1
+IF EXIST themes\hugo-universal-theme\.git (
+  SET /p HEAD=<themes\hugo-universal-theme\.git\HEAD
+  SET WEBSITE_THEME_HEAD_REVISION=78887402aeca0ab44deb8f0de800f7a6974f8c8a
+  ECHO website theme repo rev required: !WEBSITE_THEME_HEAD_REVISION!, rev found: !HEAD!
+  IF "!WEBSITE_THEME_HEAD_REVISION!" == "!HEAD!" (
+    SET WEBSITE_THEME_CLONING_REQUIRED=0
+  )
+)
+IF "!WEBSITE_THEME_CLONING_REQUIRED!" == "1" (
+  RMDIR /S /Q themes\hugo-universal-theme
+  ECHO cloning website theme repository...
   git clone --depth 1 --branch 1.3.2 https://github.com/devcows/hugo-universal-theme.git themes\hugo-universal-theme
 )
 
@@ -36,9 +47,19 @@ IF NOT "%~1"==""  (
 cd ..
 
 cd documentation
-IF NOT EXIST themes\hugo-theme-relearn (
-  ECHO Going to download theme 'relearn' for hugo...
-  git clone --depth 1 --branch 3.4.1 https://github.com/McShelby/hugo-theme-relearn.git themes\hugo-theme-relearn
+SET DOC_THEME_CLONING_REQUIRED=1
+IF EXIST themes\hugo-theme-relearn\.git (
+  SET /p HEAD=<themes\hugo-theme-relearn\.git\HEAD
+  SET DOC_THEME_HEAD_REVISION=64911282a49967f886c5a3c5e23e46907af85335
+  ECHO doc theme repo rev required: !DOC_THEME_HEAD_REVISION!, rev found: !HEAD!
+  IF "!DOC_THEME_HEAD_REVISION!" == "!HEAD!" (
+    SET DOC_THEME_CLONING_REQUIRED=0
+  )
+)
+IF "!DOC_THEME_CLONING_REQUIRED!" == "1" (
+  RMDIR /S /Q themes\hugo-theme-relearn
+  ECHO cloning doc theme repository...
+  git clone --depth 1 --branch 3.4.1 https://github.com/McShelby/hugo-theme-relearn.git themes/hugo-theme-relearn
 )
 
 IF NOT "%~1"==""  (
