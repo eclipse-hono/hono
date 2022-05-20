@@ -23,8 +23,8 @@
     <relativePath>../bom</relativePath>
   </parent>
 
-  <artifactId>hono-cli-quarkus</artifactId>
-  <name>Hono command-line interface (Quarkus)</name>
+  <artifactId>hono-cli</artifactId>
+  <name>Hono command-line interface</name>
   <url>https://www.eclipse.org/hono</url>
 
   <description>Quarkus based Hono Command line Interface</description>

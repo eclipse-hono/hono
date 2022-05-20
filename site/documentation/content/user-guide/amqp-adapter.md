@@ -146,7 +146,7 @@ The following command starts the client in interactive shell mode, establishes a
 adapter and prompts the user for a command to execute:
 
 ~~~sh
-# in directory: hono/cli-quarkus/target/
+# in directory: hono/cli/target/
 java -jar hono-cli-*-exec.jar amqp --sandbox
 ~~~
 ~~~
@@ -206,7 +206,7 @@ and tenant during the authentication process.
 Start the client in interactive mode:
 
 ~~~sh
-# in directory: hono/cli-quarkus/target/
+# in directory: hono/cli/target/
 java -jar hono-cli-*-exec.jar amqp -H hono.eclipseprojects.io -P 5672 -u sensor1@DEFAULT_TENANT -p hono-secret
 ~~~
 ~~~
@@ -229,7 +229,7 @@ telemetry --payload '{"foo": "bar"}' --content-type application/json
 The message can also be sent in non-interactive mode:
 
 ~~~sh
-# in directory: hono/cli-quarkus/target/
+# in directory: hono/cli/target/
 java -jar hono-cli-*-exec.jar amqp --sandbox telemetry --payload '{"foo": "bar"}' --content-type application/json
 ~~~
 
@@ -275,7 +275,7 @@ The Hono Sandbox does not support connections from unauthenticated devices. Howe
 publishing some JSON data on behalf of device `4711` of tenant `DEFAULT_TENANT` would look like this:
 
 ~~~sh
-# in directory: hono/cli-quarkus/target/
+# in directory: hono/cli/target/
 java -jar hono-cli-*-exec.jar amqp --sandbox telemetry --tenant DEFAULT_TENANT --device 4711 --payload '{"foo": "bar"}' --content-type application/json
 ~~~
 
@@ -327,7 +327,7 @@ A gateway connecting to the adapter using `gw@DEFAULT_TENANT` as username and `g
 some JSON data on behalf of device `4712`:
 
 ~~~sh
-# in directory: hono/cli-quarkus/target/
+# in directory: hono/cli/target/
 java -jar hono-cli-*-exec.jar amqp --sandbox -u gw@DEFAULT_TENANT -p gw-secret telemetry --device 4712 --payload '{"foo": "bar"}' --content-type application/json
 ~~~
 
@@ -379,7 +379,7 @@ configured to require devices to authenticate (which is the default).
 Publish a JSON string for the authenticated device (`4711`):
 
 ~~~sh
-# in directory: hono/cli-quarkus/target/
+# in directory: hono/cli/target/
 java -jar hono-cli-*-exec.jar amqp --sandbox event --payload '{"foo": "bar"}' --content-type application/json
 ~~~
 
@@ -420,7 +420,7 @@ The Hono Sandbox does not support connections from unauthenticated devices. Howe
 publishing some JSON data on behalf of device `4711` of tenant `DEFAULT_TENANT` would look like this:
 
 ~~~sh
-# in directory: hono/cli-quarkus/target/
+# in directory: hono/cli/target/
 java -jar hono-cli-*-exec.jar amqp --sandbox event --tenant DEFAULT_TENANT --device 4711 --payload '{"foo": "bar"}' --content-type application/json
 ~~~
 
@@ -465,7 +465,7 @@ A gateway connecting to the adapter using `gw@DEFAULT_TENANT` as username and `g
 some JSON data on behalf of device `4712`:
 
 ~~~sh
-# in directory: hono/cli-quarkus/target/
+# in directory: hono/cli/target/
 java -jar hono-cli-*-exec.jar amqp --sandbox -u gw@DEFAULT_TENANT -p gw-secret event --device 4712 --payload '{"foo": "bar"}' --content-type application/json
 ~~~
 
@@ -595,7 +595,7 @@ application.
 Start the client in interactive mode:
 
 ~~~sh
-# in directory: hono/cli-quarkus/target/
+# in directory: hono/cli/target/
 java -jar hono-cli-*-exec.jar amqp -H hono.eclipseprojects.io -P 5672 -u sensor1@DEFAULT_TENANT -p hono-secret
 hono-cli/amqp-device>
 ~~~
@@ -642,7 +642,7 @@ can also be used to simulate a business application. For that purpose, open anot
 command to send a request-response command to device `4711`:
 
 ~~~sh
-# in directory: hono/cli-quarkus/target/
+# in directory: hono/cli/target/
 java -jar hono-cli-*-exec.jar app --sandbox --amqp command req -d 4711 -n setColor --payload '{"r": 128,"g": 100,"b": 50}'
 ~~~
 
@@ -655,7 +655,7 @@ res 4711 204 text/plain automatic response to [setColor] command
 It is also possible to send a one-way command:
 
 ~~~sh
-# in directory: hono/cli-quarkus/target/
+# in directory: hono/cli/target/
 java -jar hono-cli-*-exec.jar app --sandbox --amqp command ow -d 4711 -n setVolume --payload '{"level": 50}'
 ~~~
 
