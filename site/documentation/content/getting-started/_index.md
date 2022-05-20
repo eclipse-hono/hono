@@ -170,8 +170,8 @@ be used during the remainder of this guide to set and refresh some environment v
 
 ~~~sh
 echo "export REGISTRY_IP=$(kubectl get service eclipse-hono-service-device-registry-ext --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)" > hono.env
-echo "export HTTP_ADAPTER_IP=$(kubectl get service eclipse-hono-adapter-http-vertx --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)" >> hono.env
-echo "export MQTT_ADAPTER_IP=$(kubectl get service eclipse-hono-adapter-mqtt-vertx --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)" >> hono.env
+echo "export HTTP_ADAPTER_IP=$(kubectl get service eclipse-hono-adapter-http --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)" >> hono.env
+echo "export MQTT_ADAPTER_IP=$(kubectl get service eclipse-hono-adapter-mqtt --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)" >> hono.env
 KAFKA_IP=$(kubectl get service eclipse-hono-kafka-0-external --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)
 KAFKA_TRUSTSTORE_PATH=/tmp/truststore.pem
 kubectl get secrets eclipse-hono-kafka-certs --template="{{index .data \"ca.crt\" | base64decode}}" -n hono > ${KAFKA_TRUSTSTORE_PATH}
@@ -234,8 +234,8 @@ be used during the remainder of this guide to set and refresh some environment v
 
 ~~~sh
 echo "export REGISTRY_IP=$(kubectl get service eclipse-hono-service-device-registry-ext --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)" > hono.env
-echo "export HTTP_ADAPTER_IP=$(kubectl get service eclipse-hono-adapter-http-vertx --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)" >> hono.env
-echo "export MQTT_ADAPTER_IP=$(kubectl get service eclipse-hono-adapter-mqtt-vertx --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)" >> hono.env
+echo "export HTTP_ADAPTER_IP=$(kubectl get service eclipse-hono-adapter-http --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)" >> hono.env
+echo "export MQTT_ADAPTER_IP=$(kubectl get service eclipse-hono-adapter-mqtt --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)" >> hono.env
 AMQP_NETWORK_IP=$(kubectl get service eclipse-hono-dispatch-router-ext --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)
 echo "export APP_OPTIONS='--amqp -H ${AMQP_NETWORK_IP} -P 15672 -u consumer@HONO -p verysecret'" >> hono.env
 ~~~

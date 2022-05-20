@@ -89,28 +89,28 @@ subjectAltName       = DNS.1:hono-service-command-router,DNS.2:hono-service-comm
 subjectKeyIdentifier = hash
 keyUsage             = keyAgreement,keyEncipherment,digitalSignature
 extendedKeyUsage     = serverAuth, clientAuth
-subjectAltName       = DNS.1:hono-adapter-http-vertx,DNS.2:hono-adapter-http-vertx.hono,DNS.3:localhost
+subjectAltName       = DNS.1:hono-adapter-http,DNS.2:hono-adapter-http.hono,DNS.3:localhost
 
 [ req_ext_lora-adapter ]
 
 subjectKeyIdentifier = hash
 keyUsage             = keyAgreement,keyEncipherment,digitalSignature
 extendedKeyUsage     = serverAuth, clientAuth
-subjectAltName       = DNS.1:hono-adapter-lora-vertx,DNS.2:hono-adapter-lora-vertx.hono,DNS.3:localhost
+subjectAltName       = DNS.1:hono-adapter-lora,DNS.2:hono-adapter-lora.hono,DNS.3:localhost
 
 [ req_ext_mqtt-adapter ]
 
 subjectKeyIdentifier = hash
 keyUsage             = keyAgreement,keyEncipherment,digitalSignature
 extendedKeyUsage     = serverAuth, clientAuth
-subjectAltName       = DNS.1:hono-adapter-mqtt-vertx,DNS.2:hono-adapter-mqtt-vertx.hono,DNS.3:localhost
+subjectAltName       = DNS.1:hono-adapter-mqtt,DNS.2:hono-adapter-mqtt.hono,DNS.3:localhost
 
 [ req_ext_amqp-adapter ]
 
 subjectKeyIdentifier = hash
 keyUsage             = keyAgreement,keyEncipherment,digitalSignature
 extendedKeyUsage     = serverAuth, clientAuth
-subjectAltName       = DNS.1:hono-adapter-amqp-vertx,DNS.2:hono-adapter-amqp-vertx.hono,DNS.3:localhost
+subjectAltName       = DNS.1:hono-adapter-amqp,DNS.2:hono-adapter-amqp.hono,DNS.3:localhost
 
 [ req_ext_artemis ]
 
@@ -124,7 +124,7 @@ subjectAltName       = DNS.1:hono-artemis,DNS.2:hono-artemis.hono,DNS.3:localhos
 subjectKeyIdentifier = hash
 keyUsage             = keyAgreement,keyEncipherment,digitalSignature
 extendedKeyUsage     = serverAuth, clientAuth
-subjectAltName       = DNS.1:hono-adapter-coap-vertx,DNS.2:hono-adapter-coap-vertx.hono,DNS.3:localhost
+subjectAltName       = DNS.1:hono-adapter-coap,DNS.2:hono-adapter-coap.hono,DNS.3:localhost
 
 [ req_ext_example-gateway ]
 
