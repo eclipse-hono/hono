@@ -222,7 +222,7 @@ org.mongodb:mongodb-driver-reactivestreams:jar:4.3.4
 org.postgresql:postgresql:jar:42.3.3
 org.reactivestreams:reactive-streams:jar:1.0.3
 org.slf4j:slf4j-api:jar:1.7.36
-org.springframework.security:spring-security-crypto:jar:5.5.5
+org.springframework.security:spring-security-crypto:jar:5.7.0
 org.wildfly.common:wildfly-common:jar:1.5.4.Final-format-001
 org.wildfly.security:wildfly-elytron-asn1:jar:1.19.0.Final
 org.wildfly.security:wildfly-elytron-auth:jar:1.19.0.Final
