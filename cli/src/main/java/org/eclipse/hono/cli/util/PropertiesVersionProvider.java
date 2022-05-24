@@ -14,6 +14,7 @@
 
 package org.eclipse.hono.cli.util;
 
+import java.io.InputStream;
 import java.util.Properties;
 
 import picocli.CommandLine.IVersionProvider;
@@ -35,7 +36,9 @@ public final class PropertiesVersionProvider implements IVersionProvider {
             return new String[] {"unknown"};
         }
         final var properties = new Properties();
-        properties.load(url.openStream());
+        try (InputStream inputStream = url.openStream()) {
+            properties.load(inputStream);
+        }
         return new String[] {
                 "hono-cli %s".formatted(properties.getProperty("version")),
                 "running on ${os.name} ${os.version} ${os.arch}"
