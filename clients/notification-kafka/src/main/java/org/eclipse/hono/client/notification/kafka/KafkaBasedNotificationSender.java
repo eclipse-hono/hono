@@ -21,8 +21,6 @@ import org.eclipse.hono.client.kafka.producer.AbstractKafkaBasedMessageSender;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.notification.AbstractNotification;
 import org.eclipse.hono.notification.NotificationSender;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.opentracing.noop.NoopTracerFactory;
 import io.vertx.core.Future;
@@ -35,8 +33,6 @@ import io.vertx.kafka.client.producer.KafkaProducerRecord;
 public class KafkaBasedNotificationSender extends AbstractKafkaBasedMessageSender<JsonObject> implements NotificationSender {
 
     static final String PRODUCER_NAME = "notification";
-
-    private static final Logger LOG = LoggerFactory.getLogger(KafkaBasedNotificationSender.class);
 
     /**
      * Creates an instance.
@@ -64,7 +60,7 @@ public class KafkaBasedNotificationSender extends AbstractKafkaBasedMessageSende
         return createProducerRecord(notification)
                 .compose(record -> getOrCreateProducer().send(record)
                         .recover(t -> {
-                            LOG.debug("error publishing notification [{}]", notification, t);
+                            log.debug("error publishing notification [{}]", notification, t);
                             return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, t));
                         }))
                 .mapEmpty();
@@ -78,7 +74,7 @@ public class KafkaBasedNotificationSender extends AbstractKafkaBasedMessageSende
 
             return Future.succeededFuture(KafkaProducerRecord.create(topic, key, value));
         } catch (final RuntimeException ex) {
-            LOG.error("error creating producer record for notification [{}]", notification, ex);
+            log.error("error creating producer record for notification [{}]", notification, ex);
             return Future.failedFuture(new ServerErrorException(HttpURLConnection.HTTP_INTERNAL_ERROR, ex));
         }
     }
