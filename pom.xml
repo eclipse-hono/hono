@@ -541,14 +541,14 @@
             </configuration>
           </execution>
           <execution>
-            <id>enforce-java-11</id>
+            <id>enforce-java-17</id>
             <goals>
               <goal>enforce</goal>
             </goals>
             <configuration>
               <rules>
                 <requireJavaVersion>
-                  <version>11</version>
+                  <version>17</version>
                 </requireJavaVersion>
               </rules>
             </configuration>
@@ -573,24 +573,6 @@
   </build>
 
   <profiles>
-    <profile>
-      <id>java_15_and_later</id>
-      <activation>
-        <jdk>[15,)</jdk>
-      </activation>
-      <dependencies>
-        <!--
-          use BC for creating self-signed certs instead of sun.security.x509
-          which has been removed in OpenJDK 15
-        -->
-        <dependency>
-          <groupId>org.bouncycastle</groupId>
-          <artifactId>bcpkix-jdk15on</artifactId>
-          <version>1.69</version>
-          <scope>test</scope>
-        </dependency>
-      </dependencies>
-    </profile>
     <profile>
       <id>no_docker</id>
       <activation>
