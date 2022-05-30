@@ -123,7 +123,7 @@ spec:
 
   stages {
 
-    stage("Add version for documentation") {
+    stage("Print info about environment") {
       steps {
         sh "ls -al /home/jenkins"
       }
