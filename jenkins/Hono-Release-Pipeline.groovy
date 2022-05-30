@@ -31,23 +31,23 @@ spec:
     command:
     - cat
     volumeMounts:
-    - mountPath: /home/jenkins
+    - mountPath: "/home/jenkins"
       name: "jenkins-home"
-    - mountPath: /home/jenkins/.ssh
+    - mountPath: "/home/jenkins/.ssh"
       name: "volume-known-hosts"
-    - name: "settings-xml"
-      mountPath: /home/jenkins/.m2/settings.xml
-      subPath: settings.xml
+    - mountPath: "/home/jenkins/.m2/settings.xml"
+      name: "settings-xml"
+      subPath: "settings.xml"
       readOnly: true
-    - name: "settings-security-xml"
-      mountPath: /home/jenkins/.m2/settings-security.xml
-      subPath: settings-security.xml
+    - mountPath: "/home/jenkins/.m2/settings-security.xml"
+      name: "settings-security-xml"
+      subPath: "settings-security.xml"
       readOnly: true
-    - name: "m2-repo"
-      mountPath: /home/jenkins/.m2/repository
-    - name: "toolchains-xml"
-      mountPath: /home/jenkins/.m2/toolchains.xml
-      subPath: toolchains.xml
+    - mountPath: "/home/jenkins/.m2/repository"
+      name: "m2-repo"
+    - mountPath: "/home/jenkins/.m2/toolchains.xml"
+      name: "toolchains-xml"
+      subPath: "toolchains.xml"
       readOnly: true
     env:
     - name: "HOME"
@@ -64,24 +64,24 @@ spec:
     emptyDir: {}
   - name: "m2-repo"
     emptyDir: {}
-  - configMap:
-      name: known-hosts
-    name: "volume-known-hosts"
+  - name: "volume-known-hosts"
+    configMap:
+      name: "known-hosts"
   - name: "settings-xml"
     secret:
-      secretName: m2-secret-dir
+      secretName: "m2-secret-dir"
       items:
       - key: settings.xml
         path: settings.xml
   - name: "settings-security-xml"
     secret:
-      secretName: m2-secret-dir
+      secretName: "m2-secret-dir"
       items:
       - key: settings-security.xml
         path: settings-security.xml
   - name: "toolchains-xml"
     configMap:
-      name: m2-dir
+      name: "m2-dir"
       items:
       - key: toolchains.xml
         path: toolchains.xml
@@ -123,6 +123,12 @@ spec:
 
   stages {
 
+    stage("Add version for documentation") {
+      steps {
+        sh "ls -al /home/jenkins"
+      }
+    }
+
     stage("Check out") {
       steps {
         echo "Checking out branch: ${params.BRANCH}"
@@ -155,6 +161,7 @@ spec:
       steps {
         sh '''
           echo "DEPLOY_DOCUMENTATION: ${DEPLOY_DOCUMENTATION}"
+          echo "STABLE_DOCUMENTATION: ${STABLE_DOCUMENTATION}"
           if [[ "${DEPLOY_DOCUMENTATION}" =~ (t|true) ]]; then
             echo "add to supported versions"
             MAJOR="${RELEASE_VERSION%%.*}" # before first dot
