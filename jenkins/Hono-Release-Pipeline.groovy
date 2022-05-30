@@ -133,6 +133,15 @@ spec:
       }
     }
 
+    stage("Build params") {
+      steps {
+        sh '''
+          echo "DEPLOY_DOCUMENTATION: ${DEPLOY_DOCUMENTATION}"
+          echo "params.DEPLOY_DOCUMENTATION: ${params.DEPLOY_DOCUMENTATION}"
+        '''
+      }
+    }
+
     stage("Build") {
       steps {
         container("maven") {
@@ -150,16 +159,17 @@ spec:
     stage("Add version for documentation") {
       steps {
         sh '''
-          if [[ "${params.DEPLOY_DOCUMENTATION}" =~ (T|TRUE) ]]; then
+          echo "DEPLOY_DOCUMENTATION: ${DEPLOY_DOCUMENTATION}"
+          if [[ "${DEPLOY_DOCUMENTATION}" =~ (t|true) ]]; then
             echo "add to supported versions"
-            MAJOR="${params.RELEASE_VERSION%%.*}" # before first dot
-            rest="${params.RELEASE_VERSION#*.}" # after first dot
+            MAJOR="${RELEASE_VERSION%%.*}" # before first dot
+            rest="${RELEASE_VERSION#*.}" # after first dot
             MINOR="${rest%%.*}"  # before first dot of rest
-            echo "${MAJOR};${MINOR};${params.RELEASE_VERSION}" >> site/documentation/versions_supported.csv
+            echo "${MAJOR};${MINOR};${RELEASE_VERSION}" >> site/documentation/versions_supported.csv
             git add site/documentation/versions_supported.csv
-            if [[ "${params.STABLE_DOCUMENTATION}" =~ (T|TRUE) ]]; then
+            if [[ "${STABLE_DOCUMENTATION}" =~ (t|true) ]]; then
               echo "set as stable version"
-              echo "${params.RELEASE_VERSION}" > site/documentation/tag_stable.txt
+              echo "${RELEASE_VERSION}" > site/documentation/tag_stable.txt
               git add site/documentation/tag_stable.txt
             fi
           else
