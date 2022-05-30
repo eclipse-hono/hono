@@ -150,14 +150,14 @@ spec:
     stage("Add version for documentation") {
       steps {
         sh '''
-          if [[ ${params.DEPLOY_DOCUMENTATION} =~ (T|TRUE) ]]; then
+          if [[ "${params.DEPLOY_DOCUMENTATION}" =~ (T|TRUE) ]]; then
             echo "add to supported versions"
             MAJOR="${params.RELEASE_VERSION%%.*}" # before first dot
             rest="${params.RELEASE_VERSION#*.}" # after first dot
             MINOR="${rest%%.*}"  # before first dot of rest
             echo "${MAJOR};${MINOR};${params.RELEASE_VERSION}" >> site/documentation/versions_supported.csv
             git add site/documentation/versions_supported.csv
-            if [[ ${params.STABLE_DOCUMENTATION} =~ (T|TRUE) ]]; then
+            if [[ "${params.STABLE_DOCUMENTATION}" =~ (T|TRUE) ]]; then
               echo "set as stable version"
               echo "${params.RELEASE_VERSION}" > site/documentation/tag_stable.txt
               git add site/documentation/tag_stable.txt
