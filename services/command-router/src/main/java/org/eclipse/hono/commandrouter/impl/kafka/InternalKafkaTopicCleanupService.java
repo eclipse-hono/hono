@@ -79,11 +79,13 @@ public class InternalKafkaTopicCleanupService extends AbstractVerticle {
         Objects.requireNonNull(adminClientConfigProperties);
 
         final var adminClientConfig = adminClientConfigProperties.getAdminClientConfig(CLIENT_NAME);
-        final var kafkaClientFactory = new KafkaClientFactory(vertx);
-        this.kafkaAdminClientCreator = () -> kafkaClientFactory.createKafkaAdminClientWithRetries(
-                adminClientConfig,
-                lifecycleStatus::isStarting,
-                KafkaClientFactory.UNLIMITED_RETRIES_DURATION);
+        this.kafkaAdminClientCreator = () -> {
+            final var kafkaClientFactory = new KafkaClientFactory(vertx);
+            return kafkaClientFactory.createKafkaAdminClientWithRetries(
+                    adminClientConfig,
+                    lifecycleStatus::isStarting,
+                    KafkaClientFactory.UNLIMITED_RETRIES_DURATION);
+        };
     }
 
     /**
