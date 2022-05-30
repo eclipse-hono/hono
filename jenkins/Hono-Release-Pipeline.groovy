@@ -149,25 +149,23 @@ spec:
 
     stage("Add version for documentation") {
       steps {
-        if (params.DEPLOY_DOCUMENTATION ==~ /(?i)(T|TRUE)/) {
-          echo "add to supported versions"
-          sh ''' 
-             MAJOR="${params.RELEASE_VERSION%%.*}" # before first dot
-             rest="${params.RELEASE_VERSION#*.}" # after first dot
-             MINOR="${rest%%.*}"  # before first dot of rest
-             echo "${MAJOR};${MINOR};${params.RELEASE_VERSION}" >> site/documentation/versions_supported.csv
-             git add site/documentation/versions_supported.csv
-             '''
-          if (params.STABLE_DOCUMENTATION ==~ /(?i)(T|TRUE)/) {
-            echo "set as stable version"
-            sh ''' 
-               echo "${params.RELEASE_VERSION}" > site/documentation/tag_stable.txt
-               git add site/documentation/tag_stable.txt
-               '''
-          }
-        } else {
-          echo "skip release of documentation"
-        }
+        sh '''
+          if [[ ${params.DEPLOY_DOCUMENTATION} =~ (T|TRUE) ]]; then
+            echo "add to supported versions"
+            MAJOR="${params.RELEASE_VERSION%%.*}" # before first dot
+            rest="${params.RELEASE_VERSION#*.}" # after first dot
+            MINOR="${rest%%.*}"  # before first dot of rest
+            echo "${MAJOR};${MINOR};${params.RELEASE_VERSION}" >> site/documentation/versions_supported.csv
+            git add site/documentation/versions_supported.csv
+            if [[ ${params.STABLE_DOCUMENTATION} =~ (T|TRUE) ]]; then
+              echo "set as stable version"
+              echo "${params.RELEASE_VERSION}" > site/documentation/tag_stable.txt
+              git add site/documentation/tag_stable.txt
+            fi
+          else
+            echo "skip release of documentation"
+          fi
+        '''
       }
     }
 
