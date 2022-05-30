@@ -169,7 +169,10 @@ public class ConfigBasedCoapEndpointFactory implements CoapEndpointFactory {
         configuration.set(CoapConfig.DEDUPLICATOR, CoapConfig.DEDUPLICATOR_PEERS_MARK_AND_SWEEP);
         final int maxConnections = config.getMaxConnections();
         if (maxConnections == 0) {
-            final MemoryBasedConnectionLimitStrategy limits = new MemoryBasedConnectionLimitStrategy(MINIMAL_MEMORY, MEMORY_PER_CONNECTION);
+            final MemoryBasedConnectionLimitStrategy limits = MemoryBasedConnectionLimitStrategy.forParams(
+                    MINIMAL_MEMORY,
+                    MEMORY_PER_CONNECTION,
+                    config.getGcHeapPercentage());
             configuration.set(CoapConfig.MAX_ACTIVE_PEERS, limits.getRecommendedLimit());
         } else {
             configuration.set(CoapConfig.MAX_ACTIVE_PEERS, maxConnections);

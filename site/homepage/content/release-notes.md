@@ -18,6 +18,10 @@ description = "Information about changes in recent Hono releases. Includes new f
   messages used to upload telemetry or event messages.
 * The CoAP adapter now exposes its resources using short endpoint name alternatives to the existing resources.
   Using the short endpoint names, devices can save a few bytes per request.
+* The protocol adapters now support a configuration property for explicitly setting the percentage of the heap memory
+  not to be used for maintaining device connections. This can be used to tune the adapter's memory utilization with
+  regard to the overall amount of memory available to the JVM and the characteristics of the garbage collector being
+  used.
 
 ### Fixes & Enhancements
 
