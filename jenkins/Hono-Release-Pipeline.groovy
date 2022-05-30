@@ -25,7 +25,14 @@ apiVersion: v1
 kind: Pod
 spec:
   containers:
-  - name: maven
+  - name: "jnlp"
+    volumeMounts:
+    - mountPath: "/home/jenkins/.ssh"
+      name: "volume-known-hosts"
+    env:
+    - name: "HOME"
+      value: "/home/jenkins"
+  - name: "maven"
     image: "maven:3.8.4-eclipse-temurin-17"
     tty: true
     command:
