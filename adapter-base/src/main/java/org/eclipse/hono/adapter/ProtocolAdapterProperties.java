@@ -221,7 +221,7 @@ public class ProtocolAdapterProperties extends ServiceConfigProperties {
     }
 
     /**
-     * Gets the share of heap memory that should not be used by the live-data set but should be left
+     * Sets the share of heap memory that should not be used by the live-data set but should be left
      * to be used by the garbage collector.
      * <p>
      * This value should be adapted based on the total amount of heap memory available to the JVM and
