@@ -133,15 +133,6 @@ spec:
       }
     }
 
-    stage("Build params") {
-      steps {
-        sh '''
-          echo "DEPLOY_DOCUMENTATION: ${DEPLOY_DOCUMENTATION}"
-          echo "params.DEPLOY_DOCUMENTATION: ${params.DEPLOY_DOCUMENTATION}"
-        '''
-      }
-    }
-
     stage("Build") {
       steps {
         container("maven") {
@@ -156,6 +147,10 @@ spec:
       }
     }
 
+    /**
+    * The references in the script below do not use the "params." prefix as that
+    * does not seem to work in a multi-line script delimited by '''
+    */
     stage("Add version for documentation") {
       steps {
         sh '''
@@ -185,8 +180,8 @@ spec:
            git config user.email "hono-bot@eclipse.org"
            git config user.name "hono-bot"
            git add pom.xml \\*/pom.xml
-           git commit -m "Release ${params.RELEASE_VERSION}"
-           git tag ${params.RELEASE_VERSION}
+           git commit -m "Release ${RELEASE_VERSION}"
+           git tag ${RELEASE_VERSION}
            '''
       }
     }
@@ -204,7 +199,7 @@ spec:
         sshagent(credentials: [ "github-bot-ssh" ]) {
           sh '''
              git add pom.xml \\*/pom.xml
-             git commit -m "Bump version to ${params.NEXT_VERSION}"
+             git commit -m "Bump version to ${NEXT_VERSION}"
              git push --all ssh://git@github.com/eclipse/hono.git && git push --tags ssh://git@github.com/eclipse/hono.git
              '''
         }
@@ -215,8 +210,8 @@ spec:
       steps {
         sshagent(credentials: [ "projects-storage.eclipse.org-bot-ssh" ]) {
           sh ''' 
-             chmod +r cli/target/hono-cli-${params.RELEASE_VERSION}-exec.jar
-             scp cli/target/hono-cli-${params.RELEASE_VERSION}-exec.jar \
+             chmod +r cli/target/hono-cli-${RELEASE_VERSION}-exec.jar
+             scp cli/target/hono-cli-${RELEASE_VERSION}-exec.jar \
                  genie.hono@projects-storage.eclipse.org:/home/data/httpd/download.eclipse.org/hono/
              '''
         }
