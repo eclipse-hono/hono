@@ -142,6 +142,7 @@ spec:
         checkout([$class                           : 'GitSCM',
                   branches                         : [[name: "${params.BRANCH}"]],
                   doGenerateSubmoduleConfigurations: false,
+                  extensions                       : [[$class: 'LocalBranch', localBranch: "**"]],
                   userRemoteConfigs                : [[credentialsId: 'github-bot-ssh', url: 'ssh://git@github.com/eclipse/hono.git']]])
       }
     }
