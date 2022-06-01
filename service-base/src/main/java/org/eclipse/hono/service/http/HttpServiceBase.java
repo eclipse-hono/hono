@@ -34,7 +34,6 @@ import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.AuthenticationHandler;
-import io.vertx.ext.web.handler.BodyHandler;
 
 /**
  * A base class for implementing services using HTTP.
@@ -42,11 +41,6 @@ import io.vertx.ext.web.handler.BodyHandler;
  * @param <T> The type of configuration properties used by this service.
  */
 public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends AbstractServiceBase<T> {
-
-    /**
-     * Default file uploads directory used by Vert.x Web.
-     */
-    protected static final String DEFAULT_UPLOADS_DIRECTORY = "/tmp";
 
     private final Map<String, HttpEndpoint> endpoints = new HashMap<>();
 
@@ -180,8 +174,6 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
      * <li>a default failure handler,</li>
      * <li>a handler to keep track of the tracing span created for the request by means of the Vert.x/Quarkus
      * instrumentation,</li>
-     * <li>a handler limiting the body size of requests to the maximum payload size set in the <em>config</em>
-     * properties.</li>
      * <li>the authentication handler, set via {@link #setAuthHandler(AuthenticationHandler)}.</li>
      * </ul>
      *
@@ -200,13 +192,9 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
         // route name will be used as HTTP request tracing span name,
         // ensuring a fixed name is set in case no other route matches (otherwise the span name would unsuitably be set to the request path)
         matchAllRoute.setName("/* (default route)");
-        // 1. handler to keep track of the tracing span created by the Vert.x/Quarkus instrumentation (set as active span there)
+        // handler to keep track of the tracing span created by the Vert.x/Quarkus instrumentation (set as active span there)
         matchAllRoute.handler(HttpServerSpanHelper.getRouteHandlerForAdoptingActiveSpan(tracer, getCustomTags()));
-        // 2. BodyHandler with request size limit
-        log.info("limiting size of inbound request body to {} bytes", getConfig().getMaxPayloadSize());
-        matchAllRoute.handler(BodyHandler.create().setUploadsDirectory(DEFAULT_UPLOADS_DIRECTORY)
-                .setBodyLimit(getConfig().getMaxPayloadSize()));
-        // 3. AuthHandler
+         // AuthHandler
         addAuthHandler(router);
         return router;
     }
