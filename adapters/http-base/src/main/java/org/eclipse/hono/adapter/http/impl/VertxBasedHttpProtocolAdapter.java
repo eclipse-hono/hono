@@ -158,7 +158,9 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
                     .setName("/telemetry (CORS)");
 
             // require auth for POSTing telemetry
-            router.post(ROUTE_TELEMETRY_ENDPOINT).handler(authHandler);
+            router.post(ROUTE_TELEMETRY_ENDPOINT)
+                    .handler(authHandler)
+                    .handler(getBodyHandler());
 
             // route for posting telemetry data using tenant and device ID determined as part of
             // device authentication
@@ -174,6 +176,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
         // route for uploading telemetry data
         router.putWithRegex("\\/telemetry\\/.+")
+                .handler(getBodyHandler())
                 .handler(this::handlePutTelemetry)
                 .setName(telemetryPutPathWithParams);
     }
@@ -207,7 +210,9 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
                     .setName("/event (CORS)");
 
             // require auth for POSTing events
-            router.post(ROUTE_EVENT_ENDPOINT).handler(authHandler);
+            router.post(ROUTE_EVENT_ENDPOINT)
+                    .handler(authHandler)
+                    .handler(getBodyHandler());
 
             // route for posting events using tenant and device ID determined as part of
             // device authentication
@@ -223,6 +228,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
         // route for sending event messages
         router.putWithRegex("\\/event\\/.+")
+                .handler(getBodyHandler())
                 .handler(this::handlePutTelemetry)
                 .setName(eventPutPathWithParams);
     }
@@ -252,6 +258,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
             // require auth for POSTing command response messages
             router.post(commandResponseMatchAllPath)
                     .handler(authHandler)
+                    .handler(getBodyHandler())
                     .setName(commandResponsePostPathWithParam);
 
             // route for POSTing command response messages using tenant and device ID determined as part of
@@ -270,10 +277,10 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
         // route for uploading command response message
         router.put(commandResponseMatchAllPath)
+                .handler(getBodyHandler())
                 .handler(this::handlePutCommandResponse)
                 .setName(commandResponsePutPathWithParams);
     }
-
 
     private static String getTenantParam(final RoutingContext ctx) {
         return ctx.request().getParam(PARAM_TENANT);

@@ -52,7 +52,6 @@ import io.vertx.ext.web.handler.BodyHandler;
  * @param <S> The type of service this endpoint delegates to.
  */
 public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementService> extends AbstractDelegatingRegistryHttpEndpoint<S, ServiceConfigProperties> {
-
     static final int DEFAULT_PAGE_OFFSET = 0;
     static final int DEFAULT_PAGE_SIZE = 30;
     static final int MAX_PAGE_SIZE = 200;
@@ -95,7 +94,7 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
         router.route(path).handler(createCorsHandler(config.getCorsAllowedOrigin(), Set.of(HttpMethod.POST)));
         router.route(pathWithTenant).handler(createDefaultCorsHandler(config.getCorsAllowedOrigin()));
 
-        final BodyHandler bodyHandler = BodyHandler.create();
+        final BodyHandler bodyHandler = BodyHandler.create(DEFAULT_UPLOADS_DIRECTORY);
         bodyHandler.setBodyLimit(config.getMaxPayloadSize());
 
         // ADD tenant with auto-generated ID
