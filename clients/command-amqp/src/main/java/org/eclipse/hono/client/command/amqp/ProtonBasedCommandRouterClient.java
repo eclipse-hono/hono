@@ -129,7 +129,7 @@ public class ProtonBasedCommandRouterClient extends AbstractRequestResponseServi
     public Future<Void> stop() {
         stopped = true;
         Optional.ofNullable(lastKnownGatewaysUpdateTimerId).ifPresent(tid -> connection.getVertx().cancelTimer(tid));
-        return super.stop();
+        return disconnectOnStop();
     }
 
     @Override

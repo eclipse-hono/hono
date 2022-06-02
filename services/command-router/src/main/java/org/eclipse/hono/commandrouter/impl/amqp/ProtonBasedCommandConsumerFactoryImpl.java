@@ -110,7 +110,7 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
     @Override
     public Future<Void> start() {
         registerCloseConsumerLinkHandler();
-        return CompositeFuture.all(super.start(), mappingAndDelegatingCommandHandler.start())
+        return CompositeFuture.all(connectOnStart(), mappingAndDelegatingCommandHandler.start())
                 .map((Void) null)
                 .onSuccess(v -> {
                     connection.addReconnectListener(c -> recreateConsumers());
@@ -121,7 +121,7 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
 
     @Override
     public Future<Void> stop() {
-        return CompositeFuture.join(super.stop(), mappingAndDelegatingCommandHandler.stop())
+        return CompositeFuture.join(disconnectOnStop(), mappingAndDelegatingCommandHandler.stop())
                 .map((Void) null);
     }
 

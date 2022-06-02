@@ -74,7 +74,7 @@ public class ProtonBasedNotificationReceiver extends AbstractServiceClient imple
         if (!startCalled.compareAndSet(false, true)) {
             return Future.succeededFuture();
         }
-        return super.start()
+        return connectOnStart()
                 .onComplete(v -> {
                     if (addresses.isEmpty()) {
                         log.warn("no notification consumers registered - nothing to do");
@@ -93,7 +93,7 @@ public class ProtonBasedNotificationReceiver extends AbstractServiceClient imple
         }
         addresses.clear();
         handlerPerType.clear();
-        return super.stop();
+        return disconnectOnStop();
     }
 
     @Override
