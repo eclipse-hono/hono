@@ -32,7 +32,6 @@ import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.http.HttpUtils;
 import org.eclipse.hono.util.Constants;
-import org.eclipse.hono.util.ResourceIdentifier;
 import org.eclipse.hono.util.Strings;
 
 import io.vertx.core.Handler;
@@ -305,12 +304,13 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
     void handlePutTelemetry(final RoutingContext ctx) {
 
-        final var requestedResource = ResourceIdentifier.fromString(ctx.request().uri().substring(1));
+        final HttpContext httpContext = HttpContext.from(ctx);
+        final var requestedResource = httpContext.getRequestedResource();
         if (Strings.isNullOrEmpty(requestedResource.getResourceId())) {
             HttpUtils.notFound(ctx, "request URI must contain device ID");
         } else if (ctx.user() instanceof Device authenticatedDevice) {
             doUploadMessage(
-                    HttpContext.from(ctx),
+                    httpContext,
                     // if the request URI contains a tenant ID then it has already been
                     // verified to match the tenant of the authenticated device
                     // by the assertTenant route handler
@@ -320,7 +320,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
             HttpUtils.notFound(ctx, "request URI must contain tenant ID");
         } else {
             doUploadMessage(
-                    HttpContext.from(ctx),
+                    httpContext,
                     requestedResource.getTenantId(),
                     requestedResource.getResourceId());
         }
@@ -342,7 +342,8 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
 
     void handlePutCommandResponse(final RoutingContext ctx) {
 
-        final var requestedResource = ResourceIdentifier.fromString(ctx.request().uri().substring(1));
+        final HttpContext httpContext = HttpContext.from(ctx);
+        final var requestedResource = httpContext.getRequestedResource();
         final var path = requestedResource.toPath();
         if (path.length < 5) {
             HttpUtils.notFound(ctx, "request URI must contain tenant, device and request ID");
@@ -361,7 +362,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
             HttpUtils.notFound(ctx, "request URI must contain device ID");
         } else if (ctx.user() instanceof Device authenticatedDevice) {
             uploadCommandResponseMessage(
-                    HttpContext.from(ctx),
+                    httpContext,
                     // if the request URI contains a tenant ID then it has already been
                     // verified to match the tenant of the authenticated device
                     // by the assertTenant route handler
@@ -373,7 +374,7 @@ public final class VertxBasedHttpProtocolAdapter extends AbstractVertxBasedHttpP
             HttpUtils.notFound(ctx, "request URI must contain tenant ID");
         } else {
             uploadCommandResponseMessage(
-                    HttpContext.from(ctx),
+                    httpContext,
                     tenantId,
                     deviceId,
                     requestId,
