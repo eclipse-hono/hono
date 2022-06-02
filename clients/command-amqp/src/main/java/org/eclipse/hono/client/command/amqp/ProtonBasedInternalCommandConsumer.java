@@ -76,7 +76,7 @@ public class ProtonBasedInternalCommandConsumer extends AbstractServiceClient im
 
     @Override
     public Future<Void> start() {
-        return super.start()
+        return connectOnStart()
                 .onComplete(v -> {
                     connection.addReconnectListener(c -> recreateConsumer());
                     // trigger creation of adapter specific consumer link (with retry if failed)

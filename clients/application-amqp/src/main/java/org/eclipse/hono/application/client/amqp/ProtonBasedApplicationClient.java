@@ -34,6 +34,7 @@ import org.eclipse.hono.client.amqp.connection.HonoConnection;
 import org.eclipse.hono.client.amqp.connection.SendMessageSampler;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.EventConstants;
+import org.eclipse.hono.util.LifecycleStatus;
 import org.eclipse.hono.util.TelemetryConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,6 +57,11 @@ public class ProtonBasedApplicationClient extends ProtonBasedCommandSender imple
 
     private static final Logger LOG = LoggerFactory.getLogger(ProtonBasedApplicationClient.class);
 
+    /**
+     * This component's current life cycle state.
+     */
+    protected final LifecycleStatus lifecycleStatus = new LifecycleStatus();
+
     private final List<Handler<Throwable>> consumerCloseHandlers = new ArrayList<>();
 
     /**
@@ -73,6 +79,34 @@ public class ProtonBasedApplicationClient extends ProtonBasedCommandSender imple
             final String endpointName,
             final String tenantId) {
         return String.format("%s/%s", endpointName, tenantId);
+    }
+
+    @Override
+    public void addOnClientReadyHandler(final Handler<AsyncResult<Void>> handler) {
+        if (handler != null) {
+            lifecycleStatus.addOnStartedHandler(handler);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The returned Future will be failed if this client is already started or stopping.
+     */
+    @Override
+    public Future<Void> start() {
+        if (lifecycleStatus.isStarting()) {
+            return Future.succeededFuture();
+        } else if (!lifecycleStatus.setStarting()) {
+            return Future.failedFuture(new IllegalStateException("client is already started/stopping"));
+        }
+        return connectOnStart()
+                .onSuccess(v -> lifecycleStatus.setStarted());
+    }
+
+    @Override
+    public Future<Void> stop() {
+        return lifecycleStatus.runStopAttempt(this::disconnectOnStop);
     }
 
     @Override

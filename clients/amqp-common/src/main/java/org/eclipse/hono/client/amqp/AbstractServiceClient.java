@@ -279,31 +279,56 @@ public abstract class AbstractServiceClient implements ConnectionLifecycle<HonoC
     }
 
     /**
-     * {@inheritDoc}
-     *
-     * @return The outcome of the connection's {@link HonoConnection#connect()} method (if
-     *         {@code skipConnectDisconnectOnStartStop} wasn't set).
+     * Starts the client, establishing the AMQP connection to the service if {@code skipConnectDisconnectOnStartStop}
+     * wasn't set.
+     * <p>
+     * Subclasses overriding the default behaviour are expected to invoke {@link #connectOnStart()}.
      */
     @Override
     public Future<Void> start() {
+        return connectOnStart();
+    }
+
+    /**
+     * Establishes the AMQP connection to the service, if {@code skipConnectDisconnectOnStartStop} wasn't set.
+     * <p>
+     * This method is intended to be invoked by the {@link #start()} method.
+     *
+     * @return The outcome of the connection's {@link HonoConnection#connect()} method or a succeeded Future if
+     *         {@code skipConnectDisconnectOnStartStop} was set.
+     */
+    protected final Future<Void> connectOnStart() {
         if (skipConnectDisconnectOnStartStop) {
             log.trace("connection establishment to {} endpoint on start() skipped here", connection.getConfig().getServerRole());
             return Future.succeededFuture();
         }
         return connection.connect()
-                .onSuccess(ok -> log.info("connection to {} endpoint has been established", connection.getConfig().getServerRole()))
-                .onFailure(t -> log.warn("failed to establish connection to {} endpoint", connection.getConfig().getServerRole(), t))
+                .onSuccess(ok -> log.info("connection to {} endpoint has been established",
+                        connection.getConfig().getServerRole()))
+                .onFailure(t -> log.warn("failed to establish connection to {} endpoint",
+                        connection.getConfig().getServerRole(), t))
                 .mapEmpty();
     }
 
     /**
-     * {@inheritDoc}
+     * Stops the client, closing the connection to the service, if {@code skipConnectDisconnectOnStartStop} wasn't set.
      * <p>
-     * Invokes the connection's {@link HonoConnection#shutdown(Handler)} method (if
-     * {@code skipConnectDisconnectOnStartStop} wasn't set).
+     * Subclasses overriding the default behaviour are expected to invoke {@link #disconnectOnStop()}.
      */
     @Override
     public Future<Void> stop() {
+        return disconnectOnStop();
+    }
+
+    /**
+     * Closes the connection to the service, invoking the connection's {@link HonoConnection#shutdown(Handler)} method,
+     * if {@code skipConnectDisconnectOnStartStop} wasn't set.
+     * <p>
+     * This method is intended to be invoked by the {@link #stop()} method.
+     *
+     * @return The outcome of the {@link HonoConnection#shutdown(Handler)} invocation.
+     */
+    protected final Future<Void> disconnectOnStop() {
         if (skipConnectDisconnectOnStartStop) {
             log.trace("shutdown of connection to {} endpoint on stop() skipped here", connection.getConfig().getServerRole());
             return Future.succeededFuture();
@@ -311,7 +336,7 @@ public abstract class AbstractServiceClient implements ConnectionLifecycle<HonoC
         final Promise<Void> result = Promise.promise();
         connection.shutdown(result);
         return result.future()
-            .onSuccess(ok -> log.info("connection to {} endpoint has been closed",
-                    connection.getConfig().getServerRole()));
+                .onSuccess(ok -> log.info("connection to {} endpoint has been closed",
+                        connection.getConfig().getServerRole()));
     }
 }

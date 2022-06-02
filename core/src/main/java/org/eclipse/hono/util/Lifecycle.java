@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2017 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,7 +24,7 @@ public interface Lifecycle {
     /**
      * Starts this component.
      * <p>
-     * This method should be used to allocate any required resources.
+     * Implementing classes should use this method to allocate any required resources.
      * However, no long running tasks should be executed.
      *
      * @return A future indicating the outcome of the startup process.
@@ -34,7 +34,7 @@ public interface Lifecycle {
     /**
      * Stops this component.
      * <p>
-     * This method should be used to release any allocated resources.
+     * Implementing classes should use this method to release any allocated resources.
      * However, no long running tasks should be executed.
      *
      * @return A future indicating the outcome of the shut down process.
