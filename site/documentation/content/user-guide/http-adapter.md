@@ -69,7 +69,8 @@ is exceeded.
     [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the device
     to present a client certificate as part of the TLS handshake during connection establishment.
   * (required) *content-type*: The type of payload contained in the request body.
-  * (optional) *hono-ttd*: The number of seconds the device will wait for the response.
+  * (optional) *hono-ttd*: The number of seconds the device will wait for the response. Alternatively, this may be
+    specified using a URI query parameter of the same name.
   * (optional) *qos-level*: The QoS level for publishing telemetry messages. The adapter supports *at most once* (`0`)
     and *at least once* (`1`) QoS levels. The default value of `0` is assumed if this header is omitted.
 * Request Body:
@@ -178,7 +179,8 @@ The example above assumes that the HTTP adapter is
 * Method: `PUT`
 * Request Headers:
   * (required) *content-type*: The type of payload contained in the request body.
-  * (optional) *hono-ttd*: The number of seconds the device will wait for the response.
+  * (optional) *hono-ttd*: The number of seconds the device will wait for the response. Alternatively, this may be
+    specified using a URI query parameter of the same name.
   * (optional) *qos-level*: The QoS level for publishing telemetry messages. The adapter supports *at most once* (`0`)
     and *at least once* (`1`) QoS levels. The default value of `0` is assumed if this header is omitted.
 * Request Body:
@@ -271,7 +273,8 @@ content-length: 23
     [Basic HTTP authentication scheme](https://tools.ietf.org/html/rfc7617). If not set, the adapter expects the gateway
     to present a client certificate as part of the TLS handshake during connection establishment.
   * (required) *content-type*: The type of payload contained in the request body.
-  * (optional) *hono-ttd*: The number of seconds the device will wait for the response.
+  * (optional) *hono-ttd*: The number of seconds the device will wait for the response. Alternatively, this may be
+    specified using a URI query parameter of the same name.
   * (optional) *qos-level*: The QoS level for publishing telemetry messages. The adapter supports *at most once* (`0`)
     and *at least once* (`1`) QoS levels. The default value of `0` is assumed if this header is omitted.
 * Request Body:

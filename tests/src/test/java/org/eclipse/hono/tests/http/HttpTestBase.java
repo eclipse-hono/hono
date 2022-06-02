@@ -59,6 +59,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.netty.handler.codec.http.QueryStringEncoder;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -1224,7 +1225,8 @@ import io.vertx.junit5.VertxTestContext;
                 },
                 count -> {
                     final Buffer buffer = Buffer.buffer("hello " + count);
-                    return sendHttpRequestForGatewayOrDevice(buffer, requestHeaders, endpointConfig, commandTargetDeviceId, true)
+                    final boolean useQueryParams = count % 2 == 0; // use ttd query param instead of header for half of the requests
+                    return sendHttpRequestForGatewayOrDevice(buffer, requestHeaders, endpointConfig, commandTargetDeviceId, useQueryParams, true)
                             .map(httpResponse -> {
 
                                 final String requestId = httpResponse.getHeader(Constants.HEADER_COMMAND_REQUEST_ID);
@@ -1339,7 +1341,8 @@ import io.vertx.junit5.VertxTestContext;
                 },
                 count -> {
                     final Buffer payload = Buffer.buffer("hello " + count);
-                    return sendHttpRequestForGatewayOrDevice(payload, requestHeaders, endpointConfig, commandTargetDeviceId, true)
+                    final boolean useQueryParams = count % 2 == 0; // use ttd query param instead of header for half of the requests
+                    return sendHttpRequestForGatewayOrDevice(payload, requestHeaders, endpointConfig, commandTargetDeviceId, useQueryParams, true)
                         .map(httpResponse -> {
                             ctx.verify(() -> {
                                 // assert that the response contains a one-way command
@@ -1359,16 +1362,39 @@ import io.vertx.junit5.VertxTestContext;
             final Buffer payload,
             final MultiMap requestHeaders,
             final HttpCommandEndpointConfiguration endpointConfig,
-            final String requestDeviceId) {
+            final String requestDeviceId,
+            final boolean useQueryParams) {
 
-        if (endpointConfig.isSubscribeAsGatewayForSingleDevice()) {
-            final String uri = getEndpointUri() + "/" + tenantId + "/" + requestDeviceId;
-            // GW uses PUT when acting on behalf of a device
-            return httpClient.update(uri, payload, requestHeaders, ResponsePredicate.status(HttpURLConnection.HTTP_OK));
+        final QueryStringEncoder uriEncoder = endpointConfig.isSubscribeAsGatewayForSingleDevice() ?
+                new QueryStringEncoder(getEndpointUri() + "/" + tenantId + "/" + requestDeviceId) :
+                new QueryStringEncoder(getEndpointUri());
+
+        final MultiMap requestHeadersToUse;
+        if (useQueryParams && (requestHeaders.contains(Constants.HEADER_TIME_TILL_DISCONNECT)
+                || requestHeaders.contains(Constants.HEADER_TIME_TO_LIVE))) {
+            requestHeadersToUse = MultiMap.caseInsensitiveMultiMap().addAll(requestHeaders);
+            removeFromHeadersAndAddAsQueryParam(Constants.HEADER_TIME_TILL_DISCONNECT, requestHeadersToUse, uriEncoder);
+            removeFromHeadersAndAddAsQueryParam(Constants.HEADER_TIME_TO_LIVE, requestHeadersToUse, uriEncoder);
         } else {
-            return httpClient.create(getEndpointUri(), payload, requestHeaders,
+            requestHeadersToUse = requestHeaders;
+        }
+        if (endpointConfig.isSubscribeAsGatewayForSingleDevice()) {
+            // GW uses PUT when acting on behalf of a device
+            return httpClient.update(uriEncoder.toString(), payload, requestHeadersToUse,
+                    ResponsePredicate.status(HttpURLConnection.HTTP_OK));
+        } else {
+            return httpClient.create(uriEncoder.toString(), payload, requestHeadersToUse,
                     ResponsePredicate.status(HttpURLConnection.HTTP_OK));
         }
+    }
+
+    private void removeFromHeadersAndAddAsQueryParam(final String header, final MultiMap headers,
+            final QueryStringEncoder queryStringEncoder) {
+        Optional.ofNullable(headers.get(header))
+                .ifPresent(ttd -> {
+                    queryStringEncoder.addParam(header, ttd);
+                    headers.remove(header);
+                });
     }
 
     private Future<HttpResponse<Buffer>> sendHttpRequestForGatewayOrDevice(
@@ -1376,9 +1402,10 @@ import io.vertx.junit5.VertxTestContext;
             final MultiMap requestHeaders,
             final HttpCommandEndpointConfiguration endpointConfig,
             final String requestDeviceId,
+            final boolean useQueryParams,
             final boolean retry) {
 
-        return sendHttpRequestForGatewayOrDevice(payload, requestHeaders, endpointConfig, requestDeviceId)
+        return sendHttpRequestForGatewayOrDevice(payload, requestHeaders, endpointConfig, requestDeviceId, useQueryParams)
                 .recover(t -> {
                     if (retry) {
                         // we probably sent the request before the
@@ -1388,7 +1415,7 @@ import io.vertx.junit5.VertxTestContext;
                         final Promise<HttpResponse<Buffer>> retryResult = Promise.promise();
                         vertx.setTimer(300, timerId -> {
                             logger.info("re-trying request, failure was: {}", t.getMessage());
-                            sendHttpRequestForGatewayOrDevice(payload, requestHeaders, endpointConfig, requestDeviceId)
+                            sendHttpRequestForGatewayOrDevice(payload, requestHeaders, endpointConfig, requestDeviceId, useQueryParams)
                                 .onComplete(retryResult);
                         });
                         return retryResult.future();
