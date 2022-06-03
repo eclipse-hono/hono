@@ -11,6 +11,8 @@
 # SPDX-License-Identifier: EPL-2.0
 #
 
+honoImagesType: "quarkus-native"
+
 useLoadBalancer: true
 
 messagingNetworkTypes:
@@ -28,9 +30,6 @@ amqpMessagingNetworkExample:
       sandbox:
         secretName: "sandbox-tls"
         mountPath: "/etc/external-tls"
-  broker:
-    artemis:
-      imageName: "quay.io/enmasse/artemis-base:2.16.0"
 
 kafkaMessagingClusterExample:
   enabled: true
@@ -38,8 +37,12 @@ kafkaMessagingClusterExample:
 adapters:
   http:
     enabled: true
-    imageName: "eclipse/hono-adapter-http-native"
     hono:
+      healthCheck:
+        port: 8088
+        bindAddress: "0.0.0.0"
+        keyPath: "/etc/external-tls/tls.key"
+        certPath: "/etc/external-tls/tls.crt"
       http:
         bindAddress: "0.0.0.0"
         keyPath: "/etc/external-tls/tls.key"
@@ -56,15 +59,19 @@ adapters:
     resources:
       requests:
         cpu:
-        memory: "120Mi"
+        memory: "96Mi"
       limits:
         cpu:
-        memory: "120Mi"
+        memory: "96Mi"
 
   mqtt:
     enabled: true
-    imageName: "eclipse/hono-adapter-mqtt-native"
     hono:
+      healthCheck:
+        port: 8088
+        bindAddress: "0.0.0.0"
+        keyPath: "/etc/external-tls/tls.key"
+        certPath: "/etc/external-tls/tls.crt"
       mqtt:
         bindAddress: "0.0.0.0"
         keyPath: "/etc/external-tls/tls.key"
@@ -82,15 +89,19 @@ adapters:
     resources:
       requests:
         cpu:
-        memory: "120Mi"
+        memory: "96Mi"
       limits:
         cpu:
-        memory: "120Mi"
+        memory: "96Mi"
 
   amqp:
     enabled: true
-    imageName: "eclipse/hono-adapter-amqp-native"
     hono:
+      healthCheck:
+        port: 8088
+        bindAddress: "0.0.0.0"
+        keyPath: "/etc/external-tls/tls.key"
+        certPath: "/etc/external-tls/tls.crt"
       amqp:
         bindAddress: "0.0.0.0"
         keyPath: "/etc/external-tls/tls.key"
@@ -106,15 +117,19 @@ adapters:
     resources:
       requests:
         cpu:
-        memory: "120Mi"
+        memory: "96Mi"
       limits:
         cpu:
-        memory: "120Mi"
+        memory: "96Mi"
 
   coap:
     enabled: true
-    imageName: "eclipse/hono-adapter-coap-native"
     hono:
+      healthCheck:
+        port: 8088
+        bindAddress: "0.0.0.0"
+        keyPath: "/etc/external-tls/tls.key"
+        certPath: "/etc/external-tls/tls.crt"
       coap:
         bindAddress: "0.0.0.0"
         port: 5684
@@ -122,7 +137,7 @@ adapters:
         keyPath: "/etc/external-tls/tls.key"
         certPath: "/etc/external-tls/tls.crt"
         tenantIdleTimeout: "1h"
-        maxConnections: 70
+        maxConnections: 400
     extraSecretMounts:
       sandbox:
         secretName: "sandbox-tls"
@@ -130,10 +145,10 @@ adapters:
     resources:
       requests:
         cpu:
-        memory: "120Mi"
+        memory: "96Mi"
       limits:
         cpu:
-        memory: "120Mi"
+        memory: "96Mi"
 
   kura:
     enabled: false
@@ -151,7 +166,6 @@ adapters:
     hostnameVerificationRequired: false
 
 authServer:
-  image: "eclipse/hono-service-auth-native"
   resources:
     requests:
       cpu:
@@ -188,7 +202,6 @@ deviceRegistryExample:
       memory: "400Mi"
 
 commandRouterService:
-  imageName: "eclipse/hono-service-command-router-native"
   extraSecretMounts:
     sandbox:
       secretName: "sandbox-tls"
@@ -229,7 +242,7 @@ kafka:
     create: false
   resources:
     requests:
-      cpu: "150m"
+      cpu: 150m
 
 jaegerBackendExample:
   enabled: false
