@@ -105,11 +105,14 @@ public class HonoKafkaConsumerTest {
 
     /**
      * Stops the created consumer.
+     *
+     * @param vertx The vert.x instance.
+     * @param context The vert.x test context.
      */
     @AfterEach
-    public void stopConsumer() {
+    public void stopConsumer(final Vertx vertx, final VertxTestContext context) {
         if (consumer != null) {
-            consumer.stop();
+            vertx.runOnContext(v -> consumer.stop().onComplete(r -> context.completeNow()));
         }
     }
 
