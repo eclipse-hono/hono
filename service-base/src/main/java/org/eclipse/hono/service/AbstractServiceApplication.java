@@ -14,9 +14,11 @@
 
 package org.eclipse.hono.service;
 
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
@@ -29,6 +31,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
 import io.vertx.core.Vertx;
+import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.impl.cpu.CpuCoreSensor;
 import io.vertx.core.json.impl.JsonUtil;
 
@@ -124,6 +127,30 @@ public abstract class AbstractServiceApplication implements ComponentNameProvide
         }
     }
 
+    private void registerVertxCloseHook() {
+        // register a close hook that will be notified when the Vertx instance is being closed
+        if (vertx instanceof VertxInternal vertxInternal) {
+            vertxInternal.addCloseHook(completion -> {
+                final StringBuilder b = new StringBuilder("managed vert.x instance has been closed");
+                if (LOG.isDebugEnabled()) {
+                    final var stackTrace = Thread.currentThread().getStackTrace();
+                    final String s = Arrays.stream(stackTrace)
+                        .map(element -> "\tat %s.%s(%s:%d)".formatted(
+                                element.getClassName(),
+                                element.getMethodName(),
+                                element.getFileName(),
+                                element.getLineNumber()))
+                        .collect(Collectors.joining(System.lineSeparator()));
+                    b.append(System.lineSeparator()).append(s);
+                }
+                LOG.info(b.toString());
+                completion.complete();
+            });
+        } else {
+            LOG.debug("Vertx instance is not a VertxInternal, skipping close hook registration");
+        }
+    }
+
     /**
      * Starts this component.
      * <p>
@@ -138,6 +165,7 @@ public abstract class AbstractServiceApplication implements ComponentNameProvide
     public void onStart(final @Observes StartupEvent ev) {
 
         logJvmDetails();
+        registerVertxCloseHook();
         doStart();
     }
 
