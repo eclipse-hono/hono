@@ -113,6 +113,8 @@ public class HonoKafkaConsumerTest {
     public void stopConsumer(final Vertx vertx, final VertxTestContext context) {
         if (consumer != null) {
             vertx.runOnContext(v -> consumer.stop().onComplete(r -> context.completeNow()));
+        } else {
+            context.completeNow();
         }
     }
 
