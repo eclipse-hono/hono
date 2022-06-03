@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2020, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2020, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -96,18 +96,11 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
 
     @Override
     public Future<Void> start() {
-        return connection.connect()
-                .onSuccess(ok -> log.info("connection to {} endpoint has been established", connection.getConfig().getServerRole()))
-                .onFailure(t -> log.warn("failed to establish connection to {} endpoint", connection.getConfig().getServerRole(), t))
-                .map(ok -> {
-                    // TODO implement the equivalent of a tenant timeout mechanism as used in the protocol adapters in
-                    // order to close unused tenant-scoped receiver links
-                    // connection.getVertx().eventBus().consumer(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
-                    // this::handleTenantTimeout);
+        return super.start()
+                .onSuccess(v -> {
                     connection.addReconnectListener(c -> recreateConsumers());
                     // trigger creation of adapter specific consumer link (with retry if failed)
                     recreateConsumers();
-                    return null;
                 });
     }
 
@@ -117,9 +110,6 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
         consumerLinkTenants.clear();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public final Future<Void> createCommandConsumer(final String tenantId, final SpanContext context) {
         Objects.requireNonNull(tenantId);
@@ -214,15 +204,5 @@ public class ProtonBasedCommandConsumerFactoryImpl extends AbstractServiceClient
     private void invokeRecreateConsumersWithDelay() {
         connection.getVertx().setTimer(RECREATE_CONSUMERS_DELAY, tid -> recreateConsumers());
     }
-
-// TODO implement the equivalent of a tenant timeout mechanism as used in the protocol adapters in order to close unused tenant-scoped receiver links
-//    private void handleTenantTimeout(final Message<String> msg) {
-//        final String tenantId = msg.body();
-//        final CommandConsumer consumer = mappingAndDelegatingCommandConsumerFactory.getClient(tenantId);
-//        if (consumer != null) {
-//            log.info("timeout of tenant {}: closing and removing command consumer", tenantId);
-//            consumer.close(null);
-//        }
-//    }
 
 }
