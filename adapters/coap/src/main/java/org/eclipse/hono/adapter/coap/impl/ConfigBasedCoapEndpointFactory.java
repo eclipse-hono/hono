@@ -258,8 +258,8 @@ public class ConfigBasedCoapEndpointFactory implements CoapEndpointFactory {
 
         if (config.isInsecurePortEnabled()) {
             if (config.isAuthenticationRequired()) {
-                LOG.warn("skipping creation of insecure endpoint, configuration requires authentication of devices");
-                result.complete();
+                LOG.debug("skipping creation of insecure endpoint, configuration requires authentication of devices");
+                result.fail("configuration requires authentication of devices");
             } else {
                 final int insecurePort = config.getInsecurePort(CoAP.DEFAULT_COAP_PORT);
                 final int securePort = isSecurePortEnabled() ? config.getPort(CoAP.DEFAULT_COAP_SECURE_PORT) : Constants.PORT_UNCONFIGURED;

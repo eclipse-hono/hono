@@ -118,7 +118,6 @@ adapters:
       coap:
         bindAddress: "0.0.0.0"
         port: 5684
-        insecurePortEnabled: true
         keyPath: "/etc/external-tls/tls.key"
         certPath: "/etc/external-tls/tls.crt"
         tenantIdleTimeout: "1h"
