@@ -215,13 +215,12 @@ kafka:
       requests:
         cpu: 150m
   externalAccess:
-    service:
-      type: "LoadBalancer"
-      port: 9092
-      loadBalancerIPs:
-      - "hono.eclipseprojects.io"
     autoDiscovery:
       enabled: false
+    service:
+      type: "LoadBalancer"
+      loadBalancerIPs:
+      - "hono.eclipseprojects.io"
   serviceAccount:
     create: false
   rbac:
