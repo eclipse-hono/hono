@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,6 +17,7 @@ import org.eclipse.hono.application.client.ApplicationClient;
 import org.eclipse.hono.application.client.DownstreamMessage;
 import org.eclipse.hono.application.client.MessageConsumer;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 
@@ -57,4 +58,12 @@ public interface KafkaApplicationClient extends ApplicationClient<KafkaMessageCo
             String tenantId,
             Handler<DownstreamMessage<KafkaMessageContext>> messageHandler,
             Handler<Throwable> closeHandler);
+
+    /**
+     * Adds a handler to be invoked with a succeeded future once this client is ready to be used.
+     * This may be when the {@link #start()} result future is completed or some time afterwards.
+     *
+     * @param handler The handler to invoke. The handler will never be invoked with a failed future.
+     */
+    void addOnClientReadyHandler(Handler<AsyncResult<Void>> handler);
 }
