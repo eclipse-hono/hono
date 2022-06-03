@@ -362,7 +362,7 @@ public final class HonoConnectionImpl implements HonoConnection {
         LOG.trace("running on vert.x context [event-loop context: {}]", context.isEventLoopContext());
 
         // context cannot be null thus it is safe to
-        // ignore the Future returned by executeOrRunContext
+        // ignore the Future returned by executeOnContext
         executeOnContext(ignore -> {
 
             if (isConnectedInternal()) {
