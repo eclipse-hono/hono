@@ -35,6 +35,7 @@ import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProper
 
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracerFactory;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -100,6 +101,11 @@ public class KafkaApplicationClientImpl extends KafkaBasedCommandSender implemen
         }
         this.vertx = vertx;
         this.consumerConfig = consumerConfig;
+    }
+
+    @Override
+    public void addOnClientReadyHandler(final Handler<AsyncResult<Void>> handler) {
+        addOnKafkaProducerReadyHandler(handler);
     }
 
     @SuppressWarnings("rawtypes")
