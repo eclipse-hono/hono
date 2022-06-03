@@ -12,7 +12,9 @@
  */
 package org.eclipse.hono.commandrouter.app;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -266,24 +268,41 @@ public class Application extends AbstractServiceApplication {
 
         final var instancesToDeploy = appConfig.getMaxInstances();
         LOG.info("deploying {} {} instances ...", instancesToDeploy, getComponentName());
+        final Map<String, String> deploymentResult = new HashMap<>();
 
         // deploy authentication service (once only)
         final Future<String> authServiceDeploymentTracker = vertx.deployVerticle((Verticle) authenticationService)
-                .onSuccess(ok -> registerHealthCheckProvider(authenticationService));
+                .onSuccess(ok -> {
+                    LOG.info("successfully deployed authentication service verticle");
+                    deploymentResult.put("authentication service verticle", "successfully deployed");
+                    registerHealthCheckProvider(authenticationService);
+                });
 
         // deploy AMQP 1.0 server
         final Future<String> amqpServerDeploymentTracker = vertx.deployVerticle(
                 this::amqpServer,
-                new DeploymentOptions().setInstances(instancesToDeploy));
+                new DeploymentOptions().setInstances(instancesToDeploy))
+            .onSuccess(ok -> {
+                LOG.info("successfully deployed AMQP server verticle(s)");
+                deploymentResult.put("AMQP server verticle(s)", "successfully deployed");
+            });
 
         // deploy notification receiver
         final Future<String> notificationReceiverTracker = vertx.deployVerticle(
-                new WrappedLifecycleComponentVerticle(notificationReceiver()));
+                new WrappedLifecycleComponentVerticle(notificationReceiver()))
+            .onSuccess(ok -> {
+                LOG.info("successfully deployed notification receiver verticle(s)");
+                deploymentResult.put("notification receiver verticle", "successfully deployed");
+            });
 
         // deploy Kafka topic clean-up service (once only)
         final Future<String> topicCleanUpServiceDeploymentTracker = createKafkaTopicCleanUpService()
                 .map(service -> vertx.deployVerticle(service)
-                        .onSuccess(ok -> readinessChecks.register(() -> service.checkReadiness())))
+                        .onSuccess(ok -> {
+                            LOG.info("successfully deployed Kafka topic clean-up service verticle");
+                            deploymentResult.put("Kafka topic clean-up service verticle", "successfully deployed");
+                            readinessChecks.register(service::checkReadiness);
+                        }))
                 .orElse(Future.succeededFuture());
 
         CompositeFuture.all(
@@ -291,7 +310,7 @@ public class Application extends AbstractServiceApplication {
                 amqpServerDeploymentTracker,
                 notificationReceiverTracker,
                 topicCleanUpServiceDeploymentTracker)
-            .mapEmpty()
+            .map(deploymentResult)
             .onComplete(deploymentCheck);
     }
 

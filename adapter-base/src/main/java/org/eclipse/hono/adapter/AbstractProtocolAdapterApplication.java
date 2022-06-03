@@ -13,7 +13,9 @@
 package org.eclipse.hono.adapter;
 
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.Executors;
@@ -295,16 +297,27 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     protected void doStart() {
 
         LOG.info("deploying {} {} instances ...", appConfig.getMaxInstances(), getComponentName());
+        final Map<String, String> deploymentResult = new HashMap<>();
 
         final Future<String> adapterTracker = vertx.deployVerticle(
                 this::adapter,
-                new DeploymentOptions().setInstances(appConfig.getMaxInstances()));
+                new DeploymentOptions().setInstances(appConfig.getMaxInstances()))
+            .onSuccess(ok -> {
+                LOG.info("successfully deployed adapter verticle(s)");
+                deploymentResult.put("adapter verticle(s)", "successfully deployed");
+            })
+            .onFailure(t -> LOG.error("failed to deploy adapter verticle(s)", t));
 
         final Future<String> notificationReceiverTracker = vertx.deployVerticle(
-                new WrappedLifecycleComponentVerticle(notificationReceiver()));
+                new WrappedLifecycleComponentVerticle(notificationReceiver()))
+            .onSuccess(ok -> {
+                LOG.info("successfully deployed notification receiver verticle(s)");
+                deploymentResult.put("notification receiver verticle", "successfully deployed");
+            })
+            .onFailure(t -> LOG.error("failed to deploy notification receiver verticle(s)", t));
 
         CompositeFuture.all(adapterTracker, notificationReceiverTracker)
-            .mapEmpty()
+            .map(deploymentResult)
             .onComplete(deploymentCheck);
     }
 
@@ -352,6 +365,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                     tracer));
         }
         if (downstreamSenderConfig.isHostConfigured()) {
+            LOG.info("AMQP 1.0 client configuration present, adding AMQP 1.0 based messaging clients");
             telemetrySenderProvider.setClient(downstreamSender());
             eventSenderProvider.setClient(downstreamSender());
             commandResponseSenderProvider.setClient(
@@ -616,7 +630,10 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         } else {
             final ClientConfigProperties notificationConfig = new ClientConfigProperties(downstreamSenderConfig);
             notificationConfig.setServerRole("Notification");
-            notificationReceiver = new ProtonBasedNotificationReceiver(HonoConnection.newConnection(vertx, notificationConfig, tracer));
+            notificationReceiver = new ProtonBasedNotificationReceiver(HonoConnection.newConnection(
+                    vertx,
+                    notificationConfig,
+                    tracer));
         }
         if (notificationReceiver instanceof ServiceClient serviceClient) {
             healthCheckServer.registerHealthCheckResources(ServiceClientAdapter.forClient(serviceClient));

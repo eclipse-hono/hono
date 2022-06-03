@@ -12,6 +12,9 @@
  */
 package org.eclipse.hono.authentication.app;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
@@ -36,7 +39,7 @@ import org.slf4j.LoggerFactory;
 import io.smallrye.config.ConfigMapping;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Promise;
+import io.vertx.core.Future;
 import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
 
 /**
@@ -72,21 +75,28 @@ public class Application extends AbstractServiceApplication {
     protected void doStart() {
 
         LOG.info("deploying {} ...", getComponentName());
+        final Map<String, String> deploymentResult = new HashMap<>();
 
         // deploy authentication service (once only)
-        final Promise<String> authServiceDeploymentTracker = Promise.promise();
         final var authenticationService = authenticationService();
-        vertx.deployVerticle(authenticationService, authServiceDeploymentTracker);
+        final Future<String> authServiceDeploymentTracker = vertx.deployVerticle(authenticationService)
+                .onSuccess(ok -> {
+                    LOG.info("successfully deployed authentication service verticle");
+                    deploymentResult.put("authentication service verticle", "successfully deployed");
+                });
 
         // deploy AMQP 1.0 server
-        final Promise<String> amqpServerDeploymentTracker = Promise.promise();
-        vertx.deployVerticle(
+        final Future<String> amqpServerDeploymentTracker = vertx.deployVerticle(
                 () -> simpleAuthenticationServer(authenticationService),
-                new DeploymentOptions().setInstances(appConfig.getMaxInstances()),
-                amqpServerDeploymentTracker);
+                new DeploymentOptions().setInstances(appConfig.getMaxInstances()))
+            .onSuccess(ok -> {
+                LOG.info("successfully deployed AMQP server verticle(s)");
+                deploymentResult.put("AMQP server verticle(s)", "successfully deployed");
+            });
 
-        CompositeFuture.all(authServiceDeploymentTracker.future(), amqpServerDeploymentTracker.future())
-            .mapEmpty()
+
+        CompositeFuture.all(authServiceDeploymentTracker, amqpServerDeploymentTracker)
+            .map(deploymentResult)
             .onComplete(deploymentCheck);
     }
 

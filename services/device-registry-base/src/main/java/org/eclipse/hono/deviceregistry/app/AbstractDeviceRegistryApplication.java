@@ -13,6 +13,9 @@
 
 package org.eclipse.hono.deviceregistry.app;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import javax.inject.Inject;
 
 import org.eclipse.hono.notification.NotificationSender;
@@ -24,7 +27,7 @@ import org.slf4j.LoggerFactory;
 
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Promise;
+import io.vertx.core.Future;
 import io.vertx.core.Verticle;
 
 /**
@@ -54,38 +57,49 @@ public abstract class AbstractDeviceRegistryApplication extends AbstractServiceA
         }
 
         log.info("deploying {} {} instances ...", appConfig.getMaxInstances(), getComponentName());
+        final Map<String, String> deploymentResult = new HashMap<>();
 
         // deploy authentication service (once only)
-        final Promise<String> authServiceDeploymentTracker = Promise.promise();
-        vertx.deployVerticle((Verticle) authenticationService, authServiceDeploymentTracker);
+        final Future<String> authServiceDeploymentTracker = vertx.deployVerticle((Verticle) authenticationService)
+            .onSuccess(ok -> {
+                log.info("successfully deployed authentication service verticle");
+                deploymentResult.put("authentication service verticle", "successfully deployed");
+                registerHealthCheckProvider(authenticationService);
+            });
 
         // deploy notification sender (once only)
-        final Promise<String> notificationSenderDeploymentTracker = Promise.promise();
-        vertx.deployVerticle(
-                new WrappedLifecycleComponentVerticle(notificationSender),
-                notificationSenderDeploymentTracker);
+        final Future<String> notificationSenderDeploymentTracker = vertx.deployVerticle(
+                new WrappedLifecycleComponentVerticle(notificationSender))
+            .onSuccess(ok -> {
+                log.info("successfully deployed notification sender verticle(s)");
+                deploymentResult.put("notification sender verticle", "successfully deployed");
+            });
+
 
         // deploy AMQP 1.0 server
-        final Promise<String> amqpServerDeploymentTracker = Promise.promise();
-        vertx.deployVerticle(
+        final Future<String> amqpServerDeploymentTracker = vertx.deployVerticle(
                 () -> amqpServerFactory.newServer(),
-                new DeploymentOptions().setInstances(appConfig.getMaxInstances()),
-                amqpServerDeploymentTracker);
+                new DeploymentOptions().setInstances(appConfig.getMaxInstances()))
+            .onSuccess(ok -> {
+                log.info("successfully deployed AMQP server verticle(s)");
+                deploymentResult.put("AMQP server verticle(s)", "successfully deployed");
+            });
 
         // deploy HTTP server
-        final Promise<String> httpServerDeploymentTracker = Promise.promise();
-        vertx.deployVerticle(
+        final Future<String> httpServerDeploymentTracker = vertx.deployVerticle(
                 () -> httpServerFactory.newServer(),
-                new DeploymentOptions().setInstances(appConfig.getMaxInstances()),
-                httpServerDeploymentTracker);
+                new DeploymentOptions().setInstances(appConfig.getMaxInstances()))
+            .onSuccess(ok -> {
+                log.info("successfully deployed HTTP server verticle(s)");
+                deploymentResult.put("HTTP server verticle(s)", "successfully deployed");
+            });
 
         CompositeFuture.all(
-                authServiceDeploymentTracker.future(),
-                notificationSenderDeploymentTracker.future(),
-                amqpServerDeploymentTracker.future(),
-                httpServerDeploymentTracker.future())
-            .onSuccess(ok -> registerHealthCheckProvider(authenticationService))
-            .mapEmpty()
+                authServiceDeploymentTracker,
+                notificationSenderDeploymentTracker,
+                amqpServerDeploymentTracker,
+                httpServerDeploymentTracker)
+            .map(deploymentResult)
             .onComplete(deploymentCheck);
     }
 }

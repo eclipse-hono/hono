@@ -14,6 +14,12 @@
 
 package org.eclipse.hono.service;
 
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
+
 import javax.enterprise.context.ApplicationScoped;
 
 import org.eclipse.microprofile.health.HealthCheck;
@@ -22,7 +28,6 @@ import org.eclipse.microprofile.health.Readiness;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
-import io.vertx.core.Promise;
 
 
 /**
@@ -31,36 +36,41 @@ import io.vertx.core.Promise;
  */
 @Readiness
 @ApplicationScoped
-public final class DeploymentHealthCheck implements HealthCheck, Handler<AsyncResult<Object>> {
+public final class DeploymentHealthCheck implements HealthCheck, Handler<AsyncResult<Map<String, String>>> {
 
-    private final Promise<Object> deploymentTracker = Promise.promise();
+    private static final String NAME = "Vert.x deployment";
+    private static final HealthCheckResponse INITIAL_RESPONSE = HealthCheckResponse.builder()
+            .name(NAME).down().build();
+    private final AtomicReference<HealthCheckResponse> response = new AtomicReference<>(INITIAL_RESPONSE);
 
     /**
      * Notifies this tracker about the outcome of the deployment process.
      *
-     * @param result The outcome of the deployment.
-     * @throws IllegalStateException if this tracker has been completed already.
+     * @param outcome The outcome of the deployment.
+     * @throws NullPointerException if result is {@code null}.
+     * @throws IllegalStateException if the outcome has been reported already.
      */
     @Override
-    public void handle(final AsyncResult<Object> result) {
-        synchronized (deploymentTracker) {
-            deploymentTracker.handle(result);
+    public void handle(final AsyncResult<Map<String, String>> outcome) {
+        Objects.requireNonNull(outcome);
+        final var builder  = HealthCheckResponse.builder().name(NAME);
+        if (outcome.succeeded()) {
+            Optional.ofNullable(outcome.result())
+                .map(Map::entrySet)
+                .map(Set::stream)
+                .ifPresent(s -> s.forEach(entry -> builder.withData(entry.getKey(), entry.getValue())));
+            builder.up();
+        } else {
+            builder.withData("error deploying component instance(s)", outcome.cause().getMessage());
+            builder.down();
+        }
+        if (!response.compareAndSet(INITIAL_RESPONSE, builder.build())) {
+            throw new IllegalStateException("deployment outcome has already been reported");
         }
     }
 
     @Override
     public HealthCheckResponse call() {
-        final var builder  = HealthCheckResponse.builder().name("Vert.x deployment");
-
-        synchronized (deploymentTracker) {
-            if (!deploymentTracker.future().isComplete()) {
-                builder.down();
-            } else if (deploymentTracker.future().succeeded()) {
-                builder.up();
-            } else {
-                builder.withData("error deploying instance(s)", deploymentTracker.future().cause().getMessage()).down();
-            }
-        }
-        return builder.build();
+        return response.get();
     }
 }
