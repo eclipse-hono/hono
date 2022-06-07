@@ -26,7 +26,7 @@ public interface SendMessageSampler {
     interface Factory {
 
         /**
-         * Create a new sampler.
+         * Creates a new sampler.
          *
          * @param messageType The message type to create a sampler for.
          * @return A new sampler.
@@ -35,7 +35,7 @@ public interface SendMessageSampler {
         SendMessageSampler create(String messageType);
 
         /**
-         * Get a default, no-op implementation.
+         * Gets a default, no-op implementation.
          *
          * @return A no-op implementation, never returns {@code null}.
          */
@@ -46,7 +46,7 @@ public interface SendMessageSampler {
     }
 
     /**
-     * Get a default, no-op implementation.
+     * Gets a default, no-op implementation.
      *
      * @return A no-op implementation, never returns {@code null}.
      */
@@ -79,7 +79,7 @@ public interface SendMessageSampler {
             }
 
             @Override
-            public void queueFull(final String tenantId) {
+            public void noCredit(final String tenantId) {
             }
 
         };
@@ -106,14 +106,14 @@ public interface SendMessageSampler {
         String OUTCOME_ABORTED = "aborted";
 
         /**
-         * Call when the message was processed by the remote peer.
+         * Marks the sampling operation as completed. To be called when the message was processed by the remote peer.
          *
          * @param outcome The outcome of the message. This is expected to be one of AMQP dispositions.
          */
         void completed(String outcome);
 
         /**
-         * Call when the message was processed by the remote peer.
+         * Marks the sampling operation as completed. To be called when the message was processed by the remote peer.
          * <p>
          * This method will use the <em>simple class name</em> of the delivery state parameter. If the
          * parameter is {@code null} the operating is considered <em>aborted</em> and the value {@link #OUTCOME_ABORTED}
@@ -130,14 +130,14 @@ public interface SendMessageSampler {
         }
 
         /**
-         * Call when the operation timed out.
+         * To be called when sending the message timed out.
          */
         void timeout();
 
     }
 
     /**
-     * Start operation.
+     * Starts the sampling operation.
      *
      * @param tenantId The tenant ID to sample for. If {@code null} or an empty string,
      *                 the value <em>UNKNOWN</em> will be used as the tenant identifier.
@@ -146,11 +146,11 @@ public interface SendMessageSampler {
     Sample start(String tenantId);
 
     /**
-     * Record a case of "queue full".
+     * Records a case when there are no credits for sending a message.
      *
      * @param tenantId The tenant ID to sample for. If {@code null} or an empty string,
      *                 the value <em>UNKNOWN</em> will be used as the tenant identifier.
      */
-    void queueFull(String tenantId);
+    void noCredit(String tenantId);
 
 }

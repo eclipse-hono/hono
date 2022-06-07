@@ -99,7 +99,7 @@ public class MicrometerBasedMetricsTest {
                 .and(MetricsTags.getTenantTag("tenant"))
                 .and(MetricsTags.ProcessingOutcome.FORWARDED.asTag())
                 .and(MetricsTags.QoS.AT_LEAST_ONCE.asTag());
-        assertNotNull(registry.find(MicrometerBasedMetrics.METER_MESSAGES_RECEIVED).tags(expectedTags).timer());
+        assertNotNull(registry.find(MicrometerBasedMetrics.METER_TELEMETRY_PROCESSING_DURATION).tags(expectedTags).timer());
 
         // and reporting another telemetry message with no QoS but with a TTD status succeeds
 
@@ -144,7 +144,7 @@ public class MicrometerBasedMetricsTest {
                 .and(MetricsTags.QoS.UNKNOWN.asTag())
                 .and(MetricsTags.TtdStatus.NONE.asTag());
 
-        assertNotNull(registry.find(MicrometerBasedMetrics.METER_MESSAGES_RECEIVED).tags(expectedTags).timer());
+        assertNotNull(registry.find(MicrometerBasedMetrics.METER_TELEMETRY_PROCESSING_DURATION).tags(expectedTags).timer());
     }
 
     /**
@@ -172,7 +172,7 @@ public class MicrometerBasedMetricsTest {
                 metrics.startTimer());
 
         assertEquals(4 * 1024,
-                registry.find(MicrometerBasedMetrics.METER_MESSAGES_PAYLOAD).summary().totalAmount());
+                registry.find(MicrometerBasedMetrics.METER_TELEMETRY_PAYLOAD).summary().totalAmount());
     }
 
     /**
@@ -198,7 +198,7 @@ public class MicrometerBasedMetricsTest {
                 metrics.startTimer());
 
         assertEquals(4 * 1024,
-                registry.find(MicrometerBasedMetrics.METER_COMMANDS_PAYLOAD).summary().totalAmount());
+                registry.find(MicrometerBasedMetrics.METER_COMMAND_PAYLOAD).summary().totalAmount());
     }
 
     /**
@@ -297,10 +297,10 @@ public class MicrometerBasedMetricsTest {
         reportTelemetry(metrics);
         reportCommand(metrics);
 
-        assertNotNull(registry.find(MicrometerBasedMetrics.METER_MESSAGES_PAYLOAD).tags(tenantTags).meter());
-        assertNotNull(registry.find(MicrometerBasedMetrics.METER_MESSAGES_RECEIVED).tags(tenantTags).meter());
-        assertNotNull(registry.find(MicrometerBasedMetrics.METER_COMMANDS_PAYLOAD).tags(tenantTags).meter());
-        assertNotNull(registry.find(MicrometerBasedMetrics.METER_COMMANDS_RECEIVED).tags(tenantTags).meter());
+        assertNotNull(registry.find(MicrometerBasedMetrics.METER_TELEMETRY_PAYLOAD).tags(tenantTags).meter());
+        assertNotNull(registry.find(MicrometerBasedMetrics.METER_TELEMETRY_PROCESSING_DURATION).tags(tenantTags).meter());
+        assertNotNull(registry.find(MicrometerBasedMetrics.METER_COMMAND_PAYLOAD).tags(tenantTags).meter());
+        assertNotNull(registry.find(MicrometerBasedMetrics.METER_COMMAND_PROCESSING_DURATION).tags(tenantTags).meter());
         assertNotNull(registry.find(MicrometerBasedMetrics.METER_CONNECTIONS_AUTHENTICATED).tags(tenantTags).meter());
 
         // WHEN the device disconnects ...
@@ -310,10 +310,10 @@ public class MicrometerBasedMetricsTest {
         timerHandler.get().handle(null);
 
         // THEN the metrics have been removed
-        assertNull(registry.find(MicrometerBasedMetrics.METER_MESSAGES_PAYLOAD).tags(tenantTags).meter());
-        assertNull(registry.find(MicrometerBasedMetrics.METER_MESSAGES_RECEIVED).tags(tenantTags).meter());
-        assertNull(registry.find(MicrometerBasedMetrics.METER_COMMANDS_PAYLOAD).tags(tenantTags).meter());
-        assertNull(registry.find(MicrometerBasedMetrics.METER_COMMANDS_RECEIVED).tags(tenantTags).meter());
+        assertNull(registry.find(MicrometerBasedMetrics.METER_TELEMETRY_PAYLOAD).tags(tenantTags).meter());
+        assertNull(registry.find(MicrometerBasedMetrics.METER_TELEMETRY_PROCESSING_DURATION).tags(tenantTags).meter());
+        assertNull(registry.find(MicrometerBasedMetrics.METER_COMMAND_PAYLOAD).tags(tenantTags).meter());
+        assertNull(registry.find(MicrometerBasedMetrics.METER_COMMAND_PROCESSING_DURATION).tags(tenantTags).meter());
         assertNull(registry.find(MicrometerBasedMetrics.METER_CONNECTIONS_AUTHENTICATED).tags(tenantTags).meter());
 
     }

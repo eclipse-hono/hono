@@ -69,33 +69,34 @@ public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Facto
      */
     public static final String METER_CONNECTIONS_ATTEMPTS = "hono.connections.attempts";
     /**
-     * The name of the meter for recording message payload size.
+     * The name of the meter for recording the telemetry/event message payload size.
      */
-    public static final String METER_MESSAGES_PAYLOAD = "hono.messages.payload";
+    public static final String METER_TELEMETRY_PAYLOAD = "hono.telemetry.payload";
     /**
-     * The name of the meter for messages received from devices.
+     * The name of the meter for tracking the processing duration of telemetry/event messages received from devices.
      */
-    public static final String METER_MESSAGES_RECEIVED = "hono.messages.received";
+    public static final String METER_TELEMETRY_PROCESSING_DURATION = "hono.telemetry.processing.duration";
     /**
-     * The name of the meter for recording command payload size.
+     * The name of the meter for recording the command payload size.
      */
-    public static final String METER_COMMANDS_PAYLOAD = "hono.commands.payload";
+    public static final String METER_COMMAND_PAYLOAD = "hono.command.payload";
     /**
-     * The name of the meter for command messages.
+     * The name of the meter for tracking the processing duration of command messages.
      */
-    public static final String METER_COMMANDS_RECEIVED = "hono.commands.received";
+    public static final String METER_COMMAND_PROCESSING_DURATION = "hono.command.processing.duration";
     /**
-     * The name of the meter for queue full events.
+     * The name of the meter for counting the messages that could not be sent because there was no credit.
      */
-    public static final String METER_DOWNSTREAM_FULL = "hono.downstream.full";
+    public static final String METER_AMQP_NOCREDIT = "hono.amqp.nocredit";
     /**
-     * The name of the meter for sent messages.
+     * The name of the meter for tracking the duration of AMQP message deliveries.
      */
-    public static final String METER_DOWNSTREAM_SENT = "hono.downstream.sent";
+    public static final String METER_AMQP_DELIVERY_DURATION = "hono.amqp.delivery.duration";
     /**
-     * The name of the meter for timed out messages.
+     * The name of the meter for counting sent AMQP messages for which the sender did not receive a disposition update
+     * in time.
      */
-    public static final String METER_DOWNSTREAM_TIMEOUT = "hono.downstream.timeout";
+    public static final String METER_AMQP_TIMEOUT = "hono.amqp.timeout";
 
     private static final long DEFAULT_TENANT_IDLE_TIMEOUT = Duration.ZERO.toMillis();
     private static final long DEVICE_CONNECTION_DURATION_RECORDING_INTERVAL_IN_MS = TimeUnit.SECONDS.toMillis(10);
@@ -284,10 +285,10 @@ public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Facto
                 .and(qos.asTag())
                 .and(ttdStatus.asTag());
 
-        timer.stop(this.registry.timer(METER_MESSAGES_RECEIVED, tags));
+        timer.stop(this.registry.timer(METER_TELEMETRY_PROCESSING_DURATION, tags));
 
         // record payload size
-        DistributionSummary.builder(METER_MESSAGES_PAYLOAD)
+        DistributionSummary.builder(METER_TELEMETRY_PAYLOAD)
             .baseUnit("bytes")
             .minimumExpectedValue(0.0)
             .tags(tags)
@@ -319,10 +320,10 @@ public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Facto
                 .and(MetricsTags.getTenantTag(tenantId))
                 .and(outcome.asTag());
 
-        timer.stop(this.registry.timer(METER_COMMANDS_RECEIVED, tags));
+        timer.stop(this.registry.timer(METER_COMMAND_PROCESSING_DURATION, tags));
 
         // record payload size
-        DistributionSummary.builder(METER_COMMANDS_PAYLOAD)
+        DistributionSummary.builder(METER_COMMAND_PAYLOAD)
             .baseUnit("bytes")
             .minimumExpectedValue(0.0)
             .tags(tags)
@@ -433,14 +434,14 @@ public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Facto
         registry.find(METER_CONNECTIONS_AUTHENTICATED).tags(tenantTag).meters().forEach(registry::remove);
         registry.find(METER_CONNECTIONS_AUTHENTICATED_DURATION).tags(tenantTag).meters().forEach(registry::remove);
 
-        registry.find(METER_MESSAGES_PAYLOAD).tags(tenantTag).meters().forEach(registry::remove);
-        registry.find(METER_MESSAGES_RECEIVED).tags(tenantTag).meters().forEach(registry::remove);
-        registry.find(METER_COMMANDS_PAYLOAD).tags(tenantTag).meters().forEach(registry::remove);
-        registry.find(METER_COMMANDS_RECEIVED).tags(tenantTag).meters().forEach(registry::remove);
+        registry.find(METER_TELEMETRY_PAYLOAD).tags(tenantTag).meters().forEach(registry::remove);
+        registry.find(METER_TELEMETRY_PROCESSING_DURATION).tags(tenantTag).meters().forEach(registry::remove);
+        registry.find(METER_COMMAND_PAYLOAD).tags(tenantTag).meters().forEach(registry::remove);
+        registry.find(METER_COMMAND_PROCESSING_DURATION).tags(tenantTag).meters().forEach(registry::remove);
 
-        registry.find(METER_DOWNSTREAM_FULL).tags(tenantTag).meters().forEach(registry::remove);
-        registry.find(METER_DOWNSTREAM_SENT).tags(tenantTag).meters().forEach(registry::remove);
-        registry.find(METER_DOWNSTREAM_TIMEOUT).tags(tenantTag).meters().forEach(registry::remove);
+        registry.find(METER_AMQP_NOCREDIT).tags(tenantTag).meters().forEach(registry::remove);
+        registry.find(METER_AMQP_DELIVERY_DURATION).tags(tenantTag).meters().forEach(registry::remove);
+        registry.find(METER_AMQP_TIMEOUT).tags(tenantTag).meters().forEach(registry::remove);
 
         vertx.eventBus().publish(Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT, tenantId);
     }
@@ -493,7 +494,7 @@ public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Facto
                                 Tag.of(MetricsTags.TAG_TYPE, messageType),
                                 MetricsTags.getTenantTag(tenantId),
                                 Tag.of("outcome", outcome));
-                        sample.stop(registry.timer(METER_DOWNSTREAM_SENT, tags));
+                        sample.stop(registry.timer(METER_AMQP_DELIVERY_DURATION, tags));
 
                     }
 
@@ -509,7 +510,7 @@ public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Facto
                         final Tags tags = Tags.of(
                                 Tag.of(MetricsTags.TAG_TYPE, messageType),
                                 MetricsTags.getTenantTag(tenantId));
-                        registry.counter(METER_DOWNSTREAM_TIMEOUT, tags).increment();
+                        registry.counter(METER_AMQP_TIMEOUT, tags).increment();
 
                     }
                 };
@@ -517,12 +518,12 @@ public class MicrometerBasedMetrics implements Metrics, SendMessageSampler.Facto
             }
 
             @Override
-            public void queueFull(final String tenantId) {
+            public void noCredit(final String tenantId) {
 
                 final Tags tags = Tags.of(
                         Tag.of(MetricsTags.TAG_TYPE, messageType),
                         MetricsTags.getTenantTag(tenantId));
-                registry.counter(METER_DOWNSTREAM_FULL, tags).increment();
+                registry.counter(METER_AMQP_NOCREDIT, tags).increment();
 
             }
         };

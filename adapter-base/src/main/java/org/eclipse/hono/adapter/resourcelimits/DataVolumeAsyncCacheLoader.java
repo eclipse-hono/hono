@@ -41,9 +41,9 @@ import io.vertx.ext.web.client.WebClient;
 public class DataVolumeAsyncCacheLoader extends PrometheusBasedAsyncCacheLoader<LimitedResourceKey, LimitedResource<Long>> {
 
     private static final String METRIC_NAME_COMMANDS_PAYLOAD_SIZE = String.format("%s_bytes_sum",
-            MicrometerBasedMetrics.METER_COMMANDS_PAYLOAD.replace(".", "_"));
+            MicrometerBasedMetrics.METER_COMMAND_PAYLOAD.replace(".", "_"));
     private static final String METRIC_NAME_MESSAGES_PAYLOAD_SIZE = String.format("%s_bytes_sum",
-            MicrometerBasedMetrics.METER_MESSAGES_PAYLOAD.replace(".", "_"));
+            MicrometerBasedMetrics.METER_TELEMETRY_PAYLOAD.replace(".", "_"));
 
     private static final String QUERY_TEMPLATE_MESSAGE_LIMIT = String.format(
             "floor(sum(increase(%1$s{status=~\"%3$s|%4$s\", tenant=\"%%1$s\"} [%%2$dm]) or vector(0)) + sum(increase(%2$s{status=~\"%3$s|%4$s\", tenant=\"%%1$s\"} [%%2$dm]) or vector(0)))",
