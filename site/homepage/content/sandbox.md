@@ -10,44 +10,53 @@ We are providing a publicly accessible Eclipse Hono&trade; *sandbox* environment
 The main purpose of the system is to provide an environment for experimenting with devices and how to connect them
 to Hono without the need for setting up a local instance.
 
-{{% note title="Deprecated domain name" %}}
-The sandbox used to be available at `hono.eclipse.org`. That domain name will still work for some time but
-will eventually be disabled. Please update your URLs accordingly.
-{{% /note %}}
+## Accessing the Sandbox
 
-The sandbox hosts a Hono instance consisting of the same components as described in the
-[Getting started Guide]({{% doclink "getting-started" %}}).
-All services are exposed via the same ports as used in the guide.
+The sandbox hosts a Hono instance consisting of the components listed in the table below.
+The components can be accessed as described in the [Getting started Guide]({{% doclink "getting-started" %}}).
+
+| Component | Service Port(s) |
+| :-------- | :------ |
+| Device Registry | 28080 (HTTP 1.1/TCP)<br>28443 (HTTP 1.1/TLS) |
+| AMQP Protocol Adapter | 5672 (AMQP 1.0/TCP)<br>5671 (AMQP 1.0/TLS) |
+| CoAP Protocol Adapter | 5684 (CoAP/DTLS) |
+| HTTP Protocol Adapter | 8080 (HTTP 1.1/TCP)<br>8443 (HTTP 1.1/TLS) |
+| MQTT Protocol Adapter | 1883 (MQTT 3.1.1/TCP)<br>8883 (MQTT 3.1.1/TLS) |
+| Messaging Infrastructure (AMQP 1.0) | 15672 (AMQP 1.0/TCP)<br>15671 (AMQP 1.0/TLS) |
+| Messaging Infrastructure (Kafka) | 9094 (Kafka/TCP) |
 
 ## Take note
 
-* The sandbox is intended for **testing purposes only**. Under no circumstances should it be used for any production use case.
-  It is also **not allowed** to register with nor publish any personally identifiable information to any of the sandbox's services.
-* You can use the sandbox without revealing who you are or any information about yourself. The APIs of the Device Registry running
-  on the sandbox can be used anonymously for creating tenants, register devices and add credentials. However, data can only be added
-  but **cannot be updated or removed** using the corresponding APIs. This is to prevent others from tampering with your
-  tenants/devices/credentials. In order to minimize the risk of dissemination of data, all tenants, devices and credentials are
-  **deleted periodically**.
-* We do not collect nor share with third parties any of the data you provide when registering tenants, devices and credentials.
-  We also do not inspect nor collect nor share with third parties any of the data your devices publish to the sandbox.
-* **Play fair!** The sandbox's computing resources are (quite) limited. The number of devices that can be registered per tenant
-  is therefore limited to 100.
-* The sandbox will be running the latest Hono release or milestone (if available). However, we may also deploy a more recent nightly
-  build without further notice.
-* In order to minimize the risk of collisions of device identities and credentials and to reduce the risk of others *guessing*
-  your identifiers, you are advised to use **non-trivial, hard-to-guess** tenant and device identifiers (e.g. a UUID).
-* The Apache Artemis instance we use for brokering events is configured with a maximum queue size of 1MB, i.e. you can only buffer
-  up to 1 MB of events (per tenant) without having any consumer connected that actually processes the events.
-  Once that limit is reached, no more events will be accepted by the protocol adapters for the corresponding tenant.
-  In addition to that, events that are not consumed will automatically be removed from the queue(s) after five minutes.
-* The sandbox exposes its API endpoints on both a TLS secured as well as an unsecured port. The secure ports use a Let's Encrypt
-  certificate so you should not need to configure a specific trust store on your client in order to interact with them. Please note
-  that when using the unsecured ports, the information you exchange with the sandbox might be exposed to eavesdroppers.
-  We therefore **strongly suggest** that you use the secure ports only, if possible!
+* The sandbox is intended for **testing purposes only**. Under no circumstances should it be used for any production
+  use case. It is also **not allowed** to register with nor publish any personally identifiable information to any of
+  the sandbox's services.
+* You can use the sandbox without revealing who you are or any information about yourself. The APIs of the Device
+  Registry running on the sandbox can be used anonymously for creating tenants, register devices and add credentials.
+  In order to minimize the risk of dissemination of data, all tenants, devices and credentials are **deleted
+  periodically**.
+* We do not collect nor share with third parties any of the data you provide when registering tenants, devices and
+  credentials. We also do not inspect nor collect nor share with third parties any of the data your devices publish
+  to the sandbox.
+* **Play fair!** The sandbox's computing resources are (quite) limited. The number of devices that can be registered
+  per tenant is therefore limited to 10.
+* The sandbox will be running the latest Hono release or milestone (if available). However, we may also deploy a more
+  recent nightly build without further notice.
+* In order to minimize the risk of collisions of device identities and credentials and to reduce the risk of others
+  *guessing* your identifiers, you are advised to use **non-trivial, hard-to-guess** tenant and device identifiers
+  (e.g. a UUID).
+* The Apache Artemis instance we use for brokering events is configured with a maximum queue size of 1MB, i.e. you
+  can only buffer up to 1 MB of events (per tenant) without having any consumer connected that actually processes the
+  events. Once that limit is reached, no more events will be accepted by the protocol adapters for the corresponding
+  tenant. In addition to that, events that are not consumed will automatically be removed from the queue(s) after
+  five minutes.
+* The sandbox exposes its API endpoints on both a TLS secured as well as an unsecured port. The secure ports use a
+  Let's Encrypt certificate so you should not need to configure a specific trust store on your client in order to
+  interact with them. Please note that when using the unsecured ports, the information you exchange with the sandbox
+  might be exposed to eavesdroppers. We therefore **strongly suggest** that you use the secure ports only, if possible!
   When using the [Hono client]({{% doclink "/admin-guide/hono-client-configuration/" %}}) to access the sandbox'
-  Telemetry and/or Event APIs, make sure to not set a trust store explicitly but instead set the *tlsEnabled* property to `true`.
-  The command line client binary is available from the [downloads page]({{< relref "downloads#binaries" >}}) and
-  can be used to consume telemetry/event messages from the sandbox as below:
+  Telemetry and/or Event APIs, make sure to not set a trust store explicitly but instead set the *tlsEnabled* property
+  to `true`. The command line client binary is available from the [downloads page]({{< relref "downloads#binaries" >}})
+  and can be used to consume telemetry/event messages from the sandbox as below:
 
   ~~~sh
   # in directory where the hono-cli-*-exec.jar file has been downloaded to
@@ -57,5 +66,6 @@ All services are exposed via the same ports as used in the guide.
 
 
 {{% warning %}}
-Everybody who knows your tenant identifier will be able to consume data published by your devices and everybody who also knows the device identifier can read the registration information of that device.
+Everybody who knows your tenant identifier will be able to consume data published by your devices and everybody who
+also knows the device identifier can read the registration information of that device.
 {{% /warning %}}
