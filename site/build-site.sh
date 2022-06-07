@@ -55,7 +55,7 @@ DOC_THEME_CLONING_REQUIRED=1
 if [ -d themes/hugo-theme-relearn/.git ]
 then
   HEAD=$(cat themes/hugo-theme-relearn/.git/HEAD)
-  DOC_THEME_HEAD_REVISION="64911282a49967f886c5a3c5e23e46907af85335"
+  DOC_THEME_HEAD_REVISION="e9938d80ae8b5fd0d3db918e3643c01f485be19c"
   if [[ "${DOC_THEME_HEAD_REVISION}" == "${HEAD}" ]]
   then
     DOC_THEME_CLONING_REQUIRED=0
@@ -66,7 +66,7 @@ if [[ ${DOC_THEME_CLONING_REQUIRED} -eq 1 ]]
 then
   rm -rf themes/hugo-theme-relearn
   echo "cloning doc theme repository..."
-  git clone --depth 1 --branch 3.4.1 https://github.com/McShelby/hugo-theme-relearn.git themes/hugo-theme-relearn
+  git clone --depth 1 --branch 4.0.3 https://github.com/McShelby/hugo-theme-relearn.git themes/hugo-theme-relearn
 fi
 
 echo "Building documentation in directory: $TARGET/docs"
