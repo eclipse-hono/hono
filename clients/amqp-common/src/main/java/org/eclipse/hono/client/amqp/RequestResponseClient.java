@@ -624,7 +624,7 @@ public class RequestResponseClient<R extends RequestResponseResult<?>> extends A
                 res.fail(new ServerErrorException(
                         HttpURLConnection.HTTP_UNAVAILABLE, "no credit available for sending request"));
 
-                sampler.queueFull(tenantId);
+                sampler.noCredit(tenantId);
 
             } else {
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -10,7 +10,6 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-
 
 package org.eclipse.hono.adapter.resourcelimits;
 
@@ -57,8 +56,8 @@ public class DataVolumeAsyncCacheLoaderTest extends AsyncCacheLoaderTestBase {
             final long minutes) {
 
         return String.format(
-                "floor(sum(increase(hono_messages_payload_bytes_sum{status=~\"forwarded|unprocessable\", tenant=\"%1$s\"} [%2$dm]) or vector(0))"
-                + " + sum(increase(hono_commands_payload_bytes_sum{status=~\"forwarded|unprocessable\", tenant=\"%1$s\"} [%2$dm]) or vector(0)))",
+                "floor(sum(increase(hono_telemetry_payload_bytes_sum{status=~\"forwarded|unprocessable\", tenant=\"%1$s\"} [%2$dm]) or vector(0))"
+                + " + sum(increase(hono_command_payload_bytes_sum{status=~\"forwarded|unprocessable\", tenant=\"%1$s\"} [%2$dm]) or vector(0)))",
                 tenantId,
                 minutes);
     }

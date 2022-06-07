@@ -73,7 +73,7 @@ Additional tags for *hono.connections.attempts*:
 | *cipher-suite* | *string*                                           | The name of the cipher suite that is used for the device's connection to the adapter. The specific value depends on the TLS implementation used by the protocol adapter.<br/>The value `UNKNOWN` is used if the connection does not use TLS or the cipher suite could not be determined, e.g. because the connection attempt failed before the cipher suite has been negotiated. |
 | *outcome*      | `adapter-disabled`, `connection-duration-exceeded`,<br/>`data-volume-exceeded`, `registration-assertion-failure`,<br/>`succeeded`, `tenant-connections-exceeded`,<br/>`unauthorized`, `unavailable`, `unknown` | The outcome of a device's connection attempt.<br/>`adapter-connections-exceeded` indicates that the maximum number of connections that the adapter instance can handle are exceeded<br/>`adapter-disabled` indicates that the protocol adapter is not enabled for the device's tenant<br/>`connection-duration-exceeded` indicates that the overall amount of time that a tenant's devices may be connected to an adapter has exceeded<br/>`data-volume-exceeded` indicates that the overall amount of data that a tenant's device may transfer per time period has exceeded<br/>`registration-assertion-failure` indicates that the device is either unknown or disabled<br/>`succeeded` indicates a successfully established connection<br/>`tenant-connections-exceeded` indicates that the maximum number of devices that may be connected simultaneously for a tenant has been exceeded<br/>`unauthorized` indicates that the device failed to authenticate<br/>`unavailable` indicates that some of Hono's (required) services are not available<br/>`unknown` indicates an unknown reason. |
 
-Additional tags for *hono.downstream.sent*:
+Additional tags for *hono.amqp.delivery.duration*:
 
 | Name        | Value                                              | Description |
 | ----------- | -------------------------------------------------- | ----------- |
@@ -83,17 +83,17 @@ Metrics provided by the protocol adapters are:
 
 | Metric                             | Type                | Tags                                                                                         | Description |
 | ---------------------------------- | ------------------- | -------------------------------------------------------------------------------------------- | ----------- |
-| *hono.commands.received*           | Timer               | *host*, *component-type*, *component-name*, *tenant*, *type*, *status*, *direction*          | The time it took to process a message conveying a command or a response to a command. |
-| *hono.commands.payload*            | DistributionSummary | *host*, *component-type*, *component-name*, *tenant*, *type*, *status*, *direction*          | The number of bytes conveyed in the payload of a command message. |
+| *hono.amqp.delivery.duration*      | Timer               | *host*, *component-type*, *component-name*, *tenant*, *type*, *outcome*                      | The time it took to send an AMQP 1.0 message and receive the remote peers disposition. |
+| *hono.amqp.nocredit*               | Counter             | *host*, *component-type*, *component-name*, *tenant*, *type*                                 | The number of times an AMQP 1.0 message should be sent, but could not because the sender was out of credit. |
+| *hono.amqp.timeout*                | Counter             | *host*, *component-type*, *component-name*, *tenant*, *type*                                 | The number of times sending an AMQP 1.0 message timed out, meaning that no disposition was received in the appropriate amount of time. |
+| *hono.command.payload*             | DistributionSummary | *host*, *component-type*, *component-name*, *tenant*, *type*, *status*, *direction*          | The number of bytes conveyed in the payload of a command message. |
+| *hono.command.processing.duration* | Timer               | *host*, *component-type*, *component-name*, *tenant*, *type*, *status*, *direction*          | The time it took to process a message conveying a command or a response to a command. |
 | *hono.connections.authenticated*   | Gauge               | *host*, *component-type*, *component-name*, *tenant*                                         | Current number of connected, authenticated devices. <br/> **NB** This metric is only supported by protocol adapters that maintain *connection state* with authenticated devices. In particular, the HTTP adapter does not support this metric. |
 | *hono.connections.unauthenticated* | Gauge               | *host*, *component-type*, *component-name*                                                   | Current number of connected, unauthenticated devices. <br/> **NB** This metric is only supported by protocol adapters that maintain *connection state* with authenticated devices. In particular, the HTTP adapter does not support this metric. |
 | *hono.connections.authenticated.duration* | Timer        | *host*, *component-type*, *component-name*, *tenant*                                         | The overall amount of time that authenticated devices have been connected to protocol adapters. <br/> **NB** This metric is only supported by protocol adapters that maintain *connection state* with authenticated devices. In particular, the HTTP adapter does not support this metric. |
 | *hono.connections.attempts*        | Counter             | *host*, *component-type*, *component-name*, *tenant*, *outcome*, *cipher-suite*              | The number of attempts made by devices to connect to a protocol adapter. The *outcome* tag's value determines if the attempt was successful or not. In the latter case the outcome also indicates the reason for the failure to connect.<br/>**NB** This metric is only supported by protocol adapters that maintain *connection state* with authenticated devices. In particular, the HTTP adapter does not support this metric. |
-| *hono.downstream.full*             | Counter             | *host*, *component-type*, *component-name*, *tenant*, *type*                                 | The number of times a message should be sent, but could not because the sender was out of credit. |
-| *hono.downstream.sent*             | Timer               | *host*, *component-type*, *component-name*, *tenant*, *type*, *outcome*                      | The time it took to send a message and receive the remote peers disposition. |
-| *hono.downstream.timeout*          | Counter             | *host*, *component-type*, *component-name*, *tenant*, *type*                                 | The number of times a message timed out, meaning that no disposition was received in the appropriate amount of time. |
-| *hono.messages.received*           | Timer               | *host*, *component-type*, *component-name*, *tenant*, *type*, *status*, *qos*, *ttd*         | The time it took to process a message conveying telemetry data or an event. |
-| *hono.messages.payload*            | DistributionSummary | *host*, *component-type*, *component-name*, *tenant*, *type*, *status*                       | The number of bytes conveyed in the payload of a telemetry or event message. |
+| *hono.telemetry.payload*           | DistributionSummary | *host*, *component-type*, *component-name*, *tenant*, *type*, *status*                       | The number of bytes conveyed in the payload of a telemetry or event message. |
+| *hono.telemetry.processing.duration* | Timer              | *host*, *component-type*, *component-name*, *tenant*, *type*, *status*, *qos*, *ttd*         | The time it took to process a message conveying telemetry data or an event. |
 
 #### Minimum Message Size
 
@@ -116,7 +116,12 @@ For an incoming message of size 10KB, it is reported as 12KB.
 
 #### Command Router
 
+Command messages get first received by the Command Router component and then get forwarded to the matching protocol adapter
+instance, where the command will be reflected in the corresponding protocol adapter metrics with the *hono.command* prefix.
+If the command could not be forwarded to a protocol adapter, the Command Router will report the command in its metrics,
+as listed below.
+
 | Metric                             | Type                | Tags                                                     | Description |
 | ---------------------------------- | ------------------- | -------------------------------------------------------- | ----------- |
-| *hono.commands.received*           | Timer               | *host*, *component-type*, *component-name*, *tenant*, *type*, *status*, *direction* | The time it took to process a message conveying a command that could not be forwarded to a protocol adapter. |
-| *hono.commands.payload*            | DistributionSummary | *host*, *component-type*, *component-name*, *tenant*, *type*, *status*, *direction* | The number of bytes conveyed in the payload of a command message that could not be forwarded to a protocol adapter. |
+| *hono.command.payload*             | DistributionSummary | *host*, *component-type*, *component-name*, *tenant*, *type*, *status*, *direction* | The number of bytes conveyed in the payload of a command message that could not be forwarded to a protocol adapter. |
+| *hono.command.processing.duration* | Timer               | *host*, *component-type*, *component-name*, *tenant*, *type*, *status*, *direction* | The time it took to process a message conveying a command that could not be forwarded to a protocol adapter. |

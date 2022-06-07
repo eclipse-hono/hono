@@ -351,7 +351,7 @@ public class GenericSenderLink extends AbstractHonoClient {
                 logError(currentSpan, e);
                 currentSpan.finish();
                 result.fail(e);
-                sampler.queueFull(tenantId);
+                sampler.noCredit(tenantId);
             } else {
                 sendOperation.get().onComplete(result);
             }

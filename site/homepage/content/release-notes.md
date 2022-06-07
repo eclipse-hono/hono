@@ -114,6 +114,11 @@ description = "Information about changes in recent Hono releases. Includes new f
   removing the *-vertx* and *-quarkus* parts from the names.
 * The *hono-adapters-quarkus* and *hono-services-quarkus* Maven modules, used as parent modules for protocol adapter
   and service implementations, have been renamed to *hono-adapters-parent* and *hono-services-parent*, respectively.
+* The *hono.messages* metrics have been renamed to *hono.telemetry* and *hono.messages.received* has been renamed to
+  *hono.telemetry.processing.duration*.
+* The *hono.commands* metrics have been renamed to *hono.command*.
+* The *hono.downstream* metrics have been renamed to *hono.amqp*, *hono.downstream.sent* has been renamed to
+  *hono.amqp.delivery.duration* and *hono.downstream.full* has been renamed to *hono.amqp.nocredit*.
 
 ### Deprecations
 
