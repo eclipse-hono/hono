@@ -9,7 +9,6 @@ The variables are still used to keep track of places that need to be changed tog
     --MAIN-TITLES-TEXT-color: #4c4c4c; /* Color of titles h2-h3-h4-h5 */
     --MAIN-LINK-color: #c55c04; /* Color of links */
     --MAIN-LINK-HOVER-color: #f08712; /* Color of hovered links */
-    --MAIN-ANCHOR-color: #f08712; /* color of anchors on titles */
 
     --MENU-HEADER-BG-color: #f6f6f6; /* Background color of menu header */
     --MENU-HEADER-BORDER-color: #f08712; /*Color of menu header border */
@@ -50,11 +49,6 @@ h2, h3, h4, h5 {
 a {
     color: #c55c04;
     color: var(--MAIN-LINK-color);
-}
-
-.anchor {
-    color: #f08712;
-    color: var(--MAIN-ANCHOR-color);
 }
 
 a:hover {

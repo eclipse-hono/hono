@@ -18,9 +18,6 @@ pluralizeListTitles = "false"
   description = "A set of micro-services for connecting millions of devices."
   copyright = "The Eclipse Hono Project"
 
-  # additional (custom) stylesheets to load automatically on every page
-  custom_css = ["css/hono.css"]
-
   # used in shortcode "homelink" to create absoulte URL for links into the home page
   homeBaseUrl = "https://www.eclipse.org/hono/"
 
