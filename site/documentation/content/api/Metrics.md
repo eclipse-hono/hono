@@ -64,7 +64,7 @@ Additional tags used for metrics reported by protocol adapters are:
 | *status*    | `forwarded`, `unprocessable`, `undeliverable` | The processing status of a message.<br>`forwarded` indicates that the message has been forwarded to a downstream consumer<br>`unprocessable` indicates that the message has not been processed not forwarded, e.g. because the message was malformed<br>`undeliverable` indicates that the message could not be forwarded, e.g. because there is no downstream consumer or due to an infrastructure problem |
 | *tenant*    | *string*                                           | The identifier of the tenant that the metric is being reported for. |
 | *ttd*       | `command`, `expired`, `none`                    | A status indicating the outcome of processing a TTD value contained in a message received from a device.<br>`command` indicates that a command for the device has been included in the response to the device's request for uploading the message.<br>`expired` indicates that a response without a command has been sent to the device.<br>`none` indicates that either no TTD value has been specified by the device or that the protocol adapter does not support it. |
-| *type*      | `telemetry`, `event`                             | The type of (downstream) message that the metric is being reported for. |
+| *type*      | `command_response`, `credentials`, `event`, `registration`, `telemetry`, `tenant` | The type of message that the metric is being reported for. |
 
 Additional tags for *hono.connections.attempts*:
 
