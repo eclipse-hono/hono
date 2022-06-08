@@ -22,6 +22,7 @@ import org.eclipse.hono.util.RequestResponseApiConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.opentracing.Span;
 import io.vertx.core.Handler;
 import io.vertx.core.buffer.Buffer;
@@ -67,8 +68,8 @@ public class DefaultFailureHandler implements Handler<RoutingContext> {
                 LOG.debug("handling failed route for request [method: {}, URI: {}, status: {}] - {}",
                         ctx.request().method(), HttpUtils.getAbsoluteURI(ctx.request()), ctx.statusCode(), ctx.getBody(),
                         ctx.failure());
+                final Span span = HttpServerSpanHelper.serverSpan(ctx);
                 if (ctx.failure() != null) {
-                    final Span span = HttpServerSpanHelper.serverSpan(ctx);
                     final int statusCode;
                     if (ctx.failure() instanceof ServiceInvocationException) {
                         statusCode = ((ServiceInvocationException) ctx.failure()).getErrorCode();
@@ -83,9 +84,17 @@ public class DefaultFailureHandler implements Handler<RoutingContext> {
                     Optional.ofNullable(span)
                             .ifPresent(s -> logErrorInTraceSpan(span, ctx.failure(), statusCode));
                     sendError(ctx.response(), statusCode, ctx.failure().getMessage());
+
                 } else if (ctx.statusCode() != -1) {
+                    if (span != null) {
+                        final String message = HttpResponseStatus.valueOf(ctx.statusCode()).reasonPhrase();
+                        TracingHelper.logError(span, message);
+                    }
                     sendError(ctx.response(), ctx.statusCode(), null);
+
                 } else {
+                    Optional.ofNullable(span)
+                            .ifPresent(s -> TracingHelper.logError(span, "unspecified error occurred"));
                     sendError(ctx.response(), HttpURLConnection.HTTP_INTERNAL_ERROR, "Internal Server Error");
                 }
             }
