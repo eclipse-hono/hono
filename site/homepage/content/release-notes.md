@@ -4,7 +4,7 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
-## 2.0.0 (not yet released)
+## 2.0.0
 
 ### New features
 
@@ -110,7 +110,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   [W3C Baggage](https://www.w3.org/TR/baggage/) specifications. The Jaeger native propagation format used in earlier Hono
   versions is not supported any more.
 * The Hono command line client has been re-implemented using the Picocli framework. The synopsis of the client has been
-  changed to provide for a richer user experience. The Getting Started guides have been updated to use the new command
+  changed to provide for a richer user experience. The Getting Started guide has been updated to use the new command
   line client as well.
 * The Hono protocol adapter, command router and device registry Maven modules and Docker images have been renamed,
   removing the *-vertx* and *-quarkus* parts from the names.
