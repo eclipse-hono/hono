@@ -89,7 +89,7 @@ spec:
       steps {
         echo "cloning Hugo Relearn theme..."
         sh '''
-            git clone --depth 1 --branch 3.4.1 https://github.com/McShelby/hugo-theme-relearn.git ${WORKSPACE}/hono-documentation-assembly/themes/hugo-theme-relearn
+            git clone --depth 1 --branch 4.0.4 https://github.com/McShelby/hugo-theme-relearn.git ${WORKSPACE}/hono-documentation-assembly/themes/hugo-theme-relearn
         '''
         echo "cloning Hugo Universal theme..."
         sh '''
