@@ -122,7 +122,9 @@ maven/mavencentral/io.quarkus/quarkus-kubernetes-client-internal/2.8.3.Final, Ap
 maven/mavencentral/io.quarkus/quarkus-logging-gelf/2.8.3.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.quarkus/quarkus-micrometer/2.8.3.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.quarkus/quarkus-micrometer-registry-prometheus/2.8.3.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.quarkus/quarkus-mongodb-client/2.8.3.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.quarkus/quarkus-mutiny/2.8.3.Final, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.quarkus/quarkus-mutiny-reactive-streams-operators/2.8.3.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.quarkus/quarkus-netty/2.8.3.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.quarkus/quarkus-opentelemetry/2.8.3.Final, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.quarkus/quarkus-opentelemetry-exporter-otlp/2.8.3.Final, Apache-2.0, approved, clearlydefined
@@ -147,6 +149,7 @@ maven/mavencentral/io.smallrye.config/smallrye-config-common/2.9.2, Apache-2.0, 
 maven/mavencentral/io.smallrye.config/smallrye-config-core/2.9.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.smallrye.config/smallrye-config-source-yaml/2.9.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.smallrye.reactive/mutiny/1.4.0, Apache-2.0, approved, clearlydefined
+maven/mavencentral/io.smallrye.reactive/mutiny-reactive-streams-operators/1.4.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.smallrye.reactive/mutiny-smallrye-context-propagation/1.4.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.smallrye.reactive/smallrye-mutiny-vertx-auth-common/2.21.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/io.smallrye.reactive/smallrye-mutiny-vertx-bridge-common/2.21.0, Apache-2.0, approved, clearlydefined
@@ -189,6 +192,7 @@ maven/mavencentral/jakarta.interceptor/jakarta.interceptor-api/1.2.5, , approved
 maven/mavencentral/jakarta.transaction/jakarta.transaction-api/1.3.3, , approved, eclipse
 maven/mavencentral/jakarta.ws.rs/jakarta.ws.rs-api/2.1.6, , approved, ee4j.jaxrs
 maven/mavencentral/jakarta.xml.bind/jakarta.xml.bind-api/2.3.3, BSD-3-Clause, approved, ee4j.jaxb
+maven/mavencentral/net.java.dev.jna/jna/5.8.0, Apache-2.0 OR LGPL-2.1-or-later, approved, CQ23217
 maven/mavencentral/org.apache.commons/commons-collections4/4.2, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.apache.commons/commons-compress/1.21, Apache-2.0 AND BSD-3-Clause AND bzip2-1.0.6 AND LicenseRef-Public-Domain, approved, CQ23710
 maven/mavencentral/org.apache.kafka/kafka-clients/2.8.1, Apache-2.0, approved, clearlydefined
@@ -217,8 +221,10 @@ maven/mavencentral/org.jline/jline/3.19.0, BSD-3-Clause, approved, clearlydefine
 maven/mavencentral/org.latencyutils/LatencyUtils/2.0.3, BSD-2-Clause, approved, CQ17408
 maven/mavencentral/org.lz4/lz4-java/1.8.0, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.mongodb/bson/4.3.4, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.mongodb/mongodb-crypt/1.2.1, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.mongodb/mongodb-driver-core/4.3.4, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.mongodb/mongodb-driver-reactivestreams/4.3.4, Apache-2.0, approved, clearlydefined
+maven/mavencentral/org.mongodb/mongodb-driver-sync/4.3.4, Apache-2.0, approved, clearlydefined
 maven/mavencentral/org.postgresql/postgresql/42.3.3, BSD-2-Clause, approved, #2487
 maven/mavencentral/org.reactivestreams/reactive-streams/1.0.3, CC0-1.0, approved, CQ16332
 maven/mavencentral/org.slf4j/slf4j-api/1.7.36, MIT, approved, CQ13368

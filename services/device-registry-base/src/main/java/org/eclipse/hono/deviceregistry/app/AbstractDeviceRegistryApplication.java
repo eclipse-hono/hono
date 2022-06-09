@@ -65,15 +65,17 @@ public abstract class AbstractDeviceRegistryApplication extends AbstractServiceA
                 log.info("successfully deployed authentication service verticle");
                 deploymentResult.put("authentication service verticle", "successfully deployed");
                 registerHealthCheckProvider(authenticationService);
-            });
+            })
+            .onFailure(t -> log.error("failed to deploy authentication service verticle", t));
 
         // deploy notification sender (once only)
         final Future<String> notificationSenderDeploymentTracker = vertx.deployVerticle(
                 new WrappedLifecycleComponentVerticle(notificationSender))
             .onSuccess(ok -> {
-                log.info("successfully deployed notification sender verticle(s)");
+                log.info("successfully deployed notification sender verticle");
                 deploymentResult.put("notification sender verticle", "successfully deployed");
-            });
+            })
+            .onFailure(t -> log.error("failed to deploy notification sender verticle", t));
 
 
         // deploy AMQP 1.0 server
@@ -83,7 +85,8 @@ public abstract class AbstractDeviceRegistryApplication extends AbstractServiceA
             .onSuccess(ok -> {
                 log.info("successfully deployed AMQP server verticle(s)");
                 deploymentResult.put("AMQP server verticle(s)", "successfully deployed");
-            });
+            })
+            .onFailure(t -> log.error("failed to deploy AMQP server verticle(s)", t));
 
         // deploy HTTP server
         final Future<String> httpServerDeploymentTracker = vertx.deployVerticle(
@@ -92,7 +95,8 @@ public abstract class AbstractDeviceRegistryApplication extends AbstractServiceA
             .onSuccess(ok -> {
                 log.info("successfully deployed HTTP server verticle(s)");
                 deploymentResult.put("HTTP server verticle(s)", "successfully deployed");
-            });
+            })
+            .onFailure(t -> log.error("failed to deploy HTTP server verticle(s)", t));
 
         CompositeFuture.all(
                 authServiceDeploymentTracker,
