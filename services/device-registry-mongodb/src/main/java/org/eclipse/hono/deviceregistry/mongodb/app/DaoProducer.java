@@ -131,7 +131,7 @@ public class DaoProducer {
 
         final var encryptionHelper = options.encryptionKeyFile()
                 .map(this::fieldLevelEncryption)
-                .orElse( FieldLevelEncryption.NOOP_ENCRYPTION);
+                .orElse(FieldLevelEncryption.NOOP_ENCRYPTION);
 
         final var dao =  new MongoDbBasedCredentialsDao(
                 mongoClient,
