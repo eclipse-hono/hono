@@ -34,6 +34,28 @@ public class CommandEndpoint {
     private Map<String, Object> payloadProperties = new HashMap<>();
 
     /**
+     * Creates a new command endpoint.
+     *
+     * @param uri The URI to be used when sending a command to this endpoint.
+     * @param headers The headers to be used when sending a command to this endpoint.
+     * @param payloadProperties The payload properties to be used when sending a command to this endpoint.
+     */
+    public CommandEndpoint(
+        @JsonProperty(value = RegistrationConstants.FIELD_COMMAND_ENDPOINT_URI, required = true) final String uri,
+        @JsonProperty(value = RegistrationConstants.FIELD_COMMAND_ENDPOINT_HEADERS) final Map<String, String> headers,
+        @JsonProperty(value = RegistrationConstants.FIELD_COMMAND_ENDPOINT_PAYLOAD_PROPERTIES) final Map<String, Object> payloadProperties) {
+
+        Objects.requireNonNull(uri);
+        this.uri = uri;
+        if (headers != null) {
+            this.headers = headers;
+        }
+        if (payloadProperties != null) {
+            this.payloadProperties = payloadProperties;
+        }
+    }
+
+    /**
      * Gets the URI to be used when sending a command to this endpoint.
      * <p>
      * Note that the URI may contain the <em>{{deviceId}}</em> placeholder.

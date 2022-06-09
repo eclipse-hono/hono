@@ -28,8 +28,7 @@ class CommandEndpointTest {
     @Test
     void testGetFormattedUrlInsertsDeviceId() {
 
-        final CommandEndpoint endpoint = new CommandEndpoint();
-        endpoint.setUri("https://hono.eclipseprojects.io/command/{{deviceId}}/{{deviceId}}");
+        final CommandEndpoint endpoint = new CommandEndpoint("https://hono.eclipseprojects.io/command/{{deviceId}}/{{deviceId}}", null, null);
         assertThat(endpoint.getFormattedUri("the-device"))
             .isEqualTo("https://hono.eclipseprojects.io/command/the-device/the-device");
     }

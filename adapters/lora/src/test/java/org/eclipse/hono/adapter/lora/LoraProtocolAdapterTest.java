@@ -149,7 +149,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<HttpProt
         final HttpContext httpContext = newHttpContext();
         when(httpContext.request()).thenReturn(request);
 
-        setGatewayDeviceCommandEndpoint(new CommandEndpoint());
+        setGatewayDeviceCommandEndpoint(new CommandEndpoint("uri", null, null));
 
         final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
@@ -191,7 +191,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<HttpProt
         final HttpContext httpContext = newHttpContext();
         when(httpContext.request()).thenReturn(request);
 
-        setGatewayDeviceCommandEndpoint(new CommandEndpoint());
+        setGatewayDeviceCommandEndpoint(new CommandEndpoint("uri", null, null));
 
         final CommandConsumer commandConsumer = mock(CommandConsumer.class);
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
@@ -223,9 +223,7 @@ public class LoraProtocolAdapterTest extends ProtocolAdapterTestSupport<HttpProt
         final HttpContext httpContext = newHttpContext();
         when(httpContext.request()).thenReturn(request);
 
-        final CommandEndpoint commandEndpoint = new CommandEndpoint();
-        commandEndpoint.setHeaders(Map.of("my-header", "my-header-value"));
-        commandEndpoint.setUri("https://my-server.com/commands/{{deviceId}}/send");
+        final CommandEndpoint commandEndpoint = new CommandEndpoint("https://my-server.com/commands/{{deviceId}}/send", Map.of("my-header", "my-header-value"), null);
 
         setGatewayDeviceCommandEndpoint(commandEndpoint);
 
