@@ -474,23 +474,17 @@ public abstract class AbstractRegistrationService implements RegistrationService
                     if (!via.isEmpty()) {
                         result.put(RegistrationConstants.FIELD_VIA, via);
                     }
-                    final String downstreamMessageMapper = registrationInfo.getString(RegistrationConstants.FIELD_DOWNSTREAM_MESSAGE_MAPPER);
-                    if (downstreamMessageMapper != null) {
-                        result.put(RegistrationConstants.FIELD_DOWNSTREAM_MESSAGE_MAPPER, downstreamMessageMapper);
-                    }
-                    final String upstreamMessageMapper = registrationInfo.getString(RegistrationConstants.FIELD_UPSTREAM_MESSAGE_MAPPER);
-                    if (upstreamMessageMapper != null) {
-                        result.put(RegistrationConstants.FIELD_UPSTREAM_MESSAGE_MAPPER, upstreamMessageMapper);
-                    }
-                    final JsonObject defaults = registrationInfo.getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS);
-                    if (defaults != null) {
-                        result.put(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS, defaults);
-                    }
-                    final JsonObject commandEndpoint =
-                        registrationInfo.getJsonObject(RegistrationConstants.FIELD_COMMAND_ENDPOINT);
-                    if (defaults != null) {
-                        result.put(RegistrationConstants.FIELD_COMMAND_ENDPOINT, commandEndpoint);
-                    }
+                    Optional.ofNullable(registrationInfo.getString(RegistrationConstants.FIELD_DOWNSTREAM_MESSAGE_MAPPER))
+                            .ifPresent(value -> result.put(RegistrationConstants.FIELD_DOWNSTREAM_MESSAGE_MAPPER, value));
+
+                    Optional.ofNullable(registrationInfo.getString(RegistrationConstants.FIELD_UPSTREAM_MESSAGE_MAPPER))
+                            .ifPresent(value -> result.put(RegistrationConstants.FIELD_UPSTREAM_MESSAGE_MAPPER, value));
+
+                    Optional.ofNullable(registrationInfo.getJsonObject(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS))
+                            .ifPresent(value -> result.put(RegistrationConstants.FIELD_PAYLOAD_DEFAULTS, value));
+
+                    Optional.ofNullable(registrationInfo.getJsonObject(RegistrationConstants.FIELD_COMMAND_ENDPOINT))
+                            .ifPresent(value -> result.put(RegistrationConstants.FIELD_COMMAND_ENDPOINT, value));
                     return Future.succeededFuture(result);
                 });
     }
