@@ -13,15 +13,19 @@
 
 package org.eclipse.hono.tests.registry;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.service.management.device.Device;
+import org.eclipse.hono.util.CommandEndpoint;
 import org.eclipse.hono.util.MessageHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -77,20 +81,31 @@ abstract class DeviceRegistrationApiTests extends DeviceRegistryTestBase {
 
         final JsonObject defaults = new JsonObject()
                 .put(MessageHelper.SYS_PROPERTY_CONTENT_TYPE, "application/vnd.acme+json");
+        final Map<String, String> headers = Map.of("key1", "value1");
+        final Map<String, String> props = Map.of("key2", "value2");
+        final var endpoint = new CommandEndpoint()
+                .setUri("http://some.domain.com")
+                .setHeaders(headers)
+                .setPayloadProperties(props);
         final Device device = new Device();
         device.setDefaults(defaults.getMap());
+        device.setCommandEndpoint(endpoint);
         final String deviceId = getHelper().getRandomDeviceId(tenantId);
 
         getHelper().registry
-                .registerDevice(tenantId, deviceId, device)
-                .compose(r -> getClient().assertRegistration(tenantId, deviceId, null, NoopSpan.INSTANCE.context()))
-                .onComplete(ctx.succeeding(resp -> {
-                    ctx.verify(() -> {
-                        assertThat(resp.getDeviceId()).isEqualTo(deviceId);
-                        assertThat(resp.getDefaults()).containsExactlyEntriesIn(defaults.getMap());
-                    });
-                    ctx.completeNow();
-                }));
+            .registerDevice(tenantId, deviceId, device)
+            .compose(r -> getClient().assertRegistration(tenantId, deviceId, null, NoopSpan.INSTANCE.context()))
+            .onComplete(ctx.succeeding(assertion -> {
+                ctx.verify(() -> {
+                    assertAll(
+                        () -> assertThat(assertion.getDeviceId()).isEqualTo(deviceId),
+                        () -> assertThat(assertion.getDefaults()).containsExactlyEntriesIn(defaults.getMap()),
+                        () -> assertThat(assertion.getCommandEndpoint().getUri()).isEqualTo("http://some.domain.com"),
+                        () -> assertThat(assertion.getCommandEndpoint().getHeaders()).containsExactlyEntriesIn(headers),
+                        () -> assertThat(assertion.getCommandEndpoint().getPayloadProperties()).containsExactlyEntriesIn(props));
+                });
+                ctx.completeNow();
+            }));
     }
 
     /**

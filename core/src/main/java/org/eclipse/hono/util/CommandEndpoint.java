@@ -22,13 +22,19 @@ import java.util.Objects;
 import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
+import io.quarkus.runtime.annotations.RegisterForReflection;
 
 /**
  * Encapsulates the command endpoint information for a device as defined by the
  * <a href="https://www.eclipse.org/hono/docs/api/device-registration/">Device Registration API</a>.
  */
-public class CommandEndpoint {
+@RegisterForReflection
+@JsonInclude(value = Include.NON_NULL)
+public final class CommandEndpoint {
     private String uri;
     private Map<String, String> headers = new HashMap<>();
     private Map<String, Object> payloadProperties = new HashMap<>();
@@ -64,6 +70,7 @@ public class CommandEndpoint {
      * @return An unmodifiable view on the headers.
      */
     @JsonProperty(value = RegistrationConstants.FIELD_COMMAND_ENDPOINT_HEADERS)
+    @JsonInclude(value = Include.NON_EMPTY)
     public Map<String, String> getHeaders() {
         return Collections.unmodifiableMap(headers);
     }
@@ -86,6 +93,7 @@ public class CommandEndpoint {
      * @return An unmodifiable view on the payload properties.
      */
     @JsonProperty(value = RegistrationConstants.FIELD_COMMAND_ENDPOINT_PAYLOAD_PROPERTIES)
+    @JsonInclude(value = Include.NON_EMPTY)
     public Map<String, Object> getPayloadProperties() {
         return Collections.unmodifiableMap(payloadProperties);
     }

@@ -383,4 +383,25 @@ public class Device {
     public final Set<String> getAuthorities() {
         return Collections.unmodifiableSet(authorities);
     }
+
+    /**
+     * Gets the definition of the endpoint that commands for this device should be sent to.
+     *
+     * @return The endpoint definition or {@code null} if not set.
+     */
+    public final CommandEndpoint getCommandEndpoint() {
+        return commandEndpoint;
+    }
+
+    /**
+     * Sets the definition of the endpoint that commands for this device should be sent to.
+     *
+     * @param endpoint The endpoint definition.
+     * @return A reference to this for fluent use.
+     * @throws NullPointerException if endpoint is {@code null}.
+     */
+    public final Device setCommandEndpoint(final CommandEndpoint endpoint) {
+        this.commandEndpoint = Objects.requireNonNull(endpoint);
+        return this;
+    }
 }
