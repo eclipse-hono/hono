@@ -46,6 +46,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The mechanism to delete obsolete `hono.command_internal.*` Kafka topics could have deleted still used topics in
   case the Kubernetes API server gave information about the running containers with a delay of several seconds. This has
   been fixed.
+* The native executable based images of protocol adapters failed to deserialize a registration assertion if it included command
+  endpoint information that had been configured for the device. This has been fixed.
 
 ### API Changes
 
