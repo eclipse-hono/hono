@@ -203,6 +203,24 @@ commandRouterService:
       memory: "128Mi"
 
 kafka:
+  ## @param logFlushIntervalMessages The number of messages to accept before forcing a flush of data to disk
+  ##
+  logFlushIntervalMessages: _1000
+  ## @param logFlushIntervalMs The maximum amount of time a message can sit in a log before we force a flush
+  ##
+  logFlushIntervalMs: 1000
+  ## @param logRetentionBytes A size-based retention policy for logs
+  ## 10MB
+  logRetentionBytes: _10485760
+  ## @param logRetentionCheckIntervalMs The interval at which log segments are checked to see if they can be deleted
+  ##
+  logRetentionCheckIntervalMs: 300000
+  ## @param logRetentionHours The minimum age of a log file to be eligible for deletion due to age
+  ##
+  logRetentionHours: 1
+  ## @param logSegmentBytes The maximum size of a log segment file. When this size is reached a new log segment will be created
+  ## 10MB
+  logSegmentBytes: _10485760
   auth:
     # no TLS. That would be "sasl_tls"
     clientProtocol: "sasl"
