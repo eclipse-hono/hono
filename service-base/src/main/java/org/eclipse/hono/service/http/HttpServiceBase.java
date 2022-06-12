@@ -277,8 +277,10 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
     protected HttpServerOptions getHttpServerOptions() {
 
         final HttpServerOptions options = new HttpServerOptions();
-        options.setHost(getConfig().getBindAddress()).setPort(getConfig().getPort(getPortDefaultValue()))
-                .setMaxChunkSize(4096);
+        options.setHost(getConfig().getBindAddress())
+               .setPort(getConfig().getPort(getPortDefaultValue()))
+               .setMaxChunkSize(4096)
+               .setIdleTimeout(getConfig().getIdleTimeout());
         addTlsKeyCertOptions(options);
         addTlsTrustOptions(options);
         return options;
@@ -298,7 +300,8 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
 
         final HttpServerOptions options = new HttpServerOptions();
         options.setHost(getConfig().getInsecurePortBindAddress())
-                .setPort(getConfig().getInsecurePort(getInsecurePortDefaultValue())).setMaxChunkSize(4096);
+                .setPort(getConfig().getInsecurePort(getInsecurePortDefaultValue())).setMaxChunkSize(4096)
+                .setIdleTimeout(getConfig().getIdleTimeout());
         return options;
     }
 
