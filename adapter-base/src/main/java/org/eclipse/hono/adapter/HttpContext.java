@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.adapter;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
@@ -47,7 +49,10 @@ public final class HttpContext implements TelemetryExecutionContext {
     private HttpContext(final RoutingContext routingContext) {
         this.routingContext = Objects.requireNonNull(routingContext);
         this.requestedResource = Optional.ofNullable(routingContext.request().path())
-                .map(path -> ResourceIdentifier.fromString(path.substring(1)))
+                .map(path -> {
+                    final String resourcePath = path.substring(1);
+                    return ResourceIdentifier.fromString(URLDecoder.decode(resourcePath, StandardCharsets.UTF_8));
+                })
                 .orElseThrow(() -> new IllegalArgumentException("HTTP request contains no URI"));
 
         this.eventEndpoint = EventConstants.isEventEndpoint(requestedResource.getEndpoint());
@@ -89,7 +94,7 @@ public final class HttpContext implements TelemetryExecutionContext {
      *
      * @return The created HttpContext.
      * @throws NullPointerException if routingContext is {@code null}.
-     * @throws IllegalArgumentException if the HTTP request has no URI.
+     * @throws IllegalArgumentException if the HTTP request has no URI or the URI contains illegal characters.
      */
     public static HttpContext from(final RoutingContext routingContext) {
         return new HttpContext(routingContext);

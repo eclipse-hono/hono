@@ -17,6 +17,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
 import java.net.HttpURLConnection;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
@@ -323,6 +324,8 @@ import io.vertx.junit5.VertxTestContext;
         final Tenant tenant = new Tenant();
         final String gatewayOneId = helper.getRandomDeviceId(tenantId);
         final String gatewayTwoId = helper.getRandomDeviceId(tenantId);
+        // use device ID with colon to verify proper decoding of device ID in request URI path
+        final String deviceId = "test:" + this.deviceId;
         final Device device = new Device();
         device.setVia(Arrays.asList(gatewayOneId, gatewayTwoId));
 
@@ -348,8 +351,9 @@ import io.vertx.junit5.VertxTestContext;
                 .add(HttpHeaders.AUTHORIZATION, getBasicAuth(tenantId, gatewayTwoId, PWD))
                 .add(HttpHeaders.ORIGIN, ORIGIN_URI);
 
-        final String uriOne = String.format("%s/%s/%s", getEndpointUri(), tenantId, deviceId);
-        final String uriTwo = String.format("%s//%s", getEndpointUri(), deviceId);
+        final String encodedDeviceId = URLEncoder.encode(deviceId, StandardCharsets.UTF_8);
+        final String uriOne = String.format("%s/%s/%s", getEndpointUri(), tenantId, encodedDeviceId);
+        final String uriTwo = String.format("%s//%s", getEndpointUri(), encodedDeviceId);
 
         testUploadMessages(
                 ctx,
