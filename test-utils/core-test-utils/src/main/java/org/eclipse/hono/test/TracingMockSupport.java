@@ -13,12 +13,14 @@
 
 package org.eclipse.hono.test;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.mockito.Mockito;
 
+import io.opentracing.Scope;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
@@ -67,6 +69,8 @@ public final class TracingMockSupport {
     public static Tracer mockTracer(final SpanBuilder spanBuilder) {
         final Tracer tracer = mock(Tracer.class);
         when(tracer.buildSpan(anyString())).thenReturn(spanBuilder);
+        final Scope spanScope = mock(Scope.class);
+        when(tracer.activateSpan(any(Span.class))).thenReturn(spanScope);
         return tracer;
     }
 
