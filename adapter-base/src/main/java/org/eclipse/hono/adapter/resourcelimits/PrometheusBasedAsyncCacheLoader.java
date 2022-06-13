@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
 
 import io.opentracing.References;
+import io.opentracing.Scope;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
@@ -118,6 +119,8 @@ abstract class PrometheusBasedAsyncCacheLoader<K, V> implements AsyncCacheLoader
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
                 .withTag(Tags.HTTP_URL.getKey(), url)
                 .start();
+        // set as active span so that it is used as parent for the vert.x web client request span
+        final Scope spanScope = tracer.activateSpan(span);
 
         LOG.trace("running Prometheus query [URL: {}, query: {}]", url, query);
         span.log(Map.of(
@@ -139,7 +142,10 @@ abstract class PrometheusBasedAsyncCacheLoader<K, V> implements AsyncCacheLoader
                     Tags.HTTP_STATUS.set(span, response.statusCode());
                     return extractLongValue(response.body(), span);
                 })
-                .onComplete(r -> span.finish());
+                .onComplete(r -> {
+                    span.finish();
+                    spanScope.close();
+                });
     }
 
     private HttpRequest<JsonObject> newQueryRequest(final String query) {

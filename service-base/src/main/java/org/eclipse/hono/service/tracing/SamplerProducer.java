@@ -44,6 +44,8 @@ public class SamplerProducer {
             Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
             AuthenticationConstants.EVENT_BUS_ADDRESS_AUTHENTICATION_IN);
 
+    private static final String INVALID_HTTP_REQUEST_SPAN_NAME = "/bad-request"; // see netty HttpRequestDecoder.createInvalidMessage()
+
     @Singleton
     @Produces
     Sampler sampler(final TracerRuntimeConfig tracerRuntimeConfig) {
@@ -64,6 +66,8 @@ public class SamplerProducer {
         LOG.info("spans for non-application-URI HTTP requests will be dropped; relevant span name prefixes: {}", prefixesOfSpansToDrop);
         // drop spans for event bus message prefixes
         prefixesOfSpansToDrop.addAll(EVENT_BUS_ADDRESS_PREFIXES_TO_IGNORE);
+        // drop "/bad-request" spans for invalid HTTP requests
+        prefixesOfSpansToDrop.add(INVALID_HTTP_REQUEST_SPAN_NAME);
         return new DropBySpanNamePrefixSampler(sampler, prefixesOfSpansToDrop);
     }
 
