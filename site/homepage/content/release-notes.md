@@ -73,7 +73,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The *client* module has been removed. Its deprecated classes have been removed and the remaining classes have been
   moved to the *client-common*, *amqp-connection* and *amqp-common* modules. The classes for configuring AMQP client
   connections have been moved from the *core* to the *amqp-connection* module.
-* The *core* module no longer supports Java 8 but has been changed to require at least Java 11 as all the other modules.
+* The *core* module no longer supports Java 8 but has been changed to require at least Java 17 as all the other modules.
 * The *core* module is no longer an OSGi bundle.
 * The `org.eclipse.hono.service.auth.AuthenticationService`'s method signatures have been changed to return a Future
   instead of accepting a `Handler<AsyncResult>`.
@@ -121,6 +121,11 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The *hono.commands* metrics have been renamed to *hono.command*.
 * The *hono.downstream* metrics have been renamed to *hono.amqp*, *hono.downstream.sent* has been renamed to
   *hono.amqp.delivery.duration* and *hono.downstream.full* has been renamed to *hono.amqp.nocredit*.
+* Hono’s service components and protocol adapters now use the Quarkus SmallRye Health extension to implement the health
+  check and metrics endpoints. That means the health check server configuration is now done via the corresponding Quarkus
+  configuration properties and not via *hono.healthCheck* properties any more. See the
+  [Monitoring & Tracing guide]({{% doclink "/admin-guide/monitoring-tracing-config/#health-check-server-configuration" %}})
+  for details on how to configure the health check server.
 
 ### Deprecations
 
