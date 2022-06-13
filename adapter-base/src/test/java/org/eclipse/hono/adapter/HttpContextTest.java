@@ -19,6 +19,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
 import org.eclipse.hono.util.Constants;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,6 +47,29 @@ public class HttpContextTest {
         routingContext = mock(RoutingContext.class);
         when(routingContext.request()).thenReturn(httpServerRequest);
 
+    }
+
+    /**
+     * Verifies that encoded characters in the request path get correctly decoded
+     * when initializing the HttpContext from the request.
+     */
+    @Test
+    public void testRequestPathElementsGetDecoded() {
+        httpServerRequest = mock(HttpServerRequest.class);
+        // GIVEN a request URI with encoded characters
+        final String tenantId = "test:myTenant";
+        final String deviceId = "test:myDevice";
+        when(httpServerRequest.path()).thenReturn("/telemetry/%s/%s".formatted(
+                URLEncoder.encode(tenantId, StandardCharsets.UTF_8),
+                URLEncoder.encode(deviceId, StandardCharsets.UTF_8)));
+        routingContext = mock(RoutingContext.class);
+        when(routingContext.request()).thenReturn(httpServerRequest);
+
+        // WHEN creating the HTTP context
+        final HttpContext httpContext = HttpContext.from(routingContext);
+        // THEN the HTTP context request resource contains elements with the decoded characters
+        assertEquals(tenantId, httpContext.getRequestedResource().getTenantId());
+        assertEquals(deviceId, httpContext.getRequestedResource().getResourceId());
     }
 
     /**
