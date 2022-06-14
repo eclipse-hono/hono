@@ -298,6 +298,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             }
             ctx.next();
         });
+        HttpUtils.addDefault404ErrorHandler(router);
         return router;
     }
 
