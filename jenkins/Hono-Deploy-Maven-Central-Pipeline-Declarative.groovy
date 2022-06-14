@@ -26,30 +26,10 @@ apiVersion: v1
 kind: Pod
 spec:
   containers:
-  - name: maven
-    image: "maven:3.8.4-eclipse-temurin-17"
-    tty: true
-    command:
-    - cat
+  - name: jnlp
     volumeMounts:
-    - mountPath: /home/jenkins
-      name: "jenkins-home"
     - mountPath: /home/jenkins/.ssh
-      name: "volume-known-hosts"
-    - name: "settings-xml"
-      mountPath: /home/jenkins/.m2/settings.xml
-      subPath: settings.xml
-      readOnly: true
-    - name: "settings-security-xml"
-      mountPath: /home/jenkins/.m2/settings-security.xml
-      subPath: settings-security.xml
-      readOnly: true
-    - name: "m2-repo"
-      mountPath: /home/jenkins/.m2/repository
-    - name: "toolchains-xml"
-      mountPath: /home/jenkins/.m2/toolchains.xml
-      subPath: toolchains.xml
-      readOnly: true
+      name: volume-known-hosts
     env:
     - name: "HOME"
       value: "/home/jenkins"
@@ -61,31 +41,9 @@ spec:
         memory: "6Gi"
         cpu: "2"
   volumes:
-  - name: "jenkins-home"
-    emptyDir: {}
-  - name: "m2-repo"
-    emptyDir: {}
-  - configMap:
-      name: known-hosts
-    name: "volume-known-hosts"
-  - name: "settings-xml"
-    secret:
-      secretName: m2-secret-dir
-      items:
-      - key: settings.xml
-        path: settings.xml
-  - name: "settings-security-xml"
-    secret:
-      secretName: m2-secret-dir
-      items:
-      - key: settings-security.xml
-        path: settings-security.xml
-  - name: "toolchains-xml"
+  - name: "volume-known-hosts"
     configMap:
-      name: m2-dir
-      items:
-      - key: toolchains.xml
-        path: toolchains.xml
+      name: known-hosts
 """
     }
   }
@@ -109,6 +67,11 @@ spec:
       trim: true)
   }
 
+  tools {
+    maven 'apache-maven-3.8.4'
+    jdk 'temurin-jdk17-latest'
+  }
+
   stages {
 
     stage('Prepare workspace') {
@@ -123,9 +86,7 @@ spec:
 
     stage('Build and deploy to Maven Central') {
       steps {
-        container('maven') {
           withCredentials([file(credentialsId: 'secret-subkeys.asc', variable: 'KEYRING')]) {
-            sh 'apt-get -qy install gpg'
             sh 'gpg --version'
             sh 'gpg --batch --import-options restore --import "${KEYRING}"'
             sh 'gpg --list-secret-keys'
@@ -146,7 +107,6 @@ spec:
                   :hono-service-device-registry-jdbc,\
                   :hono-service-device-registry-mongodb,\
                   '"
-        }
       }
     }
   }
