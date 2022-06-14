@@ -40,6 +40,9 @@ spec:
       name: "m2-dir"
       readOnly: true
       subPath: ".mavenrc"
+    - mountPath: "/home/jenkins/.m2/repository"
+      name: "m2-repo"
+      readOnly: false
     - mountPath: "/home/jenkins/.m2/settings.xml"
       name: "m2-secret-dir"
       readOnly: true
@@ -63,6 +66,8 @@ spec:
         cpu: "2"
   volumes:
   - name: "jenkins-home"
+    emptyDir: {}
+  - name: "m2-repo"
     emptyDir: {}
   - name: "m2-dir"
     configMap:
