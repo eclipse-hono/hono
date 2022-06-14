@@ -42,6 +42,10 @@ import io.vertx.ext.web.handler.AuthenticationHandler;
  */
 public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends AbstractServiceBase<T> {
 
+    private static final String MATCH_ALL_ROUTE_NAME = "/* (default route)";
+
+    private static final String KEY_MATCH_ALL_ROUTE_APPLIED = "matchAllRouteApplied";
+
     private final Map<String, HttpEndpoint> endpoints = new HashMap<>();
 
     private HttpServer server;
@@ -168,33 +172,40 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
     /**
      * Creates the router for handling requests.
      * <p>
-     * This method creates a router instance along with a route matching all request. That route is initialized with the
-     * following handlers and failure handlers:
+     * This method creates a router instance along with routes matching all request. The following handlers get applied:
      * <ul>
-     * <li>a default failure handler,</li>
      * <li>a handler to keep track of the tracing span created for the request by means of the Vert.x/Quarkus
      * instrumentation,</li>
      * <li>the authentication handler, set via {@link #setAuthHandler(AuthenticationHandler)}.</li>
      * </ul>
+     * Also a default failure handler is set.
      *
      * @return The newly created router (never {@code null}).
      */
     protected Router createRouter() {
 
-        // route (failure) handlers are added in a specific order here!
         final Router router = Router.router(vertx);
-        final Route matchAllFailuresRoute = router.route();
-        // failure handler is added on a separate route for which no name is set, otherwise all tracing spans
-        // of failed HTTP requests would get that route name as span name
-        matchAllFailuresRoute.failureHandler(new DefaultFailureHandler());
+        final var customTags = getCustomTags();
+        final DefaultFailureHandler defaultFailureHandler = new DefaultFailureHandler();
 
         final Route matchAllRoute = router.route();
-        // route name will be used as HTTP request tracing span name,
-        // ensuring a fixed name is set in case no other route matches (otherwise the span name would unsuitably be set to the request path)
-        matchAllRoute.setName("/* (default route)");
-        // handler to keep track of the tracing span created by the Vert.x/Quarkus instrumentation (set as active span there)
-        matchAllRoute.handler(HttpServerSpanHelper.getRouteHandlerForAdoptingActiveSpan(tracer, getCustomTags()));
-         // AuthHandler
+        matchAllRoute.failureHandler(ctx -> {
+            if (ctx.get(KEY_MATCH_ALL_ROUTE_APPLIED) == null) {
+                // handler of matchAllRoute not applied, meaning this request is invalid/failed from the start;
+                // ensure span name is set to fixed string instead of the request path
+                ctx.request().routed(MATCH_ALL_ROUTE_NAME);
+                HttpServerSpanHelper.adoptActiveSpanIntoContext(tracer, customTags, ctx);
+            }
+            defaultFailureHandler.handle(ctx);
+        });
+        matchAllRoute.handler(ctx -> {
+            // ensure span name is set to fixed string instead of the request path
+            ctx.request().routed(MATCH_ALL_ROUTE_NAME);
+            ctx.put(KEY_MATCH_ALL_ROUTE_APPLIED, true);
+            // keep track of the tracing span created by the Vert.x/Quarkus instrumentation (set as active span there)
+            HttpServerSpanHelper.adoptActiveSpanIntoContext(tracer, customTags, ctx);
+            ctx.next();
+        });
         addAuthHandler(router);
         return router;
     }

@@ -84,6 +84,9 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     protected static final String DEFAULT_UPLOADS_DIRECTORY = "/tmp";
 
     private static final String KEY_TIMER_ID = "timerId";
+    private static final String MATCH_ALL_ROUTE_NAME = "/* (default route)";
+
+    private static final String KEY_MATCH_ALL_ROUTE_APPLIED = "matchAllRouteApplied";
 
     private HttpAdapterMetrics metrics = HttpAdapterMetrics.NOOP;
     private HttpServer server;
@@ -253,42 +256,43 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     /**
      * Creates the router for handling requests.
      * <p>
-     * This method creates a router instance along with a route matching all request. That route is initialized with the
-     * following handlers and failure handlers:
+     * This method creates a router instance along with a route matching all requests. The handler set
+     * on that route makes sure that
      * <ol>
-     * <li>a default failure handler,</li>
-     * <li>a handler to keep track of the tracing span created for the request by means of the Vert.x/Quarkus
-     * instrumentation,</li>
-     * <li>a handler to add a Micrometer {@code Timer.Sample} to the routing context,</li>
-     * <li>a handler to log when the connection is closed prematurely,</li>
+     * <li>the tracing span created for the request by means of the Vert.x/Quarkus
+     * instrumentation is available via {@link HttpServerSpanHelper#serverSpan(RoutingContext)},</li>
+     * <li>a Micrometer {@code Timer.Sample} is added to the routing context,</li>
+     * <li>there is log output when the connection is closed prematurely.</li>
      * </ol>
+     * Also a default failure handler is set.
      *
      * @return The newly created router (never {@code null}).
      */
     protected Router createRouter() {
 
-        // route (failure) handlers are added in a specific order here!
         final Router router = Router.router(vertx);
-        final Route matchAllFailuresRoute = router.route();
-        // failure handler is added on a separate route for which no name is set, otherwise all tracing spans
-        // of failed HTTP requests would get that route name as span name
-        matchAllFailuresRoute.failureHandler(new DefaultFailureHandler());
+        final var customTags = getCustomTags();
+        final DefaultFailureHandler defaultFailureHandler = new DefaultFailureHandler();
 
         final Route matchAllRoute = router.route();
-        // route name will be used as HTTP request tracing span name,
-        // ensuring a fixed name is set in case no other route matches (otherwise the span name would unsuitably be set to the request path)
-        matchAllRoute.setName("/* (default route)");
-        // 1. handler to keep track of the tracing span created by the Vert.x/Quarkus instrumentation (set as active span there)
-        matchAllRoute.handler(HttpServerSpanHelper.getRouteHandlerForAdoptingActiveSpan(tracer, getCustomTags()));
-
-        // 2. handler to start the metrics timer
-        matchAllRoute.handler(ctx -> {
-            ctx.put(KEY_MICROMETER_SAMPLE, getMetrics().startTimer());
-            ctx.next();
+        matchAllRoute.failureHandler(ctx -> {
+            if (ctx.get(KEY_MATCH_ALL_ROUTE_APPLIED) == null) {
+                // handler of matchAllRoute not applied, meaning this request is invalid/failed from the start;
+                // ensure span name is set to fixed string instead of the request path
+                ctx.request().routed(MATCH_ALL_ROUTE_NAME);
+                HttpServerSpanHelper.adoptActiveSpanIntoContext(tracer, customTags, ctx);
+            }
+            defaultFailureHandler.handle(ctx);
         });
-
-        // 3. handler to log when the connection is closed prematurely
         matchAllRoute.handler(ctx -> {
+            // ensure span name is set to fixed string instead of the request path
+            ctx.request().routed(MATCH_ALL_ROUTE_NAME);
+            ctx.put(KEY_MATCH_ALL_ROUTE_APPLIED, true);
+            // keep track of the tracing span created by the Vert.x/Quarkus instrumentation (set as active span there)
+            HttpServerSpanHelper.adoptActiveSpanIntoContext(tracer, customTags, ctx);
+            // start the metrics timer
+            ctx.put(KEY_MICROMETER_SAMPLE, getMetrics().startTimer());
+            // log when the connection is closed prematurely
             if (!ctx.response().closed() && !ctx.response().ended()) {
                 ctx.response().closeHandler(v -> logResponseGettingClosedPrematurely(ctx));
             }

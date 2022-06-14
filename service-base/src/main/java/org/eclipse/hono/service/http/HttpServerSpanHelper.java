@@ -23,7 +23,6 @@ import org.slf4j.LoggerFactory;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
-import io.vertx.core.Handler;
 import io.vertx.ext.web.RoutingContext;
 
 /**
@@ -42,33 +41,31 @@ public final class HttpServerSpanHelper {
     }
 
     /**
-     * Gets a route handler for getting the active span created for an HTTP request and storing it in the routing
-     * context, so that it is available via {@link #serverSpan(RoutingContext)}. Also applies the given tags on the
-     * active span.
+     * Gets the active span created for an HTTP request and stores it in the routing context, so that it is available
+     * via {@link #serverSpan(RoutingContext)}. Also applies the given tags on the active span.
      *
      * @param tracer The tracer instance.
      * @param customTags The custom tags to apply to the active span.
-     * @return The handler.
+     * @param routingContext The routing context to set the span in.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public static Handler<RoutingContext> getRouteHandlerForAdoptingActiveSpan(
+    public static void adoptActiveSpanIntoContext(
             final Tracer tracer,
-            final Map<String, String> customTags) {
+            final Map<String, String> customTags,
+            final RoutingContext routingContext) {
 
         Objects.requireNonNull(tracer);
         Objects.requireNonNull(customTags);
-        return routingContext -> {
-            if (routingContext.get(ROUTING_CONTEXT_SPAN_KEY) == null) {
-                Optional.ofNullable(tracer.activeSpan()).ifPresentOrElse(
-                        span -> {
-                            customTags.forEach(span::setTag);
-                            routingContext.put(ROUTING_CONTEXT_SPAN_KEY, span);
-                        },
-                        () -> LOG.warn("no active span set"));
+        Objects.requireNonNull(routingContext);
 
-            }
-            routingContext.next();
-        };
+        if (routingContext.get(ROUTING_CONTEXT_SPAN_KEY) == null) {
+            Optional.ofNullable(tracer.activeSpan()).ifPresentOrElse(
+                    span -> {
+                        customTags.forEach(span::setTag);
+                        routingContext.put(ROUTING_CONTEXT_SPAN_KEY, span);
+                    },
+                    () -> LOG.warn("no active span set"));
+        }
     }
 
     /**
