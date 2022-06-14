@@ -100,9 +100,11 @@ spec:
 
   stages {
     stage("Local environment") {
-      sh 'ls -al /home/jenkins'
-      sh 'ls -al /opt/tools'
-      sh 'mvn -v'
+      steps {
+        sh 'ls -al /home/jenkins'
+        sh 'ls -al /opt/tools'
+        sh 'mvn -v'
+      }
     }
 
     stage('Prepare workspace') {
