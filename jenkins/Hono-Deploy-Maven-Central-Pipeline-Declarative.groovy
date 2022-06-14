@@ -125,6 +125,7 @@ spec:
       steps {
         container('maven') {
           withCredentials([file(credentialsId: 'secret-subkeys.asc', variable: 'KEYRING')]) {
+            sh 'apt-get -qy install gpg'
             sh 'gpg --version'
             sh 'gpg --batch --import-options restore --import "${KEYRING}"'
             sh 'gpg --list-secret-keys'
