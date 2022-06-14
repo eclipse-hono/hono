@@ -30,13 +30,17 @@ import org.eclipse.hono.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.opentracing.Span;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 
 /**
@@ -370,5 +374,28 @@ public final class HttpUtils {
             LOG.debug("invalid request URI", e);
             TracingHelper.logError(span, "invalid request URI", e);
         }
+    }
+
+    /**
+     * Adds an error handler for {@code 404} status requests to the given router.
+     * The handler adds an error log entry in the request span and sets a response body (if it's not a HEAD request).
+     *
+     * @param router The router to add the error handler to.
+     * @throws NullPointerException if router is {@code null}.
+     */
+    public static void addDefault404ErrorHandler(final Router router) {
+        Objects.requireNonNull(router);
+        router.errorHandler(404, ctx -> {
+            ctx.response().setStatusCode(404);
+            Optional.ofNullable(HttpServerSpanHelper.serverSpan(ctx))
+                    .ifPresent(span -> TracingHelper.logError(span, HttpResponseStatus.valueOf(404).reasonPhrase()));
+            if (ctx.request().method() != HttpMethod.HEAD) {
+                ctx.response()
+                        .putHeader(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=utf-8")
+                        .end("<html><body><h1>Resource not found</h1></body></html>");
+            } else {
+                ctx.response().end();
+            }
+        });
     }
 }

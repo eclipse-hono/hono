@@ -207,6 +207,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
             ctx.next();
         });
         addAuthHandler(router);
+        HttpUtils.addDefault404ErrorHandler(router);
         return router;
     }
 
