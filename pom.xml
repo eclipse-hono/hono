@@ -611,14 +611,23 @@
              -->
             <groupId>org.sonatype.plugins</groupId>
             <artifactId>nexus-staging-maven-plugin</artifactId>
-            <version>1.6.13</version>
+            <version>1.6.8</version>
             <extensions>true</extensions>
             <configuration>
               <serverId>ossrh</serverId>
               <nexusUrl>https://oss.sonatype.org/</nexusUrl>
               <autoReleaseAfterClose>false</autoReleaseAfterClose>
             </configuration>
-          </plugin>
+            <dependencies>
+              <dependency>
+                <groupId>com.thoughtworks.xstream</groupId>
+                <artifactId>xstream</artifactId>
+                <!-- apparently this needs to be exactly this version to work with Java 17 -->
+                <!-- https://stackoverflow.com/a/70157413/6138465 -->
+                <version>1.4.15</version> 
+              </dependency>
+            </dependencies>
+            </plugin>
         </plugins>
       </build>
     </profile>
