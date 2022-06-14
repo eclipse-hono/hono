@@ -48,6 +48,9 @@ spec:
       name: "m2-secret-dir"
       readOnly: true
       subPath: "settings-security.xml"
+    - mountPath: "/opt/tools"
+      name: "tools"
+      readOnly: false
     env:
     - name: "HOME"
       value: "/home/jenkins"
@@ -70,6 +73,10 @@ spec:
   - name: "volume-known-hosts"
     configMap:
       name: "known-hosts"
+  - name: "tools"
+    persistentVolumeClaim:
+      claimName: "tools-claim-jiro-hono"
+      readOnly: false
 """
     }
   }
