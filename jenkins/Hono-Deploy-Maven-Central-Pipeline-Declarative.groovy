@@ -28,13 +28,26 @@ spec:
   containers:
   - name: jnlp
     volumeMounts:
+    - mountPath: "/home/jenkins"
+      name: "jenkins-home"
     - mountPath: "/home/jenkins/.ssh"
       name: "volume-known-hosts"
-    - mountPath: "/home/jenkins/.gnupg"
-      name: "gnupg-home"
-    - mountPath: "/opt/tools"
-      name: "tools"
-      readOnly: false
+    - mountPath: "/home/jenkins/.m2/toolchains.xml"
+      name: "m2-dir"
+      readOnly: true
+      subPath: "toolchains.xml"
+    - mountPath: "/home/jenkins/.mavenrc"
+      name: "m2-dir"
+      readOnly: true
+      subPath: ".mavenrc"
+    - mountPath: "/home/jenkins/.m2/settings.xml"
+      name: "m2-secret-dir"
+      readOnly: true
+      subPath: "settings.xml"
+    - mountPath: "/home/jenkins/.m2/settings-security.xml"
+      name: "m2-secret-dir"
+      readOnly: true
+      subPath: "settings-security.xml"
     env:
     - name: "HOME"
       value: "/home/jenkins"
@@ -46,15 +59,17 @@ spec:
         memory: "6Gi"
         cpu: "2"
   volumes:
-  - name: "tools"
-    persistentVolumeClaim:
-      claimName: "tools-claim-jiro-hono"
-      readOnly: false
+  - name: "jenkins-home"
+    emptyDir: {}
+  - name: "m2-dir"
+    configMap:
+      name: "m2-dir"
+  - name: "m2-secret-dir"
+    secret:
+      secretName: "m2-secret-dir"
   - name: "volume-known-hosts"
     configMap:
-      name: known-hosts
-  - name: "gnupg-home"
-    emptyDir: {}
+      name: "known-hosts"
 """
     }
   }
@@ -84,6 +99,11 @@ spec:
   }
 
   stages {
+    stage("Local environment") {
+      sh 'ls -al /home/jenkins'
+      sh 'ls -al /opt/tools'
+      sh 'mvn -v'
+    }
 
     stage('Prepare workspace') {
       steps {
