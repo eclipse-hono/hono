@@ -132,6 +132,10 @@ spec:
             sh 'gpg --batch --import-options restore --import "${KEYRING}"'
             sh 'gpg --list-secret-keys'
           }
+          sh 'export MAVEN_OPTS="--add-opens=java.base/java.util=ALL-UNNAMED \
+                --add-opens=java.base/java.lang.reflect=ALL-UNNAMED \
+                --add-opens=java.base/java.text=ALL-UNNAMED \
+                --add-opens=java.desktop/java.awt.font=ALL-UNNAMED"'
           sh "mvn deploy \
                 -DskipTests=true -DnoDocker -DcreateGPGSignature=true -DcreateJavadoc=true -DenableEclipseJarSigner=true \
                 -am -pl '\
