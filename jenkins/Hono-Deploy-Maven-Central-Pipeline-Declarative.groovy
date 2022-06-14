@@ -28,8 +28,10 @@ spec:
   containers:
   - name: jnlp
     volumeMounts:
-    - mountPath: /home/jenkins/.ssh
-      name: volume-known-hosts
+    - mountPath: "/home/jenkins/.ssh"
+      name: "volume-known-hosts"
+    - mountPath: "/home/jenkins/.gnupg"
+      name: "gnupg-home"
     env:
     - name: "HOME"
       value: "/home/jenkins"
@@ -44,6 +46,8 @@ spec:
   - name: "volume-known-hosts"
     configMap:
       name: known-hosts
+  - name: "gnupg-home"
+    emptyDir: {}
 """
     }
   }
