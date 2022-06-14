@@ -127,7 +127,7 @@ spec:
       steps {
         container('maven') {
           sh "mvn deploy \
-                -DskipTests=true -DnoDocker -DcreateJavadoc=true -DenableEclipseJarSigner=true -DskipStaging=true
+                -DskipTests=true -DnoDocker -DcreateJavadoc=true -DenableEclipseJarSigner=true -DskipStaging=true \
                 -am -pl '\
                   :hono-adapter-amqp,\
                   :hono-adapter-coap,\
