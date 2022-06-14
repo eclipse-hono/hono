@@ -130,7 +130,7 @@ spec:
             sh 'gpg --list-secret-keys'
           }
           sh "mvn deploy \
-                -DskipTests=true -DnoDocker -DcreateGPGSignature=true -DcreateJavadoc=true -DenableEclipseJarSigner=true
+                -DskipTests=true -DnoDocker -DcreateGPGSignature=true -DcreateJavadoc=true -DenableEclipseJarSigner=true \
                 -am -pl '\
                   :hono-adapter-amqp,\
                   :hono-adapter-coap,\
