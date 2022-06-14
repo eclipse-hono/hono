@@ -32,6 +32,9 @@ spec:
       name: "volume-known-hosts"
     - mountPath: "/home/jenkins/.gnupg"
       name: "gnupg-home"
+    - mountPath: "/opt/tools"
+      name: "tools"
+      readOnly: false
     env:
     - name: "HOME"
       value: "/home/jenkins"
@@ -43,6 +46,10 @@ spec:
         memory: "6Gi"
         cpu: "2"
   volumes:
+  - name: "tools"
+    persistentVolumeClaim:
+      claimName: "tools-claim-jiro-hono"
+      readOnly: false
   - name: "volume-known-hosts"
     configMap:
       name: known-hosts
