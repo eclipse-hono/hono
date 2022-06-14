@@ -36,10 +36,6 @@ spec:
       name: "m2-dir"
       readOnly: true
       subPath: "toolchains.xml"
-    - mountPath: "/home/jenkins/.mavenrc"
-      name: "m2-dir"
-      readOnly: true
-      subPath: ".mavenrc"
     - mountPath: "/home/jenkins/.m2/repository"
       name: "m2-repo"
       readOnly: false
