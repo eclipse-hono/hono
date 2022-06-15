@@ -122,7 +122,6 @@ spec:
 
     stage('Build and deploy to Eclipse Repo') {
       steps {
-        container('maven') {
           sh "mvn deploy \
                 -DskipTests=true -DnoDocker -DcreateJavadoc=true -DenableEclipseJarSigner=true -DskipStaging=true \
                 -am -pl '\
@@ -138,7 +137,6 @@ spec:
                   :hono-service-device-registry-jdbc,\
                   :hono-service-device-registry-mongodb,\
                   '"
-        }
       }
     }
   }
