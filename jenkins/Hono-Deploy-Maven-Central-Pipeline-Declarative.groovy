@@ -26,30 +26,30 @@ apiVersion: v1
 kind: Pod
 spec:
   containers:
-  - name: maven
-    image: "maven:3.8.4-eclipse-temurin-17"
-    tty: true
-    command:
-    - cat
+  - name: jnlp
     volumeMounts:
-    - mountPath: /home/jenkins
+    - mountPath: "/home/jenkins"
       name: "jenkins-home"
-    - mountPath: /home/jenkins/.ssh
+    - mountPath: "/home/jenkins/.ssh"
       name: "volume-known-hosts"
-    - name: "settings-xml"
-      mountPath: /home/jenkins/.m2/settings.xml
-      subPath: settings.xml
+    - mountPath: "/home/jenkins/.m2/toolchains.xml"
+      name: "m2-dir"
       readOnly: true
-    - name: "settings-security-xml"
-      mountPath: /home/jenkins/.m2/settings-security.xml
-      subPath: settings-security.xml
+      subPath: "toolchains.xml"
+    - mountPath: "/home/jenkins/.m2/repository"
+      name: "m2-repo"
+      readOnly: false
+    - mountPath: "/home/jenkins/.m2/settings.xml"
+      name: "m2-secret-dir"
       readOnly: true
-    - name: "m2-repo"
-      mountPath: /home/jenkins/.m2/repository
-    - name: "toolchains-xml"
-      mountPath: /home/jenkins/.m2/toolchains.xml
-      subPath: toolchains.xml
+      subPath: "settings.xml"
+    - mountPath: "/home/jenkins/.m2/settings-security.xml"
+      name: "m2-secret-dir"
       readOnly: true
+      subPath: "settings-security.xml"
+    - mountPath: "/opt/tools"
+      name: "tools"
+      readOnly: false
     env:
     - name: "HOME"
       value: "/home/jenkins"
@@ -65,27 +65,19 @@ spec:
     emptyDir: {}
   - name: "m2-repo"
     emptyDir: {}
-  - configMap:
-      name: known-hosts
-    name: "volume-known-hosts"
-  - name: "settings-xml"
-    secret:
-      secretName: m2-secret-dir
-      items:
-      - key: settings.xml
-        path: settings.xml
-  - name: "settings-security-xml"
-    secret:
-      secretName: m2-secret-dir
-      items:
-      - key: settings-security.xml
-        path: settings-security.xml
-  - name: "toolchains-xml"
+  - name: "m2-dir"
     configMap:
-      name: m2-dir
-      items:
-      - key: toolchains.xml
-        path: toolchains.xml
+      name: "m2-dir"
+  - name: "m2-secret-dir"
+    secret:
+      secretName: "m2-secret-dir"
+  - name: "volume-known-hosts"
+    configMap:
+      name: "known-hosts"
+  - name: "tools"
+    persistentVolumeClaim:
+      claimName: "tools-claim-jiro-hono"
+      readOnly: false
 """
     }
   }
@@ -109,7 +101,19 @@ spec:
       trim: true)
   }
 
+  tools {
+    maven 'apache-maven-3.8.4'
+    jdk 'temurin-jdk17-latest'
+  }
+
   stages {
+    stage("Local environment") {
+      steps {
+        sh 'ls -al /home/jenkins'
+        sh 'ls -al /opt/tools'
+        sh 'mvn -v'
+      }
+    }
 
     stage('Prepare workspace') {
       steps {
@@ -123,29 +127,29 @@ spec:
 
     stage('Build and deploy to Maven Central') {
       steps {
-        container('maven') {
           withCredentials([file(credentialsId: 'secret-subkeys.asc', variable: 'KEYRING')]) {
             sh 'gpg --version'
             sh 'gpg --batch --import-options restore --import "${KEYRING}"'
             sh 'gpg --list-secret-keys'
           }
-          sh "mvn deploy \
-                -DskipTests=true -DnoDocker -DcreateGPGSignature=true -DcreateJavadoc=true -DenableEclipseJarSigner=true \
-                -am -pl '\
-                  :hono-adapter-amqp,\
-                  :hono-adapter-coap,\
-                  :hono-adapter-http,\
-                  :hono-adapter-lora,\
-                  :hono-adapter-mqtt,\
-                  :hono-adapter-sigfox,\
-                  :hono-cli,\
-                  :hono-example,\
-                  :hono-service-auth,\
-                  :hono-service-command-router,\
-                  :hono-service-device-registry-jdbc,\
-                  :hono-service-device-registry-mongodb,\
-                  '"
-        }
+          sh '''
+            export MAVEN_OPTS="--add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED"
+            mvn deploy \
+              -DskipTests=true -DnoDocker -DcreateGPGSignature=true -DcreateJavadoc=true -DenableEclipseJarSigner=true \
+              -am -pl "\
+                :hono-adapter-amqp,\
+                :hono-adapter-coap,\
+                :hono-adapter-http,\
+                :hono-adapter-lora,\
+                :hono-adapter-mqtt,\
+                :hono-adapter-sigfox,\
+                :hono-example,\
+                :hono-service-auth,\
+                :hono-service-command-router,\
+                :hono-service-device-registry-jdbc,\
+                :hono-service-device-registry-mongodb,\
+                "
+              '''
       }
     }
   }
