@@ -132,23 +132,25 @@ spec:
             sh 'gpg --batch --import-options restore --import "${KEYRING}"'
             sh 'gpg --list-secret-keys'
           }
-          sh 'export MAVEN_OPTS="--illegal-access=permit"'
-          sh "mvn deploy \
-                -DskipTests=true -DnoDocker -DcreateGPGSignature=true -DcreateJavadoc=true -DenableEclipseJarSigner=true \
-                -am -pl '\
-                  :hono-adapter-amqp,\
-                  :hono-adapter-coap,\
-                  :hono-adapter-http,\
-                  :hono-adapter-lora,\
-                  :hono-adapter-mqtt,\
-                  :hono-adapter-sigfox,\
-                  :hono-cli,\
-                  :hono-example,\
-                  :hono-service-auth,\
-                  :hono-service-command-router,\
-                  :hono-service-device-registry-jdbc,\
-                  :hono-service-device-registry-mongodb,\
-                  '"
+          sh '''
+            export MAVEN_OPTS="--illegal-access=permit"
+            mvn deploy \
+              -DskipTests=true -DnoDocker -DcreateGPGSignature=true -DcreateJavadoc=true -DenableEclipseJarSigner=true \
+              -am -pl "\
+                :hono-adapter-amqp,\
+                :hono-adapter-coap,\
+                :hono-adapter-http,\
+                :hono-adapter-lora,\
+                :hono-adapter-mqtt,\
+                :hono-adapter-sigfox,\
+                :hono-cli,\
+                :hono-example,\
+                :hono-service-auth,\
+                :hono-service-command-router,\
+                :hono-service-device-registry-jdbc,\
+                :hono-service-device-registry-mongodb,\
+                "
+              '''
       }
     }
   }
