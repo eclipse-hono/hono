@@ -143,7 +143,6 @@ spec:
                 :hono-adapter-lora,\
                 :hono-adapter-mqtt,\
                 :hono-adapter-sigfox,\
-                :hono-cli,\
                 :hono-example,\
                 :hono-service-auth,\
                 :hono-service-command-router,\
