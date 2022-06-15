@@ -28,8 +28,28 @@ spec:
   containers:
   - name: jnlp
     volumeMounts:
-    - mountPath: /home/jenkins/.ssh
-      name: volume-known-hosts
+    - mountPath: "/home/jenkins"
+      name: "jenkins-home"
+    - mountPath: "/home/jenkins/.ssh"
+      name: "volume-known-hosts"
+    - mountPath: "/home/jenkins/.m2/toolchains.xml"
+      name: "m2-dir"
+      readOnly: true
+      subPath: "toolchains.xml"
+    - mountPath: "/home/jenkins/.m2/repository"
+      name: "m2-repo"
+      readOnly: false
+    - mountPath: "/home/jenkins/.m2/settings.xml"
+      name: "m2-secret-dir"
+      readOnly: true
+      subPath: "settings.xml"
+    - mountPath: "/home/jenkins/.m2/settings-security.xml"
+      name: "m2-secret-dir"
+      readOnly: true
+      subPath: "settings-security.xml"
+    - mountPath: "/opt/tools"
+      name: "tools"
+      readOnly: false
     env:
     - name: "HOME"
       value: "/home/jenkins"
@@ -41,9 +61,23 @@ spec:
         memory: "6Gi"
         cpu: "2"
   volumes:
+  - name: "jenkins-home"
+    emptyDir: {}
+  - name: "m2-repo"
+    emptyDir: {}
+  - name: "m2-dir"
+    configMap:
+      name: "m2-dir"
+  - name: "m2-secret-dir"
+    secret:
+      secretName: "m2-secret-dir"
   - name: "volume-known-hosts"
     configMap:
-      name: known-hosts
+      name: "known-hosts"
+  - name: "tools"
+    persistentVolumeClaim:
+      claimName: "tools-claim-jiro-hono"
+      readOnly: false
 """
     }
   }
@@ -98,7 +132,6 @@ spec:
                   :hono-adapter-lora,\
                   :hono-adapter-mqtt,\
                   :hono-adapter-sigfox,\
-                  :hono-cli,\
                   :hono-example,\
                   :hono-service-auth,\
                   :hono-service-command-router,\
