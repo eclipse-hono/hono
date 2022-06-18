@@ -11,6 +11,9 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The mechanism to delete obsolete `hono.command_internal.*` Kafka topics could have deleted still used topics in
   case the Kubernetes API server gave information about the running containers with a delay of several seconds. This has
   been fixed.
+* The CoAP adapter did not properly consider the reduced minimum RAM requirements for starting up when running as a
+  native executable on a SubstrateVM. This could have resulted in the adapter not starting up at all, if configured
+  with less than ~150MB of RAM. This has been fixed.
 
 ## 1.12.2
 

@@ -57,9 +57,14 @@ import io.vertx.core.Vertx;
 public class ConfigBasedCoapEndpointFactory implements CoapEndpointFactory {
 
     /**
-     * The minimum amount of memory that the adapter requires to run.
+     * The minimum amount of memory (bytes) that the adapter requires to run on a standard Java VM.
      */
-    private static final int MINIMAL_MEMORY = 100_000_000; // 100MB: minimal memory necessary for startup
+    private static final int MINIMAL_MEMORY_JVM = 100_000_000; // 100MB: minimal memory necessary for startup
+    /**
+     * The minimum amount of memory (bytes) that the adapter requires to run on a Substrate VM (i.e. when running
+     * as a native executable).
+     */
+    private static final int MINIMAL_MEMORY_SUBSTRATE = 35_000_000;
     /**
      * The amount of memory required for each connection.
      */
@@ -153,7 +158,9 @@ public class ConfigBasedCoapEndpointFactory implements CoapEndpointFactory {
         networkConfig.setString(Keys.DEDUPLICATOR, Keys.DEDUPLICATOR_PEERS_MARK_AND_SWEEP);
         final int maxConnections = config.getMaxConnections();
         if (maxConnections == 0) {
-            final MemoryBasedConnectionLimitStrategy limits = new MemoryBasedConnectionLimitStrategy(MINIMAL_MEMORY, MEMORY_PER_CONNECTION);
+            final MemoryBasedConnectionLimitStrategy limits = new MemoryBasedConnectionLimitStrategy(
+                    config.isSubstrateVm() ? MINIMAL_MEMORY_SUBSTRATE : MINIMAL_MEMORY_JVM,
+                    MEMORY_PER_CONNECTION);
             networkConfig.setInt(Keys.MAX_ACTIVE_PEERS, limits.getRecommendedLimit());
         } else {
             networkConfig.setInt(Keys.MAX_ACTIVE_PEERS, maxConnections);
