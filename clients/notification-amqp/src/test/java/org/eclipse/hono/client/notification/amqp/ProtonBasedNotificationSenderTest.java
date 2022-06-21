@@ -101,7 +101,7 @@ public class ProtonBasedNotificationSenderTest {
         final String tenantId = "my-tenant";
         final Instant creationTime = Instant.parse("2007-12-03T10:15:30Z");
         final TenantChangeNotification notification = new TenantChangeNotification(LifecycleChange.CREATE,
-                tenantId, creationTime, false);
+                tenantId, creationTime, false, false);
 
         final ArgumentCaptor<Handler<ProtonDelivery>> dispositionHandlerCaptor = VertxMockSupport.argumentCaptorHandler();
         final ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);

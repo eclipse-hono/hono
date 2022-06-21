@@ -58,6 +58,10 @@ public class NotificationConstants {
      */
     public static final String JSON_FIELD_DATA_ENABLED = "enabled";
     /**
+     * The field name of the JSON object that indicates if cache invalidation is required on db update operations.
+     */
+    public static final String JSON_FIELD_DATA_INVALIDATE_CACHE_ON_UPDATE = "invalidate-cache-on-update";
+    /**
      * The field name of the JSON object that indicates the tenant ID.
      */
     public static final String JSON_FIELD_TENANT_ID = Constants.JSON_FIELD_TENANT_ID;

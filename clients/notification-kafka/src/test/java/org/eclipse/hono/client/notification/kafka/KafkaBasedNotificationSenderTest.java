@@ -55,6 +55,7 @@ public class KafkaBasedNotificationSenderTest {
     private static final String TENANT_ID = "my-tenant";
     private static final String DEVICE_ID = "my-device";
     private static final boolean ENABLED = false;
+    private static final boolean INVALIDATE_CACHE_ON_UPDATE = false;
 
     private final NotificationKafkaProducerConfigProperties config = new NotificationKafkaProducerConfigProperties();
     private final Vertx vertxMock = mock(Vertx.class);
@@ -101,7 +102,8 @@ public class KafkaBasedNotificationSenderTest {
     @Test
     public void testProducerRecordForTenantNotification() {
 
-        final var notification = new TenantChangeNotification(CHANGE, TENANT_ID, CREATION_TIME, ENABLED);
+        final var notification = new TenantChangeNotification(CHANGE, TENANT_ID, CREATION_TIME, ENABLED,
+                INVALIDATE_CACHE_ON_UPDATE);
         testProducerRecordForNotification(notification, TENANT_ID);
     }
 
@@ -178,7 +180,8 @@ public class KafkaBasedNotificationSenderTest {
 
         final var result = sender.start()
                 .compose(ok -> readyTracker.future())
-                .compose(ok -> sender.publish(new TenantChangeNotification(CHANGE, TENANT_ID, CREATION_TIME, ENABLED)));
+                .compose(ok -> sender.publish(new TenantChangeNotification(CHANGE, TENANT_ID, CREATION_TIME, ENABLED,
+                        INVALIDATE_CACHE_ON_UPDATE)));
 
         // WHEN the send operation fails
         final RuntimeException expectedError = new RuntimeException("boom");

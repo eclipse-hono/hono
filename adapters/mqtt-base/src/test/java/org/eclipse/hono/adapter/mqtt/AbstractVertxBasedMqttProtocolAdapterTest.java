@@ -965,7 +965,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
 
         final Device device = new Device("tenant", "deviceId");
         testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification(ctx, device, new TenantChangeNotification(
-                LifecycleChange.DELETE, "tenant", Instant.now(), true));
+                LifecycleChange.DELETE, "tenant", Instant.now(), true, false));
     }
 
     /**
@@ -979,7 +979,7 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
 
         final Device device = new Device("tenant", "deviceId");
         testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification(ctx, device, new TenantChangeNotification(
-                LifecycleChange.UPDATE, "tenant", Instant.now(), false));
+                LifecycleChange.UPDATE, "tenant", Instant.now(), false, false));
     }
 
     /**

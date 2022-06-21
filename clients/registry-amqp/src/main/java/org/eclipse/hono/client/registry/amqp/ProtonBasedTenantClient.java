@@ -94,7 +94,8 @@ public final class ProtonBasedTenantClient extends AbstractRequestResponseServic
             NotificationEventBusSupport.registerConsumer(connection.getVertx(), TenantChangeNotification.TYPE,
                     n -> {
                         if (LifecycleChange.DELETE.equals(n.getChange())
-                                || (LifecycleChange.UPDATE.equals(n.getChange()) && !n.isEnabled())) {
+                                || (LifecycleChange.UPDATE.equals(n.getChange())
+                                        && (!n.isEnabled() || n.isInvalidateCacheOnUpdate()))) {
                             removeResultFromCache(n.getTenantId());
                         }
                     });

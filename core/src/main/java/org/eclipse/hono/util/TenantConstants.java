@@ -205,6 +205,11 @@ public final class TenantConstants extends RequestResponseApiConstants {
     public static final String FIELD_EXT_MESSAGING_TYPE = "messaging-type";
 
     /**
+     * The name of the property that indicates if cache invalidation is required on db update operations.
+     */
+    public static final String FIELD_EXT_INVALIDATE_CACHE_ON_UPDATE = "invalidate-cache-on-update";
+
+    /**
      * The name of the Tenant API endpoint.
      */
     public static final String TENANT_ENDPOINT = "tenant";

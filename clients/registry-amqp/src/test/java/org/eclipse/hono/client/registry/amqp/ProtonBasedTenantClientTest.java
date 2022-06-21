@@ -487,7 +487,39 @@ class ProtonBasedTenantClientTest {
 
     /**
      * Verifies that the client removes all credentials of a tenant from the cache if it receives a notification about a
-     * change in that tenant.
+     * removal of that tenant.
+     *
+     * @param ctx The vert.x test context.
+     */
+    @Test
+    public void testTenantDeleteNotificationRemovesValueFromCache(final VertxTestContext ctx) {
+        final String tenantId = "the-tenant-id";
+
+        givenAClient(cache);
+
+        final var notificationHandlerCaptor = getEventBusConsumerHandlerArgumentCaptor(TenantChangeNotification.TYPE);
+
+        // GIVEN a client with a cache containing two tenants
+        client.start()
+                .compose(v -> addResultToCache("other-tenant"))
+                .compose(v -> addResultToCache(tenantId))
+                .onComplete(ctx.succeeding(keyOfChangedTenant -> ctx.verify(() -> {
+
+                    // WHEN receiving a notification about a change on a tenant
+                    sendViaEventBusMock(
+                            new TenantChangeNotification(LifecycleChange.DELETE, tenantId, Instant.now(), false, false),
+                            notificationHandlerCaptor.getValue());
+
+                    // THEN the cache is invalidated for the changed tenant
+                    ctx.verify(() -> verify(cache).invalidateAll(Set.of(keyOfChangedTenant)));
+                    ctx.completeNow();
+                })));
+
+    }
+
+    /**
+     * Verifies that the client removes all credentials of a tenant from the cache if it receives a notification about a
+     * change in that tenant and invalidate-cache-on-update flag is set.
      *
      * @param ctx The vert.x test context.
      */
@@ -506,7 +538,8 @@ class ProtonBasedTenantClientTest {
                 .onComplete(ctx.succeeding(keyOfChangedTenant -> ctx.verify(() -> {
 
                     // WHEN receiving a notification about a change on a tenant
-                    sendViaEventBusMock(new TenantChangeNotification(LifecycleChange.DELETE, tenantId, Instant.now(), false),
+                    sendViaEventBusMock(
+                            new TenantChangeNotification(LifecycleChange.UPDATE, tenantId, Instant.now(), true, true),
                             notificationHandlerCaptor.getValue());
 
                     // THEN the cache is invalidated for the changed tenant
