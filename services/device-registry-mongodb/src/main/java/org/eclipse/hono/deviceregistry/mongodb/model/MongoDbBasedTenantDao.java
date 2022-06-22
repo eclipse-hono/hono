@@ -43,6 +43,7 @@ import io.opentracing.References;
 import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
+import io.opentracing.noop.NoopSpan;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
@@ -374,6 +375,30 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
                         TracingHelper.logError(span, "error updating tenant", error);
                         return mapError(error);
                     }
+                })
+                .onComplete(r -> span.finish());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Future<Integer> count(final JsonObject filter, final SpanContext tracingContext) {
+
+        final Span span;
+        if (tracingContext != null) {
+            span = tracer.buildSpan("get Tenants count")
+                    .addReference(References.CHILD_OF, tracingContext)
+                    .start();
+        } else {
+            span = NoopSpan.INSTANCE;
+        }
+
+        return mongoClient.count(collectionName, filter == null ? new JsonObject() : filter)
+                .map(count -> count.intValue())
+                .onFailure(e -> {
+                    LOG.error("еrror while querying Tenants count from MongoDB", e);
+                    TracingHelper.logError(span, "error getting tenants count", e);
                 })
                 .onComplete(r -> span.finish());
     }

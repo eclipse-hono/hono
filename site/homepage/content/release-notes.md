@@ -10,6 +10,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 * The tracing configuration has been extended to now also support a rate-limiting sampler. See the
   [Monitoring & Tracing guide]({{% doclink "/admin-guide/monitoring-tracing-config/#tracing" %}}) for details.
+* Add new metric for tracking the total number of Tenants in Hono.
 
 ### Fixes & Enhancements
 

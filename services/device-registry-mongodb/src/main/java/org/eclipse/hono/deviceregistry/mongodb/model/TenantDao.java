@@ -28,6 +28,7 @@ import org.eclipse.hono.service.management.tenant.TenantWithId;
 
 import io.opentracing.SpanContext;
 import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
 
 /**
  * A data access object for reading and writing tenant data from/to a persistent store.
@@ -135,6 +136,18 @@ public interface TenantDao {
             TenantDto tenantConfig,
             Optional<String> resourceVersion,
             SpanContext tracingContext);
+
+    /**
+     * Gets the Tenants count.
+     *
+     * @param filter Filter for the Mongo DB count query 
+     *                       or {@code null} if the total Tenant count must be returned.
+     * @param tracingContext The context to track the processing of the request in.
+     *                       If {@code null} is passed, no Span will be created.
+     *
+     * @return The Tenants count.
+     */
+    Future<Integer> count(JsonObject filter, SpanContext tracingContext);
 
     /**
      * Deletes an existing tenant.
