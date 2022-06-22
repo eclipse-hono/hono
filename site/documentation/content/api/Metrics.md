@@ -125,3 +125,9 @@ as listed below.
 | ---------------------------------- | ------------------- | -------------------------------------------------------- | ----------- |
 | *hono.command.payload*             | DistributionSummary | *host*, *component-type*, *component-name*, *tenant*, *type*, *status*, *direction* | The number of bytes conveyed in the payload of a command message that could not be forwarded to a protocol adapter. |
 | *hono.command.processing.duration* | Timer               | *host*, *component-type*, *component-name*, *tenant*, *type*, *status*, *direction* | The time it took to process a message conveying a command that could not be forwarded to a protocol adapter. |
+
+#### Device Registry
+
+| Metric                             | Type                | Tags                                         | Description |
+| ---------------------------------- | ------------------- | -------------------------------------------- | ----------- |
+| *hono.tenants.total*               | Gauge               | *component-type*, *component-name*           | The total number of Tenants in Hono. |
