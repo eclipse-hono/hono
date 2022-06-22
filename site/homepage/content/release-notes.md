@@ -4,6 +4,14 @@ title = "What is new & noteworthy in Hono?"
 description = "Information about changes in recent Hono releases. Includes new features, fixes, enhancements and API changes."
 +++
 
+## 2.0.1
+
+### Fixes & Enhancements
+
+* The CoAP adapter did not properly consider the reduced minimum RAM requirements for starting up when running as a
+  native executable on a SubstrateVM. This could have resulted in the adapter not starting up at all, if configured
+  with less than ~150MB of RAM. This has been fixed.
+
 ## 2.0.0
 
 ### New features
