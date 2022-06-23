@@ -13,11 +13,11 @@
 
 package org.eclipse.hono.deviceregistry.server;
 
-import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.http.HttpServiceBase;
+import org.eclipse.hono.service.http.HttpServiceConfigProperties;
 
 /**
  * Default REST server for Hono's example device registry.
  */
-public class DeviceRegistryHttpServer extends HttpServiceBase<ServiceConfigProperties> {
+public class DeviceRegistryHttpServer extends HttpServiceBase<HttpServiceConfigProperties> {
 }

@@ -3,3 +3,4 @@ hono:
     authenticationRequired: false
     maxPayloadSize: 4096
     realm: "test-realm"
+    idleTimeout: 60
