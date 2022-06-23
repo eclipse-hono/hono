@@ -30,6 +30,8 @@ public class HttpServiceConfigProperties extends ServiceConfigProperties {
     private boolean authenticationRequired = true;
     private String realm = DEFAULT_REALM;
 
+    private int idleTimeout = 60;
+
     /**
      * Creates default properties.
      */
@@ -47,6 +49,7 @@ public class HttpServiceConfigProperties extends ServiceConfigProperties {
         super(options.commonOptions());
         this.setAuthenticationRequired(options.authenticationRequired());
         this.setRealm(options.realm());
+        this.setIdleTimeout(options.idleTimeout());
     }
 
     /**
@@ -102,5 +105,37 @@ public class HttpServiceConfigProperties extends ServiceConfigProperties {
      */
     public final void setRealm(final String realm) {
         this.realm = Objects.requireNonNull(realm);
+    }
+
+    /**
+     * Gets the idle timeout.
+     * <p>
+     * A connection will timeout and be closed if no data is received or sent within the idle timeout period.
+     * A zero value means no timeout is used.
+     * <p>
+     * The default value is {@code 60} in seconds.
+     *
+     * @return The idle timeout in seconds.
+     */
+    public final int getIdleTimeout() {
+        return idleTimeout;
+    }
+
+    /**
+     * Sets the idle timeout.
+     * <p>
+     * A connection will timeout and be closed if no data is received or sent within the idle timeout period.
+     * A zero value means no timeout is used.
+     * <p>
+     * The default value is {@code 60}. The idle timeout is in seconds.
+     *
+     * @param idleTimeout The idle timeout.
+     * @throws IllegalArgumentException if idleTimeout is less than {@code 0}.
+     */
+    public final void setIdleTimeout(final int idleTimeout) {
+        if (idleTimeout < 0) {
+            throw new IllegalArgumentException("idleTimeout must be >= 0");
+        }
+        this.idleTimeout = idleTimeout;
     }
 }
