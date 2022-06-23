@@ -167,20 +167,25 @@ arbitrary (unused) port numbers determined by the operating system during startu
 
 ## Authentication Service Connection Configuration
 
-The Device Registry requires a connection to an implementation of Hono's Authentication API in order to authenticate
-and authorize client requests.
+The service requires a connection to an implementation of Hono's Authentication API in order to authenticate and
+authorize client requests.
 
 The connection is configured according to the [Hono Client Configuration]({{< relref "hono-client-configuration.md" >}})
-where the `${PREFIX}` is set to `HONO_AUTH`. Since Hono's Authentication Service does not allow caching of the responses,
-the cache properties can be ignored.
+where the `${PREFIX}` is set to `HONO_AUTH`. The properties for configuring the client's response caching will be ignored because
+Hono's Authentication Service does not allow caching of responses.
 
-In addition to the standard client configuration properties, the following properties may be set for the connection:
+In addition to the standard client configuration properties, the following properties are supported:
 
-| OS Environment Variable<br>Java System Property                 | Mandatory | Default        | Description          |
-| :-------------------------------------------------------------- | :-------: | :------------- | :--------------------|
-| `HONO_AUTH_VALIDATION_CERTPATH`<br>`hono.auth.validation.certPath`        | no        | -              | The absolute path to the PEM file containing the an X.509 certificate that the service should use for validating tokens issued by the Authentication service. Alternatively, a symmetric key can be used for validating tokens by setting the `HONO_AUTH_VALIDATION_SHAREDSECRET` variable. If none of these variables is set, startup of the service fails. |
-| `HONO_AUTH_VALIDATION_SHAREDSECRET`<br>`hono.auth.validation.sharedSecret` | no        | -              | A string to derive a symmetric key from which is used for validating tokens issued by the Authentication service. The key is derived from the string by using the bytes of the String's UTF8 encoding. When setting the validation key using this variable, the Authentication service **must** be configured with the same key. Alternatively, an X.509 certificate can be used for validating tokens by setting the `HONO_AUTH_VALIDATION_CERTPATH` variable. If none of these variables is set, startup of the service fails. |
-| `HONO_AUTH_SUPPORTEDSASLMECHANISMS`<br>`hono.auth.supportedSaslMechanisms` | no        | `EXTERNAL, PLAIN` | A (comma separated) list of the SASL mechanisms that the device registry should offer to clients for authentication. This option may be set to specify only one of `EXTERNAL` or `PLAIN`, or to use a different order. |
+| OS Environment Variable<br>Java System Property | Mandatory | Default | Description                             |
+| :---------------------------------------------- | :-------: | :------ | :---------------------------------------|
+| `HONO_AUTH_JWKSENDPOINTPOLLINGINTERVAL`<br>`hono.auth.jwksEndpointPollingInterval` | no | `PT5M` | The interval at which the JWK set should be retrieved from the Authentication service. The format used is the standard `java.time.Duration` [format](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/time/Duration.html#parse(java.lang.CharSequence)). |
+| `HONO_AUTH_JWKSENDPOINTPORT`<br>`hono.auth.jwksEndpointPort` | no | `8088` | The port of the Authentication service's HTTP endpoint to retrieve the JWK set from. |
+| `HONO_AUTH_JWKSENDPOINTTLSENABLED`<br>`hono.auth.jwksEndpointTlsEnabled` | no | `false` | Indicates if TLS should be used to retrieve the JWK set from the Authentication service. |
+| `HONO_AUTH_JWKSENDPOINTURI`<br>`hono.auth.jwksEndpointUri` | no | `/validating-keys` | The URI of the Authentication service's HTTP endpoint to retrieve the JWK set from. |
+| `HONO_AUTH_VALIDATION_AUDIENCE`<br>`hono.auth.validation.audience` | no | - | The value to expect to find in a token's *aud* claim. If set, the token will not be trusted if the value in the claim does not match the value configured using this property. |
+| `HONO_AUTH_VALIDATION_CERTPATH`<br>`hono.auth.validation.certPath` | no  | - | The absolute path to the PEM file containing the public key that the service should use for validating tokens issued by the Authentication service. Alternatively, a symmetric key can be used for validating tokens by setting the `HONO_AUTH_VALIDATION_SHAREDSECRET` variable. If none of these variables is set, the service will try to retrieve a JWK set containing the key(s) from the Authentication server. |
+| `HONO_AUTH_VALIDATION_ISSUER`<br>`hono.auth.validation.issuer` | yes | `https://hono.eclipse.org/auth-server` | The value to expect to find in a token's *iss* claim. The token will not be trusted if the value in the claim does not match the value configured using this property. |
+| `HONO_AUTH_VALIDATION_SHAREDSECRET`<br>`hono.auth.validation.sharedSecret` | no  | - | A string to derive a symmetric key from which will be used for validating tokens issued by the Authentication service. The key is derived from the string by using the bytes of the String's UTF8 encoding. When setting the validation key using this variable, the Authentication service **must** be configured with the same key. Alternatively, an X.509 certificate can be used for validating tokens by setting the `HONO_AUTH_VALIDATION_CERTPATH` variable. If none of these variables is set, the service will try to retrieve a JWK set containing the key(s) from the Authentication server. |
 
 ## Metrics Configuration
 

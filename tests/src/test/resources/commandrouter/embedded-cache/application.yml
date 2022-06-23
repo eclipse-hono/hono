@@ -9,8 +9,7 @@ hono:
     port: 5671
     name: "command-router"
     trustStorePath: "/opt/hono/config/certs/trusted-certs.pem"
-    validation:
-      certPath: "/opt/hono/config/certs/auth-server-cert.pem"
+    jwksPollingInterval: "PT20S"
   commandRouter:
     amqp:
       insecurePortEnabled: true

@@ -11,6 +11,11 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The tracing configuration has been extended to now also support a rate-limiting sampler. See the
   [Monitoring & Tracing guide]({{% doclink "/admin-guide/monitoring-tracing-config/#tracing" %}}) for details.
 * Add new metric for tracking the total number of Tenants in Hono.
+* The Auth server component now provides an HTTP endpoint for retrieving the keys that applications should use for
+  validating the signature of tokens issued by the Auth server. The keys are being transferred by means of a
+  JSON Web Key set as defined by [RFC 7517](https://datatracker.ietf.org/doc/html/rfc7517). The Device Registry and
+  Command Router components will use this endpoint to periodically download the keys if no key material has been configured
+  explicitly.
 
 ### Fixes & Enhancements
 

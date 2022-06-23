@@ -17,6 +17,8 @@ import java.time.Duration;
 
 import org.eclipse.hono.auth.Authorities;
 
+import io.vertx.core.json.JsonObject;
+
 /**
  * A factory for creating JSON Web Tokens containing user identity and
  * granted authorities.
@@ -53,4 +55,13 @@ public interface AuthTokenFactory {
      * @see <a href="https://www.rfc-editor.org/rfc/rfc7515.html#section-3">RFC 7515, Section 3</a>
      */
     String createToken(String authorizationId, Authorities authorities);
+
+    /**
+     * Gets a JSON Web Key (JWK) set that contains the keys and parameters that can be used
+     * to validate signatures created by this factory.
+     *
+     * @return The JWK set.
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc7517">RFC 7517</a>
+     */
+    JsonObject getValidatingJwkSet();
 }

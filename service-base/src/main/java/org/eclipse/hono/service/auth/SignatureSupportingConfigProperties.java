@@ -25,6 +25,8 @@ public class SignatureSupportingConfigProperties {
     private String keyPath = null;
     private long tokenExpiration = 600L;
     private String certPath = null;
+    private String issuer = SignatureSupportingOptions.DEFAULT_ISSUER;
+    private String audience;
 
     /**
      * Creates new properties using default values.
@@ -40,6 +42,8 @@ public class SignatureSupportingConfigProperties {
      */
     public SignatureSupportingConfigProperties(final SignatureSupportingOptions options) {
         super();
+        options.audience().ifPresent(this::setAudience);
+        this.issuer = options.issuer();
         this.certPath = options.certPath().orElse(null);
         this.keyPath = options.keyPath().orElse(null);
         options.sharedSecret().ifPresent(this::setSharedSecret);
@@ -145,7 +149,7 @@ public class SignatureSupportingConfigProperties {
      * @return {@code true} if any of sharedSecret or keyPath is not {@code null}.
      */
     public final boolean isAppropriateForCreating() {
-        return sharedSecret != null || keyPath != null;
+        return sharedSecret != null || ( keyPath != null && certPath != null );
     }
 
     /**
@@ -155,5 +159,49 @@ public class SignatureSupportingConfigProperties {
      */
     public final boolean isAppropriateForValidating() {
         return sharedSecret != null || certPath != null;
+    }
+
+    /**
+     * Sets the value to put into or expect to find in a token's {@code iss} claim.
+     * <p>
+     * The default value of this property is {@value SignatureSupportingOptions#DEFAULT_ISSUER}.
+     *
+     * @param issuer The issuer.
+     * @throws NullPointerException if issuer is {@code null}.
+     */
+    public final void setIssuer(final String issuer) {
+        this.issuer = Objects.requireNonNull(issuer);
+    }
+
+    /**
+     * Gets the value to put into or expect to find in a token's {@code iss} claim.
+     * <p>
+     * The default value of this property is {@value SignatureSupportingOptions#DEFAULT_ISSUER}.
+     *
+     * @return The issuer value.
+     */
+    public final String getIssuer() {
+        return this.issuer;
+    }
+
+    /**
+     * Sets the value to put into or expect to find in a token's {@code aud} claim.
+     *
+     * @param audience The audience.
+     * @throws NullPointerException if audience is {@code null}.
+     */
+    public final void setAudience(final String audience) {
+        this.audience = Objects.requireNonNull(audience);
+    }
+
+    /**
+     * Gets the value to put into or expect to find in a token's {@code aud} claim.
+     * <p>
+     * This property is empty by default.
+     *
+     * @return The audience or {@code null} if not set.
+     */
+    public final String getAudience() {
+        return this.audience;
     }
 }

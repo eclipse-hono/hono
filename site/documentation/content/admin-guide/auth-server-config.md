@@ -5,7 +5,7 @@ weight = 305
 
 The Auth Server component exposes a service endpoint implementing Eclipse Hono&trade;'s
 [Authentication]({{< ref "/api/authentication" >}}) API. Other services use this component for authenticating clients
-and retrieving a token asserting the client's identity and corresponding authorities.
+and retrieving a JSON Web Token (JWT) asserting the client's identity and corresponding authorities.
 <!--more-->
 
 This component serves as a default implementation of the *Authentication* API only. On startup, it reads in all
@@ -44,9 +44,6 @@ configuring the Auth Server component:
 | `HONO_AUTH_AMQP_TRUSTSTOREPASSWORD`<br>`hono.auth.amqp.trustStorePassword` | no | - | The password required to read the contents of the trust store. |
 | `HONO_AUTH_AMQP_TRUSTSTOREPATH`<br>`hono.auth.amqp.trustStorePath` | no  | - | The absolute path to the Java key store containing the CA certificates the service uses for authenticating clients. The key store format can be either `JKS`, `PKCS12` or `PEM` indicated by a `.jks`, `.p12` or `.pem` file suffix respectively. |
 | `HONO_AUTH_SVC_PERMISSIONSPATH`<br>`hono.auth.svc.permissionsPath` | yes | - | The path to the JSON file defining the identities and corresponding authorities on Hono's endpoint resources. For backwards compatibility with previous releases, the path may contain a `file://` prefix. |
-| `HONO_AUTH_SVC_SIGNING_KEYPATH`<br>`hono.auth.svc.signing.keyPath` | no  | - | The absolute path to the (PKCS8) PEM file containing the private key that the server should use for signing tokens asserting an authenticated client's identity and authorities. When using this variable, other services that need to validate the tokens issued by this service need to be configured with the corresponding certificate/public key. Alternatively, a symmetric key can be used for signing (and validating) by setting the `HONO_AUTH_SVC_SIGNING_SHAREDSECRET` variable. If none of these variables is set, the server falls back to the key indicated by the `HONO_AUTH_AMQP_KEYPATH` variable. If that variable is also not set, startup of the server fails. |
-| `HONO_AUTH_SVC_SIGNING_SHAREDSECRET`<br>`hono.auth.svc.signing.sharedSecret` | no  | - | A string to derive a symmetric key from that is used for signing tokens asserting an authenticated client's identity and authorities. The key is derived from the string by using the bytes of the String's UTF8 encoding. When setting the signing key using this variable, other services that need to validate the tokens issued by this service need to be configured with the same key. Alternatively, an asymmetric key pair can be used for signing (and validating) by setting the `HONO_AUTH_SVC_SIGNING_KEYPATH` variable. If none of these variables is set, startup of the server fails. |
-| `HONO_AUTH_SVC_SIGNING_TOKENEXPIRATION`<br>`hono.auth.svc.signing.tokenExpiration` | no  | 600 | The number of seconds after which the tokens created by this service for asserting an authenticated client's identity should be considered invalid. Other Hono components will close AMQP connections with clients after this period in order to force the client to authenticate again and create a new token. In closed environments it should be save to set this value to a much higher value, e.g. several hours. |
 | `HONO_AUTH_SVC_SUPPORTEDSASLMECHANISMS`<br>`hono.auth.svc.supportedSaslMechanisms` | no  | `EXTERNAL, PLAIN` | A (comma separated) list of the supported SASL mechanisms to be advertised to clients. This option may be set to specify only one of `EXTERNAL` or `PLAIN`, or to use a different order. |
 
 The variables only need to be set if the default value does not match your environment.
@@ -134,7 +131,32 @@ local network e.g., while the secure port may be visible worldwide.
 Both the secure as well as the insecure port numbers may be explicitly set to `0`. The Auth Server will then use
 arbitrary (unused) port numbers determined by the operating system during startup.
 
+## Signing Key Configuration
+
+The Auth server needs to be configured with key material that can be used to digitally sign the tokens that it creates.
+
+The following table provides an overview of the configuration variables and corresponding system properties for
+configuring the Auth server's signing process:
+
+| OS Environment Variable<br>Java System Property | Mandatory | Default | Description                                                             |
+| :---------------------------------------------- | :-------: | :------ | :-----------------------------------------------------------------------|
+| `HONO_AUTH_SVC_SIGNING_AUDIENCE`<br>`hono.auth.svc.signing.audience` | no | - | The value to put into a created token's *aud* claim. |
+| `HONO_AUTH_SVC_SIGNING_ISSUER`<br>`hono.auth.svc.signing.issuer` | yes | `https://hono.eclipse.org/auth-server` | The value to put into a created token's *iss* claim. |
+| `HONO_AUTH_SVC_SIGNING_KEYPATH`<br>`hono.auth.svc.signing.keyPath` | no  | - | The absolute path to the (PKCS8) PEM file containing the private key that the server should use for signing tokens asserting an authenticated client's identity and authorities. When using this variable, other services that need to validate the tokens issued by this service need to be configured with the corresponding certificate/public key. Alternatively, a symmetric key can be used for signing (and validating) by setting the `HONO_AUTH_SVC_SIGNING_SHAREDSECRET` variable. If none of these variables is set, the server falls back to the key indicated by the `HONO_AUTH_AMQP_KEYPATH` variable. If that variable is also not set, startup of the server fails. |
+| `HONO_AUTH_SVC_SIGNING_SHAREDSECRET`<br>`hono.auth.svc.signing.sharedSecret` | no  | - | A string to derive a symmetric key from that is used for signing tokens asserting an authenticated client's identity and authorities. The key is derived from the string by using the bytes of the String's UTF8 encoding. When setting the signing key using this variable, other services that need to validate the tokens issued by this service need to be configured with the same key. Alternatively, an asymmetric key pair can be used for signing (and validating) by setting the `HONO_AUTH_SVC_SIGNING_KEYPATH` variable. If none of these variables is set, startup of the server fails. |
+| `HONO_AUTH_SVC_SIGNING_TOKENEXPIRATION`<br>`hono.auth.svc.signing.tokenExpiration` | no  | 600 | The number of seconds after which the tokens created by this service for asserting an authenticated client's identity should be considered invalid. Other Hono components will close AMQP connections with clients after this period in order to force the client to authenticate again and create a new token. In closed environments it should be save to set this value to a much higher value, e.g. several hours. |
+
+### JSON Web Key Set Resource Configuration
+
+The Auth server hosts an HTTP resource under URI `/validating-keys` that other components can use to retrieve a
+[JSON Web Key](https://datatracker.ietf.org/doc/html/rfc7517) set that contains the keys to use for validating the
+signature of tokens created by the Auth server.
+
+The resource is served by the same HTTP server that is also used for hosting the health check resources described in
+the [Monitoring & Tracing Admin Guide]({{< ref "/admin-guide/monitoring-tracing-config.md" >}}).
+
 ## Metrics Configuration
 
 See [Monitoring & Tracing Admin Guide]({{< ref "/admin-guide/monitoring-tracing-config.md" >}}) for details on how to
 configure the reporting of metrics.
+

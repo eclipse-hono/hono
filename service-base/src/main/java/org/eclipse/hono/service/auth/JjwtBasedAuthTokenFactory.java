@@ -13,10 +13,21 @@
 
 package org.eclipse.hono.service.auth;
 
+import java.security.AlgorithmParameters;
+import java.security.GeneralSecurityException;
+import java.security.Key;
+import java.security.interfaces.ECPublicKey;
+import java.security.interfaces.RSAPublicKey;
+import java.security.spec.ECGenParameterSpec;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.Date;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+
+import javax.crypto.SecretKey;
 
 import org.eclipse.hono.auth.Authorities;
 import org.slf4j.Logger;
@@ -24,8 +35,11 @@ import org.slf4j.LoggerFactory;
 
 import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 /**
  * A JJWT based factory for creating signed JSON Web Tokens containing user claims.
@@ -36,11 +50,29 @@ import io.vertx.core.Vertx;
                         io.jsonwebtoken.jackson.io.JacksonSerializer.class,
                         io.jsonwebtoken.impl.compression.GzipCompressionCodec.class
 })
-public class JjwtBasedAuthTokenFactory extends JwtSupport implements AuthTokenFactory {
+public final class JjwtBasedAuthTokenFactory extends JwtSupport implements AuthTokenFactory {
 
     private static final Logger LOG = LoggerFactory.getLogger(JjwtBasedAuthTokenFactory.class);
+    private static final String PROPERTY_JWK_CRV = "crv";
+    private static final String PROPERTY_JWK_E = "e";
+    private static final String PROPERTY_JWK_KEY_OPS = "key_ops";
+    private static final String PROPERTY_JWK_K = "k";
+    private static final String PROPERTY_JWK_KID = "kid";
+    private static final String PROPERTY_JWK_KTY = "kty";
+    private static final String PROPERTY_JWK_N = "n";
+    private static final String PROPERTY_JWK_USE = "use";
+    private static final String PROPERTY_JWK_X = "x";
+    private static final String PROPERTY_JWK_Y = "y";
 
+    private static final Map<String, String> CURVE_OID_TO_NIST_NAME = Map.of(
+            "1.2.840.10045.3.1.7", "P-256",
+            "1.3.132.0.34", "P-384",
+            "1.3.132.0.35", "P-521");
+
+    private final JsonObject jwkSet = new JsonObject();
+    private final SignatureSupportingConfigProperties config;
     private final Duration tokenLifetime;
+    private final String signingKeyId;
 
     /**
      * Creates a helper for creating tokens.
@@ -57,17 +89,21 @@ public class JjwtBasedAuthTokenFactory extends JwtSupport implements AuthTokenFa
 
         if (config.getSharedSecret() != null) {
             final var bytes = getBytes(config.getSharedSecret());
-            setSharedSecret(bytes);
+            final var secretKey = Keys.hmacShaKeyFor(bytes);
+            this.signingKeyId = addSecretKey(secretKey);
             LOG.info("using shared secret [{} bytes] for signing/validating tokens", bytes.length);
-        } else if (config.getKeyPath() != null) {
-            setPrivateKey(config.getKeyPath());
-            LOG.info("using private key [{}] for signing tokens", config.getKeyPath());
+        } else if (config.getKeyPath() != null && config.getCertPath() != null) {
+            this.signingKeyId = addPrivateKey(config.getKeyPath(), config.getCertPath());
+            LOG.info("using key pair [private: {}, cert: {}] for signing/verifying tokens",
+                    config.getKeyPath(), config.getCertPath());
         } else {
             throw new IllegalArgumentException(
                     "configuration does not specify any key material for signing tokens");
         }
         tokenLifetime = Duration.ofSeconds(config.getTokenExpiration());
         LOG.info("using token lifetime of {} seconds", tokenLifetime.getSeconds());
+        this.config = config;
+        createJwk();
     }
 
     @Override
@@ -75,12 +111,78 @@ public class JjwtBasedAuthTokenFactory extends JwtSupport implements AuthTokenFa
         return tokenLifetime;
     }
 
+    private void createJwk() {
+        final JsonArray keyArray = getValidatingKeys().stream()
+                .map(entry -> {
+                    final var jwk = new JsonObject();
+                    jwk.put(PROPERTY_JWK_USE, "sig");
+                    jwk.put(PROPERTY_JWK_KEY_OPS, "verify");
+                    if (entry.getValue() instanceof SecretKey secretKey) {
+                        jwk.put(PROPERTY_JWK_KTY, "oct");
+                        jwk.put(PROPERTY_JWK_K, entry.getValue().getEncoded());
+                    } else {
+                        addPublicKey(jwk, entry.getKey(), entry.getValue());
+                    }
+                    jwk.put(PROPERTY_JWK_KID, entry.getKey());
+                    return jwk;
+                })
+                .collect(JsonArray::new, JsonArray::add, JsonArray::addAll);
+        jwkSet.put("keys", keyArray);
+        if (LOG.isInfoEnabled()) {
+            LOG.info("successfully created JWK set:{}{}", System.lineSeparator(), jwkSet.encodePrettily());
+        }
+    }
+
+    private void addPublicKey(final JsonObject jwk, final String keyId, final Key key) {
+
+        if (key instanceof RSAPublicKey rsaPublicKey) {
+            addRsaPublicKey(jwk, rsaPublicKey);
+        } else if (key instanceof ECPublicKey ecPublicKey) {
+            addEcPublicKey(jwk, ecPublicKey);
+        } else {
+            throw new IllegalArgumentException(
+                    "unsupported key type [%s], must be RSA or EC".formatted(key.getAlgorithm()));
+        }
+        jwk.put(PROPERTY_JWK_KTY, key.getAlgorithm());
+    }
+
+    private void addRsaPublicKey(final JsonObject jwk, final RSAPublicKey rsaPublicKey) {
+        // according to https://datatracker.ietf.org/doc/html/rfc7518#section-6.3.1
+        // the modulus and exponent need to be base64url encoded without padding
+        final var encoder = Base64.getUrlEncoder().withoutPadding();
+        jwk.put(PROPERTY_JWK_N, encoder.encodeToString(rsaPublicKey.getModulus().toByteArray()));
+        jwk.put(PROPERTY_JWK_E, encoder.encodeToString(rsaPublicKey.getPublicExponent().toByteArray()));
+    }
+
+    private String getNistCurveName(final ECPublicKey ecPublicKey) throws GeneralSecurityException {
+        final AlgorithmParameters parameters = AlgorithmParameters.getInstance("EC");
+        parameters.init(ecPublicKey.getParams());
+        final var spec = parameters.getParameterSpec(ECGenParameterSpec.class);
+        final var oid = spec.getName();
+        return Optional.ofNullable(CURVE_OID_TO_NIST_NAME.get(oid))
+                .orElseThrow(() -> new IllegalArgumentException("unsupported curve [%s]".formatted(oid)));
+    }
+
+    private void addEcPublicKey(final JsonObject jwk, final ECPublicKey ecPublicKey) {
+        try {
+            jwk.put(PROPERTY_JWK_CRV, getNistCurveName(ecPublicKey));
+            // according to https://datatracker.ietf.org/doc/html/rfc7518#section-6.2.1.2
+            // the X and Y coordinates need to be base64url encoded without padding
+            final var encoder = Base64.getUrlEncoder().withoutPadding();
+            jwk.put(PROPERTY_JWK_X, encoder.encodeToString(ecPublicKey.getW().getAffineX().toByteArray()));
+            jwk.put(PROPERTY_JWK_Y, encoder.encodeToString(ecPublicKey.getW().getAffineY().toByteArray()));
+        } catch (final GeneralSecurityException e) {
+            throw new IllegalArgumentException("cannot serialize EC based public key", e);
+        }
+    }
+
     @Override
     public String createToken(final String authorizationId, final Authorities authorities) {
 
         final JwtBuilder builder = Jwts.builder()
-                .signWith(key, algorithm)
-                .setIssuer("Hono")
+                .signWith(getSigningKey(signingKeyId))
+                .setHeaderParam(PROPERTY_JWK_KID, signingKeyId)
+                .setIssuer(config.getIssuer())
                 .setSubject(Objects.requireNonNull(authorizationId))
                 .setExpiration(Date.from(Instant.now().plus(tokenLifetime)));
         if (authorities != null) {
@@ -89,5 +191,13 @@ public class JjwtBasedAuthTokenFactory extends JwtSupport implements AuthTokenFa
             });
         }
         return builder.compact();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public JsonObject getValidatingJwkSet() {
+        return jwkSet;
     }
 }

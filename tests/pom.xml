@@ -272,6 +272,11 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-auth-common</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
       <scope>test</scope>
@@ -952,9 +957,9 @@
                       </exec>
                     </cmd>
                     <env>
-                      <SMALLRYE_CONFIG_LOCATIONS>
+                      <QUARKUS_CONFIG_LOCATIONS>
                         /opt/hono/config/logging-quarkus-${logging.profile}.yml
-                      </SMALLRYE_CONFIG_LOCATIONS>
+                      </QUARKUS_CONFIG_LOCATIONS>
                       <JDK_JAVA_OPTIONS>${hono.auth-server.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                     </env>
@@ -1284,9 +1289,9 @@
                     <memorySwap>${hono.deviceregistry.mongodb.max-mem}</memorySwap>
                     <memory>${hono.deviceregistry.mongodb.max-mem}</memory>
                     <env>
-                      <SMALLRYE_CONFIG_LOCATIONS>
+                      <QUARKUS_CONFIG_LOCATIONS>
                         /opt/hono/config/logging-quarkus-${logging.profile}.yml
-                      </SMALLRYE_CONFIG_LOCATIONS>
+                      </QUARKUS_CONFIG_LOCATIONS>
                       <JDK_JAVA_OPTIONS>${hono.deviceregistry.mongodb.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                     </env>
@@ -1380,9 +1385,9 @@
                     <memorySwap>${hono.deviceregistry.jdbc.max-mem}</memorySwap>
                     <memory>${hono.deviceregistry.jdbc.max-mem}</memory>
                     <env>
-                      <SMALLRYE_CONFIG_LOCATIONS>
+                      <QUARKUS_CONFIG_LOCATIONS>
                         /opt/hono/config/logging-quarkus-${logging.profile}.yml
-                      </SMALLRYE_CONFIG_LOCATIONS>
+                      </QUARKUS_CONFIG_LOCATIONS>
                       <JDK_JAVA_OPTIONS>${hono.deviceregistry.jdbc.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                     </env>
@@ -1431,7 +1436,6 @@
                             <outputDirectory>opt/hono/config/certs</outputDirectory>
                             <includes>
                               <include>command-router-*.pem</include>
-                              <include>auth-server-cert.pem</include>
                               <include>trusted-certs.pem</include>
                             </includes>
                           </fileSet>
@@ -1458,9 +1462,9 @@
                       </exec>
                     </cmd>
                     <env>
-                      <SMALLRYE_CONFIG_LOCATIONS>
+                      <QUARKUS_CONFIG_LOCATIONS>
                         /opt/hono/config/logging-quarkus-${logging.profile}.yml
-                      </SMALLRYE_CONFIG_LOCATIONS>
+                      </QUARKUS_CONFIG_LOCATIONS>
                       <JDK_JAVA_OPTIONS>${hono.command-router.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                     </env>
@@ -1541,9 +1545,9 @@
                       </exec>
                     </cmd>
                     <env>
-                      <SMALLRYE_CONFIG_LOCATIONS>
+                      <QUARKUS_CONFIG_LOCATIONS>
                         /opt/hono/config/logging-quarkus-${logging.profile}.yml
-                      </SMALLRYE_CONFIG_LOCATIONS>
+                      </QUARKUS_CONFIG_LOCATIONS>
                       <JDK_JAVA_OPTIONS>${hono.http-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                     </env>
@@ -1614,9 +1618,9 @@
                       </exec>
                     </cmd>
                     <env>
-                      <SMALLRYE_CONFIG_LOCATIONS>
+                      <QUARKUS_CONFIG_LOCATIONS>
                         /opt/hono/config/logging-quarkus-${logging.profile}.yml
-                      </SMALLRYE_CONFIG_LOCATIONS>
+                      </QUARKUS_CONFIG_LOCATIONS>
                       <JDK_JAVA_OPTIONS>${hono.mqtt-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                     </env>
@@ -1688,9 +1692,9 @@
                       </exec>
                     </cmd>
                     <env>
-                      <SMALLRYE_CONFIG_LOCATIONS>
+                      <QUARKUS_CONFIG_LOCATIONS>
                         /opt/hono/config/logging-quarkus-${logging.profile}.yml
-                      </SMALLRYE_CONFIG_LOCATIONS>
+                      </QUARKUS_CONFIG_LOCATIONS>
                       <JDK_JAVA_OPTIONS>${hono.amqp-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                     </env>
@@ -1761,9 +1765,9 @@
                       </exec>
                     </cmd>
                     <env>
-                      <SMALLRYE_CONFIG_LOCATIONS>
+                      <QUARKUS_CONFIG_LOCATIONS>
                         /opt/hono/config/logging-quarkus-${logging.profile}.yml
-                      </SMALLRYE_CONFIG_LOCATIONS>
+                      </QUARKUS_CONFIG_LOCATIONS>
                       <JDK_JAVA_OPTIONS>${hono.coap-adapter.java-options}</JDK_JAVA_OPTIONS>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                     </env>
@@ -1905,6 +1909,7 @@
               <systemPropertyVariables>
                 <auth.host>${auth.ip}</auth.host>
                 <auth.amqps.port>${auth.amqps.port}</auth.amqps.port>
+                <auth.http.port>${auth.health.port}</auth.http.port>
                 <hono.username>hono-client</hono.username>
                 <hono.password>secret</hono.password>
                 <tenant.admin.username>http-adapter@HONO</tenant.admin.username>

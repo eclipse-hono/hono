@@ -3,6 +3,8 @@ hono:
     svc:
       permissionsPath: "/etc/permissions.json"
       signing:
+        audience: "hono-components"
         sharedSecret: "secretsecretsecretsecretsecretsecret"
         tokenExpiration: 1000
+        issuer: "https://my.auth-server.io"
       supportedSaslMechanisms: "PLAIN"
