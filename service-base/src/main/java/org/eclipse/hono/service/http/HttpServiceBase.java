@@ -37,7 +37,6 @@ import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.web.Route;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.AuthenticationHandler;
-import io.vertx.ext.web.handler.BodyHandler;
 
 /**
  * A base class for implementing services using HTTP.
@@ -45,11 +44,6 @@ import io.vertx.ext.web.handler.BodyHandler;
  * @param <T> The type of configuration properties used by this service.
  */
 public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends AbstractServiceBase<T> {
-
-    /**
-     * Default file uploads directory used by Vert.x Web.
-     */
-    protected static final String DEFAULT_UPLOADS_DIRECTORY = "/tmp";
 
     private final Map<String, HttpEndpoint> endpoints = new HashMap<>();
 
@@ -191,8 +185,6 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
      * <ul>
      * <li>a handler and failure handler that creates tracing data for all server requests,</li>
      * <li>a default failure handler,</li>
-     * <li>a handler limiting the body size of requests to the maximum payload size set in the <em>config</em>
-     * properties.</li>
      * </ul>
      *
      * @return The newly created router (never {@code null}).
@@ -207,11 +199,7 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
         matchAllRoute.handler(tracingHandler).failureHandler(tracingHandler);
         // 2. default handler for failed routes
         matchAllRoute.failureHandler(new DefaultFailureHandler());
-        // 3. BodyHandler with request size limit
-        log.info("limiting size of inbound request body to {} bytes", getConfig().getMaxPayloadSize());
-        matchAllRoute.handler(BodyHandler.create().setUploadsDirectory(DEFAULT_UPLOADS_DIRECTORY)
-                .setBodyLimit(getConfig().getMaxPayloadSize()));
-        //4. AuthHandler
+        // 3. AuthHandler
         addAuthHandler(router);
         return router;
     }

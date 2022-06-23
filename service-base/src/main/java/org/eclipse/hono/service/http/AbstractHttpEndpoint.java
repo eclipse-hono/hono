@@ -52,6 +52,11 @@ public abstract class AbstractHttpEndpoint<T extends ServiceConfigProperties> ex
         implements HttpEndpoint {
 
     /**
+     * Default file uploads directory used by Vert.x Web.
+     */
+    protected static final String DEFAULT_UPLOADS_DIRECTORY = "/tmp";
+
+    /**
      * The key that is used to put a valid JSON payload to the RoutingContext.
      */
     protected static final String KEY_REQUEST_BODY = "KEY_REQUEST_BODY";
