@@ -120,11 +120,13 @@ public final class SigfoxProtocolAdapter
         router.route("/data/telemetry/:" + SIGFOX_PARAM_TENANT)
                 .method(HttpMethod.GET)
                 .handler(dataCorsHandler())
+                .handler(getBodyHandler())
                 .handler(ctx -> dataHandler(HttpContext.from(ctx), this::uploadTelemetryMessage));
 
         router.route("/data/event/:" + SIGFOX_PARAM_TENANT)
                 .method(HttpMethod.GET)
                 .handler(dataCorsHandler())
+                .handler(getBodyHandler())
                 .handler(ctx -> dataHandler(HttpContext.from(ctx), this::uploadEventMessage));
 
         router.errorHandler(500, t -> LOG.warn("Unhandled exception", t.failure()));

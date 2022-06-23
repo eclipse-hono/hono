@@ -88,7 +88,7 @@ public class DelegatingCredentialsManagementHttpEndpoint<S extends CredentialsMa
         // Add CORS handler
         router.route(pathWithTenantAndDeviceId).handler(createCorsHandler(config.getCorsAllowedOrigin(), Set.of(HttpMethod.GET, HttpMethod.PUT)));
 
-        final BodyHandler bodyHandler = BodyHandler.create();
+        final BodyHandler bodyHandler = BodyHandler.create(DEFAULT_UPLOADS_DIRECTORY);
         bodyHandler.setBodyLimit(config.getMaxPayloadSize());
 
         // get all credentials for a given device

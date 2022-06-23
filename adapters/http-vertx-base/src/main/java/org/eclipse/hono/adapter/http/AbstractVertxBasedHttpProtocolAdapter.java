@@ -281,8 +281,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
      * <li>a handler and failure handler that creates tracing data for all server requests,</li>
      * <li>a handler to log when the connection is closed prematurely,</li>
      * <li>a default failure handler,</li>
-     * <li>a handler limiting the body size of requests to the maximum payload size set in the <em>config</em>
-     * properties.</li>
      * </ol>
      *
      * @return The newly created router (never {@code null}).
@@ -311,12 +309,6 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
 
         // 4. default handler for failed routes
         matchAllRoute.failureHandler(new DefaultFailureHandler());
-
-        // 5. BodyHandler with request size limit
-        log.info("limiting size of inbound request body to {} bytes", getConfig().getMaxPayloadSize());
-        final BodyHandler bodyHandler = BodyHandler.create(DEFAULT_UPLOADS_DIRECTORY)
-                .setBodyLimit(getConfig().getMaxPayloadSize());
-        matchAllRoute.handler(bodyHandler);
         return router;
     }
 
@@ -1307,5 +1299,17 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
         } else {
             return MetricsTags.QoS.AT_LEAST_ONCE;
         }
+    }
+
+    /**
+     * Gets body handler and sets the maximum body size.
+     * <p>This method sets body limit size from the configuration.
+     *
+     * @return The body handler.
+     */
+    protected BodyHandler getBodyHandler() {
+        final BodyHandler bodyHandler = BodyHandler.create(DEFAULT_UPLOADS_DIRECTORY);
+        bodyHandler.setBodyLimit(getConfig().getMaxPayloadSize());
+        return bodyHandler;
     }
 }

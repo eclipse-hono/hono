@@ -200,6 +200,7 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
 
                 router.route(provider.acceptedHttpMethod(), pathPrefix)
                         .consumes(provider.acceptedContentType())
+                        .handler(getBodyHandler())
                         .handler(ctx -> this.handleProviderRoute(HttpContext.from(ctx), provider));
 
                 router.route(provider.acceptedHttpMethod(), pathPrefix).handler(ctx -> {

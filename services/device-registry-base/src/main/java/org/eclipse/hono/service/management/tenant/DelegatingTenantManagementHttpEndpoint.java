@@ -95,7 +95,7 @@ public class DelegatingTenantManagementHttpEndpoint<S extends TenantManagementSe
         router.route(path).handler(createCorsHandler(config.getCorsAllowedOrigin(), Set.of(HttpMethod.POST)));
         router.route(pathWithTenant).handler(createDefaultCorsHandler(config.getCorsAllowedOrigin()));
 
-        final BodyHandler bodyHandler = BodyHandler.create();
+        final BodyHandler bodyHandler = BodyHandler.create(DEFAULT_UPLOADS_DIRECTORY);
         bodyHandler.setBodyLimit(config.getMaxPayloadSize());
 
         // ADD tenant with auto-generated ID

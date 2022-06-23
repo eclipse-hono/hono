@@ -98,7 +98,7 @@ public class DelegatingDeviceManagementHttpEndpoint<S extends DeviceManagementSe
         router.route(pathWithTenant).handler(createCorsHandler(config.getCorsAllowedOrigin(), Set.of(HttpMethod.POST)));
         router.route(pathWithTenantAndDeviceId).handler(createDefaultCorsHandler(config.getCorsAllowedOrigin()));
 
-        final BodyHandler bodyHandler = BodyHandler.create();
+        final BodyHandler bodyHandler = BodyHandler.create(DEFAULT_UPLOADS_DIRECTORY);
         bodyHandler.setBodyLimit(config.getMaxPayloadSize());
 
         // CREATE device with auto-generated deviceID
