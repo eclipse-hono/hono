@@ -54,4 +54,17 @@ public interface HttpServiceConfigOptions {
      */
     @WithDefault("Hono")
     String realm();
+
+    /**
+     * Gets the idle timeout.
+     * <p>
+     * A connection will timeout and be closed if no data is received or sent within the idle timeout period.
+     * A zero value means no timeout is used.
+     * <p>
+     * The default value is {@code 60}.The idle timeout is in seconds.
+     *
+     * @return The idle timeout.
+     */
+    @WithDefault("60")
+    int idleTimeout();
 }

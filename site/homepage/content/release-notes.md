@@ -14,7 +14,11 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The CoAP adapter did not properly consider the reduced minimum RAM requirements for starting up when running as a
   native executable on a SubstrateVM. This could have resulted in the adapter not starting up at all, if configured
   with less than ~150MB of RAM. This has been fixed.
-
+* The HTTP protocol adapter and Device Registry now support a configuration property for explicitly setting the idle timeout.
+  The timeout is configured with the property `idleTimeout`. This determines if a connection will timeout and be closed
+  if no data is received or sent within the idle timeout period. The idle timeout is in seconds.
+  A zero value means no timeout is used.
+  
 ## 1.12.2
 
 ### Fixes & Enhancements
