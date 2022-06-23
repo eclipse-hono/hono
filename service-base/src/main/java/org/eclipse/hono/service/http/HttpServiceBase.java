@@ -20,7 +20,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractServiceBase;
 import org.eclipse.hono.util.Constants;
 
@@ -40,7 +39,7 @@ import io.vertx.ext.web.handler.AuthenticationHandler;
  *
  * @param <T> The type of configuration properties used by this service.
  */
-public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends AbstractServiceBase<T> {
+public abstract class HttpServiceBase<T extends HttpServiceConfigProperties> extends AbstractServiceBase<T> {
 
     private static final String MATCH_ALL_ROUTE_NAME = "/* (default route)";
 
@@ -277,8 +276,10 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
     protected HttpServerOptions getHttpServerOptions() {
 
         final HttpServerOptions options = new HttpServerOptions();
-        options.setHost(getConfig().getBindAddress()).setPort(getConfig().getPort(getPortDefaultValue()))
-                .setMaxChunkSize(4096);
+        options.setHost(getConfig().getBindAddress())
+                .setPort(getConfig().getPort(getPortDefaultValue()))
+                .setMaxChunkSize(4096)
+                .setIdleTimeout(getConfig().getIdleTimeout());
         addTlsKeyCertOptions(options);
         addTlsTrustOptions(options);
         return options;
@@ -298,7 +299,8 @@ public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends
 
         final HttpServerOptions options = new HttpServerOptions();
         options.setHost(getConfig().getInsecurePortBindAddress())
-                .setPort(getConfig().getInsecurePort(getInsecurePortDefaultValue())).setMaxChunkSize(4096);
+                .setPort(getConfig().getInsecurePort(getInsecurePortDefaultValue())).setMaxChunkSize(4096)
+                .setIdleTimeout(getConfig().getIdleTimeout());
         return options;
     }
 
