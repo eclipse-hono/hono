@@ -29,8 +29,6 @@ public class ServerConfig extends AbstractConfig {
     private String insecurePortBindAddress = Constants.LOOPBACK_DEVICE_ADDRESS;
     private int insecurePort = Constants.PORT_UNCONFIGURED;
     private boolean sni = false;
-    private int idleTimeout = 60;
-
     /**
      * Creates new properties using default values.
      */
@@ -56,7 +54,6 @@ public class ServerConfig extends AbstractConfig {
             setPort(options.port());
         }
         this.sni = options.sni();
-        this.idleTimeout = options.idleTimeout();
     }
 
     /**
@@ -276,37 +273,5 @@ public class ServerConfig extends AbstractConfig {
      */
     public final boolean isSni() {
         return this.sni;
-    }
-
-    /**
-     * Gets the idle timeout.
-     * <p>
-     * A connection will timeout and be closed if no data is received or sent within the idle timeout period.
-     * A zero value means no timeout is used.
-     * <p>
-     * The default value is {@code 60} in seconds.
-     *
-     * @return The idle timeout in seconds.
-     */
-    public int getIdleTimeout() {
-        return idleTimeout;
-    }
-
-    /**
-     * Sets the idle timeout.
-     * <p>
-     * A connection will timeout and be closed if no data is received or sent within the idle timeout period.
-     * A zero value means no timeout is used.
-     * <p>
-     * The default value is {@code 60}. The idle timeout is in seconds.
-     *
-     * @param idleTimeout The idle timeout.
-     * @throws IllegalArgumentException if idleTimeout is less than {@code 0}.
-     */
-    public void setIdleTimeout(final int idleTimeout) {
-        if (idleTimeout < 0) {
-            throw new IllegalArgumentException("idleTimeout must be >= 0");
-        }
-        this.idleTimeout = idleTimeout;
     }
 }

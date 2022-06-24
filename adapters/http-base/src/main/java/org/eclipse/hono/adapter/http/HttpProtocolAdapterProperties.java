@@ -29,6 +29,7 @@ public class HttpProtocolAdapterProperties extends ProtocolAdapterProperties {
      */
     public static final String DEFAULT_REALM = "Hono";
     private String realm = DEFAULT_REALM;
+    private int idleTimeout = 60;
 
     /**
      * Creates properties using default values.
@@ -45,6 +46,7 @@ public class HttpProtocolAdapterProperties extends ProtocolAdapterProperties {
     public HttpProtocolAdapterProperties(final HttpProtocolAdapterOptions options) {
         super(options.adapterOptions());
         this.realm = options.realm();
+        this.idleTimeout = options.idleTimeout();
     }
 
     /**
@@ -76,4 +78,35 @@ public class HttpProtocolAdapterProperties extends ProtocolAdapterProperties {
         this.realm = Objects.requireNonNull(realm);
     }
 
+    /**
+     * Gets the idle timeout.
+     * <p>
+     * A connection will timeout and be closed if no data is received or sent within the idle timeout period.
+     * A zero value means no timeout is used.
+     * <p>
+     * The default value is {@code 60} in seconds.
+     *
+     * @return The idle timeout in seconds.
+     */
+    public final int getIdleTimeout() {
+        return idleTimeout;
+    }
+
+    /**
+     * Sets the idle timeout.
+     * <p>
+     * A connection will timeout and be closed if no data is received or sent within the idle timeout period.
+     * A zero value means no timeout is used.
+     * <p>
+     * The default value is {@code 60}. The idle timeout is in seconds.
+     *
+     * @param idleTimeout The idle timeout.
+     * @throws IllegalArgumentException if idleTimeout is less than {@code 0}.
+     */
+    public final void setIdleTimeout(final int idleTimeout) {
+        if (idleTimeout < 0) {
+            throw new IllegalArgumentException("idleTimeout must be >= 0");
+        }
+        this.idleTimeout = idleTimeout;
+    }
 }

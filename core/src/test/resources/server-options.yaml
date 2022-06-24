@@ -8,4 +8,3 @@ hono:
     nativeTlsRequired: true
     port: 11000
     trustStoreFormat: "JKS"
-    idleTimeout: 60

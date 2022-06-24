@@ -52,7 +52,6 @@ class ConfigMappingTest {
         assertThat(props.isNativeTlsRequired()).isTrue();
         assertThat(props.isSecurePortEnabled()).isFalse();
         assertThat(props.isSni()).isFalse();
-        assertThat(props.getIdleTimeout()).isEqualTo(60);
     }
 
     /**
