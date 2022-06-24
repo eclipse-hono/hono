@@ -40,5 +40,6 @@ class HttpServiceConfigOptionsTest {
         assertThat(props.isAuthenticationRequired()).isFalse();
         assertThat(props.getRealm()).isEqualTo("test-realm");
         assertThat(props.getMaxPayloadSize()).isEqualTo(4096);
+        assertThat(props.getIdleTimeout()).isEqualTo(60);
     }
 }

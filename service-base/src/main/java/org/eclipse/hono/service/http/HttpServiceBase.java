@@ -20,7 +20,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.service.AbstractServiceBase;
 import org.eclipse.hono.util.Constants;
 
@@ -40,7 +39,7 @@ import io.vertx.ext.web.handler.AuthenticationHandler;
  *
  * @param <T> The type of configuration properties used by this service.
  */
-public abstract class HttpServiceBase<T extends ServiceConfigProperties> extends AbstractServiceBase<T> {
+public abstract class HttpServiceBase<T extends HttpServiceConfigProperties> extends AbstractServiceBase<T> {
 
     private static final String MATCH_ALL_ROUTE_NAME = "/* (default route)";
 
