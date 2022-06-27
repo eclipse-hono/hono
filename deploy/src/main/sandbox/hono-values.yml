@@ -20,20 +20,9 @@ messagingNetworkTypes:
 amqpMessagingNetworkExample:
   enabled: true
   dispatchRouter:
-    keyFile: "/etc/external-tls/tls.key"
-    certFile: "/etc/external-tls/tls.crt"
     uidFormat: "n"
     adapterUids: "hono.eclipseprojects.io"
-    extraSecretMounts:
-      sandbox:
-        secretName: "sandbox-tls"
-        mountPath: "/etc/external-tls"
-  broker:
-    artemis:
-      imageName: "quay.io/enmasse/artemis-base:2.16.0"
-
-kafkaMessagingClusterExample:
-  enabled: true
+    tlsKeysSecret: "sandbox-tls"
 
 adapters:
   http:
@@ -42,17 +31,14 @@ adapters:
     hono:
       http:
         bindAddress: "0.0.0.0"
-        keyPath: "/etc/external-tls/tls.key"
-        certPath: "/etc/external-tls/tls.crt"
+        keyPath: "/opt/hono/tls/tls.key"
+        certPath: "/opt/hono/tls/tls.crt"
         insecurePortEnabled: true
         insecurePortBindAddress: "0.0.0.0"
         jmsVendorPropsEnabled: true
         maxPayloadSize: 8096
         tenantIdleTimeout: "1h"
-    extraSecretMounts:
-      sandbox:
-        secretName: "sandbox-tls"
-        mountPath: "/etc/external-tls"
+    tlsKeysSecret: "sandbox-tls"
     resources:
       requests:
         cpu:
@@ -67,18 +53,15 @@ adapters:
     hono:
       mqtt:
         bindAddress: "0.0.0.0"
-        keyPath: "/etc/external-tls/tls.key"
-        certPath: "/etc/external-tls/tls.crt"
+        keyPath: "/opt/hono/tls/tls.key"
+        certPath: "/opt/hono/tls/tls.crt"
         insecurePortEnabled: true
         insecurePortBindAddress: "0.0.0.0"
         jmsVendorPropsEnabled: true
         maxPayloadSize: 8096
         tenantIdleTimeout: "1h"
         maxConnections: 200
-    extraSecretMounts:
-      sandbox:
-        secretName: "sandbox-tls"
-        mountPath: "/etc/external-tls"
+    tlsKeysSecret: "sandbox-tls"
     resources:
       requests:
         cpu:
@@ -93,16 +76,13 @@ adapters:
     hono:
       amqp:
         bindAddress: "0.0.0.0"
-        keyPath: "/etc/external-tls/tls.key"
-        certPath: "/etc/external-tls/tls.crt"
+        keyPath: "/opt/hono/tls/tls.key"
+        certPath: "/opt/hono/tls/tls.crt"
         insecurePortEnabled: true
         insecurePortBindAddress: "0.0.0.0"
         tenantIdleTimeout: "1h"
         maxConnections: 200
-    extraSecretMounts:
-      sandbox:
-        secretName: "sandbox-tls"
-        mountPath: "/etc/external-tls"
+    tlsKeysSecret: "sandbox-tls"
     resources:
       requests:
         cpu:
@@ -118,14 +98,11 @@ adapters:
       coap:
         bindAddress: "0.0.0.0"
         port: 5684
-        keyPath: "/etc/external-tls/tls.key"
-        certPath: "/etc/external-tls/tls.crt"
+        keyPath: "/opt/hono/tls/tls.key"
+        certPath: "/opt/hono/tls/tls.crt"
         tenantIdleTimeout: "1h"
         maxConnections: 70
-    extraSecretMounts:
-      sandbox:
-        secretName: "sandbox-tls"
-        mountPath: "/etc/external-tls"
+    tlsKeysSecret: "sandbox-tls"
     resources:
       requests:
         cpu:
@@ -141,16 +118,16 @@ adapters:
     enabled: false
 
   amqpMessagingNetworkSpec:
-    keyPath: "/etc/external-tls/tls.key"
-    certPath: "/etc/external-tls/tls.crt"
+    keyPath: "/opt/hono/tls/tls.key"
+    certPath: "/opt/hono/tls/tls.crt"
     hostnameVerificationRequired: false
   commandAndControlSpec:
-    keyPath: "/etc/external-tls/tls.key"
-    certPath: "/etc/external-tls/tls.crt"
+    keyPath: "/opt/hono/tls/tls.key"
+    certPath: "/opt/hono/tls/tls.crt"
     hostnameVerificationRequired: false
 
 authServer:
-  image: "eclipse/hono-service-auth-native"
+  imageName: "eclipse/hono-service-auth-native"
   resources:
     requests:
       cpu:
@@ -165,21 +142,18 @@ deviceRegistryExample:
     registry:
       amqp:
         bindAddress: "0.0.0.0"
-        keyPath: "/etc/external-tls/tls.key"
-        certPath: "/etc/external-tls/tls.crt"
+        keyPath: "/opt/hono/tls/tls.key"
+        certPath: "/opt/hono/tls/tls.crt"
       http:
         authenticationRequired: false
         bindAddress: "0.0.0.0"
-        keyPath: "/etc/external-tls/tls.key"
-        certPath: "/etc/external-tls/tls.crt"
+        keyPath: "/opt/hono/tls/tls.key"
+        certPath: "/opt/hono/tls/tls.crt"
         insecurePortEnabled: true
         insecurePortBindAddress: "0.0.0.0"
       svc:
         maxDevicesPerTenant: 10
-  extraSecretMounts:
-    sandbox:
-      secretName: "sandbox-tls"
-      mountPath: "/etc/external-tls"
+  tlsKeysSecret: "sandbox-tls"
   resources:
     requests:
       cpu:
@@ -190,10 +164,7 @@ deviceRegistryExample:
 
 commandRouterService:
   imageName: "eclipse/hono-service-command-router-native"
-  extraSecretMounts:
-    sandbox:
-      secretName: "sandbox-tls"
-      mountPath: "/etc/external-tls"
+  tlsKeysSecret: "sandbox-tls"
   resources:
     requests:
       cpu:
@@ -250,10 +221,4 @@ kafka:
       cpu: "150m"
 
 jaegerBackendExample:
-  enabled: false
-
-prometheus:
-  createInstance: false
-
-grafana:
   enabled: false
