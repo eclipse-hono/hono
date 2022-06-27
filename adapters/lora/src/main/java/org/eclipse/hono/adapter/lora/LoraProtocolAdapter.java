@@ -191,28 +191,6 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
     protected void addRoutes(final Router router) {
 
         // the LoraWAN adapter always requires network providers to authenticate
-        setupAuthorization(router);
-
-        for (final LoraProvider provider : loraProviders) {
-            for (final String pathPrefix : provider.pathPrefixes()) {
-                router.route(HttpMethod.OPTIONS, pathPrefix)
-                        .handler(this::handleOptionsRoute);
-
-                router.route(provider.acceptedHttpMethod(), pathPrefix)
-                        .consumes(provider.acceptedContentType())
-                        .handler(getBodyHandler())
-                        .handler(ctx -> this.handleProviderRoute(HttpContext.from(ctx), provider));
-
-                router.route(provider.acceptedHttpMethod(), pathPrefix).handler(ctx -> {
-                    LOG.debug("request does not contain content-type header, will return 400 ...");
-                    handle400(ctx, ERROR_MSG_MISSING_OR_UNSUPPORTED_CONTENT_TYPE);
-                });
-            }
-        }
-    }
-
-    private void setupAuthorization(final Router router) {
-
         final ChainAuthHandler authHandler = ChainAuthHandler.any();
         authHandler.add(new X509AuthHandler(
                 new TenantServiceBasedX509Authentication(getTenantClient(), tracer),
@@ -225,7 +203,26 @@ public final class LoraProtocolAdapter extends AbstractVertxBasedHttpProtocolAda
                 getConfig().getRealm(),
                 this::handleBeforeCredentialsValidation));
 
-        router.route().handler(authHandler);
+        for (final LoraProvider provider : loraProviders) {
+            for (final String pathPrefix : provider.pathPrefixes()) {
+                router.route(HttpMethod.OPTIONS, pathPrefix)
+                        .handler(authHandler)
+                        .handler(this::handleOptionsRoute);
+
+                router.route(provider.acceptedHttpMethod(), pathPrefix)
+                        .consumes(provider.acceptedContentType())
+                        .handler(authHandler)
+                        .handler(getBodyHandler())
+                        .handler(ctx -> this.handleProviderRoute(HttpContext.from(ctx), provider));
+
+                router.route(provider.acceptedHttpMethod(), pathPrefix)
+                        .handler(authHandler)
+                        .handler(ctx -> {
+                            LOG.debug("request does not contain content-type header, will return 400 ...");
+                            handle400(ctx, ERROR_MSG_MISSING_OR_UNSUPPORTED_CONTENT_TYPE);
+                        });
+            }
+        }
     }
 
     @Override
