@@ -182,19 +182,27 @@ public abstract class AbstractSubscription implements Subscription {
      */
     static final class DefaultKey implements Key {
 
+        enum Type {
+          COMMAND,
+          ERROR
+        }
+
         private final String tenant;
         private final String deviceId;
+        private final Type type;
 
         /**
          * Creates a new Key.
          *
          * @param tenant The tenant identifier.
          * @param deviceId The device identifier.
+         * @param type The type of the subscription.
          * @throws NullPointerException If any of the parameters is {@code null}.
          */
-        DefaultKey(final String tenant, final String deviceId) {
+        DefaultKey(final String tenant, final String deviceId, final Type type) {
             this.tenant = Objects.requireNonNull(tenant);
             this.deviceId = Objects.requireNonNull(deviceId);
+            this.type = Objects.requireNonNull(type);
         }
 
         @Override
@@ -216,12 +224,12 @@ public abstract class AbstractSubscription implements Subscription {
                 return false;
             }
             final DefaultKey that = (DefaultKey) o;
-            return tenant.equals(that.tenant) && deviceId.equals(that.deviceId);
+            return tenant.equals(that.tenant) && deviceId.equals(that.deviceId) && type == that.type;
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(tenant, deviceId);
+            return Objects.hash(tenant, deviceId, type);
         }
     }
 }

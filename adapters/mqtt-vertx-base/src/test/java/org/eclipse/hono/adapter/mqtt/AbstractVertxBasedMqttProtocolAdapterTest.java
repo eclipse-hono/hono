@@ -988,10 +988,27 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         when(commandConsumer.close(any())).thenReturn(Future.succeededFuture());
         when(commandConsumerFactory.createCommandConsumer(eq("tenant-1"), eq("device-A"), VertxMockSupport.anyHandler(), any(), any()))
                         .thenReturn(Future.succeededFuture(commandConsumer));
+
+        // command and error subscription for same device, checking:
+        // - a command subscription is OK and shall pass
+        // - an error subscription with unacceptable QoS level MqttQoS.EXACTLY_ONCE - shall fail
+        // - error subscription (later, hence with priority) won't override the command subscription and
+        //   command subscription will pass
         subscriptions.add(
                 newMockTopicSubscription(getCommandSubscriptionTopic("tenant-1", "device-A"), MqttQoS.AT_MOST_ONCE));
         subscriptions.add(
+                newMockTopicSubscription(getErrorSubscriptionTopic("tenant-1", "device-A"), MqttQoS.EXACTLY_ONCE));
+
+        // command and error subscription for same device, checking:
+        // - a command subscription with unacceptable QoS level MqttQoS.EXACTLY_ONCE - shall fail
+        // - an error subscription shall be accepted with its QoS MqttQoS.AT_MOST_ONCE
+        // - error subscription (later, hence with priority) won't override the command subscription and
+        //   command subscription will fail
+        subscriptions.add(
                 newMockTopicSubscription(getCommandSubscriptionTopic("tenant-1", "device-B"), MqttQoS.EXACTLY_ONCE));
+        subscriptions.add(
+                newMockTopicSubscription(getErrorSubscriptionTopic("tenant-1", "device-B"), MqttQoS.AT_MOST_ONCE));
+
         final MqttSubscribeMessage msg = mock(MqttSubscribeMessage.class);
         when(msg.messageId()).thenReturn(15);
         when(msg.topicSubscriptions()).thenReturn(subscriptions);
@@ -1003,11 +1020,14 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
         // which contains a failure status code for each unsupported filter
         final ArgumentCaptor<List<MqttQoS>> codeCaptor = ArgumentCaptor.forClass(List.class);
         verify(endpoint).subscribeAcknowledge(eq(15), codeCaptor.capture());
-        assertThat(codeCaptor.getValue()).hasSize(5);
+        assertThat(codeCaptor.getValue()).hasSize(subscriptions.size());
         assertThat(codeCaptor.getValue().get(0)).isEqualTo(MqttQoS.FAILURE);
         assertThat(codeCaptor.getValue().get(1)).isEqualTo(MqttQoS.FAILURE);
         assertThat(codeCaptor.getValue().get(2)).isEqualTo(MqttQoS.FAILURE);
         assertThat(codeCaptor.getValue().get(3)).isEqualTo(MqttQoS.AT_MOST_ONCE);
+        assertThat(codeCaptor.getValue().get(4)).isEqualTo(MqttQoS.FAILURE);
+        assertThat(codeCaptor.getValue().get(5)).isEqualTo(MqttQoS.FAILURE);
+        assertThat(codeCaptor.getValue().get(6)).isEqualTo(MqttQoS.AT_MOST_ONCE);
         // and sends an empty notification downstream with TTD -1
         assertEmptyNotificationHasBeenSentDownstream("tenant-1", "device-A", -1);
     }
@@ -1367,6 +1387,13 @@ public class AbstractVertxBasedMqttProtocolAdapterTest extends
 
     private String getCommandEndpoint() {
         return CommandConstants.COMMAND_ENDPOINT;
+    }
+
+    private String getErrorSubscriptionTopic(final String tenantId, final String deviceId) {
+        return String.format("%s/%s/%s/#", getErrorEndpoint(), tenantId, deviceId);
+    }
+    private String getErrorEndpoint() {
+        return ErrorSubscription.ERROR_ENDPOINT;
     }
 
     private MqttEndpoint getMqttEndpointAuthenticated(final String username, final String password) {
