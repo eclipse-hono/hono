@@ -15,6 +15,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   The timeout is configured with the property `idleTimeout`. This determines if a connection will timeout and be closed
   if no data is received or sent within the idle timeout period. The idle timeout is in seconds.
   A zero value means no timeout is used.
+* The MQTT adapter skipped command or error (the first one) subscription if both are requested for the same device. This has been fixed.
 
 ## 2.0.0
 
