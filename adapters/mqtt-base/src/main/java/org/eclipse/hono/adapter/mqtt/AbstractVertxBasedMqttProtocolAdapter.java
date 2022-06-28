@@ -1334,7 +1334,7 @@ public abstract class AbstractVertxBasedMqttProtocolAdapter<T extends MqttProtoc
          */
         protected final void onSubscribe(final MqttSubscribeMessage subscribeMsg) {
             Objects.requireNonNull(subscribeMsg);
-            final Map<Object, Future<Subscription>> uniqueSubscriptions = new HashMap<>();
+            final Map<Subscription.Key, Future<Subscription>> uniqueSubscriptions = new HashMap<>();
             final Deque<Future<Subscription>> subscriptionOutcomes = new ArrayDeque<>(subscribeMsg.topicSubscriptions().size());
 
             final Span span = newSpan("SUBSCRIBE");
