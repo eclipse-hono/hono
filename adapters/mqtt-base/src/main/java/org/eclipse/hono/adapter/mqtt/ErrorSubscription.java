@@ -76,7 +76,7 @@ public final class ErrorSubscription extends AbstractSubscription {
             final Device authenticatedDevice,
             final MqttQoS qos) {
         super(topicResource, qos, authenticatedDevice);
-        key = new DefaultKey(getTenant(), getDeviceId());
+        key = getKey(getTenant(), getDeviceId());
     }
 
     /**
@@ -184,9 +184,7 @@ public final class ErrorSubscription extends AbstractSubscription {
      * @throws NullPointerException If tenantId or deviceId is {@code null}.
      */
     public static Key getKey(final String tenantId, final String deviceId) {
-        Objects.requireNonNull(tenantId);
-        Objects.requireNonNull(deviceId);
-        return new DefaultKey(tenantId, deviceId);
+        return new DefaultKey(tenantId, deviceId, DefaultKey.Type.ERROR);
     }
 
     @Override
