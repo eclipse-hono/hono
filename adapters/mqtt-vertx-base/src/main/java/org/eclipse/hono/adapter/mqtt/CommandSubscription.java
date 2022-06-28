@@ -50,7 +50,7 @@ public final class CommandSubscription extends AbstractSubscription {
             final MqttQoS qos) {
         super(topicResource, qos, authenticatedDevice);
         this.req = topicResource.elementAt(3);
-        this.key = new DefaultKey(getTenant(), getDeviceId());
+        this.key = new DefaultKey(getTenant(), getDeviceId(), DefaultKey.Type.COMMAND);
     }
 
     /**
