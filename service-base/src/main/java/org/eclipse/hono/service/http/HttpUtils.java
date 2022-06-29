@@ -386,15 +386,17 @@ public final class HttpUtils {
     public static void addDefault404ErrorHandler(final Router router) {
         Objects.requireNonNull(router);
         router.errorHandler(404, ctx -> {
-            ctx.response().setStatusCode(404);
-            Optional.ofNullable(HttpServerSpanHelper.serverSpan(ctx))
-                    .ifPresent(span -> TracingHelper.logError(span, HttpResponseStatus.valueOf(404).reasonPhrase()));
-            if (ctx.request().method() != HttpMethod.HEAD) {
-                ctx.response()
-                        .putHeader(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=utf-8")
-                        .end("<html><body><h1>Resource not found</h1></body></html>");
-            } else {
-                ctx.response().end();
+            if (!ctx.response().ended()) {
+                ctx.response().setStatusCode(404);
+                Optional.ofNullable(HttpServerSpanHelper.serverSpan(ctx))
+                        .ifPresent(span -> TracingHelper.logError(span, HttpResponseStatus.valueOf(404).reasonPhrase()));
+                if (ctx.request().method() != HttpMethod.HEAD) {
+                    ctx.response()
+                            .putHeader(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=utf-8")
+                            .end("<html><body><h1>Resource not found</h1></body></html>");
+                } else {
+                    ctx.response().end();
+                }
             }
         });
     }
