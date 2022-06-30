@@ -12,7 +12,7 @@ provisioning & managing device identity and access control rules.
 
 ## Getting started
 
-Please refer to the [Getting Started guide](https://www.eclipse.org/hono/getting-started/) on the project web site.
+Please refer to the [Getting Started guide](https://www.eclipse.org/hono/docs/getting-started/) on the project web site.
 
 ## Running Hono
 

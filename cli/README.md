@@ -16,8 +16,7 @@ cd target/
 
 ## Usage
 
-Please refer to [Getting Started](https://www.eclipse.org/hono/getting-started/),
-[Getting Started with Kafka](https://www.eclipse.org/hono/getting-started-kafka/) and the
+Please refer to [Getting Started](https://www.eclipse.org/hono/docs/getting-started/) and the
 [AMQP Adapter User Guide](https://www.eclipse.org/hono/docs/user-guide/amqp-adapter/).
 
 These guides provide extensive examples for the usage of the client with Hono.
