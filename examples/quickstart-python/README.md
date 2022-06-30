@@ -1,6 +1,6 @@
 # Eclipse Hono Quickstart tutorial
 
-Note: This tutorial follows the Tutorial from the official homepage https://www.eclipse.org/hono/getting-started/.
+Note: This tutorial follows the Tutorial from the official homepage https://www.eclipse.org/hono/docs/getting-started/.
 
 ## How to use the Script?
 
