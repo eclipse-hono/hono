@@ -43,7 +43,7 @@ public final class MessagingClientProvider<T extends MessagingClient & Lifecycle
     /**
      * The default messaging type to be used.
      */
-    public static final MessagingType DEFAULT_MESSAGING_TYPE = MessagingType.amqp;
+    public static final MessagingType DEFAULT_MESSAGING_TYPE = MessagingType.kafka;
 
     private final Map<MessagingType, T> clientImplementations = new HashMap<>();
     private final AtomicBoolean startCalled = new AtomicBoolean();

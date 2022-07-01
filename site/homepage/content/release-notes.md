@@ -20,6 +20,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   This has been fixed.
 * The native executable based Lora adapter container image failed to forward Lora meta information in messages being
   sent downstream. This has been fixed.
+* Default messaging type changed to Kafka. Changed related documentation pages.
 
 ## 2.0.0
 
