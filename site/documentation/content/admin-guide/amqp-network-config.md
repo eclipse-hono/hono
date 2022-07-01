@@ -13,6 +13,37 @@ The Dispatch Router component exposes service endpoints implementing the *north 
 [Command & Control]({{< relref "/api/command-and-control" >}}) APIs which are used by applications to interact
 with devices.
 
+## Configuring Tenants to use AMQP 1.0 based Messaging
+
+Hono's components by default support using Kafka based messaging infrastructure to transmit messages hence and forth
+between devices and applications. Hono also supports using AMQP 1.0 as the messaging infrastructure either as a replacement
+for or as an alternative in addition to the Kafka based infrastructure.
+
+In most cases Hono's components will be configured to use either AMQP 1.0 or Kafka based messaging infrastructure.
+However, in cases where both types of infrastructure are being used, Hono's components need to be able to determine,
+which infrastructure should be used for messages of a given tenant. For this purpose, the [configuration properties
+registered for a tenant]({{< relref "/api/tenant#tenant-information-format" >}}) support the `ext/messaging-type` property
+which can have a value of either `amqp` or `kafka`.
+
+The following example shows a tenant that is configured to use the AMQP 1.0 messaging infrastructure:
+
+~~~json
+{
+  "tenant-id": "TEST_TENANT",
+  "enabled": true,
+  "ext": {
+    "messaging-type": "amqp"
+  }
+}
+~~~
+
+If not explicitly set, the `ext/messaging-type` property's value is `kafka` which indicates that Kafka is to be used
+for the tenant.
+
+{{% notice info %}}
+If an adapter is configured to connect to only one type of messaging infrastructure, the tenant specific messaging
+type configuration is ignored.
+{{% /notice %}}
 
 ## Dispatch Router Configuration
 

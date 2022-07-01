@@ -119,7 +119,7 @@ public class MessagingClientProviderTest {
         underTest.setClient(kafkaClient);
         underTest.setClient(amqpClient);
 
-        assertThat(underTest.getClient(TenantObject.from(tenant, true))).isEqualTo(amqpClient);
+        assertThat(underTest.getClient(TenantObject.from(tenant, true))).isEqualTo(kafkaClient);
     }
 
     /**
