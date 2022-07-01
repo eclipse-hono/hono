@@ -626,7 +626,7 @@ public class AbstractProtocolAdapterBaseTest {
         // GIVEN a protocol adapter configured to send connection events
         final ConnectionEventProducer connectionEventProducer = new HonoEventConnectionEventProducer();
         adapter.setConnectionEventProducer(connectionEventProducer);
-        when(amqpEventSender.sendEvent(
+        when(kafkaEventSender.sendEvent(
                 any(TenantObject.class),
                 any(RegistrationAssertion.class),
                 any(),
@@ -643,7 +643,7 @@ public class AbstractProtocolAdapterBaseTest {
         adapter.sendConnectedEvent("remote-id", authenticatedDevice, null)
             .onComplete(ctx.succeeding(result -> {
                 ctx.verify(() -> {
-                        verify(amqpEventSender).sendEvent(
+                        verify(kafkaEventSender).sendEvent(
                             eq(tenantObject),
                             argThat(assertion -> assertion.getDeviceId().equals("4711")),
                             eq(EventConstants.EVENT_CONNECTION_NOTIFICATION_CONTENT_TYPE),

@@ -50,7 +50,7 @@ Protocol adapters use a connection to an *AMQP 1.0 Messaging Network* and/or an 
 * forward command response messages to be received by downstream applications,
 * receive notification messages about changes to tenant/device/credentials data sent from the device registry.
 
-For telemetry and event messages a connection to an *AMQP 1.0 Messaging Network* is used by default, if configured. 
+For telemetry and event messages a connection to a *Apache Kafka cluster* is used by default, if configured. 
 If both kinds of messaging are configured, the decision which one to use is done according to the 
 [Tenant Configuration]({{< relref "admin-guide/hono-kafka-client-configuration#configuring-tenants-to-use-kafka-based-messaging" >}}).
 

@@ -23,6 +23,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The MQTT adapter skipped command or error (the first one) subscription if both are requested for the same device. This has been fixed.
 * On startup, Hono components could get into a state that caused certain Kafka client metrics to not get reported.
   This has been fixed.
+* Default messaging type changed to Kafka. Changed related documentation pages.  
 
 ## 2.0.0
 

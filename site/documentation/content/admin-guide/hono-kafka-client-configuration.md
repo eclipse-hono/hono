@@ -14,38 +14,6 @@ please refer to the admin guide of the respective component.
 The configuration properties are directly passed to the Kafka clients (without the prefixes) without Hono parsing or
 validating them.
 
-## Configuring Tenants to use Kafka based Messaging
-
-Hono's components by default support using AMQP 1.0 based messaging infrastructure to transmit messages hence and forth
-between devices and applications. Hono also supports using Kafka as the messaging infrastructure either as a replacement
-for or as an alternative in addition to the AMQP 1.0 based infrastructure.
-
-In most cases Hono's components will be configured to use either AMQP 1.0 or Kafka based messaging infrastructure.
-However, in cases where both types of infrastructure are being used, Hono's components need to be able to determine,
-which infrastructure should be used for messages of a given tenant. For this purpose, the [configuration properties
-registered for a tenant]({{< relref "/api/tenant#tenant-information-format" >}}) support the `ext/messaging-type` property
-which can have a value of either `amqp` or `kafka`.
-
-The following example shows a tenant that is configured to use the Kafka messaging infrastructure:
-
-~~~json
-{
-  "tenant-id": "TEST_TENANT",
-  "enabled": true,
-  "ext": {
-    "messaging-type": "kafka"
-  }
-}
-~~~
-
-If not explicitly set, the `ext/messaging-type` property's value is `amqp` which indicates that AMQP 1.0 is to be used
-for the tenant.
-
-{{% notice info %}}
-If an adapter is configured to connect to only one type of messaging infrastructure, the tenant specific messaging
-type configuration is ignored.
-{{% /notice %}}
-
 ## Producer Configuration Properties
 
 The `org.eclipse.hono.client.kafka.CachingKafkaProducerFactory` factory can be used to create Kafka producers for Hono's
