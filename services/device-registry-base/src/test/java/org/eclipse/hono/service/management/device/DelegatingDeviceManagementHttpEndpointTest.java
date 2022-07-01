@@ -458,6 +458,7 @@ public class DelegatingDeviceManagementHttpEndpointTest {
             final HttpServerResponse response) {
 
         final HttpServerRequestInternal request = mock(HttpServerRequestInternal.class);
+        when(request.absoluteURI()).thenReturn(relativeURI);
         when(request.method()).thenReturn(method);
         when(request.scheme()).thenReturn("http");
         when(request.host()).thenReturn("localhost");
@@ -465,6 +466,7 @@ public class DelegatingDeviceManagementHttpEndpointTest {
         when(request.path()).thenReturn(relativeURI);
         when(request.headers()).thenReturn(requestHeaders);
         when(request.getHeader(HttpHeaders.CONTENT_TYPE)).thenReturn("application/json");
+        when(request.getHeader(HttpHeaders.CONTENT_LENGTH)).thenReturn(String.valueOf(requestBody.length()));
         when(request.params()).thenReturn(requestParams);
         when(request.response()).thenReturn(response);
         when(request.handler(VertxMockSupport.anyHandler())).thenAnswer(invocation -> {

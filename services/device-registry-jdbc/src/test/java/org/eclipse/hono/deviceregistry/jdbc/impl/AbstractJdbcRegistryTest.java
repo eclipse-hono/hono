@@ -87,7 +87,7 @@ abstract class AbstractJdbcRegistryTest {
     private static final Tracer TRACER = NoopTracerFactory.create();
     private static final Path EXAMPLE_SQL_BASE = Path.of("..", "base-jdbc", "src", "main", "resources", "sql", DATABASE_TYPE.name().toLowerCase());
 
-    private static final Path BASE_DIR = Path.of("target/data").toAbsolutePath();
+    private static final Path BASE_DIR = Path.of("target").toAbsolutePath();
 
     protected CredentialsService credentialsAdapter;
     protected CredentialsManagementServiceImpl credentialsManagement;
@@ -103,13 +103,10 @@ abstract class AbstractJdbcRegistryTest {
     void startDevices(final Vertx vertx) throws IOException, SQLException {
         final var jdbc = resolveJdbcProperties();
 
-        try (
-                var connection = DriverManager.getConnection(jdbc.getUrl(), jdbc.getUsername(), jdbc.getPassword());
-                var script = Files.newBufferedReader(EXAMPLE_SQL_BASE.resolve("02-create.devices.sql"))
-        ) {
-            // pre-create database
-            RunScript.execute(connection, script);
-        }
+        final var connection = DriverManager.getConnection(jdbc.getUrl(), jdbc.getUsername(), jdbc.getPassword());
+        final var script = Files.newBufferedReader(EXAMPLE_SQL_BASE.resolve("02-create.devices.sql"));
+        // pre-create database
+        RunScript.execute(connection, script);
 
         properties = mock(DeviceServiceOptions.class);
         when(properties.hashAlgorithmsAllowList()).thenReturn(Optional.of(Set.of()));
@@ -164,8 +161,9 @@ abstract class AbstractJdbcRegistryTest {
         }
         switch (DATABASE_TYPE) {
             case H2:
+                final var dbFolderName = UUID.randomUUID().toString();
                 jdbc.setDriverClass(Driver.class.getName());
-                jdbc.setUrl("jdbc:h2:" + BASE_DIR.resolve(UUID.randomUUID().toString()).toAbsolutePath());
+                jdbc.setUrl("jdbc:h2:" + BASE_DIR.resolve(dbFolderName).resolve("data").toAbsolutePath());
                 break;
             case POSTGRESQL:
                 createNewPerTestSchemaForPostgres(jdbc);
@@ -223,13 +221,10 @@ abstract class AbstractJdbcRegistryTest {
     void startTenants(final Vertx vertx) throws IOException, SQLException {
         final var jdbc = resolveJdbcProperties();
 
-        try (
-                var connection = DriverManager.getConnection(jdbc.getUrl(), jdbc.getUsername(), jdbc.getPassword());
-                var script = Files.newBufferedReader(EXAMPLE_SQL_BASE.resolve("01-create.tenants.sql"))
-        ) {
-            // pre-create database
-            RunScript.execute(connection, script);
-        }
+        final var connection = DriverManager.getConnection(jdbc.getUrl(), jdbc.getUsername(), jdbc.getPassword());
+        final var script = Files.newBufferedReader(EXAMPLE_SQL_BASE.resolve("01-create.tenants.sql"));
+        // pre-create database
+        RunScript.execute(connection, script);
 
         final TenantServiceOptions options = mock(TenantServiceOptions.class);
         when(options.tenantTtl()).thenReturn(Duration.ofMinutes(1));
