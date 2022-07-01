@@ -174,7 +174,7 @@ echo "export HTTP_ADAPTER_IP=$(kubectl get service eclipse-hono-adapter-http --o
 echo "export MQTT_ADAPTER_IP=$(kubectl get service eclipse-hono-adapter-mqtt --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)" >> hono.env
 KAFKA_IP=$(kubectl get service eclipse-hono-kafka-0-external --output="jsonpath={.status.loadBalancer.ingress[0]['hostname','ip']}" -n hono)
 KAFKA_TRUSTSTORE_PATH=/tmp/truststore.pem
-kubectl get secrets eclipse-hono-kafka-certs --template="{{index .data \"ca.crt\" | base64decode}}" -n hono > ${KAFKA_TRUSTSTORE_PATH}
+kubectl get secrets eclipse-hono-kafka-example-keys --template="{{index .data \"ca.crt\" | base64decode}}" -n hono > ${KAFKA_TRUSTSTORE_PATH}
 echo "export APP_OPTIONS='-H ${KAFKA_IP} -P 9094 -u hono -p hono-secret --ca-file ${KAFKA_TRUSTSTORE_PATH} --disable-hostname-verification'" >> hono.env
 ~~~
 
