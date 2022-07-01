@@ -34,7 +34,6 @@ import org.eclipse.hono.client.util.StatusCodeMapper;
 import org.eclipse.hono.notification.NotificationEventBusSupport;
 import org.eclipse.hono.notification.deviceregistry.AllDevicesOfTenantDeletedNotification;
 import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
-import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.CacheDirective;
 import org.eclipse.hono.util.Constants;
@@ -94,12 +93,7 @@ public class ProtonBasedDeviceRegistrationClient extends AbstractRequestResponse
                     n -> removeResultsForTenantFromCache(n.getTenantId()));
 
             NotificationEventBusSupport.registerConsumer(connection.getVertx(), DeviceChangeNotification.TYPE,
-                    n -> {
-                        if (LifecycleChange.DELETE.equals(n.getChange())
-                                || (LifecycleChange.UPDATE.equals(n.getChange()) && !n.isEnabled())) {
-                            removeResultsForDeviceFromCache(n.getTenantId(), n.getDeviceId());
-                        }
-                    });
+                    n -> removeResultsForDeviceFromCache(n.getTenantId(), n.getDeviceId()));
         }
     }
 

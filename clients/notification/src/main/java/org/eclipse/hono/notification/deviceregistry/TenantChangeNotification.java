@@ -78,7 +78,7 @@ public final class TenantChangeNotification extends AbstractNotification {
      * @param tenantId The ID of the tenant.
      * @param creationTime The creation time of the event.
      * @param enabled {@code true} if the device is enabled.
-     * @param invalidateCacheOnUpdate {@code true} if cache invalidation is required on db update operation.
+     * @param invalidateCacheOnUpdate {@code true} if cache invalidation is required on update operation.
      * @throws NullPointerException If any of the parameters are {@code null}.
      */
     public TenantChangeNotification(final LifecycleChange change, final String tenantId, final Instant creationTime,
@@ -118,7 +118,7 @@ public final class TenantChangeNotification extends AbstractNotification {
     }
 
     /**
-     * Checks whether db update operations on this tenant requires cache invalidation.
+     * Checks whether update operations on this tenant requires cache invalidation.
      * <p>
      * The default value of this property is {@code false}.
      *

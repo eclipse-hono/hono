@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -58,7 +58,7 @@ public class NotificationConstants {
      */
     public static final String JSON_FIELD_DATA_ENABLED = "enabled";
     /**
-     * The field name of the JSON object that indicates if cache invalidation is required on db update operations.
+     * The field name of the JSON object that indicates if cache invalidation is required on update operations.
      */
     public static final String JSON_FIELD_DATA_INVALIDATE_CACHE_ON_UPDATE = "invalidate-cache-on-update";
     /**
