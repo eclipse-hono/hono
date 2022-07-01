@@ -17,6 +17,8 @@ quarkus:
     level: INFO
     min-level: TRACE
     category:
+      "com.mchange.v2.c3p0.impl":
+        level: WARN
       "org.eclipse.hono":
         level: INFO
       "org.eclipse.hono.deviceregistry.jdbc":
@@ -29,6 +31,10 @@ quarkus:
         level: INFO
       "org.eclipse.hono.service.base.jdbc":
         level: INFO
+      "org.eclipse.hono.service.base.jdbc.config":
+        level: WARN
+      "org.eclipse.hono.service.base.jdbc.store":
+        level: WARN
       "org.eclipse.hono.service.base.jdbc.store.device":
         level: INFO
       "org.eclipse.hono.service.base.jdbc.store.model":
