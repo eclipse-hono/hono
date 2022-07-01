@@ -427,16 +427,6 @@ http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/opentracing/opentracing-java).
 
-### OpenTracing Vert.x Web Instrumentation 0.1.0
-
-This product includes software developed by the [OpenTracing Vert.x Web Instrumentation project](https://github.com/opentracing-contrib/java-vertx-web).
-
-Your use of *OpenTracing Vert.x Web Instrumentation* is subject to the terms and conditions of the Apache Software License 2.0.
-A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
-is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
-
-The source code is available from [GitHub](https://github.com/opentracing-contrib/java-vertx-web/tree/0.1.0).
-
 ### PerfMark
 
 This product includes software developed by the [PerfMark project](https://github.com/perfmark/perfmark).
@@ -506,15 +496,15 @@ is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
 The source code is available from [GitHub](https://github.com/square/protoparser/).
 
-### Protostream ${protostream.version}
+### ProtoStream
 
-This product includes software developed by the [Protoparser project](https://github.com/square/protoparser).
+This product includes software developed by the [Infinispan project](https://infinispan.org).
 
-Your use of *Protostream* is subject to the terms and conditions of the Apache Software License 2.0.
+Your use of *ProtoStream* is subject to the terms and conditions of the Apache Software License 2.0.
 A copy of the Apache Software License 2.0 is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and
 is also available at http://www.apache.org/licenses/LICENSE-2.0.html.
 
-The source code is available from [GitHub](https://github.com/infinispan/protostream/tree/${protostream.version}).
+The source code is available from [GitHub](https://github.com/infinispan/protostream).
 
 ### Quarkus
 
