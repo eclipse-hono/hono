@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -49,7 +49,8 @@ public class MicrometerKafkaClientMetricsSupportTest {
     public void testMetricsDisabledOnEmptyMetricsList() {
         final List<String> metricsPrefixes = List.of();
         final MicrometerKafkaClientMetricsSupport metricsSupport = new MicrometerKafkaClientMetricsSupport(
-                meterRegistry, false, metricsPrefixes);
+                false, metricsPrefixes);
+        metricsSupport.bindTo(meterRegistry);
         assertThat(metricsSupport.isProducerMetricsEnabled()).isFalse();
         assertThat(metricsSupport.isConsumerMetricsEnabled()).isFalse();
     }
@@ -60,7 +61,8 @@ public class MicrometerKafkaClientMetricsSupportTest {
     @Test
     public void testProducerConsumerMetricsEnabledWhenUsingDefaultMetrics() {
         final MicrometerKafkaClientMetricsSupport metricsSupport = new MicrometerKafkaClientMetricsSupport(
-                meterRegistry, true, List.of());
+                true, List.of());
+        metricsSupport.bindTo(meterRegistry);
         assertThat(metricsSupport.isProducerMetricsEnabled()).isTrue();
         assertThat(metricsSupport.isConsumerMetricsEnabled()).isTrue();
     }
@@ -73,7 +75,8 @@ public class MicrometerKafkaClientMetricsSupportTest {
     public void testConsumerMetricsDisabledOnMetricsPrefixesListWithoutConsumerMetricPrefix() {
         final List<String> metricsPrefixes = List.of("kafka.prod");
         final MicrometerKafkaClientMetricsSupport metricsSupport = new MicrometerKafkaClientMetricsSupport(
-                meterRegistry, false, metricsPrefixes);
+                false, metricsPrefixes);
+        metricsSupport.bindTo(meterRegistry);
         assertThat(metricsSupport.isProducerMetricsEnabled()).isTrue();
         assertThat(metricsSupport.isConsumerMetricsEnabled()).isFalse();
     }
@@ -86,7 +89,8 @@ public class MicrometerKafkaClientMetricsSupportTest {
     public void testProducerMetricsDisabledOnMetricsPrefixesListWithoutProducerMetricPrefix() {
         final List<String> metricsPrefixes = List.of("kafka.con");
         final MicrometerKafkaClientMetricsSupport metricsSupport = new MicrometerKafkaClientMetricsSupport(
-                meterRegistry, false, metricsPrefixes);
+                false, metricsPrefixes);
+        metricsSupport.bindTo(meterRegistry);
         assertThat(metricsSupport.isProducerMetricsEnabled()).isFalse();
         assertThat(metricsSupport.isConsumerMetricsEnabled()).isTrue();
     }
