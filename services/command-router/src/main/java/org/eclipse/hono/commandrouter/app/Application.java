@@ -13,7 +13,6 @@
 package org.eclipse.hono.commandrouter.app;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -32,9 +31,6 @@ import org.eclipse.hono.client.kafka.KafkaAdminClientOptions;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerOptions;
 import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
-import org.eclipse.hono.client.kafka.metrics.KafkaMetricsOptions;
-import org.eclipse.hono.client.kafka.metrics.MicrometerKafkaClientMetricsSupport;
-import org.eclipse.hono.client.kafka.metrics.NoopKafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerOptions;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
@@ -138,6 +134,9 @@ public class Application extends AbstractServiceApplication {
     @Inject
     CommandRouterMetrics metrics;
 
+    @Inject
+    KafkaClientMetricsSupport kafkaClientMetricsSupport;
+
     @Readiness
     @Inject
     HealthRegistry readinessChecks;
@@ -146,7 +145,6 @@ public class Application extends AbstractServiceApplication {
     private ClientConfigProperties commandConsumerConnectionConfig;
     private RequestResponseClientConfigProperties deviceRegistrationClientConfig;
     private RequestResponseClientConfigProperties tenantClientConfig;
-    private KafkaClientMetricsSupport kafkaClientMetricsSupport;
     private MessagingKafkaProducerConfigProperties commandInternalKafkaProducerConfig;
     private MessagingKafkaProducerConfigProperties commandResponseKafkaProducerConfig;
     private MessagingKafkaConsumerConfigProperties kafkaConsumerConfig;
@@ -192,14 +190,6 @@ public class Application extends AbstractServiceApplication {
         props.setServerRoleIfUnknown("Device Registration");
         props.setNameIfNotSet(getComponentName());
         this.deviceRegistrationClientConfig = props;
-    }
-
-    @Inject
-    void setKafkaClientMetricsSupport(final KafkaMetricsOptions options) {
-        this.kafkaClientMetricsSupport = options.enabled()
-                ? new MicrometerKafkaClientMetricsSupport(meterRegistry, options.useDefaultMetrics(),
-                        options.metricsPrefixes().orElse(List.of()))
-                : NoopKafkaClientMetricsSupport.INSTANCE;
     }
 
     @Inject
