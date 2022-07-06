@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -16,10 +16,12 @@ package org.eclipse.hono.client.kafka.metrics;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.producer.Producer;
 
+import io.micrometer.core.instrument.binder.MeterBinder;
+
 /**
  * Provides support for registering Kafka clients from which metrics are fetched.
  */
-public interface KafkaClientMetricsSupport {
+public interface KafkaClientMetricsSupport extends MeterBinder {
 
     /**
      * Registers a Kafka producer to fetch metrics from.

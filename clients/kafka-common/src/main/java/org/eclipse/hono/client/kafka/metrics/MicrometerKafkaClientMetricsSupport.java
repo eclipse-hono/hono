@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -15,6 +15,7 @@ package org.eclipse.hono.client.kafka.metrics;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -28,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.kafka.KafkaClientMetrics;
 import io.micrometer.core.instrument.config.MeterFilter;
+import io.micrometer.core.lang.NonNull;
 
 /**
  * Micrometer based implementation to provide support for registering Kafka clients from which metrics are fetched.
@@ -64,51 +66,45 @@ public final class MicrometerKafkaClientMetricsSupport implements KafkaClientMet
     private static final Logger LOG = LoggerFactory.getLogger(MicrometerKafkaClientMetricsSupport.class);
     private static final String PREFIX_KAFKA = "kafka.";
 
-    private final MeterRegistry meterRegistry;
+    private final List<MeterRegistry> boundMeterRegistries = new LinkedList<>();
     private final Map<Producer<?, ?>, KafkaClientMetrics> producerMetricsMap = new HashMap<>();
     private final Map<Consumer<?, ?>, KafkaClientMetrics> consumerMetricsMap = new HashMap<>();
     private final boolean producerMetricsEnabled;
     private final boolean consumerMetricsEnabled;
 
+    private final List<String> metricsPrefixesToUse;
+
     /**
      * Creates a new MicrometerKafkaClientMetricsSupport.
      *
-     * @param meterRegistry The meter registry to use.
      * @param useDefaultMetrics {@code true} if the default metrics should be used.
      * @param metricsPrefixes The list of prefixes for matching the metrics to be reported.
      *                        If useDefaultMetrics is {@code true}, the actually reported list of metrics will also
      *                        include the default metrics.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public MicrometerKafkaClientMetricsSupport(final MeterRegistry meterRegistry, final boolean useDefaultMetrics,
-            final List<String> metricsPrefixes) {
-        this.meterRegistry = Objects.requireNonNull(meterRegistry);
+    public MicrometerKafkaClientMetricsSupport(final boolean useDefaultMetrics, final List<String> metricsPrefixes) {
         Objects.requireNonNull(metricsPrefixes);
 
-        final List<String> metricsPrefixesToUse = new ArrayList<>(useDefaultMetrics ? DEFAULT_METRICS_PREFIXES : List.of());
+        metricsPrefixesToUse = new ArrayList<>(useDefaultMetrics ? DEFAULT_METRICS_PREFIXES : List.of());
         metricsPrefixes.stream()
                 .map(String::trim)
                 .filter(p -> p.startsWith(PREFIX_KAFKA)) // sanity check - only entries with kafka prefix are relevant here
                 .forEach(metricsPrefixesToUse::add);
-        final boolean reportAllMetrics = metricsPrefixesToUse.contains("kafka") || metricsPrefixesToUse.contains(PREFIX_KAFKA);
+        final boolean reportAllMetrics = isReportAllMetrics(metricsPrefixesToUse);
         this.producerMetricsEnabled = reportAllMetrics || metricsPrefixesToUse.stream().anyMatch(
                 prefix -> "kafka.producer".startsWith(prefix) || prefix.startsWith("kafka.producer"));
         this.consumerMetricsEnabled = reportAllMetrics || metricsPrefixesToUse.stream().anyMatch(
                 prefix -> "kafka.consumer".startsWith(prefix) || prefix.startsWith("kafka.consumer"));
 
         if (!this.producerMetricsEnabled && !this.consumerMetricsEnabled) {
-            LOG.info("disabling Kafka client metrics (defaults not used and metrics list empty or without matching entries); given metrics prefixes: {}",
+            LOG.info("Kafka client metrics are disabled (defaults not used and metrics list empty or without matching entries); given metrics prefixes: {}",
                     metricsPrefixes);
-        } else if (!reportAllMetrics) {
-            LOG.info("activating Kafka client metrics support; used metrics prefixes: {}", metricsPrefixesToUse);
-            this.meterRegistry.config().meterFilter(MeterFilter
-                    .accept(id -> metricsPrefixesToUse.stream().anyMatch(prefix -> id.getName().startsWith(prefix))));
-            // deny all kafka metrics not previously accepted
-            this.meterRegistry.config().meterFilter(MeterFilter.denyNameStartsWith(PREFIX_KAFKA));
-        } else {
-            LOG.info("activating Kafka client metrics support; all metrics will be reported "
-                    + "- consider configuring individual metrics to reduce the number of reported metrics");
         }
+    }
+
+    private static boolean isReportAllMetrics(final List<String> metricsPrefixes) {
+        return metricsPrefixes.contains("kafka") || metricsPrefixes.contains(PREFIX_KAFKA);
     }
 
     /**
@@ -132,38 +128,58 @@ public final class MicrometerKafkaClientMetricsSupport implements KafkaClientMet
     }
 
     @Override
-    public void registerKafkaProducer(final Producer<?, ?> producer) {
+    public synchronized void registerKafkaProducer(final Producer<?, ?> producer) {
         Objects.requireNonNull(producer);
         if (producerMetricsEnabled && !producerMetricsMap.containsKey(producer)) {
             final KafkaClientMetrics kafkaClientMetrics = new KafkaClientMetrics(producer);
             if (producerMetricsMap.putIfAbsent(producer, kafkaClientMetrics) == null) {
-                kafkaClientMetrics.bindTo(meterRegistry);
+                boundMeterRegistries.forEach(kafkaClientMetrics::bindTo);
                 LOG.debug("registered producer ({} producers total)", producerMetricsMap.size());
             }
         }
     }
 
     @Override
-    public void registerKafkaConsumer(final Consumer<?, ?> consumer) {
+    public synchronized void registerKafkaConsumer(final Consumer<?, ?> consumer) {
         Objects.requireNonNull(consumer);
         if (consumerMetricsEnabled && !consumerMetricsMap.containsKey(consumer)) {
             final KafkaClientMetrics kafkaClientMetrics = new KafkaClientMetrics(consumer);
             if (consumerMetricsMap.putIfAbsent(consumer, kafkaClientMetrics) == null) {
-                kafkaClientMetrics.bindTo(meterRegistry);
+                boundMeterRegistries.forEach(kafkaClientMetrics::bindTo);
                 LOG.debug("registered consumer ({} consumers total)", consumerMetricsMap.size());
             }
         }
     }
 
     @Override
-    public void unregisterKafkaProducer(final Producer<?, ?> producer) {
+    public synchronized void unregisterKafkaProducer(final Producer<?, ?> producer) {
         Objects.requireNonNull(producer);
         Optional.ofNullable(producerMetricsMap.remove(producer)).ifPresent(KafkaClientMetrics::close);
     }
 
     @Override
-    public void unregisterKafkaConsumer(final Consumer<?, ?> consumer) {
+    public synchronized void unregisterKafkaConsumer(final Consumer<?, ?> consumer) {
         Objects.requireNonNull(consumer);
         Optional.ofNullable(consumerMetricsMap.remove(consumer)).ifPresent(KafkaClientMetrics::close);
     }
+
+    @Override
+    public synchronized void bindTo(@NonNull final MeterRegistry registry) {
+        if (producerMetricsEnabled || consumerMetricsEnabled) {
+            if (isReportAllMetrics(metricsPrefixesToUse)) {
+                LOG.info("activating Kafka client metrics support; all metrics will be reported "
+                        + "- consider configuring individual metrics to reduce the number of reported metrics");
+            } else {
+                LOG.info("activating Kafka client metrics support; used metrics prefixes: {}", metricsPrefixesToUse);
+                registry.config().meterFilter(MeterFilter
+                        .accept(id -> metricsPrefixesToUse.stream().anyMatch(prefix -> id.getName().startsWith(prefix))));
+                // deny all kafka metrics not previously accepted
+                registry.config().meterFilter(MeterFilter.denyNameStartsWith(PREFIX_KAFKA));
+            }
+            consumerMetricsMap.values().forEach(kafkaClientMetrics -> kafkaClientMetrics.bindTo(registry));
+            producerMetricsMap.values().forEach(kafkaClientMetrics -> kafkaClientMetrics.bindTo(registry));
+            boundMeterRegistries.add(registry);
+        }
+    }
+
 }

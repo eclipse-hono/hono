@@ -14,7 +14,6 @@ package org.eclipse.hono.adapter;
 
 import java.time.Duration;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -55,9 +54,6 @@ import org.eclipse.hono.client.kafka.KafkaAdminClientOptions;
 import org.eclipse.hono.client.kafka.consumer.KafkaConsumerOptions;
 import org.eclipse.hono.client.kafka.consumer.MessagingKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
-import org.eclipse.hono.client.kafka.metrics.KafkaMetricsOptions;
-import org.eclipse.hono.client.kafka.metrics.MicrometerKafkaClientMetricsSupport;
-import org.eclipse.hono.client.kafka.metrics.NoopKafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerOptions;
@@ -137,10 +133,10 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
     protected C protocolAdapterProperties;
 
     /**
-     * The configuration to use for Kafka client metrics.
+     * The Kafka client metrics support instance.
      */
     @Inject
-    protected KafkaMetricsOptions kafkaMetricsOptions;
+    protected KafkaClientMetricsSupport kafkaClientMetricsSupport;
 
     private ClientConfigProperties commandConsumerConfig;
     private ClientConfigProperties downstreamSenderConfig;
@@ -337,7 +333,6 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         final var telemetrySenderProvider = new MessagingClientProvider<TelemetrySender>();
         final var eventSenderProvider = new MessagingClientProvider<EventSender>();
         final var commandResponseSenderProvider = new MessagingClientProvider<CommandResponseSender>();
-        final var kafkaClientMetricsSupport = kafkaClientMetricsSupport(kafkaMetricsOptions);
         final var tenantClient = tenantClient();
 
         if (kafkaEventConfig.isConfigured()) {
@@ -598,23 +593,6 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                     tracer);
         } else {
             return new NoopResourceLimitChecks();
-        }
-    }
-
-    /**
-     * Creates the Kafka metrics support.
-     *
-     * @param options The Kafka metrics options.
-     * @return The Kafka metrics support.
-     */
-    public KafkaClientMetricsSupport kafkaClientMetricsSupport(final KafkaMetricsOptions options) {
-        if (options.enabled()) {
-            return new MicrometerKafkaClientMetricsSupport(
-                    meterRegistry,
-                    options.useDefaultMetrics(),
-                    options.metricsPrefixes().orElse(List.of()));
-        } else {
-            return NoopKafkaClientMetricsSupport.INSTANCE;
         }
     }
 

@@ -16,6 +16,9 @@ package org.eclipse.hono.client.kafka.metrics;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.producer.Producer;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.lang.NonNull;
+
 /**
  * A no-op implementation for the Kafka client metrics support.
  */
@@ -47,6 +50,11 @@ public class NoopKafkaClientMetricsSupport implements KafkaClientMetricsSupport 
 
     @Override
     public void unregisterKafkaConsumer(final Consumer<?, ?> consumer) {
+        // do nothing
+    }
+
+    @Override
+    public void bindTo(@NonNull final MeterRegistry registry) {
         // do nothing
     }
 }
