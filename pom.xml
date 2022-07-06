@@ -342,7 +342,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.22.2</version>
+          <version>3.0.0-M7</version>
           <configuration>
             <systemPropertyVariables>
               <!-- use Base64 encoder/decoder that is compatible with vert.x 3 -->
@@ -360,7 +360,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-failsafe-plugin</artifactId>
-          <version>2.22.2</version>
+          <version>3.0.0-M7</version>
           <configuration>
             <systemPropertyVariables>
               <!-- use Base64 encoder/decoder that is compatible with vert.x 3 -->
