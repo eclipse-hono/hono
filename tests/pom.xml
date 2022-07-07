@@ -1061,7 +1061,7 @@
                   <run>
                     <skip>${hono.kafka.disabled}</skip>
                     <ports>
-                      <port>${kafka.port}:${kafka.port}</port>
+                      <port>kafka.port:9094</port>
                     </ports>
                     <network>
                       <mode>custom</mode>
@@ -1079,9 +1079,10 @@
                     <env>
                       <KAFKA_BROKER_ID>1</KAFKA_BROKER_ID>
                       <KAFKA_ZOOKEEPER_CONNECT>zookeeper:2181</KAFKA_ZOOKEEPER_CONNECT>
-                      <!-- setting the default listener, "PLAINTEXT", as this is the default value of KAFKA_INTER_BROKER_LISTENER_NAME -->
-                      <KAFKA_LISTENER_SECURITY_PROTOCOL_MAP>PLAINTEXT:PLAINTEXT,LISTENER_EXTERNAL:PLAINTEXT</KAFKA_LISTENER_SECURITY_PROTOCOL_MAP>
-                      <KAFKA_ADVERTISED_LISTENERS>PLAINTEXT://kafka:9092,LISTENER_EXTERNAL://${docker.host.address}:${kafka.port}</KAFKA_ADVERTISED_LISTENERS>
+                      <KAFKA_LISTENERS>DOCKER_INTERNAL://0.0.0.0:9092,DOCKER_EXTERNAL://0.0.0.0:9094</KAFKA_LISTENERS>
+                      <KAFKA_LISTENER_SECURITY_PROTOCOL_MAP>DOCKER_INTERNAL:PLAINTEXT,DOCKER_EXTERNAL:PLAINTEXT</KAFKA_LISTENER_SECURITY_PROTOCOL_MAP>
+                      <KAFKA_ADVERTISED_LISTENERS>DOCKER_INTERNAL://kafka:9092,DOCKER_EXTERNAL://${docker.host.address}:${kafka.port}</KAFKA_ADVERTISED_LISTENERS>
+                      <KAFKA_INTER_BROKER_LISTENER_NAME>DOCKER_INTERNAL</KAFKA_INTER_BROKER_LISTENER_NAME>
                       <KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR>1</KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR>
                       <KAFKA_TRANSACTION_STATE_LOG_MIN_ISR>1</KAFKA_TRANSACTION_STATE_LOG_MIN_ISR>
                       <KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR>1</KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR>
