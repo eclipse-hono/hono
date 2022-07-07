@@ -31,6 +31,7 @@ import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.notification.NotificationConstants;
 import org.eclipse.hono.notification.NotificationEventBusSupport;
 import org.eclipse.hono.notification.NotificationSender;
+import org.eclipse.hono.service.ApplicationConfigProperties;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.util.ServiceClientAdapter;
 
@@ -53,6 +54,9 @@ public class NotificationSenderProducer {
     @Inject
     HealthCheckServer healthCheckServer;
 
+    @Inject
+    ApplicationConfigProperties appConfig;
+
     @Produces
     @Singleton
     NotificationSender notificationSender(
@@ -62,15 +66,17 @@ public class NotificationSenderProducer {
             final KafkaClientMetricsSupport kafkaClientMetricsSupport) {
 
         final NotificationSender notificationSender;
-        if (kafkaProducerConfig.isConfigured()) {
+        if (!appConfig.isKafkaMessagingDisabled() && kafkaProducerConfig.isConfigured()) {
             final KafkaProducerFactory<String, JsonObject> factory = CachingKafkaProducerFactory.sharedFactory(vertx);
             factory.setMetricsSupport(kafkaClientMetricsSupport);
             notificationSender = new KafkaBasedNotificationSender(factory, kafkaProducerConfig);
-        } else {
+        } else if (!appConfig.isAmqpMessagingDisabled() && downstreamSenderConfig.isHostConfigured()) {
             notificationSender = new ProtonBasedNotificationSender(HonoConnection.newConnection(
                     vertx,
                     downstreamSenderConfig,
                     tracer));
+        } else {
+            throw new IllegalStateException("at least one of Kafka or AMQP messaging must be configured");
         }
         if (notificationSender instanceof ServiceClient serviceClient) {
             healthCheckServer.registerHealthCheckResources(ServiceClientAdapter.forClient(serviceClient));

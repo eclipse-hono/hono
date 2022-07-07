@@ -35,6 +35,7 @@ import org.eclipse.hono.deviceregistry.service.device.AbstractRegistrationServic
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
 import org.eclipse.hono.deviceregistry.service.device.EdgeDeviceAutoProvisioner;
 import org.eclipse.hono.deviceregistry.service.tenant.TenantInformationService;
+import org.eclipse.hono.service.ApplicationConfigProperties;
 import org.eclipse.hono.service.HealthCheckServer;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.service.credentials.DelegatingCredentialsAmqpEndpoint;
@@ -91,6 +92,9 @@ public abstract class AbstractAmqpServerFactory {
 
     @Inject
     KafkaClientMetricsSupport kafkaClientMetricsSupport;
+
+    @Inject
+    ApplicationConfigProperties appConfig;
 
     private ServiceConfigProperties amqpServerProperties;
 
@@ -238,7 +242,7 @@ public abstract class AbstractAmqpServerFactory {
 
         final MessagingClientProvider<EventSender> result = new MessagingClientProvider<>();
 
-        if (downstreamSenderConfig.isHostConfigured()) {
+        if (!appConfig.isAmqpMessagingDisabled() && downstreamSenderConfig.isHostConfigured()) {
             result.setClient(new ProtonBasedDownstreamSender(
                     HonoConnection.newConnection(vertx, downstreamSenderConfig, tracer),
                     SendMessageSampler.Factory.noop(),
@@ -246,7 +250,7 @@ public abstract class AbstractAmqpServerFactory {
                     true));
         }
 
-        if (eventKafkaProducerConfig.isConfigured()) {
+        if (!appConfig.isKafkaMessagingDisabled() && eventKafkaProducerConfig.isConfigured()) {
             final KafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory.sharedFactory(vertx);
             factory.setMetricsSupport(kafkaClientMetricsSupport);
             result.setClient(new KafkaBasedEventSender(vertx, factory, eventKafkaProducerConfig, true, tracer));

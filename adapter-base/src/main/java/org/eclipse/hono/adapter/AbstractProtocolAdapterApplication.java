@@ -58,8 +58,6 @@ import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerOptions;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
-import org.eclipse.hono.client.notification.amqp.ProtonBasedNotificationReceiver;
-import org.eclipse.hono.client.notification.kafka.KafkaBasedNotificationReceiver;
 import org.eclipse.hono.client.notification.kafka.NotificationKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.registry.CredentialsClient;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
@@ -73,13 +71,8 @@ import org.eclipse.hono.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.client.telemetry.kafka.KafkaBasedEventSender;
 import org.eclipse.hono.client.telemetry.kafka.KafkaBasedTelemetrySender;
 import org.eclipse.hono.client.util.MessagingClientProvider;
-import org.eclipse.hono.client.util.ServiceClient;
-import org.eclipse.hono.notification.NotificationConstants;
-import org.eclipse.hono.notification.NotificationEventBusSupport;
-import org.eclipse.hono.notification.NotificationReceiver;
 import org.eclipse.hono.service.AbstractServiceApplication;
 import org.eclipse.hono.service.cache.Caches;
-import org.eclipse.hono.service.util.ServiceClientAdapter;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
 import org.eclipse.hono.util.MessagingType;
@@ -93,7 +86,6 @@ import org.slf4j.LoggerFactory;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
-import io.opentracing.Tracer;
 import io.smallrye.config.ConfigMapping;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
@@ -113,12 +105,6 @@ import io.vertx.ext.web.client.WebClientOptions;
 public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapterProperties> extends AbstractServiceApplication {
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractProtocolAdapterApplication.class);
-
-    /**
-     * The OpenTracing tracer to use.
-     */
-    @Inject
-    protected Tracer tracer;
 
     /**
      * The factory for creating samplers for tracking the sending of AMQP messages.
@@ -304,8 +290,9 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             })
             .onFailure(t -> LOG.error("failed to deploy adapter verticle(s)", t));
 
+        final var notificationReceiver = notificationReceiver(kafkaNotificationConfig, downstreamSenderConfig);
         final Future<String> notificationReceiverTracker = vertx.deployVerticle(
-                new WrappedLifecycleComponentVerticle(notificationReceiver()))
+                new WrappedLifecycleComponentVerticle(notificationReceiver))
             .onSuccess(ok -> {
                 LOG.info("successfully deployed notification receiver verticle(s)");
                 deploymentResult.put("notification receiver verticle", "successfully deployed");
@@ -335,7 +322,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
         final var commandResponseSenderProvider = new MessagingClientProvider<CommandResponseSender>();
         final var tenantClient = tenantClient();
 
-        if (kafkaEventConfig.isConfigured()) {
+        if (!appConfig.isKafkaMessagingDisabled() && kafkaEventConfig.isConfigured()) {
             LOG.info("Kafka client configuration present, adding Kafka messaging clients");
 
             final KafkaProducerFactory<String, Buffer> factory = CachingKafkaProducerFactory.sharedFactory(vertx);
@@ -359,7 +346,7 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
                     kafkaCommandResponseConfig,
                     tracer));
         }
-        if (downstreamSenderConfig.isHostConfigured()) {
+        if (!appConfig.isAmqpMessagingDisabled() && downstreamSenderConfig.isHostConfigured()) {
             LOG.info("AMQP 1.0 client configuration present, adding AMQP 1.0 based messaging clients");
             telemetrySenderProvider.setClient(downstreamSender());
             eventSenderProvider.setClient(downstreamSender());
@@ -379,26 +366,30 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             final CommandRouterClient commandRouterClient = commandRouterClient();
             adapter.setCommandRouterClient(commandRouterClient);
             final CommandRouterCommandConsumerFactory commandConsumerFactory = commandConsumerFactory(commandRouterClient);
-            if (commandConsumerConfig.isHostConfigured()) {
+            if (!appConfig.isAmqpMessagingDisabled() && commandConsumerConfig.isHostConfigured()) {
                 commandConsumerFactory.registerInternalCommandConsumer(
                         (id, handlers) -> new ProtonBasedInternalCommandConsumer(commandConsumerConnection(), id, handlers));
             }
 
-            final CommandResponseSender kafkaCommandResponseSender = messagingClientProviders
-                    .getCommandResponseSenderProvider().getClient(MessagingType.kafka);
-            if (kafkaCommandInternalConfig.isConfigured() && kafkaCommandConfig.isConfigured()
-                    && kafkaCommandResponseSender != null) {
-                commandConsumerFactory.registerInternalCommandConsumer(
-                        (id, handlers) -> new KafkaBasedInternalCommandConsumer(
-                                vertx,
-                                kafkaCommandInternalConfig,
-                                kafkaCommandConfig,
-                                tenantClient,
-                                kafkaCommandResponseSender,
-                                id,
-                                handlers,
-                                tracer)
-                            .setMetricsSupport(kafkaClientMetricsSupport));
+            if (!appConfig.isKafkaMessagingDisabled()) {
+                final var kafkaCommandResponseSender = messagingClientProviders
+                        .getCommandResponseSenderProvider()
+                        .getClient(MessagingType.kafka);
+                if (kafkaCommandResponseSender != null
+                        && kafkaCommandInternalConfig.isConfigured()
+                        && kafkaCommandConfig.isConfigured()) {
+                    commandConsumerFactory.registerInternalCommandConsumer(
+                            (id, handlers) -> new KafkaBasedInternalCommandConsumer(
+                                    vertx,
+                                    kafkaCommandInternalConfig,
+                                    kafkaCommandConfig,
+                                    tenantClient,
+                                    kafkaCommandResponseSender,
+                                    id,
+                                    handlers,
+                                    tracer)
+                                .setMetricsSupport(kafkaClientMetricsSupport));
+                }
             }
 
             adapter.setCommandConsumerFactory(commandConsumerFactory);
@@ -595,31 +586,4 @@ public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapt
             return new NoopResourceLimitChecks();
         }
     }
-
-    /**
-     * Creates the notification receiver.
-     *
-     * @return The bean instance.
-     */
-    public NotificationReceiver notificationReceiver() {
-        final NotificationReceiver notificationReceiver;
-        if (kafkaNotificationConfig.isConfigured()) {
-            notificationReceiver = new KafkaBasedNotificationReceiver(vertx, kafkaNotificationConfig);
-        } else {
-            final ClientConfigProperties notificationConfig = new ClientConfigProperties(downstreamSenderConfig);
-            notificationConfig.setServerRole("Notification");
-            notificationReceiver = new ProtonBasedNotificationReceiver(HonoConnection.newConnection(
-                    vertx,
-                    notificationConfig,
-                    tracer));
-        }
-        if (notificationReceiver instanceof ServiceClient serviceClient) {
-            healthCheckServer.registerHealthCheckResources(ServiceClientAdapter.forClient(serviceClient));
-        }
-        final var notificationSender = NotificationEventBusSupport.getNotificationSender(vertx);
-        NotificationConstants.DEVICE_REGISTRY_NOTIFICATION_TYPES.forEach(notificationType ->
-            notificationReceiver.registerConsumer(notificationType, notificationSender::handle));
-        return notificationReceiver;
-    }
-
 }

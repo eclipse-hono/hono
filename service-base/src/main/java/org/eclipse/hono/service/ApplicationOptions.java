@@ -32,4 +32,20 @@ public interface ApplicationOptions {
      */
     @WithDefault("0")
     int maxInstances();
+
+    /**
+     * Checks if AMQP 1.0 based messaging has been disabled explicitly.
+     *
+     * @return {@code true} if disabled explicitly.
+     */
+    @WithDefault("false")
+    boolean amqpMessagingDisabled();
+
+    /**
+     * Checks if Kafka based messaging has been disabled explicitly.
+     *
+     * @return {@code true} if disabled explicitly.
+     */
+    @WithDefault("false")
+    boolean kafkaMessagingDisabled();
 }

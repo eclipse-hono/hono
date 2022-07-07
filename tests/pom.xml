@@ -97,12 +97,13 @@
     <hono.infinispan.password>hono-secret</hono.infinispan.password>
 
     <!--
-      Messaging related properties - AMQP is used as the default one.
+      Messaging related properties - Kafka is used as the default one.
     -->
-    <hono.messaging-infra.type>amqp</hono.messaging-infra.type>
-    <hono.kafka.disabled>true</hono.kafka.disabled>
+    <hono.messaging-infra.type>kafka</hono.messaging-infra.type>
+    <hono.amqp-messaging.disabled>false</hono.amqp-messaging.disabled>
+    <hono.kafka-messaging.disabled>true</hono.kafka-messaging.disabled>
     <hono.kafka.log-level>WARN</hono.kafka.log-level>
-    <hono.kafka.bootstrap.servers></hono.kafka.bootstrap.servers>
+    <hono.kafka.bootstrap.servers>kafka:9092</hono.kafka.bootstrap.servers>
 
     <!--
       Device Registry related properties - The MongoDB based device registry is used as the default one.
@@ -421,8 +422,8 @@
         </property>
       </activation>
       <properties>
-        <hono.kafka.disabled>false</hono.kafka.disabled>
-        <hono.kafka.bootstrap.servers>kafka:9092</hono.kafka.bootstrap.servers>
+        <hono.amqp-messaging.disabled>true</hono.amqp-messaging.disabled>
+        <hono.kafka-messaging.disabled>false</hono.kafka-messaging.disabled>
         <request.timeout>4000</request.timeout>
         <!--The max memory command router is increased to 500 MB-->
         <hono.command-router.max-mem>524288000</hono.command-router.max-mem>
@@ -900,6 +901,7 @@
                 <image>
                   <name>${docker.repository}/hono-artemis-test:${project.version}</name>
                   <build>
+                    <skip>${hono.amqp-messaging.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
                     <from>${artemis.image.name}</from>
                     <ports>
@@ -934,6 +936,7 @@
                     </assembly>
                   </build>
                   <run>
+                    <skip>${hono.amqp-messaging.disabled}</skip>
                     <ports>
                       <port>+broker.ip:broker.amqp.port:5671</port>
                     </ports>
@@ -964,6 +967,7 @@
                 <image>
                   <name>${docker.repository}/hono-dispatch-router-test:${project.version}</name>
                   <build>
+                    <skip>${hono.amqp-messaging.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
                     <from>${dispatch-router.image.name}</from>
                     <ports>
@@ -1004,6 +1008,7 @@
                     </assembly>
                   </build>
                   <run>
+                    <skip>${hono.amqp-messaging.disabled}</skip>
                     <ports>
                       <port>+qpid.ip:qpid.amqps.port:5671</port>
                       <port>+qpid.ip:qpid.amqp.port:5672</port>
@@ -1034,7 +1039,7 @@
                   <name>${zookeeper.image.name}</name>
                   <alias>hono-zookeeper-test</alias>
                   <run>
-                    <skip>${hono.kafka.disabled}</skip>
+                    <skip>${hono.kafka-messaging.disabled}</skip>
                     <network>
                       <mode>custom</mode>
                       <name>${custom.network.name}</name>
@@ -1059,7 +1064,7 @@
                   <name>${kafka.image.name}</name>
                   <alias>hono-kafka-test</alias>
                   <run>
-                    <skip>${hono.kafka.disabled}</skip>
+                    <skip>${hono.kafka-messaging.disabled}</skip>
                     <ports>
                       <port>kafka.port:9094</port>
                     </ports>
