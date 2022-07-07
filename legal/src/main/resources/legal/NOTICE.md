@@ -167,7 +167,7 @@ The source code is available from [GitHub](https://github.com/bolcom/cryptvault)
 
 This product includes software developed by the [Generex project](https://github.com/mifmif/Generex).
 
-Your use of *Cryptvault* is subject to the terms and conditions of the Apache Software License 2.0.
+Your use of *Generex* is subject to the terms and conditions of the Apache Software License 2.0.
 A copy of the license is contained in the file [LICENSE-2.0.txt](LICENSE-2.0.txt) and is also available at
 http://www.apache.org/licenses/LICENSE-2.0.html.
 
