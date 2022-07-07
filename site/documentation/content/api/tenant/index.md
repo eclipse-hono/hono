@@ -108,13 +108,14 @@ The table below provides an overview of the standard members defined for the JSO
 | Name                     | Mandatory | JSON Type     | Description |
 | :------------------------| :-------: | :------------ | :---------- |
 | *adapters*               | *no*      | *array*       | A list of configuration options valid for certain adapters only. The format of a configuration option is described here [Adapter Configuration Format]({{< relref "#adapter-configuration-format" >}}). **NB** If the element is provided then the list MUST NOT be empty. **NB** Only a single entry per *type* is allowed. If multiple entries for the same *type* are present it is handled as an error. **NB** If the element is omitted then all adapters are *enabled* in their default configuration. |
-| *defaults*               | *no*      | *object*      |  Arbitrary *default* properties for devices belonging to the tenant. The properties can be used by protocol adapters to augment downstream messages with missing information, e.g. setting a default content type or time-to-live. |
+| *defaults*               | *no*      | *object*      | Arbitrary *default* properties for devices belonging to the tenant. The properties can be used by protocol adapters to augment downstream messages with missing information, e.g. setting a default content type or time-to-live. |
 | *enabled*                | *yes*     | *boolean*     | If set to `false` the tenant is currently disabled. Protocol adapters MUST NOT allow devices of a disabled tenant to connect and MUST NOT accept data published by such devices. |
-| *minimum-message-size*   | *no*      | *number*      | The minimum message size in bytes. If it is set then the payload size of the telemetry, event and command messages are calculated in accordance with the configured value and then reported to the metrics. See [Metrics]({{< relref "/api/Metrics#minimum-message-size" >}}) for more details.| 
+| *minimum-message-size*   | *no*      | *number*      | The minimum message size in bytes. If it is set then the payload size of the telemetry, event and command messages are calculated in accordance with the configured value and then reported to the metrics. See [Metrics]({{< relref "/api/Metrics#minimum-message-size" >}}) for more details.|
 | *resource-limits*        | *no*      | *object*      | Any resource limits that should be enforced for the tenant, e.g. the maximum number of concurrent connections and the maximum data volume for a given period. Refer to [Resource Limits Configuration Format]({{< relref "#resource-limits-configuration-format" >}}) for details. |
 | *tenant-id*              | *yes*     | *string*      | The ID of the tenant. |
 | *tracing*                | *no*      | *object*      | A set of options regarding the tracing of messages for the tenant. See [Tracing Format]({{< relref "#tracing-format" >}}) for a definition of the content model of the object. |
 | *trusted-ca*             | *no*      | *array*       | The list of trusted certificate authorities to use for validating certificates presented by devices of the tenant for authentication purposes. See [Trusted Certificate Authority Format]({{< relref "#trusted-ca-format" >}}) for a definition of the content model of the objects contained in the array. **NB** If the element is provided then the list MUST NOT be empty. |
+| *ext*                    | *no*      | *object*      | Arbitrary *extension* properties belonging to the tenant. See [Extension properties Format]({{< relref "#extension-properties-format" >}}) for details. |
 
 The JSON object MAY contain an arbitrary number of additional members with arbitrary names which can be of a scalar or a complex type.
 This allows for future *well-known* additions and also allows to add further information which might be relevant to a *custom* adapter only.
@@ -315,6 +316,14 @@ The table below contains the properties that are used to configure a tenant's re
 | :------------------------| :-------: | :------------ | :------------ | :---------- |
 | *mode*                   | *yes*     | *string*      | `-`           | The mode of the resource usage calculation. The default implementation supports two modes namely `days` and `monthly`. |
 | *no-of-days*             | *no*      | *number*      | `-`           | When the mode is set as `days`, then this value represents the length of an accounting period , i.e. the number of days over which the resource usage is to be limited. MUST be a positive integer.|
+
+### Extension properties Format
+
+The table below contains the extension properties that are used for addition configuration:
+
+| Name                          | Mandatory | JSON Type | Default Value | Description |
+| :---------------------------- | :-------: | :-------- | :------------ | :---------- |
+| *invalidate-cache-on-update*  | *no*      | *boolean* | `false`       | If set to `true`, the clients must purge the cached tenant's entity when they receive change notification for update operation. |
 
 ## Delivery States used by the Tenant API
 

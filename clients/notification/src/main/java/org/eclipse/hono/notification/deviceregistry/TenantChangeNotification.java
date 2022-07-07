@@ -45,6 +45,7 @@ public final class TenantChangeNotification extends AbstractNotification {
     private final LifecycleChange change;
     private final String tenantId;
     private final boolean enabled;
+    private final boolean invalidateCacheOnUpdate;
 
     @JsonCreator
     TenantChangeNotification(
@@ -58,13 +59,16 @@ public final class TenantChangeNotification extends AbstractNotification {
             @JsonProperty(value = NotificationConstants.JSON_FIELD_TENANT_ID, required = true)
             final String tenantId,
             @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_ENABLED, required = true)
-            final boolean enabled) {
+            final boolean enabled,
+            @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_INVALIDATE_CACHE_ON_UPDATE, required = true)
+            final boolean invalidateCacheOnUpdate) {
 
         super(source, creationTime);
 
         this.change = Objects.requireNonNull(change);
         this.tenantId = Objects.requireNonNull(tenantId);
         this.enabled = enabled;
+        this.invalidateCacheOnUpdate = invalidateCacheOnUpdate;
     }
 
     /**
@@ -74,11 +78,13 @@ public final class TenantChangeNotification extends AbstractNotification {
      * @param tenantId The ID of the tenant.
      * @param creationTime The creation time of the event.
      * @param enabled {@code true} if the device is enabled.
+     * @param invalidateCacheOnUpdate {@code true} if cache invalidation is required on update operation.
      * @throws NullPointerException If any of the parameters are {@code null}.
      */
     public TenantChangeNotification(final LifecycleChange change, final String tenantId, final Instant creationTime,
-            final boolean enabled) {
-        this(NotificationConstants.SOURCE_DEVICE_REGISTRY, creationTime, change, tenantId, enabled);
+            final boolean enabled, final boolean invalidateCacheOnUpdate) {
+        this(NotificationConstants.SOURCE_DEVICE_REGISTRY, creationTime, change, tenantId, enabled,
+                invalidateCacheOnUpdate);
     }
 
     /**
@@ -111,6 +117,18 @@ public final class TenantChangeNotification extends AbstractNotification {
         return enabled;
     }
 
+    /**
+     * Checks whether update operations on this tenant requires cache invalidation.
+     * <p>
+     * The default value of this property is {@code false}.
+     *
+     * @return {@code true} if cache invalidation is required.
+     */
+    @JsonProperty(value = NotificationConstants.JSON_FIELD_DATA_INVALIDATE_CACHE_ON_UPDATE)
+    public boolean isInvalidateCacheOnUpdate() {
+        return invalidateCacheOnUpdate;
+    }
+
     @Override
     @JsonIgnore
     public NotificationType<TenantChangeNotification> getType() {
@@ -129,6 +147,7 @@ public final class TenantChangeNotification extends AbstractNotification {
                 "change=" + change +
                 ", tenantId='" + tenantId + '\'' +
                 ", enabled=" + enabled +
+                ", invalidateCacheOnUpdate=" + invalidateCacheOnUpdate +
                 ", creationTime='" + getCreationTime() + '\'' +
                 '}';
     }

@@ -1380,7 +1380,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     public void testDeviceConnectionIsClosedOnTenantDeletedNotification() {
 
         testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification( new TenantChangeNotification(
-                LifecycleChange.DELETE, TEST_TENANT_ID, Instant.now(), true));
+                LifecycleChange.DELETE, TEST_TENANT_ID, Instant.now(), true, false));
     }
 
     /**
@@ -1391,7 +1391,7 @@ public class VertxBasedAmqpProtocolAdapterTest extends ProtocolAdapterTestSuppor
     public void testDeviceConnectionIsClosedOnTenantDisabledNotification() {
 
         testDeviceConnectionIsClosedOnDeviceOrTenantChangeNotification( new TenantChangeNotification(
-                LifecycleChange.UPDATE, TEST_TENANT_ID, Instant.now(), false));
+                LifecycleChange.UPDATE, TEST_TENANT_ID, Instant.now(), false, false));
     }
 
     /**

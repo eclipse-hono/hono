@@ -35,6 +35,7 @@ public class TenantChangeNotificationTest {
     private static final String CREATION_TIME = "2007-12-03T10:15:30Z";
     private static final String TENANT_ID = "my-tenant";
     private static final boolean ENABLED = false;
+    private static final boolean INVALIDATE_CACHE_ON_UPDATE = false;
     private static final LifecycleChange CHANGE = LifecycleChange.CREATE;
 
     private AbstractNotification notification;
@@ -44,7 +45,8 @@ public class TenantChangeNotificationTest {
      */
     @BeforeEach
     public void setUp() {
-        notification = new TenantChangeNotification(CHANGE, TENANT_ID, Instant.parse(CREATION_TIME), ENABLED);
+        notification = new TenantChangeNotification(CHANGE, TENANT_ID, Instant.parse(CREATION_TIME), ENABLED,
+                INVALIDATE_CACHE_ON_UPDATE);
     }
 
     /**
@@ -62,6 +64,8 @@ public class TenantChangeNotificationTest {
         assertThat(json.getString(NotificationConstants.JSON_FIELD_TYPE)).isEqualTo(TenantChangeNotification.TYPE_NAME);
         assertThat(json.getString(NotificationConstants.JSON_FIELD_TENANT_ID)).isEqualTo(TENANT_ID);
         assertThat(json.getBoolean(NotificationConstants.JSON_FIELD_DATA_ENABLED)).isEqualTo(ENABLED);
+        assertThat(json.getBoolean(NotificationConstants.JSON_FIELD_DATA_INVALIDATE_CACHE_ON_UPDATE))
+                .isEqualTo(INVALIDATE_CACHE_ON_UPDATE);
         assertThat(json.getString(NotificationConstants.JSON_FIELD_DATA_CHANGE)).isEqualTo(CHANGE.toString());
     }
 
@@ -76,7 +80,7 @@ public class TenantChangeNotificationTest {
 
         // When adding new properties to the data object, make sure not to break the existing API because messages might
         // be persisted. For breaking changes add a new object mapper class instead.
-        final int expectedPropertiesCount = 6;
+        final int expectedPropertiesCount = 7;
         assertWithMessage("JSON contains unknown fields").that(json.size()).isEqualTo(expectedPropertiesCount);
 
         assertThat(json.getString("type")).isEqualTo("tenant-change-v1");
@@ -86,6 +90,7 @@ public class TenantChangeNotificationTest {
         assertThat(json.getString("change")).isEqualTo("CREATE");
         assertThat(json.getString("tenant-id")).isNotNull();
         assertThat(json.getString("enabled")).isNotNull();
+        assertThat(json.getString("invalidate-cache-on-update")).isNotNull();
 
     }
 
@@ -108,6 +113,7 @@ public class TenantChangeNotificationTest {
         assertThat(newNotification.getChange()).isEqualTo(CHANGE);
         assertThat(newNotification.getTenantId()).isEqualTo(TENANT_ID);
         assertThat(newNotification.isEnabled()).isEqualTo(ENABLED);
+        assertThat(newNotification.isInvalidateCacheOnUpdate()).isEqualTo(INVALIDATE_CACHE_ON_UPDATE);
     }
 
 }

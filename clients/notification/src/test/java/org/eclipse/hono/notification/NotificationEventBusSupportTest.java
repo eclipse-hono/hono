@@ -47,7 +47,7 @@ public class NotificationEventBusSupportTest {
     public void testPublishedNotificationIsReceived(final VertxTestContext ctx, final Vertx vertx) {
 
         final TenantChangeNotification notification = new TenantChangeNotification(LifecycleChange.CREATE, "my-tenant",
-                Instant.parse("2007-12-03T10:15:30Z"), false);
+                Instant.parse("2007-12-03T10:15:30Z"), false, false);
 
         final int consumerCount = 2;
         final Checkpoint checkpoint = ctx.checkpoint(consumerCount);

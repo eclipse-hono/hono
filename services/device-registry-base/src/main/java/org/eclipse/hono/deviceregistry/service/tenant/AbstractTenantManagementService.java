@@ -35,6 +35,7 @@ import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.service.management.tenant.TenantManagementService;
 import org.eclipse.hono.service.management.tenant.TenantWithId;
 import org.eclipse.hono.tracing.TracingHelper;
+import org.eclipse.hono.util.TenantConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -224,7 +225,8 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
         return tenantCheck.future()
                 .compose(ok -> processCreateTenant(tenantIdValue, tenantObj, span))
                 .onSuccess(result -> notificationSender.handle(new TenantChangeNotification(LifecycleChange.CREATE,
-                        tenantIdValue, Instant.now(), tenantObj.isEnabled())))
+                        tenantIdValue, Instant.now(), tenantObj.isEnabled(), (Boolean) tenantObj.getExtensions()
+                                .getOrDefault(TenantConstants.FIELD_EXT_INVALIDATE_CACHE_ON_UPDATE, false))))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantIdValue));
     }
 
@@ -262,10 +264,13 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
                     HttpURLConnection.HTTP_BAD_REQUEST,
                     e.getMessage()));
         }
+
         return tenantCheck.future()
                 .compose(ok -> processUpdateTenant(tenantId, tenantObj, resourceVersion, span))
                 .onSuccess(result -> notificationSender.handle(new TenantChangeNotification(LifecycleChange.UPDATE,
-                        tenantId, Instant.now(), tenantObj.isEnabled())))
+                        tenantId, Instant.now(), tenantObj.isEnabled(),
+                        (Boolean) tenantObj.getExtensions()
+                                .getOrDefault(TenantConstants.FIELD_EXT_INVALIDATE_CACHE_ON_UPDATE, false))))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 
@@ -281,7 +286,8 @@ public abstract class AbstractTenantManagementService implements TenantManagemen
 
         return processDeleteTenant(tenantId, resourceVersion, span)
                 .onSuccess(result -> notificationSender
-                        .handle(new TenantChangeNotification(LifecycleChange.DELETE, tenantId, Instant.now(), false)))
+                        .handle(new TenantChangeNotification(LifecycleChange.DELETE, tenantId, Instant.now(), false,
+                                true)))
                 .recover(t -> DeviceRegistryUtils.mapError(t, tenantId));
     }
 

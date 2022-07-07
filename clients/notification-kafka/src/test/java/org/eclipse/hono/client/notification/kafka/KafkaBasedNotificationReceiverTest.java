@@ -134,7 +134,7 @@ public class KafkaBasedNotificationReceiverTest {
 
         mockConsumer.schedulePollTask(() -> {
             mockConsumer.addRecord(createKafkaRecord(
-                    new TenantChangeNotification(LifecycleChange.CREATE, tenantId, creationTime, false), 0L));
+                    new TenantChangeNotification(LifecycleChange.CREATE, tenantId, creationTime, false, false), 0L));
 
             mockConsumer.addRecord(createKafkaRecord(
                     new DeviceChangeNotification(LifecycleChange.CREATE, tenantId, deviceId, creationTime, false), 0L));

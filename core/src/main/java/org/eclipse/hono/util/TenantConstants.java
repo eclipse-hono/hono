@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -203,6 +203,11 @@ public final class TenantConstants extends RequestResponseApiConstants {
      * The name of the property that defines the messaging type to be used for a tenant.
      */
     public static final String FIELD_EXT_MESSAGING_TYPE = "messaging-type";
+
+    /**
+     * The name of the property that indicates if cache invalidation is required on update operations.
+     */
+    public static final String FIELD_EXT_INVALIDATE_CACHE_ON_UPDATE = "invalidate-cache-on-update";
 
     /**
      * The name of the Tenant API endpoint.
