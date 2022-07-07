@@ -39,6 +39,20 @@
      <optional>true</optional>
     </dependency>
     <dependency>
+     <groupId>org.eclipse.hono</groupId>
+     <artifactId>hono-client-notification</artifactId>
+    </dependency>
+    <dependency>
+     <groupId>org.eclipse.hono</groupId>
+     <artifactId>hono-client-notification-amqp</artifactId>
+     <optional>true</optional>
+    </dependency>
+    <dependency>
+     <groupId>org.eclipse.hono</groupId>
+     <artifactId>hono-client-notification-kafka</artifactId>
+     <optional>true</optional>
+    </dependency>
+    <dependency>
       <groupId>org.eclipse.hono</groupId>
       <artifactId>hono-core</artifactId>
     </dependency>

@@ -34,15 +34,12 @@ import org.eclipse.hono.client.kafka.metrics.KafkaClientMetricsSupport;
 import org.eclipse.hono.client.kafka.producer.CachingKafkaProducerFactory;
 import org.eclipse.hono.client.kafka.producer.KafkaProducerOptions;
 import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProperties;
-import org.eclipse.hono.client.notification.amqp.ProtonBasedNotificationReceiver;
-import org.eclipse.hono.client.notification.kafka.KafkaBasedNotificationReceiver;
 import org.eclipse.hono.client.notification.kafka.NotificationKafkaConsumerConfigProperties;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.registry.amqp.ProtonBasedDeviceRegistrationClient;
 import org.eclipse.hono.client.registry.amqp.ProtonBasedTenantClient;
 import org.eclipse.hono.client.util.MessagingClientProvider;
-import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.commandrouter.AdapterInstanceStatusService;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterAmqpServer;
@@ -57,15 +54,11 @@ import org.eclipse.hono.commandrouter.impl.kafka.KafkaBasedCommandConsumerFactor
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.ServiceOptions;
 import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
-import org.eclipse.hono.notification.NotificationConstants;
-import org.eclipse.hono.notification.NotificationEventBusSupport;
-import org.eclipse.hono.notification.NotificationReceiver;
 import org.eclipse.hono.service.AbstractServiceApplication;
 import org.eclipse.hono.service.HealthCheckProvider;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.service.cache.Caches;
-import org.eclipse.hono.service.util.ServiceClientAdapter;
 import org.eclipse.hono.util.RegistrationResult;
 import org.eclipse.hono.util.TenantObject;
 import org.eclipse.hono.util.TenantResult;
@@ -79,7 +72,6 @@ import com.github.benmanes.caffeine.cache.Cache;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
-import io.opentracing.Tracer;
 import io.smallrye.config.ConfigMapping;
 import io.smallrye.health.api.HealthRegistry;
 import io.vertx.core.CompositeFuture;
@@ -115,9 +107,6 @@ public class Application extends AbstractServiceApplication {
 
     private static final String COMPONENT_NAME = "Hono Command Router";
     private static final Logger LOG = LoggerFactory.getLogger(Application.class);
-
-    @Inject
-    Tracer tracer;
 
     @Inject
     DeviceConnectionInfo deviceConnectionInfo;
@@ -278,8 +267,9 @@ public class Application extends AbstractServiceApplication {
             });
 
         // deploy notification receiver
+        final var notificationReceiver = notificationReceiver(kafkaNotificationConfig, commandConsumerConnectionConfig);
         final Future<String> notificationReceiverTracker = vertx.deployVerticle(
-                new WrappedLifecycleComponentVerticle(notificationReceiver()))
+                new WrappedLifecycleComponentVerticle(notificationReceiver))
             .onSuccess(ok -> {
                 LOG.info("successfully deployed notification receiver verticle(s)");
                 deploymentResult.put("notification receiver verticle", "successfully deployed");
@@ -355,7 +345,7 @@ public class Application extends AbstractServiceApplication {
     }
 
     private Optional<InternalKafkaTopicCleanupService> createKafkaTopicCleanUpService() {
-        if (kafkaAdminClientConfig.isConfigured()
+        if (!appConfig.isKafkaMessagingDisabled() && kafkaAdminClientConfig.isConfigured()
                 && !(adapterInstanceStatusService instanceof AdapterInstanceStatusService.UnknownStatusProvidingService)) {
             return Optional.of(new InternalKafkaTopicCleanupService(
                     adapterInstanceStatusService,
@@ -371,7 +361,7 @@ public class Application extends AbstractServiceApplication {
 
         final var commandConsumerFactoryProvider = new MessagingClientProvider<CommandConsumerFactory>();
 
-        if (kafkaConsumerConfig.isConfigured()
+        if (!appConfig.isKafkaMessagingDisabled() && kafkaConsumerConfig.isConfigured()
                 && commandResponseKafkaProducerConfig.isConfigured()
                 && commandInternalKafkaProducerConfig.isConfigured()) {
 
@@ -389,7 +379,7 @@ public class Application extends AbstractServiceApplication {
                     kafkaClientMetricsSupport,
                     tracer));
         }
-        if (commandConsumerConnectionConfig.isHostConfigured()) {
+        if (!appConfig.isAmqpMessagingDisabled() && commandConsumerConnectionConfig.isHostConfigured()) {
             commandConsumerFactoryProvider.setClient(new ProtonBasedCommandConsumerFactoryImpl(
                     HonoConnection.newConnection(vertx, commandConsumerConnectionConfig, tracer),
                     tenantClient,
@@ -437,30 +427,4 @@ public class Application extends AbstractServiceApplication {
                 SendMessageSampler.Factory.noop(),
                 tenantResponseCache());
     }
-
-    /**
-     * Creates the notification receiver.
-     *
-     * @return The bean instance.
-     */
-    public NotificationReceiver notificationReceiver() {
-        final NotificationReceiver notificationReceiver;
-        if (kafkaNotificationConfig.isConfigured()) {
-            notificationReceiver = new KafkaBasedNotificationReceiver(vertx, kafkaNotificationConfig);
-        } else {
-            final var notificationConfig = new ClientConfigProperties(commandConsumerConnectionConfig);
-            notificationConfig.setServerRole("Notification");
-            notificationReceiver = new ProtonBasedNotificationReceiver(
-                    HonoConnection.newConnection(vertx, notificationConfig, tracer));
-        }
-        if (notificationReceiver instanceof ServiceClient serviceClient) {
-            healthCheckServer.registerHealthCheckResources(ServiceClientAdapter.forClient(serviceClient));
-        }
-        final var notificationSender = NotificationEventBusSupport.getNotificationSender(vertx);
-        NotificationConstants.DEVICE_REGISTRY_NOTIFICATION_TYPES.forEach(notificationType -> {
-            notificationReceiver.registerConsumer(notificationType, notificationSender::handle);
-        });
-        return notificationReceiver;
-    }
-
 }

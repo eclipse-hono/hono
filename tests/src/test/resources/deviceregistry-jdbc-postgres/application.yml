@@ -2,6 +2,8 @@ hono:
 
   app:
     maxInstances: 1
+    amqpMessagingDisabled: ${hono.amqp-messaging.disabled}
+    kafkaMessagingDisabled: ${hono.kafka-messaging.disabled}
 
   messaging:
     name: "Hono Device Registry JDBC"

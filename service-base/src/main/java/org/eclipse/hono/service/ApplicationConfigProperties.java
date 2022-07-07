@@ -20,6 +20,8 @@ package org.eclipse.hono.service;
 public class ApplicationConfigProperties {
 
     private int maxInstances = 0;
+    private boolean amqpMessagingDisabled = false;
+    private boolean kafkaMessagingDisabled = false;
 
     /**
      * Creates new properties using default values.
@@ -36,6 +38,8 @@ public class ApplicationConfigProperties {
     public ApplicationConfigProperties(final ApplicationOptions options) {
         super();
         setMaxInstances(options.maxInstances());
+        this.amqpMessagingDisabled = options.amqpMessagingDisabled();
+        this.kafkaMessagingDisabled = options.kafkaMessagingDisabled();
     }
 
     /**
@@ -70,5 +74,41 @@ public class ApplicationConfigProperties {
             throw new IllegalArgumentException("maxInstances must be >= 0");
         }
         this.maxInstances = maxVerticleInstances;
+    }
+
+    /**
+     * Checks if AMQP 1.0 based messaging has been disabled explicitly.
+     *
+     * @return {@code true} if disabled explicitly.
+     */
+    public final boolean isAmqpMessagingDisabled() {
+        return amqpMessagingDisabled;
+    }
+
+    /**
+     * Disables general support for AMQP 1.0 based messaging.
+     *
+     * @param disabled {@code true} to disable explicitly.
+     */
+    public final void setAmqpMessagingDisabled(final boolean disabled) {
+        this.amqpMessagingDisabled = disabled;
+    }
+
+    /**
+     * Checks if Kafka based messaging has been disabled explicitly.
+     *
+     * @return {@code true} if disabled explicitly.
+     */
+    public final boolean isKafkaMessagingDisabled() {
+        return kafkaMessagingDisabled;
+    }
+
+    /**
+     * Disables general support for Kafka based messaging.
+     *
+     * @param disabled {@code true} to disable explicitly.
+     */
+    public final void setKafkaMessagingDisabled(final boolean disabled) {
+        this.kafkaMessagingDisabled = disabled;
     }
 }
