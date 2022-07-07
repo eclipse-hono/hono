@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -25,8 +25,6 @@ import io.vertx.core.Future;
  */
 public interface AdapterInstanceStatusProvider {
 
-    AdapterInstanceStatusProvider UNKNOWN_STATUS_PROVIDER = new UnknownStatusProvider();
-
     /**
      * Gets the status of the adapter identified by the given identifier.
      *
@@ -50,21 +48,4 @@ public interface AdapterInstanceStatusProvider {
      * @throws NullPointerException if adapterInstanceIds is {@code null}.
      */
     Future<Set<String>> getDeadAdapterInstances(Collection<String> adapterInstanceIds);
-
-    /**
-     * Status provider that always returns the {@link AdapterInstanceStatus#UNKNOWN} status.
-     */
-    class UnknownStatusProvider implements AdapterInstanceStatusProvider {
-
-        @Override
-        public AdapterInstanceStatus getStatus(final String adapterInstanceId) {
-            return AdapterInstanceStatus.UNKNOWN;
-        }
-
-        @Override
-        public Future<Set<String>> getDeadAdapterInstances(
-                final Collection<String> adapterInstanceIds) {
-            return Future.succeededFuture(Set.of());
-        }
-    }
 }

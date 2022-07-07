@@ -35,7 +35,6 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.registry.DeviceRegistrationClient;
 import org.eclipse.hono.client.registry.TenantClient;
 import org.eclipse.hono.client.util.MessagingClientProvider;
-import org.eclipse.hono.commandrouter.AdapterInstanceStatusService;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
@@ -102,7 +101,7 @@ public class CommandRouterServiceImplTest {
                 tenantClient,
                 deviceConnectionInfo,
                 commandConsumerFactoryProvider,
-                AdapterInstanceStatusService.UNKNOWN_STATUS_PROVIDING_SERVICE,
+                new UnknownStatusProvidingService(),
                 NoopTracerFactory.create());
         service.setContext(context);
         service.start();
