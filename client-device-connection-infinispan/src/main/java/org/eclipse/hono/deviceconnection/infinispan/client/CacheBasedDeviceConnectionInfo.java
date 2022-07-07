@@ -104,7 +104,7 @@ public final class CacheBasedDeviceConnectionInfo implements DeviceConnectionInf
         this.cache = Objects.requireNonNull(cache);
         this.tracer = Objects.requireNonNull(tracer);
         this.adapterInstanceStatusProvider = Optional.ofNullable(adapterInstanceStatusProvider)
-                .orElse(AdapterInstanceStatusProvider.UNKNOWN_STATUS_PROVIDER);
+                .orElseGet(UnknownStatusProvider::new);
     }
 
     /**

@@ -48,6 +48,7 @@ import org.eclipse.hono.commandrouter.CommandRouterService;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.commandrouter.impl.CommandRouterServiceImpl;
 import org.eclipse.hono.commandrouter.impl.DelegatingCommandRouterAmqpEndpoint;
+import org.eclipse.hono.commandrouter.impl.UnknownStatusProvidingService;
 import org.eclipse.hono.commandrouter.impl.amqp.ProtonBasedCommandConsumerFactoryImpl;
 import org.eclipse.hono.commandrouter.impl.kafka.InternalKafkaTopicCleanupService;
 import org.eclipse.hono.commandrouter.impl.kafka.KafkaBasedCommandConsumerFactoryImpl;
@@ -346,7 +347,7 @@ public class Application extends AbstractServiceApplication {
 
     private Optional<InternalKafkaTopicCleanupService> createKafkaTopicCleanUpService() {
         if (!appConfig.isKafkaMessagingDisabled() && kafkaAdminClientConfig.isConfigured()
-                && !(adapterInstanceStatusService instanceof AdapterInstanceStatusService.UnknownStatusProvidingService)) {
+                && !(adapterInstanceStatusService instanceof UnknownStatusProvidingService)) {
             return Optional.of(new InternalKafkaTopicCleanupService(
                     adapterInstanceStatusService,
                     kafkaAdminClientConfig));

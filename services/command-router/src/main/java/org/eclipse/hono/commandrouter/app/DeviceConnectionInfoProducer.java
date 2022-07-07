@@ -26,6 +26,7 @@ import javax.inject.Singleton;
 import org.eclipse.hono.commandrouter.AdapterInstanceStatusService;
 import org.eclipse.hono.commandrouter.CommandRouterServiceOptions;
 import org.eclipse.hono.commandrouter.impl.KubernetesBasedAdapterInstanceStatusService;
+import org.eclipse.hono.commandrouter.impl.UnknownStatusProvidingService;
 import org.eclipse.hono.deviceconnection.infinispan.client.BasicCache;
 import org.eclipse.hono.deviceconnection.infinispan.client.CacheBasedDeviceConnectionInfo;
 import org.eclipse.hono.deviceconnection.infinispan.client.CommonCacheConfig;
@@ -128,6 +129,6 @@ public class DeviceConnectionInfoProducer {
                         ? KubernetesBasedAdapterInstanceStatusService.create()
                         : null;
         return Optional.ofNullable(service)
-                .orElse(AdapterInstanceStatusService.UNKNOWN_STATUS_PROVIDING_SERVICE);
+                .orElseGet(UnknownStatusProvidingService::new);
     }
 }
