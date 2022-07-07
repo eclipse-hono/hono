@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+    Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
    
     See the NOTICE file(s) distributed with this work for additional
     information regarding copyright ownership.
@@ -16,8 +16,9 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.eclipse.hono</groupId>
-    <artifactId>hono-parent</artifactId>
+    <artifactId>hono-bom</artifactId>
     <version>2.0.1-SNAPSHOT</version>
+    <relativePath>../bom</relativePath>
   </parent>
   <artifactId>hono-legal</artifactId>
   <name>Legal Documents</name>

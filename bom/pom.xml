@@ -66,8 +66,6 @@
     <netty.version>4.1.74.Final</netty.version>
     <opentelemetry-collector.image.name>otel/opentelemetry-collector:0.49.0</opentelemetry-collector.image.name>
     <postgresql-image.name>postgres:12-alpine</postgresql-image.name>
-    <protoparser.version>4.0.3</protoparser.version>
-    <protostream.version>4.4.1.Final</protostream.version>
     <proton.version>0.33.10</proton.version>
     <qpid-jms.version>1.4.1</qpid-jms.version>
     <quarkus.platform.version>2.8.3.Final</quarkus.platform.version>
