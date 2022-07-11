@@ -181,6 +181,14 @@
         "protocol-adapter"
       ]
     },
+    "lora-adapter@HONO": {
+      "mechanism": "PLAIN",
+      "password": "lora-secret",
+      "authorities": [
+        "hono-component",
+        "protocol-adapter"
+      ]
+    },
     "mqtt-adapter@HONO": {
       "mechanism": "PLAIN",
       "password": "mqtt-secret",

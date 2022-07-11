@@ -1,0 +1,93 @@
+hono:
+  app:
+    maxInstances: 1
+  connectionEvents:
+    producer: "none"
+  lora:
+    bindAddress: "0.0.0.0"
+    insecurePortBindAddress: "0.0.0.0"
+    insecurePortEnabled: true
+    keyPath: "/opt/hono/config/certs/lora-adapter-key.pem"
+    certPath: "/opt/hono/config/certs/lora-adapter-cert.pem"
+    maxPayloadSize: 2048
+  messaging:
+    name: 'Hono Lora Adapter'
+    host: "${hono.amqp-network.host}"
+    port: 5673
+    amqpHostname: "hono-internal"
+    keyPath: "/opt/hono/config/certs/lora-adapter-key.pem"
+    certPath: "/opt/hono/config/certs/lora-adapter-cert.pem"
+    trustStorePath: "/opt/hono/config/certs/trusted-certs.pem"
+    linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
+  registration:
+    name: 'Hono Lora Adapter'
+    host: "${hono.registration.host}"
+    port: 5672
+    username: "lora-adapter@HONO"
+    password: "lora-secret"
+    linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
+  credentials:
+    name: 'Hono Lora Adapter'
+    host: "${hono.registration.host}"
+    port: 5672
+    username: "lora-adapter@HONO"
+    password: "lora-secret"
+    linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
+  tenant:
+    name: 'Hono Lora Adapter'
+    host: "${hono.registration.host}"
+    port: 5672
+    username: "lora-adapter@HONO"
+    password: "lora-secret"
+    linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
+  commandRouter:
+    name: 'Hono Lora Adapter'
+    host: "${hono.commandrouter.host}"
+    port: 5672
+    username: "lora-adapter@HONO"
+    password: "lora-secret"
+    linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
+  command:
+    name: 'Hono Lora Adapter'
+    host: "${hono.amqp-network.host}"
+    port: 5673
+    amqpHostname: "hono-internal"
+    keyPath: "/opt/hono/config/certs/lora-adapter-key.pem"
+    certPath: "/opt/hono/config/certs/lora-adapter-cert.pem"
+    trustStorePath: "/opt/hono/config/certs/trusted-certs.pem"
+    linkEstablishmentTimeout: ${link.establishment.timeout}
+    flowLatency: ${flow.latency}
+    requestTimeout: ${request.timeout}
+  kafka:
+    commonClientConfig:
+      bootstrap.servers: ${hono.kafka.bootstrap.servers}
+      max.block.ms: 1000
+
+quarkus:
+  application:
+    name: "${hono.lora-adapter.host}"
+  opentelemetry:
+    tracer:
+      exporter:
+        otlp:
+          endpoint: "${otel-collector.endpoint}"
+  log:
+    console:
+      color: true
+    level: INFO
+    min-level: TRACE
+    category:
+      "io.quarkus.vertx.core.runtime":
+        level: DEBUG
+  vertx:
+    max-event-loop-execute-time: ${max.event-loop.execute-time}

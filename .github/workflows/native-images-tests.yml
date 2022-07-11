@@ -44,18 +44,18 @@ jobs:
         -Dquarkus.native.remote-container-build=false -Dquarkus.native.container-build=true \
         -Pbuild-native-image -am \
         -pl :hono-service-auth,:hono-service-command-router,:hono-service-device-registry-mongodb,\
-        :hono-adapter-mqtt,:hono-adapter-amqp,:hono-adapter-coap,:hono-adapter-http,\
+        :hono-adapter-mqtt,:hono-adapter-amqp,:hono-adapter-coap,:hono-adapter-http,:hono-adapter-lora,\
         :hono-tests
-    - name: "Build JDBC registry image"
-      run: |
-        mvn install -B -e -DskipTests -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
-        -Pbuild-docker-image -am -pl :hono-service-device-registry-jdbc
     - name: "Run integration tests with Mongo DB and Kafka"
       run: |
         mvn verify -pl :hono-tests -B -e -DCI=$CI \
         -Dhono.components.type=quarkus-native -Dhono.deviceregistry.type=mongodb \
         -Dhono.messaging-infra.type=kafka -Dhono.commandrouting.cache=server \
         -Prun-tests,jaeger
+    - name: "Build JDBC registry image"
+      run: |
+        mvn install -B -e -DskipTests -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
+        -Pbuild-docker-image -am -pl :hono-service-device-registry-jdbc
     - name: "Run integration tests with Sandbox-like configuration"
       run: |
         mvn verify -pl :hono-tests -B -e -DCI=$CI \
