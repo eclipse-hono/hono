@@ -46,7 +46,7 @@
       https://bugs.openjdk.java.net/browse/JDK-8230305
      -->
     <java-base-image.name>docker.io/eclipse-temurin:17-jre-focal</java-base-image.name>
-    <jjwt.version>0.11.2</jjwt.version>
+    <jjwt.version>0.11.5</jjwt.version>
     <!--
       Explicitly override Kafka 3.1 client version defined by Quarkus because
       vertx-kafka-client 4.2.x is incompatible with Kafka 3.1 client.
