@@ -24,6 +24,11 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The Command Router component possibly did not reach the "ready" state in case the Kafka broker got restarted during
   Command Router startup. This has been fixed.
 * The CoAP protocol adapter now uses Eclipse Californium 3.6.0.
+* Upgraded to JJWT 0.11.5 which contains additional security guards against an ECDSA bug in Java SE versions
+  15-15.0.6, 17-17.0.2, and 18 ([CVE-2022-21449](https://nvd.nist.gov/vuln/detail/CVE-2022-21449)).
+  Note: if your application does not use these JVM versions, you are not exposed to the JVM vulnerability.
+  The CVE is not a bug within JJWT itself - it is a bug within the above listed JVM versions, and the JJWT 0.11.5 release
+  adds additional precautions within JJWT in case an application team is not able to upgrade their JVM in a timely manner.
 
 ## 2.0.0
 
