@@ -19,7 +19,9 @@ description = "Information about changes in recent Hono releases. Includes new f
   if no data is received or sent within the idle timeout period. The idle timeout is in seconds.
   A zero value means no timeout is used.
 * The MQTT adapter skipped command or error (the first one) subscription if both are requested for the same device. This has been fixed.
-
+* The native executable based Lora adapter container image failed to forward Lora meta information in messages being
+  sent downstream. This has been fixed.
+  
 ## 1.12.2
 
 ### Fixes & Enhancements
