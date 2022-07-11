@@ -6,6 +6,11 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 ## 2.1.0 (not released yet)
 
+### New features
+
+* The tracing configuration has been extended to now also support a rate-limiting sampler. See the
+  [Monitoring & Tracing guide]({{% doclink "/admin-guide/monitoring-tracing-config/#tracing" %}}) for details.
+
 ### Fixes & Enhancements
 
 * The CoAP adapter did not properly consider the reduced minimum RAM requirements for starting up when running as a
