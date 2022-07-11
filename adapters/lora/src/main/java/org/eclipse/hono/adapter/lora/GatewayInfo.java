@@ -19,9 +19,12 @@ import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
 /**
  * A container for meta information about a Lora gateway.
  */
+@RegisterForReflection
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class GatewayInfo {
 

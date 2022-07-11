@@ -19,10 +19,13 @@ import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
 /**
  * A 3D geo-location that consists of longitude, latitude and (optional) altitude.
  *
  */
+@RegisterForReflection
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public final class Location {
 
