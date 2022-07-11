@@ -120,8 +120,8 @@ exporting to an OpenTelemetry collector.
 
 | OS Environment Variable<br>Java System Property | Type          | Default Value | Description  |
 | :---------------------------------------------- | :------------ | :------------ | :------------|
-| `QUARKUS_OPENTELEMETRY_TRACER_SAMPLER`<br>`quarkus.opentelemetry.tracer.sampler` | *string* | `on` | The sampler to use for tracing. Valid values are `off` to export no traces at all, `on` to export *all* traces and `ratio` to define a ratio of traces to be exported. |
-| `QUARKUS_OPENTELEMETRY_TRACER_SAMPLER_RATIO`<br>`quarkus.opentelemetry.tracer.sampler.ratio` | *double* | | The ratio of traces to be exported. To be used if the sampler is set to `ratio`. Must be within `[0.0, 1.0]`. |
+| `QUARKUS_OPENTELEMETRY_TRACER_SAMPLER`<br>`quarkus.opentelemetry.tracer.sampler` | *string* | `on` | The sampler to use for tracing. Valid values are `off` to export no traces at all, `on` to export *all* traces and `ratio` to define a ratio of traces to be exported.<br>In order to configure a rate-limiting sampler, a system property or environment variable `OTEL_TRACES_SAMPLER` can be set with value `rate-limiting`. The limit in terms of maximum traces per seconds then needs to be configured using a `OTEL_TRACES_SAMPLER_ARG` system property or environment variable.  |
+| `QUARKUS_OPENTELEMETRY_TRACER_SAMPLER_RATIO`<br>`quarkus.opentelemetry.tracer.sampler.ratio` | *double* | | The ratio of traces to be exported. To be used if the sampler is set to `ratio`. Must be within `[0.0, 1.0]`. Note that in a YAML configuration, the `ratio` sampler has to be configured [using `~` as key](https://quarkus.io/guides/config-yaml#configuration-key-conflicts), in order to set the ratio value as well. Example:<br><code>sampler:<br>&nbsp;&nbsp;~: ratio<br>&nbsp;&nbsp;ratio: 0.8</code> |
 | `QUARKUS_OPENTELEMETRY_TRACER_EXPORTER_OTLP_ENDPOINT`<br>`quarkus.opentelemetry.tracer.exporter.otlp.endpoint` | *string* | | The OTLP endpoint of the OpenTelemetry Collector to connect to. The endpoint must start with either `http://` or `https://`. |
 
 Please refer to the

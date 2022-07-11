@@ -39,6 +39,10 @@ public class SamplerProducer {
 
     private static final Logger LOG = LoggerFactory.getLogger(SamplerProducer.class);
 
+    private static final String SAMPLER_NAME_PROPERTY = "OTEL_TRACES_SAMPLER";
+    private static final String SAMPLER_ARG_PROPERTY = "OTEL_TRACES_SAMPLER_ARG";
+    private static final int DEFAULT_MAX_TRACES_PER_SECOND = 1;
+
     private static final List<String> EVENT_BUS_ADDRESS_PREFIXES_TO_IGNORE = List.of(
             Constants.EVENT_BUS_ADDRESS_NOTIFICATION_PREFIX,
             Constants.EVENT_BUS_ADDRESS_TENANT_TIMED_OUT,
@@ -57,7 +61,16 @@ public class SamplerProducer {
             LOG.info("'quarkus.opentelemetry.tracer.sampler.parent-based' set to 'false' - will be ignored");
         }
 
-        Sampler sampler = getBaseSampler(samplerConfig.samplerName, samplerConfig.ratio);
+        final String samplerName = Optional.ofNullable(getProperty(SAMPLER_NAME_PROPERTY))
+                .orElse(samplerConfig.samplerName);
+        final Optional<Object> samplerArg = Optional.ofNullable((Object) getProperty(SAMPLER_ARG_PROPERTY))
+                .or(() -> {
+                    if (samplerName.equals("ratio")) {
+                        return samplerConfig.ratio;
+                    }
+                    return Optional.empty();
+                });
+        Sampler sampler = getBaseSampler(samplerName, samplerArg);
         sampler = Sampler.parentBased(sampler);
         sampler = new SamplingPrioritySampler(sampler);
 
@@ -71,16 +84,48 @@ public class SamplerProducer {
         return new DropBySpanNamePrefixSampler(sampler, prefixesOfSpansToDrop);
     }
 
-    private static Sampler getBaseSampler(final String samplerName, final Optional<Double> ratio) {
-        LOG.info("using OpenTelemetry tracing sampler mode '{}' [ratio {}]", samplerName, ratio.orElse(null));
+    private static String getProperty(final String name) {
+        return System.getProperty(name, System.getenv(name));
+    }
+
+    private static Sampler getBaseSampler(final String samplerName, final Optional<Object> samplerArg) {
+        LOG.info("using OpenTelemetry tracing sampler mode '{}' [arg: {}]", samplerName, samplerArg.orElse(null));
         return switch (samplerName) {
             case "on" -> Sampler.alwaysOn();
             case "off" -> Sampler.alwaysOff();
-            case "ratio" -> Sampler.traceIdRatioBased(ratio.orElse(1.0d));
+            case "ratio" -> Sampler.traceIdRatioBased(mapSamplerRatio(samplerArg));
+            case "rate-limiting" -> new RateLimitingSampler(mapSamplerMaxTracesPerSecond(samplerArg));
             default -> throw new IllegalArgumentException("Unrecognized value for sampler: " + samplerName);
         };
     }
 
+    private static Double mapSamplerRatio(final Optional<Object> samplerArg) {
+        return samplerArg.map(arg -> {
+            if (arg instanceof Double doubleArg) {
+                return doubleArg;
+            }
+            try {
+                return Double.parseDouble(arg.toString());
+            } catch (final NumberFormatException e) {
+                LOG.warn("invalid sampler ratio config (will use 1.0)", e);
+                return 1.0d;
+            }
+        }).orElse(1.0d);
+    }
+
+    private static Integer mapSamplerMaxTracesPerSecond(final Optional<Object> samplerArg) {
+        return samplerArg.map(arg -> {
+            if (arg instanceof Integer intArg) {
+                return intArg;
+            }
+            try {
+                return Integer.parseInt(arg.toString());
+            } catch (final NumberFormatException e) {
+                LOG.warn("invalid sampler rate-limit config (will use {})", DEFAULT_MAX_TRACES_PER_SECOND, e);
+                return DEFAULT_MAX_TRACES_PER_SECOND;
+            }
+        }).orElse(DEFAULT_MAX_TRACES_PER_SECOND);
+    }
 
     /**
      * Gets a list of the URI paths of the non-application endpoints provided by Quarkus, i.e. the paths
