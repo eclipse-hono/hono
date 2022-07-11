@@ -281,6 +281,20 @@ public final class IntegrationTestSupport {
      */
     public static final String PROPERTY_HTTPS_PORT = "adapter.https.port";
     /**
+     * The name of the system property to use for setting the IP address of the Lora protocol adapter.
+     */
+    public static final String PROPERTY_LORA_HOST = "adapter.lora.host";
+    /**
+     * The name of the system property to use for setting the port number that the Lora adapter
+     * should listen on for requests.
+     */
+    public static final String PROPERTY_LORA_PORT = "adapter.lora.port";
+    /**
+     * The name of the system property to use for setting the port number that the Lora adapter
+     * should listen on for secure requests.
+     */
+    public static final String PROPERTY_LORA_SECURE_PORT = "adapter.lora.secure-port";
+    /**
      * The name of the system property to use for setting the IP address of the MQTT protocol adapter.
      */
     public static final String PROPERTY_MQTT_HOST = "adapter.mqtt.host";
@@ -411,6 +425,18 @@ public final class IntegrationTestSupport {
      * The  port number that the HTTP adapter listens on for secure requests.
      */
     public static final int HTTPS_PORT = Integer.getInteger(PROPERTY_HTTPS_PORT, DEFAULT_HTTPS_PORT);
+    /**
+     * The IP address of the Lora protocol adapter.
+     */
+    public static final String LORA_HOST = System.getProperty(PROPERTY_LORA_HOST, DEFAULT_HOST);
+    /**
+     * The  port number that the Lora adapter listens on for requests.
+     */
+    public static final int LORA_PORT = Integer.getInteger(PROPERTY_LORA_PORT, DEFAULT_HTTP_PORT);
+    /**
+     * The  port number that the Lora adapter listens on for secure requests.
+     */
+    public static final int LORA_SECURE_PORT = Integer.getInteger(PROPERTY_LORA_SECURE_PORT, DEFAULT_HTTPS_PORT);
     /**
      * The IP address of the MQTT protocol adapter.
      */

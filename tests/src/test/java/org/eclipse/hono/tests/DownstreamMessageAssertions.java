@@ -14,6 +14,7 @@ package org.eclipse.hono.tests;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 
+import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
 import java.time.Duration;
@@ -27,6 +28,7 @@ import org.eclipse.hono.client.kafka.tracing.KafkaTracingHelper;
 import org.eclipse.hono.util.MessageHelper;
 
 import io.opentracing.SpanContext;
+import io.vertx.core.buffer.Buffer;
 
 
 /**
@@ -180,5 +182,18 @@ public final class DownstreamMessageAssertions {
             assertWithMessage("message contains a tracing context with trace ID").that(spanContext.toTraceId())
                     .isEqualTo(expectedTraceId);
         }
+    }
+
+    /**
+     * Asserts that a downstream message contains Lora network meta data.
+     *
+     * @param msg The message to check.
+     * @throws AssertionError if the message does not contain meta data.
+     */
+    public static void assertLoraMetaDataPresent(final DownstreamMessage<? extends MessageContext> msg) {
+        final var metaDataBuffer = Buffer.buffer(msg.getProperties().getProperty("meta_data", String.class));
+        final var metaData = metaDataBuffer.toJsonObject();
+        assertThat(metaData).isNotEmpty();
+        assertThat(metaData.getDouble("frequency")).isNotNull();
     }
 }

@@ -164,6 +164,13 @@
     <hono.http-adapter.java-options>${default.java-options}</hono.http-adapter.java-options>
     <hono.http-adapter.native-image-args></hono.http-adapter.native-image-args>
 
+    <hono.lora-adapter.host>hono-adapter-lora</hono.lora-adapter.host>
+    <hono.lora-adapter.image>hono-adapter-lora</hono.lora-adapter.image>
+    <hono.lora-adapter.max-mem>314572800</hono.lora-adapter.max-mem>
+    <hono.lora-adapter.nativeTlsRequired>false</hono.lora-adapter.nativeTlsRequired>
+    <hono.lora-adapter.java-options>${default.java-options}</hono.lora-adapter.java-options>
+    <hono.lora-adapter.native-image-args></hono.lora-adapter.native-image-args>
+
     <hono.mqtt-adapter.host>hono-adapter-mqtt</hono.mqtt-adapter.host>
     <hono.mqtt-adapter.image>hono-adapter-mqtt</hono.mqtt-adapter.image>
     <hono.mqtt-adapter.max-mem>314572800</hono.mqtt-adapter.max-mem>
@@ -556,6 +563,9 @@
         <hono.http-adapter.image>hono-adapter-http-native</hono.http-adapter.image>
         <hono.http-adapter.max-mem>67108864</hono.http-adapter.max-mem>
         <hono.http-adapter.nativeTlsRequired>false</hono.http-adapter.nativeTlsRequired>
+
+        <hono.lora-adapter.image>hono-adapter-lora-native</hono.lora-adapter.image>
+        <hono.lora-adapter.max-mem>67108864</hono.lora-adapter.max-mem>
 
         <hono.mqtt-adapter.image>hono-adapter-mqtt-native</hono.mqtt-adapter.image>
         <hono.mqtt-adapter.max-mem>67108864</hono.mqtt-adapter.max-mem>
@@ -1698,6 +1708,77 @@
                     </wait>
                   </run>
                 </image>
+                <!-- ##### Lora adapter ##### -->
+                <image>
+                  <name>${docker.repository}/hono-adapter-lora-test:${project.version}</name>
+                  <build>
+                    <imagePullPolicy>IfNotPresent</imagePullPolicy>
+                    <from>${docker.repository}/${hono.lora-adapter.image}:${project.version}</from>
+                    <assembly>
+                      <mode>dir</mode>
+                      <basedir>/</basedir>
+                      <inline>
+                        <id>config</id>
+                        <fileSets>
+                          <fileSet>
+                            <directory>${project.build.directory}/resources/lora</directory>
+                            <outputDirectory>opt/hono/config</outputDirectory>
+                            <includes>
+                              <include>*</include>
+                            </includes>
+                          </fileSet>
+                          <fileSet>
+                            <directory>${project.build.directory}/certs</directory>
+                            <outputDirectory>opt/hono/config/certs</outputDirectory>
+                            <includes>
+                              <include>lora-adapter-*.pem</include>
+                              <include>trusted-certs.pem</include>
+                            </includes>
+                          </fileSet>
+                        </fileSets>
+                      </inline>
+                    </assembly>
+                  </build>
+                  <run>
+                    <ports>
+                      <port>+lora.ip:lora.port:8080</port>
+                      <port>lora.secure-port:8443</port>
+                      <port>+lora.ip:lora.health.port:${health.check.port}</port>
+                    </ports>
+                    <portPropertyFile>${project.build.directory}/docker/adapter.lora.port.properties</portPropertyFile>
+                    <network>
+                      <mode>custom</mode>
+                      <name>${custom.network.name}</name>
+                      <alias>${hono.lora-adapter.host}</alias>
+                    </network>
+                    <memorySwap>${hono.lora-adapter.max-mem}</memorySwap>
+                    <memory>${hono.lora-adapter.max-mem}</memory>
+                    <cmd>
+                      <exec>
+                        <arg>${hono.lora-adapter.native-image-args}</arg>
+                      </exec>
+                    </cmd>
+                    <env>
+                      <SMALLRYE_CONFIG_LOCATIONS>
+                        /opt/hono/config/logging-quarkus-${logging.profile}.yml
+                      </SMALLRYE_CONFIG_LOCATIONS>
+                      <JDK_JAVA_OPTIONS>${hono.lora-adapter.java-options}</JDK_JAVA_OPTIONS>
+                      <PN_TRACE_FRM>0</PN_TRACE_FRM>
+                    </env>
+                    <log>
+                      <prefix>LORA</prefix>
+                      <color>${log.color.hono-protocol-adapters}</color>
+                    </log>
+                    <wait>
+                      <time>${service.startup.timeout}</time>
+                      <http>
+                        <method>GET</method>
+                        <url>http://${lora.ip}:${lora.health.port}${health.check.root-path}${health.check.readiness-path}</url>
+                        <status>200..299</status>
+                      </http>
+                    </wait>
+                  </run>
+                </image>
               </images>
             </configuration>
             <executions>
@@ -1772,6 +1853,9 @@
                 <adapter.http.host>${http.ip}</adapter.http.host>
                 <adapter.http.port>${http.port}</adapter.http.port>
                 <adapter.https.port>${https.port}</adapter.https.port>
+                <adapter.lora.host>${lora.ip}</adapter.lora.host>
+                <adapter.lora.port>${lora.port}</adapter.lora.port>
+                <adapter.lora.secure-port>${lora.secure-port}</adapter.lora.secure-port>
                 <adapter.mqtt.host>${mqtt.ip}</adapter.mqtt.host>
                 <adapter.mqtt.port>${mqtt.port}</adapter.mqtt.port>
                 <adapter.mqtts.port>${mqtts.port}</adapter.mqtts.port>
@@ -1830,6 +1914,7 @@
                     <file>${project.build.directory}/docker/qpid.port.properties</file>
                     <file>${project.build.directory}/docker/kafka.port.properties</file>
                     <file>${project.build.directory}/docker/adapter.http.port.properties</file>
+                    <file>${project.build.directory}/docker/adapter.lora.port.properties</file>
                     <file>${project.build.directory}/docker/adapter.mqtt.port.properties</file>
                     <file>${project.build.directory}/docker/adapter.amqp.port.properties</file>
                     <file>${project.build.directory}/docker/adapter.coap.port.properties</file>

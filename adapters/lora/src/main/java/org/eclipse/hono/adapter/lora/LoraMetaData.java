@@ -23,10 +23,13 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import io.quarkus.runtime.annotations.RegisterForReflection;
+
 /**
  * A container for meta information contained in Lora
  * messages.
  */
+@RegisterForReflection
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public final class LoraMetaData {
 
