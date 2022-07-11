@@ -51,6 +51,7 @@ import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.AssumeMessagingSystem;
 import org.eclipse.hono.tests.CommandEndpointConfiguration.SubscriberRole;
 import org.eclipse.hono.tests.DownstreamMessageAssertions;
+import org.eclipse.hono.tests.EnabledIfProtocolAdaptersAreRunning;
 import org.eclipse.hono.tests.GenericKafkaSender;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.EventConstants;
@@ -85,6 +86,7 @@ import io.vertx.proton.ProtonSender;
  *
  */
 @ExtendWith(VertxExtension.class)
+@EnabledIfProtocolAdaptersAreRunning(amqpAdapter = true)
 public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
 
     private static final String REJECTED_COMMAND_ERROR_MESSAGE = "rejected command error message";

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,6 +20,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.tests.CrudHttpClient;
+import org.eclipse.hono.tests.EnabledIfProtocolAdaptersAreRunning;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.CommandConstants;
 import org.eclipse.hono.util.Constants;
@@ -45,6 +46,7 @@ import io.vertx.junit5.VertxTestContext;
  */
 @ExtendWith(VertxExtension.class)
 @Timeout(timeUnit = TimeUnit.SECONDS, value = 5)
+@EnabledIfProtocolAdaptersAreRunning(httpAdapter = true)
 public class CorsIT {
 
     /**

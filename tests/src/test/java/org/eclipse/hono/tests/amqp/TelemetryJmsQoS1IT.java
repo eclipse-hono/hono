@@ -30,6 +30,7 @@ import javax.naming.NamingException;
 
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.AssumeMessagingSystem;
+import org.eclipse.hono.tests.EnabledIfProtocolAdaptersAreRunning;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.jms.JmsBasedHonoConnection;
 import org.eclipse.hono.util.MessagingType;
@@ -52,6 +53,7 @@ import io.vertx.junit5.VertxTestContext;
  * Send and receive telemetry messages to/from Hono.
  */
 @ExtendWith(VertxExtension.class)
+@EnabledIfProtocolAdaptersAreRunning(amqpAdapter = true)
 public class TelemetryJmsQoS1IT {
 
     private static final int DEFAULT_TEST_TIMEOUT = 5000;

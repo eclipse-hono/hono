@@ -29,6 +29,7 @@ import javax.security.sasl.SaslException;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.EnabledIfDnsRebindingIsSupported;
+import org.eclipse.hono.tests.EnabledIfProtocolAdaptersAreRunning;
 import org.eclipse.hono.tests.EnabledIfRegistrySupportsFeatures;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
@@ -56,6 +57,7 @@ import io.vertx.junit5.VertxTestContext;
  */
 @ExtendWith(VertxExtension.class)
 @Timeout(timeUnit = TimeUnit.SECONDS, value = 7)
+@EnabledIfProtocolAdaptersAreRunning(amqpAdapter = true)
 public class AmqpConnectionIT extends AmqpAdapterTestBase {
 
     /**

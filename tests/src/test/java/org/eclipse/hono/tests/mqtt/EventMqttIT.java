@@ -26,6 +26,7 @@ import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.DownstreamMessageAssertions;
+import org.eclipse.hono.tests.EnabledIfProtocolAdaptersAreRunning;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessageHelper;
@@ -47,6 +48,7 @@ import io.vertx.junit5.VertxTestContext;
  *
  */
 @ExtendWith(VertxExtension.class)
+@EnabledIfProtocolAdaptersAreRunning(mqttAdapter = true)
 public class EventMqttIT extends MqttPublishTestBase {
 
     private static final String TOPIC_TEMPLATE = "%s/%s/%s";

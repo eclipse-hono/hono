@@ -30,6 +30,7 @@ import org.eclipse.hono.service.management.credentials.X509CertificateSecret;
 import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.EnabledIfDnsRebindingIsSupported;
+import org.eclipse.hono.tests.EnabledIfProtocolAdaptersAreRunning;
 import org.eclipse.hono.tests.EnabledIfRegistrySupportsFeatures;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
@@ -59,6 +60,7 @@ import io.vertx.mqtt.MqttConnectionException;
  */
 @ExtendWith(VertxExtension.class)
 @Timeout(timeUnit = TimeUnit.SECONDS, value = 5)
+@EnabledIfProtocolAdaptersAreRunning(mqttAdapter = true)
 public class MqttConnectionIT extends MqttTestBase {
 
     private SelfSignedCertificate deviceCert;

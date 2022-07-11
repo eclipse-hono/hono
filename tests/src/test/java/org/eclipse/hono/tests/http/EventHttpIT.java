@@ -24,6 +24,7 @@ import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.DownstreamMessageAssertions;
+import org.eclipse.hono.tests.EnabledIfProtocolAdaptersAreRunning;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Constants;
 import org.eclipse.hono.util.EventConstants;
@@ -46,6 +47,7 @@ import io.vertx.junit5.VertxTestContext;
  *
  */
 @ExtendWith(VertxExtension.class)
+@EnabledIfProtocolAdaptersAreRunning(httpAdapter = true)
 public class EventHttpIT extends HttpTestBase {
 
     private static final String URI = String.format("/%s", EventConstants.EVENT_ENDPOINT);

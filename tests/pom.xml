@@ -150,12 +150,14 @@
     <hono.amqp-adapter.max-mem>314572800</hono.amqp-adapter.max-mem>
     <hono.amqp-adapter.java-options>${default.java-options}</hono.amqp-adapter.java-options>
     <hono.amqp-adapter.native-image-args></hono.amqp-adapter.native-image-args>
+    <hono.amqp-adapter.disabled>false</hono.amqp-adapter.disabled>
 
     <hono.coap-adapter.host>hono-adapter-coap</hono.coap-adapter.host>
     <hono.coap-adapter.image>hono-adapter-coap</hono.coap-adapter.image>
     <hono.coap-adapter.max-mem>314572800</hono.coap-adapter.max-mem>
     <hono.coap-adapter.java-options>${default.java-options}</hono.coap-adapter.java-options>
     <hono.coap-adapter.native-image-args></hono.coap-adapter.native-image-args>
+    <hono.coap-adapter.disabled>false</hono.coap-adapter.disabled>
 
     <hono.http-adapter.host>hono-adapter-http</hono.http-adapter.host>
     <hono.http-adapter.image>hono-adapter-http</hono.http-adapter.image>
@@ -163,6 +165,7 @@
     <hono.http-adapter.nativeTlsRequired>true</hono.http-adapter.nativeTlsRequired>
     <hono.http-adapter.java-options>${default.java-options}</hono.http-adapter.java-options>
     <hono.http-adapter.native-image-args></hono.http-adapter.native-image-args>
+    <hono.http-adapter.disabled>false</hono.http-adapter.disabled>
 
     <hono.lora-adapter.host>hono-adapter-lora</hono.lora-adapter.host>
     <hono.lora-adapter.image>hono-adapter-lora</hono.lora-adapter.image>
@@ -170,12 +173,14 @@
     <hono.lora-adapter.nativeTlsRequired>false</hono.lora-adapter.nativeTlsRequired>
     <hono.lora-adapter.java-options>${default.java-options}</hono.lora-adapter.java-options>
     <hono.lora-adapter.native-image-args></hono.lora-adapter.native-image-args>
+    <hono.lora-adapter.disabled>false</hono.lora-adapter.disabled>
 
     <hono.mqtt-adapter.host>hono-adapter-mqtt</hono.mqtt-adapter.host>
     <hono.mqtt-adapter.image>hono-adapter-mqtt</hono.mqtt-adapter.image>
     <hono.mqtt-adapter.max-mem>314572800</hono.mqtt-adapter.max-mem>
     <hono.mqtt-adapter.java-options>${default.java-options}</hono.mqtt-adapter.java-options>
     <hono.mqtt-adapter.native-image-args></hono.mqtt-adapter.native-image-args>
+    <hono.mqtt-adapter.disabled>false</hono.mqtt-adapter.disabled>
 
     <hono.auth-server.image>hono-service-auth</hono.auth-server.image>
     <hono.auth-server.max-mem>205520896</hono.auth-server.max-mem>
@@ -577,6 +582,56 @@
         <hono.command-router.max-mem>67108864</hono.command-router.max-mem>
         <hono.deviceregistry.mongodb.image>hono-service-device-registry-mongodb-native</hono.deviceregistry.mongodb.image>
         <hono.deviceregistry.mongodb.max-mem>150000000</hono.deviceregistry.mongodb.max-mem>
+      </properties>
+    </profile>
+    <profile>
+      <id>amqp-only</id>
+      <properties>
+        <hono.amqp-adapter.disabled>false</hono.amqp-adapter.disabled>
+        <hono.coap-adapter.disabled>true</hono.coap-adapter.disabled>
+        <hono.http-adapter.disabled>true</hono.http-adapter.disabled>
+        <hono.lora-adapter.disabled>true</hono.lora-adapter.disabled>
+        <hono.mqtt-adapter.disabled>true</hono.mqtt-adapter.disabled>
+      </properties>
+    </profile>
+    <profile>
+      <id>coap-only</id>
+      <properties>
+        <hono.amqp-adapter.disabled>true</hono.amqp-adapter.disabled>
+        <hono.coap-adapter.disabled>false</hono.coap-adapter.disabled>
+        <hono.http-adapter.disabled>true</hono.http-adapter.disabled>
+        <hono.lora-adapter.disabled>true</hono.lora-adapter.disabled>
+        <hono.mqtt-adapter.disabled>true</hono.mqtt-adapter.disabled>
+      </properties>
+    </profile>
+    <profile>
+      <id>http-only</id>
+      <properties>
+        <hono.amqp-adapter.disabled>true</hono.amqp-adapter.disabled>
+        <hono.coap-adapter.disabled>true</hono.coap-adapter.disabled>
+        <hono.http-adapter.disabled>false</hono.http-adapter.disabled>
+        <hono.lora-adapter.disabled>true</hono.lora-adapter.disabled>
+        <hono.mqtt-adapter.disabled>true</hono.mqtt-adapter.disabled>
+      </properties>
+    </profile>
+    <profile>
+      <id>lora-only</id>
+      <properties>
+        <hono.amqp-adapter.disabled>true</hono.amqp-adapter.disabled>
+        <hono.coap-adapter.disabled>true</hono.coap-adapter.disabled>
+        <hono.http-adapter.disabled>true</hono.http-adapter.disabled>
+        <hono.lora-adapter.disabled>false</hono.lora-adapter.disabled>
+        <hono.mqtt-adapter.disabled>true</hono.mqtt-adapter.disabled>
+      </properties>
+    </profile>
+    <profile>
+      <id>mqtt-only</id>
+      <properties>
+        <hono.amqp-adapter.disabled>true</hono.amqp-adapter.disabled>
+        <hono.coap-adapter.disabled>true</hono.coap-adapter.disabled>
+        <hono.http-adapter.disabled>true</hono.http-adapter.disabled>
+        <hono.lora-adapter.disabled>true</hono.lora-adapter.disabled>
+        <hono.mqtt-adapter.disabled>false</hono.mqtt-adapter.disabled>
       </properties>
     </profile>
     <profile>
@@ -1417,6 +1472,7 @@
                 <image>
                   <name>${docker.repository}/hono-adapter-http-test:${project.version}</name>
                   <build>
+                    <skip>${hono.http-adapter.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
                     <from>${docker.repository}/${hono.http-adapter.image}:${project.version}</from>
                     <assembly>
@@ -1455,6 +1511,7 @@
                     </assembly>
                   </build>
                   <run>
+                    <skip>${hono.http-adapter.disabled}</skip>
                     <ports>
                       <port>+http.ip:http.port:8080</port>
                       <port>https.port:8443</port>
@@ -1498,6 +1555,7 @@
                 <image>
                   <name>${docker.repository}/hono-adapter-mqtt-test:${project.version}</name>
                   <build>
+                    <skip>${hono.mqtt-adapter.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
                     <from>${docker.repository}/${hono.mqtt-adapter.image}:${project.version}</from>
                     <assembly>
@@ -1526,6 +1584,7 @@
                     </assembly>
                   </build>
                   <run>
+                    <skip>${hono.mqtt-adapter.disabled}</skip>
                     <ports>
                       <port>+mqtt.ip:mqtt.port:1883</port>
                       <port>mqtts.port:8883</port>
@@ -1569,6 +1628,7 @@
                 <image>
                   <name>${docker.repository}/hono-adapter-amqp-test:${project.version}</name>
                   <build>
+                    <skip>${hono.amqp-adapter.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
                     <from>${docker.repository}/${hono.amqp-adapter.image}:${project.version}</from>
                     <assembly>
@@ -1597,6 +1657,7 @@
                     </assembly>
                   </build>
                   <run>
+                    <skip>${hono.amqp-adapter.disabled}</skip>
                     <ports>
                       <port>5005</port>
                       <port>+adapter.amqp.ip:adapter.amqp.port:5672</port>
@@ -1641,6 +1702,7 @@
                 <image>
                   <name>${docker.repository}/hono-adapter-coap-test:${project.version}</name>
                   <build>
+                    <skip>${hono.coap-adapter.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
                     <from>${docker.repository}/${hono.coap-adapter.image}:${project.version}</from>
                     <assembly>
@@ -1669,6 +1731,7 @@
                     </assembly>
                   </build>
                   <run>
+                    <skip>${hono.coap-adapter.disabled}</skip>
                     <ports>
                       <port>+coap.ip:coap.port:5683/udp</port>
                       <port>coaps.port:5684/udp</port>
@@ -1712,6 +1775,7 @@
                 <image>
                   <name>${docker.repository}/hono-adapter-lora-test:${project.version}</name>
                   <build>
+                    <skip>${hono.lora-adapter.disabled}</skip>
                     <imagePullPolicy>IfNotPresent</imagePullPolicy>
                     <from>${docker.repository}/${hono.lora-adapter.image}:${project.version}</from>
                     <assembly>
@@ -1740,6 +1804,7 @@
                     </assembly>
                   </build>
                   <run>
+                    <skip>${hono.lora-adapter.disabled}</skip>
                     <ports>
                       <port>+lora.ip:lora.port:8080</port>
                       <port>lora.secure-port:8443</port>
@@ -1847,18 +1912,23 @@
                 <deviceregistry.http.port>${deviceregistry.http.port}</deviceregistry.http.port>
                 <deviceregistry.http.authConfig.username>${hono.deviceregistry.http.authConfig.username}</deviceregistry.http.authConfig.username>
                 <deviceregistry.http.authConfig.password>${hono.deviceregistry.http.authConfig.password}</deviceregistry.http.authConfig.password>
+                <adapter.coap.disabled>${hono.coap-adapter.disabled}</adapter.coap.disabled>
                 <adapter.coap.host>${coap.ip}</adapter.coap.host>
                 <adapter.coap.port>${coap.port}</adapter.coap.port>
                 <adapter.coaps.port>${coaps.port}</adapter.coaps.port>
+                <adapter.http.disabled>${hono.http-adapter.disabled}</adapter.http.disabled>
                 <adapter.http.host>${http.ip}</adapter.http.host>
                 <adapter.http.port>${http.port}</adapter.http.port>
                 <adapter.https.port>${https.port}</adapter.https.port>
+                <adapter.lora.disabled>${hono.lora-adapter.disabled}</adapter.lora.disabled>
                 <adapter.lora.host>${lora.ip}</adapter.lora.host>
                 <adapter.lora.port>${lora.port}</adapter.lora.port>
                 <adapter.lora.secure-port>${lora.secure-port}</adapter.lora.secure-port>
+                <adapter.mqtt.disabled>${hono.mqtt-adapter.disabled}</adapter.mqtt.disabled>
                 <adapter.mqtt.host>${mqtt.ip}</adapter.mqtt.host>
                 <adapter.mqtt.port>${mqtt.port}</adapter.mqtt.port>
                 <adapter.mqtts.port>${mqtts.port}</adapter.mqtts.port>
+                <adapter.amqp.disabled>${hono.amqp-adapter.disabled}</adapter.amqp.disabled>
                 <adapter.amqp.host>${adapter.amqp.ip}</adapter.amqp.host>
                 <adapter.amqp.port>${adapter.amqp.port}</adapter.amqp.port>
                 <adapter.amqps.port>${adapter.amqps.port}</adapter.amqps.port>

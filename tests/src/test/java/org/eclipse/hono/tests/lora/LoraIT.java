@@ -39,6 +39,7 @@ import org.eclipse.hono.service.management.device.Device;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.CrudHttpClient;
 import org.eclipse.hono.tests.DownstreamMessageAssertions;
+import org.eclipse.hono.tests.EnabledIfProtocolAdaptersAreRunning;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
 import org.eclipse.hono.util.Adapter;
@@ -75,6 +76,7 @@ import io.vertx.junit5.VertxTestContext;
  * Base class for Lora adapter integration tests.
  *
  */
+@EnabledIfProtocolAdaptersAreRunning(loraAdapter = true)
 @ExtendWith(VertxExtension.class)
 @Timeout(value = 10, timeUnit = TimeUnit.SECONDS)
 public class LoraIT {

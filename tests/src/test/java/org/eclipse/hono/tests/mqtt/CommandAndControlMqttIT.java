@@ -44,6 +44,7 @@ import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.tests.AssumeMessagingSystem;
 import org.eclipse.hono.tests.CommandEndpointConfiguration.SubscriberRole;
 import org.eclipse.hono.tests.DownstreamMessageAssertions;
+import org.eclipse.hono.tests.EnabledIfProtocolAdaptersAreRunning;
 import org.eclipse.hono.tests.GenericKafkaSender;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.EventConstants;
@@ -80,6 +81,7 @@ import io.vertx.proton.ProtonHelper;
  *
  */
 @ExtendWith(VertxExtension.class)
+@EnabledIfProtocolAdaptersAreRunning(mqttAdapter = true)
 public class CommandAndControlMqttIT extends MqttTestBase {
 
     private static final int COMMANDS_TO_SEND = 60;
