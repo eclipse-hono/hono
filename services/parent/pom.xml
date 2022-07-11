@@ -66,11 +66,6 @@
       </exclusions>
     </dependency>
     <dependency>
-      <!-- JAX-RS API used by quarkus-opentelemetry; preferring Jakarta impl here over 'jboss-jaxrs-api_2.1_spec' used in quarkus -->
-      <groupId>jakarta.ws.rs</groupId>
-      <artifactId>jakarta.ws.rs-api</artifactId>
-    </dependency>
-    <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-smallrye-health</artifactId>
     </dependency>

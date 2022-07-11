@@ -38,7 +38,6 @@
     <guava.version>31.1-jre</guava.version>
     <infinispan-image.name>quay.io/infinispan/server-native:13.0</infinispan-image.name>
     <jaeger.image.name>jaegertracing/all-in-one:1.33</jaeger.image.name>
-    <jakarta.jaxrs-api.version>2.1.6</jakarta.jaxrs-api.version>
     <!--
       We want to allow users to run containers in a rootless Docker environment.
       For that purpose, the JVM needs to support cgroups v2 based resource limits
@@ -563,11 +562,6 @@ quarkus.vertx.resolver.cache-max-time-to-live=0
         <groupId>com.bol</groupId>
         <artifactId>cryptvault</artifactId>
         <version>${cryptvault.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>jakarta.ws.rs</groupId>
-        <artifactId>jakarta.ws.rs-api</artifactId>
-        <version>${jakarta.jaxrs-api.version}</version>
       </dependency>
 
       <!-- Testing -->
