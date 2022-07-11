@@ -71,7 +71,7 @@ import org.eclipse.hono.client.telemetry.amqp.ProtonBasedDownstreamSender;
 import org.eclipse.hono.client.telemetry.kafka.KafkaBasedEventSender;
 import org.eclipse.hono.client.telemetry.kafka.KafkaBasedTelemetrySender;
 import org.eclipse.hono.client.util.MessagingClientProvider;
-import org.eclipse.hono.service.AbstractServiceApplication;
+import org.eclipse.hono.service.NotificationSupportingServiceApplication;
 import org.eclipse.hono.service.cache.Caches;
 import org.eclipse.hono.util.CredentialsObject;
 import org.eclipse.hono.util.CredentialsResult;
@@ -102,7 +102,8 @@ import io.vertx.ext.web.client.WebClientOptions;
  *
  * @param <C> The type of configuration properties the adapter uses.
  */
-public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapterProperties> extends AbstractServiceApplication {
+public abstract class AbstractProtocolAdapterApplication<C extends ProtocolAdapterProperties>
+    extends NotificationSupportingServiceApplication {
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractProtocolAdapterApplication.class);
 

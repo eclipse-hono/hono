@@ -41,6 +41,7 @@
     <dependency>
      <groupId>org.eclipse.hono</groupId>
      <artifactId>hono-client-notification</artifactId>
+     <optional>true</optional>
     </dependency>
     <dependency>
      <groupId>org.eclipse.hono</groupId>

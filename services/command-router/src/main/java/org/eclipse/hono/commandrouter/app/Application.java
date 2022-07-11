@@ -55,8 +55,8 @@ import org.eclipse.hono.commandrouter.impl.kafka.KafkaBasedCommandConsumerFactor
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.ServiceOptions;
 import org.eclipse.hono.deviceconnection.infinispan.client.DeviceConnectionInfo;
-import org.eclipse.hono.service.AbstractServiceApplication;
 import org.eclipse.hono.service.HealthCheckProvider;
+import org.eclipse.hono.service.NotificationSupportingServiceApplication;
 import org.eclipse.hono.service.amqp.AmqpEndpoint;
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.service.cache.Caches;
@@ -87,7 +87,7 @@ import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
  * The Quarkus based Command Router main application class.
  */
 @ApplicationScoped
-public class Application extends AbstractServiceApplication {
+public class Application extends NotificationSupportingServiceApplication {
 
     // workaround so that the Quarkus KubernetesClientProcessor finds a Pod watcher and registers corresponding
     // model classes
