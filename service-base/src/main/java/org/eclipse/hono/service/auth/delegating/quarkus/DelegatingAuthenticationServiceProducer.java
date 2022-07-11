@@ -16,17 +16,20 @@ package org.eclipse.hono.service.auth.delegating.quarkus;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
+import javax.inject.Singleton;
 
 import org.eclipse.hono.client.amqp.connection.ConnectionFactory;
 import org.eclipse.hono.service.auth.AuthTokenHelperImpl;
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
 import org.eclipse.hono.service.auth.delegating.AuthenticationServerClientConfigProperties;
+import org.eclipse.hono.service.auth.delegating.AuthenticationServerClientOptions;
 import org.eclipse.hono.service.auth.delegating.DelegatingAuthenticationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.quarkus.arc.properties.IfBuildProperty;
+import io.smallrye.config.ConfigMapping;
 import io.vertx.core.Vertx;
 import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
 
@@ -42,6 +45,17 @@ public class DelegatingAuthenticationServiceProducer {
     private static final Logger LOG = LoggerFactory.getLogger(DelegatingAuthenticationServiceProducer.class);
 
     @Produces
+    @Singleton
+    AuthenticationServerClientConfigProperties authenticationServerClientProperties(
+            @ConfigMapping(prefix = "hono.auth")
+            final AuthenticationServerClientOptions options) {
+        final var props = new AuthenticationServerClientConfigProperties(options);
+        props.setServerRoleIfUnknown("Authentication Server");
+        return props;
+    }
+
+    @Produces
+    @Singleton
     AuthenticationService delegatingAuthenticationService(
             final Vertx vertx,
             final AuthenticationServerClientConfigProperties authServerClientConfig) {
@@ -54,6 +68,7 @@ public class DelegatingAuthenticationServiceProducer {
     }
 
     @Produces
+    @Singleton
     ProtonSaslAuthenticatorFactory honoSaslAuthenticatorFactory(
             final Vertx vertx,
             final AuthenticationServerClientConfigProperties authServerClientConfig,

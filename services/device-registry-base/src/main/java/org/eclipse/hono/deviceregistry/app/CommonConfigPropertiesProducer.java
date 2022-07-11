@@ -26,8 +26,6 @@ import org.eclipse.hono.client.kafka.producer.MessagingKafkaProducerConfigProper
 import org.eclipse.hono.client.notification.kafka.NotificationKafkaProducerConfigProperties;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigOptions;
 import org.eclipse.hono.deviceregistry.service.device.AutoProvisionerConfigProperties;
-import org.eclipse.hono.service.auth.delegating.AuthenticationServerClientConfigProperties;
-import org.eclipse.hono.service.auth.delegating.AuthenticationServerClientOptions;
 
 import io.smallrye.config.ConfigMapping;
 
@@ -48,16 +46,6 @@ public class CommonConfigPropertiesProducer {
         result.setServerRoleIfUnknown("AMQP Messaging Network");
         result.setNameIfNotSet("Hono Device Registry");
         return result;
-    }
-
-    @Produces
-    @Singleton
-    AuthenticationServerClientConfigProperties authenticationServerClientProperties(
-            @ConfigMapping(prefix = "hono.auth")
-            final AuthenticationServerClientOptions options) {
-        final var props = new AuthenticationServerClientConfigProperties(options);
-        props.setServerRoleIfUnknown("Authentication Server");
-        return props;
     }
 
     @Produces
