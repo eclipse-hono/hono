@@ -13,6 +13,7 @@
 package org.eclipse.hono.service.tracing;
 
 import java.util.List;
+import java.util.Objects;
 
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.trace.SpanKind;
@@ -35,15 +36,16 @@ public class DropBySpanNamePrefixSampler implements Sampler {
      * @param sampler Sampler to use if the span name didn't match the given prefixes.
      * @param spanNamePrefixList The list of prefixes to match the span name against for the decision whether to drop
      *            the span.
+     * @throws NullPointerException If any of the parameters is {@code null}.
      */
     public DropBySpanNamePrefixSampler(final Sampler sampler, final List<String> spanNamePrefixList) {
-        this.sampler = sampler;
-        this.spanNamePrefixList = spanNamePrefixList;
+        this.sampler = Objects.requireNonNull(sampler);
+        this.spanNamePrefixList = Objects.requireNonNull(spanNamePrefixList);
     }
 
     @Override
-    public SamplingResult shouldSample(final Context parentContext, final String traceId, final String spanName, final SpanKind spanKind,
-            final Attributes attributes, final List<LinkData> parentLinks) {
+    public SamplingResult shouldSample(final Context parentContext, final String traceId, final String spanName,
+            final SpanKind spanKind, final Attributes attributes, final List<LinkData> parentLinks) {
 
         for (final String spanNamePrefix : spanNamePrefixList) {
             if (spanName.startsWith(spanNamePrefix)) {
