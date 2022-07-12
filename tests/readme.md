@@ -34,6 +34,7 @@ This starts the following Docker containers and runs the test cases against them
 * Hono MQTT adapter
 * Hono AMQP adapter
 * Hono CoAP adapter
+* Hono Lora adapter
 
 To run all tests of a certain class, or to run an individual test, set the `it.test` property:
 
