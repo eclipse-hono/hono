@@ -80,7 +80,6 @@ public abstract class AbstractTenantStore extends AbstractStore {
                 .validateParameters(
                         "tenant_id"
                 );
-
     }
 
     /**

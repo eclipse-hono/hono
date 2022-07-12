@@ -13,26 +13,13 @@
 
 package org.eclipse.hono.deviceregistry.metrics;
 
-import org.eclipse.hono.service.metric.Metrics;
-import org.eclipse.hono.service.metric.NoopBasedMetrics;
-
 /**
  * Metrics for the Device Registry service.
  */
-public interface DeviceRegistryMetrics extends Metrics {
-
-
-    /**
-     * A no-op implementation for this specific metrics type.
-     */
-    final class Noop extends NoopBasedMetrics implements DeviceRegistryMetrics {
-
-        private Noop() {
-        }
-    }
+public interface DeviceRegistryMetrics {
 
     /**
-     * The no-op implementation.
+     * The name of the meter holding the total number of registered tenants.
      */
-    DeviceRegistryMetrics NOOP = new Noop();
+    String TOTAL_TENANTS_METRIC_KEY = "hono.tenants.total";
 }

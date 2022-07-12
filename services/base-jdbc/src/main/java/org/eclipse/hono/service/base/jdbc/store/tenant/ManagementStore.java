@@ -34,6 +34,7 @@ import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.jdbc.JDBCClient;
 import io.vertx.ext.sql.SQLConnection;
@@ -46,6 +47,8 @@ import io.vertx.ext.sql.UpdateResult;
 public class ManagementStore extends AbstractTenantStore {
 
     private static final Logger log = LoggerFactory.getLogger(ManagementStore.class);
+
+    private final String countStatementSql;
 
     private final Statement createStatement;
 
@@ -67,6 +70,12 @@ public class ManagementStore extends AbstractTenantStore {
      */
     public ManagementStore(final JDBCClient client, final Tracer tracer, final StatementConfiguration cfg) {
         super(client, tracer, cfg);
+
+
+        this.countStatementSql = cfg
+                .getRequiredStatement("count")
+                .expand()
+                .getSql();
 
         this.createStatement = cfg
                 .getRequiredStatement("create")
@@ -149,6 +158,24 @@ public class ManagementStore extends AbstractTenantStore {
         // we store this separately
         jsonObjectObj.remove(TenantConstants.FIELD_PAYLOAD_TRUSTED_CA);
         return jsonObjectObj.toString();
+    }
+
+    /**
+     * Gets the current number of tenants.
+     *
+     * @return A future containing the total number of tenants.
+     */
+    public Future<Integer> getTenantCount() {
+
+        final Promise<Integer> result = Promise.promise();
+        this.client.querySingle(countStatementSql, rs -> {
+            if (rs.failed()) {
+                result.fail(new IllegalStateException("failed to query number of tenants", rs.cause()));
+            } else {
+                result.complete(rs.result().getInteger(0));
+            }
+        });
+        return result.future();
     }
 
     /**

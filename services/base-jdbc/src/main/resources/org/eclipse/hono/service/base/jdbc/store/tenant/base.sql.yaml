@@ -1,4 +1,10 @@
 
+count: |
+   SELECT
+      COUNT(tenant_id) as TENANT_COUNT
+   FROM
+      %s
+
 create: |
    INSERT INTO %s (
       tenant_id,
