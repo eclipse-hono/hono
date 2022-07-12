@@ -468,7 +468,8 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
 
         final var kafkaConsumerConfig = new MessagingKafkaConsumerConfigProperties();
         kafkaConsumerConfig.setConsumerConfig(Map.of(
-                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS));
+                ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, IntegrationTestSupport.DOWNSTREAM_BOOTSTRAP_SERVERS,
+                ConsumerConfig.GROUP_ID_CONFIG, commandRouterGroupId));
         final CommandRouterMetrics metrics = mock(CommandRouterMetrics.class);
         when(metrics.startTimer()).thenReturn(Timer.start());
 
@@ -483,7 +484,6 @@ public class KafkaBasedCommandConsumerFactoryImplIT {
                 metrics,
                 NoopKafkaClientMetricsSupport.INSTANCE,
                 tracer);
-        kafkaBasedCommandConsumerFactoryImpl.setGroupId(commandRouterGroupId);
         componentsToStopAfterTest.add(kafkaBasedCommandConsumerFactoryImpl);
         return kafkaBasedCommandConsumerFactoryImpl;
     }
