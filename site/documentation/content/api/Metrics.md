@@ -130,4 +130,4 @@ as listed below.
 
 | Metric                             | Type                | Tags                                         | Description |
 | ---------------------------------- | ------------------- | -------------------------------------------- | ----------- |
-| *hono.tenants.total*               | Gauge               | *component-type*, *component-name*           | The total number of Tenants in Hono. |
+| *hono.tenants.total*               | Gauge               | *host*, *component-type*, *component-name*   | The total number of tenants registered. All registry instances will report the same (total) number of tenants so no aggregation along the *host* dimension should be performed. |

@@ -19,7 +19,6 @@ import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import org.eclipse.hono.deviceregistry.mongodb.MicrometerBasedMongoDbDeviceRegistryMetrics;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedCredentialsConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedRegistrationConfigProperties;
 import org.eclipse.hono.deviceregistry.mongodb.config.MongoDbBasedTenantsConfigProperties;
@@ -56,12 +55,6 @@ public class ManagementServicesProducer {
 
     @Inject
     MongoDbBasedCredentialsConfigProperties credentialsServiceProperties;
-
-    /*
-     * Declare this field so that a bean is produced. It's not used directly in code.  
-     */
-    @Inject
-    MicrometerBasedMongoDbDeviceRegistryMetrics metrics;
 
     /**
      * Creates a service for retrieving tenant information.
