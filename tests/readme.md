@@ -27,8 +27,6 @@ This starts the following Docker containers and runs the test cases against them
 * MongoDB server
 * Hono Authentication service
 * Hono Device Registration service
-* Apache ActiveMQ Artemis message broker
-* Apache Qpid Dispatch Router
 * Apache Zookeeper
 * Apache Kafka
 * Hono Command Router service
@@ -144,12 +142,12 @@ setting the `hono.commandrouting.cache` Maven property to value `embedded`:
 mvn verify -Prun-tests -Dhono.commandrouting.cache=embedded
 ```
 
-### Running the Tests with Kafka as the Messaging Infrastructure
+### Running the Tests with AMQP 1.0 based Messaging Infrastructure
 
-By default, the integration tests are run using the AMQP 1.0 based QPid Dispatch Router and ActiveMQ Artemis message
-broker as messaging infrastructure. In order to use a Kafka broker instead, the `hono.messaging-infra.type` Maven
-property needs to be set to value `kafka`:
+By default, the integration tests are run using the Kafka based messaging infrastructure. In order to use
+AMQP 1.0 based messaging infrastructure instead, the `hono.messaging-infra.type` Maven property needs to be set to
+value `amqp`:
 
 ```sh
-mvn verify -Prun-tests -Dhono.messaging-infra.type=kafka
+mvn verify -Prun-tests -Dhono.messaging-infra.type=amqp
 ```
