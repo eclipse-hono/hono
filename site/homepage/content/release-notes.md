@@ -18,6 +18,8 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The MQTT adapter skipped command or error (the first one) subscription if both are requested for the same device. This has been fixed.
 * On startup, Hono components could get into a state that caused certain Kafka client metrics to not get reported.
   This has been fixed.
+* The native executable based Lora adapter container image failed to forward Lora meta information in messages being
+  sent downstream. This has been fixed.
 
 ## 2.0.0
 
