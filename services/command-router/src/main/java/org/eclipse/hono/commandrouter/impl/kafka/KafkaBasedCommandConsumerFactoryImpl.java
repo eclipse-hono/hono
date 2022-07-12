@@ -15,6 +15,7 @@ package org.eclipse.hono.commandrouter.impl.kafka;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -84,7 +85,6 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
     private final KafkaBasedCommandResponseSender kafkaBasedCommandResponseSender;
     private final KafkaClientMetricsSupport kafkaClientMetricsSupport;
     private final LifecycleStatus lifecycleStatus = new LifecycleStatus();
-    private String groupId = DEFAULT_GROUP_ID;
     private KafkaBasedMappingAndDelegatingCommandHandler commandHandler;
     private AsyncHandlingAutoCommitKafkaConsumer<Buffer> kafkaConsumer;
 
@@ -150,18 +150,12 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void registerLivenessChecks(final HealthCheckHandler livenessHandler) {
         internalCommandSender.registerLivenessChecks(livenessHandler);
         kafkaBasedCommandResponseSender.registerLivenessChecks(livenessHandler);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
         internalCommandSender.registerReadinessChecks(readinessHandler);
@@ -177,25 +171,6 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
                         status.tryComplete(new Status().setOk(response.getStatus() == HealthCheckResponse.Status.UP));
                     }
                 });
-    }
-
-    /**
-     * Sets the group identifier for the Kafka consumer.
-     * <p>
-     * Must be invoked before {@link #start()}.
-     * TODO this method should become obsolete once the configs of the Hono components support multiple
-     *      specific consumer configurations; then the group id value should be taken from there.
-     *
-     * @param groupId The group id to use.
-     * @throws IllegalStateException If this factory has already been started.
-     * @throws NullPointerException If groupId is {@code null}.
-     */
-    public void setGroupId(final String groupId) {
-        Objects.requireNonNull(groupId);
-        if (kafkaConsumer != null) {
-            throw new IllegalStateException("must be invoked before start()");
-        }
-        this.groupId = groupId;
     }
 
     @Override
@@ -235,7 +210,10 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
                 tracer);
 
         final Map<String, String> consumerConfig = kafkaConsumerConfig.getConsumerConfig("command");
-        consumerConfig.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
+        Optional.ofNullable(consumerConfig.putIfAbsent(ConsumerConfig.GROUP_ID_CONFIG, DEFAULT_GROUP_ID))
+                .ifPresentOrElse(
+                        groupId -> LOG.info("using explicitly configured consumer group id [{}]", groupId),
+                        () -> LOG.debug("using default consumer group id [{}]", DEFAULT_GROUP_ID));
         consumerConfig.putIfAbsent(ConsumerConfig.PARTITION_ASSIGNMENT_STRATEGY_CONFIG, CooperativeStickyAssignor.class.getName());
         consumerConfig.putIfAbsent(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
