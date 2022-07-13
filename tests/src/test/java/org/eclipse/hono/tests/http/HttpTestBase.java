@@ -83,7 +83,7 @@ import io.vertx.junit5.VertxTestContext;
  * Base class for HTTP adapter integration tests.
  *
  */
-    public abstract class HttpTestBase {
+public abstract class HttpTestBase {
 
     /**
      * The default password of devices.

@@ -30,6 +30,7 @@ import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.AssumeMessagingSystem;
 import org.eclipse.hono.tests.EnabledIfDnsRebindingIsSupported;
+import org.eclipse.hono.tests.EnabledIfProtocolAdaptersAreRunning;
 import org.eclipse.hono.tests.EnabledIfRegistrySupportsFeatures;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
@@ -62,6 +63,7 @@ import io.vertx.proton.ProtonDelivery;
  *
  */
 @ExtendWith(VertxExtension.class)
+@EnabledIfProtocolAdaptersAreRunning(httpAdapter = true)
 public class TelemetryHttpIT extends HttpTestBase {
 
     private static final String URI = "/" + TelemetryConstants.TELEMETRY_ENDPOINT;

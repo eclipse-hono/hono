@@ -33,6 +33,7 @@ import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.config.KeyLoader;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.EnabledIfDnsRebindingIsSupported;
+import org.eclipse.hono.tests.EnabledIfProtocolAdaptersAreRunning;
 import org.eclipse.hono.tests.EnabledIfRegistrySupportsFeatures;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.tests.Tenants;
@@ -54,6 +55,7 @@ import io.vertx.junit5.VertxTestContext;
  *
  */
 @ExtendWith(VertxExtension.class)
+@EnabledIfProtocolAdaptersAreRunning(coapAdapter = true)
 public class TelemetryCoapIT extends CoapTestBase {
 
     private static final String POST_URI = "/" + TelemetryConstants.TELEMETRY_ENDPOINT;

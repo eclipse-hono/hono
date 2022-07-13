@@ -152,3 +152,41 @@ value `amqp`:
 ```sh
 mvn verify -Prun-tests -Dhono.messaging-infra.type=amqp
 ```
+
+### Running the Tests for a particular Protocol Adapter only
+
+By default, all protocol adapter listed in the overview above are started as part of running the integration tests.
+However, when working on a particular protocol adapter, only the integration tests verifying that adapter's behavior
+will be of interest and thus starting all other adapters seems unnecessary.
+
+The following Maven profiles can be used to run the integration tests with a single protocol adapter only:
+
+* `amqp-only`
+* `coap-only`
+* `http-only`
+* `lora-only`
+* `mqtt-only`
+
+For example, the following command will run all MQTT related test cases and skip the tests for the other adapter types:
+
+```sh
+mvn verify -Prun-tests,mqtt-only
+```
+
+The `no-adapters` Maven profile can be used to run no adapter (and corresponding tests) at all. This might be useful when
+working on the device registry and/or command router components.
+
+It is also possible to selectively disable one or more protocol adapters and skip the corresponding test cases
+by means of setting one or more of the following Maven properties to `true`:
+
+* `hono.amqp-adapter.disabled`
+* `hono.coap-adapter.disabled`
+* `hono.http-adapter.disabled`
+* `hono.lora-adapter.disabled`
+* `hono.mqtt-adapter.disabled`
+
+For example, the following command will not start the MQTT adapter and will run all tests except for the MQTT related ones:
+
+```sh
+mvn verify -Prun-tests -Dhono.mqtt-adapter.disabled=true
+```

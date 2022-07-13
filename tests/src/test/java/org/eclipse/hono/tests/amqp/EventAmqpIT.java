@@ -29,6 +29,7 @@ import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.client.amqp.connection.AmqpUtils;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.DownstreamMessageAssertions;
+import org.eclipse.hono.tests.EnabledIfProtocolAdaptersAreRunning;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.ResourceLimits;
 import org.junit.jupiter.api.Test;
@@ -48,6 +49,7 @@ import io.vertx.proton.ProtonQoS;
  * An Event based integration test for the AMQP adapter.
  */
 @ExtendWith(VertxExtension.class)
+@EnabledIfProtocolAdaptersAreRunning(amqpAdapter = true)
 public class EventAmqpIT extends AmqpUploadTestBase {
 
     private static final String EVENT_ENDPOINT = "event";

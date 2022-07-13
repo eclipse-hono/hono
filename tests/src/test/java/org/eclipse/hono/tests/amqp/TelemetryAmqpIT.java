@@ -20,6 +20,7 @@ import org.eclipse.hono.application.client.MessageConsumer;
 import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.service.management.tenant.Tenant;
 import org.eclipse.hono.tests.DownstreamMessageAssertions;
+import org.eclipse.hono.tests.EnabledIfProtocolAdaptersAreRunning;
 import org.eclipse.hono.util.QoS;
 import org.eclipse.hono.util.ResourceLimits;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,6 +34,7 @@ import io.vertx.proton.ProtonQoS;
  * A Telemetry based integration test for the AMQP adapter.
  */
 @ExtendWith(VertxExtension.class)
+@EnabledIfProtocolAdaptersAreRunning(amqpAdapter = true)
 public class TelemetryAmqpIT extends AmqpUploadTestBase {
 
     private static final String TELEMETRY_ENDPOINT = "telemetry";
