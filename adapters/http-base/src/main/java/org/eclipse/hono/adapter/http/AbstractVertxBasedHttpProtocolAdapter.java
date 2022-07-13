@@ -683,6 +683,10 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             }
         })
         .compose(proceed -> {
+            // overwrites the execution of closeHandler in setTtdRequestConnectionCloseHandler
+            // to prevent ctx.response().end() from being called twice
+            ctx.response().closeHandler(v -> logResponseGettingClosedPrematurely(ctx.getRoutingContext()));
+
             // downstream message sent and (if ttd was set) command was received or ttd has timed out
             // we wait for the CommandConsumer having been closed before delivering the response to the
             // device in order to prevent a race condition when the device immediately sends a new
