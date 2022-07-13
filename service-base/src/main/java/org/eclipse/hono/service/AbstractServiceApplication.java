@@ -31,6 +31,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.opentracing.Tracer;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
+import io.vertx.core.Closeable;
 import io.vertx.core.Vertx;
 import io.vertx.core.impl.VertxInternal;
 import io.vertx.core.impl.cpu.CpuCoreSensor;
@@ -81,6 +82,8 @@ public abstract class AbstractServiceApplication implements ComponentNameProvide
     @Readiness
     protected DeploymentHealthCheck deploymentCheck;
 
+    private Closeable addedVertxCloseHook;
+
     /**
      * Logs information about the JVM.
      */
@@ -107,7 +110,8 @@ public abstract class AbstractServiceApplication implements ComponentNameProvide
      *
      * @param provider The provider of the health checks to be registered (may be {@code null}).
      * @deprecated Consider implementing health checks according to the MicroProfile Health specification instead of
-     *             Vert.x Health and register them as CDI beans as described in https://quarkus.io/guides/smallrye-health
+     *             Vert.x Health and register them as CDI beans as described in the
+     *             <a href="https://quarkus.io/guides/smallrye-health">Quarkus SmallRye Health Guide</a>.
      */
     @Deprecated
     protected final void registerHealthchecks(final HealthCheckProvider provider) {
@@ -125,7 +129,8 @@ public abstract class AbstractServiceApplication implements ComponentNameProvide
      *
      * @param obj The provider of the health checks.
      * @deprecated Consider implementing health checks according to the MicroProfile Health specification instead of
-     *             Vert.x Health and register them as CDI beans as described in https://quarkus.io/guides/smallrye-health
+     *             Vert.x Health and register them as CDI beans as described in the
+     *             <a href="https://quarkus.io/guides/smallrye-health">Quarkus SmallRye Health Guide</a>.
      */
     @Deprecated
     protected final void registerHealthCheckProvider(final Object obj) {
@@ -137,22 +142,21 @@ public abstract class AbstractServiceApplication implements ComponentNameProvide
     private void registerVertxCloseHook() {
         // register a close hook that will be notified when the Vertx instance is being closed
         if (vertx instanceof VertxInternal vertxInternal) {
-            vertxInternal.addCloseHook(completion -> {
-                final StringBuilder b = new StringBuilder("managed vert.x instance has been closed");
-                if (LOG.isDebugEnabled()) {
-                    final var stackTrace = Thread.currentThread().getStackTrace();
-                    final String s = Arrays.stream(stackTrace)
+            final Closeable closeHook = completion -> {
+                final var stackTrace = Thread.currentThread().getStackTrace();
+                final String s = Arrays.stream(stackTrace)
+                        .skip(2)
                         .map(element -> "\tat %s.%s(%s:%d)".formatted(
                                 element.getClassName(),
                                 element.getMethodName(),
                                 element.getFileName(),
                                 element.getLineNumber()))
                         .collect(Collectors.joining(System.lineSeparator()));
-                    b.append(System.lineSeparator()).append(s);
-                }
-                LOG.info(b.toString());
+                LOG.warn("managed vert.x instance has been closed unexpectedly{}{}", System.lineSeparator(), s);
                 completion.complete();
-            });
+            };
+            vertxInternal.addCloseHook(closeHook);
+            addedVertxCloseHook = closeHook;
         } else {
             LOG.debug("Vertx instance is not a VertxInternal, skipping close hook registration");
         }
@@ -199,6 +203,9 @@ public abstract class AbstractServiceApplication implements ComponentNameProvide
      */
     public void onStop(final @Observes ShutdownEvent ev) {
         LOG.info("shutting down {}", getComponentName());
+        if (addedVertxCloseHook != null && vertx instanceof VertxInternal vertxInternal) {
+            vertxInternal.removeCloseHook(addedVertxCloseHook);
+        }
         final CompletableFuture<Void> shutdown = new CompletableFuture<>();
         vertx.close(attempt -> {
             if (attempt.succeeded()) {
