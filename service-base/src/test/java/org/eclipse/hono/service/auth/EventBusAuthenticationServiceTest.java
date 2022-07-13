@@ -21,7 +21,6 @@ import org.eclipse.hono.auth.AuthoritiesImpl;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.config.SignatureSupportingConfigProperties;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -46,8 +45,8 @@ public class EventBusAuthenticationServiceTest {
     private static Vertx vertx;
 
     private static String secret = "dafhkjsdahfuksahuioahgfqgpsgjkhfdjkg";
-    private static AuthTokenHelper authTokenHelperForSigning;
-    private static AuthTokenHelper authTokenHelperForValidating;
+    private static AuthTokenFactory authTokenHelperForSigning;
+    private static AuthTokenValidator authTokenHelperForValidating;
 
     private MessageConsumer<JsonObject> authRequestConsumer;
 
@@ -60,8 +59,8 @@ public class EventBusAuthenticationServiceTest {
         final SignatureSupportingConfigProperties props = new SignatureSupportingConfigProperties();
         props.setSharedSecret(secret);
         props.setTokenExpiration(100);
-        authTokenHelperForSigning = AuthTokenHelperImpl.forSigning(vertx, props);
-        authTokenHelperForValidating = AuthTokenHelperImpl.forValidating(vertx, props);
+        authTokenHelperForSigning = new JjwtBasedAuthTokenFactory(vertx, props);
+        authTokenHelperForValidating = new JjwtBasedAuthTokenValidator(vertx, props);
     }
 
     /**

@@ -3,6 +3,6 @@ hono:
     svc:
       permissionsPath: "/etc/permissions.json"
       signing:
-        sharedSecret: "secret"
+        sharedSecret: "secretsecretsecretsecretsecretsecret"
         tokenExpiration: 1000
       supportedSaslMechanisms: "PLAIN"

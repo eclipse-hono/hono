@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,19 +17,16 @@ import java.time.Duration;
 
 import org.eclipse.hono.auth.Authorities;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jws;
-
 /**
- * A utility for creating and parsing JSON Web Tokens containing user identity and
+ * A factory for creating JSON Web Tokens containing user identity and
  * granted authorities.
  *
  */
-public interface AuthTokenHelper {
+public interface AuthTokenFactory {
 
     /**
      * Gets the duration being used for calculating the <em>exp</em> claim of tokens
-     * created by this class.
+     * created by this factory.
      * <p>
      * Clients should always check if a token is expired before using any information
      * contained in the token.
@@ -39,9 +36,10 @@ public interface AuthTokenHelper {
     Duration getTokenLifetime();
 
     /**
-     * Creates a JSON Web Token for an identity and its granted authorities.
+     * Creates the compact serialization of a JWS with a JSON Web Token for an identity and its
+     * granted authorities as the (signed) payload.
      * <p>
-     * The returned JWT 
+     * The returned JWT
      * <ul>
      * <li>contains the authorization id in the <em>sub</em> claim.</li>
      * <li>contains the authorities (as returned by {@link Authorities#asMap()}) as claims.</li>
@@ -52,16 +50,7 @@ public interface AuthTokenHelper {
      * @param authorizationId The asserted identity.
      * @param authorities The granted authorities.
      * @return The compact encoding of the JWT.
+     * @see <a href="https://www.rfc-editor.org/rfc/rfc7515.html#section-3">RFC 7515, Section 3</a>
      */
     String createToken(String authorizationId, Authorities authorities);
-
-    /**
-     * Expands an encoded JWT token containing a signed <em>claims</em> body.
-     *
-     * @param token The compact encoding of the JWT token to expand.
-     * @return The expanded token.
-     * @throws io.jsonwebtoken.JwtException if the token cannot be expanded, e.g. because its signature cannot
-     *                      be verified or it is expired or malformed.
-     */
-    Jws<Claims> expand(String token);
 }

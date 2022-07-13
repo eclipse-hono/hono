@@ -28,7 +28,7 @@ import org.eclipse.hono.auth.AuthoritiesImpl;
 import org.eclipse.hono.auth.HonoUser;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.auth.AbstractHonoAuthenticationService;
-import org.eclipse.hono.service.auth.AuthTokenHelper;
+import org.eclipse.hono.service.auth.AuthTokenFactory;
 import org.eclipse.hono.util.AuthenticationConstants;
 
 import io.vertx.core.Future;
@@ -54,7 +54,7 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
     private final Map<String, Authorities> roles = new HashMap<>();
     private final Map<String, JsonObject> users = new HashMap<>();
 
-    private AuthTokenHelper tokenFactory;
+    private AuthTokenFactory tokenFactory;
 
     /**
      * Gets the supported SASL mechanisms from the service configuration. If no configuration is set, the
@@ -75,7 +75,7 @@ public final class FileBasedAuthenticationService extends AbstractHonoAuthentica
      * @param tokenFactory The factory.
      * @throws NullPointerException if factory is {@code null}.
      */
-    public void setTokenFactory(final AuthTokenHelper tokenFactory) {
+    public void setTokenFactory(final AuthTokenFactory tokenFactory) {
         this.tokenFactory = Objects.requireNonNull(tokenFactory);
     }
 

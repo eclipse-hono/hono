@@ -16,8 +16,8 @@ package org.eclipse.hono.authentication.file;
 import java.util.List;
 import java.util.Objects;
 
-import org.eclipse.hono.config.SignatureSupportingConfigProperties;
 import org.eclipse.hono.service.auth.AbstractHonoAuthenticationService;
+import org.eclipse.hono.service.auth.SignatureSupportingConfigProperties;
 import org.eclipse.hono.util.AuthenticationConstants;
 
 

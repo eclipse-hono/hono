@@ -19,9 +19,9 @@ import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
 
 import org.eclipse.hono.client.amqp.connection.ConnectionFactory;
-import org.eclipse.hono.service.auth.AuthTokenHelperImpl;
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
+import org.eclipse.hono.service.auth.JjwtBasedAuthTokenValidator;
 import org.eclipse.hono.service.auth.delegating.AuthenticationServerClientConfigProperties;
 import org.eclipse.hono.service.auth.delegating.AuthenticationServerClientOptions;
 import org.eclipse.hono.service.auth.delegating.DelegatingAuthenticationService;
@@ -74,7 +74,7 @@ public class DelegatingAuthenticationServiceProducer {
             final AuthenticationServerClientConfigProperties authServerClientConfig,
             final AuthenticationService authenticationService) {
 
-        final var authTokenValidator = AuthTokenHelperImpl.forValidating(vertx, authServerClientConfig.getValidation());
+        final var authTokenValidator = new JjwtBasedAuthTokenValidator(vertx, authServerClientConfig.getValidation());
         return new HonoSaslAuthenticatorFactory(vertx, authTokenValidator, authenticationService);
     }
 }
