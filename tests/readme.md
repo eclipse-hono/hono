@@ -173,6 +173,9 @@ For example, the following command will run all MQTT related test cases and skip
 mvn verify -Prun-tests,mqtt-only
 ```
 
+The `no-adapters` Maven profile can be used to run no adapter (and corresponding tests) at all. This might be useful when
+working on the device registry and/or command router components.
+
 It is also possible to selectively disable one or more protocol adapters and skip the corresponding test cases
 by means of setting one or more of the following Maven properties to `true`:
 

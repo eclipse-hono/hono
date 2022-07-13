@@ -635,6 +635,16 @@
       </properties>
     </profile>
     <profile>
+      <id>no-adapters</id>
+      <properties>
+        <hono.amqp-adapter.disabled>true</hono.amqp-adapter.disabled>
+        <hono.coap-adapter.disabled>true</hono.coap-adapter.disabled>
+        <hono.http-adapter.disabled>true</hono.http-adapter.disabled>
+        <hono.lora-adapter.disabled>true</hono.lora-adapter.disabled>
+        <hono.mqtt-adapter.disabled>true</hono.mqtt-adapter.disabled>
+      </properties>
+    </profile>
+    <profile>
       <id>run-tests</id>
       <build>
         <plugins>
