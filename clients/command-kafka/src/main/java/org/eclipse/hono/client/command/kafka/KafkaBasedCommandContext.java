@@ -49,6 +49,15 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
 
     private static final Logger LOG = LoggerFactory.getLogger(KafkaBasedCommandContext.class);
 
+    private static final String PROPERTY_NAME_DELIVERY_FAILURE_RESPONSES_DISABLED = "HONO_DISABLE_KAFKA_COMMAND_DELIVERY_FAILURE_RESPONSES";
+    private static final boolean DELIVERY_FAILURE_RESPONSES_DISABLED = Boolean
+            .parseBoolean(getProperty(PROPERTY_NAME_DELIVERY_FAILURE_RESPONSES_DISABLED));
+    static {
+        if (DELIVERY_FAILURE_RESPONSES_DISABLED) {
+            LOG.info("sending of command delivery failure response messages is disabled");
+        }
+    }
+
     private final KafkaBasedCommand command;
     private final CommandResponseSender commandResponseSender;
     private String completedOutcome;
@@ -112,7 +121,8 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
         final ServiceInvocationException mappedError = StatusCodeMapper.toServerError(error);
         final int status = mappedError.getErrorCode();
         Tags.HTTP_STATUS.set(span, status);
-        if (isRequestResponseCommand() && !(error instanceof CommandAlreadyProcessedException)
+        if (!DELIVERY_FAILURE_RESPONSES_DISABLED && isRequestResponseCommand()
+                && !(error instanceof CommandAlreadyProcessedException)
                 && !(error instanceof CommandToBeReprocessedException)) {
             final String errorMessage = Optional.ofNullable(ServiceInvocationException.getErrorMessageForExternalClient(mappedError))
                     .orElse("Temporarily unavailable");
@@ -135,7 +145,7 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
         final int status = undeliverableHere ? HttpURLConnection.HTTP_NOT_FOUND
                 : HttpURLConnection.HTTP_UNAVAILABLE;
         Tags.HTTP_STATUS.set(span, status);
-        if (isRequestResponseCommand()) {
+        if (!DELIVERY_FAILURE_RESPONSES_DISABLED && isRequestResponseCommand()) {
             final String error = "command not processed"
                     + (deliveryFailed ? "; delivery failed" : "")
                     + (undeliverableHere ? "; undeliverable here" : "");
@@ -167,7 +177,7 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
         }
         final Span span = getTracingSpan();
         Tags.HTTP_STATUS.set(span, status);
-        if (isRequestResponseCommand()) {
+        if (!DELIVERY_FAILURE_RESPONSES_DISABLED && isRequestResponseCommand()) {
             final String nonNullCause = Optional.ofNullable(cause).orElse("Command message rejected");
             sendDeliveryFailureCommandResponseMessage(status, nonNullCause, span, null)
                     .onComplete(v -> span.finish());
@@ -239,5 +249,9 @@ public class KafkaBasedCommandContext extends MapBasedExecutionContext implement
         }
         completedOutcome = outcome;
         return true;
+    }
+
+    private static String getProperty(final String name) {
+        return System.getProperty(name, System.getenv(name));
     }
 }
