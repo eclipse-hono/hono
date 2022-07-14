@@ -23,6 +23,22 @@ amqpMessagingNetworkExample:
     uidFormat: "n"
     adapterUids: "hono.eclipseprojects.io"
     tlsKeysSecret: "sandbox-tls"
+    resources:
+      requests:
+        cpu: "50m"
+        memory: "64Mi"
+      limits:
+        cpu: "1"
+        memory: "256Mi"
+  broker:
+    artemis:
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "600Mi"
+        limits:
+          cpu: "1"
+          memory: "600Mi"
 
 adapters:
   http:
@@ -39,12 +55,13 @@ adapters:
         maxPayloadSize: 8096
         tenantIdleTimeout: "1h"
     tlsKeysSecret: "sandbox-tls"
+    cmdLineArgs:
+    - "-Xmx96m"
     resources:
       requests:
-        cpu:
+        cpu: "50m"
         memory: "120Mi"
       limits:
-        cpu:
         memory: "120Mi"
 
   mqtt:
@@ -62,12 +79,13 @@ adapters:
         tenantIdleTimeout: "1h"
         maxConnections: 200
     tlsKeysSecret: "sandbox-tls"
+    cmdLineArgs:
+    - "-Xmx96m"
     resources:
       requests:
-        cpu:
+        cpu: "50m"
         memory: "120Mi"
       limits:
-        cpu:
         memory: "120Mi"
 
   amqp:
@@ -83,12 +101,13 @@ adapters:
         tenantIdleTimeout: "1h"
         maxConnections: 200
     tlsKeysSecret: "sandbox-tls"
+    cmdLineArgs:
+    - "-Xmx96m"
     resources:
       requests:
-        cpu:
+        cpu: "50m"
         memory: "120Mi"
       limits:
-        cpu:
         memory: "120Mi"
 
   coap:
@@ -103,12 +122,13 @@ adapters:
         tenantIdleTimeout: "1h"
         maxConnections: 70
     tlsKeysSecret: "sandbox-tls"
+    cmdLineArgs:
+    - "-Xmx96m"
     resources:
       requests:
-        cpu:
+        cpu: "50m"
         memory: "120Mi"
       limits:
-        cpu:
         memory: "120Mi"
 
   kura:
@@ -128,13 +148,15 @@ adapters:
 
 authServer:
   imageName: "eclipse/hono-service-auth-native"
+  cmdLineArgs:
+  - "-Xmx24m"
   resources:
     requests:
-      cpu:
-      memory: "32Mi"
+      cpu: "50m"
+      memory: "30Mi"
     limits:
       cpu:
-      memory: "32Mi"
+      memory: "30Mi"
 
 deviceRegistryExample:
   type: "embedded"
@@ -154,24 +176,26 @@ deviceRegistryExample:
       svc:
         maxDevicesPerTenant: 10
   tlsKeysSecret: "sandbox-tls"
-  resources:
-    requests:
-      cpu:
-      memory: "400Mi"
-    limits:
-      cpu:
-      memory: "400Mi"
+  embeddedJdbcDeviceRegistry:
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "400Mi"
+      limits:
+        cpu:
+        memory: "400Mi"
 
 commandRouterService:
   imageName: "eclipse/hono-service-command-router-native"
   tlsKeysSecret: "sandbox-tls"
+  cmdLineArgs:
+  - "-Xmx96m"
   resources:
     requests:
-      cpu:
-      memory: "128Mi"
+      cpu: "50m"
+      memory: "120Mi"
     limits:
-      cpu:
-      memory: "128Mi"
+      memory: "120Mi"
 
 kafka:
   ## @param logFlushIntervalMessages The number of messages to accept before forcing a flush of data to disk
@@ -204,7 +228,7 @@ kafka:
       size: 200Mi
     resources:
       requests:
-        cpu: 150m
+        cpu: "50m"
   externalAccess:
     autoDiscovery:
       enabled: false
@@ -216,9 +240,9 @@ kafka:
     create: false
   rbac:
     create: false
-  resources:
-    requests:
-      cpu: "150m"
+#  resources:
+#    requests:
+#      cpu:
 
 jaegerBackendExample:
   enabled: false

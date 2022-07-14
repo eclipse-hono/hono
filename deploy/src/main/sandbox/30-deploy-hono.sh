@@ -1,6 +1,6 @@
 #!/bin/bash
 #*******************************************************************************
-# Copyright (c) 2021 Contributors to the Eclipse Foundation
+# Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -26,4 +26,4 @@ helm repo update
 
 echo ""
 echo "Deploying Hono..."
-helm install eclipse-hono --dependency-update -f $SCRIPTPATH/hono-values.yml -n hono eclipse-iot/hono --wait --timeout 5m0s
+helm install eclipse-hono eclipse-iot/hono -f $SCRIPTPATH/hono-values.yml -n hono --wait --timeout 5m0s
