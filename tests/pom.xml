@@ -100,8 +100,8 @@
       Messaging related properties - Kafka is used as the default one.
     -->
     <hono.messaging-infra.type>kafka</hono.messaging-infra.type>
-    <hono.amqp-messaging.disabled>false</hono.amqp-messaging.disabled>
-    <hono.kafka-messaging.disabled>true</hono.kafka-messaging.disabled>
+    <hono.amqp-messaging.disabled>true</hono.amqp-messaging.disabled>
+    <hono.kafka-messaging.disabled>false</hono.kafka-messaging.disabled>
     <hono.kafka.log-level>WARN</hono.kafka.log-level>
     <hono.kafka.bootstrap.servers>kafka:9092</hono.kafka.bootstrap.servers>
 
@@ -426,11 +426,24 @@
       </properties>
     </profile>
     <profile>
+      <id>amqp</id>
+      <activation>
+        <property>
+          <name>hono.messaging-infra.type</name>
+          <value>amqp</value>
+        </property>
+      </activation>
+      <properties>
+        <hono.amqp-messaging.disabled>false</hono.amqp-messaging.disabled>
+        <hono.kafka-messaging.disabled>true</hono.kafka-messaging.disabled>
+      </properties>
+    </profile>
+    <profile>
       <id>kafka</id>
       <activation>
         <property>
           <name>hono.messaging-infra.type</name>
-          <value>kafka</value>
+          <value>!amqp</value>
         </property>
       </activation>
       <properties>
