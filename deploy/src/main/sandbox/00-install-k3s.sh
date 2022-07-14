@@ -1,6 +1,6 @@
 #!/bin/sh
 #*******************************************************************************
-# Copyright (c) 2021 Contributors to the Eclipse Foundation
+# Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -15,6 +15,11 @@
 # This script installs the current version of k3s. It is intended to be only used
 # on the Eclipse Foundation's Hono sandbox VM.
 
+# Also see https://www.suse.com/support/kb/doc/?id=000020071 regarding configuration
+# of (container) log rotation
+
 set -ue
 
-curl -sfL https://get.k3s.io | sh -s - server --node-name hono.eclipseprojects.io
+curl -sfL https://get.k3s.io | sh -s - server --node-name hono.eclipseprojects.io \
+  --kubelet-arg container-log-max-files=3 \
+  --kubelet-arg container-log-max-size=1Mi
