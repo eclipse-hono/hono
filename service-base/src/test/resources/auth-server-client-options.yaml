@@ -6,5 +6,5 @@ hono:
       validation:
         certPath: "/etc/cert.pem"
         keyPath: "/etc/key.pem"
-        sharedSecret: "secret"
+        sharedSecret: "secretsecretsecretsecretsecretsecret"
         tokenExpiration: 300

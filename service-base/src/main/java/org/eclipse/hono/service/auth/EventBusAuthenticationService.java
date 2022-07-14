@@ -50,7 +50,7 @@ public final class EventBusAuthenticationService implements AuthenticationServic
 
     private final Logger log = LoggerFactory.getLogger(EventBusAuthenticationService.class);
     private final Vertx vertx;
-    private final AuthTokenHelper tokenValidator;
+    private final AuthTokenValidator tokenValidator;
     private final String[] supportedSASLMechanisms;
 
     /**
@@ -62,7 +62,7 @@ public final class EventBusAuthenticationService implements AuthenticationServic
      * @param validator The object to use for validating auth tokens.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public EventBusAuthenticationService(final Vertx vertx, final AuthTokenHelper validator) {
+    public EventBusAuthenticationService(final Vertx vertx, final AuthTokenValidator validator) {
         this(vertx, validator, AbstractHonoAuthenticationService.DEFAULT_SASL_MECHANISMS);
     }
 
@@ -74,7 +74,7 @@ public final class EventBusAuthenticationService implements AuthenticationServic
      * @param supportedSASLMechanisms The supported SASL mechanisms.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public EventBusAuthenticationService(final Vertx vertx, final AuthTokenHelper validator,
+    public EventBusAuthenticationService(final Vertx vertx, final AuthTokenValidator validator,
             final String[] supportedSASLMechanisms) {
         this.vertx = Objects.requireNonNull(vertx);
         this.tokenValidator = Objects.requireNonNull(validator);

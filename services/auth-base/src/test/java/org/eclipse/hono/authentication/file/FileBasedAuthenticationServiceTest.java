@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.auth.Authorities;
 import org.eclipse.hono.auth.HonoUser;
-import org.eclipse.hono.service.auth.AuthTokenHelper;
+import org.eclipse.hono.service.auth.AuthTokenFactory;
 import org.eclipse.hono.util.ResourceIdentifier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -61,7 +61,7 @@ public class FileBasedAuthenticationServiceTest {
 
     private FileBasedAuthenticationService getService(final String permissionsPath) {
 
-        final AuthTokenHelper tokenFactory = mock(AuthTokenHelper.class);
+        final AuthTokenFactory tokenFactory = mock(AuthTokenFactory.class);
         when(tokenFactory.createToken(anyString(), any(Authorities.class))).thenReturn(TOKEN);
         when(tokenFactory.getTokenLifetime()).thenReturn(TOKEN_LIFETIME);
 

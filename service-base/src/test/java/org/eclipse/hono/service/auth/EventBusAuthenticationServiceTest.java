@@ -21,7 +21,6 @@ import org.eclipse.hono.auth.AuthoritiesImpl;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.config.SignatureSupportingConfigProperties;
 import org.eclipse.hono.util.AuthenticationConstants;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -46,8 +45,8 @@ public class EventBusAuthenticationServiceTest {
     private static Vertx vertx;
 
     private static String secret = "dafhkjsdahfuksahuioahgfqgpsgjkhfdjkg";
-    private static AuthTokenHelper authTokenHelperForSigning;
-    private static AuthTokenHelper authTokenHelperForValidating;
+    private static AuthTokenFactory authTokenFactory;
+    private static AuthTokenValidator authTokenValidator;
 
     private MessageConsumer<JsonObject> authRequestConsumer;
 
@@ -60,8 +59,8 @@ public class EventBusAuthenticationServiceTest {
         final SignatureSupportingConfigProperties props = new SignatureSupportingConfigProperties();
         props.setSharedSecret(secret);
         props.setTokenExpiration(100);
-        authTokenHelperForSigning = AuthTokenHelperImpl.forSigning(vertx, props);
-        authTokenHelperForValidating = AuthTokenHelperImpl.forValidating(vertx, props);
+        authTokenFactory = new JjwtBasedAuthTokenFactory(vertx, props);
+        authTokenValidator = new JjwtBasedAuthTokenValidator(vertx, props);
     }
 
     /**
@@ -88,7 +87,7 @@ public class EventBusAuthenticationServiceTest {
             message.reply(AuthenticationConstants.getAuthenticationReply(token));
         });
 
-        final EventBusAuthenticationService eventBusAuthService = new EventBusAuthenticationService(vertx, authTokenHelperForValidating);
+        final EventBusAuthenticationService eventBusAuthService = new EventBusAuthenticationService(vertx, authTokenValidator);
         eventBusAuthService.authenticate(new JsonObject())
             .onComplete(ctx.succeeding(t -> {
                 ctx.verify(() -> assertThat(t.getToken()).isEqualTo(token));
@@ -105,7 +104,7 @@ public class EventBusAuthenticationServiceTest {
     @Test
     public void testAuthenticateFailureNoHandler(final VertxTestContext ctx) {
 
-        final EventBusAuthenticationService eventBusAuthService = new EventBusAuthenticationService(vertx, authTokenHelperForValidating);
+        final EventBusAuthenticationService eventBusAuthService = new EventBusAuthenticationService(vertx, authTokenValidator);
         eventBusAuthService.authenticate(new JsonObject())
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
@@ -131,7 +130,7 @@ public class EventBusAuthenticationServiceTest {
             message.fail(HttpURLConnection.HTTP_UNAUTHORIZED, failureMessage);
         });
 
-        final EventBusAuthenticationService eventBusAuthService = new EventBusAuthenticationService(vertx, authTokenHelperForValidating);
+        final EventBusAuthenticationService eventBusAuthService = new EventBusAuthenticationService(vertx, authTokenValidator);
         eventBusAuthService.authenticate(new JsonObject())
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
@@ -159,7 +158,7 @@ public class EventBusAuthenticationServiceTest {
             message.fail(200, failureMessage);
         });
 
-        final EventBusAuthenticationService eventBusAuthService = new EventBusAuthenticationService(vertx, authTokenHelperForValidating);
+        final EventBusAuthenticationService eventBusAuthService = new EventBusAuthenticationService(vertx, authTokenValidator);
         eventBusAuthService.authenticate(new JsonObject())
             .onComplete(ctx.failing(t -> {
                 ctx.verify(() -> {
@@ -172,6 +171,6 @@ public class EventBusAuthenticationServiceTest {
     }
 
     private String createTestToken() {
-        return authTokenHelperForSigning.createToken("authId", new AuthoritiesImpl());
+        return authTokenFactory.createToken("authId", new AuthoritiesImpl());
     }
 }

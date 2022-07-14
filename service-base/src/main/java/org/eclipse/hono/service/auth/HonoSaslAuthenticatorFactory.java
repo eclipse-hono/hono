@@ -44,7 +44,7 @@ public final class HonoSaslAuthenticatorFactory implements ProtonSaslAuthenticat
      */
     public HonoSaslAuthenticatorFactory(
             final Vertx vertx,
-            final AuthTokenHelper validator,
+            final AuthTokenValidator validator,
             final AuthenticationService actualAuthenticationService) {
         this(new EventBusAuthenticationService(vertx, validator,
                 actualAuthenticationService.getSupportedSaslMechanisms()));
@@ -61,7 +61,7 @@ public final class HonoSaslAuthenticatorFactory implements ProtonSaslAuthenticat
      * @param validator The object to use for validating auth tokens.
      * @throws NullPointerException if any of the parameters is {@code null}.
      */
-    public HonoSaslAuthenticatorFactory(final Vertx vertx, final AuthTokenHelper validator) {
+    public HonoSaslAuthenticatorFactory(final Vertx vertx, final AuthTokenValidator validator) {
         this(new EventBusAuthenticationService(vertx, validator));
     }
 

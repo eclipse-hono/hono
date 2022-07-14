@@ -15,7 +15,7 @@ package org.eclipse.hono.authentication.file;
 
 import java.util.List;
 
-import org.eclipse.hono.config.SignatureSupportingOptions;
+import org.eclipse.hono.service.auth.SignatureSupportingOptions;
 import org.eclipse.hono.util.AuthenticationConstants;
 
 import io.smallrye.config.ConfigMapping;

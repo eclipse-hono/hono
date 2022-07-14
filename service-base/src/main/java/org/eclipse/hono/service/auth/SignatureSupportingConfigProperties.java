@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.hono.config;
+package org.eclipse.hono.service.auth;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
@@ -42,8 +42,8 @@ public class SignatureSupportingConfigProperties {
         super();
         this.certPath = options.certPath().orElse(null);
         this.keyPath = options.keyPath().orElse(null);
-        this.sharedSecret = options.sharedSecret().orElse(null);
-        this.tokenExpiration = options.tokenExpiration();
+        options.sharedSecret().ifPresent(this::setSharedSecret);
+        setTokenExpiration(options.tokenExpiration());
     }
 
     /**

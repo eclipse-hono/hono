@@ -14,6 +14,8 @@
 
 package org.eclipse.hono.service.auth.delegating;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import org.eclipse.hono.test.ConfigMappingSupport;
@@ -38,11 +40,12 @@ class AuthenticationServerClientOptionsTest {
                         AuthenticationServerClientOptions.class,
                         this.getClass().getResource("/auth-server-client-options.yaml")));
 
-        assertThat(props.getServerRole()).isEqualTo("Authentication Server");
-        assertThat(props.getSupportedSaslMechanisms()).containsExactly("PLAIN");
-        assertThat(props.getValidation().getCertPath()).isEqualTo("/etc/cert.pem");
-        assertThat(props.getValidation().getKeyPath()).isEqualTo("/etc/key.pem");
-        assertThat(props.getValidation().getSharedSecret()).isEqualTo("secret");
-        assertThat(props.getValidation().getTokenExpiration()).isEqualTo(300);
+        assertAll(
+                () -> assertThat(props.getServerRole()).isEqualTo("Authentication Server"),
+                () -> assertThat(props.getSupportedSaslMechanisms()).containsExactly("PLAIN"),
+                () -> assertThat(props.getValidation().getCertPath()).isEqualTo("/etc/cert.pem"),
+                () -> assertThat(props.getValidation().getKeyPath()).isEqualTo("/etc/key.pem"),
+                () -> assertThat(props.getValidation().getSharedSecret()).isEqualTo("secretsecretsecretsecretsecretsecret"),
+                () -> assertThat(props.getValidation().getTokenExpiration()).isEqualTo(300));
     }
 }

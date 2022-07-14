@@ -28,11 +28,13 @@ import org.eclipse.hono.authentication.file.FileBasedAuthenticationServiceOption
 import org.eclipse.hono.config.ServiceConfigProperties;
 import org.eclipse.hono.config.ServiceOptions;
 import org.eclipse.hono.service.AbstractServiceApplication;
-import org.eclipse.hono.service.auth.AuthTokenHelper;
-import org.eclipse.hono.service.auth.AuthTokenHelperImpl;
+import org.eclipse.hono.service.auth.AuthTokenFactory;
+import org.eclipse.hono.service.auth.AuthTokenValidator;
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.service.auth.EventBusAuthenticationService;
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
+import org.eclipse.hono.service.auth.JjwtBasedAuthTokenFactory;
+import org.eclipse.hono.service.auth.JjwtBasedAuthTokenValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -100,12 +102,12 @@ public class Application extends AbstractServiceApplication {
             .onComplete(deploymentCheck);
     }
 
-    AuthTokenHelper authTokenFactory() {
+    AuthTokenFactory authTokenFactory() {
         if (!serviceConfig.getSigning().isAppropriateForCreating() && amqpProps.getKeyPath() != null) {
             // fall back to TLS configuration
             serviceConfig.getSigning().setKeyPath(amqpProps.getKeyPath());
         }
-        return AuthTokenHelperImpl.forSigning(vertx, serviceConfig.getSigning());
+        return new JjwtBasedAuthTokenFactory(vertx, serviceConfig.getSigning());
     }
 
     FileBasedAuthenticationService authenticationService() {
@@ -117,12 +119,12 @@ public class Application extends AbstractServiceApplication {
         return service;
     }
 
-    AuthTokenHelper tokenValidator() {
+    AuthTokenValidator tokenValidator() {
         if (!serviceConfig.getValidation().isAppropriateForValidating() && amqpProps.getCertPath() != null) {
             // fall back to TLS configuration
             serviceConfig.getValidation().setCertPath(amqpProps.getCertPath());
         }
-        return AuthTokenHelperImpl.forValidating(vertx, serviceConfig.getValidation());
+        return new JjwtBasedAuthTokenValidator(vertx, serviceConfig.getValidation());
     }
 
     /**
