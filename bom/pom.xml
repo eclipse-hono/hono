@@ -29,7 +29,7 @@
 
   <properties>
     <artemis.image.name>quay.io/enmasse/artemis-base:2.13.0</artemis.image.name>
-    <assertj.version>3.22.0</assertj.version>
+    <assertj.version>3.23.1</assertj.version>
     <bouncycastle.version>1.71</bouncycastle.version>
     <caffeine.version>2.9.3</caffeine.version>
     <californium.version>3.5.0</californium.version>
@@ -61,7 +61,7 @@
     <opentelemetry-collector.image.name>otel/opentelemetry-collector:0.55.0</opentelemetry-collector.image.name>
     <postgresql-image.name>postgres:12-alpine</postgresql-image.name>
     <proton.version>0.33.10</proton.version>
-    <qpid-jms.version>1.4.1</qpid-jms.version>
+    <qpid-jms.version>1.6.0</qpid-jms.version>
     <quarkus.platform.version>2.10.2.Final</quarkus.platform.version>
     <slf4j.version>1.7.36</slf4j.version>
     <spring-security-crypto.version>5.7.0</spring-security-crypto.version>
