@@ -93,6 +93,7 @@ abstract class JwtSupport {
      */
     protected final String addPrivateKey(final String keyPath, final String certPath) {
         Objects.requireNonNull(keyPath);
+        Objects.requireNonNull(certPath);
         final var keys = KeyLoader.fromFiles(vertx, keyPath, certPath);
         return addPrivateKey(keys.getPrivateKey(), keys.getPublicKey());
     }
