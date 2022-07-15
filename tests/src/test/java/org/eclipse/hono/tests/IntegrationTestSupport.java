@@ -181,10 +181,15 @@ public final class IntegrationTestSupport {
      */
     public static final String PROPERTY_AUTH_HOST = "auth.host";
     /**
-     * The name of the system property to use for setting the port number that the Auth service
-     * should listen on.
+     * The name of the system property that contains the port number that the Auth service's
+     * HTTP endpoint listens on.
      */
-    public static final String PROPERTY_AUTH_PORT = "auth.amqps.port";
+    public static final String PROPERTY_AUTH_PORT_HTTP = "auth.http.port";
+    /**
+     * The name of the system property that contains the port number that the Auth service's
+     * AMQP endpoint listens on.
+     */
+    public static final String PROPERTY_AUTH_PORT_AMQPS = "auth.amqps.port";
     /**
      * The name of the system property to use for setting the username that protocol adapters
      * use for authenticating to the Device Registry in a SASL handshake.
@@ -338,9 +343,13 @@ public final class IntegrationTestSupport {
      */
     public static final String AUTH_HOST = System.getProperty(PROPERTY_AUTH_HOST, DEFAULT_HOST);
     /**
-     * The port number that the Auth service listens on.
+     * The port number that the Authentication Server's AMQP endpoint service listens on.
      */
-    public static final int AUTH_PORT = Integer.getInteger(PROPERTY_AUTH_PORT, Constants.PORT_AMQPS);
+    public static final int AUTH_PORT_AMQPS = Integer.getInteger(PROPERTY_AUTH_PORT_AMQPS, Constants.PORT_AMQPS);
+    /**
+     * The port number that the Authentication Server's HTTP endpoint listens on.
+     */
+    public static final int AUTH_PORT_HTTP = Integer.getInteger(PROPERTY_AUTH_PORT_HTTP, 8088);
 
     /**
      * The username of the principal that has access to the DEFAULT_TENANT only.

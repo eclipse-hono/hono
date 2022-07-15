@@ -24,21 +24,17 @@ import org.eclipse.hono.authentication.MicrometerBasedAuthenticationServerMetric
 import org.eclipse.hono.authentication.SimpleAuthenticationServer;
 import org.eclipse.hono.authentication.file.FileBasedAuthenticationService;
 import org.eclipse.hono.authentication.file.FileBasedAuthenticationServiceConfigProperties;
-import org.eclipse.hono.authentication.file.FileBasedAuthenticationServiceOptions;
 import org.eclipse.hono.config.ServiceConfigProperties;
-import org.eclipse.hono.config.ServiceOptions;
 import org.eclipse.hono.service.AbstractServiceApplication;
 import org.eclipse.hono.service.auth.AuthTokenFactory;
 import org.eclipse.hono.service.auth.AuthTokenValidator;
 import org.eclipse.hono.service.auth.AuthenticationService;
 import org.eclipse.hono.service.auth.EventBusAuthenticationService;
 import org.eclipse.hono.service.auth.HonoSaslAuthenticatorFactory;
-import org.eclipse.hono.service.auth.JjwtBasedAuthTokenFactory;
 import org.eclipse.hono.service.auth.JjwtBasedAuthTokenValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.smallrye.config.ConfigMapping;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
@@ -53,20 +49,12 @@ public class Application extends AbstractServiceApplication {
     private static final String COMPONENT_NAME = "Hono Authentication Server";
     private static final Logger LOG = LoggerFactory.getLogger(Application.class);
 
-    private ServiceConfigProperties amqpProps;
-    private FileBasedAuthenticationServiceConfigProperties serviceConfig;
-
     @Inject
-    void setServiceOptions(
-            @ConfigMapping(prefix = "hono.auth.amqp")
-            final ServiceOptions options) {
-        this.amqpProps = new ServiceConfigProperties(options);
-    }
-
+    FileBasedAuthenticationServiceConfigProperties serviceConfig;
     @Inject
-    void setAuthenticationServiceOptions(final FileBasedAuthenticationServiceOptions options) {
-        this.serviceConfig = new FileBasedAuthenticationServiceConfigProperties(options);
-    }
+    AuthTokenFactory authTokenFactory;
+    @Inject
+    ServiceConfigProperties amqpProps;
 
     @Override
     public String getComponentName() {
@@ -102,20 +90,12 @@ public class Application extends AbstractServiceApplication {
             .onComplete(deploymentCheck);
     }
 
-    AuthTokenFactory authTokenFactory() {
-        if (!serviceConfig.getSigning().isAppropriateForCreating() && amqpProps.getKeyPath() != null) {
-            // fall back to TLS configuration
-            serviceConfig.getSigning().setKeyPath(amqpProps.getKeyPath());
-        }
-        return new JjwtBasedAuthTokenFactory(vertx, serviceConfig.getSigning());
-    }
-
     FileBasedAuthenticationService authenticationService() {
 
         LOG.info("creating {} instance", FileBasedAuthenticationService.class.getName());
         final var service = new FileBasedAuthenticationService();
         service.setConfig(serviceConfig);
-        service.setTokenFactory(authTokenFactory());
+        service.setTokenFactory(authTokenFactory);
         return service;
     }
 

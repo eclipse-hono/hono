@@ -4,7 +4,9 @@ hono:
       serverRole: "Authentication Server"
       supportedSaslMechanisms: "PLAIN"
       validation:
+        audience: "hono-components"
         certPath: "/etc/cert.pem"
         keyPath: "/etc/key.pem"
         sharedSecret: "secretsecretsecretsecretsecretsecret"
         tokenExpiration: 300
+        issuer: "https://my.auth-server.io"

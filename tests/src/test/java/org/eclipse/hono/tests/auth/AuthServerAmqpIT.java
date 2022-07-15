@@ -13,6 +13,8 @@
 
 package org.eclipse.hono.tests.auth;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
@@ -22,7 +24,9 @@ import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.client.amqp.connection.ConnectionFactory;
 import org.eclipse.hono.client.amqp.connection.impl.ConnectionFactoryImpl;
+import org.eclipse.hono.service.auth.SignatureSupportingOptions;
 import org.eclipse.hono.service.auth.delegating.AuthenticationServerClient;
+import org.eclipse.hono.service.auth.delegating.AuthenticationServerClientOptions;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,7 +35,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.auth.impl.jose.JWK;
+import io.vertx.ext.auth.impl.jose.JWT;
+import io.vertx.ext.web.client.HttpResponse;
+import io.vertx.ext.web.client.WebClient;
+import io.vertx.ext.web.client.predicate.ResponsePredicate;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -45,6 +57,7 @@ public class AuthServerAmqpIT {
 
     private static final Logger LOG = LoggerFactory.getLogger(AuthServerAmqpIT.class);
     private static Vertx vertx = Vertx.vertx();
+
     private AuthenticationServerClient client;
 
     /**
@@ -60,7 +73,7 @@ public class AuthServerAmqpIT {
     }
 
     private AuthenticationServerClient getClient() {
-        return getClient(IntegrationTestSupport.AUTH_HOST, IntegrationTestSupport.AUTH_PORT);
+        return getClient(IntegrationTestSupport.AUTH_HOST, IntegrationTestSupport.AUTH_PORT_AMQPS);
     }
 
     private AuthenticationServerClient getClient(final String host, final int port) {
@@ -84,10 +97,43 @@ public class AuthServerAmqpIT {
     @Test
     public void testTokenRetrievalSucceedsForAuthenticatedUser(final VertxTestContext ctx) {
 
-        client.verifyPlain(null, "hono-client", "secret")
-            .onComplete(ctx.succeeding(user -> {
+        final var jwksClient = WebClient.create(vertx);
+        final var validationKey = jwksClient.get(
+                IntegrationTestSupport.AUTH_PORT_HTTP,
+                IntegrationTestSupport.AUTH_HOST,
+                AuthenticationServerClientOptions.DEFAULT_JWKS_ENDPOINT_URI)
+            .timeout(3000L)
+            .expect(ResponsePredicate.SC_OK)
+            .expect(ResponsePredicate.contentType("application/jwk-set+json"))
+            .send()
+            .onSuccess(response -> {
+                LOG.debug("response from Authentication Server:{}{}", System.lineSeparator(), response.body().toString());
+            })
+            .map(HttpResponse::bodyAsJsonObject)
+            .map(jwkSet -> {
+                final var keys = jwkSet.getJsonArray("keys", new JsonArray());
+                ctx.verify(() -> assertAll(
+                        () -> assertThat(keys).hasSize(1),
+                        () -> assertThat(keys.getValue(0)).isInstanceOf(JsonObject.class)
+                        ));
+                return new JWK(keys.getJsonObject(0));
+            });
+
+        final var token = client.verifyPlain(null, "hono-client", "secret");
+
+        CompositeFuture.all(validationKey, token)
+            .onComplete(ctx.succeeding(ok -> {
+                final var user = token.result();
+                LOG.debug("retrieved token:{}{}", System.lineSeparator(), user.getToken());
                 ctx.verify(() -> {
                     assertThat(user.getToken()).isNotNull();
+                    final var jwt = new JWT().addJWK(validationKey.result());
+                    final var json = jwt.decode(user.getToken(), true, null);
+                    LOG.info("JWT:{}{}", System.lineSeparator(), json.encodePrettily());
+                    assertThat(json.getJsonObject("header").getString("kid")).isNotNull();
+                    assertThat(json.getJsonObject("payload").getString("iss"))
+                        .isEqualTo(SignatureSupportingOptions.DEFAULT_ISSUER);
+                    assertThat(json.getJsonObject("payload").getString("sub")).isEqualTo("hono-client");
                 });
                 ctx.completeNow();
             }));

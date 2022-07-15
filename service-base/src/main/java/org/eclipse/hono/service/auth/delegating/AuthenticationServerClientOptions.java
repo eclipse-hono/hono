@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.service.auth.delegating;
 
+import java.time.Duration;
 import java.util.List;
 
 import org.eclipse.hono.client.amqp.config.ClientOptions;
@@ -29,6 +30,11 @@ import io.smallrye.config.WithParentName;
  */
 @ConfigMapping(prefix = "hono.auth.client", namingStrategy = NamingStrategy.VERBATIM)
 public interface AuthenticationServerClientOptions {
+
+    /**
+     * The default URI to retrieve a JWK set from.
+     */
+    String DEFAULT_JWKS_ENDPOINT_URI = "/validating-keys";
 
     /**
      * Gets the client options.
@@ -52,4 +58,36 @@ public interface AuthenticationServerClientOptions {
      */
     @WithDefault("EXTERNAL,PLAIN")
     List<String> supportedSaslMechanisms();
+
+    /**
+     * Gets the port of the HTTP endpoint to retrieve a JWK set from.
+     *
+     * @return The port.
+     */
+    @WithDefault("8088")
+    int jwksEndpointPort();
+
+    /**
+     * Gets the URI of the HTTP endpoint to retrieve a JWK set from.
+     *
+     * @return The URI.
+     */
+    @WithDefault(DEFAULT_JWKS_ENDPOINT_URI)
+    String jwksEndpointUri();
+
+    /**
+     * Checks if the HTTP endpoint to retrieve a JWK set from uses TLS.
+     *
+     * @return {@code true} if the endpoint uses TLS.
+     */
+    @WithDefault("false")
+    boolean jwksEndpointTlsEnabled();
+
+    /**
+     * Gets the interval at which the JWK set should be retrieved.
+     *
+     * @return The interval.
+     */
+    @WithDefault("PT5M")
+    Duration jwksPollingInterval();
 }

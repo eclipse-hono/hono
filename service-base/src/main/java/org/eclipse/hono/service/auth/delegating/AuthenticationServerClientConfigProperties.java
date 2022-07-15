@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -13,6 +13,7 @@
 
 package org.eclipse.hono.service.auth.delegating;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 
@@ -32,6 +33,10 @@ public class AuthenticationServerClientConfigProperties extends ClientConfigProp
     private List<String> supportedSaslMechanisms = List.of(
             AuthenticationConstants.MECHANISM_EXTERNAL,
             AuthenticationConstants.MECHANISM_PLAIN);
+    private int jwksEndpointPort = 8088;
+    private String jwksEndpointUri = AuthenticationServerClientOptions.DEFAULT_JWKS_ENDPOINT_URI;
+    private boolean jwksEndpointTlsEnabled = false;
+    private Duration jwksPollingInterval = Duration.ofMinutes(5);
 
     /**
      * Creates new properties using default values.
@@ -49,6 +54,10 @@ public class AuthenticationServerClientConfigProperties extends ClientConfigProp
         super(options.clientOptions());
         setSupportedSaslMechanisms(List.copyOf(options.supportedSaslMechanisms()));
         this.validation = new SignatureSupportingConfigProperties(options.validation());
+        this.jwksEndpointPort = options.jwksEndpointPort();
+        this.jwksEndpointTlsEnabled = options.jwksEndpointTlsEnabled();
+        this.jwksEndpointUri = options.jwksEndpointUri();
+        this.jwksPollingInterval = options.jwksPollingInterval();
     }
 
     /**
@@ -93,5 +102,89 @@ public class AuthenticationServerClientConfigProperties extends ClientConfigProp
             throw new IllegalArgumentException("invalid list of SASL mechanisms");
         }
         this.supportedSaslMechanisms = supportedSaslMechanisms;
+    }
+
+    /**
+     * Gets the port of the HTTP endpoint to retrieve a JWK set from.
+     *
+     * @return The port.
+     */
+    public final int getJwksEndpointPort() {
+        return jwksEndpointPort;
+    }
+
+    /**
+     * Sets the port of the HTTP endpoint to retrieve a JWK set from.
+     *
+     * @param port The port number.
+     * @throws IllegalArgumentException if port &lt; 1000 or port &gt; 65535.
+     */
+    public final void setJwksEndpointPort(final int port) {
+        if (isValidPort(port)) {
+            this.jwksEndpointPort = port;
+        } else {
+            throw new IllegalArgumentException("invalid port number");
+        }
+    }
+
+    /**
+     * Gets the URI of the HTTP endpoint to retrieve a JWK set from.
+     *
+     * @return The URI.
+     */
+    public final String getJwksEndpointUri() {
+        return jwksEndpointUri;
+    }
+
+    /**
+     * Sets the URI of the HTTP endpoint to retrieve a JWK set from.
+     *
+     * @param uri The endpoint URI.
+     * @throws NullPointerException if URI is {@code null}.
+     */
+    public final void setJwksEndpointUri(final String uri) {
+        this.jwksEndpointUri = Objects.requireNonNull(uri);
+    }
+
+    /**
+     * Checks if the HTTP endpoint to retrieve a JWK set from uses TLS.
+     *
+     * @return {@code true} if the endpoint requires TLS.
+     */
+    public final boolean isJwksEndpointTlsEnabled() {
+        return jwksEndpointTlsEnabled;
+    }
+
+    /**
+     * Sets if the HTTP endpoint to retrieve a JWK set from uses TLS.
+     *
+     * @param flag {@code true} if the endpoint requires TLS.
+     */
+    public final void setJwksEndpointTlsEnabled(final boolean flag) {
+        this.jwksEndpointTlsEnabled = flag;
+    }
+
+    /**
+     * Gets the interval at which the JWK set should be retrieved.
+     *
+     * @return The interval.
+     */
+    public final Duration getJwksPollingInterval() {
+        return jwksPollingInterval;
+    }
+
+    /**
+     * Sets the interval at which the JWK set should be retrieved.
+     *
+     * @param interval The interval.
+     * @throws NullPointerException if interval is {@code null}.
+     * @throws IllegalArgumentException if the interval is shorter than 10 seconds.
+     */
+    public final void setJwksPollingInterval(final Duration interval) {
+        Objects.requireNonNull(interval);
+        if (interval.toSeconds() < 10) {
+            throw new IllegalArgumentException("polling interval must be at least 10 seconds");
+        }
+        this.jwksPollingInterval = interval;
     }
 }

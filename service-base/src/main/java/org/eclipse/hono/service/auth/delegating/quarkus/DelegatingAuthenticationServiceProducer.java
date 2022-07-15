@@ -25,11 +25,14 @@ import org.eclipse.hono.service.auth.JjwtBasedAuthTokenValidator;
 import org.eclipse.hono.service.auth.delegating.AuthenticationServerClientConfigProperties;
 import org.eclipse.hono.service.auth.delegating.AuthenticationServerClientOptions;
 import org.eclipse.hono.service.auth.delegating.DelegatingAuthenticationService;
+import org.eclipse.microprofile.health.HealthCheckResponse;
+import org.eclipse.microprofile.health.Readiness;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.quarkus.arc.properties.IfBuildProperty;
 import io.smallrye.config.ConfigMapping;
+import io.smallrye.health.api.HealthRegistry;
 import io.vertx.core.Vertx;
 import io.vertx.proton.sasl.ProtonSaslAuthenticatorFactory;
 
@@ -72,9 +75,17 @@ public class DelegatingAuthenticationServiceProducer {
     ProtonSaslAuthenticatorFactory honoSaslAuthenticatorFactory(
             final Vertx vertx,
             final AuthenticationServerClientConfigProperties authServerClientConfig,
-            final AuthenticationService authenticationService) {
+            final AuthenticationService authenticationService,
+            @Readiness
+            final HealthRegistry readinessChecks) {
 
-        final var authTokenValidator = new JjwtBasedAuthTokenValidator(vertx, authServerClientConfig.getValidation());
+        final var authTokenValidator = new JjwtBasedAuthTokenValidator(vertx, authServerClientConfig);
+        readinessChecks.register(() -> {
+            return HealthCheckResponse.builder()
+                    .name("AuthTokenValidator")
+                    .status(authTokenValidator.hasValidatingKey())
+                    .build();
+        });
         return new HonoSaslAuthenticatorFactory(vertx, authTokenValidator, authenticationService);
     }
 }

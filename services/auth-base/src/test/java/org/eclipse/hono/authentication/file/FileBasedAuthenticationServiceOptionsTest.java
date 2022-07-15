@@ -39,10 +39,14 @@ public class FileBasedAuthenticationServiceOptionsTest {
                         this.getClass().getResource("/auth-service-options.yaml")));
 
         assertThat(props.getPermissionsPath()).isEqualTo("/etc/permissions.json");
+        assertThat(props.getSigning().getAudience()).isEqualTo("hono-components");
         assertThat(props.getSigning().getSharedSecret()).isEqualTo("secretsecretsecretsecretsecretsecret");
         assertThat(props.getSigning().getTokenExpiration()).isEqualTo(1000);
+        assertThat(props.getSigning().getIssuer()).isEqualTo("https://my.auth-server.io");
         assertThat(props.getSupportedSaslMechanisms()).containsExactly(AuthenticationConstants.MECHANISM_PLAIN);
+        assertThat(props.getValidation().getAudience()).isEqualTo("hono-components");
         assertThat(props.getValidation().getSharedSecret()).isEqualTo("secretsecretsecretsecretsecretsecret");
         assertThat(props.getValidation().getTokenExpiration()).isEqualTo(1000);
+        assertThat(props.getValidation().getIssuer()).isEqualTo("https://my.auth-server.io");
     }
 }

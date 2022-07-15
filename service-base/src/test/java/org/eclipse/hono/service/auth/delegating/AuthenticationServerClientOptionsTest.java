@@ -43,9 +43,11 @@ class AuthenticationServerClientOptionsTest {
         assertAll(
                 () -> assertThat(props.getServerRole()).isEqualTo("Authentication Server"),
                 () -> assertThat(props.getSupportedSaslMechanisms()).containsExactly("PLAIN"),
+                () -> assertThat(props.getValidation().getAudience()).isEqualTo("hono-components"),
                 () -> assertThat(props.getValidation().getCertPath()).isEqualTo("/etc/cert.pem"),
                 () -> assertThat(props.getValidation().getKeyPath()).isEqualTo("/etc/key.pem"),
                 () -> assertThat(props.getValidation().getSharedSecret()).isEqualTo("secretsecretsecretsecretsecretsecret"),
-                () -> assertThat(props.getValidation().getTokenExpiration()).isEqualTo(300));
+                () -> assertThat(props.getValidation().getTokenExpiration()).isEqualTo(300),
+                () -> assertThat(props.getValidation().getIssuer()).isEqualTo("https://my.auth-server.io"));
     }
 }

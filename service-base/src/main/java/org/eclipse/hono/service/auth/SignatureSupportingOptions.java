@@ -24,6 +24,11 @@ import io.smallrye.config.WithDefault;
 public interface SignatureSupportingOptions {
 
     /**
+     * The default value to use/expect in a token's iss claim.
+     */
+    String DEFAULT_ISSUER = "https://hono.eclipse.org/auth-server";
+
+    /**
      * Gets the secret used for creating and validating HmacSHA256 based signatures.
      * <p>
      * Either this property or both {@link #keyPath()} and {@link #certPath()} must be set.
@@ -59,4 +64,19 @@ public interface SignatureSupportingOptions {
      * @return The path to the file.
      */
     Optional<String> certPath();
+
+    /**
+     * Gets the value to put into or expect to find in a token's {@code iss} claim.
+     *
+     * @return The issuer.
+     */
+    @WithDefault(DEFAULT_ISSUER)
+    String issuer();
+
+    /**
+     * Gets the value to put into or expect to find in a token's {@code aud} claim.
+     *
+     * @return The audience.
+     */
+    Optional<String> audience();
 }
