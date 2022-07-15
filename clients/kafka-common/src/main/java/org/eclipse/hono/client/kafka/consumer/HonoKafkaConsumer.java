@@ -60,6 +60,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
 import io.vertx.kafka.client.common.TopicPartition;
@@ -529,8 +530,26 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
     @Override
     public void registerReadinessChecks(final HealthCheckHandler readinessHandler) {
         readinessHandler.register(
-                "notification-kafka-consumer-creation-%s".formatted(UUID.randomUUID()),
-                status -> status.tryComplete(new Status().setOk(lifecycleStatus.isStarted())));
+                "kafka-consumer[%s]-creation".formatted(getClientId()),
+                status -> {
+                    if (lifecycleStatus.isStarted()) {
+                        status.tryComplete(Status.OK());
+                    } else {
+                        final JsonObject data = new JsonObject();
+                        if (lifecycleStatus.isStarting()) {
+                            if (kafkaConsumer == null) {
+                                LOG.debug("readiness check failed, consumer not created yet (Kafka server URL possibly not resolvable (yet)) [client-id: {}]",
+                                        getClientId());
+                                data.put("status", "consumer not created yet (Kafka server URL possibly not resolvable (yet))");
+                            } else {
+                                LOG.debug("readiness check failed, consumer initialization not finished yet [client-id: {}]",
+                                        getClientId());
+                                data.put("status", "consumer initialization not finished yet");
+                            }
+                        }
+                        status.tryComplete(Status.KO(data));
+                    }
+                });
     }
 
     /**
@@ -840,7 +859,7 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
         final Pair<Promise<Void>, Promise<Void>> newPromisePair = Pair.of(subscriptionUpdated, partitionAssignmentDone);
 
         final var promisePair = subscriptionUpdatedAndPartitionsAssignedPromiseRef
-                .updateAndGet(promise -> promise == null ? newPromisePair : promise);
+                .updateAndGet(existingPair -> Optional.ofNullable(existingPair).orElse(newPromisePair));
         if (!promisePair.equals(newPromisePair)) {
             LOG.debug("subscribeAndWaitForRebalance: will wait for ongoing invocation to complete");
             return CompositeFuture.all(promisePair.one().future(), promisePair.two().future()).mapEmpty();
@@ -855,8 +874,8 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
             topics.forEach(topic -> HonoKafkaConsumerHelper.partitionsFor(kafkaConsumer, topic)
                     .onSuccess(partitions -> {
                         if (partitions.isEmpty()) {
-                            LOG.info("subscription topic doesn't exist and didn't get auto-created: {} [client-id: {}]",
-                                    topic, getClientId());
+                            // either auto-creation of topics is disabled or the (manually) created topic isn't reflected in the result yet
+                            LOG.info("subscription topic doesn't exist as of now: {} [client-id: {}]", topic, getClientId());
                         }
                     }));
             kafkaConsumer.subscribe(topics, subscriptionUpdated);
@@ -864,15 +883,19 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
         // init kafkaConsumerWorker if needed; it has to be retrieved after the first "subscribe" invocation
         if (kafkaConsumerWorker == null) {
             kafkaConsumerWorker = getKafkaConsumerWorker(kafkaConsumer);
+        } else {
+            // not the first "subscribe" invocation;
+            // add a timer to cancel waiting for the rebalance - just in case the "subscribe" invocation didn't
+            // reveal any needed subscription or partition assignment changes, in which case there wouldn't be a rebalance
+            vertx.setTimer(WAIT_FOR_REBALANCE_TIMEOUT_MILLIS, ar -> {
+                if (!partitionAssignmentDone.future().isComplete()) {
+                    subscriptionUpdatedAndPartitionsAssignedPromiseRef.compareAndSet(promisePair, null);
+                    final String errorMsg = "timed out waiting for rebalance and update of subscribed topics";
+                    LOG.warn(errorMsg);
+                    partitionAssignmentDone.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, errorMsg));
+                }
+            });
         }
-        vertx.setTimer(WAIT_FOR_REBALANCE_TIMEOUT_MILLIS, ar -> {
-            if (!partitionAssignmentDone.future().isComplete()) {
-                subscriptionUpdatedAndPartitionsAssignedPromiseRef.compareAndSet(promisePair, null);
-                final String errorMsg = "timed out waiting for rebalance and update of subscribed topics";
-                LOG.warn(errorMsg);
-                partitionAssignmentDone.tryFail(new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, errorMsg));
-            }
-        });
         subscriptionUpdated.future().onFailure(thr -> {
             subscriptionUpdatedAndPartitionsAssignedPromiseRef.compareAndSet(promisePair, null);
         });
