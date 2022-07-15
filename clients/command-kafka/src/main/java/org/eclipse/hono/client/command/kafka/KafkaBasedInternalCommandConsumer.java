@@ -65,6 +65,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.healthchecks.HealthCheckHandler;
 import io.vertx.ext.healthchecks.Status;
 import io.vertx.kafka.client.consumer.KafkaConsumerRecord;
@@ -100,7 +101,7 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
     private Admin adminClient;
     private Context context;
     private KafkaClientMetricsSupport metricsSupport;
-    private long retryCreateTopicTimerId;
+    private Long retryCreateTopicTimerId;
 
     /**
      * Creates a consumer.
@@ -298,8 +299,22 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
                     if (lifecycleStatus.isStarted()) {
                         status.tryComplete(Status.OK());
                     } else {
-                        LOG.debug("readiness check failed [internal command topic is not created]");
-                        status.tryComplete(Status.KO());
+                        final JsonObject data = new JsonObject();
+                        if (lifecycleStatus.isStarting()) {
+                            if (adminClient == null) {
+                                LOG.debug("readiness check failed, admin client not created yet (Kafka server URL possibly not resolvable (yet))");
+                                data.put("status", "admin client not created yet (Kafka server URL possibly not resolvable (yet))");
+                            } else if (retryCreateTopicTimerId != null) {
+                                LOG.debug("readiness check failed, internal command topic not created yet");
+                                data.put("status", "internal command topic not created yet");
+                            } else if (consumer != null) {
+                                LOG.debug("readiness check failed, consumer not ready yet");
+                                data.put("status", "consumer not ready yet");
+                            } else {
+                                LOG.debug("readiness check failed");
+                            }
+                        }
+                        status.tryComplete(Status.KO(data));
                     }
                 });
     }
@@ -334,6 +349,7 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
             if (retryCreateTopic.compareAndSet(true, false)) {
                 createTopic()
                         .onSuccess(ok -> {
+                            retryCreateTopicTimerId = null;
                             vertx.cancelTimer(id);
                             createTopicRetryPromise.complete();
                         })
@@ -360,7 +376,8 @@ public class KafkaBasedInternalCommandConsumer implements InternalCommandConsume
 
         return lifecycleStatus.runStopAttempt(() -> {
             retryCreateTopic.set(false);
-            vertx.cancelTimer(retryCreateTopicTimerId);
+            Optional.ofNullable(retryCreateTopicTimerId)
+                    .ifPresent(vertx::cancelTimer);
 
             return CompositeFuture.all(closeAdminClient(), stopConsumer())
                 .mapEmpty();
