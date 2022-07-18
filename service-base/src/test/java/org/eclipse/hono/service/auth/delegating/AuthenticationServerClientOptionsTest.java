@@ -18,6 +18,8 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import java.time.Duration;
+
 import org.eclipse.hono.test.ConfigMappingSupport;
 import org.junit.jupiter.api.Test;
 
@@ -43,6 +45,11 @@ class AuthenticationServerClientOptionsTest {
         assertAll(
                 () -> assertThat(props.getServerRole()).isEqualTo("Authentication Server"),
                 () -> assertThat(props.getSupportedSaslMechanisms()).containsExactly("PLAIN"),
+                () -> assertThat(props.isJwksSignatureAlgorithmRequired()).isFalse(),
+                () -> assertThat(props.getJwksEndpointPort()).isEqualTo(12000),
+                () -> assertThat(props.getJwksEndpointUri()).isEqualTo("https://my.auth-server.io/jwks"),
+                () -> assertThat(props.isJwksEndpointTlsEnabled()).isTrue(),
+                () -> assertThat(props.getJwksPollingInterval()).isEqualTo(Duration.ofSeconds(12)),
                 () -> assertThat(props.getValidation().getAudience()).isEqualTo("hono-components"),
                 () -> assertThat(props.getValidation().getCertPath()).isEqualTo("/etc/cert.pem"),
                 () -> assertThat(props.getValidation().getKeyPath()).isEqualTo("/etc/key.pem"),

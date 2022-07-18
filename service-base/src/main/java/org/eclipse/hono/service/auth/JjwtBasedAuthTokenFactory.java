@@ -15,7 +15,6 @@ package org.eclipse.hono.service.auth;
 
 import java.security.AlgorithmParameters;
 import java.security.GeneralSecurityException;
-import java.security.Key;
 import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.ECGenParameterSpec;
@@ -30,14 +29,13 @@ import java.util.Optional;
 import javax.crypto.SecretKey;
 
 import org.eclipse.hono.auth.Authorities;
-import org.eclipse.hono.config.KeyLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SecurityException;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
@@ -76,10 +74,11 @@ public final class JjwtBasedAuthTokenFactory extends JwtSupport implements AuthT
     private final SignatureSupportingConfigProperties config;
     private final Duration tokenLifetime;
     private final String signingKeyId;
-    private final SignatureAlgorithm alg;
 
     /**
-     * Creates a helper for creating tokens.
+     * Creates a factory for configuration properties.
+     * <p>
+     * The factory will use the strongest hash algorithm that the key material is compatible with.
      *
      * @param vertx The vertx instance to use for accessing the file system.
      * @param config The configuration properties to determine the signing key material from.
@@ -96,12 +95,9 @@ public final class JjwtBasedAuthTokenFactory extends JwtSupport implements AuthT
                 final var bytes = getBytes(config.getSharedSecret());
                 final var secretKey = Keys.hmacShaKeyFor(bytes);
                 this.signingKeyId = addSecretKey(secretKey);
-                this.alg = SignatureAlgorithm.forSigningKey(secretKey);
                 LOG.info("using shared secret [{} bytes] for signing/validating tokens", bytes.length);
             } else if (config.getKeyPath() != null && config.getCertPath() != null) {
-                final var keys = KeyLoader.fromFiles(vertx, config.getKeyPath(), config.getCertPath());
-                this.signingKeyId = addPrivateKey(keys.getPrivateKey(), keys.getPublicKey());
-                this.alg = SignatureAlgorithm.forSigningKey(keys.getPrivateKey());
+                this.signingKeyId = addPrivateKey(config.getKeyPath(), config.getCertPath());
                 LOG.info("using key pair [private: {}, cert: {}] for signing/verifying tokens",
                         config.getKeyPath(), config.getCertPath());
             } else {
@@ -126,16 +122,18 @@ public final class JjwtBasedAuthTokenFactory extends JwtSupport implements AuthT
         final JsonArray keyArray = getValidatingKeys().stream()
                 .map(entry -> {
                     final var jwk = new JsonObject();
+                    final var keyId = entry.getKey();
+                    final var keySpec = entry.getValue();
                     jwk.put(PROPERTY_JWK_USE, "sig");
                     jwk.put(PROPERTY_JWK_KEY_OPS, "verify");
-                    if (entry.getValue() instanceof SecretKey secretKey) {
+                    if (keySpec.key instanceof SecretKey secretKey) {
                         jwk.put(PROPERTY_JWK_KTY, "oct");
-                        jwk.put(PROPERTY_JWK_K, entry.getValue().getEncoded());
+                        jwk.put(PROPERTY_JWK_K, keySpec.key.getEncoded());
                     } else {
-                        addPublicKey(jwk, entry.getKey(), entry.getValue());
+                        addPublicKey(jwk, keySpec);
                     }
-                    jwk.put(PROPERTY_JWK_KID, entry.getKey());
-                    jwk.put(PROPERTY_JWK_ALG, alg.getValue());
+                    jwk.put(PROPERTY_JWK_KID, keyId);
+                    jwk.put(PROPERTY_JWK_ALG, keySpec.algorithm.getValue());
                     return jwk;
                 })
                 .collect(JsonArray::new, JsonArray::add, JsonArray::addAll);
@@ -145,17 +143,17 @@ public final class JjwtBasedAuthTokenFactory extends JwtSupport implements AuthT
         }
     }
 
-    private void addPublicKey(final JsonObject jwk, final String keyId, final Key key) {
+    private void addPublicKey(final JsonObject jwk, final KeySpec keySpec) {
 
-        if (key instanceof RSAPublicKey rsaPublicKey) {
+        if (keySpec.key instanceof RSAPublicKey rsaPublicKey) {
             addRsaPublicKey(jwk, rsaPublicKey);
-        } else if (key instanceof ECPublicKey ecPublicKey) {
+        } else if (keySpec.key instanceof ECPublicKey ecPublicKey) {
             addEcPublicKey(jwk, ecPublicKey);
         } else {
             throw new IllegalArgumentException(
-                    "unsupported key type [%s], must be RSA or EC".formatted(key.getAlgorithm()));
+                    "unsupported key type [%s], must be RSA or EC".formatted(keySpec.key.getAlgorithm()));
         }
-        jwk.put(PROPERTY_JWK_KTY, key.getAlgorithm());
+        jwk.put(PROPERTY_JWK_KTY, keySpec.key.getAlgorithm());
     }
 
     private void addRsaPublicKey(final JsonObject jwk, final RSAPublicKey rsaPublicKey) {
@@ -193,8 +191,9 @@ public final class JjwtBasedAuthTokenFactory extends JwtSupport implements AuthT
 
         Objects.requireNonNull(authorizationId);
 
+        final var signingKeySpec = getSigningKey(signingKeyId);
         final JwtBuilder builder = Jwts.builder()
-                .signWith(getSigningKey(signingKeyId), alg)
+                .signWith(signingKeySpec.key, signingKeySpec.algorithm)
                 .setHeaderParam(PROPERTY_JWK_KID, signingKeyId)
                 .setIssuer(config.getIssuer())
                 .setSubject(authorizationId)

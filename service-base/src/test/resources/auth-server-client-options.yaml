@@ -3,6 +3,11 @@ hono:
     client:
       serverRole: "Authentication Server"
       supportedSaslMechanisms: "PLAIN"
+      jwksEndpointPort: 12000
+      jwksEndpointUri: "https://my.auth-server.io/jwks"
+      jwksEndpointTlsEnabled: true
+      jwksPollingInterval: "PT12S"
+      jwksSignatureAlgorithmRequired: false
       validation:
         audience: "hono-components"
         certPath: "/etc/cert.pem"
