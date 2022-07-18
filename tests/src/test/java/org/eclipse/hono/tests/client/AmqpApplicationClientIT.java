@@ -23,7 +23,7 @@ import org.eclipse.hono.application.client.amqp.ProtonBasedApplicationClient;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.amqp.config.ClientConfigProperties;
 import org.eclipse.hono.client.amqp.connection.HonoConnection;
-import org.eclipse.hono.tests.AssumeMessagingSystem;
+import org.eclipse.hono.tests.EnabledIfMessagingSystemConfigured;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.MessagingType;
 import org.junit.jupiter.api.BeforeAll;
@@ -39,7 +39,7 @@ import io.vertx.junit5.VertxTestContext;
  * Test cases verifying the behavior of {@link ProtonBasedApplicationClient}.
  */
 @ExtendWith(VertxExtension.class)
-@AssumeMessagingSystem(type = MessagingType.amqp)
+@EnabledIfMessagingSystemConfigured(type = MessagingType.amqp)
 public class AmqpApplicationClientIT {
 
     private static Vertx vertx;

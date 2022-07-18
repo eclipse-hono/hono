@@ -35,7 +35,7 @@ import org.apache.kafka.clients.consumer.CooperativeStickyAssignor;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.config.TopicConfig;
 import org.eclipse.hono.client.kafka.consumer.HonoKafkaConsumer;
-import org.eclipse.hono.tests.AssumeMessagingSystem;
+import org.eclipse.hono.tests.EnabledIfMessagingSystemConfigured;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.MessagingType;
 import org.junit.jupiter.api.AfterAll;
@@ -74,7 +74,7 @@ import io.vertx.kafka.client.producer.RecordMetadata;
  * e.g. <code>-Ddownstream.bootstrap.servers="PLAINTEXT://localhost:9092"</code>.
  */
 @ExtendWith(VertxExtension.class)
-@AssumeMessagingSystem(type = MessagingType.kafka)
+@EnabledIfMessagingSystemConfigured(type = MessagingType.kafka)
 public class HonoKafkaConsumerIT {
 
     private static final Logger LOG = LoggerFactory.getLogger(HonoKafkaConsumerIT.class);

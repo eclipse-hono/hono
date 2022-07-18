@@ -49,7 +49,7 @@ import org.eclipse.hono.commandrouter.CommandRouterMetrics;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
 import org.eclipse.hono.commandrouter.impl.kafka.KafkaBasedCommandConsumerFactoryImpl;
 import org.eclipse.hono.test.TracingMockSupport;
-import org.eclipse.hono.tests.AssumeMessagingSystem;
+import org.eclipse.hono.tests.EnabledIfMessagingSystemConfigured;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.DeviceConnectionConstants;
 import org.eclipse.hono.util.Lifecycle;
@@ -94,7 +94,7 @@ import io.vertx.kafka.client.producer.KafkaProducerRecord;
  * e.g. <code>-Ddownstream.bootstrap.servers="PLAINTEXT://localhost:9092"</code>.
  */
 @ExtendWith(VertxExtension.class)
-@AssumeMessagingSystem(type = MessagingType.kafka)
+@EnabledIfMessagingSystemConfigured(type = MessagingType.kafka)
 public class KafkaBasedCommandConsumerFactoryImplIT {
 
     private static final Logger LOG = LoggerFactory.getLogger(KafkaBasedCommandConsumerFactoryImplIT.class);

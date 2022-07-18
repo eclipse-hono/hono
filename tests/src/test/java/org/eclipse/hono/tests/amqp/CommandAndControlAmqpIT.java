@@ -48,9 +48,9 @@ import org.eclipse.hono.client.amqp.connection.HonoProtonHelper;
 import org.eclipse.hono.client.kafka.HonoTopic;
 import org.eclipse.hono.client.kafka.KafkaRecordHelper;
 import org.eclipse.hono.service.management.tenant.Tenant;
-import org.eclipse.hono.tests.AssumeMessagingSystem;
 import org.eclipse.hono.tests.CommandEndpointConfiguration.SubscriberRole;
 import org.eclipse.hono.tests.DownstreamMessageAssertions;
+import org.eclipse.hono.tests.EnabledIfMessagingSystemConfigured;
 import org.eclipse.hono.tests.EnabledIfProtocolAdaptersAreRunning;
 import org.eclipse.hono.tests.GenericKafkaSender;
 import org.eclipse.hono.tests.IntegrationTestSupport;
@@ -516,7 +516,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("allCombinations")
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
-    @AssumeMessagingSystem(type = MessagingType.amqp)
+    @EnabledIfMessagingSystemConfigured(type = MessagingType.amqp)
     public void testSendCommandViaAmqpFailsForMalformedMessage(
             final AmqpCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {
@@ -602,7 +602,7 @@ public class CommandAndControlAmqpIT extends AmqpAdapterTestBase {
     @ParameterizedTest(name = IntegrationTestSupport.PARAMETERIZED_TEST_NAME_PATTERN)
     @MethodSource("allCombinations")
     @Timeout(timeUnit = TimeUnit.SECONDS, value = 10)
-    @AssumeMessagingSystem(type = MessagingType.kafka)
+    @EnabledIfMessagingSystemConfigured(type = MessagingType.kafka)
     public void testSendCommandViaKafkaFailsForMalformedMessage(
             final AmqpCommandEndpointConfiguration endpointConfig,
             final VertxTestContext ctx) throws InterruptedException {

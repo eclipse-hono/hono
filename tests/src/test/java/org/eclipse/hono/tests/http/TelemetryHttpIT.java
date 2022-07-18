@@ -28,8 +28,8 @@ import org.eclipse.hono.client.NoConsumerException;
 import org.eclipse.hono.client.SendMessageTimeoutException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.management.tenant.Tenant;
-import org.eclipse.hono.tests.AssumeMessagingSystem;
 import org.eclipse.hono.tests.EnabledIfDnsRebindingIsSupported;
+import org.eclipse.hono.tests.EnabledIfMessagingSystemConfigured;
 import org.eclipse.hono.tests.EnabledIfProtocolAdaptersAreRunning;
 import org.eclipse.hono.tests.EnabledIfRegistrySupportsFeatures;
 import org.eclipse.hono.tests.IntegrationTestSupport;
@@ -160,7 +160,7 @@ public class TelemetryHttpIT extends HttpTestBase {
      * @param ctx The test context
      */
     @Test
-    @AssumeMessagingSystem(type = MessagingType.amqp)
+    @EnabledIfMessagingSystemConfigured(type = MessagingType.amqp)
     public void testUploadMessageFailsForNoConsumer(final VertxTestContext ctx) {
 
         // GIVEN a device
@@ -204,7 +204,7 @@ public class TelemetryHttpIT extends HttpTestBase {
      * @throws InterruptedException if test is interrupted while running.
      */
     @Test
-    @AssumeMessagingSystem(type = MessagingType.amqp)
+    @EnabledIfMessagingSystemConfigured(type = MessagingType.amqp)
     public void testUploadQos1MessageFailsIfDeliveryStateNotUpdated(
             final Vertx vertx,
             final VertxTestContext ctx)

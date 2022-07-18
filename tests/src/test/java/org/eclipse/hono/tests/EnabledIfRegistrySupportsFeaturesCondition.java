@@ -44,10 +44,10 @@ public class EnabledIfRegistrySupportsFeaturesCondition implements ExecutionCond
     private ConditionEvaluationResult checkConditions(final EnabledIfRegistrySupportsFeatures annotation) {
 
         if (annotation.searchDevices() && !isSearchDevicesSupportedByRegistry()) {
-            return ConditionEvaluationResult.disabled("device registry does not support search Devices operation");
+            return ConditionEvaluationResult.disabled("device registry does not support 'search devices' operation");
         }
         if (annotation.searchTenants() && !isSearchTenantsSupportedByRegistry()) {
-            return ConditionEvaluationResult.disabled("device registry does not support search Tenants operation");
+            return ConditionEvaluationResult.disabled("device registry does not support 'search tenants' operation");
         }
         if (annotation.tenantAlias() && !isTenantAliasSupported()) {
             return ConditionEvaluationResult.disabled("device registry does not support tenant aliases");
