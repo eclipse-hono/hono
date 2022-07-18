@@ -29,7 +29,7 @@ import org.eclipse.hono.client.telemetry.kafka.KafkaBasedEventSender;
 import org.eclipse.hono.notification.NotificationEventBusSupport;
 import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
 import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
-import org.eclipse.hono.tests.AssumeMessagingSystem;
+import org.eclipse.hono.tests.EnabledIfMessagingSystemConfigured;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.EventConstants;
 import org.eclipse.hono.util.MessagingType;
@@ -64,7 +64,7 @@ import io.vertx.kafka.client.producer.KafkaProducer;
  * e.g. <code>-Ddownstream.bootstrap.servers="PLAINTEXT://localhost:9092"</code>.
  */
 @ExtendWith(VertxExtension.class)
-@AssumeMessagingSystem(type = MessagingType.kafka)
+@EnabledIfMessagingSystemConfigured(type = MessagingType.kafka)
 public class KafkaBasedEventSenderIT {
 
     private static final Logger LOG = LoggerFactory.getLogger(KafkaBasedEventSenderIT.class);

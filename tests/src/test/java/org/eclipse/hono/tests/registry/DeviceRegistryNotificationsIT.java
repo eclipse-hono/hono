@@ -31,7 +31,7 @@ import org.eclipse.hono.notification.deviceregistry.CredentialsChangeNotificatio
 import org.eclipse.hono.notification.deviceregistry.DeviceChangeNotification;
 import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 import org.eclipse.hono.service.management.tenant.Tenant;
-import org.eclipse.hono.tests.AssumeMessagingSystem;
+import org.eclipse.hono.tests.EnabledIfMessagingSystemConfigured;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.Lifecycle;
 import org.eclipse.hono.util.MessagingType;
@@ -105,7 +105,7 @@ public class DeviceRegistryNotificationsIT {
      * @throws InterruptedException if test is interrupted while running.
      */
     @Test
-    @AssumeMessagingSystem(type = MessagingType.amqp)
+    @EnabledIfMessagingSystemConfigured(type = MessagingType.amqp)
     public void testReceiveNotificationViaAmqp() throws InterruptedException {
 
         final ClientConfigProperties messagingNetworkProperties = IntegrationTestSupport.getMessagingNetworkProperties();
@@ -124,7 +124,7 @@ public class DeviceRegistryNotificationsIT {
      * @throws InterruptedException if test is interrupted while running.
      */
     @Test
-    @AssumeMessagingSystem(type = MessagingType.kafka)
+    @EnabledIfMessagingSystemConfigured(type = MessagingType.kafka)
     public void testReceiveNotificationViaKafka() throws InterruptedException {
 
         final var notificationConsumerConfig = new NotificationKafkaConsumerConfigProperties();

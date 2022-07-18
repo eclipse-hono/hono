@@ -25,7 +25,7 @@ import org.eclipse.hono.application.client.MessageContext;
 import org.eclipse.hono.client.NoConsumerException;
 import org.eclipse.hono.client.ServiceInvocationException;
 import org.eclipse.hono.service.management.tenant.Tenant;
-import org.eclipse.hono.tests.AssumeMessagingSystem;
+import org.eclipse.hono.tests.EnabledIfMessagingSystemConfigured;
 import org.eclipse.hono.tests.EnabledIfProtocolAdaptersAreRunning;
 import org.eclipse.hono.tests.IntegrationTestSupport;
 import org.eclipse.hono.util.MessageHelper;
@@ -120,7 +120,7 @@ public class TelemetryMqttQoS1IT extends MqttPublishTestBase {
      * @throws InterruptedException if the test fails.
      */
     @Test
-    @AssumeMessagingSystem(type = MessagingType.amqp)
+    @EnabledIfMessagingSystemConfigured(type = MessagingType.amqp)
     public void testUploadMessagesWithNoConsumerSendsErrors(final VertxTestContext ctx) throws InterruptedException {
 
         final String tenantId = helper.getRandomTenantId();

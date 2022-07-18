@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -22,8 +22,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
  * An annotation which configures a test to run with a specific messaging system only.
  */
 @Retention(RetentionPolicy.RUNTIME)
-@ExtendWith(AssumeMessagingSystemCondition.class)
-public @interface AssumeMessagingSystem {
+@ExtendWith(EnabledIfMessagingSystemConfiguredCondition.class)
+public @interface EnabledIfMessagingSystemConfigured {
 
     /**
      * The type of the messaging system for which the test shall be run exclusively.
