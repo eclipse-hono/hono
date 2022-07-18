@@ -35,6 +35,9 @@ import org.eclipse.hono.client.util.ServiceClient;
 import org.eclipse.hono.commandrouter.CommandConsumerFactory;
 import org.eclipse.hono.commandrouter.CommandRouterMetrics;
 import org.eclipse.hono.commandrouter.CommandTargetMapper;
+import org.eclipse.hono.notification.NotificationEventBusSupport;
+import org.eclipse.hono.notification.deviceregistry.LifecycleChange;
+import org.eclipse.hono.notification.deviceregistry.TenantChangeNotification;
 import org.eclipse.hono.tracing.TracingHelper;
 import org.eclipse.hono.util.LifecycleStatus;
 import org.eclipse.hono.util.MessagingType;
@@ -218,6 +221,9 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
         consumerConfig.putIfAbsent(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
         final Promise<Void> consumerTracker = Promise.promise();
+        consumerTracker.future().onSuccess(v -> {
+            registerTenantCreationListener();
+        });
         kafkaConsumer = new AsyncHandlingAutoCommitKafkaConsumer<>(
                 vertx,
                 COMMANDS_TOPIC_PATTERN,
@@ -239,6 +245,22 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
             .onSuccess(ok -> lifecycleStatus.setStarted());
 
         return CompositeFuture.all(commandHandler.start(), kafkaConsumer.start()).mapEmpty();
+    }
+
+    private void registerTenantCreationListener() {
+        NotificationEventBusSupport.registerConsumer(vertx, TenantChangeNotification.TYPE,
+                notification -> {
+                    if (lifecycleStatus.isStarted() && LifecycleChange.CREATE == notification.getChange()
+                            && notification.isEnabled()) {
+                        // Optional optimization:
+                        // Prepare Kafka consumer to receive commands for devices of a newly created tenant.
+                        // If not done here, this preparation is done in the "createCommandConsumer" method below.
+                        // Doing it here will speed up the first invocation of "createCommandConsumer" for this tenant.
+                        final String tenantId = notification.getTenantId();
+                        final String topic = new HonoTopic(HonoTopic.Type.COMMAND, tenantId).toString();
+                        kafkaConsumer.ensureTopicIsAmongSubscribedTopicPatternTopics(topic);
+                    }
+                });
     }
 
     /**
