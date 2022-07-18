@@ -41,7 +41,7 @@ import io.vertx.ext.web.handler.AuthenticationHandler;
  */
 public abstract class HttpServiceBase<T extends HttpServiceConfigProperties> extends AbstractServiceBase<T> {
 
-    private static final String MATCH_ALL_ROUTE_NAME = "/* (default route)";
+    private static final String MATCH_ALL_ROUTE_NAME = "/*";
 
     private static final String KEY_MATCH_ALL_ROUTE_APPLIED = "matchAllRouteApplied";
 
@@ -203,7 +203,7 @@ public abstract class HttpServiceBase<T extends HttpServiceConfigProperties> ext
             ctx.put(KEY_MATCH_ALL_ROUTE_APPLIED, true);
             // keep track of the tracing span created by the Vert.x/Quarkus instrumentation (set as active span there)
             HttpServerSpanHelper.adoptActiveSpanIntoContext(tracer, customTags, ctx);
-            ctx.next();
+            HttpUtils.nextRoute(ctx);
         });
         addAuthHandler(router);
         HttpUtils.addDefault404ErrorHandler(router);
