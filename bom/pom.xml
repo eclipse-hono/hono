@@ -92,7 +92,8 @@ quarkus.micrometer.binder.jvm=true
 # Kafka client metrics are being managed explicitly by MicrometerKafkaClientMetricsSupport
 quarkus.micrometer.binder.kafka.enabled=false
 quarkus.micrometer.binder.system=true
-quarkus.micrometer.binder.http-server.enabled=true
+# have to explicitly set value to false - see https://github.com/quarkusio/quarkus/pull/26356#discussion_r922661619
+quarkus.micrometer.binder.http-server.enabled=false
 quarkus.micrometer.binder.vertx.enabled=true
 quarkus.micrometer.export.prometheus.path=/prometheus
 quarkus.smallrye-health.root-path=${health.check.root-path}

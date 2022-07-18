@@ -377,6 +377,26 @@ public final class HttpUtils {
     }
 
     /**
+     * Invokes the next route on the given routing context, checking first whether the request path is invalid and
+     * failing the context if that is the case.
+     * <p>
+     * This check prevents exceptions thrown for invalid request paths on invoking the next route, if the route has
+     * {code useNormalizedPath} set to {@code true}, which is the default.
+     *
+     * @param ctx The routing context.
+     */
+    public static void nextRoute(final RoutingContext ctx) {
+        try {
+            ctx.normalizedPath();
+        } catch (final IllegalArgumentException ex) {
+            LOG.debug("invalid request path [{}]: {}", ctx.request().path(), ex.getMessage());
+            ctx.fail(400, ex);
+            return;
+        }
+        ctx.next();
+    }
+
+    /**
      * Adds an error handler for {@code 404} status requests to the given router.
      * The handler adds an error log entry in the request span and sets a response body (if it's not a HEAD request).
      *

@@ -84,7 +84,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     protected static final String DEFAULT_UPLOADS_DIRECTORY = "/tmp";
 
     private static final String KEY_TIMER_ID = "timerId";
-    private static final String MATCH_ALL_ROUTE_NAME = "/* (default route)";
+    private static final String MATCH_ALL_ROUTE_NAME = "/*";
 
     private static final String KEY_MATCH_ALL_ROUTE_APPLIED = "matchAllRouteApplied";
 
@@ -296,7 +296,7 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
             if (!ctx.response().closed() && !ctx.response().ended()) {
                 ctx.response().closeHandler(v -> logResponseGettingClosedPrematurely(ctx));
             }
-            ctx.next();
+            HttpUtils.nextRoute(ctx);
         });
         HttpUtils.addDefault404ErrorHandler(router);
         return router;

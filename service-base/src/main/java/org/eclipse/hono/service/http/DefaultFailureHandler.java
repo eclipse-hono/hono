@@ -65,7 +65,7 @@ public class DefaultFailureHandler implements Handler<RoutingContext> {
             if (ctx.response().ended()) {
                 LOG.debug("skipping processing of failed route, response already ended");
             } else {
-                LOG.debug("handling failed route for request [method: {}, URI: {}, status: {}] - {}",
+                LOG.debug("handling failed route for request [method: {}, URI: {}, status: {}]; failure: {}",
                         ctx.request().method(), HttpUtils.getAbsoluteURI(ctx.request()), ctx.statusCode(), ctx.getBody(),
                         ctx.failure());
                 final Span span = HttpServerSpanHelper.serverSpan(ctx);
