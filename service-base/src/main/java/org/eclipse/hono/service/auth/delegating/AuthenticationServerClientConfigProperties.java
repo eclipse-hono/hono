@@ -37,6 +37,7 @@ public class AuthenticationServerClientConfigProperties extends ClientConfigProp
     private String jwksEndpointUri = AuthenticationServerClientOptions.DEFAULT_JWKS_ENDPOINT_URI;
     private boolean jwksEndpointTlsEnabled = false;
     private Duration jwksPollingInterval = Duration.ofMinutes(5);
+    private boolean jwksSignatureAlgorithmRequired = true;
 
     /**
      * Creates new properties using default values.
@@ -58,6 +59,7 @@ public class AuthenticationServerClientConfigProperties extends ClientConfigProp
         this.jwksEndpointTlsEnabled = options.jwksEndpointTlsEnabled();
         this.jwksEndpointUri = options.jwksEndpointUri();
         this.jwksPollingInterval = options.jwksPollingInterval();
+        this.jwksSignatureAlgorithmRequired = options.jwksSignatureAlgorithmRequired();
     }
 
     /**
@@ -186,5 +188,29 @@ public class AuthenticationServerClientConfigProperties extends ClientConfigProp
             throw new IllegalArgumentException("polling interval must be at least 10 seconds");
         }
         this.jwksPollingInterval = interval;
+    }
+
+    /**
+     * Checks if validating JWKs must include an <em>alg</em> property that indicates
+     * the signature algorithm to use with the key as described in
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7517#section-4.4">RFC 7517, Section 4.4</a>.
+     * <p>
+     * The default value of this property is {@code true}.
+     *
+     * @return {@code true} if the property is required.
+     */
+    public final boolean isJwksSignatureAlgorithmRequired() {
+        return jwksSignatureAlgorithmRequired;
+    }
+
+    /**
+     * Sets if validating JWKs must include an <em>alg</em> property that indicates
+     * the signature algorithm to use with the key as described in
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7517#section-4.4">RFC 7517, Section 4.4</a>.
+     *
+     * @param flag {@code true} if the property is required.
+     */
+    public final void setJwksSignatureAlgorithmRequired(final boolean flag) {
+        this.jwksSignatureAlgorithmRequired = flag;
     }
 }

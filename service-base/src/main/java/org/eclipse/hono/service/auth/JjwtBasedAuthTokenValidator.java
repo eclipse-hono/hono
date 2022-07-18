@@ -14,7 +14,6 @@
 package org.eclipse.hono.service.auth;
 
 import java.security.Key;
-import java.security.PublicKey;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -31,8 +30,10 @@ import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.JwsHeader;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SigningKeyResolverAdapter;
-import io.jsonwebtoken.security.KeyException;
+import io.jsonwebtoken.security.InvalidKeyException;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SecurityException;
+import io.jsonwebtoken.security.SignatureException;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -69,6 +70,7 @@ public final class JjwtBasedAuthTokenValidator extends JwtSupport implements Aut
     private HttpClient httpClient;
     private RequestOptions requestOptions;
     private long pollingIntervalMillis = 5 * 60 * 1000L; // 5 minutes
+    private boolean isJwksSignatureAlgorithmRequired = true;
 
     /**
      * Creates a validator for configuration properties.
@@ -109,6 +111,7 @@ public final class JjwtBasedAuthTokenValidator extends JwtSupport implements Aut
         } catch (IllegalArgumentException e) {
             // then fall back to retrieving a JWK set
             LOG.info("using JWK set retrieved from Authentication service vor validating tokens");
+            this.isJwksSignatureAlgorithmRequired = authServerClientConfig.isJwksSignatureAlgorithmRequired();
             this.pollingIntervalMillis = authServerClientConfig.getJwksPollingInterval().toMillis();
             final var clientOptions = new HttpClientOptions()
                     .setTrustOptions(authServerClientConfig.getTrustOptions());
@@ -127,16 +130,20 @@ public final class JjwtBasedAuthTokenValidator extends JwtSupport implements Aut
     }
 
     private void useConfiguredKeys(final SignatureSupportingConfigProperties config) {
-        if (config.getSharedSecret() != null) {
-            final byte[] secret = getBytes(config.getSharedSecret());
-            addSecretKey(Keys.hmacShaKeyFor(secret));
-            LOG.info("using shared secret [{} bytes] for validating tokens", secret.length);
-        } else if (config.getCertPath() != null) {
-            setPublicKey(config.getCertPath());
-            LOG.info("using public key from certificate [{}] for validating tokens", config.getCertPath());
-        } else {
-            throw new IllegalArgumentException(
-                    "configuration does not specify any key material for validating tokens");
+        try {
+            if (config.getSharedSecret() != null) {
+                final byte[] secret = getBytes(config.getSharedSecret());
+                addSecretKey(Keys.hmacShaKeyFor(secret));
+                LOG.info("using shared secret [{} bytes] for validating tokens", secret.length);
+            } else if (config.getCertPath() != null) {
+                setPublicKey(config.getCertPath());
+                LOG.info("using public key from certificate [{}] for validating tokens", config.getCertPath());
+            } else {
+                throw new IllegalArgumentException(
+                        "configuration does not specify any key material for validating tokens");
+            }
+        } catch (final SecurityException e) {
+            throw new IllegalArgumentException("failed to create validator for configured key material", e);
         }
     }
 
@@ -174,11 +181,22 @@ public final class JjwtBasedAuthTokenValidator extends JwtSupport implements Aut
                 return keys;
             })
             .onSuccess(jwkSet -> {
-                final Map<String, PublicKey> keys = jwkSet.stream()
+                final Map<String, KeySpec> keys = new HashMap<>();
+                jwkSet.stream()
                     .filter(JsonObject.class::isInstance)
                     .map(JsonObject.class::cast)
-                    .map(JWK::new)
-                    .collect(HashMap::new, (map, jwk) -> map.put(jwk.getId(), jwk.publicKey()), Map::putAll);
+                    .forEach(json -> {
+                        if (isJwksSignatureAlgorithmRequired && !json.containsKey("alg")) {
+                            LOG.warn("JSON Web Key does not contain required alg property, skipping key ...");
+                        } else {
+                            try {
+                                final var jwk = new JWK(json);
+                                keys.put(jwk.getId(), new KeySpec(jwk.publicKey(), jwk.getAlgorithm()));
+                            } catch (final Exception e) {
+                                LOG.warn("failed to deserialize JSON Web Key retrieved from server", e.getCause());
+                            }
+                        }
+                    });
                 setValidatingKeys(keys);
                 LOG.debug("successfully retrieved JWK set of {} key(s)", keys.size());
                 nextJwksPollingTask.set(vertx.setTimer(pollingIntervalMillis, tid -> requestJwkSet()));
@@ -188,6 +206,35 @@ public final class JjwtBasedAuthTokenValidator extends JwtSupport implements Aut
                 nextJwksPollingTask.set(vertx.setTimer(3000, tid -> requestJwkSet()));
             })
             .onComplete(ar -> jwksPollingInProgress.set(false));
+    }
+
+    private Key getValidatingKey(final String keyId, final String algorithmName) {
+        if (keyId == null) {
+            LOG.debug("token has no kid header, will try to use default key for validating signature");
+            final var keySpec = getValidatingKey();
+            if (keySpec.supportsSignatureAlgorithm(algorithmName)) {
+                return keySpec.key;
+            } else {
+                throw new InvalidKeyException("""
+                        validating key on record does not support signature algorithm [%s] used in token
+                        """.formatted(algorithmName));
+            }
+        } else {
+            final var keySpec = getValidatingKey(keyId);
+            if (keySpec == null) {
+                LOG.debug("unknown validating key [id: {}]", keyId);
+                requestJwkSet();
+                throw new InvalidKeyException("unknown validating key");
+            } else if (keySpec.supportsSignatureAlgorithm(algorithmName)) {
+                LOG.debug("using key [id: {}] to validate signature (alg: {}]", keyId, algorithmName);
+                return keySpec.key;
+            } else {
+                throw new InvalidKeyException("""
+                        validating key on record [id: %s] does not support signature
+                        algorithm [%s] used in token
+                        """.formatted(keyId, algorithmName));
+            }
+        }
     }
 
     @Override
@@ -201,21 +248,11 @@ public final class JjwtBasedAuthTokenValidator extends JwtSupport implements Aut
                     public Key resolveSigningKey(
                             @SuppressWarnings("rawtypes") final JwsHeader header,
                             final Claims claims) {
+
+                        final var algorithmName = Optional.ofNullable(header.getAlgorithm())
+                                .orElseThrow(() -> new SignatureException("token does not contain required alg header"));
                         final var keyId = header.getKeyId();
-                        if (keyId == null) {
-                            LOG.debug("token has no kid header, will try to use default key for validating signature");
-                            return getValidatingKey();
-                        } else {
-                            final var key = getValidatingKey(keyId);
-                            if (key == null) {
-                                LOG.debug("unknown validating key [id: {}]", keyId);
-                                requestJwkSet();
-                                throw new KeyException("unknown validating key");
-                            } else {
-                                LOG.debug("using key [id: {}] to validate signature", keyId);
-                                return key;
-                            }
-                        }
+                        return getValidatingKey(keyId, algorithmName);
                     }
                 });
 

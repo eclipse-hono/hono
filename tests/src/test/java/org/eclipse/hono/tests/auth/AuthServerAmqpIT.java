@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
+import java.util.concurrent.TimeUnit;
 
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
@@ -44,6 +45,7 @@ import io.vertx.ext.auth.impl.jose.JWT;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.predicate.ResponsePredicate;
+import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -53,6 +55,7 @@ import io.vertx.junit5.VertxTestContext;
  *
  */
 @ExtendWith(VertxExtension.class)
+@Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class AuthServerAmqpIT {
 
     private static final Logger LOG = LoggerFactory.getLogger(AuthServerAmqpIT.class);

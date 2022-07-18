@@ -90,4 +90,14 @@ public interface AuthenticationServerClientOptions {
      */
     @WithDefault("PT5M")
     Duration jwksPollingInterval();
+
+    /**
+     * Checks if retrieved JWKs must include an <em>alg</em> property that indicates
+     * the signature algorithm to use with the key as described in
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7517#section-4.4">RFC 7517, Section 4.4</a>.
+     *
+     * @return {@code true} if the property is required.
+     */
+    @WithDefault("true")
+    boolean jwksSignatureAlgorithmRequired();
 }

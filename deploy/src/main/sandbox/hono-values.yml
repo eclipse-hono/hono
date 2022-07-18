@@ -149,14 +149,14 @@ adapters:
 authServer:
   imageName: "eclipse/hono-service-auth-native"
   cmdLineArgs:
-  - "-Xmx24m"
+  - "-Xmx48m"
   resources:
     requests:
       cpu: "50m"
-      memory: "30Mi"
+      memory: "60Mi"
     limits:
       cpu:
-      memory: "30Mi"
+      memory: "60Mi"
 
 deviceRegistryExample:
   type: "embedded"
