@@ -48,11 +48,11 @@ processes are running in the same container.
 ### Kubernetes
 
 In Kubernetes (and OpenShift) the resource limits for a *pod*, and thus the container(s) that are part of the pod,
-can be configured in the corresponding *PodSpec*. The following example from the HTTP adapter's Kubernetes *Deployment*
+can be configured in the corresponding *PodSpec*. The following excerpt from the HTTP adapter's Kubernetes *Deployment*
 resource descriptor illustrates the mechanism:
 
 ~~~yaml
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: hono-adapter-http
@@ -60,33 +60,55 @@ spec:
   template:
     metadata:
       labels:
-        app: hono-adapter-http
-        version: "${project.version}"
-        group: ${project.groupId}
+        app.kubernetes.io/component: adapter-http
+        app.kubernetes.io/instance: eclipse-hono
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: hono
+        app.kubernetes.io/version: 2.0.0
+        helm.sh/chart: hono-2.0.3
     spec:
       containers:
-      - image: eclipse/hono-adapter-http:${project.version}
-        name: eclipse-hono-adapter-http
+      - image: index.docker.io/eclipse/hono-adapter-http:2.0.0
+        name: adapter-http
         resources:
           limits:
+            cpu: "1"
+            memory: "300Mi"
+          requests:
+            cpu: "150m"
             memory: "300Mi"
         ports:
+        - containerPort: 8088
+          name: health
+          protocol: TCP
         - containerPort: 8080
+          name: http
+          protocol: TCP
+        - containerPort: 8443
+          name: https
           protocol: TCP
         env:
         - name: JDK_JAVA_OPTIONS
-          value: "-XX:MinRAMPercentage=80 -XX:MaxRAMPercentage=80"
+          value: -XX:MinRAMPercentage=80 -XX:MaxRAMPercentage=80
+        - name: KUBERNETES_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: QUARKUS_CONFIG_LOCATIONS
+          value: /opt/hono/default-logging-config/logging-quarkus-dev.yml
         volumeMounts:
         - mountPath: /opt/hono/config
           name: conf
           readOnly: true
       volumes:
-      - name: conf
+      - name: adapter-http-conf
         secret:
-          secretName: hono-adapter-http-conf
+          defaultMode: 420
+          secretName: eclipse-hono-adapter-http-conf
 ~~~
 
-The `resources` property defines the overall limit of 256 MB of memory that the pod may use. The `JDK_JAVA_OPTIONS`
+The `resources` property defines the overall limit of 300 MB of memory that the pod may use. The `JDK_JAVA_OPTIONS`
 environment variable is used to configure the JVM to use 80% of the total memory for its heap.
 
 ## Limiting the Number of Device Connections
