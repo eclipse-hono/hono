@@ -26,6 +26,7 @@ import java.util.Optional;
 import org.eclipse.californium.core.coap.CoAP.Type;
 import org.eclipse.californium.core.coap.OptionSet;
 import org.eclipse.californium.core.coap.Request;
+import org.eclipse.californium.core.network.Exchange;
 import org.eclipse.californium.elements.EndpointContext;
 import org.eclipse.californium.elements.auth.AdditionalInfo;
 import org.eclipse.californium.elements.auth.ExtensiblePrincipal;
@@ -49,9 +50,15 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 class AbstractHonoResourceTest extends ResourceTestBase {
 
+    private static final String SPAN_NAME = "test";
+
     private AbstractHonoResource givenAResource(final CoapProtocolAdapter adapter) {
 
         return new AbstractHonoResource("test", adapter, NoopTracerFactory.create(), vertx) {
+            @Override
+            protected String getSpanName(final Exchange exchange) {
+                return SPAN_NAME;
+            }
         };
     }
 
