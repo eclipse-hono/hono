@@ -18,15 +18,10 @@ import java.util.Optional;
 import org.eclipse.californium.core.coap.Response;
 import org.eclipse.californium.core.network.interceptors.MessageInterceptorAdapter;
 import org.eclipse.californium.core.network.stack.BlockwiseLayer;
-import org.eclipse.californium.elements.EndpointContext;
 import org.eclipse.californium.elements.auth.AbstractExtensiblePrincipal;
-import org.eclipse.californium.elements.auth.AdditionalInfo;
 import org.eclipse.hono.auth.Device;
 import org.eclipse.hono.tracing.TracingHelper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import io.opentracing.Span;
 import io.opentracing.Tracer;
 
 /**
@@ -35,8 +30,6 @@ import io.opentracing.Tracer;
  * the purpose of this interceptor - to track if such errors occur and report a trace for them in Jaeger.
  */
 public class InternalErrorTracer extends MessageInterceptorAdapter {
-
-    private static final Logger LOG = LoggerFactory.getLogger(InternalErrorTracer.class);
 
     private final String coapAdapterName;
     private final Tracer tracer;
@@ -53,30 +46,37 @@ public class InternalErrorTracer extends MessageInterceptorAdapter {
     @Override
     public void sendResponse(final Response response) {
         if (response.isInternal() && response.isError()) {
-            final EndpointContext context = response.getDestinationContext();
-            final AdditionalInfo honoInfo = Optional.ofNullable(context.getPeerIdentity())
+            final var spanBuilder = TracingHelper
+                    .buildServerChildSpan(tracer, null, "internal error", coapAdapterName)
+                    .withTag(CoapConstants.TAG_COAP_MESSAGE_TYPE, response.getType().name())
+                    .withTag(CoapConstants.TAG_COAP_RESPONSE_CODE, response.getCode().toString());
+
+            Optional.ofNullable(response.getDestinationContext().getPeerIdentity())
                     .filter(AbstractExtensiblePrincipal.class::isInstance)
                     .map(AbstractExtensiblePrincipal.class::cast)
                     .map(AbstractExtensiblePrincipal::getExtendedInfo)
-                    .orElse(null);
-            if (honoInfo == null) {
-                LOG.debug("CoAP internal error has occured, but Hono context info is not set in the response [{}]",
-                        response.getCode().name());
-                return;
-            }
+                    .ifPresent(info -> {
+                        final String authId = info.get(DeviceInfoSupplier.EXT_INFO_KEY_HONO_AUTH_ID, String.class);
+                        final Device deviceInfo = info.get(DeviceInfoSupplier.EXT_INFO_KEY_HONO_DEVICE, Device.class);
+                        spanBuilder
+                            .withTag(TracingHelper.TAG_AUTH_ID, authId)
+                            .withTag(TracingHelper.TAG_DEVICE_ID, deviceInfo.getDeviceId())
+                            .withTag(TracingHelper.TAG_TENANT_ID, deviceInfo.getTenantId());
+                    });
+            final var span = spanBuilder.start();
+            final String msg = Optional.ofNullable(response.getPayloadString())
+                    .orElseGet(() -> {
+                        switch (response.getCode()) {
+                        case REQUEST_ENTITY_INCOMPLETE:
+                            return "blockwise transfer of request body timed out";
+                        case REQUEST_ENTITY_TOO_LARGE:
+                            return "request body exceeds maximum size";
+                        default:
+                            return "error while processing request";
+                        }
+                    });
 
-            final String authId = honoInfo.get(DeviceInfoSupplier.EXT_INFO_KEY_HONO_AUTH_ID, String.class);
-            final Device deviceInfo = honoInfo.get(DeviceInfoSupplier.EXT_INFO_KEY_HONO_DEVICE, Device.class);
-            final String deviceId = deviceInfo.getDeviceId();
-            final String tenantId = deviceInfo.getTenantId();
-            final Span span = TracingHelper
-                    .buildServerChildSpan(tracer, null, response.getCode().toString(), coapAdapterName)
-                    .withTag(TracingHelper.TAG_AUTH_ID, authId)
-                    .withTag(TracingHelper.TAG_DEVICE_ID, deviceId)
-                    .withTag(TracingHelper.TAG_TENANT_ID, tenantId)
-                    .withTag(CoapConstants.TAG_COAP_MESSAGE_TYPE, response.getType().name())
-                    .start();
-            TracingHelper.logError(span, "CoAP Internal error");
+            TracingHelper.logError(span, msg);
             span.finish();
         }
     }
