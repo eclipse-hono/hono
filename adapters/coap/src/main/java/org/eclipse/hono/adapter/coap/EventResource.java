@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2021 Contributors to the Eclipse Foundation
+ * Copyright (c) 2021, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,6 +17,7 @@ package org.eclipse.hono.adapter.coap;
 import java.net.HttpURLConnection;
 import java.util.Objects;
 
+import org.eclipse.californium.core.network.Exchange;
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.service.metric.MetricsTags;
 import org.eclipse.hono.util.EventConstants;
@@ -30,6 +31,10 @@ import io.vertx.core.Vertx;
  *
  */
 public class EventResource extends AbstractHonoResource {
+
+    private static final String SPAN_NAME_DEFAULT = "/%s/*".formatted(EventConstants.EVENT_ENDPOINT);
+    private static final String SPAN_NAME_POST = "/%s".formatted(EventConstants.EVENT_ENDPOINT);
+    private static final String SPAN_NAME_PUT = "/%s/:tenant_id/:device_id".formatted(EventConstants.EVENT_ENDPOINT);
 
     /**
      * Creates a new resource.
@@ -64,6 +69,18 @@ public class EventResource extends AbstractHonoResource {
             final Tracer tracer,
             final Vertx vertx) {
         super(resourceName, adapter, tracer, vertx);
+    }
+
+    @Override
+    protected String getSpanName(final Exchange exchange) {
+        switch (exchange.getRequest().getCode()) {
+        case POST:
+            return SPAN_NAME_POST;
+        case PUT:
+            return SPAN_NAME_PUT;
+        default:
+            return SPAN_NAME_DEFAULT;
+        }
     }
 
     @Override

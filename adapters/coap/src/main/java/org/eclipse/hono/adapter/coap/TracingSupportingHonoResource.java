@@ -136,13 +136,21 @@ public abstract class TracingSupportingHonoResource extends CoapResource {
         return TracingHelper.buildServerChildSpan(
                 tracer,
                 null,
-                exchange.getRequest().getCode().toString(),
+                getSpanName(exchange),
                 adapter.getTypeName())
             .withTag(Tags.HTTP_METHOD, exchange.getRequest().getCode().name())
             .withTag(Tags.HTTP_URL.getKey(), exchange.getRequest().getOptions().getUriString())
             .withTag(CoapConstants.TAG_COAP_MESSAGE_TYPE, exchange.getRequest().getType().name())
             .start();
     }
+
+    /**
+     * Gets the name to use for the span to be created for tracing a given request.
+     *
+     * @param exchange The CoAP exchange representing the request from a client.
+     * @return The name.
+     */
+    protected abstract String getSpanName(Exchange exchange);
 
     /**
      * {@inheritDoc}

@@ -64,6 +64,7 @@ public class TracingSupportingHonoResourceTest {
     private static final String DEVICE_ID = "4711";
     private static final String AUTHENTICATED_DEVICE_ID = "4712";
     private static final String AUTH_ID = "authId";
+    private static final String SPAN_NAME = "test";
 
     private Tracer tracer;
     private Span span;
@@ -103,6 +104,11 @@ public class TracingSupportingHonoResourceTest {
         when(adapter.getTypeName()).thenReturn("adapter");
 
         resource = new TracingSupportingHonoResource(adapter, tracer, "test") {
+
+            @Override
+            protected String getSpanName(final Exchange exchange) {
+                return SPAN_NAME;
+            }
 
             @Override
             protected Future<CoapContext> createCoapContextForPost(final CoapExchange coapExchange, final Span span) {
@@ -153,7 +159,7 @@ public class TracingSupportingHonoResourceTest {
         final Exchange exchange = newExchange(request);
         resource.handleRequest(exchange);
 
-        verify(tracer).buildSpan(eq(Code.POST.toString()));
+        verify(tracer).buildSpan(eq(SPAN_NAME));
         verify(spanBuilder).withTag(eq(Tags.SPAN_KIND.getKey()), eq(Tags.SPAN_KIND_SERVER));
         verify(spanBuilder).addReference(eq(References.CHILD_OF), isNull());
         // verify sampling prio has been set to 0 (corresponding to TracingSamplingMode.NONE)
@@ -178,7 +184,7 @@ public class TracingSupportingHonoResourceTest {
         final Exchange exchange = newExchange(request);
         resource.handleRequest(exchange);
 
-        verify(tracer).buildSpan(eq(Code.POST.toString()));
+        verify(tracer).buildSpan(eq(SPAN_NAME));
         verify(spanBuilder).withTag(eq(Tags.SPAN_KIND.getKey()), eq(Tags.SPAN_KIND_SERVER));
         verify(spanBuilder).addReference(eq(References.CHILD_OF), isNull());
         // verify sampling prio has been set to 1 (corresponding to TracingSamplingMode.ALL)
