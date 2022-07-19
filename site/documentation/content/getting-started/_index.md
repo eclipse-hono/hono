@@ -133,7 +133,7 @@ export APP_OPTIONS="--sandbox"
 In order to set up an instance of Hono running on your local computer using Apache Kafka as the messaging infrastructure,
 follow these steps:
 
-1. Please refer to the [Kubernetes installation instructions]({{< relref "/deployment/create-kubernetes-cluster#setting-up-a-local-development-environment" >}})
+1. Please refer to the [Kubernetes installation instructions]({{< relref "/deployment/create-kubernetes-cluster" >}})
    for setting up a local single-node Minikube cluster.
 1. Make sure to run `minikube tunnel` in order to support creating Kubernetes services of type *LoadBalancer*.
 1. Follow the instructions given in the [README](https://github.com/eclipse/packages/blob/master/charts/hono/README.md#using-kafka-based-messaging)
@@ -196,7 +196,7 @@ export APP_OPTIONS='-H (host name/IP address) -P 9094 -u hono -p hono-secret --c
 In order to set up an instance of Hono running on your local computer using Apache Qpid as the messaging infrastructure,
 follow these steps:
 
-1. Please refer to the [Kubernetes installation instructions]({{< relref "/deployment/create-kubernetes-cluster#setting-up-a-local-development-environment" >}})
+1. Please refer to the [Kubernetes installation instructions]({{< relref "/deployment/create-kubernetes-cluster" >}})
    for setting up a local single-node Minikube cluster.
 1. Make sure to run `minikube tunnel` in order to support creating Kubernetes services of type *LoadBalancer*.
 1. Follow the instructions given in the [README](https://github.com/eclipse/packages/blob/master/charts/hono/README.md)
