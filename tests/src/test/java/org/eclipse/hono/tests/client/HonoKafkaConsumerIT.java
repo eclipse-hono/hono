@@ -155,7 +155,7 @@ public class HonoKafkaConsumerIT {
 
     /**
      * Verifies that a HonoKafkaConsumer configured with "latest" as offset reset strategy only receives
-     * records published after the consumer <em>start()</em> method has completed.
+     * records published after the consumer <em>onKafkaConsumerReadyHandler</em> Future has completed.
      *
      * @param partitionAssignmentStrategy The partition assignment strategy to use for the consumer.
      * @param ctx The vert.x test context.
@@ -386,11 +386,12 @@ public class HonoKafkaConsumerIT {
 
     /**
      * Verifies that a HonoKafkaConsumer configured with "latest" as offset reset strategy and a topic pattern
-     * subscription only receives records published after the consumer <em>start()</em> method has completed.
+     * subscription only receives records published after the consumer <em>onKafkaConsumerReadyHandler</em> Future has
+     * completed.
      * <p>
      * Also verifies that all records published after the consumer <em>ensureTopicIsAmongSubscribedTopicPatternTopics()</em>
      * method has completed are received by the consumer, also if the topic was only created after the consumer
-     * <em>start</em> method has completed.
+     * <em>onKafkaConsumerReadyHandler</em> Future has completed.
      *
      * @param partitionAssignmentStrategy The partition assignment strategy to use for the consumer.
      * @param ctx The vert.x test context.
@@ -599,7 +600,7 @@ public class HonoKafkaConsumerIT {
     /**
      * Verifies that a HonoKafkaConsumer that is using a not yet existing topic and that is configured with
      * "latest" as offset reset strategy, only receives records on the auto-created topic published after the consumer
-     * <em>start()</em> method has completed.
+     * <em>onKafkaConsumerReadyHandler</em> Future has completed.
      *
      * @param partitionAssignmentStrategy The partition assignment strategy to use for the consumer.
      * @param ctx The vert.x test context.
