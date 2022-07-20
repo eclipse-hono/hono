@@ -561,6 +561,18 @@ public class AsyncHandlingAutoCommitKafkaConsumer<V> extends HonoKafkaConsumer<V
         }
     }
 
+    /**
+     * Checks whether offset commits are currently needed for the partitions of the given topic.
+     * <p>
+     * This may be used to check whether a topic can safely be deleted if no further incoming records are expected.
+     *
+     * @param topic The topic to check.
+     * @return {@code true} if offsets need to be committed.
+     */
+    public boolean isOffsetsCommitNeededForTopic(final String topic) {
+        return getOffsetsToCommit().keySet().stream().anyMatch(tp -> tp.topic().equals(topic));
+    }
+
     // synchronized because offsetsMap is accessed from vert.x event loop and kafka polling thread
     private synchronized Map<TopicPartition, OffsetAndMetadata> getOffsetsToCommit() {
         return offsetsMap.entrySet().stream()
