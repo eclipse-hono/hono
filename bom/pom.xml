@@ -28,7 +28,7 @@
   <description>A "bill-of-materials" for Hono.</description>
 
   <properties>
-    <artemis.image.name>quay.io/enmasse/artemis-base:2.13.0</artemis.image.name>
+    <artemis.image.name>quay.io/artemiscloud/activemq-artemis-broker:1.0.6</artemis.image.name>
     <assertj.version>3.22.0</assertj.version>
     <bouncycastle.version>1.71</bouncycastle.version>
     <caffeine.version>2.9.3</caffeine.version>
