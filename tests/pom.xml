@@ -918,11 +918,12 @@
                       <port>5671</port>
                     </ports>
                     <entryPoint>
-                      <shell>/opt/apache-artemis/bin/launch.sh start</shell>
+                      <arg>/bin/bash</arg>
+                      <arg>/opt/amq/conf/launch.sh</arg>
                     </entryPoint>
                     <assembly>
                       <mode>dir</mode>
-                      <basedir>/opt/apache-artemis/conf</basedir>
+                      <basedir>/opt/amq/conf</basedir>
                       <inline>
                         <id>config</id>
                         <fileSets>
@@ -959,7 +960,9 @@
                     <memory>419430400</memory>
                     <env>
                       <AMQ_NAME>custom</AMQ_NAME>
-                      <HOME>/var/run/artemis/</HOME>
+                      <AMQ_USER>admin</AMQ_USER>
+                      <AMQ_PASSWORD>admin</AMQ_PASSWORD>
+                      <HOME>/home/jboss</HOME>
                       <PN_TRACE_FRM>0</PN_TRACE_FRM>
                     </env>
                     <log>
