@@ -30,11 +30,13 @@ import java.util.Optional;
 import javax.crypto.SecretKey;
 
 import org.eclipse.hono.auth.Authorities;
+import org.eclipse.hono.config.KeyLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.vertx.core.Vertx;
@@ -53,6 +55,7 @@ import io.vertx.core.json.JsonObject;
 public final class JjwtBasedAuthTokenFactory extends JwtSupport implements AuthTokenFactory {
 
     private static final Logger LOG = LoggerFactory.getLogger(JjwtBasedAuthTokenFactory.class);
+    private static final String PROPERTY_JWK_ALG = "alg";
     private static final String PROPERTY_JWK_CRV = "crv";
     private static final String PROPERTY_JWK_E = "e";
     private static final String PROPERTY_JWK_KEY_OPS = "key_ops";
@@ -73,6 +76,7 @@ public final class JjwtBasedAuthTokenFactory extends JwtSupport implements AuthT
     private final SignatureSupportingConfigProperties config;
     private final Duration tokenLifetime;
     private final String signingKeyId;
+    private final SignatureAlgorithm alg;
 
     /**
      * Creates a helper for creating tokens.
@@ -87,23 +91,30 @@ public final class JjwtBasedAuthTokenFactory extends JwtSupport implements AuthT
         super(vertx);
         Objects.requireNonNull(config);
 
-        if (config.getSharedSecret() != null) {
-            final var bytes = getBytes(config.getSharedSecret());
-            final var secretKey = Keys.hmacShaKeyFor(bytes);
-            this.signingKeyId = addSecretKey(secretKey);
-            LOG.info("using shared secret [{} bytes] for signing/validating tokens", bytes.length);
-        } else if (config.getKeyPath() != null && config.getCertPath() != null) {
-            this.signingKeyId = addPrivateKey(config.getKeyPath(), config.getCertPath());
-            LOG.info("using key pair [private: {}, cert: {}] for signing/verifying tokens",
-                    config.getKeyPath(), config.getCertPath());
-        } else {
-            throw new IllegalArgumentException(
-                    "configuration does not specify any key material for signing tokens");
+        try {
+            if (config.getSharedSecret() != null) {
+                final var bytes = getBytes(config.getSharedSecret());
+                final var secretKey = Keys.hmacShaKeyFor(bytes);
+                this.signingKeyId = addSecretKey(secretKey);
+                this.alg = SignatureAlgorithm.forSigningKey(secretKey);
+                LOG.info("using shared secret [{} bytes] for signing/validating tokens", bytes.length);
+            } else if (config.getKeyPath() != null && config.getCertPath() != null) {
+                final var keys = KeyLoader.fromFiles(vertx, config.getKeyPath(), config.getCertPath());
+                this.signingKeyId = addPrivateKey(keys.getPrivateKey(), keys.getPublicKey());
+                this.alg = SignatureAlgorithm.forSigningKey(keys.getPrivateKey());
+                LOG.info("using key pair [private: {}, cert: {}] for signing/verifying tokens",
+                        config.getKeyPath(), config.getCertPath());
+            } else {
+                throw new IllegalArgumentException(
+                        "configuration does not specify any key material for signing tokens");
+            }
+            tokenLifetime = Duration.ofSeconds(config.getTokenExpiration());
+            LOG.info("using token lifetime of {} seconds", tokenLifetime.getSeconds());
+            this.config = config;
+            createJwk();
+        } catch (final SecurityException e) {
+            throw new IllegalArgumentException("failed to create factory for configured key material", e);
         }
-        tokenLifetime = Duration.ofSeconds(config.getTokenExpiration());
-        LOG.info("using token lifetime of {} seconds", tokenLifetime.getSeconds());
-        this.config = config;
-        createJwk();
     }
 
     @Override
@@ -124,6 +135,7 @@ public final class JjwtBasedAuthTokenFactory extends JwtSupport implements AuthT
                         addPublicKey(jwk, entry.getKey(), entry.getValue());
                     }
                     jwk.put(PROPERTY_JWK_KID, entry.getKey());
+                    jwk.put(PROPERTY_JWK_ALG, alg.getValue());
                     return jwk;
                 })
                 .collect(JsonArray::new, JsonArray::add, JsonArray::addAll);
@@ -179,17 +191,19 @@ public final class JjwtBasedAuthTokenFactory extends JwtSupport implements AuthT
     @Override
     public String createToken(final String authorizationId, final Authorities authorities) {
 
+        Objects.requireNonNull(authorizationId);
+
         final JwtBuilder builder = Jwts.builder()
-                .signWith(getSigningKey(signingKeyId))
+                .signWith(getSigningKey(signingKeyId), alg)
                 .setHeaderParam(PROPERTY_JWK_KID, signingKeyId)
                 .setIssuer(config.getIssuer())
-                .setSubject(Objects.requireNonNull(authorizationId))
+                .setSubject(authorizationId)
                 .setExpiration(Date.from(Instant.now().plus(tokenLifetime)));
-        if (authorities != null) {
-            authorities.asMap().forEach((key, value) -> {
-                builder.claim(key, value);
-            });
-        }
+        Optional.ofNullable(authorities)
+            .map(Authorities::asMap)
+            .ifPresent(authMap -> authMap.forEach(builder::claim));
+        Optional.ofNullable(config.getAudience())
+            .ifPresent(builder::setAudience);
         return builder.compact();
     }
 

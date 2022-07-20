@@ -41,17 +41,18 @@ public interface AuthTokenFactory {
      * Creates the compact serialization of a JWS with a JSON Web Token for an identity and its
      * granted authorities as the (signed) payload.
      * <p>
-     * The returned JWT
+     * The JWT
      * <ul>
      * <li>contains the authorization id in the <em>sub</em> claim.</li>
      * <li>contains the authorities (as returned by {@link Authorities#asMap()}) as claims.</li>
      * <li>expires after the {@linkplain #getTokenLifetime() configured expiration time}.</li>
-     * <li>contains a signature of the claims.</li>
      * </ul>
      *
      * @param authorizationId The asserted identity.
-     * @param authorities The granted authorities.
+     * @param authorities The granted authorities or {@code null} if the asserted identity has no
+     *                    authorities.
      * @return The compact encoding of the JWT.
+     * @throws NullPointerException if authorization ID is {@code null}.
      * @see <a href="https://www.rfc-editor.org/rfc/rfc7515.html#section-3">RFC 7515, Section 3</a>
      */
     String createToken(String authorizationId, Authorities authorities);

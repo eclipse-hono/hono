@@ -62,10 +62,12 @@ public class AuthTokenFactoryTest {
         factoryProps.setCertPath("target/certs/auth-server-cert.pem");
         factoryProps.setTokenExpiration(60);
         factoryProps.setIssuer("my-issuer");
+        factoryProps.setAudience("hono-components");
 
         validatorProps = new SignatureSupportingConfigProperties();
         validatorProps.setCertPath("target/certs/auth-server-cert.pem");
         validatorProps.setIssuer("my-issuer");
+        validatorProps.setAudience("hono-components");
 
         publicKey = KeyLoader.fromFiles(vertx, null, "target/certs/auth-server-cert.pem").getPublicKey();
         factory = new JjwtBasedAuthTokenFactory(vertx, factoryProps);
@@ -89,6 +91,7 @@ public class AuthTokenFactoryTest {
         assertThat(parsedToken.getBody()).isNotNull();
         assertThat(parsedToken.getBody().getExpiration().toInstant()).isAtLeast(expirationMin);
         assertThat(parsedToken.getBody().getExpiration().toInstant()).isAtMost(expirationMax);
+        assertThat(parsedToken.getBody().getSubject()).isEqualTo("userA");
     }
 
     /**

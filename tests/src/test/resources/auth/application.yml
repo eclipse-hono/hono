@@ -13,6 +13,7 @@ hono:
         # extend token expiration to 1h in order to prevent
         # connection loss during test execution
         tokenExpiration: 3600
+        audience: "hono-components"
       supportedSaslMechanisms: "PLAIN"
 
 quarkus:

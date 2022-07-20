@@ -134,6 +134,7 @@ public class AuthServerAmqpIT {
                     assertThat(json.getJsonObject("payload").getString("iss"))
                         .isEqualTo(SignatureSupportingOptions.DEFAULT_ISSUER);
                     assertThat(json.getJsonObject("payload").getString("sub")).isEqualTo("hono-client");
+                    assertThat(json.getJsonObject("payload").getString("aud")).isEqualTo("hono-components");
                 });
                 ctx.completeNow();
             }));

@@ -26,6 +26,7 @@
   <logger name="org.eclipse.hono.tests" level="TRACE"/>
   <logger name="org.eclipse.hono.tests.CrudHttpClient" level="TRACE"/>
   <logger name="org.eclipse.hono.tests.amqp" level="TRACE"/>
+  <logger name="org.eclipse.hono.tests.auth" level="TRACE"/>
   <logger name="org.eclipse.hono.tests.coap" level="TRACE"/>
   <logger name="org.eclipse.hono.tests.http" level="TRACE"/>
   <logger name="org.eclipse.hono.tests.jms" level="TRACE"/>
