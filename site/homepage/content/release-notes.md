@@ -23,6 +23,7 @@ description = "Information about changes in recent Hono releases. Includes new f
 * Default messaging type changed to Kafka. Changed related documentation pages.
 * The Command Router component possibly did not reach the "ready" state in case the Kafka broker got restarted during
   Command Router startup. This has been fixed.
+* The CoAP protocol adapter now uses Eclipse Californium 3.6.0.
 
 ## 2.0.0
 
