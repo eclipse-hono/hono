@@ -1,7 +1,7 @@
 #!/usr/bin/env groovy
 
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -24,7 +24,10 @@
  * @return returns the jdk version to be used for the build.
  */
 String getJDKVersion() {
-    return "openjdk-jdk11-latest"
+    // we use the Eclipse Temurin JDK here because the latest OpenJDK 11 version available
+    // on the Eclipse Jenkins infra is 11.0.2+9 which fails to read Java key stores created with
+    // JDK versions >= 11.0.5
+    return "temurin-jdk11-latest"
 }
 
 /**
@@ -33,7 +36,7 @@ String getJDKVersion() {
  * @return returns the maven version to be used for the build.
  */
 String getMavenVersion() {
-    return "apache-maven-latest"
+    return "apache-maven-3.8.4"
 }
 
 /**

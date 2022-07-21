@@ -27,7 +27,7 @@ kind: Pod
 spec:
   containers:
   - name: maven
-    image: "maven:3.8-openjdk-11"
+    image: "maven:3.8.4-openjdk-11"
     tty: true
     command:
     - cat
