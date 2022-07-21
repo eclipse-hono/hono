@@ -15,7 +15,7 @@ com.github.mifmif:generex:jar:1.0.2
 com.google.api.grpc:proto-google-common-protos:jar:2.0.1
 com.google.code.gson:gson:jar:2.9.0
 com.google.guava:failureaccess:jar:1.0.1
-com.google.guava:guava:jar:30.1-jre
+com.google.guava:guava:jar:31.1-jre
 com.google.protobuf:protobuf-java:jar:3.19.3
 com.h2database:h2:jar:1.4.197
 com.mchange:c3p0:jar:0.9.5.5
@@ -55,9 +55,9 @@ io.grpc:grpc-netty:jar:1.45.0
 io.grpc:grpc-protobuf:jar:1.45.0
 io.grpc:grpc-protobuf-lite:jar:1.45.0
 io.grpc:grpc-stub:jar:1.45.0
-io.jsonwebtoken:jjwt-api:jar:0.11.2
-io.jsonwebtoken:jjwt-impl:jar:0.11.2
-io.jsonwebtoken:jjwt-jackson:jar:0.11.2
+io.jsonwebtoken:jjwt-api:jar:0.11.5
+io.jsonwebtoken:jjwt-impl:jar:0.11.5
+io.jsonwebtoken:jjwt-jackson:jar:0.11.5
 io.micrometer:micrometer-core:jar:1.8.5
 io.micrometer:micrometer-registry-prometheus:jar:1.8.5
 io.netty:netty-buffer:jar:4.1.74.Final
