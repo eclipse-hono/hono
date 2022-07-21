@@ -89,7 +89,7 @@ public class AuthTokenHelperImpl extends JwtHelper implements AuthTokenHelper {
     public String createToken(final String authorizationId, final Authorities authorities) {
 
         final JwtBuilder builder = Jwts.builder()
-                .signWith(key, algorithm)
+                .signWith(key)
                 .setIssuer("Hono")
                 .setSubject(Objects.requireNonNull(authorizationId))
                 .setExpiration(Date.from(Instant.now().plus(tokenLifetime)));

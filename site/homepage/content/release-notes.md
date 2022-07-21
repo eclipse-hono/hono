@@ -26,6 +26,8 @@ description = "Information about changes in recent Hono releases. Includes new f
   Note: if your application does not use these JVM versions, you are not exposed to the JVM vulnerability.
   The CVE is not a bug within JJWT itself - it is a bug within the above listed JVM versions, and the JJWT 0.11.5 release
   adds additional precautions within JJWT in case an application team is not able to upgrade their JVM in a timely manner.
+* The Auth server failed to create a token when configured with an ECC based private key that does not use the P-256 curve.
+  This has been fixed.
 
 ## 1.12.2
 

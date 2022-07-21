@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2016, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -38,10 +38,6 @@ public abstract class JwtHelper {
 
     private static final Logger LOG = LoggerFactory.getLogger(JwtHelper.class);
 
-    /**
-     * The signature algorithm used for signing.
-     */
-    protected SignatureAlgorithm algorithm;
     /**
      * The secret key used for signing.
      */
@@ -83,7 +79,6 @@ public abstract class JwtHelper {
         if (Objects.requireNonNull(secret).length < 32) {
             throw new IllegalArgumentException("shared secret must be at least 32 bytes");
         }
-        this.algorithm = SignatureAlgorithm.HS256;
         this.key = new SecretKeySpec(secret, SignatureAlgorithm.HS256.getJcaName());
     }
 
@@ -100,11 +95,7 @@ public abstract class JwtHelper {
         key = KeyLoader.fromFiles(vertx, keyPath, null).getPrivateKey();
         if (key == null) {
             throw new IllegalArgumentException("cannot load private key: " + keyPath);
-        } else if (key instanceof ECKey) {
-            algorithm = SignatureAlgorithm.ES256;
-        } else if (key instanceof RSAKey) {
-            algorithm = SignatureAlgorithm.RS256;
-        } else {
+        } else if (!(key instanceof ECKey) && !(key instanceof RSAKey)) {
             throw new IllegalArgumentException("unsupported private key type: " + key.getClass());
         }
     }
@@ -122,11 +113,7 @@ public abstract class JwtHelper {
         key = KeyLoader.fromFiles(vertx, null, keyPath).getPublicKey();
         if (key == null) {
             throw new IllegalArgumentException("cannot load public key: " + keyPath);
-        } else if (key instanceof ECKey) {
-            algorithm = SignatureAlgorithm.ES256;
-        } else if (key instanceof RSAKey) {
-            algorithm = SignatureAlgorithm.RS256;
-        } else {
+        } else if (!(key instanceof ECKey) && !(key instanceof RSAKey)) {
             throw new IllegalArgumentException("unsupported public key type: " + key.getClass());
         }
     }
