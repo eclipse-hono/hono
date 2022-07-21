@@ -28,6 +28,7 @@ description = "Information about changes in recent Hono releases. Includes new f
   adds additional precautions within JJWT in case an application team is not able to upgrade their JVM in a timely manner.
 * The Auth server failed to create a token when configured with an ECC based private key that does not use the P-256 curve.
   This has been fixed.
+* The CoAP protocol adapter now uses Eclipse Californium 2.7.3.
 
 ## 1.12.2
 
