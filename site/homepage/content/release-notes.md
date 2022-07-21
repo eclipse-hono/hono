@@ -35,6 +35,34 @@ description = "Information about changes in recent Hono releases. Includes new f
 * The Command Router component possibly did not reach the "ready" state in case the Kafka broker got restarted during
   Command Router startup. This has been fixed.
 
+## 2.0.1
+
+### Fixes & Enhancements
+
+* The CoAP adapter did not properly consider the reduced minimum RAM requirements for starting up when running as a
+  native executable on a SubstrateVM. This could have resulted in the adapter not starting up at all, if configured
+  with less than ~150MB of RAM. This has been fixed.
+* The HTTP protocol adapter and Device Registry now support a configuration property for explicitly setting the idle timeout.
+  The timeout is configured with the property `idleTimeout`. This determines if a connection will timeout and be closed
+  if no data is received or sent within the idle timeout period. The idle timeout is in seconds.
+  A zero value means no timeout is used.
+* The MQTT adapter skipped command or error (the first one) subscription if both are requested for the same device. This has been fixed.
+* On startup, Hono components could get into a state that caused certain Kafka client metrics to not get reported.
+  This has been fixed.
+* The native executable based Lora adapter container image failed to forward Lora meta information in messages being
+  sent downstream. This has been fixed.
+* Default messaging type changed to Kafka. Changed related documentation pages.
+* The Command Router component possibly did not reach the "ready" state in case the Kafka broker got restarted during
+  Command Router startup. This has been fixed.
+* The CoAP protocol adapter now uses Eclipse Californium 3.6.0.
+* Upgraded to JJWT 0.11.5 which contains additional security guards against an ECDSA bug in Java SE versions
+  15-15.0.6, 17-17.0.2, and 18 ([CVE-2022-21449](https://nvd.nist.gov/vuln/detail/CVE-2022-21449)).
+  Note: if your application does not use these JVM versions, you are not exposed to the JVM vulnerability.
+  The CVE is not a bug within JJWT itself - it is a bug within the above listed JVM versions, and the JJWT 0.11.5 release
+  adds additional precautions within JJWT in case an application team is not able to upgrade their JVM in a timely manner.
+* The Auth server failed to create a token when configured with an ECC based private key that does not use the P-256 curve.
+  This has been fixed.
+
 ## 2.0.0
 
 ### New features
@@ -162,6 +190,32 @@ description = "Information about changes in recent Hono releases. Includes new f
 
 * Support for implementing readiness and liveness checks based on Vert.x Health Checks has been deprecated and will be
   removed in a future version. New health checks should be implemented according to MicroProfile Health.
+
+## 1.12.3
+
+### Fixes & Enhancements
+
+* The mechanism to delete obsolete `hono.command_internal.*` Kafka topics could have deleted still used topics in
+  case the Kubernetes API server gave information about the running containers with a delay of several seconds. This has
+  been fixed.
+* The CoAP adapter did not properly consider the reduced minimum RAM requirements for starting up when running as a
+  native executable on a SubstrateVM. This could have resulted in the adapter not starting up at all, if configured
+  with less than ~150MB of RAM. This has been fixed.
+* The HTTP protocol adapter and Device Registry now support a configuration property for explicitly setting the idle timeout.
+  The timeout is configured with the property `idleTimeout`. This determines if a connection will timeout and be closed
+  if no data is received or sent within the idle timeout period. The idle timeout is in seconds.
+  A zero value means no timeout is used.
+* The MQTT adapter skipped command or error (the first one) subscription if both are requested for the same device. This has been fixed.
+* The native executable based Lora adapter container image failed to forward Lora meta information in messages being
+  sent downstream. This has been fixed.
+* Upgraded to JJWT 0.11.5 which contains additional security guards against an ECDSA bug in Java SE versions
+  15-15.0.6, 17-17.0.2, and 18 ([CVE-2022-21449](https://nvd.nist.gov/vuln/detail/CVE-2022-21449)).
+  Note: if your application does not use these JVM versions, you are not exposed to the JVM vulnerability.
+  The CVE is not a bug within JJWT itself - it is a bug within the above listed JVM versions, and the JJWT 0.11.5 release
+  adds additional precautions within JJWT in case an application team is not able to upgrade their JVM in a timely manner.
+* The Auth server failed to create a token when configured with an ECC based private key that does not use the P-256 curve.
+  This has been fixed.
+* The CoAP protocol adapter now uses Eclipse Californium 2.7.3.
 
 ## 1.12.2
 
