@@ -50,7 +50,7 @@ cd documentation
 SET DOC_THEME_CLONING_REQUIRED=1
 IF EXIST themes\hugo-theme-relearn\.git (
   SET /p HEAD=<themes\hugo-theme-relearn\.git\HEAD
-  SET DOC_THEME_HEAD_REVISION=2e30ef1e53f9cfd47fb5d41b19cc0de1de436803
+  SET DOC_THEME_HEAD_REVISION=be030d4eab0e5648c83e32a888bc3084e44da02b
   ECHO doc theme repo rev required: !DOC_THEME_HEAD_REVISION!, rev found: !HEAD!
   IF "!DOC_THEME_HEAD_REVISION!" == "!HEAD!" (
     SET DOC_THEME_CLONING_REQUIRED=0
@@ -59,7 +59,7 @@ IF EXIST themes\hugo-theme-relearn\.git (
 IF "!DOC_THEME_CLONING_REQUIRED!" == "1" (
   RMDIR /S /Q themes\hugo-theme-relearn
   ECHO cloning doc theme repository...
-  git clone --depth 1 --branch 4.0.4 https://github.com/McShelby/hugo-theme-relearn.git themes/hugo-theme-relearn
+  git clone --depth 1 --branch 4.2.5 https://github.com/McShelby/hugo-theme-relearn.git themes/hugo-theme-relearn
 )
 
 IF NOT "%~1"==""  (
