@@ -21,41 +21,41 @@ pipeline {
     kubernetes {
       label 'my-agent-pod'
       yaml """
-apiVersion: v1
-kind: Pod
-spec:
-  containers:
-  - name: jnlp
-    volumeMounts:
-    - mountPath: /home/jenkins/.ssh
-      name: volume-known-hosts
-    env:
-    - name: "HOME"
-      value: "/home/jenkins"
-    resources:
-      limits:
-        memory: "512Mi"
-        cpu: "1"
-      requests:
-        memory: "512Mi"
-        cpu: "1"
-  - name: hugo
-    image: cibuilds/hugo:0.97
-    command:
-    - cat
-    tty: true
-    resources:
-      limits:
-        memory: "512Mi"
-        cpu: "1"
-      requests:
-        memory: "512Mi"
-        cpu: "1"
-  volumes:
-  - configMap:
-      name: known-hosts
-    name: volume-known-hosts
-"""
+        apiVersion: v1
+        kind: Pod
+        spec:
+          containers:
+          - name: jnlp
+            volumeMounts:
+            - mountPath: /home/jenkins/.ssh
+              name: volume-known-hosts
+            env:
+            - name: "HOME"
+              value: "/home/jenkins"
+            resources:
+              limits:
+                memory: "512Mi"
+                cpu: "1"
+              requests:
+                memory: "512Mi"
+                cpu: "1"
+          - name: hugo
+            image: cibuilds/hugo:0.97
+            command:
+            - cat
+            tty: true
+            resources:
+              limits:
+                memory: "512Mi"
+                cpu: "1"
+              requests:
+                memory: "512Mi"
+                cpu: "1"
+          volumes:
+          - configMap:
+              name: known-hosts
+            name: volume-known-hosts
+        """
     }
   }
 

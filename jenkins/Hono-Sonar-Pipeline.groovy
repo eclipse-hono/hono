@@ -19,73 +19,81 @@
 pipeline {
   agent {
     kubernetes {
-      label 'my-agent-pod'
-      yaml """
-apiVersion: v1
-kind: Pod
-spec:
-  containers:
-  - name: maven
-    image: "maven:3.8.4-eclipse-temurin-17"
-    tty: true
-    command:
-    - cat
-    volumeMounts:
-    - mountPath: /home/jenkins
-      name: "jenkins-home"
-    - mountPath: /home/jenkins/.ssh
-      name: "volume-known-hosts"
-    - name: "settings-xml"
-      mountPath: /home/jenkins/.m2/settings.xml
-      subPath: settings.xml
-      readOnly: true
-    - name: "settings-security-xml"
-      mountPath: /home/jenkins/.m2/settings-security.xml
-      subPath: settings-security.xml
-      readOnly: true
-    - name: "m2-repo"
-      mountPath: /home/jenkins/.m2/repository
-    - name: "toolchains-xml"
-      mountPath: /home/jenkins/.m2/toolchains.xml
-      subPath: toolchains.xml
-      readOnly: true
-    env:
-    - name: "HOME"
-      value: "/home/jenkins"
-    resources:
-      limits:
-        memory: "6Gi"
-        cpu: "2"
-      requests:
-        memory: "6Gi"
-        cpu: "2"
-  volumes:
-  - name: "jenkins-home"
-    emptyDir: {}
-  - name: "m2-repo"
-    emptyDir: {}
-  - configMap:
-      name: known-hosts
-    name: "volume-known-hosts"
-  - name: "settings-xml"
-    secret:
-      secretName: m2-secret-dir
-      items:
-      - key: settings.xml
-        path: settings.xml
-  - name: "settings-security-xml"
-    secret:
-      secretName: m2-secret-dir
-      items:
-      - key: settings-security.xml
-        path: settings-security.xml
-  - name: "toolchains-xml"
-    configMap:
-      name: m2-dir
-      items:
-      - key: toolchains.xml
-        path: toolchains.xml
-"""
+      yaml '''
+        apiVersion: v1
+        kind: Pod
+        spec:
+          containers:
+          - name: "jnlp"
+            volumeMounts:
+            - mountPath: "/home/jenkins/.ssh"
+              name: "volume-known-hosts"
+            env:
+            - name: "HOME"
+              value: "/home/jenkins"
+          - name: "hono-builder"
+            image: "eclipse/hono-builder:2.1.0"
+            imagePullPolicy: "Always"
+            tty: true
+            command:
+            - cat
+            volumeMounts:
+            - mountPath: "/home/jenkins"
+              name: "jenkins-home"
+            - mountPath: "/home/jenkins/.ssh"
+              name: "volume-known-hosts"
+            - mountPath: "/home/jenkins/.m2/settings.xml"
+              name: "settings-xml"
+              subPath: "settings.xml"
+              readOnly: true
+            - mountPath: "/home/jenkins/.m2/settings-security.xml"
+              name: "settings-security-xml"
+              subPath: "settings-security.xml"
+              readOnly: true
+            - mountPath: "/home/jenkins/.m2/repository"
+              name: "m2-repo"
+            - mountPath: "/home/jenkins/.m2/toolchains.xml"
+              name: "toolchains-xml"
+              subPath: "toolchains.xml"
+              readOnly: true
+            env:
+            - name: "HOME"
+              value: "/home/jenkins"
+            resources:
+              limits:
+                memory: "8Gi"
+                cpu: "2"
+              requests:
+                memory: "8Gi"
+                cpu: "2"
+          volumes:
+          - name: "jenkins-home"
+            emptyDir: {}
+          - name: "m2-repo"
+            emptyDir: {}
+          - name: "volume-known-hosts"
+            configMap:
+              name: "known-hosts"
+          - name: "settings-xml"
+            secret:
+              secretName: "m2-secret-dir"
+              items:
+              - key: settings.xml
+                path: settings.xml
+          - name: "settings-security-xml"
+            secret:
+              secretName: "m2-secret-dir"
+              items:
+              - key: settings-security.xml
+                path: settings-security.xml
+          - name: "toolchains-xml"
+            configMap:
+              name: "m2-dir"
+              items:
+              - key: toolchains.xml
+                path: toolchains.xml
+        '''
+      defaultContainer 'hono-builder'
     }
   }
 
@@ -101,22 +109,22 @@ spec:
 
   stages {
 
-    stage('Build and run Sonar analysis on master branch') {
+    stage("Build and run Sonar analysis on master branch") {
       steps {
-        container('maven') {
-          echo "checking out branch [master] ..."
-          checkout([$class           : 'GitSCM',
-                    branches         : [[name: "refs/heads/master"]],
-                    userRemoteConfigs: [[url: 'https://github.com/eclipse/hono.git']]])
+        echo "checking out branch [master] ..."
+        checkout([$class           : 'GitSCM',
+                  branches         : [[name: "refs/heads/master"]],
+                  userRemoteConfigs: [[url: 'https://github.com/eclipse/hono.git']]])
 
-          withSonarQubeEnv(credentialsId: 'sonarcloud-token', installationName: 'SonarCloud.io') {
+        withSonarQubeEnv(credentialsId: 'sonarcloud-token', installationName: 'SonarCloud.io') {
+          sh '''#!/bin/bash
             echo "building and running Sonar analysis ..."
-            sh "mvn verify sonar:sonar -Djacoco.skip=false -DnoDocker -DcreateJavadoc=true -Dsonar.organization=eclipse -Dsonar.projectKey=org.eclipse.hono"
-          }
-
-          echo "recording JUnit test results ..."
-          junit '**/surefire-reports/*.xml'
+            mvn verify sonar:sonar -Djacoco.skip=false -DnoDocker -DcreateJavadoc=true -Dsonar.organization=eclipse -Dsonar.projectKey=org.eclipse.hono
+          '''
         }
+
+        echo "recording JUnit test results ..."
+        junit '**/surefire-reports/*.xml'
       }
 
     }

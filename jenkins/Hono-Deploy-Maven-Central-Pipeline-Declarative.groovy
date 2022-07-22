@@ -20,65 +20,81 @@
 pipeline {
   agent {
     kubernetes {
-      label 'my-agent-pod'
-      yaml """
-apiVersion: v1
-kind: Pod
-spec:
-  containers:
-  - name: jnlp
-    volumeMounts:
-    - mountPath: "/home/jenkins"
-      name: "jenkins-home"
-    - mountPath: "/home/jenkins/.ssh"
-      name: "volume-known-hosts"
-    - mountPath: "/home/jenkins/.m2/toolchains.xml"
-      name: "m2-dir"
-      readOnly: true
-      subPath: "toolchains.xml"
-    - mountPath: "/home/jenkins/.m2/repository"
-      name: "m2-repo"
-      readOnly: false
-    - mountPath: "/home/jenkins/.m2/settings.xml"
-      name: "m2-secret-dir"
-      readOnly: true
-      subPath: "settings.xml"
-    - mountPath: "/home/jenkins/.m2/settings-security.xml"
-      name: "m2-secret-dir"
-      readOnly: true
-      subPath: "settings-security.xml"
-    - mountPath: "/opt/tools"
-      name: "tools"
-      readOnly: false
-    env:
-    - name: "HOME"
-      value: "/home/jenkins"
-    resources:
-      limits:
-        memory: "6Gi"
-        cpu: "2"
-      requests:
-        memory: "6Gi"
-        cpu: "2"
-  volumes:
-  - name: "jenkins-home"
-    emptyDir: {}
-  - name: "m2-repo"
-    emptyDir: {}
-  - name: "m2-dir"
-    configMap:
-      name: "m2-dir"
-  - name: "m2-secret-dir"
-    secret:
-      secretName: "m2-secret-dir"
-  - name: "volume-known-hosts"
-    configMap:
-      name: "known-hosts"
-  - name: "tools"
-    persistentVolumeClaim:
-      claimName: "tools-claim-jiro-hono"
-      readOnly: false
-"""
+      yaml '''
+        apiVersion: v1
+        kind: Pod
+        spec:
+          containers:
+          - name: "jnlp"
+            volumeMounts:
+            - mountPath: "/home/jenkins/.ssh"
+              name: "volume-known-hosts"
+            env:
+            - name: "HOME"
+              value: "/home/jenkins"
+          - name: "hono-builder"
+            image: "eclipse/hono-builder:2.1.0"
+            imagePullPolicy: "Always"
+            tty: true
+            command:
+            - cat
+            volumeMounts:
+            - mountPath: "/home/jenkins"
+              name: "jenkins-home"
+            - mountPath: "/home/jenkins/.ssh"
+              name: "volume-known-hosts"
+            - mountPath: "/home/jenkins/.m2/settings.xml"
+              name: "settings-xml"
+              subPath: "settings.xml"
+              readOnly: true
+            - mountPath: "/home/jenkins/.m2/settings-security.xml"
+              name: "settings-security-xml"
+              subPath: "settings-security.xml"
+              readOnly: true
+            - mountPath: "/home/jenkins/.m2/repository"
+              name: "m2-repo"
+            - mountPath: "/home/jenkins/.m2/toolchains.xml"
+              name: "toolchains-xml"
+              subPath: "toolchains.xml"
+              readOnly: true
+            env:
+            - name: "HOME"
+              value: "/home/jenkins"
+            resources:
+              limits:
+                memory: "8Gi"
+                cpu: "2"
+              requests:
+                memory: "8Gi"
+                cpu: "2"
+          volumes:
+          - name: "jenkins-home"
+            emptyDir: {}
+          - name: "m2-repo"
+            emptyDir: {}
+          - name: "volume-known-hosts"
+            configMap:
+              name: "known-hosts"
+          - name: "settings-xml"
+            secret:
+              secretName: "m2-secret-dir"
+              items:
+              - key: settings.xml
+                path: settings.xml
+          - name: "settings-security-xml"
+            secret:
+              secretName: "m2-secret-dir"
+              items:
+              - key: settings-security.xml
+                path: settings-security.xml
+          - name: "toolchains-xml"
+            configMap:
+              name: "m2-dir"
+              items:
+              - key: toolchains.xml
+                path: toolchains.xml
+        '''
+      defaultContainer 'hono-builder'
     }
   }
 
@@ -91,31 +107,31 @@ spec:
   parameters {
     string(
       name: 'BRANCH',
-      description: "The branch to retrieve the pipeline from.\nExamples:\n refs/heads/master\nrefs/heads/1.4.x",
+      description: "The branch to retrieve the pipeline from.\nExamples:\n refs/heads/master\nrefs/heads/2.1.x",
       defaultValue: 'refs/heads/master',
       trim: true)
     string(
       name: 'RELEASE_VERSION',
-      description: "The tag to build and deploy.\nExamples:\n1.0.0-M6\n1.0.0-RC1\n2.1.0",
+      description: "The tag to build and deploy.\nExamples:\n2.0.0-M6\n2.1.0-RC1\n2.0.1",
       defaultValue: '',
       trim: true)
   }
 
-  tools {
-    maven 'apache-maven-3.8.4'
-    jdk 'temurin-jdk17-latest'
-  }
-
   stages {
-    stage("Local environment") {
+
+    stage("Check build environment") {
       steps {
-        sh 'ls -al /home/jenkins'
-        sh 'ls -al /opt/tools'
-        sh 'mvn -v'
+        sh '''#!/bin/bash
+          git --version
+          mvn --version
+          java --version
+          gpg --version
+          ls -al /home/jenkins
+        '''
       }
     }
 
-    stage('Prepare workspace') {
+    stage("Prepare workspace") {
       steps {
         echo "Checking out tag [refs/tags/${params.RELEASE_VERSION}]"
         checkout([$class                           : 'GitSCM',
@@ -125,14 +141,15 @@ spec:
       }
     }
 
-    stage('Build and deploy to Maven Central') {
+    stage("Build and deploy to Maven Central") {
       steps {
           withCredentials([file(credentialsId: 'secret-subkeys.asc', variable: 'KEYRING')]) {
-            sh 'gpg --version'
-            sh 'gpg --batch --import-options restore --import "${KEYRING}"'
-            sh 'gpg --list-secret-keys'
+            sh '''#!/bin/bash
+              gpg --batch --import-options restore --import "${KEYRING}"
+              gpg --list-secret-keys
+            '''
           }
-          sh '''
+          sh '''#!/bin/bash
             export MAVEN_OPTS="--add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED --add-opens=java.desktop/java.awt.font=ALL-UNNAMED"
             mvn deploy \
               -DskipTests=true -DnoDocker -DcreateGPGSignature=true -DcreateJavadoc=true -DenableEclipseJarSigner=true \

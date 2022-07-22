@@ -30,6 +30,19 @@
   <description>Quarkus based Hono Command line Interface</description>
 
   <properties>
+    <!-- 
+      this property prevents the Nexus Staging Maven Plugin to
+      deploy this module's artifacts to Maven Central' staging repo
+     -->
+    <skipNexusStagingDeployMojo>true</skipNexusStagingDeployMojo>
+    <!-- 
+      this property prevents the Nexus Staging Maven Plugin to
+      deploy this module's artifacts to the configured project repository
+     -->
+    <skipStaging>true</skipStaging>
+    <maven.source.skip>true</maven.source.skip>
+    <maven.javadoc.skip>true</maven.javadoc.skip>
+    <gpg.skip>true</gpg.skip>
     <quarkus.package.type>uber-jar</quarkus.package.type>
     <quarkus.package.runner-suffix>-exec</quarkus.package.runner-suffix>
   </properties>
@@ -124,50 +137,16 @@
         <artifactId>maven-checkstyle-plugin</artifactId>
       </plugin>
       <plugin>
-        <!-- Copy legal documents from "legal" module to "target/classes" folder so that we make sure to include 
-          legal docs in all modules. -->
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
-        <executions>
-          <execution>
-            <!-- Execution and configuration for copying certificates from related module to "target/classes" folder 
-              so that we can include them in the image. -->
-            <id>copy_demo_certs</id>
-            <phase>generate-resources</phase>
-            <goals>
-              <goal>unpack-dependencies</goal>
-            </goals>
-            <configuration>
-              <includeArtifactIds>
-                hono-demo-certs
-              </includeArtifactIds>
-              <outputDirectory>${project.build.directory}/config</outputDirectory>
-              <includes>
-                *.pem,
-                *.jks,
-                *.p12
-              </includes>
-              <useSubDirectoryPerArtifact>true</useSubDirectoryPerArtifact>
-              <stripClassifier>true</stripClassifier>
-              <stripVersion>true</stripVersion>
-              <excludeTransitive>true</excludeTransitive>
-            </configuration>
-          </execution>
-        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.jboss.jandex</groupId>
+        <artifactId>jandex-maven-plugin</artifactId>
       </plugin>
       <plugin>
         <groupId>io.quarkus</groupId>
         <artifactId>quarkus-maven-plugin</artifactId>
-        <extensions>true</extensions>
-        <executions>
-          <execution>
-            <goals>
-              <goal>build</goal>
-              <goal>generate-code</goal>
-              <goal>generate-code-tests</goal>
-            </goals>
-          </execution>
-        </executions>
       </plugin>
     </plugins>
   </build>
@@ -175,69 +154,45 @@
   <profiles>
 
     <profile>
-      <id>build-native-image</id>
+      <id>build-cli-native-executable</id>
+      <!-- 
+        This profile can be used to build a native executable from the hono-cli jar file.
+      -->
       <properties>
-        <!-- build native image inside of a container, doesn't require GraalVM SDK to be installed locally -->
-        <quarkus.native.remote-container-build>true</quarkus.native.remote-container-build>
-        <quarkus.native.builder-image>${native.builder-image.name}</quarkus.native.builder-image>
         <quarkus.package.type>native</quarkus.package.type>
+        <!--
+          By default, use remote container based build which does not require local installation of the GraalVM SDK
+          and native-image compiler.
+        -->
+        <quarkus.native.remote-container-build>true</quarkus.native.remote-container-build>
         <!--  include all JSSE related classes -->
         <quarkus.native.enable-all-security-services>true</quarkus.native.enable-all-security-services>
-        <!-- allow incomplete class path in order to not require (optional) compression codec dependencies of Netty -->
-        <!-- use Base64 encoder/decoder that is compatible with vert.x 3 -->
+        <!--
+          allow incomplete class path in order to not require (optional) compression codec dependencies of Netty,
+          open up certain modules' packages as required by native-image builder
+          (see https://www.graalvm.org/release-notes/22_2/#native-image)
+        -->
         <quarkus.native.additional-build-args>
           --initialize-at-run-time=io.netty.internal.tcnative.SSL\,org.apache.kafka.common.security.authenticator.SaslClientAuthenticator,
-          --allow-incomplete-classpath,
-          -Dvertx.json.base64=legacy
+          -J--add-opens=org.graalvm.nativeimage.builder/com.oracle.svm.core.jdk=ALL-UNNAMED,
+          -J--add-opens=org.graalvm.nativeimage.builder/com.oracle.svm.core.jdk.localization=ALL-UNNAMED,
+          -J--add-opens=org.graalvm.nativeimage.base/com.oracle.svm.util=ALL-UNNAMED,
+          -J--add-opens=org.graalvm.sdk/org.graalvm.nativeimage.impl=ALL-UNNAMED
         </quarkus.native.additional-build-args>
+        <quarkus.native.resources.includes>hono-cli-build.properties</quarkus.native.resources.includes>
       </properties>
-
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>io.fabric8</groupId>
-            <artifactId>docker-maven-plugin</artifactId>
-            <configuration>
-              <images>
-                <image>
-                  <name>${docker.repository}/%a-native:%v</name>
-                  <build>
-                    <maintainer>The Eclipse Hono project</maintainer>
-                    <labels>
-                      <project>Eclipse Hono</project>
-                    </labels>
-                    <tags>
-                      <tag>${docker.image.additional.tag}</tag>
-                    </tags>
-                    <imagePullPolicy>Always</imagePullPolicy>
-                    <from>${native.image.name}</from>
-                    <workdir>/opt/hono</workdir>
-                    <entryPoint>
-                      <arg>/opt/hono/${project.artifactId}-${project.version}-runner</arg>
-                      <arg>-Djava.util.logging.manager=org.jboss.logmanager.LogManager</arg>
-                    </entryPoint>
-                    <assembly>
-                      <mode>dir</mode>
-                      <basedir>/</basedir>
-                      <inline>
-                        <fileSets>
-                          <fileSet>
-                            <directory>${project.build.directory}</directory>
-                            <outputDirectory>opt/hono</outputDirectory>
-                            <includes>
-                              <include>${project.artifactId}-${project.version}-runner</include>
-                            </includes>
-                          </fileSet>
-                        </fileSets>
-                      </inline>
-                    </assembly>
-                  </build>
-                </image>
-              </images>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
+      <dependencies>
+        <!--
+          This is an optional dependency of picocli but without it, native executable compilation fails
+          due to unresolved classes.
+        -->
+        <dependency>
+            <groupId>com.googlecode.juniversalchardet</groupId>
+            <artifactId>juniversalchardet</artifactId>
+            <version>1.0.3</version>
+            <optional>true</optional>
+        </dependency>
+      </dependencies>
     </profile>
   </profiles>
 </project>
