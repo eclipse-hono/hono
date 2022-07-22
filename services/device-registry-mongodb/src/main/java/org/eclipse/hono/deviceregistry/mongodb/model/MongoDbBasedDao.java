@@ -19,8 +19,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 
-import javax.annotation.PreDestroy;
-
 import org.eclipse.hono.client.ClientErrorException;
 import org.eclipse.hono.client.ServerErrorException;
 import org.eclipse.hono.client.ServiceInvocationException;
@@ -96,11 +94,8 @@ public abstract class MongoDbBasedDao {
             final Tracer tracer,
             final FieldLevelEncryption fieldLevelEncryption) {
 
-        Objects.requireNonNull(mongoClient);
-        Objects.requireNonNull(collectionName);
-
-        this.mongoClient = mongoClient;
-        this.collectionName = collectionName;
+        this.mongoClient = Objects.requireNonNull(mongoClient);
+        this.collectionName = Objects.requireNonNull(collectionName);
         this.tracer = Optional.ofNullable(tracer).orElse(NoopTracerFactory.create());
         this.fieldLevelEncryption = fieldLevelEncryption;
     }
@@ -110,7 +105,6 @@ public abstract class MongoDbBasedDao {
      * <p>
      * This method invokes {@link #close(Handler)} with {@code null} as the close handler.
      */
-    @PreDestroy
     public final void close() {
         close(null);
     }
@@ -121,16 +115,14 @@ public abstract class MongoDbBasedDao {
      * @param closeHandler The handler to notify about the outcome.
      */
     public final void close(final Handler<AsyncResult<Void>> closeHandler) {
-        if (mongoClient != null) {
-            mongoClient.close(ar -> {
-                if (ar.succeeded()) {
-                    LOG.info("successfully closed connection to Mongo DB");
-                } else {
-                    LOG.info("error closing connection to Mongo DB", ar.cause());
-                }
-                Optional.ofNullable(closeHandler).ifPresent(h -> h.handle(ar));
-            });
-        }
+        mongoClient.close(ar -> {
+            if (ar.succeeded()) {
+                LOG.info("successfully closed connection to Mongo DB");
+            } else {
+                LOG.info("error closing connection to Mongo DB", ar.cause());
+            }
+            Optional.ofNullable(closeHandler).ifPresent(h -> h.handle(ar));
+        });
     }
 
     /**
@@ -144,8 +136,7 @@ public abstract class MongoDbBasedDao {
 
         Objects.requireNonNull(error);
 
-        if (error instanceof MongoException) {
-            final MongoException mongoException = (MongoException) error;
+        if (error instanceof final MongoException mongoException) {
             return ErrorCategory.fromErrorCode(mongoException.getCode()) == ErrorCategory.DUPLICATE_KEY;
         }
         return false;
