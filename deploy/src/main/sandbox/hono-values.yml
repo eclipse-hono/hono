@@ -51,6 +51,7 @@ adapters:
         certPath: "/opt/hono/tls/tls.crt"
         insecurePortEnabled: true
         insecurePortBindAddress: "0.0.0.0"
+        idleTimeout: 20
         jmsVendorPropsEnabled: true
         maxPayloadSize: 8096
         tenantIdleTimeout: "1h"
@@ -120,7 +121,6 @@ adapters:
         keyPath: "/opt/hono/tls/tls.key"
         certPath: "/opt/hono/tls/tls.crt"
         tenantIdleTimeout: "1h"
-        maxConnections: 70
     tlsKeysSecret: "sandbox-tls"
     cmdLineArgs:
     - "-Xmx96m"
