@@ -864,6 +864,40 @@ public class AbstractVertxBasedHttpProtocolAdapterTest extends
                 any());
     }
 
+    /**
+     * Verifies that if the default idle timeout configuration value is used and a device uses the default tenant
+     * "max-ttd" value in its request, that value is used as the effective ttd ("time until disconnect") value,
+     * meaning it is within the overall limit of 80% of the idle timeout value.
+     */
+    @Test
+    public void testDefaultTenantMaxTtdIsTakenAsTimeUntilDisconnectValue() {
+        givenAnAdapter(properties);
+
+        final TenantObject myTenantConfig = TenantObject.from("my-tenant", true);
+
+        final int deviceTtd = TenantConstants.DEFAULT_MAX_TTD;
+        final Future<Integer> timeUntilDisconnectFuture = adapter.getTimeUntilDisconnect(myTenantConfig, deviceTtd);
+        assertThat(timeUntilDisconnectFuture.succeeded()).isTrue();
+        assertThat(timeUntilDisconnectFuture.result()).isEqualTo(deviceTtd);
+    }
+
+    /**
+     * Verifies that the effective ttd ("time until disconnect") value is limited by the configured idle timeout.
+     */
+    @Test
+    public void testTimeUntilDisconnectValueLimitedByIdleTimeout() {
+        final int idleTimeout = 30;
+        properties.setIdleTimeout(idleTimeout);
+        givenAnAdapter(properties);
+
+        final TenantObject myTenantConfig = TenantObject.from("my-tenant", true);
+
+        final int deviceTtd = TenantConstants.DEFAULT_MAX_TTD;
+        final Future<Integer> timeUntilDisconnectFuture = adapter.getTimeUntilDisconnect(myTenantConfig, deviceTtd);
+        assertThat(timeUntilDisconnectFuture.succeeded()).isTrue();
+        assertThat(timeUntilDisconnectFuture.result()).isEqualTo(idleTimeout * 80 / 100);
+    }
+
     private HttpServerRequest newCommandResponseRequest() {
         final HttpServerRequest request = mock(HttpServerRequest.class);
         when(request.path()).thenReturn("/" + CommandConstants.COMMAND_RESPONSE_ENDPOINT);
