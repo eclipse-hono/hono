@@ -52,10 +52,10 @@ public interface HttpProtocolAdapterOptions {
      * A connection will timeout and be closed if no data is received or sent within the idle timeout period.
      * A zero value means no timeout is used.
      * <p>
-     * The default value is {@code 60}.The idle timeout is in seconds.
+     * The default value is {@code 75} seconds.
      *
-     * @return The idle timeout.
+     * @return The idle timeout in seconds.
      */
-    @WithDefault("60")
+    @WithDefault("75")
     int idleTimeout();
 }

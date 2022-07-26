@@ -824,6 +824,32 @@ public abstract class AbstractVertxBasedHttpProtocolAdapter<T extends HttpProtoc
     }
 
     /**
+     * {@inheritDoc}
+     * <p>
+     * This implementation limits the returned time period to at most 80 % of the configured idle timeout.
+     *
+     * @param tenant The tenant that the device belongs to.
+     * @param deviceTtd The TTD value provided by the device in seconds or {@code null} if the device did not
+     *                  provide a TTD value.
+     * @return A succeeded future that contains {@code null} if device TTD is {@code null}, or otherwise the lesser of
+     *         device TTD, the value returned by {@link TenantObject#getMaxTimeUntilDisconnect(String)} and 80% of the
+     *         configured idle timeout.
+     * @throws NullPointerException if tenant is {@code null}.
+     */
+    @Override
+    public Future<Integer> getTimeUntilDisconnect(final TenantObject tenant, final Integer deviceTtd) {
+        Objects.requireNonNull(tenant);
+
+        if (deviceTtd == null) {
+            return Future.succeededFuture();
+        }
+        final int ttdWithTenantMaxApplied = Math.min(tenant.getMaxTimeUntilDisconnect(getTypeName()), deviceTtd);
+        // apply 80% of configured idle timeout as overall upper limit
+        final int effectiveTtd = Math.min(getConfig().getIdleTimeout() * 80 / 100, ttdWithTenantMaxApplied);
+        return Future.succeededFuture(effectiveTtd);
+    }
+
+    /**
      * Sets a handler for tidying up when a device closes the HTTP connection of a TTD request before
      * a response could be sent.
      * <p>

@@ -28,8 +28,13 @@ public class HttpProtocolAdapterProperties extends ProtocolAdapterProperties {
      * The default name of the realm that devices need to authenticate to.
      */
     public static final String DEFAULT_REALM = "Hono";
+    /**
+     * The default idle timeout.
+     */
+    public static final int DEFAULT_IDLE_TIMEOUT_SECONDS = 75;
+
     private String realm = DEFAULT_REALM;
-    private int idleTimeout = 60;
+    private int idleTimeout = DEFAULT_IDLE_TIMEOUT_SECONDS;
 
     /**
      * Creates properties using default values.
@@ -84,7 +89,7 @@ public class HttpProtocolAdapterProperties extends ProtocolAdapterProperties {
      * A connection will timeout and be closed if no data is received or sent within the idle timeout period.
      * A zero value means no timeout is used.
      * <p>
-     * The default value is {@code 60} in seconds.
+     * The default value is {@value #DEFAULT_IDLE_TIMEOUT_SECONDS} seconds.
      *
      * @return The idle timeout in seconds.
      */
@@ -98,7 +103,7 @@ public class HttpProtocolAdapterProperties extends ProtocolAdapterProperties {
      * A connection will timeout and be closed if no data is received or sent within the idle timeout period.
      * A zero value means no timeout is used.
      * <p>
-     * The default value is {@code 60}. The idle timeout is in seconds.
+     * The default value is {@value #DEFAULT_IDLE_TIMEOUT_SECONDS} seconds.
      *
      * @param idleTimeout The idle timeout.
      * @throws IllegalArgumentException if idleTimeout is less than {@code 0}.
