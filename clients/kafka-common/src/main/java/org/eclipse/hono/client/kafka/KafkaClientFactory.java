@@ -220,8 +220,8 @@ public class KafkaClientFactory {
                 } else {
                     // retries time limit reached
                     LOG.warn("""
-                            error creating Kafka client (no further attempts will be done, timeout for \
-                            retries reached): {}
+                            error creating Kafka client \
+                            (no further attempts will be done, timeout for retries reached): {}\
                             """,
                             e.getCause().getMessage());
                     resultPromise.fail(e);

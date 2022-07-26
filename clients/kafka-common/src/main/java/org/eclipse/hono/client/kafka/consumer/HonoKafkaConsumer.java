@@ -573,7 +573,7 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
             if (!initResult.future().isComplete()) {
                 LOG.debug("""
                         postponing record handling until consumer has been initialized \
-                        [topic: {}, partition: {}, offset: {}]
+                        [topic: {}, partition: {}, offset: {}]\
                         """,
                         record.topic(), record.partition(), record.offset());
             }
@@ -787,7 +787,7 @@ public class HonoKafkaConsumer<V> implements Lifecycle, ServiceClient {
                 if (!outOfRangeOffsetPartitions.isEmpty()) {
                     LOG.info("""
                             found out-of-range committed offsets, corresponding records having already been deleted; \
-                            positions were reset to beginning offsets; partitions: [{}] [client-id: {}]
+                            positions were reset to beginning offsets; partitions: [{}] [client-id: {}]\
                             """,
                             HonoKafkaConsumerHelper.getPartitionsDebugString(outOfRangeOffsetPartitions), getClientId());
                 }

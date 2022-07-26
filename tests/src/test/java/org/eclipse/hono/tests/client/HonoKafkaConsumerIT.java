@@ -371,7 +371,7 @@ public class HonoKafkaConsumerIT {
                         resultPromise.tryFail("""
                                 timeout checking for any deleted records; make sure the topic log retention \
                                 and the broker 'log.retention.check.interval.ms' is configured according to the \
-                                test requirements
+                                test requirements\
                                 """);
                     } else {
                         vertx.setTimer(nextCheckDelayMillis, tid -> {
