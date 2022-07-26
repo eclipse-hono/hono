@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2019, 2020 Contributors to the Eclipse Foundation
+ * Copyright (c) 2019, 2022 Contributors to the Eclipse Foundation
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -11,32 +11,37 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-
 package org.eclipse.hono.client.util;
 
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.notNull;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import static com.google.common.truth.Truth.assertThat;
 
 import java.net.HttpURLConnection;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
+import java.util.function.Supplier;
 
 import org.eclipse.hono.client.ServerErrorException;
-import org.eclipse.hono.client.ServiceInvocationException;
-import org.eclipse.hono.client.util.CachingClientFactory;
 import org.eclipse.hono.test.VertxMockSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.junit5.Timeout;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -46,7 +51,10 @@ import io.vertx.junit5.VertxTestContext;
  *
  */
 @ExtendWith(VertxExtension.class)
+@Timeout(value = 5, timeUnit = TimeUnit.SECONDS)
 public class CachingClientFactoryTest {
+
+    private static final Logger LOG = LoggerFactory.getLogger(CachingClientFactoryTest.class);
 
     private Vertx vertx;
 
@@ -56,6 +64,8 @@ public class CachingClientFactoryTest {
     @BeforeEach
     public void setup() {
         vertx = mock(Vertx.class);
+        doThrow(new IllegalStateException("runOnContext called on Vertx mock - change test to use real Vertx object instead"))
+                .when(vertx).runOnContext(VertxMockSupport.anyHandler());
         VertxMockSupport.runTimersImmediately(vertx);
     }
 
@@ -85,19 +95,21 @@ public class CachingClientFactoryTest {
 
     /**
      * Verifies that a concurrent request to create a client fails the given
-     * future for tracking the attempt if the initial request doesn't complete.
+     * future for tracking the attempt when the initial request fails.
      *
      * @param ctx The helper to use for running async tests.
      */
     @Test
-    public void testGetOrCreateClientFailsIfInvokedConcurrently(final VertxTestContext ctx) {
+    public void testConcurrentGetOrCreateClientFailsWhenInitialRequestFails(final VertxTestContext ctx) {
 
-        // GIVEN a factory that already creates a client for key "bumlux" (and never completes doing so)
+        // GIVEN a factory that already creates a client for key "bumlux"
         final CachingClientFactory<Object> factory = new CachingClientFactory<>(vertx, o -> true);
         final Promise<Object> creationResult = Promise.promise();
+        final Promise<Object> initialClientInstanceSupplierPromise = Promise.promise();
+        final ServerErrorException clientInstanceCreationFailure = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE);
         factory.getOrCreateClient(
                 "bumlux",
-                () -> Promise.promise().future(),
+                initialClientInstanceSupplierPromise::future,
                 creationResult);
 
         // WHEN an additional, concurrent attempt is made to create a client for the same key
@@ -108,53 +120,212 @@ public class CachingClientFactoryTest {
                     return Future.succeededFuture();
                 }, ctx.failing(t -> {
                     ctx.verify(() -> {
-                        // THEN the concurrent attempt fails after having done the default number of retries.
-                        assertThat(t).isInstanceOf(ServerErrorException.class);
-                        assertThat(ServiceInvocationException.extractStatusCode(t)).isEqualTo(HttpURLConnection.HTTP_UNAVAILABLE);
-                        verify(vertx, times(CachingClientFactory.MAX_CREATION_RETRIES)).setTimer(anyLong(), notNull());
+                        // THEN the concurrent attempt fails
+                        assertThat(t).isEqualTo(clientInstanceCreationFailure);
                     });
                     ctx.completeNow();
                 }));
+        ctx.verify(() -> {
+            assertThat(creationResult.future().isComplete()).isFalse();
+        });
+        // AFTER the initial client instance creation failed
+        initialClientInstanceSupplierPromise.fail(clientInstanceCreationFailure);
     }
 
     /**
-     * Verifies that a concurrent request to create a client succeeds
-     * if the initial request completes before the first retry of the
-     * concurrent request.
+     * Verifies that a concurrent request to create a client succeeds when the initial request completes.
      *
      * @param ctx The helper to use for running async tests.
      */
     @Test
-    public void testGetOrCreateClientSucceedsOnRetry(final VertxTestContext ctx) {
+    public void testConcurrentGetOrCreateClientSucceedsOnInitialRequestCompletion(final VertxTestContext ctx) {
 
         // GIVEN a factory that already creates a client for key "bumlux"
         final CachingClientFactory<Object> factory = new CachingClientFactory<>(vertx, o -> true);
         final Promise<Object> creationResult = Promise.promise();
-        final Promise<Object> clientInstancePromise = Promise.promise();
+        final Promise<Object> initialClientInstanceSupplierPromise = Promise.promise();
+        final Object clientInstance = new Object();
         factory.getOrCreateClient(
                 "bumlux",
-                () -> clientInstancePromise.future(),
+                initialClientInstanceSupplierPromise::future,
                 creationResult);
 
         // WHEN an additional, concurrent attempt is made to create a client for the same key
-        // and the first 'setTimer' invocation finishes the first creation attempt.
-        when(vertx.setTimer(anyLong(), VertxMockSupport.anyHandler())).thenAnswer(invocation -> {
-            clientInstancePromise.tryComplete(new Object());
-            final Handler<Long> task = invocation.getArgument(1);
-            task.handle(1L);
-            return 1L;
-        });
-        // THEN the additional attempt finishes after one retry
         factory.getOrCreateClient(
                 "bumlux",
                 () -> {
                     ctx.failNow(new AssertionError("should not create new client (cached one shall be used)"));
                     return Future.succeededFuture();
                 },
-                ctx.succeeding(s -> {
-                    ctx.verify(() -> verify(vertx).setTimer(anyLong(), notNull()));
+                ctx.succeeding(secondClient -> {
+                    ctx.verify(() -> {
+                        // THEN the additional attempt finishes
+                        assertThat(secondClient).isEqualTo(clientInstance);
+                    });
                     ctx.completeNow();
                 }));
+        ctx.verify(() -> {
+            assertThat(creationResult.future().isComplete()).isFalse();
+        });
+        // AFTER the initial client instance creation succeeded
+        initialClientInstanceSupplierPromise.complete(clientInstance);
+    }
+
+    /**
+     * Verifies that concurrent requests to create a client are completed in the expected order, meaning that
+     * requests with the same client key are completed in the order the requests were made.
+     *
+     * @param ctx The helper to use for running async tests.
+     * @param vertx The (not mocked) Vertx instance.
+     */
+    @Test
+    public void testConcurrentGetOrCreateClientRequestsAreCompletedInOrder(final VertxTestContext ctx, final Vertx vertx) {
+        final CachingClientFactory<Object> factory = new CachingClientFactory<>(vertx, o -> true);
+        factory.setWaitingCreationRequestsCompletionBatchSize(1);
+
+        final int expectedRequestCount = 12;
+        final Map<Object, List<String>> expectedRequestIdsPerClient = new HashMap<>();
+
+        final AtomicInteger completedRequestsCount = new AtomicInteger();
+        final Map<Object, List<String>> completedRequestIdsPerClient = new HashMap<>();
+        final List<String> completedRequestIds = new ArrayList<>();
+        final Promise<Void> allRequestsCompletedPromise = Promise.promise();
+
+        final Promise<Object> initialClientInstanceSupplierPromiseKeyA = Promise.promise();
+        final Promise<Object> initialClientInstanceSupplierPromiseKeyB = Promise.promise();
+        final Promise<Object> initialClientInstanceSupplierPromiseKeyC = Promise.promise();
+        final Object clientInstanceKeyA = "ClientForKeyA";
+        final Object clientInstanceKeyB = "ClientForKeyB";
+        final Object clientInstanceKeyC = "ClientForKeyC";
+        final BiConsumer<Object, String> requestCreationCompletionHandler = (client, requestId) -> {
+            LOG.debug("completed client creation request {}", requestId);
+            completedRequestIds.add(requestId);
+            completedRequestIdsPerClient.putIfAbsent(client, new ArrayList<>());
+            completedRequestIdsPerClient.get(client).add(requestId);
+            if (completedRequestsCount.incrementAndGet() == expectedRequestCount) {
+                allRequestsCompletedPromise.complete();
+            }
+        };
+        final Supplier<Future<Object>> notToBeCalledClientInstanceSupplier = () -> {
+            ctx.failNow(new AssertionError("should not create new client (cached one shall be used)"));
+            return Future.succeededFuture();
+        };
+        vertx.runOnContext(v -> {
+            // GIVEN a factory that already creates clients for 3 different keys
+            expectedRequestIdsPerClient.put(clientInstanceKeyA, new ArrayList<>());
+            expectedRequestIdsPerClient.get(clientInstanceKeyA).add("keyA1");
+            factory.getOrCreateClient("keyA", initialClientInstanceSupplierPromiseKeyA::future,
+                    ctx.succeeding(client -> requestCreationCompletionHandler.accept(client, "keyA1")));
+
+            expectedRequestIdsPerClient.put(clientInstanceKeyB, new ArrayList<>());
+            expectedRequestIdsPerClient.get(clientInstanceKeyB).add("keyB1");
+            factory.getOrCreateClient("keyB", initialClientInstanceSupplierPromiseKeyB::future,
+                    ctx.succeeding(client -> requestCreationCompletionHandler.accept(client, "keyB1")));
+
+            expectedRequestIdsPerClient.put(clientInstanceKeyC, new ArrayList<>());
+            expectedRequestIdsPerClient.get(clientInstanceKeyC).add("keyC1");
+            factory.getOrCreateClient("keyC", initialClientInstanceSupplierPromiseKeyC::future,
+                    ctx.succeeding(client -> requestCreationCompletionHandler.accept(client, "keyC1")));
+
+            // WHEN a number of client creation requests are made before the initial requests have been completed
+            expectedRequestIdsPerClient.get(clientInstanceKeyA).add("keyA2");
+            factory.getOrCreateClient("keyA", notToBeCalledClientInstanceSupplier,
+                    ctx.succeeding(client -> requestCreationCompletionHandler.accept(client, "keyA2")));
+
+            expectedRequestIdsPerClient.get(clientInstanceKeyB).add("keyB2");
+            factory.getOrCreateClient("keyB", notToBeCalledClientInstanceSupplier,
+                    ctx.succeeding(client -> requestCreationCompletionHandler.accept(client, "keyB2")));
+
+            expectedRequestIdsPerClient.get(clientInstanceKeyC).add("keyC2");
+            factory.getOrCreateClient("keyC", notToBeCalledClientInstanceSupplier,
+                    ctx.succeeding(client -> requestCreationCompletionHandler.accept(client, "keyC2")));
+
+            expectedRequestIdsPerClient.get(clientInstanceKeyA).add("keyA3");
+            factory.getOrCreateClient("keyA", notToBeCalledClientInstanceSupplier,
+                    ctx.succeeding(client -> requestCreationCompletionHandler.accept(client, "keyA3")));
+
+            expectedRequestIdsPerClient.get(clientInstanceKeyB).add("keyB3");
+            factory.getOrCreateClient("keyB", notToBeCalledClientInstanceSupplier,
+                    ctx.succeeding(client -> requestCreationCompletionHandler.accept(client, "keyB3")));
+
+            expectedRequestIdsPerClient.get(clientInstanceKeyC).add("keyC3");
+            factory.getOrCreateClient("keyC", notToBeCalledClientInstanceSupplier,
+                    ctx.succeeding(client -> requestCreationCompletionHandler.accept(client, "keyC3")));
+        });
+
+        // THEN the completion of the initial requests...
+        vertx.runOnContext(v -> initialClientInstanceSupplierPromiseKeyA.complete(clientInstanceKeyA));
+        vertx.runOnContext(v -> initialClientInstanceSupplierPromiseKeyB.complete(clientInstanceKeyB));
+        vertx.runOnContext(v -> initialClientInstanceSupplierPromiseKeyC.complete(clientInstanceKeyC));
+
+        // AND the processing of additional client creation requests...
+        vertx.runOnContext(v -> {
+            expectedRequestIdsPerClient.get(clientInstanceKeyA).add("keyA4");
+            factory.getOrCreateClient("keyA", notToBeCalledClientInstanceSupplier,
+                    ctx.succeeding(client -> requestCreationCompletionHandler.accept(client, "keyA4")));
+
+            expectedRequestIdsPerClient.get(clientInstanceKeyB).add("keyB4");
+            factory.getOrCreateClient("keyB", notToBeCalledClientInstanceSupplier,
+                    ctx.succeeding(client -> requestCreationCompletionHandler.accept(client, "keyB4")));
+
+            expectedRequestIdsPerClient.get(clientInstanceKeyC).add("keyC4");
+            factory.getOrCreateClient("keyC", notToBeCalledClientInstanceSupplier,
+                    ctx.succeeding(client -> requestCreationCompletionHandler.accept(client, "keyC4")));
+        });
+
+        allRequestsCompletedPromise.future().onSuccess(v -> {
+            ctx.verify(() -> {
+                // ... leads to the completion of all requests in the order per key in which requests were made.
+                assertThat(completedRequestIdsPerClient).isEqualTo(expectedRequestIdsPerClient);
+                // verify that the earlier "keyB1" request was completed *before* the later "keyA3" request;
+                // this is achieved via the decoupling configured via setWaitingCreationRequestsCompletionBatchSize(1)
+                assertThat(completedRequestIds.subList(0, 3)).isEqualTo(List.of("keyA1", "keyA2", "keyB1"));
+            });
+            ctx.completeNow();
+        });
+    }
+
+    /**
+     * Verifies that clearing the state of the factory fails all client creation requests.
+     *
+     * @param ctx The helper to use for running async tests.
+     */
+    @Test
+    public void testClearStateClearsConcurrentGetOrCreateClientRequests(final VertxTestContext ctx) {
+        final CachingClientFactory<Object> factory = new CachingClientFactory<>(vertx, o -> true);
+
+        final Promise<Void> allRequestsCompletedWithFailurePromise = Promise.promise();
+        final int requestCount = 9;
+        final AtomicInteger requestsCompletedWithFailureCounter = new AtomicInteger();
+        final Handler<AsyncResult<Object>> requestCompletionHandler = ctx.failing(thr -> {
+            if (requestsCompletedWithFailureCounter.incrementAndGet() == requestCount) {
+                allRequestsCompletedWithFailurePromise.complete();
+            }
+        });
+
+        // GIVEN a factory that already creates clients for 3 different keys
+        final Promise<Object> initialClientInstanceSupplierPromise = Promise.promise();
+        factory.getOrCreateClient("keyA", initialClientInstanceSupplierPromise::future, requestCompletionHandler);
+        factory.getOrCreateClient("keyB", initialClientInstanceSupplierPromise::future, requestCompletionHandler);
+        factory.getOrCreateClient("keyC", initialClientInstanceSupplierPromise::future, requestCompletionHandler);
+
+        // WHEN a number of concurrent client creation requests are made before the initial requests have been completed
+        final Supplier<Future<Object>> toBeIgnoredClientInstanceSupplier = () -> {
+            ctx.failNow(new AssertionError("should not create new client"));
+            return Future.succeededFuture();
+        };
+        factory.getOrCreateClient("keyA", toBeIgnoredClientInstanceSupplier, requestCompletionHandler);
+        factory.getOrCreateClient("keyB", toBeIgnoredClientInstanceSupplier, requestCompletionHandler);
+        factory.getOrCreateClient("keyC", toBeIgnoredClientInstanceSupplier, requestCompletionHandler);
+        factory.getOrCreateClient("keyA", toBeIgnoredClientInstanceSupplier, requestCompletionHandler);
+        factory.getOrCreateClient("keyB", toBeIgnoredClientInstanceSupplier, requestCompletionHandler);
+        factory.getOrCreateClient("keyC", toBeIgnoredClientInstanceSupplier, requestCompletionHandler);
+
+        // THEN invoking clearState() means that all creation requests get failed
+        factory.clearState();
+        allRequestsCompletedWithFailurePromise.future().onSuccess(v -> {
+            ctx.completeNow();
+        });
     }
 
     /**

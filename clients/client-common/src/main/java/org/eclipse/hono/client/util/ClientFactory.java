@@ -11,7 +11,6 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-
 package org.eclipse.hono.client.util;
 
 import java.net.HttpURLConnection;
@@ -29,8 +28,8 @@ import io.vertx.core.Handler;
 /**
  * A factory for creating clients.
  * <p>
- * The createClient method makes sure that the creation attempt
- * fails if the clearState method is being invoked.
+ * The {@link #createClient(Supplier, Handler)} method makes sure that all ongoing creation attempts are failed when the
+ * {@link #clearState()} method gets invoked.
  *
  * @param <T> The type of client to be created.
  */
@@ -38,31 +37,38 @@ public class ClientFactory<T> {
 
     /**
      * The current requests for creating an instance.
+     * <p>
+     * Each request is represented by the handler to be invoked to fail the request
+     * in case the service connection got lost.
      */
-    protected final List<Handler<Void>> creationRequests = new ArrayList<>();
+    protected final List<Handler<ServerErrorException>> creationRequests = new ArrayList<>();
 
     /**
-     * Clears all state.
+     * Clears all state. Meant to be invoked when the service connection was lost.
      * <p>
-     * All pending creation requests are failed.
+     * All pending creation requests are failed with a {@link ServerErrorException} with status 503.
      */
     public final void clearState() {
-        failAllCreationRequests();
-        doClearState();
+        final var connectionLostException = new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE,
+                "no connection to service");
+        failAllCreationRequests(connectionLostException);
+        doClearStateAfterCreationRequestsCleared();
     }
 
-    private void failAllCreationRequests() {
+    private void failAllCreationRequests(final ServerErrorException exception) {
 
-        for (final Iterator<Handler<Void>> iter = creationRequests.iterator(); iter.hasNext();) {
-            iter.next().handle(null);
+        for (final Iterator<Handler<ServerErrorException>> iter = creationRequests.iterator(); iter.hasNext();) {
+            iter.next().handle(exception);
             iter.remove();
         }
     }
 
     /**
      * Clears this factory's internal state.
+     * <p>
+     * This default implementation does nothing.
      */
-    protected void doClearState() {
+    protected void doClearStateAfterCreationRequestsCleared() {
         // do nothing
     }
 
@@ -78,9 +84,8 @@ public class ClientFactory<T> {
 
             // register a handler to be notified if the underlying connection to the server fails
             // so that we can fail the result handler
-            final Handler<Void> connectionFailureHandler = connectionLost -> {
-                result.handle(Future.failedFuture(
-                        new ServerErrorException(HttpURLConnection.HTTP_UNAVAILABLE, "connection to server lost")));
+            final Handler<ServerErrorException> connectionFailureHandler = connectionLostException -> {
+                result.handle(Future.failedFuture(connectionLostException));
             };
             creationRequests.add(connectionFailureHandler);
 
@@ -89,4 +94,5 @@ public class ClientFactory<T> {
                 result.handle(attempt);
             });
     }
+
 }
