@@ -94,7 +94,7 @@ public abstract class AbstractServiceApplication implements ComponentNameProvide
 
             LOG.info("""
                     running on Java VM [version: {}, name: {}, vendor: {}, max memory: {}MiB, processors: {}] \
-                    with vert.x using {} Base64 encoder
+                    with vert.x using {} Base64 encoder\
                     """,
                     System.getProperty("java.version"),
                     System.getProperty("java.vm.name"),

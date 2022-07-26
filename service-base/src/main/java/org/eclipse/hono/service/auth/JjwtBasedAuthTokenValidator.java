@@ -216,7 +216,7 @@ public final class JjwtBasedAuthTokenValidator extends JwtSupport implements Aut
                 return keySpec.key;
             } else {
                 throw new InvalidKeyException("""
-                        validating key on record does not support signature algorithm [%s] used in token
+                        validating key on record does not support signature algorithm [%s] used in token\
                         """.formatted(algorithmName));
             }
         } else {
@@ -231,7 +231,7 @@ public final class JjwtBasedAuthTokenValidator extends JwtSupport implements Aut
             } else {
                 throw new InvalidKeyException("""
                         validating key on record [id: %s] does not support signature
-                        algorithm [%s] used in token
+                        algorithm [%s] used in token\
                         """.formatted(keyId, algorithmName));
             }
         }

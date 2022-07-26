@@ -285,7 +285,7 @@ public class KafkaBasedCommandConsumerFactoryImpl implements CommandConsumerFact
         }
         LOG.debug("""
                 createCommandConsumer: topic not subscribed; check for its existence, triggering auto-creation \
-                if enabled [{}]
+                if enabled [{}]\
                 """, topic);
         final Span span = TracingHelper.buildServerChildSpan(
                 tracer,
