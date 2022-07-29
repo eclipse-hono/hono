@@ -58,7 +58,7 @@ public abstract class DeviceRegistryMetricsAdapter implements DeviceRegistryMetr
     private Number getTenantCount() {
         determineCurrentNumberOfTenants()
             .onSuccess(tenantCount::set)
-            .onFailure(e -> LOG.warn("еrror determining tenant count", e));
+            .onFailure(e -> LOG.warn("error determining tenant count", e));
         return tenantCount.get();
     }
 

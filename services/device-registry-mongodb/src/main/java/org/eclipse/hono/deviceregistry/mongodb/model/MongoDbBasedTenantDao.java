@@ -397,7 +397,7 @@ public final class MongoDbBasedTenantDao extends MongoDbBasedDao implements Tena
         return mongoClient.count(collectionName, filter == null ? new JsonObject() : filter)
                 .map(count -> count.intValue())
                 .onFailure(e -> {
-                    LOG.error("еrror while querying Tenants count from MongoDB", e);
+                    LOG.error("error while querying Tenants count from MongoDB", e);
                     TracingHelper.logError(span, "error getting tenants count", e);
                 })
                 .onComplete(r -> span.finish());
